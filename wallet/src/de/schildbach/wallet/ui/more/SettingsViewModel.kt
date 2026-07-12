@@ -32,6 +32,7 @@ import de.schildbach.wallet.service.platform.sdk.WalletFundingGate
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -42,6 +43,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -147,6 +149,9 @@ class SettingsViewModel @Inject constructor(
 
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
 
+    /** Test seam: the soak send / decrypt proof block on network and must stay off main. */
+    var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
     private val _uiState = MutableStateFlow(SettingsUIState())
     val uiState: StateFlow<SettingsUIState> = _uiState.asStateFlow()
 
@@ -163,7 +168,7 @@ class SettingsViewModel @Inject constructor(
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .onEach { currency ->
-                _uiState.value = _uiState.value.copy(localCurrencySymbol = currency)
+                _uiState.update { it.copy(localCurrencySymbol = currency) }
             }
             .launchIn(viewModelScope)
 
@@ -173,7 +178,7 @@ class SettingsViewModel @Inject constructor(
             .map { it.creationComplete }
             .distinctUntilChanged()
             .onEach { isVisible ->
-                _uiState.value = _uiState.value.copy(transactionMetadataVisible = isVisible)
+                _uiState.update { it.copy(transactionMetadataVisible = isVisible) }
             }.launchIn(viewModelScope)
 
         // Observe the debug-only Kotlin-SDK L1 send flag (Phase 5b soak
@@ -182,7 +187,7 @@ class SettingsViewModel @Inject constructor(
         dashPayConfig.observe(DashPayConfig.USE_KOTLIN_SDK_L1_SEND)
             .distinctUntilChanged()
             .onEach { enabled ->
-                _uiState.value = _uiState.value.copy(useKotlinSdkL1Send = enabled == true)
+                _uiState.update { it.copy(useKotlinSdkL1Send = enabled == true) }
             }.launchIn(viewModelScope)
 
         // Debug-only: poll the SDK L1 send gate — the EXACT predicate
@@ -204,7 +209,7 @@ class SettingsViewModel @Inject constructor(
             .distinctUntilChanged()
             .flatMapLatest { visible -> if (visible) sdkSendGateStatusPoll() else emptyFlow() }
             .onEach { status ->
-                _uiState.value = _uiState.value.copy(sdkSendGateStatus = status)
+                _uiState.update { it.copy(sdkSendGateStatus = status) }
             }.launchIn(viewModelScope)
     }
 
@@ -231,7 +236,7 @@ class SettingsViewModel @Inject constructor(
     fun updateIgnoringBatteryOptimizations() {
         try {
             val isIgnoring = isIgnoringBatteryOptimizations()
-            _uiState.value = _uiState.value.copy(ignoringBatteryOptimizations = isIgnoring)
+            _uiState.update { it.copy(ignoringBatteryOptimizations = isIgnoring) }
         } catch (e: Exception) {
             log.error("Error updating battery optimization status", e)
         }
@@ -256,7 +261,7 @@ class SettingsViewModel @Inject constructor(
     suspend fun isSavingTransactionMetadata() = dashPayConfig.isSavingTransactionMetadata()
 
     fun updateTransactionMetadataSubtitle(subtitle: String?) {
-        _uiState.value = _uiState.value.copy(transactionMetadataSubtitle = subtitle)
+        _uiState.update { it.copy(transactionMetadataSubtitle = subtitle) }
     }
 
     /**
@@ -294,11 +299,13 @@ class SettingsViewModel @Inject constructor(
             soakLog.info("soak send already in flight; ignoring tap")
             return
         }
-        _uiState.value = _uiState.value.copy(
-            soakSendInFlight = true,
-            soakSendStatus = "sending ${SOAK_SEND_AMOUNT.toPlainString()} to self…"
-        )
-        viewModelScope.launch(Dispatchers.IO) {
+        _uiState.update {
+            it.copy(
+                soakSendInFlight = true,
+                soakSendStatus = "sending ${SOAK_SEND_AMOUNT.toPlainString()} to self…"
+            )
+        }
+        viewModelScope.launch(ioDispatcher) {
             // Route label = the flag PLUS the send gate probed at attempt
             // time (the neutral overload only returns a txid, deliberately
             // route-agnostic; see soakRouteLabel for the best-effort caveat).
@@ -327,7 +334,7 @@ class SettingsViewModel @Inject constructor(
                 soakLog.error("soak send failed ({})", routeLabel, e)
                 "failed: ${e.message ?: e.javaClass.simpleName} ($routeLabel)"
             }
-            _uiState.value = _uiState.value.copy(soakSendInFlight = false, soakSendStatus = status)
+            _uiState.update { it.copy(soakSendInFlight = false, soakSendStatus = status) }
         }
     }
 
@@ -347,11 +354,13 @@ class SettingsViewModel @Inject constructor(
             proofLog.info("decrypt proof already in flight; ignoring tap")
             return
         }
-        _uiState.value = _uiState.value.copy(
-            txMetadataProofInFlight = true,
-            txMetadataProofStatus = "fetching + decrypting via the SDK…"
-        )
-        viewModelScope.launch(Dispatchers.IO) {
+        _uiState.update {
+            it.copy(
+                txMetadataProofInFlight = true,
+                txMetadataProofStatus = "fetching + decrypting via the SDK…"
+            )
+        }
+        viewModelScope.launch(ioDispatcher) {
             val status = try {
                 sdkTxMetadataDecryptProbe.runProof()
             } catch (e: Exception) {
@@ -359,10 +368,12 @@ class SettingsViewModel @Inject constructor(
                 proofLog.error("decrypt proof threw unexpectedly", e)
                 "failed: ${e.message ?: e.javaClass.simpleName}"
             }
-            _uiState.value = _uiState.value.copy(
-                txMetadataProofInFlight = false,
-                txMetadataProofStatus = status
-            )
+            _uiState.update {
+                it.copy(
+                    txMetadataProofInFlight = false,
+                    txMetadataProofStatus = status
+                )
+            }
         }
     }
 

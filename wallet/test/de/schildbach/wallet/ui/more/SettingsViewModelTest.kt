@@ -39,14 +39,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.first
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BlockchainServiceConfig
@@ -204,7 +205,11 @@ class SettingsViewModelTest {
         sdkL1SendService = sdkL1SendService,
         sdkTxMetadataDecryptProbe = sdkTxMetadataDecryptProbe,
         dashPayProfileDao = dashPayProfileDao
-    )
+    ).apply {
+        // Off-main work must run inside runTest's virtual time, or the
+        // settled-state waits below race a real IO thread (flaky 1m hangs).
+        ioDispatcher = dispatcher
+    }
 
     @Test
     fun unsetFlag_switchShowsOff() = runTest(dispatcher) {
@@ -255,9 +260,13 @@ class SettingsViewModelTest {
 
     private val soakTxid = "ab".repeat(32)
 
-    /** Waits out the IO-dispatched send and returns the settled state. */
-    private suspend fun SettingsViewModel.settledSoakState() =
-        uiState.first { !it.soakSendInFlight && it.soakSendStatus != null }
+    /** Runs the dispatched send to completion (virtual time) and returns the settled state. */
+    private fun TestScope.settledSoakState(viewModel: SettingsViewModel): SettingsUIState {
+        advanceUntilIdle()
+        val state = viewModel.uiState.value
+        assertFalse("the soak send should have settled", state.soakSendInFlight)
+        return state
+    }
 
     @Test
     fun soakSend_flagOnGateOpen_reportsTheSdkEngineRoute() = runTest(dispatcher) {
@@ -270,7 +279,7 @@ class SettingsViewModelTest {
 
         viewModel.runSdkSoakSend()
 
-        val state = viewModel.settledSoakState()
+        val state = settledSoakState(viewModel)
         assertTrue(state.soakSendStatus!!.startsWith("sent ${soakTxid.take(8)}"))
         assertTrue(state.soakSendStatus!!.contains("(SDK engine)"))
         coVerify(exactly = 1) {
@@ -291,7 +300,7 @@ class SettingsViewModelTest {
 
         viewModel.runSdkSoakSend()
 
-        val state = viewModel.settledSoakState()
+        val state = settledSoakState(viewModel)
         assertTrue(state.soakSendStatus!!.contains("(dashj fallback)"))
     }
 
@@ -304,7 +313,7 @@ class SettingsViewModelTest {
 
         viewModel.runSdkSoakSend()
 
-        val state = viewModel.settledSoakState()
+        val state = settledSoakState(viewModel)
         assertTrue(state.soakSendStatus!!.startsWith("failed: insufficient funds"))
         assertTrue(state.soakSendStatus!!.contains("(dashj — flag off)"))
     }
@@ -324,7 +333,7 @@ class SettingsViewModelTest {
         viewModel.runSdkSoakSend() // re-tap while in flight — must be a no-op
         gate.complete(Unit)
 
-        viewModel.settledSoakState()
+        settledSoakState(viewModel)
         coVerify(exactly = 1) {
             sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         }
@@ -332,9 +341,13 @@ class SettingsViewModelTest {
 
     // ── The debug-only decrypt proof (runTxMetadataDecryptProof) ──────
 
-    /** Waits out the IO-dispatched proof and returns the settled state. */
-    private suspend fun SettingsViewModel.settledProofState() =
-        uiState.first { !it.txMetadataProofInFlight && it.txMetadataProofStatus != null }
+    /** Runs the dispatched proof to completion (virtual time) and returns the settled state. */
+    private fun TestScope.settledProofState(viewModel: SettingsViewModel): SettingsUIState {
+        advanceUntilIdle()
+        val state = viewModel.uiState.value
+        assertFalse("the decrypt proof should have settled", state.txMetadataProofInFlight)
+        return state
+    }
 
     @Test
     fun decryptProof_surfacesTheProbeSummaryLine_asTheSubtitle() = runTest(dispatcher) {
@@ -344,7 +357,7 @@ class SettingsViewModelTest {
 
         viewModel.runTxMetadataDecryptProof()
 
-        val state = viewModel.settledProofState()
+        val state = settledProofState(viewModel)
         assertEquals(
             "sdkFetched=0 sdkDecrypted=0 sdkParsed=0 legacyExpected=0 verdict=FAILED",
             state.txMetadataProofStatus
@@ -359,7 +372,7 @@ class SettingsViewModelTest {
         viewModel.runTxMetadataDecryptProof() // re-tap while in flight — must be a no-op
         proofFetchGate.complete(Unit)
 
-        viewModel.settledProofState()
+        settledProofState(viewModel)
         assertEquals(1, proofFetches)
     }
 

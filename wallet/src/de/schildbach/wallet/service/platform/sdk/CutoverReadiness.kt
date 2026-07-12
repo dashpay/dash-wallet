@@ -116,6 +116,70 @@ object CutoverPolicy {
 }
 
 /**
+ * Bounded window of parity observations feeding [CutoverEvidence]. One
+ * instance lives on the shadow-sync service; [record] is called once per
+ * probe (with a MONOTONIC elapsed-realtime stamp), [clear] whenever the
+ * shadow state is reset (stale evidence from before a reset must never
+ * count toward a cutover). Thread-safe; pure Kotlin (host-testable).
+ *
+ * An observation is a MATCH only when ALL THREE parity dimensions agree
+ * (estimated, confirmed, tx count) — the same bar the funding gate uses.
+ */
+class ParityStreakRecorder(private val maxObservations: Int = 64) {
+    private val window = ArrayDeque<ParityObservation>()
+
+    @Synchronized
+    fun record(report: ParityReport, atElapsedMillis: Long) {
+        window.addLast(
+            ParityObservation(
+                synced = report.sdkSynced,
+                match = report.balancesMatch && report.confirmedBalancesMatch && report.txCountsMatch,
+                atElapsedMillis = atElapsedMillis
+            )
+        )
+        while (window.size > maxObservations) window.removeFirst()
+    }
+
+    @Synchronized
+    fun snapshot(): List<ParityObservation> = window.toList()
+
+    @Synchronized
+    fun clear() = window.clear()
+}
+
+/**
+ * Data-survival audit for the "keyed carry-over" inventory class: app
+ * Room rows are keyed by txid, so a row whose txid the post-cutover
+ * engine does not know is ORPHANED (its memo/fiat/gift-card context
+ * silently vanishes from the UI). Pure; collectors feed it the three
+ * txid sets. [missingFromSdk] non-empty blocks cutover for real
+ * metadata; [missingFromBoth] is pre-existing garbage (safe to ignore
+ * but reported for completeness).
+ */
+data class MetadataOrphanAudit(
+    val totalMetadataRows: Int,
+    val missingFromSdk: Set<String>,
+    val missingFromBoth: Set<String>
+) {
+    val clean: Boolean get() = missingFromSdk.isEmpty()
+}
+
+fun auditMetadataOrphans(
+    metadataTxids: Set<String>,
+    sdkTxids: Set<String>,
+    dashjTxids: Set<String>
+): MetadataOrphanAudit {
+    val notInSdk = metadataTxids - sdkTxids
+    val inNeither = notInSdk - dashjTxids
+    return MetadataOrphanAudit(
+        totalMetadataRows = metadataTxids.size,
+        // Rows dashj knows but the SDK does not = REAL loss at cutover.
+        missingFromSdk = notInSdk - inNeither,
+        missingFromBoth = inNeither
+    )
+}
+
+/**
  * The decision table. Pure; every rule keyed to one [CutoverBlocker].
  *
  * Parity rules look at the NEWEST-TAIL streak: the run of consecutive

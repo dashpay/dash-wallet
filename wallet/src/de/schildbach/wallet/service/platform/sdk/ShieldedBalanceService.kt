@@ -190,6 +190,14 @@ interface ShieldedBalanceService {
     suspend fun syncNow()
 
     /**
+     * Phase 5d cutover evidence: how many tracked shielded-top-up asset
+     * locks are still resumable (must be drained before a cutover). Null
+     * when the runtime isn't ready or the count cannot be read — callers
+     * must treat null as UNKNOWN (conservatively blocking), never as zero.
+     */
+    suspend fun pendingWalletShieldLockCount(): Int?
+
+    /**
      * Live unspent shielded balance, credits summed from the SDK's note
      * store and floored to [Dash]. Emits [Dash.ZERO] until
      * [ensureShieldedReady] succeeds.

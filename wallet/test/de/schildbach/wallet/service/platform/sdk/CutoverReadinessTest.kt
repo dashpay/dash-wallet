@@ -163,6 +163,73 @@ class CutoverReadinessTest {
         )
     }
 
+    // ── ParityStreakRecorder ─────────────────────────────────────────────
+
+    private fun report(
+        match: Boolean = true,
+        confirmedMatch: Boolean = true,
+        txCountsMatch: Boolean = true,
+        synced: Boolean = true
+    ) = ParityReport(
+        balancesMatch = match,
+        sdkDuffs = 100L,
+        dashjDuffs = if (match) 100L else 99L,
+        sdkTxCount = 5,
+        dashjTxCount = if (txCountsMatch) 5 else 4,
+        sdkSynced = synced,
+        timestampMs = 0L,
+        confirmedBalancesMatch = confirmedMatch,
+        sdkConfirmedDuffs = 100L,
+        dashjAvailableDuffs = if (confirmedMatch) 100L else 98L
+    )
+
+    @Test
+    fun recorder_matchRequiresAllThreeDimensions() {
+        val recorder = ParityStreakRecorder()
+        recorder.record(report(), atElapsedMillis = 1L)
+        recorder.record(report(confirmedMatch = false), atElapsedMillis = 2L)
+        recorder.record(report(txCountsMatch = false), atElapsedMillis = 3L)
+
+        val snapshot = recorder.snapshot()
+        assertEquals(listOf(true, false, false), snapshot.map { it.match })
+        assertTrue(snapshot.all { it.synced })
+    }
+
+    @Test
+    fun recorder_boundsTheWindow_andClears() {
+        val recorder = ParityStreakRecorder(maxObservations = 3)
+        (1L..5L).forEach { recorder.record(report(), atElapsedMillis = it) }
+        assertEquals(listOf(3L, 4L, 5L), recorder.snapshot().map { it.atElapsedMillis })
+
+        recorder.clear()
+        assertTrue(recorder.snapshot().isEmpty())
+    }
+
+    // ── Metadata orphan audit ────────────────────────────────────────────
+
+    @Test
+    fun orphanAudit_partitionsRealLossFromPreexistingGarbage() {
+        val audit = auditMetadataOrphans(
+            metadataTxids = setOf("a", "b", "c", "d"),
+            sdkTxids = setOf("a", "b"),
+            dashjTxids = setOf("a", "b", "c")
+        )
+        assertEquals(4, audit.totalMetadataRows)
+        // "c": dashj knows it, the SDK does not — REAL loss at cutover.
+        assertEquals(setOf("c"), audit.missingFromSdk)
+        // "d": neither engine knows it — pre-existing garbage, not a blocker.
+        assertEquals(setOf("d"), audit.missingFromBoth)
+        assertFalse(audit.clean)
+
+        assertTrue(
+            auditMetadataOrphans(
+                metadataTxids = setOf("a"),
+                sdkTxids = setOf("a"),
+                dashjTxids = setOf("a")
+            ).clean
+        )
+    }
+
     @Test
     fun blockersAccumulate_verdictIsATodoList() {
         val verdict = evaluateCutoverReadiness(

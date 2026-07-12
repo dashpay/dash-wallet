@@ -965,6 +965,14 @@ class L1ShadowSyncService internal constructor(
     /** The most recent parity measurement, for a future debug UI. */
     val latestParity: StateFlow<ParityReport?> = _latestParity.asStateFlow()
 
+    /**
+     * Phase 5d: bounded parity-observation window feeding the cutover
+     * readiness evaluator ([evaluateCutoverReadiness]) — recorded once per
+     * probe on the MONOTONIC clock, cleared on shadow reset so pre-reset
+     * evidence never counts toward a cutover.
+     */
+    val parityStreakRecorder = ParityStreakRecorder()
+
     private val _verificationStatus = MutableStateFlow(L1VerificationStatus.UNKNOWN)
 
     /**
@@ -1272,6 +1280,7 @@ class L1ShadowSyncService internal constructor(
             timestampMs = nowMs()
         )
         _latestParity.value = report
+        parityStreakRecorder.record(report, android.os.SystemClock.elapsedRealtime())
         log.info(parityLogLine(report))
         if (report.sdkSynced) {
             // The same evidence the funding gate requires: BOTH balance
@@ -1444,6 +1453,8 @@ class L1ShadowSyncService internal constructor(
                 runCatching { source.stopSpv() }
                     .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
                 _progress.value = ShadowSyncProgress.IDLE
+                // Pre-reset parity evidence must never count toward a cutover.
+                parityStreakRecorder.clear()
                 if (hard) {
                     deleteSpvDataDir()
                 }

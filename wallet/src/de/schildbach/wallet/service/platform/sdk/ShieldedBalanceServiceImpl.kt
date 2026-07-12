@@ -1236,6 +1236,17 @@ class ShieldedBalanceServiceImpl internal constructor(
         kickImmediateShieldedSync()
     }
 
+    override suspend fun pendingWalletShieldLockCount(): Int? {
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
+        return try {
+            source.walletShieldLocks(walletId).count { it.resumable }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("pending-lock count unavailable; cutover evidence stays UNKNOWN", t)
+            null
+        }
+    }
+
     private suspend fun kickImmediateShieldedSync() {
         try {
             source.syncShieldedNow()
