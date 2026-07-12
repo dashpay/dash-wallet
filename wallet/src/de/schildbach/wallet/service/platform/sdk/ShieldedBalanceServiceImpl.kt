@@ -1085,6 +1085,10 @@ class ShieldedBalanceServiceImpl internal constructor(
                     source.resumeFundFromAssetLock(walletId, outPoint.first, outPoint.second, recipient)
                     resumed++
                     log.info("pending wallet-shield lock {} resumed and consumed", lock.outPointHex)
+                    // The direct path kicks this too — without it a shield
+                    // completed via RESUME (interrupted stage (b)) sat on the
+                    // ~60s tick before the balance appeared (observed live).
+                    kickImmediateShieldedSync()
                 } catch (t: Throwable) {
                     if (t is CancellationException) throw t
                     log.warn(
@@ -1227,6 +1231,11 @@ class ShieldedBalanceServiceImpl internal constructor(
      * op result — failures are logged and swallowed; the background loop
      * remains the source of truth.
      */
+    override suspend fun syncNow() {
+        if (readyWalletIdHex.value == null) return
+        kickImmediateShieldedSync()
+    }
+
     private suspend fun kickImmediateShieldedSync() {
         try {
             source.syncShieldedNow()

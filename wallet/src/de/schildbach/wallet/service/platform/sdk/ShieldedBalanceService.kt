@@ -180,6 +180,16 @@ interface ShieldedBalanceService {
     suspend fun stop()
 
     /**
+     * Best-effort immediate sync pass — for screen-entry refreshes, so a
+     * balance surface shows fresh notes on arrival instead of on the next
+     * ~60s background tick (Brian: the More card should refresh as soon
+     * as the screen becomes active). No-op when the runtime isn't ready;
+     * failures are logged and swallowed (the background loop remains the
+     * source of truth).
+     */
+    suspend fun syncNow()
+
+    /**
      * Live unspent shielded balance, credits summed from the SDK's note
      * store and floored to [Dash]. Emits [Dash.ZERO] until
      * [ensureShieldedReady] succeeds.

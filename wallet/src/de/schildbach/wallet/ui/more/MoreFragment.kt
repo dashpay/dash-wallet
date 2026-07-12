@@ -460,9 +460,18 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             renderShieldedCardAmount(latestStatus, latestBalance, latestHasShieldedContext)
 
             // Bring the shielded runtime up so the balance loads and the sync
-            // status advances past NOT_READY. Idempotent + single-flight; the
+            // status advances past NOT_READY, then kick an immediate sync
+            // pass so the card shows fresh notes on screen entry instead of
+            // waiting out the ~60s background tick (Brian's request after
+            // the first live shield). Idempotent + single-flight; the
             // background sync/poll runs in the app scope, not this one.
-            launch { runCatching { shieldedBalanceService.ensureShieldedReady() } }
+            launch {
+                runCatching {
+                    if (shieldedBalanceService.ensureShieldedReady()) {
+                        shieldedBalanceService.syncNow()
+                    }
+                }
+            }
         }
     }
 
