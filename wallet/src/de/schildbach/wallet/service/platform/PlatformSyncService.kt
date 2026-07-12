@@ -1830,9 +1830,21 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun clearDatabases() {
-        // push all changes to platform before clearing the database tables
+        // Push all changes to platform before clearing the database tables —
+        // best-effort and time-bounded: this is a NETWORK + signing operation
+        // running inside a wallet reset (the wallet may already be unloading),
+        // and a hang or throw here must never block the wipe or prevent the
+        // clears below (partially-cleared DashPay state resurrects the
+        // DashPay UI on the next wallet).
         if (Constants.SUPPORTS_PLATFORM && dashPayConfig.shouldSaveOnReset()) {
-            publishChangeCache(System.currentTimeMillis(), saveAll = true) // Before now - push everything
+            try {
+                withTimeout(30_000) {
+                    publishChangeCache(System.currentTimeMillis(), saveAll = true) // Before now - push everything
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException && e !is TimeoutCancellationException) throw e
+                log.warn("pre-reset metadata publish failed/timed out; continuing with the clears", e)
+            }
         }
         transactionMetadataChangeCacheDao.clear()
         transactionMetadataDocumentDao.clear()
