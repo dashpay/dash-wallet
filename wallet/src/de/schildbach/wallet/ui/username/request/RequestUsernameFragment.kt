@@ -169,6 +169,15 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         }
 
         requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
+            // Shielded submissions run an app-scoped ~30s proof while this
+            // screen stays visible — show a DISMISSIBLE processing dialog
+            // (Brian: submitting silently dropped back to the entry screen
+            // with no feedback). Terminal states below replace it.
+            if (it.usernameRequestSubmitting) {
+                showProcessingDialog()
+            } else {
+                dismissProcessingDialog()
+            }
             if (it.usernameSubmittedError) {
                 showErrorDialog()
             }
@@ -447,6 +456,21 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 requestUserNameViewModel.submit()
             }
         }
+    }
+
+    private var processingDialog: AdaptiveDialog? = null
+
+    /** Dismissible: the creation runs on the app scope and survives the dialog. */
+    private fun showProcessingDialog() {
+        if (processingDialog?.dialog?.isShowing == true) return
+        processingDialog = AdaptiveDialog.progress(getString(R.string.username_creation_processing))
+            .apply { isCancelable = true }
+            .also { it.show(requireActivity()) { } }
+    }
+
+    private fun dismissProcessingDialog() {
+        processingDialog?.dismissAllowingStateLoss()
+        processingDialog = null
     }
 
     /**

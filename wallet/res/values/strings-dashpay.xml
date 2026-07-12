@@ -439,6 +439,8 @@
          non-contested, worded from the request screen's validation rules;
          costs are the amounts withdrawn from the shielded balance. -->
     <string name="username_cost_info_title">Shielded username costs</string>
+    <!-- Dismissible processing dialog while the shielded creation proves (~30s). -->
+    <string name="username_creation_processing">Creating your username… This could take about 30 seconds. You can close this dialog — the request keeps running.</string>
     <!-- Shielded creation outcome unconfirmed (may be on chain) — no retry offered. -->
     <string name="username_request_ambiguous_title">Request may have gone through</string>
     <string name="username_request_ambiguous_message">We could not confirm the result. Do not submit again — the app will check and recover automatically.</string>
