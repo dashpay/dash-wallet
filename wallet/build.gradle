@@ -83,7 +83,7 @@ dependencies {
     implementation "org.dashj:dashj-core:$dashjVersion"
     // Dash Platform Kotlin SDK (Phase 3+ of the dashj migration; see docs/kotlin-sdk-migration-plan.md).
     // Published from the platform repo's kotlin-sdk package (locally: ./gradlew :sdk:publishToMavenLocal).
-    implementation "org.dashfoundation:dash-sdk-android:0.1.0-SNAPSHOT"
+    implementation "org.dashj:dash-sdk-android:0.1.0-SNAPSHOT"
     // dashj-platform SDK is declared per-flavor in a dependencies block after the
     // android {} block, since the flavor-scoped configurations (e.g. prodImplementation)
     // only exist once productFlavors have been registered.

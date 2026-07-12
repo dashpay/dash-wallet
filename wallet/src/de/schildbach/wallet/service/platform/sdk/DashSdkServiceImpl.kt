@@ -30,6 +30,7 @@ import org.dashfoundation.dashsdk.Network
 import org.dashfoundation.dashsdk.Sdk
 import org.dashfoundation.dashsdk.config.SdkConfig
 import org.dashfoundation.dashsdk.persistence.DashDatabase
+import org.dashfoundation.dashsdk.security.KeySecurityPolicy
 import org.dashfoundation.dashsdk.security.WalletStorage
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
 import org.dashfoundation.dashsdk.wallet.WalletManagerStore
@@ -689,14 +690,22 @@ class DashSdkServiceImpl @Inject constructor(
         Sdk.enableLogging(if (BuildConfig.DEBUG) Sdk.LogLevel.DEBUG else Sdk.LogLevel.WARN)
 
         // 2. Storage layer — ← AppContainer construction (database,
-        //    walletStorage, walletManagerStore fields). No BiometricGate:
-        //    the app gates secrets with its own PIN (SecurityGuard), and
-        //    the auth-gated key flows are a Phase 3b concern.
+        //    walletStorage, walletManagerStore fields). DEVICE_BOUND key
+        //    policy (#4060): this app gates wallet access with its own PIN
+        //    (SecurityGuard), so the SDK's default AUTH_GATED alias only
+        //    added a second, unwired auth layer — identity-key signing died
+        //    with "User not authenticated" outside the ~30 s post-unlock
+        //    window (observed live: contact-accept dead ends, mid-operation
+        //    signing failures). DEVICE_BOUND keys stay hardware-backed and
+        //    non-exportable but never throw UserNotAuthenticatedException.
+        //    Keys previously wrapped under the AUTH_GATED alias surface as
+        //    unhealthy and are re-derived + re-wrapped by the binder's
+        //    key-heal pass (repairIdentityKey) — no user action needed.
         var database: DashDatabase? = null
         var sdk: Sdk? = null
         try {
             database = DashDatabase.create(context)
-            val walletStorage = WalletStorage(context)
+            val walletStorage = WalletStorage(context, KeySecurityPolicy.DEVICE_BOUND)
             val walletManagerStore = WalletManagerStore(database, walletStorage)
 
             // 3. Per-network SDK build — ← AppState.initializeSdk called from
