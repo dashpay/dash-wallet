@@ -40,6 +40,7 @@ import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
+import de.schildbach.wallet.service.platform.IdentityKeyChainBackfill
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
@@ -55,6 +56,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.*
+import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.AuthenticationKeyChain
@@ -467,6 +469,92 @@ class PlatformRepo @Inject constructor(
         val key = decryptedChain.getKey(index)
         Preconditions.checkState(key.path.last().isHardened)
         return key
+    }
+
+    /**
+     * Ensures the BLOCKCHAIN_IDENTITY authentication key chain has ISSUED every key that
+     * [identity] registered from that chain, so that legacy dashj-platform signing
+     * (`WalletSignerCallback.sign` → `AuthenticationKeyChain.findKeyFromPubKey`) can resolve
+     * the private key. The identity chain has lookahead 0, so only issued keys are findable
+     * by public key.
+     *
+     * Identities created by the legacy dashj flow issue their keys at registration and this is
+     * a no-op for them. Identities created by the Kotlin SDK (canonical 4-key set, derivation
+     * index == keyId) arrive via the restore path with zero issued keys, and without this
+     * backfill every legacy-path signature (contact request send/accept, profile
+     * create/update) fails with "signer callback returned 0".
+     *
+     * The import mechanics mirror the encrypted-wallet fallback inside the legacy
+     * `BlockchainIdentity.privateKeyAtIndex`: decrypt the chain's watching (account) key,
+     * derive the hardened child, re-encrypt it against the watching key and add it via
+     * `AuthenticationGroupExtension.addNewKey` (which imports it into the chain's basic key
+     * chain and persists the wallet).
+     *
+     * Never throws; failures are logged and the number of keys issued so far is returned.
+     *
+     * @return the number of keys that were newly issued (0 if nothing was missing)
+     */
+    fun ensureIdentityChainKeys(identity: Identity?, keyParameter: KeyParameter?): Int {
+        identity ?: return 0
+        var issued = 0
+        try {
+            val authExtension = authenticationGroupExtension ?: return 0
+            val identityChain = authExtension.getKeyChain(
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY
+            ) ?: return 0
+            val wallet = walletApplication.wallet ?: return 0
+
+            val watchingKey = identityChain.watchingKey
+            val decryptedParent = if (wallet.isEncrypted) {
+                val keyCrypter = wallet.keyCrypter ?: return 0
+                if (keyParameter == null) {
+                    log.warn("ensureIdentityChainKeys: wallet is encrypted but no key was provided")
+                    return 0
+                }
+                watchingKey.decrypt(keyCrypter, keyParameter) as IDeterministicKey
+            } else {
+                watchingKey
+            }
+
+            val derivedKeys = hashMapOf<Int, IDeterministicKey>()
+            fun derive(index: Int): IDeterministicKey = derivedKeys.getOrPut(index) {
+                decryptedParent.deriveChildKey(ChildNumber(index, true))
+            }
+
+            val indexes = IdentityKeyChainBackfill.indexesToIssue(
+                identity.publicKeys.map { IdentityKeyChainBackfill.IdentityKeyRef(it.id, it.data) },
+                derivePublicKey = { index ->
+                    try {
+                        derive(index).pubKey
+                    } catch (e: Exception) {
+                        log.warn("ensureIdentityChainKeys: cannot derive identity key at index $index", e)
+                        null
+                    }
+                },
+                isIssued = { pubKey -> identityChain.findKeyFromPubKey(pubKey) != null }
+            )
+
+            indexes.forEach { index ->
+                var key = derive(index)
+                if (wallet.isEncrypted) {
+                    key = key.encrypt(wallet.keyCrypter, keyParameter, watchingKey)
+                }
+                authExtension.addNewKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY, key)
+                issued++
+            }
+            if (issued > 0) {
+                log.info(
+                    "ensureIdentityChainKeys: issued {} missing identity chain key(s) at index(es) {} " +
+                        "for identity {}",
+                    issued,
+                    indexes,
+                    identity.id
+                )
+            }
+        } catch (e: Exception) {
+            log.error("ensureIdentityChainKeys: failed after issuing $issued key(s)", e)
+        }
+        return issued
     }
 
     fun observeProfileByUserId(userId: String): Flow<DashPayProfile?> {

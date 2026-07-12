@@ -170,6 +170,14 @@ class PlatformDocumentBroadcastService @Inject constructor(
             }
         }
 
+        // The legacy create below signs with the identity's HIGH/AUTHENTICATION key, resolved
+        // through AuthenticationKeyChain.findKeyFromPubKey — which only knows keys ISSUED on
+        // the BLOCKCHAIN_IDENTITY chain. SDK-created identities that were handed to dashj via
+        // the restore path have none issued (the chain has lookahead 0), so signing fails with
+        // "signer callback returned 0". Backfill any missing chain keys here; this repairs
+        // wallets restored before the fix in RestoreIdentityWorker and is a no-op otherwise.
+        platformRepo.ensureIdentityChainKeys(blockchainIdentity.identity, encryptionKey)
+
         // Create Contact Request
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
         val cr = platform.contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
@@ -256,6 +264,11 @@ class PlatformDocumentBroadcastService @Inject constructor(
                 // Fall through to the unchanged dashj path.
             }
         }
+
+        // Same WalletSignerCallback → findKeyFromPubKey resolution as the contact request
+        // path: backfill identity chain keys that were never issued (SDK-created identities
+        // restored into dashj); no-op otherwise.
+        platformRepo.ensureIdentityChainKeys(blockchainIdentity.identity, encryptionKey)
 
         // Create Identity Verify
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
@@ -377,6 +390,12 @@ class PlatformDocumentBroadcastService @Inject constructor(
                 // Fall through to the unchanged dashj path.
             }
         }
+
+        // Legacy Profiles.create/replace sign with the identity's HIGH key through
+        // WalletSignerCallback → AuthenticationKeyChain.findKeyFromPubKey, which only knows
+        // ISSUED chain keys — backfill any missing ones (SDK-created identities restored
+        // into dashj have none); no-op for legacy-created identities.
+        platformRepo.ensureIdentityChainKeys(blockchainIdentity.identity, encryptionKey)
 
         //Create Contact Request
         val timer: AnalyticsTimer

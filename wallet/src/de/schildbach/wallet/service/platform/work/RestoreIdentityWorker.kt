@@ -154,6 +154,15 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 firstIdentityKey.pubKeyHash
             )
 
+            // Recovery only fetches the identity; it never issues the identity's keys on the
+            // wallet's BLOCKCHAIN_IDENTITY chain (lookahead 0). Identities created by the
+            // Kotlin SDK (canonical 4-key set, derivation index == keyId) therefore arrive
+            // with zero issued keys and every later legacy-path signature (contact request
+            // send/accept, profile create/update) dies in WalletSignerCallback with
+            // "signer callback returned 0". Backfill them now; a no-op for identities whose
+            // keys were issued at creation by the legacy flow.
+            platformRepo.ensureIdentityChainKeys(blockchainIdentity.identity, encryptionKey)
+
             identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetIdentity)
