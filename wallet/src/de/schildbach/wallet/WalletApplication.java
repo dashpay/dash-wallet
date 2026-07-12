@@ -224,6 +224,8 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     PlatformSyncService platformSyncService;
     @Inject
+    de.schildbach.wallet.ui.dashpay.utils.DashPayConfig dashPayConfig;
+    @Inject
     TopUpRepository topUpRepository;
     @Inject
     PackageInfoProvider packageInfoProvider;

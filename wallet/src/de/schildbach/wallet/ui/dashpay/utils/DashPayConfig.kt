@@ -243,23 +243,38 @@ open class DashPayConfig @Inject constructor(
         // builds keep them OFF until rollout. QA can still toggle them afterwards.
         if (BuildConfig.DEBUG) {
             CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    if (get(USE_KOTLIN_SDK_DPNS_READS) == null) {
-                        set(USE_KOTLIN_SDK_DPNS_READS, true)
-                    }
-                    if (get(USE_KOTLIN_SDK_DASHPAY_WRITES) == null) {
-                        set(USE_KOTLIN_SDK_DASHPAY_WRITES, true)
-                    }
-                    if (get(USE_KOTLIN_SDK_SHIELDED) == null) {
-                        set(USE_KOTLIN_SDK_SHIELDED, true)
-                    }
-                    if (get(USE_KOTLIN_SDK_L1_SHADOW) == null) {
-                        set(USE_KOTLIN_SDK_L1_SHADOW, true)
-                    }
-                } catch (e: Exception) {
-                    // best-effort seeding; the flags simply stay at their OFF default
-                }
+                seedDebugDefaultsIfUnset()
             }
+        }
+    }
+
+    /**
+     * Idempotent debug-flag seeding — callable OUTSIDE the init block
+     * because a Reset Wallet wipes this DataStore MID-PROCESS: the
+     * singleton already exists, so the init-time pass never re-runs, all
+     * `USE_KOTLIN_SDK_*` flags silently read as OFF, and every SDK path
+     * (binder, shadow, shielded) goes inert with no log trail — observed
+     * live: the duck-say overnight restore ran with the SDK dark. The
+     * wipe path calls this after clearing (debug builds only; a no-op on
+     * release where BuildConfig.DEBUG gates the caller).
+     */
+    suspend fun seedDebugDefaultsIfUnset() {
+        if (!BuildConfig.DEBUG) return
+        try {
+            if (get(USE_KOTLIN_SDK_DPNS_READS) == null) {
+                set(USE_KOTLIN_SDK_DPNS_READS, true)
+            }
+            if (get(USE_KOTLIN_SDK_DASHPAY_WRITES) == null) {
+                set(USE_KOTLIN_SDK_DASHPAY_WRITES, true)
+            }
+            if (get(USE_KOTLIN_SDK_SHIELDED) == null) {
+                set(USE_KOTLIN_SDK_SHIELDED, true)
+            }
+            if (get(USE_KOTLIN_SDK_L1_SHADOW) == null) {
+                set(USE_KOTLIN_SDK_L1_SHADOW, true)
+            }
+        } catch (e: Exception) {
+            // best-effort seeding; the flags simply stay at their OFF default
         }
     }
 
