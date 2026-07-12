@@ -235,6 +235,17 @@ open class DashPayConfig @Inject constructor(
          * see `ShadowResetDecider`'s decision table.
          */
         val L1_SHADOW_LAST_RESET = longPreferencesKey("l1_shadow_last_reset")
+
+        /**
+         * Phase 5d cutover state machine (see docs/kotlin-sdk-migration-plan.md
+         * and [de.schildbach.wallet.service.platform.sdk.CutoverState]).
+         * Persisted per-install so the engine-start decision survives process
+         * death; absent = [de.schildbach.wallet.service.platform.sdk
+         * .CutoverState.DUAL_RUNNING] (today's behavior). The transition to
+         * CUT_OVER is the single atomic write that makes the SDK the L1
+         * source of truth; every engine-start site consults it first.
+         */
+        val CUTOVER_STATE = stringPreferencesKey("cutover_state")
     }
 
     init {
