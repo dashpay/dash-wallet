@@ -166,7 +166,9 @@ fun MakeUsernamePrivateSheet(
             )
 
             // The funding bar, with the ⓘ opening the contested vs
-            // non-contested cost explainer.
+            // non-contested cost explainer. weight(fill=false) keeps the
+            // text from claiming the whole row — without it the icon
+            // measures at zero width and disappears (observed on the S21).
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -175,7 +177,8 @@ fun MakeUsernamePrivateSheet(
                 Text(
                     text = stringResource(R.string.username_payment_min_shield, minShieldAmount),
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textPrimary
+                    color = MyTheme.Colors.textPrimary,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 Image(
                     painter = painterResource(org.dash.wallet.common.R.drawable.ic_info_blue),
@@ -222,14 +225,10 @@ fun MakeUsernamePrivateSheet(
                 .padding(horizontal = 60.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            if (!canShieldMinimum) {
-                Text(
-                    text = stringResource(R.string.username_payment_shield_minimum, minShieldAmount),
-                    style = MyTheme.Typography.BodySmall,
-                    color = MyTheme.Colors.textSecondary,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            // No repeated minimum text here: the funding bar is already
+            // stated (with the ⓘ) under the title, and the disabled state
+            // itself communicates "can't shield yet" (Brian: saying 0.1
+            // twice on one sheet is noise).
             DashButton(
                 text = stringResource(R.string.username_payment_shield_first),
                 style = Style.Filled,
