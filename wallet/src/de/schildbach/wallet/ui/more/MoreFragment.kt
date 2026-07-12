@@ -18,15 +18,9 @@
 package de.schildbach.wallet.ui.more
 
 import android.content.Intent
-import android.graphics.Typeface
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
-import android.text.SpannableString
-import android.text.Spanned
-import android.text.TextPaint
 import android.text.format.DateFormat
-import android.text.style.MetricAffectingSpan
-import android.text.style.StyleSpan
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -70,8 +64,6 @@ import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.display
-import de.schildbach.wallet.ui.shielded.toCompactCreditsString
-import de.schildbach.wallet.ui.shielded.toDisplayString
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
@@ -130,6 +122,18 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     @Inject lateinit var analytics: AnalyticsService
     @Inject lateinit var dashPayConfig: DashPayConfig
     @Inject lateinit var shieldedBalanceService: ShieldedBalanceService
+
+    /**
+     * Balance-card amount format, shared by the Dash and Shielded cards
+     * (design 1691:15460 shows "2.00 Đ"): two decimals, rounded DOWN so a
+     * card never overstates the balance; Đ stays an Inter font glyph
+     * appended in the string (a trailing ImageView clips).
+     */
+    private val balanceCardFormat = org.dash.wallet.common.money.MoneyFormat()
+        .noCode()
+        .minDecimals(2)
+        .optionalDecimals()
+        .roundingMode(java.math.RoundingMode.DOWN)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -422,17 +426,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
             binding.balanceCardsContainer.isVisible = true
 
-            // Design 1691:15460 shows the card amount at two decimals ("2.00 Đ") —
-            // rounded DOWN so the card never overstates the balance. Đ stays an
-            // Inter font glyph inside the string (a trailing ImageView clips).
-            val cardFormat = org.dash.wallet.common.money.MoneyFormat()
-                .noCode()
-                .minDecimals(2)
-                .optionalDecimals()
-                .roundingMode(java.math.RoundingMode.DOWN)
             walletData.observeTotalBalance().observe(viewLifecycleOwner) { balance ->
                 binding.walletBalanceCardAmount.text =
-                    "${cardFormat.format(org.dash.wallet.common.money.Dash(balance.value))} Đ"
+                    "${balanceCardFormat.format(org.dash.wallet.common.money.Dash(balance.value))} Đ"
             }
 
             // The shielded card must never flash a bare "0" for a funded wallet
@@ -471,52 +467,27 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     /**
-     * Render the "Shielded" card's amount (Figma 1693:15853). The AMOUNT arm
-     * of [mapShieldedCardDisplay] shows the compact credits value at the
-     * design's 20sp with the magnitude suffix (B/M/K/T) raised and small
-     * (caption-2 11sp) plus the credits glyph; the SYNCING arm shows a subtle
-     * "Syncing…" placeholder and hides the glyph, so a still-syncing funded
-     * wallet is never misread as empty — while a fresh wallet with nothing
-     * shielded to sync shows its honest zero (see [mapShieldedCardDisplay]).
+     * Render the "Shielded" card's amount. The AMOUNT arm of
+     * [mapShieldedCardDisplay] shows the balance in DASH, formatted exactly
+     * like the sibling Dash Wallet card ("2.00 Đ" — two decimals, rounded
+     * DOWN so the card never overstates, Đ as an Inter glyph in the string);
+     * the credits glyph stays hidden (the card stopped showing credits per
+     * Brian, 2026-07-12). The SYNCING arm shows a subtle "Syncing…"
+     * placeholder, so a still-syncing funded wallet is never misread as
+     * empty — while a fresh wallet with nothing shielded to sync shows its
+     * honest zero (see [mapShieldedCardDisplay]).
      */
     private fun renderShieldedCardAmount(status: ShieldedSyncStatus, balance: Dash, hasShieldedContext: Boolean) {
         val amount = binding.shieldedBalanceCardAmount
+        binding.shieldedBalanceCardSymbol.isVisible = false
         if (mapShieldedCardDisplay(status, hasShieldedContext) == ShieldedCardDisplay.AMOUNT) {
             amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
             amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.content_primary))
-            amount.text = compactCreditsSpannable(balance)
-            binding.shieldedBalanceCardSymbol.isVisible = true
+            amount.text = "${balanceCardFormat.format(balance)} Đ"
         } else {
             amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.content_secondary))
             amount.text = getString(R.string.shielded_balance_syncing)
-            binding.shieldedBalanceCardSymbol.isVisible = false
-        }
-    }
-
-    /**
-     * Compact credits string with the magnitude suffix letter rendered at the
-     * design's smaller, raised caption size (Figma shows "115.5ᴮ" — 20sp value,
-     * 11sp/20sp ≈ 0.55 heavy superscript "B"). No suffix (small values) renders
-     * plain. The raise is done by [RaisedSuffixSpan], NOT
-     * [android.text.style.SuperscriptSpan]: the platform span shifts the
-     * baseline up by half the ascent, TextLine extends the line's ascent by
-     * that whole shift, and the taller line box grew the Shielded pill past
-     * its sibling Dash pill once a real value replaced "Syncing…"
-     * (screenshot-verified card misalignment on the More screen).
-     */
-    private fun compactCreditsSpannable(balance: Dash): CharSequence {
-        val text = balance.toCompactCreditsString()
-        val last = text.lastOrNull()
-        if (last == null || !last.isLetter()) {
-            return text
-        }
-        val start = text.length - 1
-        return SpannableString(text).apply {
-            // bold first: RaisedSuffixSpan then measures the BOLD full-size
-            // ascent it must stay inside (spans apply in insertion order)
-            setSpan(StyleSpan(Typeface.BOLD), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            setSpan(RaisedSuffixSpan(0.55f), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
 
@@ -711,34 +682,3 @@ internal fun mapShieldedCardDisplay(
 internal fun hasShieldedContext(identity: BlockchainIdentityBaseData): Boolean =
     identity.creationState != IdentityCreationState.NONE || identity.userId != null
 
-/**
- * Scales the credits magnitude suffix down by [scale] and raises it toward
- * the cap line WITHOUT growing the line box — unlike
- * [android.text.style.SuperscriptSpan], whose `baselineShift += ascent / 2`
- * pushes the run's ascent above the surrounding text's (TextLine extends the
- * line's ascent by any negative baselineShift), expanding the TextView's
- * line height and with it the balance pill.
- *
- * This span shrinks the glyph FIRST and then raises it only until the scaled
- * ascent touches the ORIGINAL full-size ascent: the run's effective ascent
- * (`scaledAscent + shift == fullAscent`) exactly equals the surrounding
- * text's, and the scaled top stays inside the full-size top
- * (`fullAscent + (top − ascent) · scale > fullTop` for scale < 1), so the
- * line metrics — and the pill height — are identical whether the suffix is
- * present or not. Applied to both measuring and drawing so layout and render
- * agree.
- */
-private class RaisedSuffixSpan(private val scale: Float) : MetricAffectingSpan() {
-
-    override fun updateDrawState(tp: TextPaint) = raise(tp)
-
-    override fun updateMeasureState(tp: TextPaint) = raise(tp)
-
-    private fun raise(tp: TextPaint) {
-        val fullAscent = tp.ascent() // negative (distance above the baseline)
-        tp.textSize *= scale
-        // negative shift raises; sized so the scaled ascent lands exactly on
-        // the full-size ascent — never above it
-        tp.baselineShift += (fullAscent - tp.ascent()).toInt()
-    }
-}
