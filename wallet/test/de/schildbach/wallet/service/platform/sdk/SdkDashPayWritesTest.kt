@@ -143,6 +143,23 @@ class SdkDashPayWritesTest {
     }
 
     @Test
+    fun classify_identityKeyValidation_isNotBroadcast() {
+        // The live S21 failure: the FFI validates the SENDER identity's key
+        // set while BUILDING a contact request (before signing/submission)
+        // and rejects identities without an ENCRYPTION-purpose key — every
+        // dashj-created identity and Type-20 shielded-created identities.
+        // Nothing was broadcast, and the dashj fallback derives DIP-15
+        // encryption keys from the seed, so falling back is sufficient.
+        val liveShape = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "Invalid identity data: Identity has no enabled ECDSA_SECP256K1 encryption key"
+        )
+        val result = classifyBroadcastFailure(liveShape)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertSame(liveShape, (result as SdkWriteResult.NotBroadcast).cause)
+    }
+
+    @Test
     fun classify_keystoreAuthWindowExpiry_isNotBroadcast() {
         // The live S22 failure: the SDK's AUTH_GATED Keystore threw
         // UserNotAuthenticatedException while decrypting the identity key to

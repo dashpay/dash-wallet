@@ -108,6 +108,18 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // message-matched until the SDK exposes a typed signing error.
     t.message?.contains("no private key stored") == true ->
         SdkWriteResult.NotBroadcast("signing failure (pre-broadcast): no private key stored", t)
+    // The FFI validates the SENDER identity's key set while BUILDING a
+    // contact request — strictly before signing or submission. Identities
+    // without an ENCRYPTION-purpose key (every dashj-created identity, and
+    // Type-20 shielded-created identities with the canonical 4-key set)
+    // fail here as a Generic "Invalid identity data: Identity has no
+    // enabled ECDSA_SECP256K1 encryption key" (observed live: the first
+    // contact request from a shielded-created identity). Nothing was
+    // broadcast → the dashj fallback is safe AND sufficient: the legacy
+    // path derives DIP-15 encryption keys from the wallet seed, not from
+    // identity keys. Message-matched until the SDK exposes a typed error.
+    t.message?.contains("Invalid identity data") == true ->
+        SdkWriteResult.NotBroadcast("pre-broadcast identity-key validation failure", t)
     // Android Keystore auth-window expiry: the SDK keeps identity keys
     // AUTH_GATED (decryptable only within ~30 s of a biometric/device-credential
     // unlock), and an expired window surfaces as UserNotAuthenticatedException —
