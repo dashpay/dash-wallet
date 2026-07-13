@@ -33,5 +33,6 @@ data class GiftCard(
     var barcodeFormat: BarcodeFormat? = null,
     var merchantUrl: String? = null, // holds claimLink or redeemUrl
     var note: String? = null, // holds order number
-    var index: Int = 0
+    var index: Int = 0,
+    var redeemUrlChallenge: String? = null
 )

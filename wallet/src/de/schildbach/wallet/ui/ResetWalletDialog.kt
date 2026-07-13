@@ -51,8 +51,12 @@ class ResetWalletDialog : DialogFragment() {
                     // 1. wipe the wallet
                     // 2. start OnboardingActivity
                     // 3. close the backstack (Home->More->Security)
+                    // The wipe completes asynchronously and the callback fires after this fragment's
+                    // activity has been torn down, so restart using the application context rather than
+                    // requireActivity() (which would throw "Fragment not attached to an activity").
+                    val appContext = WalletApplication.getInstance()
                     WalletApplication.getInstance().triggerWipe() {
-                        restartService.performRestart(requireActivity(), true)
+                        restartService.performRestart(appContext, true)
                     }
                 }
                 positiveText = getString(android.R.string.no)

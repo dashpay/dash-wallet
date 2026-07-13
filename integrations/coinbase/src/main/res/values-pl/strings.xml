@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">Pomiędzy twoim Portfelem Dash a twoim kontem na Coinbase</string>
     <string name="coinbase_dash_wallet_error_title">Nie znaleźliśmy Porfela Dash na twoim koncie Coinbase</string>
     <string name="coinbase_dash_wallet_error_message">Aby kontynuować, stwórz portfel Dash na Coinbase.</string>
+    <string name="coinbase_usd_wallet_error_message">Twoje konto Coinbase nie obsługuje USD.</string>
     <string name="create_dash_account">Stwórz Konto Dash</string>
     <string name="close">Zamknij</string>
     <string name="retry">Ponów</string>

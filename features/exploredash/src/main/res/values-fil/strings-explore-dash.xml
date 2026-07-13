@@ -46,6 +46,8 @@
     <string name="explore_no_atms">Walang mga ATM</string>
     <string name="distance_miles">%s milya</string>
     <string name="distance_kilometers">%s kilometro</string>
+    <string name="explore_fee">bayad %s%%</string>
+
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d mga merchant</item>
         <item quantity="other">%d mga merchant</item>
@@ -180,14 +182,23 @@
     <string name="purchase_gift_card_at">sa</string>
     <string name="purchase_gift_card_min">Pinakamababa: %s</string>
     <string name="purchase_gift_card_max">Pinakamataas: %s</string>
+    <string name="gift_card_tab_single">Nag-iisa</string>
+    <string name="gift_card_tab_multiple">Marami</string>
+    <string name="gift_card_buy_title">Bumili ng gift card</string>
     <string name="purchase_gift_card_discount_hint">Bumibili ka ng %s gift card para sa %s (%s diskwento)</string>
     <string name="button_next">Susunod</string>
     <string name="purchase_gift_card_from">mula sa</string>
     <string name="purchase_gift_card_to">Sa</string>
     <string name="purchase_confirm_transaction">Kumpirmahin</string>
-    <string name="purchase_gift_card_total_label">kabuuang gift card</string>
+    <string name="purchase_gift_card_total_label">Halaga ng Gift card </string>
     <string name="purchase_gift_card_discount">Diskwento</string>
     <string name="purchase_gift_card_you_pay">Magbabayad ka</string>
+    <string name="purchase_gift_card_quantity_label">Dami</string>
+    <plurals name="purchase_gift_card_quantity_value">
+        <item quantity="one">%d mga card</item>
+        <item quantity="other">%d mga card</item>
+    </plurals>
+    <string name="purchase_gift_card_denomination_label">Halaga ng card</string>
     <string name="purchase_gift_card_confirm">Kumpirmahin</string>
     <string name="purchase_gift_card_details">Mga detalye ng gift card</string>
     <string name="purchase_original_purchase">Orihinal na pagbili</string>
@@ -203,6 +214,9 @@
     <string name="purchase_tell_the_cashier">Sabihin sa cashier na nagbabayad ka gamit ang isang digital gift card. Cashier: i-type ang kabuuang halaga sa field ng Bankcard, pagkatapos ay i-type ang numero ng gift card sa field ng Account at pindutin ang Enter.</string>
     <string name="purchase_in_the_payment_section">Sa seksyon ng pagbabayad, ilagay ang numero ng iyong digital na gift card sa field ng gift card.</string>
     <string name="purchase_powered_by">Pinatatakbo ng</string>
+    <string name="purchase_cashier_instructions">Mga tagubilin sa cashier</string>
+    <string name="purchase_cashier_instructions_body">Tanggapin ang gift card o eGift Card sa pag-checkout at iproseso ito bilang bayad.</string>
+    <string name="purchase_gift_card_date_format">%1$s at %2$s</string>
     <string name="insufficient_money_title">Hindi sapat ang barya</string>
     <string name="insufficient_money_msg">Hindi sapat na pondo</string>
     <string name="send_coins_error_msg">Nagkaproblema sa pagpapadala ng barya!</string>
@@ -210,7 +224,12 @@
     <string name="gift_card_tx_title">Gift card · %s</string>
     <string name="select_amount">Pumili ng halaga</string>
     <string name="select_fixed_amount">Ang merchant na ito ay nagbebenta ng mga gift card sa mga nakapirming presyo</string>
-
+    <string name="purchase_gift_card_max_multiple_error">Maaari kang bumili ng hanggang  %ssa mga gift card bawat order</string>
+    <string name="purchase_gift_card_insufficient_money_error">Hindi sapat ang Dash para bilhin ang mga gift card na ito</string>
+    <string name="purchase_gift_card_insufficient_inventory">Hindi sapat na imbentaryo para sa %s na makabili ng %d x %s cards</string>
+    <string name="purchase_gift_card_inventory_toast"> %dcard lang ang available ng Merchant </string>
+    <string name="purchase_gift_card_single_card_only_toast">Maaari kang pumili lamang ng isang halaga ng card</string>
+    <string name="purchase_gift_card_reset">I-reset</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Ilagay ang verification code</string>
     <string name="verification_check_email">Suriin ang iyong email at ilagay ang verification code</string>
@@ -244,6 +263,7 @@
     <string name="accept_to_proceed">Upang gumawa ng account sa DashSpend kailangan mong tanggapin ang mga tuntunin at kundisyon ng DashSpend</string>
     <string name="view_terms_conditions">Mga Tuntunin &amp; kundisyon</string>
     <string name="barcode_placeholder">Mangyaring maghintay na maihatid ang mga detalye ng gift card.</string>
+    <string name="purchase_order_number">Numero ng Order</string>
     <string name="gift_card_contact_ctx">Makipag-ugnayan sa Suporta sa CTX</string>
     <string name="gift_card_contact_piggycards">Makipag-ugnayan sa Suporta sa PiggyCards</string>
     <string name="gift_card_contact_support">Contact Support</string>

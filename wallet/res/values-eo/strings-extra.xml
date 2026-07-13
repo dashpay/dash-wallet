@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="onboarding_recover_wallet">Restaŭri privatajn ŝlosilojn</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_send">Sendu</string>
+    <string name="pay_title">Sendu</string>
+    <string name="settings_title">Agoroj</string>
+    <string name="payments_tab_pay_label">Sendu</string>
+    <string name="options_paste_from_clipboard_title">Alglui el tondujo</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Tiu pago ne estis transdonita jam.</string>
+    <string name="preferences_report_issue_summary">Kolekti informojn pri via afero kaj retpoŝtu vian raporton al la programistoj.</string>
+    <string name="request_coins_clipboard_address_msg">Bitmonadreso kopiita al tondujo</string>
+    <string name="wallet_lock_reset">Reŝargi</string>
+    <string name="menu_settings_title">Agoroj</string>
+    <string name="tools_address_book">Adreslibro</string>
+    <string name="tools_network_monitor">Reta Monitoro</string>
+    <string name="masternode_key_address">Adreso</string>
+    </resources>

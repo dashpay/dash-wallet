@@ -58,7 +58,7 @@ class RemoteDataSource @Inject constructor(
             .create(api)
     }
 
-    private fun buildTokenApi(): CTXSpendTokenApi {
+    fun buildTokenApi(): CTXSpendTokenApi {
         return Retrofit.Builder()
             .baseUrl(
                 if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
@@ -67,15 +67,18 @@ class RemoteDataSource @Inject constructor(
                     CTXSpendConstants.DEV_BASE_URL
                 }
             )
-            .client(getOkHttpClient())
+            .client(getOkHttpClient(includeAuthorization = false))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(CTXSpendTokenApi::class.java)
     }
 
-    private fun getOkHttpClient(authenticator: Authenticator? = null): OkHttpClient {
+    private fun getOkHttpClient(
+        authenticator: Authenticator? = null,
+        includeAuthorization: Boolean = true
+    ): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor(HeadersInterceptor(config))
+            .addInterceptor(HeadersInterceptor(config, includeAuthorization))
             .addInterceptor(ErrorHandlingInterceptor(ServiceName.CTXSpend))
             .connectTimeout(20.seconds.toJavaDuration())
             .callTimeout(20.seconds.toJavaDuration())

@@ -5,8 +5,28 @@
     <string name="request_coins_share_dialog_title">Dash kérelem megosztása…</string>
     <!-- Generic buttons -->
     <string name="button_dismiss">Elvet</string>
+    <string name="button_cancel">Mégse</string>
+    <string name="button_confirm">Megerősítés</string>
     <string name="button_retry">Újra</string>
     <string name="button_share">Megosztás</string>
     <string name="dash">Dash</string>
+    <string name="exchange_rate_not_found">Árfolyam nem található.</string>
     <string name="enter_amount_available">rendelkezésre áll</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Hiba küldése ezzel…</string>
+
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Sajnáljuk</string>
+    <string name="scan_camera_problem_dialog_message">A kamera nem válaszol. Próbáld meg újraindítani a készüléket.</string>
+    <!-- address input -->
+    <string name="address_input_title">Dash küldése</string>
+    <!-- input parser -->
+    <string name="input_parser_io_error">Nem lehet olvasni az adatot:\n%s</string>
+    <string name="input_parser_cannot_classify">Nem lehet felismerni a bemenetet:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Érvénytelen Dash URI:\n%s</string>
+    <string name="input_parser_invalid_address">A kapott Dash cím érvénytelen!\n(Össze van keverve a mainnet/testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Nem lehet megerősíteni a fizetési kérelmet:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Érvénytelen fizetési kérelem:\n%s</string>
+    <string name="input_parser_invalid_transaction">Érvénytelen tranzakció:\n%s</string>
+    <string name="insufficient_money_title">Nincs elég érme</string>
+    <string name="send_coins_error_msg">Probléma az érmeküldésben!</string>
     </resources>

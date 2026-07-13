@@ -12,6 +12,15 @@ plugins {
 
 ext {
     archivesBaseName = 'dash-wallet'
+
+    // dashj-platform SDK version per product flavor.
+    // prod uses the stable release; all other flavors use the latest snapshot.
+    dppVersions = [
+        prod      : dppVersion,
+        _testNet3 : dppVersion,
+        staging   : dppVersion,
+        devnet    : dppVersion,
+    ]
 }
 repositories {
     mavenLocal()
@@ -56,9 +65,9 @@ dependencies {
 
     implementation 'org.bouncycastle:bcprov-jdk15to18:1.74'
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation "org.dashj.platform:dash-sdk-java:$dppVersion"
-    implementation "org.dashj.platform:dash-sdk-kotlin:$dppVersion"
-    implementation "org.dashj.platform:dash-sdk-android:$dppVersion"
+    // dashj-platform SDK is declared per-flavor in a dependencies block after the
+    // android {} block, since the flavor-scoped configurations (e.g. prodImplementation)
+    // only exist once productFlavors have been registered.
     implementation 'io.grpc:grpc-stub:1.54.0' // CURRENT_GRPC_VERSION
     implementation "org.dashj.android:dashj-bls-android:1.0.1"
     implementation "org.dashj.android:dashj-x11-android:1.0.0"
@@ -216,6 +225,20 @@ if (file("../local.properties").exists()) {
     file("../local.properties").withInputStream { localProps.load(it) }
 }
 
+// Year of the most recent commit on the current branch, used for the copyright notice.
+// Uses providers.exec so it stays compatible with the Gradle configuration cache.
+// Falls back to the current year if git is unavailable (e.g. building from a source tarball).
+def commitYear
+try {
+    def out = providers.exec {
+        workingDir = rootDir
+        commandLine 'git', 'log', '-1', '--format=%cd', '--date=format:%Y'
+    }.standardOutput.asText.get().trim()
+    commitYear = (out ==~ /\d{4}/) ? out : new Date().format('yyyy')
+} catch (Exception ignored) {
+    commitYear = new Date().format('yyyy')
+}
+
 android {
     android.ndkVersion '21.3.6528147'
     namespace "de.schildbach.wallet_test"
@@ -225,8 +248,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 35
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11070202
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.7.2-quantity"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11080201
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.8.2"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -247,8 +270,8 @@ android {
         } else if(System.getenv("SUPPORT_EMAIL") != null) {
             buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv("SUPPORT_EMAIL")}\"")
         }
-        buildConfigField("String", "DPP_VERSION", "\"$dppVersion\"")
         buildConfigField("String", "DASHJ_VERSION", "\"$dashjVersion\"")
+        buildConfigField("int", "COMMIT_YEAR", "$commitYear")
     }
 
     buildTypes {
@@ -316,6 +339,7 @@ android {
     flavorDimensions "default"
     productFlavors {
         all {
+            buildConfigField("String", "DPP_VERSION", "\"${dppVersions[name]}\"")
             def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID", "\"COINBASE_CLIENT_ID\"")
             def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
             buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
@@ -347,6 +371,7 @@ android {
 
             def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID", "\"\"")
             buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpay.onelink.me\"")
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
@@ -367,6 +392,7 @@ android {
 
             def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID_TESTNET", "\"\"")
             buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpaytest.onelink.me\"")
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
@@ -391,6 +417,7 @@ android {
 
             def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID_TESTNET", "\"\"")
             buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpaytest.onelink.me\"")
         }
         devnet {
             applicationId = "org.dash.dashpay.devnet"
@@ -412,6 +439,7 @@ android {
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpaytest.onelink.me\"")
         }
     }
 
@@ -458,6 +486,7 @@ android {
     buildFeatures {
         viewBinding true
         compose true
+        buildConfig true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
@@ -465,6 +494,9 @@ android {
     testOptions {
         unitTests.includeAndroidResources  = true
         unitTests.returnDefaultValues = true
+        unitTests.all {
+            maxHeapSize = "2g"
+        }
     }
     lint {
         abortOnError false
@@ -474,6 +506,17 @@ android {
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
+        }
+    }
+}
+
+// Declared after the android {} block so the flavor-scoped configurations
+// (prodImplementation, _testNet3Implementation, ...) exist. Each flavor pulls the
+// dashj-platform SDK version mapped in ext.dppVersions above.
+dependencies {
+    dppVersions.each { flavor, ver ->
+        ["java", "kotlin", "android"].each { artifact ->
+            "${flavor}Implementation"("org.dashj.platform:dash-sdk-$artifact:$ver")
         }
     }
 }

@@ -67,7 +67,7 @@ abstract class ExploreDashModule {
 
         @Provides
         fun provideCTXAuthApi(remoteDataSource: RemoteDataSource): CTXSpendTokenApi {
-            return remoteDataSource.buildApi(CTXSpendTokenApi::class.java)
+            return remoteDataSource.buildTokenApi()
         }
 
         @Provides
@@ -97,6 +97,6 @@ abstract class ExploreDashModule {
     @Binds
     abstract fun bindDataSyncService(exploreDatabase: ExploreDataSyncStatus): DataSyncStatusService
 
-    @Binds
-    abstract fun provideCTXSpendRepository(ctxSpendRepository: CTXSpendRepository): CTXSpendRepositoryInt
+    // @Binds
+    // abstract fun provideCTXSpendRepository(ctxSpendRepository: CTXSpendRepository): CTXSpendRepositoryInt
 }

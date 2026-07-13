@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -94,6 +95,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Barcode
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
+import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.time.LocalDateTime
@@ -360,23 +362,12 @@ private fun MerchantHeader(uiState: GiftCardUIState) {
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val icon = uiState.icon
-        if (icon != null) {
-            Image(
-                bitmap = icon.asImageBitmap(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(100.dp))
-            )
-        } else {
-            Image(
-                painter = painterResource(R.drawable.ic_gift_card_tx),
-                contentDescription = null,
-                modifier = Modifier.size(50.dp)
-            )
-        }
+        MerchantLogo(
+            merchantName = uiState.giftCard?.merchantName,
+            logoBitmap = uiState.icon,
+            size = 50.dp,
+            shape = CircleShape
+        )
 
         Column(modifier = Modifier.padding(start = 15.dp)) {
             Text(
@@ -421,6 +412,7 @@ private fun GiftCardItemCard(
     val hasNumber = !giftCard?.number.isNullOrEmpty()
     val hasPin = !giftCard?.pin.isNullOrEmpty()
     val hasMerchantUrl = !giftCard?.merchantUrl.isNullOrEmpty()
+    val hasRedeemUrlChallenge = !giftCard?.redeemUrlChallenge.isNullOrEmpty()
     val isLoading = giftCard != null &&
         !hasNumber &&
         !hasMerchantUrl &&
@@ -449,6 +441,21 @@ private fun GiftCardItemCard(
                 trailingActionText = stringResource(R.string.purchase_check_current_balance),
                 onTrailingActionClick = { onBalanceCheck() }
             )
+            if (hasRedeemUrlChallenge) {
+                ListItem(
+                    label = stringResource(R.string.purchase_redeem_url_challange),
+                    trailingText = giftCard.redeemUrlChallenge,
+                    trailingTrailingIcon = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_copy),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clickable { onCopyNumber(giftCard.redeemUrlChallenge!!) }
+                        )
+                    }
+                )
+            }
         }
 
         // Error text

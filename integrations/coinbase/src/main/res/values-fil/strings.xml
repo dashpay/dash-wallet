@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">Sa pagitan ng Dash Wallet at ng iyong Coinbase account</string>
     <string name="coinbase_dash_wallet_error_title">Wala kaming nakitang Dash Wallet sa iyong Coinbase account.</string>
     <string name="coinbase_dash_wallet_error_message">Mangyaring lumikha ng Dash Wallet sa Coinbase upang magpatuloy.</string>
+    <string name="coinbase_usd_wallet_error_message">Ang iyong Coinbase account ay hindi sumusuporta sa USD.</string>
     <string name="create_dash_account">Lumikha ng Dash Account</string>
     <string name="close">Sarado</string>
     <string name="retry">Subukang muli</string>

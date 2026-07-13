@@ -69,6 +69,11 @@
 
     <string name="pay_title">Enviar</string>
     <string name="history_title">Histórico</string>
+    <string name="wallet_transactions_building_cache">Determinando o histórico de transações…</string>
+    <string name="history_refresh_dialog_title">Atualizar lista de transações</string>
+    <string name="history_refresh_dialog_message">Isso limpará o cache de exibição das transações e o reconstruirá do zero. A lista ficará temporariamente indisponível durante o processo.</string>
+    <string name="history_refresh_dialog_confirm">Atualizar</string>
+    <string name="history_refresh_complete">Lista de transações atualizada</string>
     <string name="more_title">Mais</string>
     <string name="settings_title">Ajustes</string>
     <string name="security_title">Segurança</string>
@@ -286,20 +291,27 @@
     <string name="menu_explore_subtitle">Encontrar comerciantes que aceitam DASH</string>
 
     <string name="tools_address_book">Livro de endereços</string>
-    <string name="tools_import_private_key">Importar Chave Privada</string>
+    <string name="tools_import_private_key">Importe chave privada</string>
     <string name="import_private_key_description">Esta ação irá transferir todas as moedas da sua carteira de papel Dash para o aplicativo DashPay neste dispositivo.</string>
     <string name="tools_network_monitor">Monitor de rede</string>
-    <string name="tools_show_xpub">Chave Pública Estendida</string>
+    <string name="tools_show_xpub">Chave pública estendida (BIP44)</string>
 
     <string name="about_help_us_improve">Ajude-nos a melhorar a sua experiência</string>
     <string name="about_review_and_rate">Avalie o aplicativo</string>
     <string name="about_contact_support">Contato com o Suporte</string>
     <string name="about_fork_disclaimer">Este é um aplicativo de código aberto bifurcado da Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2026 Dash Core Group</string>
+    <string name="about_copyright">Copyright © %1$d Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Carteira DashPay %s</string>
     <string name="about_last_explore_device_sync">Última sincronização do dispositivo Explore</string>
     <string name="about_last_explore_server_update">Última atualização do servidor Explore</string>
+    <string name="about_app_version_label">Versão do aplicativo</string>
+    <string name="about_platform_label">Plataforma</string>
+    <string name="about_explore_section">Explorar Dash</string>
+    <string name="about_explore_update">Atualização</string>
+    <string name="about_last_device_sync">Última sincronização do dispositivo</string>
+    <string name="about_last_server_update">Última atualização do servidor</string>
+    <string name="about_value_not_available">Não disponível</string>
     <string name="about_firebase_installation_id">ID de instalação do Firebase</string>
     <string name="about_fcm_token">Token de mensagens na nuvem do Firebase</string>
     <string name="about_last_explore_dash_update_error">não foi possível buscar</string>

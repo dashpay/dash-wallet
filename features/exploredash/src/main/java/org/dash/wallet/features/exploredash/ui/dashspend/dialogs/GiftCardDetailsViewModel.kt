@@ -197,7 +197,12 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }
 
                 try {
-                    val giftCards = ctxSpendRepository.getGiftCard(txid.toStringBase58())
+                    val orderId = giftCardDao.getCardForTransaction(txid).firstOrNull()?.note
+                    val giftCards = if (orderId != null) {
+                        ctxSpendRepository.getGiftCard(orderId)
+                    } else {
+                        ctxSpendRepository.getGiftCardByTxId(txid.toStringBase58())
+                    }
                     val giftCard = giftCards.firstOrNull()
                     // Single state update with all changes
                     val newState = if (giftCard != null) {
@@ -263,24 +268,14 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     state
                                 } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
                                     log.error("CTXSpend returned a redeem url card: not supported")
-                                    val state = uiState.value.copy(
+                                    updateGiftCardWithURL(index = 0, giftCard.redeemUrl, giftCard.redeemUrlChallenge)
+                                    val newState = uiState.value.copy(
                                         status = giftCard.status,
                                         queries = uiState.value.queries + 1,
-                                        error = CTXSpendException(
-                                            ResourceString(
-                                                R.string.gift_card_redeem_url_not_supported,
-                                                listOf(
-                                                    GiftCardProviderType.CTX.name,
-                                                    giftCard.id,
-                                                    giftCard.paymentId ?: "",
-                                                    txid
-                                                )
-                                            ),
-                                            giftCard
-                                        )
+                                        error = null
                                     )
                                     cancelTicker()
-                                    state
+                                    newState
                                 } else {
                                     uiState.value.copy(
                                         status = giftCard.status,
@@ -435,13 +430,16 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
                                 }
                                 if (uiState.value.giftCards.size < giftCards.size) {
-                                    // add dummy cards
+                                    // add dummy cards so every server card has a local row.
+                                    // index is the row's primary-key component; keep it
+                                    // contiguous from the current max so positions line up.
                                     val cardToCopy = uiState.value.giftCards.maxByOrNull { it.index }
                                     if (cardToCopy != null) {
+                                        val nextIndex = cardToCopy.index + 1
                                         val missing = giftCards.size - uiState.value.giftCards.size
                                         val added = (0 until missing).map { i ->
                                             cardToCopy.copy(
-                                                index = cardToCopy.index + i + 1,
+                                                index = nextIndex + i,
                                                 number = null,
                                                 pin = null,
                                                 merchantUrl = null,
@@ -453,19 +451,40 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         _uiState.update { state ->
                                             state.copy(giftCards = state.giftCards + added)
                                         }
+                                    } else {
+                                        log.error(
+                                            "no local gift card rows to map ${giftCards.size} server cards for $txid"
+                                        )
                                     }
                                 }
-                                giftCards.forEachIndexed { index, giftCard ->
+                                // Cards in an order share the same order id (note), so the
+                                // server list and the local rows can only be matched by
+                                // position. Map each server position to the actual local
+                                // row index rather than assuming indices are 0..n-1.
+                                val localCards = uiState.value.giftCards.sortedBy { it.index }
+                                giftCards.forEachIndexed { position, giftCard ->
+                                    val cardIndex = localCards.getOrNull(position)?.index
+                                    if (cardIndex == null) {
+                                        log.error(
+                                            "no local row for server card position $position " +
+                                                "(${localCards.size} local, ${giftCards.size} server) for $txid"
+                                        )
+                                        return@forEachIndexed
+                                    }
                                     if (!giftCard.cardNumber.isNullOrEmpty()) {
-                                        updateGiftCard(index, giftCard.cardNumber, giftCard.cardPin)
+                                        updateGiftCard(cardIndex, giftCard.cardNumber, giftCard.cardPin)
                                         log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
                                         giftCard.barcodeUrl?.let {
-                                            if (!saveBarcodeUrl(it, index)) {
-                                                saveBarcode(giftCard.cardNumber, BarcodeFormat.CODE_128, index)
+                                            if (!saveBarcodeUrl(it, cardIndex)) {
+                                                saveBarcode(giftCard.cardNumber, BarcodeFormat.CODE_128, cardIndex)
                                             }
                                         }
                                     } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
-                                        updateGiftCard(index, giftCard.redeemUrl)
+                                        updateGiftCardWithURL(
+                                            cardIndex,
+                                            giftCard.redeemUrl,
+                                            giftCard.redeemUrlChallenge
+                                        )
                                     }
                                 }
                                 cancelTicker()
@@ -560,13 +579,14 @@ class GiftCardDetailsViewModel @Inject constructor(
         logOnPurchaseEvents(giftCard)
     }
 
-    private suspend fun updateGiftCard(index: Int, merchantUrl: String) {
+    private suspend fun updateGiftCardWithURL(index: Int, redeemUrl: String, redeemUrlChallenge: String?) {
         val giftCard = uiState.value.giftCards.find { it.index == index } ?: return
 
         applicationScope.launch {
             metadataProvider.updateGiftCardMetadata(
                 giftCard.copy(
-                    merchantUrl = merchantUrl
+                    merchantUrl = redeemUrl,
+                    redeemUrlChallenge = redeemUrlChallenge
                 )
             )
         }.join()

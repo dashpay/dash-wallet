@@ -5,7 +5,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d dani iza</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d tjedana iza</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d mjeseci iza</string>
-    <string name="blockchain_state_progress_downloading">Sinkroniziranje sa mrežom (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Sinkronizacija u zastoju</string>
     <string name="blockchain_state_progress_problem_storage">Sinkroniziranje: Spremišni problem</string>
     <string name="blockchain_state_progress_problem_network">Sinkroniziranje: Mrežni problem</string>
@@ -42,8 +41,6 @@
     <string name="edit_address_book_entry_dialog_address_label">Adresa</string>
     <string name="edit_address_book_entry_dialog_button_edit">Spremi</string>
     <string name="peer_list_fragment_empty">Nema povezani klijenata</string>
-    <string name="scan_camera_problem_dialog_title">Ispričavamo se</string>
-    <string name="scan_camera_problem_dialog_message">Kamera je naišla na problem. Vjerovatno ćete morati ponovno pokrenuti uređaj</string>
     <string name="about_title">O nama</string>
     <string name="about_license_title">Licenca</string>
     <string name="about_credits_icon_title">Ova aplikacija koristi ikonu on \'bitboy\'</string>

@@ -37,6 +37,8 @@
     <string name="network_unavailable_return">Zpět do pěněženky</string>
     <string name="button_continue">Pokračovat</string>
     <string name="button_close">Zavřít</string>
+    <string name="button_cancel">Zrušit</string>
+    <string name="button_confirm">Potvrdit</string>
     <string name="button_retry">Opakovat</string>
     <string name="button_info">info</string>
     <string name="button_copy_address">Kopírovat adresu</string>
@@ -73,4 +75,24 @@
     <string name="transaction_row_rate_not_available">Není dostupný</string>
     <string name="report_issue_dialog_mail_intent_chooser">Odeslat hlášení pomocí…</string>
 
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Promiňte</string>
+    <string name="scan_camera_problem_dialog_message">Problém s kamerou. Pravděpodobně je potřeba aby jste restartoval zařízení.</string>
+    <string name="scan_camera_permission_dialog_title">Práva pro používání fotoaparátu</string>
+    <string name="scan_camera_permission_dialog_message">Pro oskenování QR kódu musíte povolit používání fotoaparátu.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Zaslat Dash</string>
+    <!-- input parser -->
+    <string name="input_parser_io_error">Nelze přečíst data:\n%s</string>
+    <string name="input_parser_cannot_classify">Nelze rozpoznat vstup:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Neplatná Dash URI:\n%s</string>
+    <string name="input_parser_invalid_address">Obdržena neplatná Dash adresa!\n(Nepletete si mainnet/testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Nelze ověřit požadavek na platbu:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Neplatný požadavek na platbu:\n%s</string>
+    <string name="input_parser_invalid_transaction">Neplatná transakce:\n%s</string>
+    <string name="input_connect">Připojit</string>
+
+    <string name="insufficient_money_title">Nemáte dostatečný zůstatek</string>
+    <string name="send_coins_error_msg">Problém při zasílání!</string>
     </resources>

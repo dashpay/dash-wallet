@@ -38,6 +38,7 @@ android {
     buildFeatures {
         viewBinding true
         compose = true
+        buildConfig true
     }
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {

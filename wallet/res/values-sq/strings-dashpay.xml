@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="processing_error_retry">Provo prapë</string>
+    <string name="pay">Paguaj</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">Ruaj</string>
+    <string name="error_updating_profile_cancel">Anulo</string>
+    <string name="platform_credits_error">Gabim</string>
+    <string name="create_instant_username_cancel">Anulo</string>
+
+</resources>

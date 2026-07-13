@@ -41,7 +41,10 @@ data class TransactionMetadataCacheItem(
     var originalPrice: Double? = null,
     var barcodeValue: String? = null,
     var barcodeFormat: String? = null,
-    var merchantUrl: String? = null
+    var merchantUrl: String? = null,
+    var order: String? = null,
+    var giftCardChallenge: String? = null,
+    var index: Int? = null
 ) {
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0
@@ -66,14 +69,18 @@ data class TransactionMetadataCacheItem(
         giftCard?.price,
         giftCard?.barcodeValue,
         giftCard?.barcodeFormat?.toString(),
-        giftCard?.merchantUrl
+        giftCard?.merchantUrl,
+        giftCard?.note,
+        giftCard?.redeemUrlChallenge,
+        giftCard?.index
     )
 
     fun isNotEmpty(): Boolean {
         return taxCategory != null || !memo.isNullOrEmpty() ||
             currencyCode != null || rate != null || service != null || customIconUrl != null ||
             giftCardNumber != null || giftCardPin != null || merchantName != null || originalPrice != null ||
-            barcodeValue != null || barcodeFormat != null || merchantUrl != null
+            barcodeValue != null || barcodeFormat != null || merchantUrl != null ||
+            order != null || giftCardChallenge != null || index != null
     }
 
     fun isEmpty(): Boolean = !isNotEmpty()
@@ -100,6 +107,9 @@ data class TransactionMetadataCacheItem(
             barcodeValue = if (barcodeValue == other.barcodeValue) null else barcodeValue,
             barcodeFormat = if (barcodeFormat == other.barcodeFormat) null else barcodeFormat,
             merchantUrl = if (merchantUrl == other.merchantUrl) null else merchantUrl,
+            order = if (order == other.order) null else order,
+            giftCardChallenge = if (giftCardChallenge == other.giftCardChallenge) null else giftCardChallenge,
+            index = if (index == other.index) null else index
         )
     }
 
@@ -117,7 +127,10 @@ data class TransactionMetadataCacheItem(
                     this.barcodeFormat == giftCard.barcodeFormat.toString() &&
                     this.merchantName == giftCard.merchantName &&
                     this.merchantUrl == giftCard.merchantUrl &&
-                    this.originalPrice == giftCard.price
+                    this.originalPrice == giftCard.price &&
+                    this.order == giftCard.note &&
+                    this.giftCardChallenge == giftCard.redeemUrlChallenge &&
+                    this.index == giftCard.index
         }
         return txData && (giftCard == null || giftCardEquals == true)
     }

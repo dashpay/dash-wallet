@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">Μεταξύ του Dash Wallet και του λογαριασμού σας στην Coinbase.</string>
     <string name="coinbase_dash_wallet_error_title">Δεν βρήκαμε Dash πορτοφόλι στο λογαριασμό σας στην Coinbase.</string>
     <string name="coinbase_dash_wallet_error_message"> Παρακαλούμε δημιουργήστε ένα Dash πορτοφόλι στη Coinbase για να προχωρήσετε.</string>
+    <string name="coinbase_usd_wallet_error_message">Ο λογαριασμός σας στο Coinbase δεν υποστηρίζει το δολάριο USD.</string>
     <string name="create_dash_account">Δημιουργία λογαριασμού Dash</string>
     <string name="close">κλείσιμο</string>
     <string name="retry">Επανάληψη</string>

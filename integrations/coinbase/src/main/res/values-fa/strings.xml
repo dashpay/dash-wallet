@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">بین داش والت و حساب کوین‌بیس شما</string>
     <string name="coinbase_dash_wallet_error_title">دش والت روی حساب کوین‌بیس شما یافت نشد</string>
     <string name="coinbase_dash_wallet_error_message">برای ادامه لطفا یک دش والت روی کوین‌بیس ایجاد کنید. </string>
+    <string name="coinbase_usd_wallet_error_message">حساب کوینبیس شما از یو‌اس‌دی پشتیبانی نمی‌کند. </string>
     <string name="create_dash_account">ایجاد حساب دش</string>
     <string name="close">بستن</string>
     <string name="retry">تلاش دوباره</string>

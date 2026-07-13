@@ -12,12 +12,23 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogComposeContainerBinding
 import org.dash.wallet.common.ui.viewBinding
 
-class ComposeBottomSheet(
+class ComposeBottomSheet @JvmOverloads constructor(
     override val backgroundStyle: Int = R.style.SecondaryBackground,
     override val forceExpand: Boolean = false,
-    private val content: @Composable (DialogFragment) -> Unit
+    private val content: @Composable (DialogFragment) -> Unit = {}
 ) : OffsetDialogFragment(R.layout.dialog_compose_container) {
     private val binding by viewBinding(DialogComposeContainerBinding::bind)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // The content lambda cannot be serialized into saved state. If the OS
+        // recreates this fragment after process death it uses the no-arg
+        // constructor (provided by @JvmOverloads) with an empty content, so
+        // dismiss instead of showing an empty sheet.
+        if (savedInstanceState != null) {
+            dismissAllowingStateLoss()
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

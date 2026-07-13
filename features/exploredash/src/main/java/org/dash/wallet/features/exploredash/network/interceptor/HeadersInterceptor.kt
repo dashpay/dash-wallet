@@ -23,7 +23,10 @@ import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import javax.inject.Inject
 
-class HeadersInterceptor @Inject constructor(private val config: CTXSpendConfig) : Interceptor {
+class HeadersInterceptor @Inject constructor(
+    private val config: CTXSpendConfig,
+    private val includeAuthorization: Boolean = true
+) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
@@ -31,8 +34,12 @@ class HeadersInterceptor @Inject constructor(private val config: CTXSpendConfig)
         requestBuilder.header("Accept", "application/json")
         requestBuilder.header(CTXSpendConstants.CLIENT_ID_PARAM_NAME, CTXSpendConstants.CLIENT_ID)
 
-        val accessToken = runBlocking {
-            config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)
+        val accessToken = if (includeAuthorization) {
+            runBlocking {
+                config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)
+            }
+        } else {
+            null
         }
 
         if (accessToken?.isNotEmpty() == true) {

@@ -269,11 +269,9 @@
     <string name="menu_explore_title">Keşfet</string>
     <string name="menu_explore_subtitle">DASH\'i kabul eden satıcıları bulun</string>
 
-    <string name="tools_address_book">Adres Rehberi</string>
+    <string name="tools_address_book">Adres rehberi</string>
     <string name="tools_import_private_key">Özel anahtar içeri al</string>
     <string name="tools_network_monitor">Ağ monitörü</string>
-    <string name="tools_show_xpub">Genişletilmiş Genel Anahtar</string>
-
     <string name="about_help_us_improve">Deneyiminizi geliştirmemize yardımcı olun</string>
     <string name="about_review_and_rate">Uygulamamızı değerlendirip puanlayın</string>
     <string name="about_contact_support">Destekle İletişime Geçin</string>
@@ -281,6 +279,10 @@
     <string name="about_license">GNU Genel Kamu Lisansı v3.0</string>
     <string name="about_last_explore_device_sync">Son Explore cihaz senkronizasyonu</string>
     <string name="about_last_explore_server_update">Son Explore sunucu güncellemesi</string>
+    <string name="about_explore_section">Dash\'i Keşfet</string>
+    <string name="about_last_device_sync">Son cihaz senkronizasyonu</string>
+    <string name="about_last_server_update">Son sunucu güncellemesi</string>
+    <string name="about_value_not_available">Mevcut değil</string>
     <string name="about_firebase_installation_id">Firebase kurulum kimliği</string>
     <string name="about_fcm_token">Firebase bulut mesajlaşma jetonu</string>
     <string name="about_last_explore_dash_update_error">getirilemiyor</string>

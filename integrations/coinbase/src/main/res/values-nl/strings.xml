@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">Tussen Dash portemonnee en je Coinbase account</string>
     <string name="coinbase_dash_wallet_error_title">We hebben geen Dash portemonnee gevonden op je Coinbase account.</string>
     <string name="coinbase_dash_wallet_error_message">Maak een Dash portemonnee aan op Coinbase om door te gaan.</string>
+    <string name="coinbase_usd_wallet_error_message">Je Coinbase account ondersteunt geen USD.</string>
     <string name="create_dash_account">Maak Dash account aan</string>
     <string name="close">Sluit</string>
     <string name="retry">Probeer opnieuw</string>

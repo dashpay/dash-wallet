@@ -10,10 +10,33 @@
     <string name="request_coins_share_dialog_title">Trimite solicitarea pentru Dash...</string>
     <!-- Generic buttons -->
     <string name="button_dismiss">Renunță</string>
+    <string name="button_cancel">Anulează</string>
+    <string name="button_confirm">Confirmă</string>
     <string name="button_retry">Reîncercă</string>
     <string name="button_copy_address">Copiază adresa</string>
     <string name="button_share">Distribuie</string>
     <string name="dash">Dash</string>
     <string name="send_coins_error_insufficient_money">Fonduri nesuficiente</string>
+    <string name="exchange_rate_not_found">Nu se poate găsi cursul de schimb.</string>
     <string name="enter_amount_available">valabil</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Trimite raportul folosind...</string>
+
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Scuze</string>
+    <string name="scan_camera_problem_dialog_message">Camera are o problemă. Probabil că trebuie să repornești dispozitivul.</string>
+    <string name="scan_camera_permission_dialog_title">Permisiune pentru cameră</string>
+    <string name="scan_camera_permission_dialog_message">Pentru a scana codurile QR, trebuie sa oferi permisiunea de a folosi camera. </string>
+
+    <!-- address input -->
+    <string name="address_input_title">Trimite Dash</string>
+    <!-- input parser -->
+    <string name="input_parser_io_error">Datele nu pot fi citite:\n%s</string>
+    <string name="input_parser_cannot_classify">Intrarea nu poate fi recunoscută:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">URI Dash invalid:\n%s</string>
+    <string name="input_parser_invalid_address">Adresă Dash invalidă!\n(Ai amestecat mainnet/testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Nu se poate verifica solicitarea de plată:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Solicitare de plată nevalidă:\n%s</string>
+    <string name="input_parser_invalid_transaction">Tranzacție invalidă:\n%s</string>
+    <string name="insufficient_money_title">Nu sunt suficiente monede</string>
+    <string name="send_coins_error_msg">O problemă cu trimiterea de monede!</string>
     </resources>

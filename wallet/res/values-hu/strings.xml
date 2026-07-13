@@ -175,15 +175,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Titkosítás…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Visszafejtés…</string>
     <string name="encrypt_keys_dialog_state_done">Kész</string>
-    <string name="scan_camera_problem_dialog_title">Sajnáljuk</string>
-    <string name="scan_camera_problem_dialog_message">A kamera nem válaszol. Próbáld meg újraindítani a készüléket.</string>
-    <string name="input_parser_io_error">Nem lehet olvasni az adatot:\n%s</string>
-    <string name="input_parser_cannot_classify">Nem lehet felismerni a bemenetet:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Érvénytelen Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">A kapott Dash cím érvénytelen!\n(Össze van keverve a mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Nem lehet megerősíteni a fizetési kérelmet:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Érvénytelen fizetési kérelem:\n%s</string>
-    <string name="input_parser_invalid_transaction">Érvénytelen tranzakció:\n%s</string>
     <string name="preferences_activity_title">Beállítások</string>
     <string name="preferences_category_diagnostics">Diagnosztika</string>
     <string name="preferences_category_labs">Labor</string>
@@ -209,7 +200,6 @@
     <string name="preferences_extended_public_key_title">Xpub megjelenítése</string>
     <string name="preferences_extended_public_key_summary">Nézd meg a tárcád kiterjesztett nyilvános kulcsát, így tudod importálni másik alkalmazásokba és szolgáltatásokba. Legyél óvatos: ezt téve felfeded a pénzügyi magánéletedet annak az alkalmazásnak.</string>
     <string name="bitmap_fragment_share">Megosztás…</string>
-    <string name="extended_public_key_fragment_title">Kiterjesztett nyilvános kulcs</string>
     <string name="extended_public_key_fragment_share">Xpub megosztása…</string>
     <string name="report_issue_dialog_title_issue">Hiba jelentése</string>
     <string name="report_issue_dialog_title_crash">Az előző alkalommal a program összeomlott.</string>

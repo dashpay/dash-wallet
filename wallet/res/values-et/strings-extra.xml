@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="dialog_confirm_confirm">Kinnita</string>
+    <string name="settings_title">Seaded</string>
+    <string name="recover_wallet_title">Taasta Rahakott</string>
+    <string name="notification_transactions_channel_name">Kanded</string>
+    <string name="view_seed_done">Tehtud</string>
+    <string name="menu_settings_title">Seaded</string>
+    <string name="menu_local_currency">Kohalik valuuta</string>
+    <string name="tools_import_private_key">Impordi private key</string>
+    <string name="confirm">Kinnita</string>
+
+    </resources>
