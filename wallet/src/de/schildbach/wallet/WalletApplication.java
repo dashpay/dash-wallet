@@ -964,18 +964,38 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void clearDatastorePrefs() {
+        // Clear live DataStore-backed configs through their API first: deleting the
+        // backing file of a LIVE DataStore out-of-band leaves its in-memory cache
+        // populated while disk is empty (memory/disk desync — observed live as the
+        // debug SDK flags never reseeding after a Reset Wallet and datastore files
+        // recreated with a random subset of keys). The API-level clear resets
+        // memory and disk atomically.
+        final Set<String> apiCleared = WalletApplicationExt.INSTANCE.clearLiveConfigs();
+
+        // File-delete only the datastore files with no live DataStore instance
+        // (configs never instantiated this process have no in-memory cache, so raw
+        // deletion is safe for them). Deleting an api-cleared file here would
+        // desynchronize its live cache again.
+        final List<String> fileDeleted = new ArrayList<>();
         final File folder = new File(getFilesDir(), Constants.Files.DATASTORE_PREFS_DIRECTORY);
 
         if (folder.isDirectory()) {
-            log.info("removing datastore preferences");
             final File[] files = folder.listFiles();
 
             if (files != null) {
-                for (File file: files) {
-                    file.delete();
+                for (File file : files) {
+                    if (!apiCleared.contains(file.getName())) {
+                        if (file.delete()) {
+                            fileDeleted.add(file.getName());
+                        } else {
+                            log.warn("failed to delete datastore preferences file: '{}'", file.getName());
+                        }
+                    }
                 }
             }
         }
+
+        log.info("datastore preferences cleared; api-cleared: {}, file-deleted: {}", apiCleared, fileDeleted);
     }
 
     private void clearWebCookies() {

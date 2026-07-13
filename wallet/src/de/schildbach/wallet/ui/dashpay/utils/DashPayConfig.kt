@@ -26,6 +26,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
 import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -97,6 +98,8 @@ open class DashPayConfig @Inject constructor(
     )
 ) {
     companion object {
+        private val log = org.slf4j.LoggerFactory.getLogger(DashPayConfig::class.java)
+
         const val DISABLE_NOTIFICATIONS: Long = -1
 
         const val PREFERENCES_NAME = "dashpay"
@@ -272,20 +275,31 @@ open class DashPayConfig @Inject constructor(
     suspend fun seedDebugDefaultsIfUnset() {
         if (!BuildConfig.DEBUG) return
         try {
-            if (get(USE_KOTLIN_SDK_DPNS_READS) == null) {
-                set(USE_KOTLIN_SDK_DPNS_READS, true)
+            val seeded = mutableListOf<String>()
+            val alreadySet = mutableListOf<String>()
+            val debugDefaultOnFlags = listOf(
+                USE_KOTLIN_SDK_DPNS_READS,
+                USE_KOTLIN_SDK_DASHPAY_WRITES,
+                USE_KOTLIN_SDK_SHIELDED,
+                USE_KOTLIN_SDK_L1_SHADOW
+            )
+
+            for (flag in debugDefaultOnFlags) {
+                if (get(flag) == null) {
+                    set(flag, true)
+                    seeded.add(flag.name)
+                } else {
+                    alreadySet.add(flag.name)
+                }
             }
-            if (get(USE_KOTLIN_SDK_DASHPAY_WRITES) == null) {
-                set(USE_KOTLIN_SDK_DASHPAY_WRITES, true)
-            }
-            if (get(USE_KOTLIN_SDK_SHIELDED) == null) {
-                set(USE_KOTLIN_SDK_SHIELDED, true)
-            }
-            if (get(USE_KOTLIN_SDK_L1_SHADOW) == null) {
-                set(USE_KOTLIN_SDK_L1_SHADOW, true)
-            }
+
+            log.info("debug SDK flag seeding: seeded ON = {}, already set (skipped) = {}", seeded, alreadySet)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            // best-effort seeding; the flags simply stay at their OFF default
+            // best-effort seeding; unset flags simply stay at their OFF default —
+            // but that darkens every flag-gated SDK surface, so it must be loud
+            log.warn("debug SDK flag seeding failed; unset USE_KOTLIN_SDK_* flags stay OFF", e)
         }
     }
 

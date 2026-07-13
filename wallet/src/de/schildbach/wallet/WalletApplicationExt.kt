@@ -25,10 +25,25 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.dash.wallet.common.data.BaseConfig
 import org.slf4j.LoggerFactory
 
 object WalletApplicationExt {
     private val log = LoggerFactory.getLogger(WalletApplicationExt::class.java)
+
+    /**
+     * Clears every live [BaseConfig]-backed DataStore through its API — one
+     * atomic edit that resets memory AND disk together — and returns the file
+     * names cleared (e.g. "dashpay.preferences_pb"). Called from the Java wipe
+     * path ([WalletApplication.finalizeWipe] -> clearDatastorePrefs), which then
+     * file-deletes only the datastore files NOT in the returned set: configs
+     * never instantiated this process have no live in-memory cache, so raw file
+     * deletion is safe for them, while deleting a live config's file
+     * out-of-band desynchronizes its cache from disk (see [BaseConfig]).
+     */
+    fun clearLiveConfigs(): Set<String> = runBlocking {
+        BaseConfig.clearAllLiveInstances()
+    }
 
     /**
      * Clear databases
