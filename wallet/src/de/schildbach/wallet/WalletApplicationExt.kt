@@ -59,6 +59,15 @@ object WalletApplicationExt {
      * exactly the resurrected-DashPay-UI bug.
      */
     private suspend fun WalletApplication.clearDatabasesInner(isWalletWipe: Boolean) {
+        // Stop the platform sync machinery BEFORE any clear: "Reset Wallet"
+        // does not restart the process, and shutdown() gates its cancel on an
+        // identity still being present — so an in-flight sync iteration
+        // holding a pre-reset BlockchainIdentityData could keep running and
+        // re-persist (resurrect) the previous wallet's identity right after
+        // the clears below. Sync restarts naturally with the next blockchain
+        // service start.
+        runCatching { platformSyncService.stopSync() }
+            .onFailure { rethrowCancellation(it); log.warn("platform-sync stop failed during reset", it) }
         runCatching { platformSyncService.clearDatabases() }
             .onFailure { rethrowCancellation(it); log.warn("platform-sync clear failed during reset", it) }
         if (isWalletWipe) {

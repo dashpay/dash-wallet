@@ -113,6 +113,19 @@ interface PlatformSyncService {
     fun resume()
     suspend fun shutdown()
 
+    /**
+     * Unconditionally stop the platform sync machinery and (bounded) wait for
+     * in-flight iterations to die. Called by the wallet reset/rescan path
+     * BEFORE the persisted identity is cleared: a live sync iteration holds a
+     * pre-clear [BlockchainIdentityData] and would re-persist ("resurrect") it
+     * after the clear. Unlike [shutdown], this does not gate on an identity
+     * being present — the reset path may already have nulled it, which is
+     * exactly why [shutdown] used to leave the ticker running across a reset.
+     * Sync restarts naturally with the next blockchain service start
+     * (preBlockDownload → initSync).
+     */
+    suspend fun stopSync()
+
     fun updateSyncStatus(stage: PreBlockStage)
     fun preBlockDownload(future: SettableFuture<Boolean>)
 
@@ -176,6 +189,7 @@ class PlatformSynchronizationService @Inject constructor(
         val CUTOFF_MAX = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 6.minutes else 6.hours
         private val PUBLISH = MarkerFactory.getMarker("PUBLISH")
         val NON_CONTACTS_UPDATE_PERIOD = 1.minutes.inWholeMilliseconds
+        val STOP_SYNC_JOIN_TIMEOUT = 5.seconds
     }
 
     private var platformSyncJob: Job? = null
@@ -328,6 +342,42 @@ class PlatformSynchronizationService @Inject constructor(
             }
             txMetadataJob = null
         }
+    }
+
+    override suspend fun stopSync() {
+        log.info("stopping the platform sync machinery for a wallet reset/rescan")
+        platformSyncJob?.cancel(CancellationException("wallet reset"))
+        platformSyncJob = null
+        txMetadataJob?.cancel(CancellationException("wallet reset"))
+        txMetadataJob = null
+
+        // Cancel every in-flight child (an iteration may hold a pre-reset
+        // BlockchainIdentityData) and wait for them, bounded: a thread parked
+        // in a non-cancellable network call must not stall the wipe. Any
+        // straggler that outlives this window is caught by the
+        // no-resurrection guard in IdentityRepositoryImpl.updateBlockchainIdentityData.
+        val children = syncJob.children.toList()
+        children.forEach { it.cancel(CancellationException("wallet reset")) }
+        if (children.isNotEmpty()) {
+            val stopped = withTimeoutOrNull(STOP_SYNC_JOIN_TIMEOUT.inWholeMilliseconds) {
+                children.joinAll()
+            } != null
+            if (!stopped) {
+                log.warn(
+                    "platform sync children did not stop within {} — relying on the no-resurrection guard",
+                    STOP_SYNC_JOIN_TIMEOUT
+                )
+            }
+        }
+
+        // Reset the in-memory sync state so a post-reset restart starts clean.
+        updatingContacts.set(false)
+        preDownloadBlocks.set(false)
+        lastPreBlockStage = PreBlockStage.None
+        hasCheckedTopups = false
+        lastTopupUpdateTime = 0L
+        lastMetadataUpdateTime = 0L
+        log.info("platform sync machinery stopped")
     }
 
     var counterForReport = 0

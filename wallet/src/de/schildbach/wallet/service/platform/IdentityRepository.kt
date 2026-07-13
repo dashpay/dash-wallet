@@ -69,6 +69,35 @@ import java.util.HashSet
 import java.util.NoSuchElementException
 import javax.inject.Inject
 
+/**
+ * No-resurrection guard for the persisted blockchain identity.
+ *
+ * Observed live: "Reset Wallet" does not restart the process, and a platform
+ * sync iteration that loaded a fully-populated [BlockchainIdentityData]
+ * BEFORE the reset can re-persist it AFTER [BlockchainIdentityConfig.clear]
+ * ran (e.g. the fire-and-forget persists in PlatformSynchronizationService's
+ * checkVotingStatus / the DONE_AND_DISMISS transition in
+ * updateContactRequests). That resurrects the previous wallet's identity —
+ * username, CONFIRMED/DONE_AND_DISMISS state — onto a brand-new wallet and
+ * re-enables the whole DashPay UI.
+ *
+ * A cleared store has no CREATION_STATE (or NONE). No legitimate flow writes
+ * a DONE/DONE_AND_DISMISS identity over a cleared store in a single step:
+ * creation, restore (RestoreIdentityWorker) and invite flows all march the
+ * persisted creationState through intermediate states first. So "store says
+ * NONE/absent, incoming object says DONE" can only be a stale pre-reset
+ * object and must never be written.
+ */
+internal fun isResurrectingClearedIdentity(
+    persistedCreationState: String?,
+    incomingState: IdentityCreationState
+): Boolean {
+    if (incomingState < IdentityCreationState.DONE) {
+        return false
+    }
+    return persistedCreationState == null || persistedCreationState == IdentityCreationState.NONE.name
+}
+
 interface IdentityRepository {
     val blockchainIdentity: BlockchainIdentity?
     val blockchainIdentityFlow: StateFlow<BlockchainIdentity?>
@@ -330,6 +359,23 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
+        // Defense in depth against a wallet reset racing the platform sync
+        // loop: re-read the persisted creationState immediately before
+        // persisting and refuse to write a completed (>= DONE) identity over
+        // a cleared store — see [isResurrectingClearedIdentity].
+        if (blockchainIdentityData.creationState >= IdentityCreationState.DONE) {
+            val persistedState = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.CREATION_STATE)
+            if (isResurrectingClearedIdentity(persistedState, blockchainIdentityData.creationState)) {
+                log.warn(
+                    "refusing to persist {} identity ({}) over a cleared store (persisted creationState={}) — " +
+                        "stale object surviving a wallet reset",
+                    blockchainIdentityData.creationState,
+                    blockchainIdentityData.username,
+                    persistedState
+                )
+                return
+            }
+        }
         blockchainIdentityDataStorage.insert(blockchainIdentityData)
     }
 
