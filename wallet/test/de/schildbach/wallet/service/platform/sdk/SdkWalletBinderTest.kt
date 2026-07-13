@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dashfoundation.dashsdk.Sdk
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
@@ -177,6 +178,17 @@ class SdkWalletBinderTest {
 
     private fun walletData(): WalletDataProvider = mockk { every { wallet } returns null }
 
+    /**
+     * A dashj wallet whose watching key hashes to a fingerprint derived
+     * from [seedByte] — two wallets fingerprint equal iff their seed bytes
+     * match, mirroring the deterministic seed → watching-key relationship
+     * the binder's latch revalidation relies on.
+     */
+    private fun walletWithFingerprint(seedByte: Byte): Wallet = mockk {
+        every { watchingKey.pubKeyHash } returns ByteArray(20) { seedByte }
+        every { earliestKeyCreationTime } returns 0L
+    }
+
     /** A binder whose collaborators are all in the happy-path state. */
     private fun binder(
         sdk: FakeSdkService,
@@ -184,13 +196,14 @@ class SdkWalletBinderTest {
         identity: BlockchainIdentityConfig = identityConfig(identityBase()),
         config: DashPayConfig = dashPayConfig(readsFlag = true),
         supportsPlatform: Boolean = true,
+        walletData: WalletDataProvider = walletData(),
         scope: CoroutineScope
     ) = SdkWalletBinder(
         sdkService = sdk,
         mnemonicProvider = mnemonic,
         identityConfig = identity,
         dashPayConfig = config,
-        walletData = walletData(),
+        walletData = walletData,
         scope = scope,
         supportsPlatform = { supportsPlatform }
     )
@@ -411,6 +424,101 @@ class SdkWalletBinderTest {
         // And the re-bound state latches again.
         binder.bindIfEnabled(unlock)
         assertEquals(2, sdk.bindCalls)
+    }
+
+    // ── In-process wallet replacement (Reset Wallet → restore, no restart) ─
+
+    @Test
+    fun isBoundWalletStale_truthTable() {
+        // Same fingerprint (a restore of the SAME phrase): latch stays.
+        assertTrue(!isBoundWalletStale("aa", "aa"))
+        // Different wallet loaded: stale — the live S21 incident.
+        assertTrue(isBoundWalletStale("aa", "bb"))
+        // Latched without a fingerprintable wallet, one is loaded now:
+        // cannot prove the latch covers it — stale (one idempotent rebind).
+        assertTrue(isBoundWalletStale(null, "bb"))
+        // No fingerprintable wallet right now: no evidence of replacement.
+        assertTrue(!isBoundWalletStale("aa", null))
+        assertTrue(!isBoundWalletStale(null, null))
+    }
+
+    @Test
+    fun walletReplacedInProcess_invalidatesTheLatch_fullRebindPrunesTheOldSdkWallet() = runBlocking {
+        // The live S21 incident (02:28–02:35): Reset Wallet →
+        // restore-from-seed WITHOUT a process restart. The latch must not
+        // keep the previous wallet's binding — the next trigger must run
+        // the full bind pass against the NEW wallet, whose orphan prune
+        // removes the old deterministic SDK wallet.
+        val oldSdkWalletId = "ab".repeat(32)
+        val sdk = FakeSdkService()
+        var currentSdkWalletId = oldSdkWalletId
+        sdk.onBind = { _, _ -> currentSdkWalletId }
+        sdk.managed = { _, _ -> sdk.discoverCalls > 0 }
+        sdk.onDiscover = { _, _ -> listOf(Identifier.from(userId).toBuffer()) }
+        val mnemonic = FakeMnemonicProvider { words }
+        var currentWallet: Wallet? = walletWithFingerprint(1)
+        val walletData: WalletDataProvider = mockk { every { wallet } answers { currentWallet } }
+        val binder = binder(sdk, mnemonic, walletData = walletData, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        binder.bindIfEnabled(unlock) // latched for wallet A
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1, mnemonic.calls)
+
+        // Reset Wallet + restore of a DIFFERENT phrase, same process: the
+        // app wallet object is replaced; the SDK still holds the old wallet.
+        currentWallet = walletWithFingerprint(2)
+        currentSdkWalletId = walletId
+        sdk.loadedWallets = setOf(oldSdkWalletId, walletId)
+
+        binder.bindIfEnabled(unlock) // trigger revalidates → full rebind
+        assertEquals(2, sdk.bindCalls) // seed re-requested from the NEW wallet…
+        assertEquals(2, mnemonic.calls)
+        assertEquals(listOf(oldSdkWalletId), sdk.removedWallets) // …old binding pruned as orphan
+
+        // And the NEW binding latches again.
+        binder.bindIfEnabled(unlock)
+        assertEquals(2, sdk.bindCalls)
+    }
+
+    @Test
+    fun sameWalletRestoredInProcess_keepsTheLatch_noSpuriousRebind() = runBlocking {
+        // Restore of the SAME phrase re-derives the SAME deterministic SDK
+        // wallet id — the existing binding stays valid, no seed re-request.
+        val sdk = readySdk()
+        val mnemonic = FakeMnemonicProvider { words }
+        var currentWallet: Wallet? = walletWithFingerprint(1)
+        val walletData: WalletDataProvider = mockk { every { wallet } answers { currentWallet } }
+        val binder = binder(sdk, mnemonic, walletData = walletData, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.bindCalls)
+
+        currentWallet = walletWithFingerprint(1) // new instance, same seed
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1, mnemonic.calls)
+    }
+
+    @Test
+    fun walletMomentarilyUnloaded_keepsTheLatch() = runBlocking {
+        // No wallet loaded is NOT evidence of a replacement — the latch
+        // survives and the next trigger (wallet back) re-checks.
+        val sdk = readySdk()
+        var currentWallet: Wallet? = walletWithFingerprint(1)
+        val walletData: WalletDataProvider = mockk { every { wallet } answers { currentWallet } }
+        val binder = binder(sdk, walletData = walletData, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.bindCalls)
+
+        currentWallet = null
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.bindCalls) // still latched
+
+        currentWallet = walletWithFingerprint(1)
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.bindCalls) // same wallet — still latched
     }
 
     @Test

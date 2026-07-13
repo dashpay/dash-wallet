@@ -99,6 +99,32 @@ internal fun isMissingMnemonicError(t: Throwable): Boolean {
 }
 
 /**
+ * Whether the binder's bound/latched state belongs to a DIFFERENT app
+ * wallet than the one currently loaded — the pure decision behind
+ * [SdkWalletBinder]'s per-trigger latch revalidation (the
+ * [ShadowResetDecider]-style pure-core + thin-wiring pattern).
+ *
+ * Live incident (S21, Reset Wallet → restore-from-seed WITHOUT a process
+ * restart): the success latch kept the PREVIOUS wallet's SDK binding, so
+ * every bound-wallet consumer (L1 shadow parity, shielded runtime, DashPay
+ * writes) kept comparing/operating against the OLD deterministic wallet id
+ * — an error class no shadow reset can fix (the parity decider hard-reset
+ * in vain) and that only a manual app restart used to clear.
+ *
+ * [latchedFingerprint] is the app-wallet fingerprint captured when the
+ * bind pass handed the seed to the SDK; [currentFingerprint] is the
+ * fingerprint of the wallet loaded right now. Stale means: the current
+ * wallet is fingerprintable AND it differs from what was latched —
+ * including a latch captured while no wallet was fingerprintable
+ * (`latchedFingerprint == null`), which cannot prove it covers the current
+ * wallet. A currently-unfingerprintable wallet (`currentFingerprint ==
+ * null`, e.g. momentarily unloaded) keeps the latch: there is no evidence
+ * of a replacement, and the next trigger re-checks anyway.
+ */
+internal fun isBoundWalletStale(latchedFingerprint: String?, currentFingerprint: String?): Boolean =
+    currentFingerprint != null && latchedFingerprint != currentFingerprint
+
+/**
  * Phase 3f production wiring (`docs/kotlin-sdk-migration-plan.md`): make
  * the Kotlin-SDK wallet binding ([DashSdkService.bindAppWallet]) and
  * identity discovery ([DashSdkService.discoverIdentities]) actually happen
@@ -210,10 +236,28 @@ class SdkWalletBinder internal constructor(
     private var boundWalletIdHex: String? = null
 
     /**
+     * Fingerprint of the APP wallet whose seed the bind pass handed to the
+     * SDK (captured next to [boundWalletIdHex], cleared with it). The SDK
+     * wallet id is a deterministic function of the seed, so this records
+     * WHICH wallet the bound id (and the [completed] latch) belong to —
+     * see [currentWalletFingerprint] for what the fingerprint is and
+     * [isBoundWalletStale] for how it is compared.
+     */
+    @Volatile
+    private var boundWalletFingerprint: String? = null
+
+    /**
      * Success latch: wallet bound, identity attached AND its keys healed
      * to a settled state (or provably nothing to attach). Deliberately NOT
      * set while a transient key-heal failure is outstanding, so the next
      * trigger retries the heal (cheap: bind + discovery are both skipped).
+     *
+     * Only valid FOR THE WALLET fingerprinted in [boundWalletFingerprint]:
+     * every pass revalidates it against the currently-loaded app wallet
+     * ([revalidateBoundWallet]) before honoring it, because the app can
+     * replace its wallet IN-PROCESS (Reset Wallet → restore-from-seed) and
+     * a latch surviving that replacement pins every SDK consumer to the
+     * WRONG deterministic wallet id (observed live on the S21).
      */
     @Volatile
     private var completed = false
@@ -242,8 +286,63 @@ class SdkWalletBinder internal constructor(
                     "latch cleared — the next binding trigger runs a full bind + discovery pass"
             )
             boundWalletIdHex = null
+            boundWalletFingerprint = null
             completed = false
         }
+    }
+
+    /**
+     * A cheap fingerprint of the CURRENTLY-LOADED app wallet's seed: the
+     * dashj wallet's watching key (the public account-level xpub — already
+     * derived in memory, no unlock, no scrypt; the same public material
+     * `WalletApplication` logs at startup). It is a deterministic function
+     * of the exact seed the bind pass feeds into the SDK's deterministic
+     * wallet-id derivation ([DashSdkService.bindAppWallet]), so equal
+     * fingerprints ⇔ same SDK binding — a restore of the SAME phrase keeps
+     * the latch (correct: the deterministic id is unchanged), any other
+     * wallet invalidates it. No new key-material handling: strictly public
+     * bytes, never logged beyond a prefix. Null when no wallet is loaded
+     * or the wallet cannot produce a watching key (treated as "no
+     * evidence" — see [isBoundWalletStale]).
+     */
+    private fun currentWalletFingerprint(): String? = try {
+        walletData.wallet?.watchingKey?.pubKeyHash?.joinToString("") { "%02x".format(it) }
+    } catch (t: Throwable) {
+        log.warn("failed to fingerprint the app wallet; keeping the current binder state", t)
+        null
+    }
+
+    /**
+     * Per-trigger latch revalidation (caller holds [mutex]): if the app
+     * wallet was REPLACED IN-PROCESS since the bind (Reset Wallet →
+     * restore-from-seed, no process restart — the live S21 incident),
+     * everything the previous pass established is for the WRONG wallet.
+     * Treat as unbound: clear the bound id + latch so THIS pass runs the
+     * full bind (seed hand-off, orphan prune of the old SDK wallet,
+     * discovery + key heal) against the new wallet.
+     *
+     * Wiring note: `WalletDataProvider.observeWalletChanged()` exists and
+     * could push this eagerly, but subscribing would need an
+     * always-running collector from construction — breaking the binder's
+     * do-nothing-until-triggered posture — and adds no coverage:
+     * binding triggers already fire on every platform-sync start and every
+     * DashPay broadcast, and a stale binding only matters when something
+     * is about to USE it, i.e. exactly at those triggers.
+     */
+    private fun revalidateBoundWallet() {
+        if (boundWalletIdHex == null && !completed) return // nothing latched to revalidate
+        val current = currentWalletFingerprint()
+        if (!isBoundWalletStale(boundWalletFingerprint, current)) return
+        log.warn(
+            "app wallet replaced in-process (fingerprint {}… -> {}…): dropping bound SDK " +
+                "wallet {}… and the success latch — this pass re-runs the full bind " +
+                "(orphan prune + creation) against the current wallet",
+            boundWalletFingerprint?.take(8) ?: "none", current?.take(8),
+            boundWalletIdHex?.take(8) ?: "none"
+        )
+        boundWalletIdHex = null
+        boundWalletFingerprint = null
+        completed = false
     }
 
     /**
@@ -280,6 +379,10 @@ class SdkWalletBinder internal constructor(
     suspend fun bindIfEnabled(unlockProvider: suspend () -> WalletUnlock?) {
         try {
             mutex.withLock {
+                // In-process wallet replacement check BEFORE honoring the
+                // latch — a latch for a replaced wallet is worse than no
+                // latch (it pins every consumer to the wrong SDK wallet).
+                revalidateBoundWallet()
                 if (completed) return
                 try {
                     bindLocked(unlockProvider)
@@ -310,6 +413,7 @@ class SdkWalletBinder internal constructor(
         if (!isMissingMnemonicError(t)) return
         val bound = boundWalletIdHex ?: return
         boundWalletIdHex = null
+        boundWalletFingerprint = null
         log.warn(
             "SDK wallet {}… has no stored mnemonic — clearing the cached bind so the next " +
                 "binding trigger re-runs the full bind pass (which re-stores the phrase)",
@@ -348,11 +452,18 @@ class SdkWalletBinder internal constructor(
                 log.info("SDK binding skipped: no wallet unlock available at this call site")
                 return
             }
+            // Record WHICH wallet this pass binds (same wallet the mnemonic
+            // provider reads the seed from) so later triggers can detect an
+            // in-process wallet replacement — see revalidateBoundWallet().
+            val fingerprint = currentWalletFingerprint()
             // Decrypt + hand off; the words are function-local and the
             // reference dies with this call (see PlatformMnemonicProvider).
             val words = mnemonicProvider.getMnemonicWords(unlock)
             val birthTimeSecs = walletData.wallet?.earliestKeyCreationTime
-            sdkService.bindAppWallet(words, birthTimeSecs).also { boundWalletIdHex = it }
+            sdkService.bindAppWallet(words, birthTimeSecs).also {
+                boundWalletIdHex = it
+                boundWalletFingerprint = fingerprint
+            }
         }
 
         // 4b. Prune orphan SDK wallets. The app-side Reset Wallet clears the
