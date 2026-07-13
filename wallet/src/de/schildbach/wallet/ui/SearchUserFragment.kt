@@ -45,6 +45,7 @@ import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import org.dash.wallet.common.data.entity.BlockchainState
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
@@ -69,6 +70,17 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // DashPayUserBottomSheet is shown on the activity's FragmentManager (via show(activity)),
+        // so listen there for its result.
+        requireActivity().supportFragmentManager.setFragmentResultListener(
+            DashPayUserBottomSheet.REQUEST_KEY,
+            viewLifecycleOwner
+        ) { _, bundle ->
+            if (bundle.getBoolean(DashPayUserBottomSheet.KEY_CHANGED, false)) {
+                searchUser(false)
+            }
+        }
 
         val toolbar = binding.appBarLayout.toolbar
         toolbar.setNavigationOnClickListener {
@@ -269,21 +281,11 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        startActivityForResult(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult),
-                DashPayUserActivity.REQUEST_CODE_DEFAULT)
+        // startActivityForResult(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult),
+        //        DashPayUserActivity.REQUEST_CODE_DEFAULT)
 
-        //overridePendingTransition(R.anim.slide_in_bottom, R.anim.activity_stay)
+        DashPayUserBottomSheet.newInstance(usernameSearchResult).show(requireActivity())
     }
-
-//    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-//        when (item.itemId) {
-//            android.R.id.home -> {
-//                onBackPressed()
-//                return true
-//            }
-//        }
-//        return super.onOptionsItemSelected(item)
-//    }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.ACCEPT_REQUEST)
@@ -326,12 +328,5 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
-            searchUser(false)
-        }
     }
 }

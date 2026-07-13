@@ -30,6 +30,7 @@ import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.util.viewOnBlockExplorer
 import org.dash.wallet.common.UserInteractionAwareCallback
@@ -99,7 +100,10 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
             viewModel.wallet!!,
             viewModel.dashFormat,
             contentBinding
-        )
+        ) {
+            DashPayUserBottomSheet.newInstance(it).show(requireActivity())
+            dismissAllowingStateLoss()
+        }
 
         viewModel.init(txId)
         viewModel.transaction.filterNotNull().observe(viewLifecycleOwner) { tx ->
