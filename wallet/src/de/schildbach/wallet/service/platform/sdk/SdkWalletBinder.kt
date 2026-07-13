@@ -31,6 +31,7 @@ import kotlinx.coroutines.sync.withLock
 import org.dash.wallet.common.WalletDataProvider
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -208,7 +209,10 @@ class SdkWalletBinder internal constructor(
     private val dashPayConfig: DashPayConfig,
     private val walletData: WalletDataProvider,
     private val scope: CoroutineScope,
-    private val supportsPlatform: () -> Boolean
+    private val supportsPlatform: () -> Boolean,
+    // Injectable clock so the friend-chain provisioning throttle is
+    // deterministically testable on the host JVM. Production uses wall time.
+    private val now: () -> Long = { System.currentTimeMillis() }
 ) {
     @Inject
     constructor(
@@ -261,6 +265,22 @@ class SdkWalletBinder internal constructor(
      */
     @Volatile
     private var completed = false
+
+    /**
+     * Single-flights the DIP-15 friend-chain provisioning pass. Distinct
+     * from the bind [mutex]: provisioning does its own network I/O (a
+     * DashPay sweep) and must neither block nor be blocked by a bind pass.
+     */
+    private val provisioning = AtomicBoolean(false)
+
+    /**
+     * Wall-clock of the last provisioning pass — throttles the non-forced
+     * heartbeat trigger (the 15 s contact ticker) so it doesn't drive a
+     * network DashPay sweep every tick. Forced passes (bind completion, a
+     * freshly established contact) ignore it.
+     */
+    @Volatile
+    private var lastProvisionAtMs = 0L
 
     /**
      * Forget everything a previous pass established — the shadow-state
@@ -358,6 +378,81 @@ class SdkWalletBinder internal constructor(
     /** Lazy fire-and-forget variant: [unlockProvider] runs only if the eligibility gate passes. */
     fun bindInBackground(unlockProvider: suspend () -> WalletUnlock?): Job =
         scope.launch { bindIfEnabled(unlockProvider) }
+
+    /**
+     * Fire-and-forget DIP-15 friend-chain provisioning for the bound SDK
+     * wallet ([DashSdkService.provisionDashPayContactAccounts]): drive the
+     * SDK's contact-sync + account-drain so the SDK L1 wallet derives and
+     * watches the addresses DashPay contacts pay us on — the gap the
+     * dashj-only contact bookkeeping leaves (see that method's KDoc /
+     * `scratchpad/txdiff/FINDINGS.md`). Gated by the SAME eligibility the
+     * bind pass uses, single-flight, and throttled for non-[force] triggers.
+     * Never throws into the caller.
+     *
+     * Independent of the bind success latch: provisioning must keep running
+     * on later triggers (a drain registers accounts asynchronously, and the
+     * follow-up sweep that re-scans their funding heights has to land on a
+     * SUBSEQUENT pass), whereas the bind pass latches once and stops.
+     *
+     * @param force run even if the throttle window hasn't elapsed — use on
+     *   bind completion and when a contact was just established. The
+     *   single-flight guard still applies.
+     */
+    fun provisionContactAccountsInBackground(force: Boolean = false): Job =
+        scope.launch { provisionContactAccountsIfEnabled(force) }
+
+    /** As [provisionContactAccountsInBackground], but awaitable. Never throws. */
+    suspend fun provisionContactAccountsIfEnabled(force: Boolean = false) {
+        try {
+            // Same posture as bind: inert unless a USE_KOTLIN_SDK_* flag is
+            // on and platform is supported. Read failures are treated as off.
+            if (!anyFlagEnabled() || !supportsPlatform()) return
+            // A friend chain hangs off the bound wallet; until a bind pass
+            // has produced a bound id there is nothing to provision (the
+            // next bind trigger will, and then this).
+            val walletId = boundWalletIdHex ?: return
+            // Throttle non-forced heartbeat triggers BEFORE the identity read
+            // so a rate-limited tick costs only the flag reads above.
+            val nowMs = now()
+            if (!force && nowMs - lastProvisionAtMs < PROVISION_MIN_INTERVAL_MS) return
+            // No identity ⇒ no contacts ⇒ no friend chains. Mirrors the bind
+            // identity gate; a config read failure falls through to "return".
+            if (identityConfig.loadBase().userId == null) return
+            // Single-flight: the sweep does network I/O and must not stack.
+            if (!provisioning.compareAndSet(false, true)) return
+            try {
+                lastProvisionAtMs = nowMs
+                val report = sdkService.provisionDashPayContactAccounts(walletId)
+                when {
+                    !report.bound -> log.debug(
+                        "DashPay friend-chain provisioning: SDK wallet {}… not loaded yet",
+                        walletId.take(8)
+                    )
+                    report.pendingBefore > 0 || report.drainScheduled -> log.info(
+                        "DashPay friend-chain provisioning on {}…: sweep ok={}/err={}, " +
+                            "{} account build(s) queued, drainScheduled={}",
+                        walletId.take(8), report.syncSuccess, report.syncErrors,
+                        report.pendingBefore, report.drainScheduled
+                    )
+                    else -> log.debug(
+                        "DashPay friend-chain provisioning on {}…: steady " +
+                            "(sweep ok={}/err={}, nothing queued)",
+                        walletId.take(8), report.syncSuccess, report.syncErrors
+                    )
+                }
+            } finally {
+                provisioning.set(false)
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // Opportunistic by contract: dashj funds discovery is unaffected.
+            log.warn(
+                "DashPay friend-chain provisioning pass failed; SDK contact-payment " +
+                    "discovery may lag until the next pass",
+                t
+            )
+        }
+    }
 
     /**
      * Bind the app wallet into the SDK and attach its identity, if (and
@@ -615,5 +710,16 @@ class SdkWalletBinder internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkWalletBinder::class.java)
+
+        /**
+         * Floor between non-forced friend-chain provisioning passes. The
+         * contact ticker fires every 15 s; a full DashPay sweep every tick
+         * would waste network, but the pass must run often enough that the
+         * post-drain rescan follow-up lands promptly. One minute balances
+         * both — forced passes (bind completion, a new contact) bypass it,
+         * and the underlying sweep is high-water-cursor incremental so
+         * steady-state passes are cheap.
+         */
+        internal const val PROVISION_MIN_INTERVAL_MS = 60_000L
     }
 }

@@ -673,6 +673,79 @@ class DashSdkServiceImpl @Inject constructor(
     }
 
     /**
+     * See [DashSdkService.provisionDashPayContactAccounts] for the full
+     * contract. Wiring: resolve the bound [ManagedPlatformWallet] from the
+     * manager's live map, run one DashPay sweep
+     * ([PlatformWalletManager.dashPaySyncNow] — fetch both contact-request
+     * directions, enqueue the receiving/external account builds, reconcile,
+     * and lower `synced_height` for registered receival accounts), then —
+     * only when the sweep left builds queued — schedule the Keystore-signer
+     * drain that actually registers the accounts
+     * ([PlatformWalletManager.unlockWalletFromKeystore], a background drain).
+     */
+    override suspend fun provisionDashPayContactAccounts(
+        walletIdHex: String
+    ): DashPayContactProvisionReport {
+        ensureStarted()
+        val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
+        val manager = current.walletManager
+        val managed = manager.wallets.value[walletIdHex]
+        if (managed == null) {
+            // The bind hasn't completed (or the wallet was removed): nothing
+            // to provision. Not an error — the binder retries on later triggers.
+            log.debug("DashPay contact provisioning skipped: SDK wallet {}… not loaded", walletIdHex.take(8))
+            return DashPayContactProvisionReport(
+                bound = false, syncSuccess = 0, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+            )
+        }
+        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+
+        // 1. One DashPay sweep: received + sent contact requests for every
+        //    managed identity → enqueue RegisterReceiving/RegisterExternal
+        //    pending-crypto, reconcile incoming payments, and lower
+        //    synced_height for already-registered receival accounts (#846).
+        val summary = manager.dashPaySyncNow()
+
+        // 2. Drain only when the sweep queued account builds. The drain
+        //    (verify seed → background register) derives our friendship xpub
+        //    via the Keystore signer and registers the DashpayReceivingFunds
+        //    (ours) + DashpayExternalAccount (watch-only) accounts, whose
+        //    addresses then enter the SPV monitored/filter set. A locked
+        //    device / seed-verify failure leaves the queue for the next pass.
+        val pendingBefore = manager.contactCryptoPendingCount(walletId)
+        var drainScheduled = false
+        if (pendingBefore > 0) {
+            drainScheduled = try {
+                manager.unlockWalletFromKeystore(managed)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Non-fatal: the next signer-present pass retries the drain;
+                // the sweep rebuilds the queue if it was lost.
+                log.warn(
+                    "DashPay contact-crypto drain deferred on SDK wallet {}… " +
+                        "(seed verify / Keystore unavailable): {}",
+                    walletIdHex.take(8), e.message
+                )
+                false
+            }
+        }
+
+        log.info(
+            "DashPay contact provisioning on SDK wallet {}…: sweep success={} errors={}, " +
+                "pendingBuilds={}, drainScheduled={}",
+            walletIdHex.take(8), summary.success, summary.errors, pendingBefore, drainScheduled
+        )
+        return DashPayContactProvisionReport(
+            bound = true,
+            syncSuccess = summary.success,
+            syncErrors = summary.errors,
+            pendingBefore = pendingBefore,
+            drainScheduled = drainScheduled
+        )
+    }
+
+    /**
      * One-shot bring-up; caller holds [lock]. On any failure every
      * partially-created resource is torn down and the exception rethrown,
      * leaving the service stopped (retryable).

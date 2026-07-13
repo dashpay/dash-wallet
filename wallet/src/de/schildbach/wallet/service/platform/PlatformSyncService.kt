@@ -236,6 +236,15 @@ class PlatformSynchronizationService @Inject constructor(
         syncScope.launch {
             bindJob.join()
             l1ShadowSyncService.startIfEnabled()
+            // DIP-15 friend-chain backfill (docs/kotlin-sdk-migration-plan.md;
+            // scratchpad/txdiff/FINDINGS.md): the app keeps DashPay contacts on
+            // dashj and never drives the SDK's contact-sync path, so the bound
+            // SDK L1 wallet derives NONE of the m/9'/coin'/15' friend chains and
+            // misses contact/username payments. Provision them now that the bind
+            // pass has (attempted to) attach the identity. Forced so it runs
+            // promptly on every service (re)start; fire-and-forget and provably
+            // inert unless a USE_KOTLIN_SDK_* flag is on and a wallet is bound.
+            sdkWalletBinder.provisionContactAccountsInBackground(force = true)
         }
     }
 
@@ -613,6 +622,17 @@ class PlatformSynchronizationService @Inject constructor(
             if (addedContact) {
                 fireContactsUpdatedListeners()
             }
+
+            // Keep the SDK L1 wallet's DIP-15 friend chains in step with the
+            // dashj contact set: this dashj sync just (re)built the DashPay
+            // receiving/sending keychains, but the SDK wallet only learns of
+            // contacts through its own contact-sync path (never driven here).
+            // Provision them so contact/username payments are captured on the
+            // SDK scan too. Forced when a contact was just (un)established so
+            // the new friend account provisions immediately; otherwise
+            // throttled — the binder no-ops unless a USE_KOTLIN_SDK_* flag is
+            // on and a wallet is bound. Fire-and-forget (never blocks sync).
+            sdkWalletBinder.provisionContactAccountsInBackground(force = addedContact)
 
             updateSyncStatus(PreBlockStage.Complete)
 

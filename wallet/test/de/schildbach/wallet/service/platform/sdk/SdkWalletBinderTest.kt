@@ -122,6 +122,21 @@ class SdkWalletBinderTest {
         /** Loaded-wallet snapshot the orphan prune (bindLocked step 4b) scans. */
         var loadedWallets: Set<String> = emptySet()
         override fun loadedWalletIds(): Set<String> = loadedWallets
+
+        var provisionCalls = 0
+        var lastProvisionWalletId: String? = null
+        var onProvision: suspend (String) -> DashPayContactProvisionReport = { _ ->
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 0, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+            )
+        }
+        override suspend fun provisionDashPayContactAccounts(
+            walletIdHex: String
+        ): DashPayContactProvisionReport {
+            provisionCalls++
+            lastProvisionWalletId = walletIdHex
+            return onProvision(walletIdHex)
+        }
     }
 
     private class FakeMnemonicProvider(
@@ -197,6 +212,7 @@ class SdkWalletBinderTest {
         config: DashPayConfig = dashPayConfig(readsFlag = true),
         supportsPlatform: Boolean = true,
         walletData: WalletDataProvider = walletData(),
+        now: () -> Long = { System.currentTimeMillis() },
         scope: CoroutineScope
     ) = SdkWalletBinder(
         sdkService = sdk,
@@ -205,7 +221,8 @@ class SdkWalletBinderTest {
         dashPayConfig = config,
         walletData = walletData,
         scope = scope,
-        supportsPlatform = { supportsPlatform }
+        supportsPlatform = { supportsPlatform },
+        now = now
     )
 
     /** SDK fake in the first-bind happy path: bind ok, discovery attaches. */
@@ -899,5 +916,126 @@ class SdkWalletBinderTest {
 
         assertEquals(0, sdk.totalCalls)
         assertTrue(!unlockRequested)
+    }
+
+    // ── DIP-15 friend-chain provisioning (contact-payment capture) ───────
+    //
+    // The gap `scratchpad/txdiff/FINDINGS.md` found: the app keeps DashPay
+    // contacts on dashj and never drives the SDK's contact-sync path, so the
+    // bound SDK L1 wallet derives NO m/9'/coin'/15' friend chains and misses
+    // contact/username payments. The binder drives the (already-published)
+    // SDK provisioning under the SAME eligibility gate as bind.
+
+    @Test
+    fun provisioning_flagsOff_noSdkCall() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(
+            sdk,
+            config = dashPayConfig(readsFlag = false, writesFlag = false),
+            scope = this
+        )
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertEquals(0, sdk.provisionCalls)
+    }
+
+    @Test
+    fun provisioning_platformNotSupported_noSdkCall() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(sdk, supportsPlatform = false, scope = this)
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertEquals(0, sdk.provisionCalls)
+    }
+
+    @Test
+    fun provisioning_notBoundYet_noSdkCall() = runBlocking {
+        // Flags on, but no bind pass has produced a bound wallet id — there
+        // is nothing to provision (a later bind trigger will, then this).
+        val sdk = readySdk()
+        val binder = binder(sdk, scope = this)
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertEquals(0, sdk.provisionCalls)
+    }
+
+    @Test
+    fun provisioning_boundButNoIdentity_noSdkCall() = runBlocking {
+        // The shielded-only path binds a wallet before any identity exists;
+        // with no identity there are no contacts / friend chains to build.
+        val sdk = readySdk()
+        val binder = binder(
+            sdk,
+            identity = identityConfig(identityBase(IdentityCreationState.NONE, userId = null)),
+            config = dashPayConfig(readsFlag = false, writesFlag = false, shieldedFlag = true),
+            scope = this
+        )
+        binder.bindIfEnabled(unlock) // binds the wallet, no identity attach
+        assertEquals(1, sdk.bindCalls)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertEquals(0, sdk.provisionCalls)
+    }
+
+    @Test
+    fun provisioning_eligibleAndBound_callsSdkWithTheBoundWalletId() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(sdk, scope = this)
+        binder.bindIfEnabled(unlock) // establishes the bound wallet id
+        assertEquals(walletId, sdk.lastHealedWalletId) // sanity: bind completed
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.provisionCalls)
+        assertEquals(walletId, sdk.lastProvisionWalletId)
+    }
+
+    @Test
+    fun provisioning_nonForced_throttledWithinWindow_forcedBypasses() = runBlocking {
+        val sdk = readySdk()
+        var clock = 10_000_000L
+        val binder = binder(sdk, now = { clock }, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = false) // first pass runs
+        assertEquals(1, sdk.provisionCalls)
+
+        clock += 30_000L // inside the 60 s floor
+        binder.provisionContactAccountsIfEnabled(force = false) // throttled → skipped
+        assertEquals(1, sdk.provisionCalls)
+
+        binder.provisionContactAccountsIfEnabled(force = true) // forced bypasses the floor
+        assertEquals(2, sdk.provisionCalls)
+
+        clock += 70_000L // past the floor since the last pass
+        binder.provisionContactAccountsIfEnabled(force = false) // runs again
+        assertEquals(3, sdk.provisionCalls)
+    }
+
+    @Test
+    fun provisioning_singleFlight_concurrentCallsRunOnce() = runBlocking {
+        val sdk = readySdk()
+        sdk.onProvision = { _ ->
+            delay(50) // hold the single-flight slot so the second caller drops
+            DashPayContactProvisionReport(bound = true, syncSuccess = 1, syncErrors = 0, pendingBefore = 0, drainScheduled = false)
+        }
+        val binder = binder(sdk, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        val a = launch { binder.provisionContactAccountsIfEnabled(force = true) }
+        val b = launch { binder.provisionContactAccountsIfEnabled(force = true) }
+        a.join()
+        b.join()
+
+        assertEquals(1, sdk.provisionCalls)
+    }
+
+    @Test
+    fun provisioning_background_neverThrowsIntoCaller_andRunsThePass() = runBlocking {
+        val sdk = readySdk()
+        sdk.onProvision = { _ -> throw RuntimeException("DashPay sweep failed") }
+        val binder = binder(sdk, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsInBackground(force = true).join() // must not throw
+
+        assertEquals(1, sdk.provisionCalls)
     }
 }

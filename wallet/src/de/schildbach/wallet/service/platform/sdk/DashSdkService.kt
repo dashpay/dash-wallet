@@ -58,6 +58,55 @@ data class IdentityKeyHealReport(
 }
 
 /**
+ * Outcome of one [DashSdkService.provisionDashPayContactAccounts] pass —
+ * the DIP-15 friend-chain maintenance step that makes the SDK L1 wallet
+ * derive and watch the addresses DashPay contacts pay us on.
+ *
+ * ## Why this exists
+ *
+ * The app performs ALL DashPay contact bookkeeping through dashj
+ * (`PlatformSyncService.updateContactRequests` →
+ * `addPaymentKeyChainFromContact`) and never drives the Kotlin SDK's own
+ * contact-sync pipeline, so the bound SDK wallet learns of NO contacts and
+ * derives NONE of the DIP-15 friend chains
+ * (`m/9'/coin'/15'/0'/ourId/contactId/index`). A migrated wallet with contacts
+ * would then miss real incoming contact payments — proven on testnet
+ * (`scratchpad/txdiff/FINDINGS.md`: dashj tracked 282 friend keys the SDK
+ * had zero of). This pass closes that gap by driving the SDK's existing,
+ * already-published contact-sync + drain surface.
+ *
+ * Counts are advisory (logging / telemetry); the pass is idempotent so a
+ * zero-effect steady state is normal and healthy.
+ */
+data class DashPayContactProvisionReport(
+    /**
+     * False when no SDK wallet is loaded for the given id (the bind hasn't
+     * completed) — nothing was attempted. True once the pass ran against a
+     * bound wallet, regardless of how much work it found to do.
+     */
+    val bound: Boolean,
+    /** Per-identity DashPay-sweep successes (`dashPaySyncNow`). */
+    val syncSuccess: Int,
+    /** Per-identity DashPay-sweep errors (`dashPaySyncNow`). */
+    val syncErrors: Int,
+    /**
+     * Deferred contact-crypto entries queued after the sweep — the
+     * `RegisterReceiving` (ours) / `RegisterExternal` (watch-only) account
+     * builds waiting on the Keystore signer. Zero once every established
+     * contact's accounts are registered.
+     */
+    val pendingBefore: Int,
+    /**
+     * Whether a background drain of the pending queue was scheduled this
+     * pass (only when [pendingBefore] > 0 and the seed verified). The drain
+     * itself completes asynchronously; a later pass observes the resulting
+     * accounts and lowers the SPV `synced_height` to re-scan historical
+     * funding heights (DIP-15 §12.6 / committed-range rescan).
+     */
+    val drainScheduled: Boolean
+)
+
+/**
  * Lifecycle owner for the Dash Platform Kotlin SDK inside the wallet app —
  * the Phase 3 bootstrap seam of the dashj → Kotlin SDK migration
  * (see `docs/kotlin-sdk-migration-plan.md`, "Phase 3 — Introduce the SDK").
@@ -334,4 +383,48 @@ interface DashSdkService {
         walletIdHex: String,
         identityId: ByteArray
     ): IdentityKeyHealReport
+
+    /**
+     * DIP-15 friend-chain maintenance: make the bound SDK wallet
+     * [walletIdHex] derive and watch the receiving addresses its DashPay
+     * contacts pay us on, so contact/username payments are captured on the
+     * SDK L1 scan. See [DashPayContactProvisionReport] for the why (the app
+     * keeps contacts on dashj and never drives the SDK's contact-sync path,
+     * so the SDK wallet holds zero friend chains).
+     *
+     * ## What it drives (all already published in the SDK AAR)
+     *
+     * 1. `PlatformWalletManager.dashPaySyncNow()` — one DashPay sweep:
+     *    fetches every managed identity's RECEIVED and SENT contact requests
+     *    from Platform (both directions), enqueues the deferred
+     *    `RegisterReceiving` (our `DashpayReceivingFunds` account — the
+     *    funds-critical one contacts pay into) and `RegisterExternal` (the
+     *    watch-only `DashpayExternalAccount` from the contact's xpub) crypto
+     *    ops, reconciles incoming payments, and lowers the SPV
+     *    `synced_height` for already-registered receival accounts so their
+     *    historical funding heights are re-scanned (the #846 committed-range
+     *    rescan). Cheap after the first pass — the fetch is high-water
+     *    cursor-incremental.
+     * 2. `PlatformWalletManager.unlockWalletFromKeystore(managed)` — only
+     *    when the sweep left entries queued: verifies the Keystore-resolved
+     *    seed binds to the wallet, then schedules a BACKGROUND drain that
+     *    derives our friendship xpub via the Keystore signer and registers
+     *    the receiving + external accounts. Registration inserts the
+     *    accounts into the wallet's managed collection, whose addresses feed
+     *    the SPV monitored/filter set automatically (no separate
+     *    script-registration call). A subsequent pass's `dashPaySyncNow`
+     *    then re-scans their funding heights.
+     *
+     * Every step is idempotent Rust-side (accounts guard on
+     * `(index, user, friend)`, the sweep is reentrant-safe, the drain is
+     * single-flight), so this is safe to call on every contact heartbeat.
+     * A drain that can't run right now (locked device / seed-verify failure)
+     * leaves the queue intact for the next pass — never fatal. Internally
+     * calls [ensureStarted]. Returns [DashPayContactProvisionReport] with
+     * `bound = false` (and nothing attempted) when the wallet id is not
+     * loaded.
+     *
+     * @param walletIdHex the bound wallet id ([bindAppWallet]'s return).
+     */
+    suspend fun provisionDashPayContactAccounts(walletIdHex: String): DashPayContactProvisionReport
 }
