@@ -325,6 +325,18 @@ class ContactsFragment : Fragment(),
         dashPayViewModel.updateDashPayState()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // identityResolved and viewsInitialized are one-shot guards scoped to a single view
+        // lifecycle, but the fragment instance (and these fields) survives on the navigation back
+        // stack while the view is destroyed and later recreated. If we don't reset them, returning
+        // to this screen (e.g. back from SearchUserFragment) leaves the blockchainIdentity observer
+        // early-returning and setupContactsViews() skipped, so the container stays hidden and the
+        // contact list never repopulates. Reset so a recreated view re-runs the full setup.
+        identityResolved = false
+        viewsInitialized = false
+    }
+
     private fun processResults(data: List<UsernameSearchResult>) {
         val results = ArrayList<ContactSearchResultsAdapter.ViewItem>()
         // process the requests

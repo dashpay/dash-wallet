@@ -85,6 +85,7 @@ import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
@@ -167,6 +168,15 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
             applyAutoExpandIfNeeded(state.userData?.type, state.notifications.size)
         }
 
+        // The contact request / accept operation only completes asynchronously; notify the host
+        // (so it refreshes its contact list) once the operation actually succeeds, not when it is
+        // merely enqueued.
+        LaunchedEffect(state.sendContactRequestState?.status) {
+            if (state.sendContactRequestState?.status == Status.SUCCESS) {
+                notifyContactChange()
+            }
+        }
+
         DashPayUserContent(
             state = state,
             isFullScreen = hasAutoExpanded,
@@ -176,7 +186,7 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
                     handleCreditCheckAndSend(viewModel)
                 }
             },
-            onIgnoreClick = { /* not yet implemented, mirror activity */ },
+            onIgnoreClick = { /* Ignore is disabled until the backend flow exists; see RequestReceivedCard. */ },
             onPayClick = {
                 state.userData?.let { startPayActivity(it) }
             },
@@ -188,6 +198,7 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
             },
             onFilterSelected = viewModel::setFilter,
             isSentTransaction = viewModel::isSentTransaction,
+            transactionValue = viewModel::getTransactionValue,
             onSheetDraggableChanged = ::setSheetDraggable
         )
     }
@@ -263,14 +274,14 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
                 if (answer == true) {
                     SendCoinsActivity.startBuyCredits(activity)
                 } else if (!isEmpty) {
+                    // notifyContactChange() fires from the SUCCESS observer once the op completes.
                     viewModel.sendContactRequest()
-                    notifyContactChange()
                 }
                 viewModel.resetCreditCheck()
             }
             DashPayUserBottomSheetViewModel.CreditCheckOutcome.Proceed -> {
+                // notifyContactChange() fires from the SUCCESS observer once the op completes.
                 viewModel.sendContactRequest()
-                notifyContactChange()
                 viewModel.resetCreditCheck()
             }
         }
@@ -324,6 +335,7 @@ private fun DashPayUserContent(
     onNotificationClick: (NotificationItem) -> Unit,
     onFilterSelected: (NotificationFilter) -> Unit = {},
     isSentTransaction: (Transaction) -> Boolean = { false },
+    transactionValue: (Transaction) -> Coin = { Coin.ZERO },
     onSheetDraggableChanged: (Boolean) -> Unit = {}
 ) {
     val userData = state.userData
@@ -368,6 +380,7 @@ private fun DashPayUserContent(
                 onFilterSelected = onFilterSelected,
                 onNotificationClick = onNotificationClick,
                 isSentTransaction = isSentTransaction,
+                transactionValue = transactionValue,
                 onSheetDraggableChanged = onSheetDraggableChanged
             )
         }
@@ -484,11 +497,14 @@ private fun RequestReceivedCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            // "Ignore" has no backend flow yet (the legacy activity only showed a "not implemented"
+            // toast), so keep the button visible per the design but disabled rather than exposing a
+            // silent no-op.
             DashButton(
                 modifier = Modifier.weight(1f),
                 text = stringResource(R.string.contact_request_ignore),
                 style = Style.TintedGray,
-                isEnabled = !isLoading,
+                isEnabled = false,
                 onClick = onIgnoreClick
             )
             DashButton(
@@ -511,6 +527,7 @@ private fun ColumnScope.ActivitySection(
     onFilterSelected: (NotificationFilter) -> Unit,
     onNotificationClick: (NotificationItem) -> Unit,
     isSentTransaction: (Transaction) -> Boolean,
+    transactionValue: (Transaction) -> Coin,
     onSheetDraggableChanged: (Boolean) -> Unit = {}
 ) {
     // In full-screen mode, the section claims all remaining vertical space so the inner
@@ -581,6 +598,7 @@ private fun ColumnScope.ActivitySection(
                 DayGroupCard(
                     group = group,
                     isSentTransaction = isSentTransaction,
+                    transactionValue = transactionValue,
                     onNotificationClick = onNotificationClick
                 )
             }
@@ -624,6 +642,7 @@ private fun dayLabel(date: LocalDate): String {
 private fun DayGroupCard(
     group: NotificationDayGroup,
     isSentTransaction: (Transaction) -> Boolean,
+    transactionValue: (Transaction) -> Coin,
     onNotificationClick: (NotificationItem) -> Unit
 ) {
     Column(
@@ -656,6 +675,7 @@ private fun DayGroupCard(
             NotificationRow(
                 item = item,
                 isSentTransaction = isSentTransaction,
+                transactionValue = transactionValue,
                 onClick = { onNotificationClick(item) }
             )
         }
@@ -740,6 +760,7 @@ private fun FilterMenuItem(
 private fun NotificationRow(
     item: NotificationItem,
     isSentTransaction: (Transaction) -> Boolean,
+    transactionValue: (Transaction) -> Coin,
     onClick: () -> Unit
 ) {
     // The day is conveyed by the group header; rows show only the time of day (e.g. "9:40 AM"),
@@ -839,9 +860,11 @@ private fun NotificationRow(
                         color = MyTheme.Colors.textSecondary
                     )
                 }
+                // Use the wallet-net value (same basis as the sent/received classification) rather
+                // than a single output, which on a sent tx would show change or one recipient leg.
                 val amount = tx?.let {
                     try {
-                        it.outputs.firstOrNull()?.value?.toFriendlyString() ?: ""
+                        transactionValue(it).toFriendlyString()
                     } catch (_: Exception) { "" }
                 } ?: ""
                 if (amount.isNotEmpty()) {

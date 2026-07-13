@@ -138,6 +138,23 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
     fun isSentTransaction(tx: org.bitcoinj.core.Transaction): Boolean =
         tx.getValue(walletData.transactionBag).signum() < 0
 
+    /** Net value of [tx] from this wallet's perspective (negative for sends). Used for row amounts. */
+    fun getTransactionValue(tx: org.bitcoinj.core.Transaction): org.bitcoinj.core.Coin =
+        tx.getValue(walletData.transactionBag)
+
+    /**
+     * Direction of a contact row, mirroring the title/icon logic in the bottom sheet: a sent
+     * request (or our own acceptance for an established contact) is "sent", an inbound request
+     * (or their acceptance) is "received".
+     */
+    private fun isSentContact(result: UsernameSearchResult): Boolean = when (result.type) {
+        UsernameSearchResult.Type.REQUEST_SENT -> true
+        UsernameSearchResult.Type.REQUEST_RECEIVED -> false
+        UsernameSearchResult.Type.CONTACT_ESTABLISHED ->
+            (result.toContactRequest?.timestamp ?: 0L) > (result.fromContactRequest?.timestamp ?: 0L)
+        else -> false
+    }
+
     private fun applyFilter(items: List<NotificationItem>, filter: NotificationFilter): List<NotificationItem> {
         if (filter == NotificationFilter.ALL) return items
         val bag = walletData.transactionBag
@@ -150,6 +167,14 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
                     when (filter) {
                         NotificationFilter.RECEIVED -> !sent && !isInternal
                         NotificationFilter.SENT -> sent && !isInternal
+                        else -> true
+                    }
+                }
+                is NotificationItemContact -> {
+                    val sent = isSentContact(item.usernameSearchResult)
+                    when (filter) {
+                        NotificationFilter.RECEIVED -> !sent
+                        NotificationFilter.SENT -> sent
                         else -> true
                     }
                 }

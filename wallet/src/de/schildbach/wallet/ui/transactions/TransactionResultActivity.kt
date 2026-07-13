@@ -68,6 +68,7 @@ class TransactionResultActivity : LockScreenActivity() {
         private const val EXTRA_PAYMENT_MEMO = "payee_name"
         private const val EXTRA_PAYEE_VERIFIED_BY = "payee_verified_by"
         private const val EXTRA_USER_DATA = "user_data"
+        private const val STATE_PENDING_FINISH = "pending_finish_on_sheet_dismiss"
 
         @JvmStatic
         fun createIntent(
@@ -130,6 +131,10 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private val viewModel: TransactionResultViewModel by viewModels()
+    // True once we've deferred finish() to the dismissal of a DashPayUserBottomSheet. Persisted so a
+    // configuration change (rotation) re-arms the lifecycle callback and dismissing the recreated
+    // sheet still exits the flow instead of stranding the user on this screen.
+    private var pendingFinishOnSheetDismiss = false
     private lateinit var binding: ActivitySuccessfulTransactionBinding
     private lateinit var contentBinding: TransactionResultContentBinding
     @Inject
@@ -138,6 +143,12 @@ class TransactionResultActivity : LockScreenActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Re-arm the deferred finish before the recreated sheet runs its lifecycle, so dismissing
+        // the restored DashPayUserBottomSheet still finishes this host activity.
+        if (savedInstanceState?.getBoolean(STATE_PENDING_FINISH) == true) {
+            finishWhenUserSheetDismissed()
+        }
 
         val txId = intent.getSerializableExtra(EXTRA_TX_ID) as Sha256Hash
         if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)!!) {
@@ -315,17 +326,24 @@ class TransactionResultActivity : LockScreenActivity() {
      * user, so we skip that case via [isChangingConfigurations].
      */
     private fun finishWhenUserSheetDismissed() {
+        pendingFinishOnSheetDismiss = true
         supportFragmentManager.registerFragmentLifecycleCallbacks(
             object : FragmentManager.FragmentLifecycleCallbacks() {
                 override fun onFragmentDestroyed(fm: FragmentManager, fragment: Fragment) {
                     if (fragment is DashPayUserBottomSheet && !isChangingConfigurations) {
                         fm.unregisterFragmentLifecycleCallbacks(this)
+                        pendingFinishOnSheetDismiss = false
                         finish()
                     }
                 }
             },
             false
         )
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(STATE_PENDING_FINISH, pendingFinishOnSheetDismiss)
     }
 
     override fun onDestroy() {

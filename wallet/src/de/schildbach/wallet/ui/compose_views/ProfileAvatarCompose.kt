@@ -39,8 +39,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import coil.size.Size
 import coil.transform.Transformation
+import de.schildbach.wallet_test.BuildConfig
 import org.dash.wallet.common.R
 import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import org.dash.wallet.common.ui.avatar.ProfilePictureZoomTransformation
@@ -60,7 +60,10 @@ fun ProfileAvatar(
     modifier: Modifier = Modifier
 ) {
     val url = avatarUrl?.takeIf { it.isNotEmpty() }
-    Log.d(LOG_TAG, "compose for $username url=${url ?: "<empty>"}")
+    // Avoid leaking user identifiers / profile-picture URLs to logcat in production builds.
+    if (BuildConfig.DEBUG) {
+        Log.d(LOG_TAG, "compose for $username url=${url ?: "<empty>"}")
+    }
 
     Box(modifier = modifier.clip(CircleShape)) {
         AvatarPlaceholder(username = username, modifier = Modifier.fillMaxSize())
@@ -78,19 +81,22 @@ fun ProfileAvatar(
             }
 
             val request = remember(baseUrl, transformations) {
-                ImageRequest.Builder(context)
+                // No explicit .size(): AsyncImage infers the target from the composable's bounds,
+                // so Coil downsamples during decode instead of loading the full-resolution image.
+                val builder = ImageRequest.Builder(context)
                     .data(baseUrl)
-                    .size(Size.ORIGINAL)
                     .transformations(transformations)
                     .crossfade(true)
-                    .listener(
+                if (BuildConfig.DEBUG) {
+                    builder.listener(
                         onStart = { Log.d(LOG_TAG, "load start: $baseUrl") },
                         onSuccess = { _, _ -> Log.d(LOG_TAG, "load success: $baseUrl") },
                         onError = { _, result ->
                             Log.w(LOG_TAG, "load failed: $baseUrl", result.throwable)
                         }
                     )
-                    .build()
+                }
+                builder.build()
             }
 
             AsyncImage(
