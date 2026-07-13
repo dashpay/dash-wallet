@@ -102,7 +102,6 @@ private fun DEXRefundAddressScreenContent(
             TopIntro(
                 heading = stringResource(R.string.dex_refund_address_heading),
                 text = stringResource(R.string.dex_refund_address_description, currencyCode, currencyCode),
-                modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp)
             )
 
             // Refund address field (design-system AddressField): label + paste/scan input + inline

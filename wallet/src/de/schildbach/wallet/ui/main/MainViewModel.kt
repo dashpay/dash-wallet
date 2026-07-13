@@ -129,7 +129,7 @@ class MainViewModel @Inject constructor(
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
     private val txDisplayCacheService: TxDisplayCacheService,
-    private val crowdNodeApi: CrowdNodeApi
+    private val crowdNodeApi: CrowdNodeApi,
     private val swapProvider: DispatchingSwapProvider
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false

@@ -124,8 +124,7 @@ private fun DEXReceiveScreenContent(
             ) {
                 TopIntro(
                     heading = stringResource(R.string.dex_receive_heading, coinCode),
-                    text = stringResource(R.string.dex_receive_description),
-                    modifier = Modifier.fillMaxWidth()
+                    text = stringResource(R.string.dex_receive_description)
                 )
 
                 // White card with QR + URI row. shadows/xs: #B8C1CC ~10% alpha, y=5, blur=20.
