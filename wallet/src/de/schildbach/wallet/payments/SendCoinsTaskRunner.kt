@@ -119,7 +119,7 @@ class SendCoinsTaskRunner @Inject constructor(
         coinJoinSend = coinJoinMode != CoinJoinMode.NONE && coinJoinMixingState != MixingStatus.FINISHING
     }
 
-    private val paymentIntentParser = DashPaymentIntentParser(Constants.NETWORK_PARAMETERS)
+    private val paymentIntentParser = DashPaymentIntentParser(NETWORK_PARAMETERS)
 
     @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
@@ -392,7 +392,12 @@ class SendCoinsTaskRunner @Inject constructor(
                     delay(delayMs)
                     if (isTransactionOnNetwork(tx)) {
                         log.info("Transaction found on network despite HTTP timeout: ${tx.txId}")
-                        wallet.commitTx(tx)
+                        // The BIP70 server may have broadcast the tx and our wallet may have already
+                        // picked it up via the P2P network — use maybeCommitTx to avoid throwing
+                        // "commitTx called on the same transaction twice" in that race.
+                        if (!wallet.maybeCommitTx(tx)) {
+                            log.info("tx was already in the wallet (received via network): {}", tx.txId)
+                        }
                         return tx
                     }
                 }
@@ -655,7 +660,16 @@ class SendCoinsTaskRunner @Inject constructor(
             log.info("sending: {}", sendRequest)
 
             if (txCompleted) {
-                wallet.commitTx(sendRequest.tx)
+                // Use maybeCommitTx to avoid "commitTx called on the same transaction twice":
+                // a BIP70 merchant (e.g. CTX) may broadcast the tx to the network as soon as it
+                // receives the payment message, so our wallet can pick it up via the P2P peer
+                // group and add it to the pending pool before we reach this commit.
+                if (!wallet.maybeCommitTx(sendRequest.tx)) {
+                    log.info(
+                        "tx was already in the wallet (likely received via network broadcast): {}",
+                        sendRequest.tx.txId
+                    )
+                }
             } else {
                 signSendRequest(sendRequest)
                 wallet.sendCoinsOffline(sendRequest)

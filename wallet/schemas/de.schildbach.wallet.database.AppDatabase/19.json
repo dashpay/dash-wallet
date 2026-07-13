@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 19,
-    "identityHash": "9249dea53d653584d07a683ddc3e8f7d",
+    "identityHash": "384655556eee4a9efd557d8f84d88495",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -251,7 +251,7 @@
       },
       {
         "tableName": "gift_cards",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`txId` BLOB NOT NULL, `merchantName` TEXT NOT NULL, `price` REAL NOT NULL, `number` TEXT, `pin` TEXT, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `note` TEXT, `index` INTEGER NOT NULL, PRIMARY KEY(`txId`, `index`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`txId` BLOB NOT NULL, `merchantName` TEXT NOT NULL, `price` REAL NOT NULL, `number` TEXT, `pin` TEXT, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `note` TEXT, `index` INTEGER NOT NULL, `redeemUrlChallenge` TEXT, PRIMARY KEY(`txId`, `index`))",
         "fields": [
           {
             "fieldPath": "txId",
@@ -312,6 +312,12 @@
             "columnName": "index",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "redeemUrlChallenge",
+            "columnName": "redeemUrlChallenge",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -570,7 +576,7 @@
       },
       {
         "tableName": "transaction_metadata_cache",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cacheTimestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, `giftCardNumber` TEXT, `giftCardPin` TEXT, `merchantName` TEXT, `originalPrice` REAL, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cacheTimestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, `giftCardNumber` TEXT, `giftCardPin` TEXT, `merchantName` TEXT, `originalPrice` REAL, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `order` TEXT, `giftCardChallenge` TEXT, `index` INTEGER, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
         "fields": [
           {
             "fieldPath": "cacheTimestamp",
@@ -669,6 +675,24 @@
             "notNull": false
           },
           {
+            "fieldPath": "order",
+            "columnName": "order",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "giftCardChallenge",
+            "columnName": "giftCardChallenge",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "index",
+            "columnName": "index",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
             "fieldPath": "id",
             "columnName": "id",
             "affinity": "INTEGER",
@@ -686,7 +710,7 @@
       },
       {
         "tableName": "transaction_metadata_platform",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` REAL, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, `giftCardNumber` TEXT, `giftCardPin` TEXT, `merchantName` TEXT, `originalPrice` REAL, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, PRIMARY KEY(`id`, `txId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` REAL, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, `giftCardNumber` TEXT, `giftCardPin` TEXT, `merchantName` TEXT, `originalPrice` REAL, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `order` TEXT, `giftCardChallenge` TEXT, `index` INTEGER, PRIMARY KEY(`id`, `txId`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -788,6 +812,24 @@
             "fieldPath": "merchantUrl",
             "columnName": "merchantUrl",
             "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "order",
+            "columnName": "order",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "giftCardChallenge",
+            "columnName": "giftCardChallenge",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "index",
+            "columnName": "index",
+            "affinity": "INTEGER",
             "notNull": false
           }
         ],
@@ -997,7 +1039,7 @@
       },
       {
         "tableName": "tx_display_cache",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowId` TEXT NOT NULL, `title` TEXT NOT NULL, `valueSatoshis` INTEGER NOT NULL, `iconType` INTEGER NOT NULL, `iconBgType` INTEGER NOT NULL, `statusText` TEXT NOT NULL, `comment` TEXT NOT NULL, `transactionAmount` INTEGER NOT NULL, `time` INTEGER NOT NULL, `hasErrors` INTEGER NOT NULL, `service` TEXT, `swapStatus` TEXT, `exchangeRateFiatCode` TEXT, `exchangeRateFiatValue` INTEGER, `contactUsername` TEXT, `contactDisplayName` TEXT, `contactAvatarUrl` TEXT, `contactUserId` TEXT, `filterFlags` INTEGER NOT NULL, PRIMARY KEY(`rowId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowId` TEXT NOT NULL, `title` TEXT NOT NULL, `valueSatoshis` INTEGER NOT NULL, `iconType` INTEGER NOT NULL, `iconBgType` INTEGER NOT NULL, `statusText` TEXT NOT NULL, `comment` TEXT NOT NULL, `transactionAmount` INTEGER NOT NULL, `time` INTEGER NOT NULL, `hasErrors` INTEGER NOT NULL, `service` TEXT, `exchangeRateFiatCode` TEXT, `exchangeRateFiatValue` INTEGER, `contactUsername` TEXT, `contactDisplayName` TEXT, `contactAvatarUrl` TEXT, `contactUserId` TEXT, `filterFlags` INTEGER NOT NULL, PRIMARY KEY(`rowId`))",
         "fields": [
           {
             "fieldPath": "rowId",
@@ -1062,12 +1104,6 @@
           {
             "fieldPath": "service",
             "columnName": "service",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "swapStatus",
-            "columnName": "swapStatus",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -1177,104 +1213,12 @@
           }
         ],
         "foreignKeys": []
-      },
-      {
-        "tableName": "swap_orders",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`txId` BLOB NOT NULL, `service` TEXT NOT NULL, `provider` TEXT, `fromAsset` TEXT NOT NULL, `toAsset` TEXT NOT NULL, `toAddress` TEXT NOT NULL, `expectedToAmount` TEXT, `actualToAmount` TEXT, `status` TEXT NOT NULL, `outboundTxHash` TEXT, `timestamp` INTEGER NOT NULL, `finalisedAt` INTEGER, `lastChecked` INTEGER NOT NULL, PRIMARY KEY(`txId`))",
-        "fields": [
-          {
-            "fieldPath": "txId",
-            "columnName": "txId",
-            "affinity": "BLOB",
-            "notNull": true
-          },
-          {
-            "fieldPath": "service",
-            "columnName": "service",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "provider",
-            "columnName": "provider",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "fromAsset",
-            "columnName": "fromAsset",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "toAsset",
-            "columnName": "toAsset",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "toAddress",
-            "columnName": "toAddress",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "expectedToAmount",
-            "columnName": "expectedToAmount",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "actualToAmount",
-            "columnName": "actualToAmount",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "status",
-            "columnName": "status",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "outboundTxHash",
-            "columnName": "outboundTxHash",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "timestamp",
-            "columnName": "timestamp",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "finalisedAt",
-            "columnName": "finalisedAt",
-            "affinity": "INTEGER",
-            "notNull": false
-          },
-          {
-            "fieldPath": "lastChecked",
-            "columnName": "lastChecked",
-            "affinity": "INTEGER",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "txId"
-          ]
-        },
-        "indices": [],
-        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9249dea53d653584d07a683ddc3e8f7d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '384655556eee4a9efd557d8f84d88495')"
     ]
   }
 }

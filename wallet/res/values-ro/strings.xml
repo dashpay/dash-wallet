@@ -190,17 +190,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Securizare...</string>
     <string name="encrypt_keys_dialog_state_decrypting">În curs de securizare...</string>
     <string name="encrypt_keys_dialog_state_done">Gata</string>
-    <string name="scan_camera_problem_dialog_title">Scuze</string>
-    <string name="scan_camera_problem_dialog_message">Camera are o problemă. Probabil că trebuie să repornești dispozitivul.</string>
-    <string name="scan_camera_permission_dialog_title">Permisiune pentru cameră</string>
-    <string name="scan_camera_permission_dialog_message">Pentru a scana codurile QR, trebuie sa oferi permisiunea de a folosi camera. </string>
-    <string name="input_parser_io_error">Datele nu pot fi citite:\n%s</string>
-    <string name="input_parser_cannot_classify">Intrarea nu poate fi recunoscută:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">URI Dash invalid:\n%s</string>
-    <string name="input_parser_invalid_address">Adresă Dash invalidă!\n(Ai amestecat mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Nu se poate verifica solicitarea de plată:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Solicitare de plată nevalidă:\n%s</string>
-    <string name="input_parser_invalid_transaction">Tranzacție invalidă:\n%s</string>
     <string name="preferences_activity_title">Setări</string>
     <string name="preferences_category_diagnostics">Diagnostic</string>
     <string name="preferences_category_labs">Laboratoare</string>
@@ -238,7 +227,6 @@
     <string name="preferences_extended_public_key_title">Arată xpub</string>
     <string name="preferences_extended_public_key_summary">Arată Cheia Publică Extinsă a portofelului tau, pentru a putea fi importată in alte aplicaţii și servicii. Ai grijă: acest lucru va dezvălui confidențialitatea ta monetară aplicației respective.</string>
     <string name="bitmap_fragment_share">Distribuie...</string>
-    <string name="extended_public_key_fragment_title">Cheie Publică Extinsă</string>
     <string name="extended_public_key_fragment_share">Distribue xpub...</string>
     <string name="report_issue_dialog_title_issue">Raportează problema</string>
     <string name="report_issue_dialog_title_crash">Un crash anterior a fost detectat</string>

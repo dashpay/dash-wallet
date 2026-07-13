@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">Entre la billetera de Dash y tu cuenta de Coinbase.</string>
     <string name="coinbase_dash_wallet_error_title">No encontramos una billetera de Dash en tu cuenta de Coinbase.</string>
     <string name="coinbase_dash_wallet_error_message">Crea una billetera de Dash en Coinbase para continuar.</string>
+    <string name="coinbase_usd_wallet_error_message">Tu cuenta de Coinbase no admite USD.</string>
     <string name="create_dash_account">Crear cuenta de Dash</string>
     <string name="close">Cerrar</string>
     <string name="retry">Reintentar</string>

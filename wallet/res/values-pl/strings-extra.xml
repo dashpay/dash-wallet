@@ -69,6 +69,11 @@
 
     <string name="pay_title">Wyślij</string>
     <string name="history_title">Historia</string>
+    <string name="wallet_transactions_building_cache">Określanie historii transakcji…</string>
+    <string name="history_refresh_dialog_title">Odśwież Listę Transakcji</string>
+    <string name="history_refresh_dialog_message">Spowoduje to wyczyszczenie pamięci podręcznej wyświetlania transakcji i utworzenie jej od nowa. Lista będzie tymczasowo niedostępna podczas odbudowy.</string>
+    <string name="history_refresh_dialog_confirm">Odśwież</string>
+    <string name="history_refresh_complete">Lista transakcji odświeżona</string>
     <string name="more_title">Więcej</string>
     <string name="settings_title">Ustawienia</string>
     <string name="security_title">Bezpieczeństwo</string>
@@ -288,21 +293,28 @@
     <string name="menu_explore_title">Odkryj</string>
     <string name="menu_explore_subtitle">Znajdź sprzedawców, którzy akceptują DASH</string>
 
-    <string name="tools_address_book">Książka Adresowa</string>
-    <string name="tools_import_private_key">Zaimportuj Klucz Prywatny</string>
+    <string name="tools_address_book">Książka adresowa</string>
+    <string name="tools_import_private_key">Importuj klucz prywatny</string>
     <string name="import_private_key_description">Ta akcja przeniesie wszystkie monety z papierowego portfela Dash do twojej aplikacji DashPay na tym urządzeniu.</string>
-    <string name="tools_network_monitor">Monitor Sieci</string>
-    <string name="tools_show_xpub">Wydłużony Klucz Publiczny</string>
+    <string name="tools_network_monitor">Monitor sieci</string>
+    <string name="tools_show_xpub">Wydłużone klucze publiczne (BIP44)</string>
 
     <string name="about_help_us_improve">Pomóż nam poprawić Twoje wrażenia</string>
     <string name="about_review_and_rate">Przeglądnij i oceń appke</string>
     <string name="about_contact_support">Skontaktuj się z pomocą techniczną</string>
     <string name="about_fork_disclaimer">Jest to aplikacja typu open source opracowana na podstawie portfela Bitcoin</string>
-    <string name="about_copyright">Prawa autorskie © 2026 Dash Core Group</string>
+    <string name="about_copyright">Prawa autorskie © %1$d  Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPay Wallet %s</string>
     <string name="about_last_explore_device_sync">Ostatnia synchronizacja Eksploruj na urządzeniu</string>
     <string name="about_last_explore_server_update">Ostatnia aktualizacja Eksploruj dla serwera</string>
+    <string name="about_app_version_label">Wersja Aplikacji</string>
+    <string name="about_platform_label">Platforma</string>
+    <string name="about_explore_section">Odkryj Dash</string>
+    <string name="about_explore_update">Aktualizacja</string>
+    <string name="about_last_device_sync">Ostatnia synchronizacja urządzenia</string>
+    <string name="about_last_server_update">Ostatni update serwera</string>
+    <string name="about_value_not_available">Niedostępne</string>
     <string name="about_firebase_installation_id">ID instalacji Firebase</string>
     <string name="about_fcm_token">Token wiadomości chmury Firebase</string>
     <string name="about_last_explore_dash_update_error">nie można pobrać</string>

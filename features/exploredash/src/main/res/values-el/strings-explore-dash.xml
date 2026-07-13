@@ -46,6 +46,8 @@
     <string name="explore_no_atms">Κανένα ATM</string>
     <string name="distance_miles">%sμίλια</string>
     <string name="distance_kilometers">%sχιλιόμετρα</string>
+    <string name="explore_fee">τέλος %s%%</string>
+
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d έμπορος</item>
         <item quantity="other">%dέμποροι</item>
@@ -180,14 +182,23 @@
     <string name="purchase_gift_card_at">σε</string>
     <string name="purchase_gift_card_min">Ελάχιστο: %s</string>
     <string name="purchase_gift_card_max">Μέγιστο: %s</string>
+    <string name="gift_card_tab_single">Μονό</string>
+    <string name="gift_card_tab_multiple">Πολλαπλά</string>
+    <string name="gift_card_buy_title">Αγορά δωροκάρτας</string>
     <string name="purchase_gift_card_discount_hint">Αγοράζετε μια %s δωροκάρτα για %s (έκπτωση %s)</string>
     <string name="button_next">Επόμενο</string>
     <string name="purchase_gift_card_from">Από</string>
     <string name="purchase_gift_card_to">Σε</string>
     <string name="purchase_confirm_transaction">Επιβεβαίωση</string>
-    <string name="purchase_gift_card_total_label">Σύνολο δωροκάρτας</string>
+    <string name="purchase_gift_card_total_label">Αξία δωροκάρτας</string>
     <string name="purchase_gift_card_discount">Έκπτωση</string>
     <string name="purchase_gift_card_you_pay">Πληρώνετε</string>
+    <string name="purchase_gift_card_quantity_label">Ποσότητα</string>
+    <plurals name="purchase_gift_card_quantity_value">
+        <item quantity="one">%d κάρτα</item>
+        <item quantity="other">%d κάρτες </item>
+    </plurals>
+    <string name="purchase_gift_card_denomination_label">Αξία δωροκάρτας</string>
     <string name="purchase_gift_card_confirm">Επιβεβαίωση</string>
     <string name="purchase_gift_card_details">Λεπτομέριες δωροκάρτας</string>
     <string name="purchase_original_purchase">Αρχική αγορά</string>
@@ -203,6 +214,9 @@
     <string name="purchase_tell_the_cashier">Πείτε στον ταμία ότι πληρώνετε με ψηφιακή δωροκάρτα. Ταμίας: Πληκτρολογήστε το συνολικό ποσό στο πεδίο Bankcard, στη συνέχεια πληκτρολογήστε τον αριθμό της δωροκάρτας στο πεδίο  Λογαριασμός και πατήστε Enter.</string>
     <string name="purchase_in_the_payment_section">Στην ενότητα πληρωμής, πληκτρολογήστε τον αριθμό της ψηφιακής δωροκάρτας σας στο πεδίο της δωροκάρτας.</string>
     <string name="purchase_powered_by">Με την υποστήριξη</string>
+    <string name="purchase_cashier_instructions">Οδηγίες για τους ταμίες</string>
+    <string name="purchase_cashier_instructions_body">Επιλέξτε την δωροκάρτα ή τηνeGift Card κατά την ολοκλήρωση της παραγγελίας και επεξεργαστείτε την ως μέσο πληρωμής.</string>
+    <string name="purchase_gift_card_date_format">%1$s σε %2$s</string>
     <string name="insufficient_money_title">Ανεπαρκή διαθέσιμα νομίσματα</string>
     <string name="insufficient_money_msg">Ανεπαρκή χρήματα</string>
     <string name="send_coins_error_msg">Πρόβλημα στην αποστολή νομισμάτων!</string>
@@ -210,7 +224,12 @@
     <string name="gift_card_tx_title">Δωροκάρτα · %s</string>
     <string name="select_amount">επιλεξτε ποσό</string>
     <string name="select_fixed_amount">Αυτός ο έμπορος πωλεί δωροκάρτες σε σταθερές τιμές</string>
-
+    <string name="purchase_gift_card_max_multiple_error">Μπορείτε να αγοράσετε έως και %s σε κάρτες δώρων ανά παραγγελία</string>
+    <string name="purchase_gift_card_insufficient_money_error">Δεν υπάρχουν αρκετά χρήματα στο Dash για την αγορά αυτών των δωροκαρτών</string>
+    <string name="purchase_gift_card_insufficient_inventory">Δεν υπάρχουν αρκετά αποθέματα για %s να αγοράσει%dx%s κάρτες </string>
+    <string name="purchase_gift_card_inventory_toast">Ο έμπορος διαθέτει μόνο %d κάρτες</string>
+    <string name="purchase_gift_card_single_card_only_toast">Μπορείτε να επιλέξετε μόνο ένα ποσό ανά κάρτα</string>
+    <string name="purchase_gift_card_reset">Επαναφορά</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Πληκτρολογήστε τον κωδικό επαλήθευσης</string>
     <string name="verification_check_email">Ελέγξτε το email σας και πληκτρολογήστε τον κωδικό επαλήθευσης</string>
@@ -244,6 +263,7 @@
     <string name="accept_to_proceed">Για να δημιουργήσετε λογαριασμό στο DashSpend πρέπει να αποδεχτείτε τους όρους και τις προϋποθέσεις του DashSpend.</string>
     <string name="view_terms_conditions">Όροι και Προϋποθέσεις</string>
     <string name="barcode_placeholder">Παρακαλώ περιμένετε μέχρι να παραδοθούν τα στοιχεία της δωροκάρτας.</string>
+    <string name="purchase_order_number">Αριθμός παραγγελίας</string>
     <string name="gift_card_contact_ctx">Επικοινωνήστε με την CTX υποστήριξη</string>
     <string name="gift_card_contact_piggycards">Επικοινωνήστε με την υποστήριξη της PiggyCards</string>
     <string name="gift_card_contact_support">Επικοινωνήστε με την υποστήριξη</string>

@@ -446,7 +446,7 @@ class PiggyCardsRepository @Inject constructor(
         }
 
         return try {
-            val uri = BitcoinURI(orderResponse.payTo)
+            val uri = BitcoinURI(Constants.NETWORK_PARAMETERS, orderResponse.payTo)
             // the first query may return only one item, rather than all, so
             // let us fill out a mock of what the cards should be
             val giftCard = response.first()
@@ -528,6 +528,10 @@ class PiggyCardsRepository @Inject constructor(
                 paymentUrls = hashMapOf(DASH_DASH_KEY to data.payTo)
             )
         }
+    }
+
+    override suspend fun getGiftCardByTxId(txId: String): List<GiftCardInfo> {
+        TODO("PiggyCards requires an orderId, not a txId")
     }
 
     suspend fun getAccountEmail(): String? {

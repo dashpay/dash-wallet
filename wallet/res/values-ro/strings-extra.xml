@@ -1,16 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
+    <string name="onboarding_recover_wallet">Restaurează portofelul</string>
     <string name="dialog_confirm_confirm">Confirmă</string>
     <string name="dialog_confirm_fee">Taxă de reţea</string>
     <string name="dialog_confirm_total">Total</string>
-
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Scanează</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Trimite</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importă Cheia Privată</string>
+
     <!-- Lock Screen: Text above the PIN Entry area -->
     <string name="lock_enter_pin">Introdu codul PIN</string>
     <string name="pay_title">Trimite</string>
@@ -81,7 +80,7 @@
         <item quantity="other">ore</item>
     </plurals>
 
-	<string name="encrypt_new_key_chain_upgrade_button">Actualizează</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Actualizează</string>
     <string name="encrypt_new_key_chain_dialog_title">Actualizează portofelul</string>
     <string name="encrypt_new_key_chain_dialog_message">Portofelul tău va fi actualizat pentru a permite importarea și exportul către mai multe aplicații.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Trebuie să introduci codul PIN pentru a termina procesul de actualizare.</string>
@@ -116,20 +115,25 @@
     <string name="transaction_result_tax_category_loading">Se încarca…</string>
     <string name="menu_settings_title">Setări</string>
     <string name="menu_tools_subtitle">Importă cheia privată…</string>
-    <string name="menu_local_currency">Monedă Locală</string>
-    <string name="menu_rescan_blockchain">Scanează din nou blockchain-ul</string>
+    <string name="menu_local_currency">Monedă locală</string>
+    <string name="menu_rescan_blockchain">scanează din nou blockchain-ul</string>
     <string name="menu_contact_support_title">Contactează serviciul de asistența</string>
-    <string name="tools_import_private_key">Importă Cheia Privată</string>
-    <string name="tools_show_xpub">Cheie Publică Extinsă</string>
-
+    <string name="tools_address_book">Carte de adrese</string>
+    <string name="tools_import_private_key">Importă cheia privată</string>
+    <string name="tools_network_monitor">Monitor de rețea</string>
     <string name="about_contact_support">Contactează serviciul de asistența</string>
     <string name="confirm">Confirmă</string>
+
+    <string-array name="history_filter">
+        <item>Primiţi</item>
+        <item>Trimis</item>
+    </string-array>
 
     <string name="received_transactions">Primiţi</string>
     <string name="sent_transactions">Trimis</string>
     <string name="reset_wallet_text">Resetează Portofelul</string>
-    <string name="masternode_key_type_owner">Cheile Proprietarului</string>
-    <string name="masternode_key_type_voting">Chei de Vot</string>
-    <string name="masternode_key_type_operator">Chei De Operator</string>
+    <string name="reset_wallet_button">Resetează portofelul</string>
+
+
     <string name="masternode_key_address">Adresă</string>
     </resources>

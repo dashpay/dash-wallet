@@ -203,6 +203,7 @@
     <string name="purchase_gift_card_details">Gift card details</string>
     <string name="purchase_original_purchase">Original purchase</string>
     <string name="purchase_check_current_balance">See card details</string>
+    <string name="purchase_redeem_url_challange">Challenge</string>
     <string name="purchase_card_number">Card Number</string>
     <string name="purchase_card_pin">Card PIN</string>
     <string name="purchase_view_transaction">View Transaction Details</string>

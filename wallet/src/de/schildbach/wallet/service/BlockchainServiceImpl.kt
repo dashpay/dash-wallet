@@ -305,7 +305,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var balance = Coin.ZERO
     private var mixedBalance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
-    private var pendingForegroundNotification: Notification? = null
 
     // Background state tracking for Android 15 thread optimization
     private var isAppInBackground = false
@@ -372,8 +371,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         )
                         if (exchangeRate != null) {
                             log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate + " tx: " + tx.txId.toString())
+                            // Set the rate on the in-memory tx only. Do NOT saveWallet() here:
+                            // this callback runs inline under the wallet lock while commitTx() holds
+                            // it, and a full save of a large wallet takes seconds — doing it here
+                            // blocked the send path (purchase confirm dialog hung, tx not broadcast
+                            // until restart) and, firing for every CoinJoin mixing tx, starved the
+                            // lock. The exchange rate is non-critical and is persisted separately in
+                            // the transaction metadata table.
                             tx.exchangeRate = ExchangeRate(Coin.COIN, exchangeRate.fiat)
-                            application.saveWallet()
                         }
                     } catch (e: Exception) {
                         log.error("Failed to get exchange rate", e)
@@ -1763,7 +1768,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                 log.info("transaction {} broadcast initiated", tx.txId)
                             } else {
                                 log.warn("peergroup not available, not broadcasting transaction {}", tx.txId)
-                                tx.confidence.setPeerInfo(0, 1)
+                                // tx.confidence.setPeerInfo(0, 1)
                             }
                         } else {
                             log.error("transaction {} not found in wallet", hash)
@@ -1808,33 +1813,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 startForeground(notification)
                 log.info("start foreground service")
             } catch (e: ForegroundServiceStartNotAllowedException) {
-                log.info("failed to start in foreground, try again", e)
-                // On Android 15+, we'll retry later when the app is in foreground
-                // For now, continue running as a regular service
-                scheduleRetryForegroundService(notification)
+                // The app is in the background and is not allowed to promote to the foreground.
+                // Don't retry on a delay - a postDelayed() retry can't beat the ~5s startForeground()
+                // deadline. Just log and continue running as an ordinary background service; the
+                // service is re-promoted later via rescheduleService()/forceForeground() once the app
+                // is foregrounded. (Matches upstream bitcoin-wallet BlockchainService behavior.)
+                log.warn("foreground start not allowed, continuing as background service", e)
             }
         } else {
             startForeground(notification)
             log.info("start foreground service")
         }
-    }
-
-    private fun scheduleRetryForegroundService(notification: Notification) {
-        pendingForegroundNotification = notification
-        // Schedule a retry after a few seconds to see if the app comes to foregrxound
-        handler.postDelayed({
-            if (pendingForegroundNotification != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                try {
-                    startForeground(pendingForegroundNotification!!)
-                    log.info("start foreground service (delayed)")
-                    pendingForegroundNotification = null
-                    log.info("Successfully started foreground service on retry")
-                } catch (e: ForegroundServiceStartNotAllowedException) {
-                    log.info("Foreground service start still not allowed, will continue as background service")
-                    pendingForegroundNotification = null
-                }
-            }
-        }, 5000) // Retry after 5 seconds
     }
 
     override fun onDestroy() {
@@ -1934,26 +1923,29 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 platformSyncService.shutdown()
-                if (peerGroup != null) {
+                // Snapshot peerGroup into a local. onDestroy() may proceed without the check()
+                // mutex (after the 5s timeout above), so a concurrent checkService() can set the
+                // peerGroup field to null between this guard and any later deref. Using the local
+                // avoids that check-then-act race (previously an NPE at peerGroup!!.forceStop()).
+                val localPeerGroup = peerGroup
+                if (localPeerGroup != null) {
                     log.info("shutting down peerGroup and system services")
                     propagateContext()
                     coinJoinService.prepareForShutdown()
                     // we may need to skip these, or move them to after the forceStop because they grab a lock
-                    if (!peerGroup!!.lock.isLocked) {
-                        peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
-                        peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
-                        peerGroup!!.removeTimeoutErrorListener(timeoutErrorListener)
+                    if (!localPeerGroup.lock.isLocked) {
+                        localPeerGroup.removeDisconnectedEventListener(peerConnectivityListener)
+                        localPeerGroup.removeConnectedEventListener(peerConnectivityListener)
+                        localPeerGroup.removeTimeoutErrorListener(timeoutErrorListener)
                     }
                     dashSystemService.system.removeWallet(wallet)
-                    peerGroup!!.removeWallet(application.wallet)
+                    localPeerGroup.removeWallet(application.wallet)
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                     log.info("CLEANUP STEP 1: peerGroup listeners and wallet removed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
-                    log.info("CLEANUP STEP 2: About to call peerGroup.stop()")
-                    //peerGroup!!.forceStop(7_000)
-                    val peerGroupStopWatch = Stopwatch.createStarted()
-                    peerGroup!!.stop()
-                    log.info("CLEANUP STEP 2: peerGroup.stop() completed: {}", peerGroupStopWatch)
+                    log.info("CLEANUP STEP 2: About to call peerGroup.forceStop(7000)")
+                    localPeerGroup.forceStop(7_000)
+                    log.info("CLEANUP STEP 2: peerGroup.forceStop() completed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
                     log.info("CLEANUP STEP 3: About to close dashSystemService.system")
                     dashSystemService.system.close()
@@ -1962,7 +1954,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         wallet.riskAnalyzer = defaultRiskAnalyzer
                     }
                     log.info("CLEANUP STEP 4: About to shutdown riskAnalyzer")
-                    riskAnalyzer!!.shutdown()
+                    riskAnalyzer?.shutdown()
                     log.info("CLEANUP STEP 4: riskAnalyzer shutdown completed, peergroup fully stopped")
                 }
                 log.info("CLEANUP STEP 5: About to stop peerConnectivityListener")
@@ -1982,9 +1974,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     propagateContext()
                     application.saveWallet()
                 }
-                if (wakeLock!!.isHeld) {
-                    log.debug("wakelock still held, releasing")
-                    wakeLock!!.release()
+                // wakeLock is only assigned in onCreate; if onDestroy runs after an early/partial
+                // onCreate it may still be null, so guard rather than assert.
+                wakeLock?.let { lock ->
+                    if (lock.isHeld) {
+                        log.debug("wakelock still held, releasing")
+                        lock.release()
+                    }
                 }
                 if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
                     log.info("removing blockchain")
@@ -2238,9 +2234,22 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     fun forceForeground() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val intent = Intent(this, BlockchainServiceImpl::class.java)
-            ContextCompat.startForegroundService(this, intent)
-            // call startForeground just after startForegroundService.
-            startForegroundAndCatch(createNetworkSyncNotification())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    ContextCompat.startForegroundService(this, intent)
+                    // call startForeground just after startForegroundService.
+                    startForegroundAndCatch(createNetworkSyncNotification())
+                } catch (e: ForegroundServiceStartNotAllowedException) {
+                    // Not allowed to start an FGS from the background. The service is never created,
+                    // so no startForeground() promise is armed - nothing to clean up, just log.
+                    // (Matches upstream bitcoin-wallet BlockchainService.start().)
+                    log.info("failed to start in foreground", e)
+                }
+            } else {
+                ContextCompat.startForegroundService(this, intent)
+                // call startForeground just after startForegroundService.
+                startForegroundAndCatch(createNetworkSyncNotification())
+            }
         }
     }
 

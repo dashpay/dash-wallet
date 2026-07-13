@@ -281,7 +281,7 @@ Benutzernamen</b></string>
     <string name="username_voting_subtitle">Als Masternode-Besitzer kannst du abstimmen, um beantragte Nutzernamen zu bewilligen, bevor diese im Netzwerk erstellt werden.</string>
     <string name="username_voting_subtitle_two">Du kannst das Erstellen von Nutzernamen blockieren, wenn du sie für unangemessen hälst</string>
     <string name="voting_duplicates_only_title">Standardmäßige Filtereinstellung</string>
-    <string name="voting_duplicates_only_message">Die standardmäßige Filtereinstellung zeigt nur doppelte Benutzernamen über die noch NICHT abgestimmt wurde. Um alle strittigen Benutzernamen sehen zu können, ändere den Filter.</string>
+    <string name="voting_duplicates_only_message">Die standardmäßige Filtereinstellung zeigt nur doppelte Nutzernamen über die noch NICHT abgestimmt wurde. Um alle strittigen Nutzernamen sehen zu können, ändere den Filter.</string>
     <string name="all">Alles</string>
     <string name="n_usernames">%d Benutzernamen</string>
     <string name="n_requests">%d Anfragen</string>
@@ -523,8 +523,8 @@ Benutzernamen</b></string>
     <string name="transaction_metadata_continue_without_saving">Ohne Speichern fortfahren</string>
     <string name="invitation_fee_title">Einladungsgebühr</string>
     <string name="invitation_fee_message">Jede Einladung ist bereits vorfinanziert, damit jeder Empfänger seinen Nutzernamen schnell im Dash-Netzwerk erstellen kann.</string>
-    <string name="invitation_fee_noncontested">Unangefochten</string>
-    <string name="invitation_fee_contested">Angefochten</string>
+    <string name="invitation_fee_noncontested">Nicht beansprucht</string>
+    <string name="invitation_fee_contested">Beansprucht</string>
     <string name="invitation_fee_contested_message">Der Person, der du diese Einladung sendest, kann einen Nutzernamen nach ihren wünschen erstellen und das Netzwerk wird darüber abstimmen.</string>
     <string name="invitation_fee_noncontested_message">Der Person, die du diese Einladung sendest, kann einen Nutzernamen beanspruchen der die Nummer 2-9 beinhaltet und mehr als 20 Zeichen hat.</string>
     <string name="invitation_creating_progress_loading">Einladung laden...</string>
@@ -532,9 +532,9 @@ Benutzernamen</b></string>
     <string name="invitation_fee_confirm_and_pay_button">Bestätigen und bezahlen</string>
     <string name="error_sending_invite_transaction">Fehler beim Senden der Einladungs-Transaktion</string>
     <string name="request_username_invitation_not_mixed_message">Die Einladung wurde mit ungemixten Guthaben erstellt.</string>
-    <string name="request_username_invitation_only_noncontested_message">Du kannst nur unangefochtene Nutzernamen für diese Einladung nutzen.</string>
-    <string name="username_types_title">Was sind angefochtene und unangefochtene Nutzernamen\?</string>
-    <string name="username_types_message">Es gibt zwei Arten von Nutzernamen: angefochtene und unangefochtene.\n\nUnangefochtene Nutzernamen besitzen mindestens eine Nummer (2-9) oder sind länger als 20 Zeichen. Diese Nutzernamen werden automatisch bestätigt.\n\nAngefochtene Nutzernamen sind kürzer als 20 Zeichen und beinhalten keine Nummer außer der 1. Diese Art von Nutzernamen kannst du nur ohne Einladung erstellen. Die Gebühr muss selber bezahlt werden. Die Bestätigung erfolgt nach dem Ablauf der Abstimmungsperiode.</string>
+    <string name="request_username_invitation_only_noncontested_message">Du kannst nur nicht beanspruchte Nutzernamen für diese Einladung nutzen.</string>
+    <string name="username_types_title">Was sind beanspruchte und nicht beanspruchte Nutzernamen\?</string>
+    <string name="username_types_message">Es gibt zwei Arten von Nutzernamen: beanspruchte und nicht beanspruchte.\n\nNicht beanspruchte Nutzernamen besitzen mindestens eine Nummer (2-9) oder sind länger als 20 Zeichen. Diese Nutzernamen werden automatisch bestätigt.\n\nBeanspruchte Nutzernamen sind kürzer als 20 Zeichen und beinhalten keine Nummer außer der 1. Diese Art von Nutzernamen kannst du nur ohne Einladung erstellen. Die Gebühr muss selber bezahlt werden. Die Bestätigung erfolgt nach dem Ablauf der Abstimmungsperiode.</string>
     <string name="accept_invitation_hide">Ausblenden</string>
     <string name="accept_invitation_create">Erstellen</string>
 

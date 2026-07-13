@@ -395,7 +395,11 @@ class DashSpendViewModel @Inject constructor(
         try {
             response?.apply {
                 return merchant.deepCopy(
-                    savingsPercentage = this.first.maxOf { it.savingsPercentage },
+                    savingsPercentage = if (this.first.isNotEmpty()) {
+                        this.first.maxOf { it.savingsPercentage }
+                    } else {
+                        0
+                    },
                     giftCardProviders = this.second
                 )
             }
@@ -554,6 +558,7 @@ class DashSpendViewModel @Inject constructor(
                 merchantName = _giftCardMerchant.value?.name ?: "",
                 price = it.fiatAmount?.toDouble() ?: 0.0,
                 merchantUrl = it.redeemUrl,
+                redeemUrlChallenge = it.redeemUrlChallenge,
                 note = it.id,
                 index = index++
             )

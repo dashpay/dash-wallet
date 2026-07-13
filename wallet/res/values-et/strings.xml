@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+
+    <string name="exchange_rates_fragment_balance">Jääk</string>
+    <string name="encrypt_keys_dialog_state_done">Tehtud</string>
+    <string name="preferences_activity_title">Seaded</string>
+    <string name="about_title">Teave</string>
+    <string name="notification_inactivity_action_dismiss">Tuleta mulle hiljem meelde</string>
+    <!-- generic buttons -->
+    <string name="button_ok">OK</string>
+    <string name="button_cancel">Katkesta</string>
+    <string name="button_settings">Seaded</string>
+    </resources>

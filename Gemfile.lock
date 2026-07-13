@@ -41,7 +41,7 @@ GEM
     dotenv (2.8.1)
     emoji_regex (3.2.3)
     excon (0.112.0)
-    faraday (1.10.4)
+    faraday (1.10.5)
       faraday-em_http (~> 1.0)
       faraday-em_synchrony (~> 1.0)
       faraday-excon (~> 1.1)
@@ -66,7 +66,7 @@ GEM
     faraday-net_http_persistent (1.2.0)
     faraday-patron (1.0.0)
     faraday-rack (1.0.0)
-    faraday-retry (1.0.3)
+    faraday-retry (1.0.4)
     faraday_middleware (1.2.1)
       faraday (~> 1.0)
     fastimage (2.4.0)
@@ -178,6 +178,7 @@ GEM
     nkf (0.2.0)
     optparse (0.8.1)
     os (1.1.4)
+    ostruct (0.6.3)
     plist (3.7.2)
     public_suffix (7.0.2)
     rake (13.3.1)
@@ -225,12 +226,14 @@ GEM
 
 PLATFORMS
   arm64-darwin-23
+  arm64-darwin-25
 
 DEPENDENCIES
   abbrev (~> 0.1.2)
   fastlane (~> 2.227.1)
   fastlane-plugin-firebase_app_distribution
   nkf
+  ostruct
 
 BUNDLED WITH
    2.4.22

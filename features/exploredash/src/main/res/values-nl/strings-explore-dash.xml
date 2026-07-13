@@ -46,6 +46,8 @@
     <string name="explore_no_atms">Geen geldautomaten</string>
     <string name="distance_miles">%s miles</string>
     <string name="distance_kilometers">%s kilometers</string>
+    <string name="explore_fee">vergoeding %s%%</string>
+
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d acceptant</item>
         <item quantity="other">%d acceptanten</item>
@@ -180,14 +182,23 @@
     <string name="purchase_gift_card_at">ter hoogte van</string>
     <string name="purchase_gift_card_min">Min: %s</string>
     <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="gift_card_tab_single">Enkel</string>
+    <string name="gift_card_tab_multiple">Meerdere</string>
+    <string name="gift_card_buy_title">koop cadeaukaart</string>
     <string name="purchase_gift_card_discount_hint">Je koopt een %s cadeaukaart voor %s (%s korting)</string>
     <string name="button_next">Volgende</string>
     <string name="purchase_gift_card_from">Van</string>
     <string name="purchase_gift_card_to">Naar</string>
     <string name="purchase_confirm_transaction">Bevestig</string>
-    <string name="purchase_gift_card_total_label">Cadeaukaart totaal</string>
+    <string name="purchase_gift_card_total_label">Waarde cadeaubon</string>
     <string name="purchase_gift_card_discount">Korting</string>
     <string name="purchase_gift_card_you_pay">Je betaalt</string>
+    <string name="purchase_gift_card_quantity_label">Aantal</string>
+    <plurals name="purchase_gift_card_quantity_value">
+        <item quantity="one">%d bon</item>
+        <item quantity="other">%d bonnen</item>
+    </plurals>
+    <string name="purchase_gift_card_denomination_label">Waarde cadeaubon</string>
     <string name="purchase_gift_card_confirm">Bevestig</string>
     <string name="purchase_gift_card_details">Gegevens cadeaukaart</string>
     <string name="purchase_original_purchase">Originele aankoop</string>
@@ -203,6 +214,9 @@
     <string name="purchase_tell_the_cashier">Vertel de kassamedewerker dat je met een digitale cadeaukaart betaalt. Medewerker: typ het totaalbedrag in het veld Bankcard , typ vervolgens het nummer van de cadeaukaart in het veld Account en druk op Enter.</string>
     <string name="purchase_in_the_payment_section">Voer het nummer van de digitale cadeaukaart in.</string>
     <string name="purchase_powered_by">Aangedreven door</string>
+    <string name="purchase_cashier_instructions">Instructies voor de kassier</string>
+    <string name="purchase_cashier_instructions_body">Accepteer de cadeaubon of e-cadeaubon bij het afrekenen en verwerk deze als betaling.</string>
+    <string name="purchase_gift_card_date_format">%1$s bij %2$s</string>
     <string name="insufficient_money_title">Onvoldoende munten</string>
     <string name="insufficient_money_msg">Ontoereikende fondsen</string>
     <string name="send_coins_error_msg">Er is een probleem opgetreden bij het versturen van munten!</string>
@@ -210,7 +224,12 @@
     <string name="gift_card_tx_title">Cadeaukaart · %s</string>
     <string name="select_amount">selecteer bedrag</string>
     <string name="select_fixed_amount"> Deze winkelier verkoopt cadeaubonnen tegen vaste prijzen</string>
-
+    <string name="purchase_gift_card_max_multiple_error">U kunt per bestelling maximaal %s cadeaubonnen kopen</string>
+    <string name="purchase_gift_card_insufficient_money_error">Onvoldoende Dash om deze cadeaubonnen te kopen</string>
+    <string name="purchase_gift_card_insufficient_inventory">Onvoldoende voorraad voor %s om %d x %s kaarten te kopen</string>
+    <string name="purchase_gift_card_inventory_toast">Winkelier heeft slechts %d kaarten beschikbaar</string>
+    <string name="purchase_gift_card_single_card_only_toast">U kunt slechts één kaart aantal kiezen</string>
+    <string name="purchase_gift_card_reset">Reset</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Voer verificatiecode in</string>
     <string name="verification_check_email">Controleer je e-mail en voer de verificatiecode in</string>
@@ -244,6 +263,7 @@
     <string name="accept_to_proceed">Om een ​​account aan te maken bij DashSpend, accepteer de algemene voorwaarden van DashSpend</string>
     <string name="view_terms_conditions">Terms &amp; voorwaarden</string>
     <string name="barcode_placeholder">Wacht tot de cadeaukaart worden geleverd.</string>
+    <string name="purchase_order_number">Bestelnummer</string>
     <string name="gift_card_contact_ctx">Neem contact op met CTX</string>
     <string name="gift_card_contact_piggycards">Neem contact op met PiggyCards.</string>
     <string name="gift_card_contact_support">Neem contact op</string>

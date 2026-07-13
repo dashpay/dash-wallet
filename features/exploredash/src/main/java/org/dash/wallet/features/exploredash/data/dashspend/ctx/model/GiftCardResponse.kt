@@ -33,7 +33,9 @@ data class GiftCardResponse(
     val paymentId: String? = "",
     val percentDiscount: String? = "",
     val rate: String? = "",
+    val redeemType: String? = "",
     val redeemUrl: String? = "",
+    val redeemUrlChallenge: String? = "",
     @SerializedName("paymentFiatAmount") val fiatAmount: String? = "",
     @SerializedName("paymentFiatCurrency") val fiatCurrency: String? = "",
     @SerializedName("paymentUrls") val paymentUrls: Map<String, String>? = buildMap { }

@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">在Dash钱包和您的Coinbase账户之间</string>
     <string name="coinbase_dash_wallet_error_title">我们没有在您的 Coinbase账户上找到 Dash钱包.</string>
     <string name="coinbase_dash_wallet_error_message">请在 Coinbase上创建一个Dash 钱包以继续.</string>
+    <string name="coinbase_usd_wallet_error_message">您的 Coinbase 账户不支持美元.</string>
     <string name="create_dash_account">创建 Dash账户</string>
     <string name="close">关闭</string>
     <string name="retry">重试</string>

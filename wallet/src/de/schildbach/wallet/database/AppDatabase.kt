@@ -67,7 +67,7 @@ import org.dash.wallet.integrations.maya.data.SwapOrderDao
         TxGroupCacheEntry::class,
         SwapOrder::class
     ],
-    version = 20, // if increasing version, we need migrations to preserve tx/addr metadata,
+    version = 21, // if increasing version, we need migrations to preserve tx/addr metadata,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class, BlockchainStateRoomConverters::class)

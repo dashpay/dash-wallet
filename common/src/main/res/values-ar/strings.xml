@@ -48,6 +48,8 @@
     <string name="button_continue">استمر</string>
     <string name="get_quote">احصل على السعر</string>
     <string name="button_close">اغلاق</string>
+    <string name="button_cancel">إلغاء</string>
+    <string name="button_confirm">تأكيد</string>
     <string name="button_retry">إعادة المحاولة</string>
     <string name="button_send_report">إرسال تقرير</string>
     <string name="button_info">معلومات</string>
@@ -105,4 +107,34 @@
     <string name="chain_syncing">السلسلة قيد المزامنة ...</string>
     <string name="report_issue_dialog_mail_intent_chooser">إرسال التقرير بواسطة…</string>
 
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">عذرا</string>
+    <string name="scan_camera_problem_dialog_message">هناك مشكلة في الكاميرا. ربما تحتاج إلى إعادة تشغيل الجهاز.</string>
+    <string name="scan_camera_permission_dialog_title">إذن الكاميرا</string>
+    <string name="scan_camera_permission_dialog_message">من أجل مسح رموز QR، تحتاج إلى منح إذن لاستخدام الكاميرا.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">إرسال داش</string>
+    <string name="show_clipboard">اظهر المحتوى في لوحة الملاحظات </string>
+    <string name="tap_to_paste">اضغط على العنوان من لوحة الملاحظات للصقه</string>
+    <string name="recipient_address">عنوان المستلم</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">تعذر قراءة البيانات:\n%s</string>
+    <string name="input_parser_cannot_classify">تعذر تصنيف المدخل:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">عنوان داش غير صالح:\n%s</string>
+    <string name="input_parser_invalid_address">هل حصلت على عنوان Dash غير صالح! \ n (هل تريد خلط mainnet / testnet؟)</string>
+    <string name="input_parser_unverifyable_paymentrequest">تعذر التحقق من طلب الدفع:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">طلب دفع غير صالح:\n%s</string>
+    <string name="input_parser_invalid_transaction">معاملة غير صالحة:\n%s</string>
+    <string name="input_connect">اتصال</string>
+
+    <!-- others -->
+    <string name="confirm_sec">تأكيد (%s)</string>
+    <string name="cancel_transaction">إلغاء الصفقة؟</string>
+    <string name="yes_cancel">نعم ، إلغاء</string>
+    <string name="no_keep_it">لا ، احتفظ بها</string>
+    <string name="insufficient_money_title">لا يوجد عملات كافية</string>
+    <string name="send_coins_error_msg">مشكلة في إرسال العملات!</string>
+    <string name="from_dash_wallet_on_this_device">من محفظة داش على هذا الجهاز</string>
     </resources>

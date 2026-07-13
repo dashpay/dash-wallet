@@ -49,6 +49,11 @@ class DEXEnterAmountFragment : Fragment() {
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private val args by navArgs<DEXEnterAmountFragmentArgs>()
 
+    // Captured while the Maya nav graph is still on the back stack (in onCreateView). onDestroy must
+    // not touch the `viewModel` lazy directly: resolving it re-runs getBackStackEntry(nav_maya), which
+    // throws once the whole flow has been popped to Home (the graph is gone by then).
+    private var resolvedViewModel: DEXEnterAmountViewModel? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -64,6 +69,7 @@ class DEXEnterAmountFragment : Fragment() {
             ?: assetPool?.assetPriceFiat?.currencyCode
             ?: args.fiatCurrency
 
+        resolvedViewModel = viewModel
         viewModel.setArguments(
             asset = args.asset,
             assetCurrencyCode = args.currency,
@@ -103,9 +109,10 @@ class DEXEnterAmountFragment : Fragment() {
         // gesture) to the coin picker, or the receive screen's "Back home" popping the whole flow —
         // not on config changes or process death. The shared ViewModel outlives this fragment while
         // the picker is still on the stack, so without this it would restore the stale amount on
-        // the next entry into the buy flow.
+        // the next entry into the buy flow. Use the instance captured in onCreateView rather than the
+        // lazy: re-resolving it here would throw once the whole flow has been popped to Home.
         if (isRemoving) {
-            viewModel.clearEnteredAmount()
+            resolvedViewModel?.clearEnteredAmount()
         }
     }
 }

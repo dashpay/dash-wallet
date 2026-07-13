@@ -19,6 +19,7 @@ package de.schildbach.wallet.database
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
+import androidx.room.migration.AutoMigrationSpec
 import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -63,14 +64,18 @@ open class DatabaseMigrationTest {
         AppDatabaseMigrations.migration12To13,
         AppDatabaseMigrations.migration13to14,
         AppDatabaseMigrations.migration14to15,
-        AppDatabaseMigrations.migration15to16
+        AppDatabaseMigrations.migration15to16,
+        AppDatabaseMigrations.migration16to17,
+        AppDatabaseMigrations.migration17to18,
+        AppDatabaseMigrations.migration18to19
     )
 
     @Rule
     @JvmField
     val testHelper: MigrationTestHelper = MigrationTestHelper(
         InstrumentationRegistry.getInstrumentation(),
-        AppDatabase::class.java.canonicalName,
+        AppDatabase::class.java,
+        emptyList<AutoMigrationSpec>(),
         FrameworkSQLiteOpenHelperFactory()
     )
 
