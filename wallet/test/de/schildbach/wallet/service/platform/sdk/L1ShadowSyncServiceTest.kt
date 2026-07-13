@@ -82,6 +82,7 @@ class L1ShadowSyncServiceTest {
         var sdkTxs = 0
         var dashjBalances: Pair<Long, Long>? = 0L to 0L
         var dashjTxs: Int? = 0
+        var dashjChainHead: Int? = null
 
         var sdkUtxos: List<L1Utxo> = emptyList()
         var dashjUtxos: List<L1Utxo>? = emptyList()
@@ -125,6 +126,8 @@ class L1ShadowSyncServiceTest {
         override suspend fun dashjBalanceDuffs(): Pair<Long, Long>? = dashjBalances
 
         override suspend fun dashjTxCount(): Int? = dashjTxs
+
+        override suspend fun dashjChainHeadHeight(): Int? = dashjChainHead
 
         override suspend fun sdkUnspentUtxos(walletIdHex: String): List<L1Utxo> {
             sdkUtxoFetches++
@@ -632,6 +635,82 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
+    fun dashjChainCaughtUp_gateTruthTable() {
+        // Caught up: at the tip, ahead of it, or within the tolerance.
+        assertTrue(isDashjChainCaughtUp(1_511_575, 1_511_575L))
+        assertTrue(isDashjChainCaughtUp(1_511_580, 1_511_575L))
+        assertTrue(isDashjChainCaughtUp(1_511_573, 1_511_575L)) // tip - tolerance
+        // Behind by more than the tolerance: mid-sync/replay — not caught up.
+        assertFalse(isDashjChainCaughtUp(1_511_572, 1_511_575L))
+        assertFalse(isDashjChainCaughtUp(900_000, 1_511_575L)) // the live replay shape
+        // Missing evidence is conservative (suppresses the reset, never fires it).
+        assertFalse(isDashjChainCaughtUp(null, 1_511_575L)) // dashj wallet not loaded
+        assertFalse(isDashjChainCaughtUp(1_511_575, 0L)) // SDK snapshot carries no heights
+
+        // The SDK tip reference: target while syncing, max of both once synced.
+        assertEquals(0L, ShadowSyncProgress.IDLE.bestKnownTipHeight)
+        val progress = ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 1_511_575, 1_511_570, 0, 0)
+        assertEquals(1_511_575L, progress.bestKnownTipHeight)
+        assertEquals(1_511_575L, progress.copy(headerHeight = 1_511_570, headerTarget = 1_511_575).bestKnownTipHeight)
+    }
+
+    @Test
+    fun resetDecider_dashjNotCaughtUp_suppressesAndZeroesInflatedStreaks() {
+        // The live 02:38–02:42 incident: the SDK finished its scan (synced,
+        // full balance) while dashj was still replaying its chain download —
+        // sdk > dashj on every probe, but the inflated rule must not fire
+        // until dashj's chain head reaches the tip.
+        val decider = ShadowResetDecider()
+        repeat(5) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(inflated(), dashjChainCaughtUp = false)
+            )
+        }
+        // Not-caught-up probes also ZERO the streak (the stability
+        // requirement): the condition must hold for the FULL window with
+        // dashj genuinely synced throughout.
+        repeat(2) { assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated())) }
+        assertEquals(
+            ShadowResetDecider.Decision.NONE,
+            decider.onProbe(inflated(), dashjChainCaughtUp = false)
+        )
+        repeat(2) { assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated())) }
+        // A genuinely inflated view with BOTH engines synced still resets.
+        assertEquals(ShadowResetDecider.Decision.RESET, decider.onProbe(inflated()))
+    }
+
+    @Test
+    fun resetDecider_dashjNotCaughtUp_doesNotDisturbTheDeficitRows() {
+        // The deficit direction is deliberately ungated (it never resets
+        // organically, and its empty-deficit signature is SDK-side): the
+        // caught-up bit must not change deficit handling either way.
+        val decider = ShadowResetDecider()
+        repeat(3) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(deficit(), dashjChainCaughtUp = false)
+            )
+        }
+        repeat(2) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(
+                    emptyDeficit(), scanLooksComplete = true, recentResetMarker = true,
+                    dashjChainCaughtUp = false
+                )
+            )
+        }
+        assertEquals(
+            ShadowResetDecider.Decision.RECREATE_WALLET,
+            decider.onProbe(
+                emptyDeficit(), scanLooksComplete = true, recentResetMarker = true,
+                dashjChainCaughtUp = false
+            )
+        )
+    }
+
+    @Test
     fun resetDecider_selfSpendMarker_doesNotDisturbTheDeficitRows() {
         // The deficit direction needs no self-spend guard (a post-send
         // wallet always has sdkTxCount > 0, so the empty-deficit signature
@@ -821,10 +900,15 @@ class L1ShadowSyncServiceTest {
         headers = null, filterHeaders = null, filters = null, masternodes = null
     )
 
-    /** An inflated synced mismatch: sdk sees 200k duffs, dashj 100k. */
+    /**
+     * An inflated synced mismatch: sdk sees 200k duffs, dashj 100k — with
+     * dashj's chain head AT the network tip, so the mismatch is genuinely
+     * inflated (not a dashj mid-sync artifact the caught-up gate suppresses).
+     */
     private fun inflatedSource() = FakeSource(boundWalletId = walletIdHex).apply {
         sdkConfirmed = 200_000
         dashjBalances = 100_000L to 100_000L
+        dashjChainHead = 1_511_575
     }
 
     @Test
@@ -832,7 +916,7 @@ class L1ShadowSyncServiceTest {
         val source = inflatedSource()
         val service = service(source)
         assertTrue(service.startIfEnabled())
-        source.progressFlow.value = synced
+        source.progressFlow.value = syncedComplete
 
         repeat(2) { service.probeParity(walletIdHex) }
         assertEquals(0, source.clearL1RowsCalls) // below the threshold
@@ -848,16 +932,52 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
+    fun probeParity_dashjMidReplay_neverHardResetsACorrectSdkView() = runBlocking {
+        // The live 02:38–02:42 incident: after a restore-from-seed the SDK
+        // discovered the full 12.08713251 DASH / 1044+ txs in ~3 minutes
+        // while dashj was still replaying its chain download (balance
+        // climbing from ~0, chain head far below the tip). The old rule
+        // read this as "inflated for 3 synced probes" and hard-reset the
+        // CORRECT SDK state; the caught-up gate must suppress that.
+        val source = FakeSource(boundWalletId = walletIdHex).apply {
+            sdkConfirmed = 1_208_713_251 // the SDK view is CORRECT
+            sdkTxs = 1044
+            dashjBalances = 0L to 0L // dashj replay just started
+            dashjTxs = 0
+            dashjChainHead = 900_000 // replay position, tip is 1_511_575
+        }
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = syncedComplete
+
+        repeat(3) { service.probeParity(walletIdHex) }
+        // dashj replay progresses: balance partially discovered, still behind.
+        source.dashjBalances = 500_000_000L to 500_000_000L
+        source.dashjChainHead = 1_200_000
+        repeat(3) { service.probeParity(walletIdHex) }
+        assertEquals(0, source.clearL1RowsCalls) // NO hard reset — SDK state intact
+        assertEquals(1, source.startCalls)
+
+        // dashj finishes its replay and agrees with the SDK: parity verified.
+        source.dashjBalances = 1_208_713_251L to 1_208_713_251L
+        source.dashjTxs = 1044
+        source.dashjChainHead = 1_511_574 // within tolerance of the tip
+        service.probeParity(walletIdHex)
+        assertEquals(0, source.clearL1RowsCalls)
+        assertEquals(L1VerificationStatus.VERIFIED, service.verificationStatus.value)
+    }
+
+    @Test
     fun probeParity_neverResetsTwicePerProcess_evenIfTheMismatchSurvivesResync() = runBlocking {
         val source = inflatedSource()
         val service = service(source)
         assertTrue(service.startIfEnabled())
-        source.progressFlow.value = synced
+        source.progressFlow.value = syncedComplete
         repeat(3) { service.probeParity(walletIdHex) } // → the one reset
 
         // Simulate the post-reset resync completing (flow change re-emits).
         source.progressFlow.value = SpvSyncProgressData.EMPTY
-        source.progressFlow.value = synced
+        source.progressFlow.value = syncedComplete
 
         // Mismatch persists through a full resync: ERROR + stand down, no 2nd reset.
         repeat(6) { service.probeParity(walletIdHex) }
@@ -875,7 +995,7 @@ class L1ShadowSyncServiceTest {
         val source = inflatedSource()
         val service = service(source, nowMs = { now })
         assertTrue(service.startIfEnabled())
-        source.progressFlow.value = synced
+        source.progressFlow.value = syncedComplete
 
         service.noteSelfSpendBroadcast()
         repeat(5) {
@@ -1146,13 +1266,13 @@ class L1ShadowSyncServiceTest {
         val source = inflatedSource()
         val service = service(source)
         assertTrue(service.startIfEnabled())
-        source.progressFlow.value = synced
+        source.progressFlow.value = syncedComplete
         repeat(3) { service.probeParity(walletIdHex) } // → the one reset (recoverable)
         assertEquals(L1VerificationStatus.PROBING, service.verificationStatus.value)
 
         // The mismatch survives a full post-reset resync → CORRUPT_AFTER_RESET.
         source.progressFlow.value = SpvSyncProgressData.EMPTY
-        source.progressFlow.value = synced
+        source.progressFlow.value = syncedComplete
         repeat(3) { service.probeParity(walletIdHex) }
         assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
     }

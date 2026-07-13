@@ -111,6 +111,15 @@ data class ShadowSyncProgress(
         headerTarget > 0 && headerHeight >= headerTarget &&
             filterTarget > 0 && filterHeight >= filterTarget
 
+    /**
+     * The shadow SPV's best knowledge of the NETWORK chain tip, 0 when the
+     * snapshot carries no header heights: the reference height the
+     * dashj-caught-up gate ([isDashjChainCaughtUp]) compares dashj's chain
+     * head against. Uses the larger of current/target — while syncing the
+     * target IS the network tip; once synced the two agree.
+     */
+    val bestKnownTipHeight: Long get() = maxOf(headerHeight, headerTarget)
+
     companion object {
         val IDLE = ShadowSyncProgress(ShadowSyncPhase.IDLE, 0.0, 0, 0, 0, 0)
     }
@@ -347,6 +356,62 @@ internal const val DIFF_LOG_MAX_ENTRIES = 50
 // ── Auto-reset decision (pure) ────────────────────────────────────────
 
 /**
+ * Whether dashj's initial sync is GENUINELY complete for the purpose of
+ * the inflated-mismatch auto-reset rule — pure, host-testable.
+ *
+ * ## Why the rule needs this gate (live incident, 02:38–02:42)
+ *
+ * The probe's `synced=` bit ([ParityReport.sdkSynced]) is the SDK SHADOW
+ * chain's own SPV state ([ShadowSyncProgress.synced]) — the rule never
+ * consulted any dashj-side sync signal at all. After a restore-from-seed
+ * the SDK correctly discovered the wallet's full 12.08713251 DASH / 1044+
+ * txs in ~3 minutes while dashj was still REPLAYING its chain download
+ * (balance climbing from ~0), so `sdk > dashj` held for 3 consecutive
+ * probes and the decider hard-reset a CORRECT SDK state — wiping tx
+ * records and stranding the balance row (the watermark-strand state that
+ * later forced a full wallet re-creation).
+ *
+ * ## The signal chosen
+ *
+ * dashj's in-memory chain head (`Wallet.lastBlockSeenHeight`, stamped on
+ * every best-chain block dashj processes — it sits at the replay position
+ * during a replay/initial download) compared against the shadow SPV's own
+ * best knowledge of the network tip
+ * ([ShadowSyncProgress.bestKnownTipHeight] — live SYNCED snapshots carry
+ * header heights; the [ShadowResetDecider] reset-aftermath detector
+ * already relies on that). Both engines see the same network, so when
+ * both are genuinely synced the two heights agree within a block or two;
+ * during a dashj replay dashj sits thousands of blocks behind. Chosen
+ * over the Room-persisted `BlockchainState.replaying/percentageSync`
+ * because it needs no new collaborator (the [L1ShadowSource] seam already
+ * wraps the dashj wallet), cannot be stale (no persistence round-trip),
+ * and directly measures the very quantity the rule mis-read: how far
+ * dashj's view of the chain actually reaches.
+ *
+ * Conservative on missing evidence: an unknown dashj head or an SDK
+ * snapshot without header heights returns false — suppressing the reset
+ * (it only DELAYS a genuine reset until the next height-carrying probe,
+ * whereas firing early destroys correct state, the exact live failure).
+ * Streak stability across the 3-probe window is the caller's existing
+ * consecutive-probe counter: any not-caught-up probe zeroes the streak.
+ */
+internal fun isDashjChainCaughtUp(
+    dashjChainHeadHeight: Int?,
+    sdkBestKnownTipHeight: Long,
+    toleranceBlocks: Int = DASHJ_TIP_TOLERANCE_BLOCKS
+): Boolean =
+    dashjChainHeadHeight != null && sdkBestKnownTipHeight > 0 &&
+        dashjChainHeadHeight >= sdkBestKnownTipHeight - toleranceBlocks
+
+/**
+ * How far dashj's chain head may trail the shadow SPV's network tip and
+ * still count as caught up ([isDashjChainCaughtUp]): both engines track
+ * the same network tip when synced, but block propagation and probe
+ * timing skew them by a block or so momentarily.
+ */
+internal const val DASHJ_TIP_TOLERANCE_BLOCKS = 2
+
+/**
  * Decides when a persistent parity mismatch warrants an automatic
  * [L1ShadowSyncService.resetShadowState], from the probe stream plus two
  * context bits ([scanLooksComplete][ShadowSyncProgress.scanLooksComplete]
@@ -396,6 +461,7 @@ internal const val DIFF_LOG_MAX_ENTRIES = 50
  * |---------------------------------|-------------|----------------------------|----------|
  * | not synced                      | streaks → 0 | —                          | NONE |
  * | synced, balances match          | streaks → 0 | —                          | NONE |
+ * | sdk > dashj, dashj NOT caught up| streaks → 0 | —                          | NONE (dashj mid-sync/replay — see [isDashjChainCaughtUp]) |
  * | inflated (sdk > dashj)          | < threshold | —                          | NONE |
  * | inflated                        | ≥ threshold | no reset yet               | RESET (once) |
  * | inflated                        | ≥ threshold | reset already ran          | CORRUPT_AFTER_RESET (once), then NONE |
@@ -440,6 +506,17 @@ internal class ShadowResetDecider(
         // sdkTxCount == 0, which is impossible right after a send from a wallet whose
         // parity-gated (non-zero, TXO-backed) balance just funded the spend.
         recentSelfSpendMarker: Boolean = false,
+        // dashj's initial sync is GENUINELY complete (chain head at the network tip — see
+        // isDashjChainCaughtUp). The INFLATED direction is meaningless while dashj is still
+        // replaying/downloading: its balance is climbing toward the truth, so a correct SDK
+        // view trivially reads sdk > dashj (the live 02:38 incident — a hard reset wiped a
+        // CORRECT SDK state mid-replay). Not-caught-up probes zero the inflated streak, which
+        // also enforces stability across the consecutive-probe window. Defaults to true so
+        // callers with no dashj sync signal keep the pre-gate semantics (a genuinely inflated
+        // view with both engines synced must still reset). The DEFICIT direction is NOT gated:
+        // it never auto-resets organically, and its empty-deficit signature is about SDK-side
+        // scan state, not dashj's.
+        dashjChainCaughtUp: Boolean = true,
         // Debug builds always treat a persistent empty deficit as recoverable by wallet
         // re-creation: this harness only runs on debug builds, an empty-and-scanned SDK view
         // is never a legitimate steady state for a funded wallet, and remote testers have no
@@ -448,7 +525,7 @@ internal class ShadowResetDecider(
     ): Decision {
         val mismatch = report.sdkSynced && !report.balancesMatch
         val inflated = mismatch && report.sdkDuffs > report.dashjDuffs &&
-            !recentSelfSpendMarker
+            !recentSelfSpendMarker && dashjChainCaughtUp
         val emptyDeficit = mismatch && report.sdkDuffs < report.dashjDuffs &&
             report.sdkTxCount == 0 && scanLooksComplete
 
@@ -588,6 +665,14 @@ interface L1ShadowSource {
     /** dashj wallet tx count (`getTransactions(false)`), or null when it isn't loaded. */
     suspend fun dashjTxCount(): Int?
 
+    /**
+     * dashj's chain-head height (`Wallet.lastBlockSeenHeight` — the last
+     * best-chain block dashj processed; sits at the replay position during
+     * an initial sync/replay), or null when the wallet isn't loaded. Feeds
+     * the [isDashjChainCaughtUp] gate on the inflated auto-reset rule.
+     */
+    suspend fun dashjChainHeadHeight(): Int?
+
     /** Every unspent TXO row of the wallet from the SDK's Room store, normalized. */
     suspend fun sdkUnspentUtxos(walletIdHex: String): List<L1Utxo>
 
@@ -687,6 +772,9 @@ internal class DashSdkL1ShadowSource(
 
     override suspend fun dashjTxCount(): Int? =
         walletData.wallet?.getTransactions(false)?.size
+
+    override suspend fun dashjChainHeadHeight(): Int? =
+        walletData.wallet?.lastBlockSeenHeight
 
     override suspend fun sdkUnspentUtxos(walletIdHex: String): List<L1Utxo> {
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
@@ -1299,12 +1387,31 @@ class L1ShadowSyncService internal constructor(
         if (report.sdkSynced && !report.balancesMatch) {
             maybeLogOutpointDiff(walletIdHex, report)
         }
+        // The inflated auto-reset rule only means anything once dashj's own
+        // initial sync is genuinely complete (see isDashjChainCaughtUp — the
+        // live 02:38 incident: a dashj chain replay made a CORRECT SDK view
+        // read as inflated and the hard reset destroyed it).
+        val progressSnapshot = _progress.value
+        val dashjChainHead = source.dashjChainHeadHeight()
+        val dashjCaughtUp = isDashjChainCaughtUp(dashjChainHead, progressSnapshot.bestKnownTipHeight)
+        if (report.sdkSynced && !report.balancesMatch &&
+            report.sdkDuffs > report.dashjDuffs && !dashjCaughtUp
+        ) {
+            log.info(
+                "L1Parity inflated-mismatch auto-reset suppressed: dashj chain head {} vs SDK " +
+                    "tip {} (must be within {} blocks) — dashj is still mid-initial-sync/replay, " +
+                    "so sdk > dashj is expected until it catches up; not counted toward the " +
+                    "reset streak",
+                dashjChainHead, progressSnapshot.bestKnownTipHeight, DASHJ_TIP_TOLERANCE_BLOCKS
+            )
+        }
         val decision = resetDecider.onProbe(
             report,
-            scanLooksComplete = _progress.value.scanLooksComplete,
+            scanLooksComplete = progressSnapshot.scanLooksComplete,
             recentResetMarker = hasRecentResetMarker(),
             recentSelfSpendMarker =
                 lastSelfSpendMs != 0L && nowMs() - lastSelfSpendMs <= SELF_SPEND_GRACE_MS,
+            dashjChainCaughtUp = dashjCaughtUp,
             alwaysRecreateOnEmptyDeficit = alwaysRecreateOnEmptyDeficitOverride ?: BuildConfig.DEBUG
         )
         when (decision) {
