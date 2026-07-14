@@ -247,21 +247,14 @@ data class ShieldedTransferUIState(
         get() = amount.isGreaterThan(availableBalance)
 
     /**
-     * "You will transfer ~" hint, denominated in what ARRIVES (Figma
-     * 1746:18462 / 1746:18478): Dash Wallet → Shielded lands as Platform
-     * credits ("~ 100,000,000,000 C" for 1 DASH — gross 1 duff = 1000
-     * credits conversion, per the design); Shielded → Dash Wallet lands
-     * as Dash ("~ 1.00 Đ").
+     * "You will transfer ~" hint. Always denominated in DASH, both
+     * directions — user decision (2026-07-14) superseding the original
+     * Figma credits denomination: every balance and transfer amount in the
+     * shielded UI shows Dash, consistent with the More-screen balance card.
+     * The "~" covers the small pool/withdraw fees.
      */
     val transferHintText: String
-        get() = when (direction) {
-            ShieldedTransferDirection.ToShielded -> "~ ${amount.toCreditsString()}"
-            ShieldedTransferDirection.FromShielded -> "~ ${amount.toDisplayString()}"
-        }
-
-    /** True when [transferHintText] is credits-denominated (trailing "C" symbol). */
-    val transferHintIsCredits: Boolean
-        get() = direction == ShieldedTransferDirection.ToShielded
+        get() = "~ ${amount.toDisplayString()}"
 
     /** The L1-funding gate only applies to the Dash Wallet → Shielded direction. */
     val directionAvailable: Boolean

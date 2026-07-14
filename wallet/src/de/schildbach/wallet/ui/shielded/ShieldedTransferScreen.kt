@@ -444,8 +444,8 @@ private fun DirectionCard(
                     label = label,
                     name = stringResource(R.string.shielded_balance_title),
                     icon = R.drawable.ic_shielded_balance,
-                    balanceText = shieldedBalance.toCreditsString(),
-                    balanceIsCredits = true
+                    balanceText = shieldedBalance.toDisplayString(),
+                    balanceIsCredits = false
                 )
             }
             when (direction) {
@@ -600,12 +600,12 @@ private fun TransferHintOrError(uiState: ShieldedTransferUIState) {
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(2.dp))
-                // Denominated in what arrives (Figma 1746:18462/18478):
-                // To Shielded lands as credits, From Shielded as Dash —
-                // the "~" covers the small pool/withdraw fees.
+                // Always Dash, both directions (user decision superseding
+                // the Figma credits denomination) — the "~" covers the
+                // small pool/withdraw fees.
                 BalanceWithSymbol(
                     text = uiState.transferHintText,
-                    isCredits = uiState.transferHintIsCredits,
+                    isCredits = false,
                     big = true
                 )
             }

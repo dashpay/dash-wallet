@@ -717,18 +717,15 @@ class ShieldedTransferViewModelTest {
         )
     }
 
-    // ── "You will transfer ~" hint units (Figma 1746:18462 / 1746:18478) ──
+    // ── "You will transfer ~" hint — always DASH, both directions (user
+    // decision 2026-07-14, superseding the Figma credits denomination) ──
 
     @Test
-    fun transferHint_toShielded_isCredits_grossConversion() = runTest(dispatcher) {
+    fun transferHint_toShielded_isDash() = runTest(dispatcher) {
         val vm = viewModel()
 
         vm.onKeyInput("1")
-        val state = vm.uiState.value
-        // 1 DASH = 1e8 duffs = 1e11 credits — the design shows
-        // "~ 100,000,000,000 C" for a 1 DASH entry.
-        assertEquals("~ ${java.text.NumberFormat.getIntegerInstance().format(100_000_000_000L)}", state.transferHintText)
-        assertTrue(state.transferHintIsCredits)
+        assertEquals("~ 1.00", vm.uiState.value.transferHintText)
     }
 
     @Test
@@ -737,10 +734,7 @@ class ShieldedTransferViewModelTest {
 
         vm.onSwapDirection()
         vm.onKeyInput("1")
-        val state = vm.uiState.value
-        // the design shows "~ 1.00 Đ" for a 1 DASH entry
-        assertEquals("~ 1.00", state.transferHintText)
-        assertFalse(state.transferHintIsCredits)
+        assertEquals("~ 1.00", vm.uiState.value.transferHintText)
     }
 
     // ── AC2: first-visit timing sheet ───────────────────────────────────
