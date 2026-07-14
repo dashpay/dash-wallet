@@ -579,7 +579,13 @@ class ShieldedTransferViewModel @Inject constructor(
         val state = _uiState.value
         if (!state.canContinue || !state.showConfirm) return
         _uiState.value = state.copy(showConfirm = false)
-        if (!transferExecutor.submit(state.direction, state.amount)) {
+        // Confirming the full shielded balance means "spend everything":
+        // the exact note-selection fee is Rust-computed and unknowable
+        // here, so the executor may retry ONCE with the fee-adjusted
+        // amount instead of failing the Max flow (FromShielded only).
+        val isMaxSpend = state.direction == ShieldedTransferDirection.FromShielded &&
+            state.amount == state.availableBalance
+        if (!transferExecutor.submit(state.direction, state.amount, isMaxSpend)) {
             log.warn("shielded transfer submit refused — an operation is already in flight")
         }
     }

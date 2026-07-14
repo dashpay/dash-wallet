@@ -150,6 +150,20 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
             m.contains("set_funding failed")
     } == true ->
         SdkWriteResult.NotBroadcast("pre-broadcast build failure (insufficient funds / coin selection)", t)
+    // Shielded note selection (rs-platform-wallet note_selection.rs) runs
+    // strictly BEFORE proof generation or broadcast — nothing was submitted
+    // and the selected notes are released. Surfaced as a WalletOperation
+    // error carrying the reason in the message (observed live on a Max
+    // withdraw: "shielded withdraw failed: Insufficient shielded balance:
+    // available N, required M" — required = amount + the Rust-computed fee;
+    // "No unspent shielded notes available" is raised on the same path).
+    // Message-matched until the SDK exposes typed errors. Retryable with a
+    // smaller amount.
+    t.message?.let { m ->
+        m.contains("Insufficient shielded balance") ||
+            m.contains("No unspent shielded notes available")
+    } == true ->
+        SdkWriteResult.NotBroadcast("pre-broadcast shielded note-selection failure", t)
     // The SDK's SPV client wasn't running when broadcast was attempted, so the
     // tx never left the device (observed live: the interim shield pipeline
     // broadcasts via the shadow SPV, which our recovery paths stop/reset — the

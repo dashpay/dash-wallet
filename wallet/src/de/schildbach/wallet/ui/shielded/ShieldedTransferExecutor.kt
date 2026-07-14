@@ -27,6 +27,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.ShieldFromWalletOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.creditsToDash
+import de.schildbach.wallet.service.platform.sdk.dashToCredits
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.MoreFragment
 import de.schildbach.wallet_test.R
@@ -104,6 +106,65 @@ internal fun shieldedOutcomeNotification(state: ShieldedSubmitState): ShieldedOu
         )
         ShieldedSubmitState.Idle, ShieldedSubmitState.Proving -> null
     }
+
+/**
+ * The exact deficit rs-platform-wallet's shielded note selection reports
+ * when the requested amount + its Rust-computed fee exceeds the available
+ * shielded balance — amounts in credits (1 duff = 1000 credits). Raised
+ * strictly pre-broadcast (see the note-selection rule in
+ * `classifyBroadcastFailure`); message-matched until the SDK exposes the
+ * amounts as typed fields.
+ */
+private val INSUFFICIENT_SHIELDED_BALANCE =
+    Regex("""Insufficient shielded balance: available (\d+), required (\d+)""")
+
+/** A one-shot fee adjustment for a max shielded withdraw — see [shieldedMaxFeeAdjustment]. */
+internal data class ShieldedMaxFeeAdjustment(val deficitCredits: Long, val adjustedAmount: Dash)
+
+/**
+ * The fee-adjusted retry amount for a max ("spend everything") shielded
+ * withdraw that failed note selection, or null when [failure] isn't that
+ * exact, provably-pre-broadcast shape (or the numbers don't make sense).
+ *
+ * The note-selection fee is computed Rust-side from the selected note
+ * count and platform fee constants — not computable app-side — so a max
+ * spend can only learn it from the failure itself: `required` is
+ * amount + exact fee, and `required - available` is precisely what the
+ * request must shrink by. A max spend selects all notes either way, so
+ * the fee on the retry equals the fee baked into `required` — one
+ * adjusted attempt converges. The adjusted amount is floored to a whole
+ * duff ([creditsToDash]) since the app's money type can't carry sub-duff
+ * credits.
+ */
+internal fun shieldedMaxFeeAdjustment(
+    requested: Dash,
+    failure: SdkWriteResult.NotBroadcast
+): ShieldedMaxFeeAdjustment? {
+    val messages = buildList {
+        add(failure.reason)
+        var t: Throwable? = failure.cause
+        var depth = 0
+        while (t != null && depth < 10) {
+            t.message?.let(::add)
+            t = t.cause
+            depth++
+        }
+    }
+    val match = messages.firstNotNullOfOrNull { INSUFFICIENT_SHIELDED_BALANCE.find(it) } ?: return null
+    val available = match.groupValues[1].toLongOrNull() ?: return null
+    val required = match.groupValues[2].toLongOrNull() ?: return null
+    val deficitCredits = required - available
+    if (deficitCredits <= 0) return null
+    val requestedCredits = try {
+        dashToCredits(requested)
+    } catch (e: ArithmeticException) {
+        return null
+    }
+    val adjustedCredits = requestedCredits - deficitCredits
+    if (adjustedCredits <= 0) return null
+    val adjustedAmount = creditsToDash(adjustedCredits)
+    return if (adjustedAmount.isPositive) ShieldedMaxFeeAdjustment(deficitCredits, adjustedAmount) else null
+}
 
 /**
  * App-scoped owner of the shielded internal-transfer spend, so the ~30s
@@ -215,8 +276,16 @@ class ShieldedTransferExecutor @Inject constructor(
      * provably-pre-broadcast NotSent (retry). The Idle→Proving transition
      * is atomic under [this], so two racing confirmations can never both
      * pass the gate.
+     *
+     * [isMaxSpend] — the user confirmed the full available shielded
+     * balance (FromShielded only): the exact note-selection fee is
+     * Rust-computed and not knowable app-side, so instead of failing the
+     * spend, ONE fee-adjusted retry is made inside the same Proving
+     * operation when note selection reports the exact deficit — see
+     * [shieldedMaxFeeAdjustment]. Safe: that failure is provably
+     * pre-broadcast (nothing submitted, notes released).
      */
-    fun submit(direction: ShieldedTransferDirection, amount: Dash): Boolean {
+    fun submit(direction: ShieldedTransferDirection, amount: Dash, isMaxSpend: Boolean = false): Boolean {
         synchronized(this) {
             val state = _submitState.value
             if (state != ShieldedSubmitState.Idle && state !is ShieldedSubmitState.NotSent) {
@@ -257,25 +326,32 @@ class ShieldedTransferExecutor @Inject constructor(
                     surfaceOutcome(ShieldedSubmitState.Stalled())
                 }
             }
-            val result = withContext(ioDispatcher) {
-                try {
-                    when (direction) {
-                        ShieldedTransferDirection.ToShielded ->
-                            shieldedBalanceService.shieldFromWallet(amount)
-                        ShieldedTransferDirection.FromShielded ->
-                            shieldedBalanceService.withdrawToCore(
-                                walletDataProvider.freshReceiveAddressString(),
-                                amount
-                            )
-                    }
-                } catch (e: Exception) {
-                    // freshReceiveAddress failures happen strictly pre-broadcast
-                    SdkWriteResult.NotBroadcast("failed to prepare transfer", e)
+            var result = withContext(ioDispatcher) { attemptSpend(direction, amount) }
+            // Max-spend fee convergence: the Rust note selection just told
+            // us the exact deficit (amount + fee vs available), the failure
+            // is provably pre-broadcast (nothing submitted, notes released),
+            // and a max spend selects all notes either way — so ONE retry
+            // with the deficit-adjusted amount is safe and converges. Still
+            // inside Proving; the watchdog spans both attempts.
+            val firstResult = result
+            if (direction == ShieldedTransferDirection.FromShielded && isMaxSpend &&
+                firstResult is SdkWriteResult.NotBroadcast
+            ) {
+                val adjustment = shieldedMaxFeeAdjustment(amount, firstResult)
+                if (adjustment != null) {
+                    log.info(
+                        "max withdraw auto-adjusting for shielded fee: requested {}, deficit {} credits, " +
+                            "retrying once with {}",
+                        amount,
+                        adjustment.deficitCredits,
+                        adjustment.adjustedAmount
+                    )
+                    result = withContext(ioDispatcher) { attemptSpend(direction, adjustment.adjustedAmount) }
                 }
             }
             watchdog.cancel()
-            val outcome = when (result) {
-                is SdkWriteResult.Broadcast -> when (result.value) {
+            val outcome = when (val spendResult = result) {
+                is SdkWriteResult.Broadcast -> when (spendResult.value) {
                     ShieldFromWalletOutcome.SHIELD_PENDING_RETRY -> {
                         log.warn("wallet shield locked but pending — surfacing auto-retry state")
                         ShieldedSubmitState.LockedPendingShield
@@ -283,8 +359,8 @@ class ShieldedTransferExecutor @Inject constructor(
                     else -> ShieldedSubmitState.Success
                 }
                 is SdkWriteResult.NotBroadcast -> {
-                    log.info("shielded transfer not sent: {}", result.reason)
-                    ShieldedSubmitState.NotSent(result.reason)
+                    log.info("shielded transfer not sent: {}", spendResult.reason)
+                    ShieldedSubmitState.NotSent(spendResult.reason)
                 }
                 is SdkWriteResult.Ambiguous -> {
                     log.warn("shielded transfer ambiguous — surfacing terminal state")
@@ -300,6 +376,25 @@ class ShieldedTransferExecutor @Inject constructor(
             surfaceOutcome(outcome)
         }
         return true
+    }
+
+    /** One spend attempt against the service — the ~30s Halo 2 proof + broadcast. */
+    private suspend fun attemptSpend(
+        direction: ShieldedTransferDirection,
+        amount: Dash
+    ): SdkWriteResult<*> = try {
+        when (direction) {
+            ShieldedTransferDirection.ToShielded ->
+                shieldedBalanceService.shieldFromWallet(amount)
+            ShieldedTransferDirection.FromShielded ->
+                shieldedBalanceService.withdrawToCore(
+                    walletDataProvider.freshReceiveAddressString(),
+                    amount
+                )
+        }
+    } catch (e: Exception) {
+        // freshReceiveAddress failures happen strictly pre-broadcast
+        SdkWriteResult.NotBroadcast("failed to prepare transfer", e)
     }
 
     /**

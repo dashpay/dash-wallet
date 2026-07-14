@@ -186,6 +186,35 @@ class SdkDashPayWritesTest {
     }
 
     @Test
+    fun classify_shieldedNoteSelectionFailures_areNotBroadcast() {
+        // The live Max-withdraw failure: rs-platform-wallet's shielded note
+        // selection rejects the spend while CHOOSING notes — strictly before
+        // proof generation or broadcast, with the selected notes released —
+        // so it must surface as the retryable NotSent, not the terminal
+        // "may have gone through" Ambiguous. Message-matched until the SDK
+        // exposes typed errors.
+        val liveShapes = listOf<Throwable>(
+            // verbatim from the on-device incident log
+            DashSdkError.PlatformWallet.WalletOperation(
+                "shielded withdraw failed: Insufficient shielded balance: " +
+                    "available 29787148800, required 30062339200"
+            ),
+            // the sibling failure on the same note-selection path
+            DashSdkError.PlatformWallet.WalletOperation(
+                "shielded withdraw failed: No unspent shielded notes available"
+            )
+        )
+        for (error in liveShapes) {
+            val result = classifyBroadcastFailure(error)
+            assertTrue(
+                "${error.javaClass.simpleName}(${error.message}) must be NotBroadcast",
+                result is SdkWriteResult.NotBroadcast
+            )
+            assertSame(error, (result as SdkWriteResult.NotBroadcast).cause)
+        }
+    }
+
+    @Test
     fun classify_everythingElse_isAmbiguous() {
         val possiblyBroadcast = listOf<Throwable>(
             DashSdkError.NetworkError("connection reset"),

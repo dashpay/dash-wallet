@@ -30,6 +30,7 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -469,6 +470,62 @@ class ShieldedTransferViewModelTest {
 
         // pre-broadcast failure must surface as NotSent (retry-safe), never Ambiguous
         assertTrue(vm.uiState.value.submitState is ShieldedSubmitState.NotSent)
+    }
+
+    /**
+     * The shielded note-selection rejection as the service surfaces it:
+     * classified NotBroadcast with the original error (carrying the exact
+     * available/required credits) as the cause.
+     */
+    private fun insufficientShieldedResult(availableCredits: Long, requiredCredits: Long) =
+        SdkWriteResult.NotBroadcast(
+            "pre-broadcast shielded note-selection failure",
+            RuntimeException(
+                "shielded withdraw failed: Insufficient shielded balance: " +
+                    "available $availableCredits, required $requiredCredits"
+            )
+        )
+
+    @Test
+    fun maxFromShielded_confirm_isMaxSpend_executorRetriesFeeAdjusted() = runTest(dispatcher) {
+        // Confirming exactly the available shielded balance (the Max tap)
+        // must thread isMaxSpend = true: the fee-deficit failure then gets
+        // ONE adjusted retry instead of dead-ending the Max flow.
+        coEvery { shieldedService.withdrawToCore(any(), any()) } returnsMany
+            listOf(
+                // 15.5 DASH = 1_550_000_000_000 credits; fee deficit 275_190_400
+                insufficientShieldedResult(1_550_000_000_000L, 1_550_275_190_400L),
+                SdkWriteResult.Broadcast(Unit)
+            )
+        val vm = viewModel()
+
+        vm.onSwapDirection()
+        vm.onMaxClick()
+        vm.onContinue()
+        vm.onConfirm()
+
+        assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
+        // first the full balance, then the deficit-adjusted amount floored
+        // to a whole duff (1_549_724_809_600 credits → 1_549_724_809 duffs)
+        coVerifyOrder {
+            shieldedService.withdrawToCore(any(), Dash.parse("15.5"))
+            shieldedService.withdrawToCore(any(), Dash(1_549_724_809L))
+        }
+        coVerify(exactly = 2) { shieldedService.withdrawToCore(any(), any()) }
+    }
+
+    @Test
+    fun nonMaxFromShielded_confirm_isNotMaxSpend_noFeeAdjustedRetry() = runTest(dispatcher) {
+        coEvery { shieldedService.withdrawToCore(any(), any()) } returns
+            insufficientShieldedResult(1_550_000_000_000L, 1_550_275_190_400L)
+        val vm = viewModel()
+
+        vm.onSwapDirection()
+        vm.typeAmountAndConfirm() // 1 DASH ≠ the 15.5 available balance
+
+        // a typed (non-Max) amount never auto-adjusts: single attempt, NotSent
+        assertTrue(vm.uiState.value.submitState is ShieldedSubmitState.NotSent)
+        coVerify(exactly = 1) { shieldedService.withdrawToCore(any(), any()) }
     }
 
     // ── AC3: L1 sync gate ───────────────────────────────────────────────

@@ -24,6 +24,7 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet_test.R
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -164,6 +165,103 @@ class ShieldedTransferExecutorTest {
 
         // pre-broadcast failure must surface as NotSent (retry-safe), never Ambiguous
         assertTrue(executor.submitState.value is ShieldedSubmitState.NotSent)
+    }
+
+    // ── Max-spend fee adjustment (FromShielded only) ────────────────────
+
+    /**
+     * The live incident shape: the user's Max withdraw failed note
+     * selection because required = amount + Rust-computed fee exceeded the
+     * available shielded balance. Amounts in credits (1 duff = 1000):
+     * deficit = 30062339200 − 29787148800 = 275190400 credits.
+     */
+    private val liveInsufficientMessage =
+        "shielded withdraw failed: Insufficient shielded balance: " +
+            "available 29787148800, required 30062339200"
+
+    private fun insufficientShieldedResult() = SdkWriteResult.NotBroadcast(
+        "pre-broadcast shielded note-selection failure",
+        RuntimeException(liveInsufficientMessage)
+    )
+
+    /** What the user's Max tap requested: the shown balance, whole duffs. */
+    private val maxRequested = Dash(29_787_148L)
+
+    @Test
+    fun maxWithdraw_insufficientForFee_retriesOnceWithTheFeeAdjustedAmount() = runTest(dispatcher) {
+        coEvery { shieldedService.withdrawToCore(any(), any()) } returnsMany
+            listOf(insufficientShieldedResult(), SdkWriteResult.Broadcast(Unit))
+        val executor = executor()
+
+        assertTrue(executor.submit(ShieldedTransferDirection.FromShielded, maxRequested, isMaxSpend = true))
+
+        // one adjusted retry inside the same operation, then Success
+        assertEquals(ShieldedSubmitState.Success, executor.submitState.value)
+        // first the full balance, then requested 29_787_148_000 − deficit
+        // 275_190_400 = 29_511_957_600 credits, floored DOWN to the whole
+        // duff 29_511_957
+        coVerifyOrder {
+            shieldedService.withdrawToCore(any(), maxRequested)
+            shieldedService.withdrawToCore(any(), Dash(29_511_957L))
+        }
+        coVerify(exactly = 2) { shieldedService.withdrawToCore(any(), any()) }
+    }
+
+    @Test
+    fun nonMaxWithdraw_insufficientBalance_isNotSent_withoutAnyRetry() = runTest(dispatcher) {
+        coEvery { shieldedService.withdrawToCore(any(), any()) } returns insufficientShieldedResult()
+        val executor = executor()
+
+        executor.submit(ShieldedTransferDirection.FromShielded, maxRequested)
+
+        assertTrue(executor.submitState.value is ShieldedSubmitState.NotSent)
+        coVerify(exactly = 1) { shieldedService.withdrawToCore(any(), any()) }
+    }
+
+    @Test
+    fun maxWithdraw_retryAlsoInsufficient_isNotSent_neverAThirdAttempt() = runTest(dispatcher) {
+        coEvery { shieldedService.withdrawToCore(any(), any()) } returns insufficientShieldedResult()
+        val executor = executor()
+
+        executor.submit(ShieldedTransferDirection.FromShielded, maxRequested, isMaxSpend = true)
+
+        // one shot only: the adjustment never cascades
+        assertTrue(executor.submitState.value is ShieldedSubmitState.NotSent)
+        coVerify(exactly = 2) { shieldedService.withdrawToCore(any(), any()) }
+    }
+
+    @Test
+    fun shieldedMaxFeeAdjustment_parsesReasonOrCauseChain_andGuardsNonsense() {
+        val requested = Dash(29_787_148L)
+        val expected = ShieldedMaxFeeAdjustment(275_190_400L, Dash(29_511_957L))
+
+        // deficit in the cause chain (the classifier's NotBroadcast shape)
+        assertEquals(
+            expected,
+            shieldedMaxFeeAdjustment(requested, insufficientShieldedResult())
+        )
+        // …or in the reason string itself
+        assertEquals(
+            expected,
+            shieldedMaxFeeAdjustment(requested, SdkWriteResult.NotBroadcast(liveInsufficientMessage))
+        )
+
+        // no matching message → no adjustment
+        assertNull(shieldedMaxFeeAdjustment(requested, SdkWriteResult.NotBroadcast("flag off")))
+        // non-positive deficit → no adjustment
+        assertNull(
+            shieldedMaxFeeAdjustment(
+                requested,
+                SdkWriteResult.NotBroadcast("Insufficient shielded balance: available 200, required 100")
+            )
+        )
+        // deficit swallows the whole request → no adjustment
+        assertNull(
+            shieldedMaxFeeAdjustment(
+                Dash(1L),
+                SdkWriteResult.NotBroadcast("Insufficient shielded balance: available 0, required 999999999")
+            )
+        )
     }
 
     // ── Outcome surfacing: backgrounded → system notification ───────────
