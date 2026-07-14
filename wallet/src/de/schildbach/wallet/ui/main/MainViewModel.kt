@@ -29,7 +29,6 @@ import androidx.paging.PagingData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
@@ -39,12 +38,7 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.DeviceInfoProvider
-import de.schildbach.wallet.service.MAX_ALLOWED_AHEAD_TIMESKEW
-import de.schildbach.wallet.service.MAX_ALLOWED_BEHIND_TIMESKEW
-import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.TxDisplayCacheService
 import de.schildbach.wallet.service.platform.PlatformService
@@ -73,8 +67,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.PeerGroup
-import org.bitcoinj.core.PeerGroup.SyncStage
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
@@ -83,6 +75,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.CurrencyInfo
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.SyncStage
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -124,8 +117,6 @@ class MainViewModel @Inject constructor(
     dashPayProfileDao: DashPayProfileDao,
     private val dashPayConfig: DashPayConfig,
     dashPayContactRequestDao: DashPayContactRequestDao,
-    private val coinJoinConfig: CoinJoinConfig,
-    private val coinJoinService: CoinJoinService,
     private val txDisplayCacheService: TxDisplayCacheService,
     private val crowdNodeApi: CrowdNodeApi
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
@@ -180,9 +171,6 @@ class MainViewModel @Inject constructor(
     private val _totalBalance = MutableLiveData<Coin>()
     val totalBalance: LiveData<Coin>
         get() = _totalBalance
-    private val _mixedBalance = MutableLiveData<Coin>()
-    val mixedBalance: LiveData<Coin>
-        get() = _mixedBalance
 
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
     val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
@@ -203,16 +191,6 @@ class MainViewModel @Inject constructor(
         get() = _isNetworkUnavailable
 
     val currencyChangeDetected = SingleLiveEvent<Pair<String, String>>()
-
-    // CoinJoin
-    val coinJoinMode: Flow<CoinJoinMode>
-        get() = coinJoinConfig.observeMode()
-    val mixingState: Flow<MixingStatus>
-        get() = coinJoinService.observeMixingState()
-    val mixingProgress: Flow<Double>
-        get() = coinJoinService.observeMixingProgress()
-    val mixingSessions: Flow<Int>
-        get() = coinJoinService.observeActiveSessions()
 
     // DashPay
     private val isPlatformAvailable = MutableStateFlow(false)
@@ -301,19 +279,11 @@ class MainViewModel @Inject constructor(
             .catch { e -> log.error("crowdnode withdrawal reminder flow error", e) }
             .launchIn(viewModelScope)
 
-        // we need the total wallet balance for mixing progress,
         walletData.observeTotalBalance()
             .onEach {
                 _totalBalance.value = it
             }
             .catch { e -> log.error("total balance flow error", e) }
-            .launchIn(viewModelScope)
-
-        walletData.observeMixedBalance()
-            .onEach {
-                _mixedBalance.value = it
-            }
-            .catch { e -> log.error("mixed balance flow error", e) }
             .launchIn(viewModelScope)
 
         walletUIConfig
@@ -419,20 +389,10 @@ class MainViewModel @Inject constructor(
         walletData.processDirectTransaction(tx)
     }
 
-    suspend fun getCoinJoinMode(): CoinJoinMode {
-        return coinJoinConfig.getMode()
-    }
-
     suspend fun getDeviceTimeSkew(force: Boolean): Pair<Boolean, Long> {
         return try {
             val timeSkew = getTimeSkew(force)
-            val maxAllowedTimeSkew: Long = if (coinJoinConfig.getMode() == CoinJoinMode.NONE) {
-                TIME_SKEW_TOLERANCE
-            } else {
-                if (timeSkew > 0) MAX_ALLOWED_AHEAD_TIMESKEW * 3 else MAX_ALLOWED_BEHIND_TIMESKEW * 2
-            }
-            coinJoinService.updateTimeSkew(timeSkew)
-            return Pair(abs(timeSkew) > maxAllowedTimeSkew, timeSkew)
+            return Pair(abs(timeSkew) > TIME_SKEW_TOLERANCE, timeSkew)
         } catch (_: Exception) {
             // Ignore errors
             Pair(false, 0)

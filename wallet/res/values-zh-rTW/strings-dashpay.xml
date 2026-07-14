@@ -258,7 +258,6 @@
     <string name="please_note_cant_change_this_later">請注意，稍後您將無法變更此設置</string>
     <string name="Intermediate_level_WIFI_Warning">中級隱私等級需要可靠的網路連接</string>
     <string name="Advanced_level_WIFI_Warning">高級隱私等級需要可靠的網路連接</string>
-    <string name="privcay_level_WIFI_warning_desc">建議使用 Wi-Fi 網路以避免產生額外的混合費用</string>
     <string name="continue_anyway">無論如何都要繼續</string>
     <string name="welcome_to_dash_pay">歡迎使用 Dash Pay</string>
     <string name="pay_to_usernames">向用戶名付費。無須再使用有字母數字地址。</string>
@@ -404,34 +403,13 @@
     <string name="request_username_min_balance_disclaimer">要在達世幣網路上請求用戶名，您需要擁有超過 %s 個達世幣</string>
 
     <!-- CoinJoin -->
-    <string name="coinjoin">CoinJoin</string>
     <string name="turned_off">已關閉</string>
-    <string name="coinjoin_info_subtitle">混合您的達世幣將使您交易的私隱度更高</string>
-    <string name="coinjoin_description_1">開啟此功能後，您將只能使用已混合的達世幣。該功能可以隨時關閉。</string>
-    <string name="coinjoin_description_2">新收到的達世幣將在錢包打開時自動混合</string>
-    <string name="coinjoin_description_3">打開此功能將導致更高的電池使用率</string>
-    <string name="coinjoin_mixing_level_title">選擇混合級別</string>
-    <string name="coinjoin_mixing_level_subtitle">您可以隨時變更或停止混合級別</string>
     <string name="coinjoin_mixing_transactions">混合交易</string>
     <string name="coinjoin_transaction_group">這些都是混合關聯交易。</string>
     <string name="intermediate">中間的</string>
     <string name="advanced">進階</string>
     <string name="intermediate_level_card_decs">擁有極高技術水平的高級用戶可以確定您的交易歷史記錄</string>
     <string name="advanced_level_card_decs">即使對於具有任何技術專業水平的高級用戶來說，要確定您的交易歷史記錄都是非常困難的</string>
-    <string name="coinjoin_intermediate_time">最多 30 分鐘</string>
-    <string name="coinjoin_advanced_time">多小時</string>
-    <string name="coinjoin_start">開始混合</string>
-    <string name="coinjoin_stop">停止混合</string>
-    <string name="coinjoin_mixing">混合</string>
-    <string name="coinjoin_mixing_finishing">正在完成</string>
-    <string name="coinjoin_paused">已暫停</string>
-    <string name="coinjoin_not_started">尚未開始</string>
-    <string name="coinjoin_progress_balance">%1$s of %2$s</string>
-    <string name="coinjoin_progress_finished">充分混合</string>
-    <string name="coinjoin_change_level_confirmation">您確定要變更隱私等級嗎？</string>
-    <string name="coinjoin_stop_mixing_title">您確定要停止混合嗎？</string>
-    <string name="coinjoin_stop_mixing_message">任何已混合的資金將與您未混合的資金合併</string>
-    <string name="coinjoin_mixed_balance">已混合資金結餘:</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">您的信用餘額偏低</string>
@@ -460,9 +438,6 @@
     <string name="request_username_lost_vote">請求的用戶名已提供給其他人</string>
     <string name="request_username_blocked_message">用戶名 %s 被達世幣網路阻止。請請求另一個用戶名重試。</string>
     <string name="request_username_lost_vote_message">根據投票過程，達世幣網路決定將用戶名 %s 分配給其他人。請請求另一個用戶名重試。</string>
-    <string name="mix_dash_mix">混合資金結餘</string>
-    <string name="mix_dash_title">混合你的達世幣</string>
-    <string name="mix_dash_message">為了防止其他人看到您的付款對象，建議您在建立使用者名稱之前混合您的餘額。</string>
     <string name="tools_credits_title">積分</string>
     <string name="tools_credits_buy_button">購買</string>
     <string name="dashpay_what_are_credits_title">什麼是積分\?</string>
@@ -531,7 +506,6 @@
     <string name="invitation_creating_progress_wip">創建邀請中...</string>
     <string name="invitation_fee_confirm_and_pay_button">確認並付款</string>
     <string name="error_sending_invite_transaction">發送邀請交易時發生錯誤</string>
-    <string name="request_username_invitation_not_mixed_message">邀請是由未混合資金所創建的</string>
     <string name="request_username_invitation_only_noncontested_message">您只能使用此邀請來創建一個非競爭的用戶名</string>
     <string name="username_types_title">什麼是有爭議的和沒有爭議的的用戶名？</string>
     <string name="username_types_message">用戶名有兩種類型：有爭議的和沒有爭議的。.\n\n沒有爭議的用戶名至少有一個數字（2-9）或超過20個字符，該用戶名稱將自動批准.\n\n如果您想創建一個較短且沒有數字的有爭議的用戶名，則需要在沒有邀請的情況下註冊Dashpay，支付所需的費用並在投票期完成後等待批准。</string>

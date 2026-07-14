@@ -457,9 +457,6 @@
     <string name="masternode_key_not_used">尚未使用</string>
     <string name="masternode_key_revoked">已撤銷</string>
     <string name="masternode_key_private_public_base64">私鑰 / 公鑰 (base64)</string>
-    <string name="timeskew_ahead">前面</string>
-    <string name="timeskew_behind">在後面
-Zài hòumiàn</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">價格未被檢索到，所以相關的法幣的價值可能不正確。</string>

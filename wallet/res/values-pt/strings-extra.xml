@@ -463,8 +463,6 @@
     <string name="masternode_key_not_used">Não utilizado</string>
     <string name="masternode_key_revoked">Revogado</string>
     <string name="masternode_key_private_public_base64">Chaves Públicas / Privadas (base64)</string>
-    <string name="timeskew_ahead">adiante</string>
-    <string name="timeskew_behind">atrás</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Os preços não foram recuperados. Os valores em fiat podem estar incorretos.</string>

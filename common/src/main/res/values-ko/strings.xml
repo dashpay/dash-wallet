@@ -87,7 +87,6 @@
     <string name="select_currency">통화 선택</string>
     <string name="send_coins_error_dusty_send">송금액이 너무 적어 전송할 수 없습니다</string>
     <string name="send_coins_error_insufficient_money">잔액 부족</string>
-    <string name="send_coins_error_insufficient_mixed_money">믹싱된 자금이 충분하지 않습니다. 이 거래를 완료하기 위해서는 코인조인 믹싱이 끝날 때까지 기다리거나 설정에서 이 기능을 끄십시오.</string>
     <string name="syncing">동기화 중</string>
     <string name="no_connection">인터넷 연결 없음</string>
     <string name="rate_not_available">이용할 수 없음</string>

@@ -259,7 +259,6 @@ gebruikersnaam</b></string>
     <string name="please_note_cant_change_this_later">Let op dat je dit later niet kunt veranderen</string>
     <string name="Intermediate_level_WIFI_Warning">Het privacy niveau \'Gemiddeld\' vereist een betrouwbare internetverbinding</string>
     <string name="Advanced_level_WIFI_Warning">Het privacy niveau \'Geavanceerd\' vereist een betrouwbare internetverbinding</string>
-    <string name="privcay_level_WIFI_warning_desc">Het wordt aanbevolen om op een WiFi netwerk verbonden te zijn om extra mix kosten te vermijden.</string>
     <string name="continue_anyway">Ga toch door</string>
     <string name="welcome_to_dash_pay">Welkom bij Dash Pay</string>
     <string name="pay_to_usernames">Betaal aan gebruikersnamen. Geen alfanumerieke adressen meer.</string>
@@ -405,34 +404,13 @@ gebruikersnaam</b></string>
     <string name="request_username_min_balance_disclaimer">Om een gebruikersnaam aan te vragen op het Dash Netwerk, moet je meer dan %s Dash hebben.</string>
 
     <!-- CoinJoin -->
-    <string name="coinjoin">CoinJoin</string>
     <string name="turned_off">Uitgeschakeld</string>
-    <string name="coinjoin_info_subtitle">Door Dash te mixen, worden je transacties meer privé</string>
-    <string name="coinjoin_description_1">Wanneer dit is ingeschakeld kun je alleen Dash uitgeven wat gemixt is. Dit kan op elk moment worden uitgeschakeld.</string>
-    <string name="coinjoin_description_2">Nieuw ontvangen Dash wordt automatisch gemixt wanneer de portemonnee wordt geopend</string>
-    <string name="coinjoin_description_3">Als je deze functie inschakelt, zal het batterijgebruik toenemen</string>
-    <string name="coinjoin_mixing_level_title">Selecteer mix niveau</string>
-    <string name="coinjoin_mixing_level_subtitle">Je kunt het niveau van mixen op elk moment wijzigen of stoppen.</string>
     <string name="coinjoin_mixing_transactions">Transacties mixen</string>
     <string name="coinjoin_transaction_group">Dit zijn mix gerelateerde transacties.</string>
     <string name="intermediate">Gemiddeld</string>
     <string name="advanced">Gevanceerd</string>
     <string name="intermediate_level_card_decs">Gevorderde gebruikers met een zeer hoog niveau van technische expertise kunnen je transactiegeschiedenis achterhalen</string>
     <string name="advanced_level_card_decs">Het zou voor gevorderde gebruikers met welke technische expertise dan ook erg moeilijk zijn om je transactiegeschiedenis te achterhalen</string>
-    <string name="coinjoin_intermediate_time">tot 30 minuten</string>
-    <string name="coinjoin_advanced_time">Meerdere uren</string>
-    <string name="coinjoin_start">Start met mixen</string>
-    <string name="coinjoin_stop">Stop het mixen</string>
-    <string name="coinjoin_mixing">Aan het mixen</string>
-    <string name="coinjoin_mixing_finishing">Aan het afronden</string>
-    <string name="coinjoin_paused">Gepauzeerd</string>
-    <string name="coinjoin_not_started">Niet gestart</string>
-    <string name="coinjoin_progress_balance">%1$s van %2$s</string>
-    <string name="coinjoin_progress_finished">Volledig gemixt</string>
-    <string name="coinjoin_change_level_confirmation">Weet je zeker dat je het privacy niveau wilt wijzigen\?</string>
-    <string name="coinjoin_stop_mixing_title">Weet je zeker dat je het mixen wil stoppen\?</string>
-    <string name="coinjoin_stop_mixing_message">Alle het saldo dat is gemixt, worden samengevoegd met je ongemixte saldo</string>
-    <string name="coinjoin_mixed_balance">Gemixt saldo:</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">je krediet saldo is laag</string>
@@ -461,9 +439,6 @@ gebruikersnaam</b></string>
     <string name="request_username_lost_vote">De aangevraagde gebruikersnaam is aan iemand anders gegeven</string>
     <string name="request_username_blocked_message">De gebruikersnaam %s is geblokkeerd door het Dash Netwerk. Probeer het opnieuw door een andere gebruikersnaam aan te vragen.</string>
     <string name="request_username_lost_vote_message">Vanwege het stemproces heeft het Dash Netwerk besloten om de gebruikersnaam %s aan iemand anders toe te wijzen. Probeer het opnieuw door een andere gebruikersnaam aan te vragen.</string>
-    <string name="mix_dash_mix">Gemixt saldo</string>
-    <string name="mix_dash_title">Mix je Dash</string>
-    <string name="mix_dash_message">Om te voorkomen dat anderen kunnen zien aan wie je betalingen doet, raden wij u aan om je saldo te mixen voordat je je gebruikersnaam aanmaakt.</string>
     <string name="tools_credits_title">Credits</string>
     <string name="tools_credits_buy_button">Koop</string>
     <string name="dashpay_what_are_credits_title">Wat zijn credits\?</string>
@@ -532,7 +507,6 @@ gebruikersnaam</b></string>
     <string name="invitation_creating_progress_wip">Uitnodiging aanmaken...</string>
     <string name="invitation_fee_confirm_and_pay_button">Bevestigen en betalen</string>
     <string name="error_sending_invite_transaction">Fout bij het verzenden van de uitnodiging</string>
-    <string name="request_username_invitation_not_mixed_message">De uitnodiging is aangemaakt met een niet gemixt saldo.</string>
     <string name="request_username_invitation_only_noncontested_message">Je kunt alleen een niet-betwiste gebruikersnaam aanmaken met deze uitnodiging</string>
     <string name="username_types_title">Wat zijn betwiste en niet-betwiste gebruikersnamen\?</string>
     <string name="username_types_message">Er zijn twee soorten gebruikersnamen: betwist en niet-betwist.\n\nNiet-betwiste gebruikersnamen bevatten minstens één cijfer (2-9) of zijn langer dan 20 tekens en worden automatisch goedgekeurd.\n\nAls je een betwiste gebruikersnaam wilt aanmaken die korter is en zonder cijfers, moet je je registreren bij DashPay zonder uitnodiging, de vereiste vergoeding betalen en wachten op goedkeuring na voltooiing van de stemperiode.</string>

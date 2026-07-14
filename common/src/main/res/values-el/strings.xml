@@ -87,7 +87,6 @@
     <string name="select_currency">Επιλέξτε Νόμισμα</string>
     <string name="send_coins_error_dusty_send">Το ποσό είναι πολύ μικρό για να σταλθεί</string>
     <string name="send_coins_error_insufficient_money">Ανεπαρκή χρήματα</string>
-    <string name="send_coins_error_insufficient_mixed_money">Ανεπαρκή μικτά κεφάλαια. Περιμένετε να ολοκληρωθεί η ανάμειξη του CoinJoin ή απενεργοποιήστε αυτή τη λειτουργία στις ρυθμίσεις για να ολοκληρώσετε αυτή τη συναλλαγή.</string>
     <string name="syncing">Συγχρονισμός</string>
     <string name="no_connection">Χωρίς σύνδεση στο διαδίκτυο</string>
     <string name="rate_not_available">Μη διαθέσιμο</string>

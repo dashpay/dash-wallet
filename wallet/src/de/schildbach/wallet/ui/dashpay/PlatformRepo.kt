@@ -86,7 +86,6 @@ class PlatformRepo @Inject constructor(
     val walletApplication: WalletApplication,
     val appDatabase: AppDatabase,
     val platform: PlatformService,
-    val coinJoinConfig: CoinJoinConfig,
     val dashPayConfig: DashPayConfig
 ) {
 

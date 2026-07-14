@@ -24,7 +24,6 @@ import com.google.common.base.Stopwatch
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
@@ -62,7 +61,6 @@ class RestoreIdentityWorker @AssistedInject constructor(
     val walletDataProvider: WalletDataProvider,
     val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
-    val coinJoinConfig: CoinJoinConfig,
     val identityConfig: BlockchainIdentityConfig,
     val usernameRequestDao: UsernameRequestDao
 ) : BaseForegroundWorker(

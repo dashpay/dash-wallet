@@ -19,8 +19,6 @@ package de.schildbach.wallet.transactions
 
 import com.google.common.base.Stopwatch
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,8 +28,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Threading
@@ -56,10 +52,6 @@ class WalletBalanceObserver(
     private val _totalBalance = MutableStateFlow(Coin.ZERO)
     val totalBalance: StateFlow<Coin>
         get() = _totalBalance
-
-    private val _mixedBalance = MutableStateFlow(Coin.ZERO)
-    val mixedBalance: StateFlow<Coin>
-        get() = _mixedBalance
 
     private val walletChangeListener = object : ThrottlingWalletChangeListener() {
         override fun onThrottledWalletChanged() {
@@ -93,7 +85,6 @@ class WalletBalanceObserver(
     private fun emitLastBalances() {
         emitterScope.launch {
             _totalBalance.value = Coin.valueOf(walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) ?: 0L)
-            _mixedBalance.value = Coin.valueOf(walletUIConfig.get(WalletUIConfig.LAST_MIXED_BALANCE) ?: 0L)
         }
     }
 
@@ -101,9 +92,6 @@ class WalletBalanceObserver(
         emitterScope.launch {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
 
-            val mixedBalance = wallet.getBalance(BalanceType.COINJOIN_SPENDABLE)
-            walletUIConfig.set(WalletUIConfig.LAST_MIXED_BALANCE, mixedBalance.value)
-            _mixedBalance.emit(mixedBalance)
             val totalBalance = wallet.getBalance(BalanceType.ESTIMATED)
             walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, totalBalance.value)
             _totalBalance.emit(totalBalance)
@@ -158,36 +146,4 @@ class WalletBalanceObserver(
         }
     }
 
-    /** the emitted balance depends on the current [CoinJoinMode] and if mixing is ongoing */
-    fun observeSpendable(coinJoinService: CoinJoinService): Flow<Coin> = callbackFlow {
-        val emitterJob = SupervisorJob()
-        val emitterScope = CoroutineScope(Dispatchers.IO + emitterJob)
-
-        fun emitSpendingBalance(isMixing: Boolean) {
-            trySend(
-                if (isMixing) {
-                    _mixedBalance.value
-                } else {
-                    _totalBalance.value
-                }
-            )
-        }
-
-        fun emitBalance() {
-            emitterScope.launch {
-                emitSpendingBalance(coinJoinService.isMixing())
-            }
-        }
-
-        coinJoinService
-            .observeMixing()
-            .onEach { isMixing -> emitSpendingBalance(isMixing) }
-            .launchIn(emitterScope)
-
-        emitBalance()
-
-        awaitClose {
-            emitterJob.cancel()
-        }
-    }
 }

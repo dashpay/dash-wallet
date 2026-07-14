@@ -23,16 +23,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import org.dash.wallet.common.data.PaymentIntent
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.entity.DashPayContactRequest
-import de.schildbach.wallet.payments.MaxOutputAmountCoinJoinCoinSelector
 import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.AnrException
@@ -40,17 +37,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
-import org.bitcoinj.coinjoin.CoinJoinCoinSelector
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -73,7 +66,6 @@ import javax.inject.Inject
 import kotlin.math.min
 
 class SendException(message: String) : Exception(message)
-class InsufficientCoinJoinMoneyException(ex: InsufficientMoneyException) : InsufficientMoneyException(ex.missing, "${ex.message} [coinjoin]")
 
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
@@ -87,9 +79,7 @@ class SendCoinsViewModel @Inject constructor(
     private val notificationService: NotificationService,
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
-    private val dashPayContactRequestDao: DashPayContactRequestDao,
-    coinJoinConfig: CoinJoinConfig,
-    coinJoinService: CoinJoinService
+    private val dashPayContactRequestDao: DashPayContactRequestDao
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
@@ -123,7 +113,6 @@ class SendCoinsViewModel @Inject constructor(
     private val _dryRunSuccessful = MutableLiveData(false)
     val dryRunSuccessful: LiveData<Boolean>
         get() = _dryRunSuccessful
-    private var dryRunGreedy: Boolean = true
 
     private val _isBlockchainReplaying = MutableLiveData<Boolean>()
     val isBlockchainReplaying: LiveData<Boolean>
@@ -143,9 +132,6 @@ class SendCoinsViewModel @Inject constructor(
     val contactData: LiveData<UsernameSearchResult>
         get() = _contactData
 
-    private var _coinJoinActive = MutableStateFlow(false)
-    val coinJoinActive: Flow<Boolean>
-        get() = _coinJoinActive
     /** the resulting transaction is an asset lock transaction (default = false) */
     var isAssetLock = false
 
@@ -157,18 +143,7 @@ class SendCoinsViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        coinJoinService.observeMixing()
-            .map { isMixing ->
-                _coinJoinActive.value = isMixing
-                if (!isMixing) {
-                    MaxOutputAmountCoinSelector()
-                } else {
-                    MaxOutputAmountCoinJoinCoinSelector(wallet)
-                }
-            }
-            .flatMapLatest { coinSelector ->
-                walletDataProvider.observeBalance(Wallet.BalanceType.ESTIMATED, coinSelector)
-            }
+        walletDataProvider.observeBalance(Wallet.BalanceType.ESTIMATED, MaxOutputAmountCoinSelector())
             .distinctUntilChanged()
             .onEach(_maxOutputAmount::postValue)
             .launchIn(viewModelScope)
@@ -254,8 +229,7 @@ class SendCoinsViewModel @Inject constructor(
                 basePaymentIntent.mayEditAmount(),
                 finalPaymentIntent,
                 true,
-                dryrunSendRequest!!.ensureMinRequiredFee,
-                dryRunGreedy
+                dryrunSendRequest!!.ensureMinRequiredFee
             )
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
@@ -289,8 +263,7 @@ class SendCoinsViewModel @Inject constructor(
                 finalPaymentIntent,
                 true,
                 dryrunSendRequest!!.ensureMinRequiredFee,
-                key,
-                dryRunGreedy
+                key
             )
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
@@ -435,7 +408,6 @@ class SendCoinsViewModel @Inject constructor(
     private fun executeDryrun(amount: Coin) {
         dryrunSendRequest = null
         dryRunException = null
-        dryRunGreedy = false
 
         if (state.value != State.INPUT || amount == Coin.ZERO) {
             _dryRunSuccessful.postValue(false)
@@ -465,21 +437,15 @@ class SendCoinsViewModel @Inject constructor(
                 signInputs = false,
                 forceEnsureMinRequiredFee = false
             )
-            dryRunGreedy = true
             log.info("  start completeTx")
             wallet.completeTx(sendRequest)
 
-            dryRunGreedy = sendRequest.coinSelector is CoinJoinCoinSelector && !sendRequest.returnChange
             dryrunSendRequest = sendRequest
             log.info("executeDryRun finished")
             monitorJob.cancel()
             _dryRunSuccessful.postValue(true)
         } catch (ex: Exception) {
-            dryRunException = if (ex is InsufficientMoneyException && _coinJoinActive.value && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
-                 InsufficientCoinJoinMoneyException(ex)
-            } else {
-                ex
-            }
+            dryRunException = ex
             monitorJob.cancel()
             _dryRunSuccessful.postValue(false)
         }

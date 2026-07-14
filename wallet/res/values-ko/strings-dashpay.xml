@@ -258,7 +258,6 @@
     <string name="please_note_cant_change_this_later">다시 변경할 수 없음에 주의하세요</string>
     <string name="Intermediate_level_WIFI_Warning">중간 프라이버시 레벨은 신뢰할 수 있는 인터넷 연결이 필요합니다</string>
     <string name="Advanced_level_WIFI_Warning">향상된 프라이버시 레벨은 신뢰할 수 있는 인터넷 연결이 필요합니다</string>
-    <string name="privcay_level_WIFI_warning_desc">추가적인 믹싱 수수료 발생을 방지하기 위하여는 Wi-Fi 네트워크에 접속할 것을 권장합니다</string>
     <string name="continue_anyway">그래도 계속하기</string>
     <string name="welcome_to_dash_pay">대시페이에 오신 것을 환영합니다</string>
     <string name="pay_to_usernames">사용자 이름으로 지불하세요. 더 이상 알파벳과 숫자로 이루어진 주소는 필요하지 않습니다.</string>
@@ -404,34 +403,13 @@
     <string name="request_username_min_balance_disclaimer">대시 네트워크상에 사용자 이름을 요청하기 위해서는 %s 대시 이상이 필요합니다</string>
 
     <!-- CoinJoin -->
-    <string name="coinjoin">코인조인</string>
     <string name="turned_off">꺼짐</string>
-    <string name="coinjoin_info_subtitle">대시 코인을 믹싱하면 거래 내역이 보다 보호됩니다.</string>
-    <string name="coinjoin_description_1">이 기능이 켜지면 믹싱된 대시만을 사용할 수 있습니다. 이 기능은 언제든 끌 수 있습니다.</string>
-    <string name="coinjoin_description_2">새롭게 수신된 대시는 지갑을 열었을 때 자동으로 믹싱됩니다</string>
-    <string name="coinjoin_description_3">이 기능을 켜면 더 많은 배터리를 사용하게 됩니다.</string>
-    <string name="coinjoin_mixing_level_title">믹싱 수준 선택</string>
-    <string name="coinjoin_mixing_level_subtitle">믹싱 레벨은 언제든 변경 혹은 중지할 수 있습니다</string>
     <string name="coinjoin_mixing_transactions">거래 믹싱</string>
     <string name="coinjoin_transaction_group">이는 거래와 관련된 믹싱입니다.</string>
     <string name="intermediate">중급</string>
     <string name="advanced">고급</string>
     <string name="intermediate_level_card_decs">높은 수준의 기술적 전문 지식을 가진 고급 사용자의 경우 거래 기록을 결정할 수 있습니다</string>
     <string name="advanced_level_card_decs">어떤 수준의 기술적 전문 지식을 가진 고급 사용자라고 하더라도 자신의 거래 기록을 결정하는 것은 어려울 수 있습니다.</string>
-    <string name="coinjoin_intermediate_time">최대 30분</string>
-    <string name="coinjoin_advanced_time">다중 시간</string>
-    <string name="coinjoin_start">믹싱 시작</string>
-    <string name="coinjoin_stop">믹싱 중지</string>
-    <string name="coinjoin_mixing">믹싱</string>
-    <string name="coinjoin_mixing_finishing">마치는 중</string>
-    <string name="coinjoin_paused">멈춤</string>
-    <string name="coinjoin_not_started">시작되지 않음</string>
-    <string name="coinjoin_progress_balance">%2$s 중 %1$s</string>
-    <string name="coinjoin_progress_finished">완전히 믹싱됨</string>
-    <string name="coinjoin_change_level_confirmation">정말 프라이버시 수준을 변경하시겠습니까\?</string>
-    <string name="coinjoin_stop_mixing_title">정말 믹싱을 중단하시겠습니까\?</string>
-    <string name="coinjoin_stop_mixing_message">믹싱된 자금은 믹싱되지 않은 자금과 합산되게 됩니다</string>
-    <string name="coinjoin_mixed_balance">믹싱된 잔고:</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">당신의 크레딧 잔고가 적습니다</string>
@@ -460,9 +438,6 @@
     <string name="request_username_lost_vote">요청된 사용자 이름이 다른 사람에게 주어졌습니다</string>
     <string name="request_username_blocked_message">사용자 이름 %s은 대시 네트워크에 의해 블록되었습니다. 다른 사용자 이름으로 다시 시도해주십시오.</string>
     <string name="request_username_lost_vote_message">투표 과정에 의하여, 대시 네트워크가 사용자 이름 %s 을 다른 사용자에게 배치하기로 결정하였습니다. 다른 사용자이름으로 다시 시도해주십시오.</string>
-    <string name="mix_dash_mix">믹스 잔고</string>
-    <string name="mix_dash_title">당신의 대시를 믹스하세요</string>
-    <string name="mix_dash_message">당신이 누구에게 송금하는 지를 아무도 알 수 없게 하기 위해서는, 사용자 이름을 만들기 전에 잔고를 믹싱할 것을 권장합니다.</string>
     <string name="tools_credits_title">크레딧</string>
     <string name="tools_credits_buy_button">구매</string>
     <string name="dashpay_what_are_credits_title">크레딧은 무엇인가요\?</string>
@@ -531,7 +506,6 @@
     <string name="invitation_creating_progress_wip">초대 생성중...</string>
     <string name="invitation_fee_confirm_and_pay_button">승인 및 지불</string>
     <string name="error_sending_invite_transaction">초대 거래 중 오류 발생</string>
-    <string name="request_username_invitation_not_mixed_message">믹싱되지 않은 자금으로 초대장이 생성되었습니다</string>
     <string name="request_username_invitation_only_noncontested_message">이 초대장을 사용하면 비경쟁형 사용자 이름만을 생성할 수 있습니다.</string>
     <string name="username_types_title">경쟁형 혹은 비경쟁형 사용자 이름은 무엇인가요\?</string>
     <string name="username_types_message">사용자 이름에는 경쟁형과 비경쟁형의 두 가지 유형이 있습니다.\n\n비경쟁형 사용자 이름은 숫자(2-9)가 하나 이상 포함되거나, 20자 이상이어야 하며 자동으로 승인됩니다.\n\n더 짧고 숫자가 포함되지 않은 경쟁형 사용자 이름을 생성하려면, 초대 없이 대시페이에 등록하고 필요한 수수료를 지불한 후 투표 기간이 완료될 때까지 승인을 기다려야 합니다.</string>

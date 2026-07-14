@@ -183,6 +183,8 @@ class DashWalletFactory @Inject constructor(
             // does this work on encrypted backups?
             wallet.addKeyChain(Constants.BIP44_PATH)
             wallet as WalletEx
+            // mixing was removed from the app, but the CoinJoin keychain is still provisioned
+            // so that funds mixed by older versions (or other wallets sharing this seed) stay visible
             wallet.initializeCoinJoin(0)
             return wallet
         } finally {

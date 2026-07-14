@@ -21,7 +21,6 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CREATION_STATE
@@ -32,7 +31,6 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -97,7 +95,6 @@ class RequestUserNameViewModel @Inject constructor(
     val walletData: WalletDataProvider,
     val platformRepo: PlatformRepo,
     val usernameRequestDao: UsernameRequestDao,
-    val coinJoinConfig: CoinJoinConfig,
     val analytics: AnalyticsService,
     val topUpRepository: TopUpRepository
 ) : ViewModel() {
@@ -132,9 +129,6 @@ class RequestUserNameViewModel @Inject constructor(
     private val _inviteBalance = MutableStateFlow(Coin.ZERO)
     val inviteBalance: StateFlow<Coin>
         get() = _inviteBalance
-    private val _isInviteMixed = MutableStateFlow(false)
-    val isInviteMixed: StateFlow<Boolean>
-        get() = _isInviteMixed
 
     fun setCreateUsernameArgs(createUsernameArgs: CreateUsernameArgs?) {
         createUsernameArgs?.let {
@@ -247,16 +241,7 @@ class RequestUserNameViewModel @Inject constructor(
             }
             .launchIn(viewModelWorkerScope)
 
-        coinJoinConfig.observeMode()
-            .flatMapLatest { coinJoinMode ->
-                walletData.observeBalance(
-                    if (coinJoinMode == CoinJoinMode.NONE) {
-                        Wallet.BalanceType.ESTIMATED_SPENDABLE
-                    } else {
-                        Wallet.BalanceType.COINJOIN_SPENDABLE
-                    }
-                )
-            }
+        walletData.observeBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
             .onEach {
                 _walletBalance.value = it
             }
@@ -524,7 +509,6 @@ class RequestUserNameViewModel @Inject constructor(
                 log.error("error getting asset lock tx", e)
                 null
             }
-            isInviteMixed()
         }
         inviteAssetLockTx.value
     }
@@ -544,12 +528,6 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun isInviteForContestedNames(): Boolean = getInvitationAmount() >= Constants.DASH_PAY_FEE_CONTESTED
-
-    private suspend fun isInviteMixed(): Unit = withContext(Dispatchers.IO) {
-        _isInviteMixed.value = inviteAssetLockTx.value?.let {
-            topUpRepository.isInvitationMixed(it)
-        } ?: false
-    }
 
     suspend fun hasSecondaryName(): Boolean {
         return identityConfig.get(IDENTITY_ID) != null &&

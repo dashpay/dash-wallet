@@ -101,7 +101,6 @@ open class DashPayConfig @Inject constructor(
         val LAST_METADATA_PUSH = longPreferencesKey("last_metadata_push")
         val HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN = booleanPreferencesKey("has_dash_pay_info_screen_been_shown")
         val VOTING_INFO_SHOWN = booleanPreferencesKey("voting_info_shown")
-        val MIX_DASH_SHOWN = booleanPreferencesKey("mix_dash_shown")
         val KEYS_DONT_ASK_AGAIN = booleanPreferencesKey("dont_ask_again_for_keys")
         val FIRST_TIME_VOTING = booleanPreferencesKey("first_time_voting")
         val CREDIT_INFO_SHOWN = booleanPreferencesKey("credit_info_shown")

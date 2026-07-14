@@ -35,10 +35,10 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import android.net.Uri
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.PeerGroup.SyncStage
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import org.dash.wallet.common.data.SyncStage
 
 @HiltViewModel
 class InviteHandlerViewModel @Inject constructor(

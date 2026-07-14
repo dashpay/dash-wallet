@@ -22,7 +22,6 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.service.platform.IdentityRepository
@@ -49,7 +48,6 @@ class TopupIdentityWorker @AssistedInject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val platformRepo: PlatformRepo,
     private val identityRepo: IdentityRepository,
-    private val coinJoinConfig: CoinJoinConfig,
     private val topUpsDao: TopUpsDao
 ) : BaseWorker(context, parameters) {
     companion object {

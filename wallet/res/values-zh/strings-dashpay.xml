@@ -258,7 +258,6 @@
     <string name="please_note_cant_change_this_later">请注意您在之后无法再进行更改</string>
     <string name="Intermediate_level_WIFI_Warning">中等隐私级别需要稳定的网络连接</string>
     <string name="Advanced_level_WIFI_Warning">高等隐私级别需要稳定的网络连接</string>
-    <string name="privcay_level_WIFI_warning_desc">推荐使用Wi-Fi网络, 以避免产生额外的混币费用</string>
     <string name="continue_anyway">仍然继续</string>
     <string name="welcome_to_dash_pay">欢迎来到 DashPay</string>
     <string name="pay_to_usernames">以用户名支付. 无需使用字母数字地址.</string>
@@ -404,34 +403,13 @@
     <string name="request_username_min_balance_disclaimer">在 Dash 网络上申请一个用户名, 您需要持有超过 %s Dash</string>
 
     <!-- CoinJoin -->
-    <string name="coinjoin">CoinJoin</string>
     <string name="turned_off">已关闭</string>
-    <string name="coinjoin_info_subtitle">通过混合您的Dash将使您的交易更具隐私性</string>
-    <string name="coinjoin_description_1">这项功能被打开时, 您将只能花费已经混币的 Dash. 这项功能可以随时被关闭.</string>
-    <string name="coinjoin_description_2">当钱包打开时新接收的 Dash 将自动被混币</string>
-    <string name="coinjoin_description_3">打开这项功能将导致更高的电池使用率</string>
-    <string name="coinjoin_mixing_level_title">选择混币级别</string>
-    <string name="coinjoin_mixing_level_subtitle">您可以随时改变或停止混币级别</string>
     <string name="coinjoin_mixing_transactions">混币交易</string>
     <string name="coinjoin_transaction_group">这些是与混币相关的交易.</string>
     <string name="intermediate">常规</string>
     <string name="advanced">进阶</string>
     <string name="intermediate_level_card_decs">具有高水平技术专长的进阶用户可以决定您的交易历史记录</string>
     <string name="advanced_level_card_decs">具有任何水平技术专长的进阶用户都很难决定您的交易历史记录</string>
-    <string name="coinjoin_intermediate_time">最多30分钟</string>
-    <string name="coinjoin_advanced_time">多小时</string>
-    <string name="coinjoin_start">开始混币</string>
-    <string name="coinjoin_stop">停止混币</string>
-    <string name="coinjoin_mixing">混币</string>
-    <string name="coinjoin_mixing_finishing">正在完成</string>
-    <string name="coinjoin_paused">已暂停</string>
-    <string name="coinjoin_not_started">尚未开始</string>
-    <string name="coinjoin_progress_balance">%2$s中的%1$s</string>
-    <string name="coinjoin_progress_finished">完全混币</string>
-    <string name="coinjoin_change_level_confirmation">您确定要改变隐私级别吗\?</string>
-    <string name="coinjoin_stop_mixing_title">您确定要停止混币吗\?</string>
-    <string name="coinjoin_stop_mixing_message">任何已混币的资金将会与您未混币的资金相加</string>
-    <string name="coinjoin_mixed_balance">混币余额:</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">您的积分余额不足</string>
@@ -460,9 +438,6 @@
     <string name="request_username_lost_vote">请求的用户名已给与其他人</string>
     <string name="request_username_blocked_message">用户名 %s 被 Dash网络屏蔽. 请尝试申请其它用户名.</string>
     <string name="request_username_lost_vote_message">根据投票过程, Dash 网络决定将用户名 %s 分配给其他人. 请尝试申请其它用户名.</string>
-    <string name="mix_dash_mix">混币余额</string>
-    <string name="mix_dash_title">混币您的 Dash</string>
-    <string name="mix_dash_message">为了防止其他人看到您的付款对象, 建议您在创建用户名之前对您的 Dash 进行混币.</string>
     <string name="tools_credits_title">积分</string>
     <string name="tools_credits_buy_button">购买</string>
     <string name="dashpay_what_are_credits_title">什么是积分\?</string>
@@ -531,7 +506,6 @@
     <string name="invitation_creating_progress_wip">创建邀请中...</string>
     <string name="invitation_fee_confirm_and_pay_button">确认并付款</string>
     <string name="error_sending_invite_transaction">发送邀请交易时错误</string>
-    <string name="request_username_invitation_not_mixed_message">此邀请是使用未混币的资金创建的</string>
     <string name="request_username_invitation_only_noncontested_message">您只能使用此邀请创建一个无争议的用户名</string>
     <string name="username_types_title">什么是竞争的和非竞争的用户名\?</string>
     <string name="username_types_message">用户名有两种类型: 竞争的和非竞争的. \n\n非竞争的用户名至少包含一个数字 (2-9) 或长度超过20个字符, 能够自动获得批准. \n\n如果您想创建一个较短且不含数字的竞争的用户名, 则需要在没有邀请的情况下注册DashPay, 支付相应费用, 并在投票期结束后等待批准.</string>

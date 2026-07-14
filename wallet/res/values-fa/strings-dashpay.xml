@@ -257,7 +257,6 @@
     <string name="please_note_cant_change_this_later">لطفا دقت داشته باشید که نمی‌توانید بعدا این را تغییر دهید</string>
     <string name="Intermediate_level_WIFI_Warning">سطح میانی محرمانگی نیازمند اتصال اینترنتی مطمئن است</string>
     <string name="Advanced_level_WIFI_Warning">سطح بالای مخرمانگی نیازمند اتصال اینترنتی مطمئن است.</string>
-    <string name="privcay_level_WIFI_warning_desc">توصیه می‌شود برای جلوگیری از هزینه‌های اضافی میکسینگ، به شبکه وای‌فای متصل باشید.</string>
     <string name="continue_anyway">در هر صورت، ادامه بده</string>
     <string name="welcome_to_dash_pay">به دش پی خوش آمدید</string>
     <string name="pay_to_usernames">پرداخت به نام کاربری. بدون نیاز به نشانی طولانی کیف پول</string>
@@ -403,34 +402,13 @@
     <string name="request_username_min_balance_disclaimer">برای درخواست نام کاربری روی شبکه دش، باید بیش از %sدش داشته باشید</string>
 
     <!-- CoinJoin -->
-    <string name="coinjoin">کوین‌جوین</string>
     <string name="turned_off">خاموش شده</string>
-    <string name="coinjoin_info_subtitle">ترکیب کوین‌های دش موجب می‌شود تراکنش‌هایتان محرمانه‌تر شود</string>
-    <string name="coinjoin_description_1">فقط وقتی می‌توانید دش‌های ترکیب‌شده‌تان را خرج کنید که این گزینه روشن باشد. می‌توانید هر وقت که بخواهید، آن را خاموش کنید. </string>
-    <string name="coinjoin_description_2">دش‌هایی که به تازگی دریافت شده وقتی که کیف پول باز می‌شود، به صورت خودکار ترکیب خواهد شد</string>
-    <string name="coinjoin_description_3">روشن کردن این قابلیت موجب استفاده بیشتر از باتری می‌شود</string>
-    <string name="coinjoin_mixing_level_title">انتخاب سطح ترکیب</string>
-    <string name="coinjoin_mixing_level_subtitle">می‌توانید سطح ترکیب را هر زمانی تغییر داده یا متوقف کنید</string>
     <string name="coinjoin_mixing_transactions">ترکیب تراکنش‌ها</string>
     <string name="coinjoin_transaction_group">اینها تراکنش‌های ترکیب‌شده هستند</string>
     <string name="intermediate">متوسط</string>
     <string name="advanced">پیشرفته</string>
     <string name="intermediate_level_card_decs">کاربران پیشرفته که سطح بالایی از تخصص فنی را دارند می‌توانند سابقه تراکنش شما را تعیین کنند.</string>
     <string name="advanced_level_card_decs">حتی برای کاربران با تخصص فنی بالا نیز تعیین سابقه تراکنش شما دشوار است</string>
-    <string name="coinjoin_intermediate_time">تا ۳۰ دقیقه</string>
-    <string name="coinjoin_advanced_time">چند ساعت</string>
-    <string name="coinjoin_start">آغاز ترکیب</string>
-    <string name="coinjoin_stop">توقف ترکیب</string>
-    <string name="coinjoin_mixing">در حال ترکیب</string>
-    <string name="coinjoin_mixing_finishing">در حال پایان</string>
-    <string name="coinjoin_paused">متوقف شده</string>
-    <string name="coinjoin_not_started">شروع نشده</string>
-    <string name="coinjoin_progress_balance">%1$s از %2$s</string>
-    <string name="coinjoin_progress_finished">کاملا ترکیب شده</string>
-    <string name="coinjoin_change_level_confirmation">آیا مطمئن هستید که می‌خواهید سطح محرمانگی را تغییر دهید؟</string>
-    <string name="coinjoin_stop_mixing_title">آیا مطمئن هستید که می‌خواهید ترکیب را متوقف کنید؟</string>
-    <string name="coinjoin_stop_mixing_message">هر مبلغی که ترکیب شده، با مبالغ ترکیب‌نشده شما ترکیب خواهد شد</string>
-    <string name="coinjoin_mixed_balance">موجودی ترکیب شده:</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">موجودی اعتباری‌تان پائین است</string>
@@ -459,9 +437,6 @@
     <string name="request_username_lost_vote">نام کاربری درخواستی به فرد دیگری داده شده است. </string>
     <string name="request_username_blocked_message">نام کاربری %s توسط شبکه شد مسدود شد. لطفا یک نام کاربری دیگر را درخواست کنید. </string>
     <string name="request_username_lost_vote_message">با توجه به فرآیند رای‌گیری، شبکه دش تصمیم گرفته که نام کاربری %s را به کاربری دیگر اختصاص دهد. لطفا یک نام کاربری دیگر را درخواست کنید. </string>
-    <string name="mix_dash_mix">ترکیب موجودی</string>
-    <string name="mix_dash_title">دش‌تان را ترکیب کنید</string>
-    <string name="mix_dash_message">برای اینکه افراد دیگر نتوانند پرداخت‌هایتان را ببینند، توصیه می‌شود پیش از ایجاد نام کاربری، موجودی‌تان را ترکیب کنید. </string>
     <string name="tools_credits_title">اعتبارها</string>
     <string name="tools_credits_buy_button">خرید</string>
     <string name="dashpay_what_are_credits_title">اعتبارها چیست؟</string>
@@ -530,7 +505,6 @@
     <string name="invitation_creating_progress_wip">ایجاد دعوتنامه...</string>
     <string name="invitation_fee_confirm_and_pay_button">تائید و پرداخت</string>
     <string name="error_sending_invite_transaction">خطا در ارسال تراکنش دعوتنامه</string>
-    <string name="request_username_invitation_not_mixed_message">دعوتنامه با موجودی ترکیب‌نشده ایجاد شد</string>
     <string name="request_username_invitation_only_noncontested_message">با استفاده از این دعوتنامه فقط می‌توانید نام کاربری توافق‌نشده ایجاد کنید</string>
     <string name="username_types_title">نام کاربری توافق‌شده و توافق‌نشده چیست؟</string>
     <string name="username_types_message">دو نوع نام کاربری نداریم: توافق‌شده و توافق‌نشده.\nنام‌های کاربری توافق‌نشده شامل حداقل یک عدد (۲ تا ۹) هستید و یا بیش از ۲۰ کاراکتر دارند و به صورت خودکار مورد تائید قرار می‌گیرند.\nاگر می‌خواهید نام‌ کابری توافق‌شده ایجاد کنید که کوتاه‌تر و بدون عدد است، باید بدون دعوتنامه در دش‌پی ثبت‌نام کنید، کارمزد مربوطه را بپردازید و منتظر تائید پس از تکمیل دوره رأی‌گیری بمانید.</string>

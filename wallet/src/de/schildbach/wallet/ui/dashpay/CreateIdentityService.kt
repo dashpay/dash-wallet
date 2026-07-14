@@ -9,7 +9,6 @@ import com.google.android.gms.common.internal.Preconditions.checkState
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.dao.UsernameRequestDao
@@ -20,7 +19,6 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.TopUpRepository
@@ -150,7 +148,6 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var userAlertDao: UserAlertDao
     @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityConfig
     @Inject lateinit var securityFunctions: SecurityFunctions
-    @Inject lateinit var coinJoinConfig: CoinJoinConfig
     @Inject lateinit var usernameRequestDao: UsernameRequestDao
     @Inject lateinit var walletDataProvider: WalletDataProvider
     private lateinit var securityGuard: SecurityGuard
@@ -406,14 +403,12 @@ class CreateIdentityService : LifecycleService() {
             // Step 2: Create and send the credit funding transaction
             //
             // check to see if the funding transaction exists
-            val useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE
             if (blockchainIdentity.assetLockTransaction == null) {
                 if (blockchainIdentity.identity == null) {
                     topUpRepository.createAssetLockTransaction(
                         blockchainIdentity,
                         blockchainIdentityData.username!!,
-                        encryptionKey,
-                        useCoinJoin
+                        encryptionKey
                     )
                     assetLockTransaction = blockchainIdentity.assetLockTransaction
                     walletApplication.broadcastTransaction(assetLockTransaction)
@@ -436,8 +431,7 @@ class CreateIdentityService : LifecycleService() {
                     assetLockTransaction = topUpRepository.createTopupTransaction(
                         blockchainIdentity,
                         topupValue,
-                        encryptionKey,
-                        useCoinJoin
+                        encryptionKey
                     )
                 }
             }

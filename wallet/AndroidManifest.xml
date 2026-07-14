@@ -327,11 +327,6 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity
-            android:name="de.schildbach.wallet.ui.coinjoin.CoinJoinActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme"
-            android:screenOrientation="portrait" />
-
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
             android:authorities="${applicationId}.address_book"
