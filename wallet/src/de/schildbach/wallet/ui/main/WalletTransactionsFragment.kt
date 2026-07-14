@@ -517,21 +517,32 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         val percentage = viewModel.blockchainSyncPercentage.value
         val kotlinLabel = kotlinSyncStatus
 
+        // Debug-only two-engine format ("DashJ 63% · Kotlin 19%") whenever
+        // the Kotlin shadow label is present; the production "Syncing N%"
+        // rendering below stays byte-identical when it is not (release
+        // builds, shadow off). The header stays visible after dashj
+        // finishes so testers can watch the SDK scan reach 100% ✓ without
+        // reading logs.
+        if (kotlinLabel != null) {
+            val dashjPart = when {
+                isSynced == true -> "DashJ 100%"
+                percentage == null || percentage == 0 -> "DashJ…"
+                else -> "DashJ $percentage%"
+            }
+            binding.syncing.isVisible = true
+            binding.syncing.text = "$dashjPart · $kotlinLabel"
+            return
+        }
+
         if (isSynced != null && isSynced) {
-            // dashj is done; the debug-only Kotlin shadow label (if any)
-            // keeps the header visible so testers can see the SDK scan
-            // reach 100% without reading logs.
-            binding.syncing.isVisible = kotlinLabel != null
-            binding.syncing.text = kotlinLabel
+            binding.syncing.isVisible = false
         } else {
             binding.syncing.isVisible = true
             var syncing = getString(R.string.syncing)
 
             if (percentage == null || percentage == 0) {
                 syncing += "…"
-                binding.syncing.text = kotlinLabel?.let { "$syncing · $it" } ?: syncing
-            } else if (kotlinLabel != null) {
-                binding.syncing.text = "$syncing $percentage% · $kotlinLabel"
+                binding.syncing.text = syncing
             } else {
                 val str = SpannableStringBuilder("$syncing $percentage%")
                 val start = syncing.length + 1

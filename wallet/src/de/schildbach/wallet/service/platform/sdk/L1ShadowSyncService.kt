@@ -126,30 +126,36 @@ data class ShadowSyncProgress(
 }
 
 /**
- * One-line "Kotlin sync" home-screen label (debug builds), or null to
- * hide (shadow idle: flag off or not started). The SDK's own
- * [ShadowSyncProgress.overallPercent] is deliberately NOT used — it
- * under-reports during the filter scan (observed live: 1.0% at filters
- * 1402000/1514660) — so the percent derives from the header/filter
- * counts of the phase that is actually the bottleneck. English-only like
- * the rest of the debug instrumentation. Pure — host-testable.
+ * Compact "Kotlin N%" home-screen label (debug builds), or null to hide
+ * (shadow idle: flag off or not started). The percent is the COMBINED
+ * header+filter progress — (headerHeight + filterHeight) over
+ * (headerTarget + filterTarget) — one monotonic number across the whole
+ * pipeline; the SDK's own [ShadowSyncProgress.overallPercent] is
+ * deliberately NOT used (it under-reports during the filter scan —
+ * observed live: 1.0% at filters 1402000/1514660). Renders side by side
+ * with the "DashJ N%" status in the sync header, so it stays short.
+ * English-only like the rest of the debug instrumentation. Pure —
+ * host-testable.
  */
 fun kotlinSyncLabel(progress: ShadowSyncProgress, status: L1VerificationStatus): String? =
     when (progress.phase) {
         ShadowSyncPhase.IDLE -> null
-        ShadowSyncPhase.CONNECTING -> "Kotlin sync…"
-        ShadowSyncPhase.HEADERS ->
-            "Kotlin sync: headers ${syncPct(progress.headerHeight, progress.headerTarget)}%"
-        ShadowSyncPhase.FILTER_HEADERS, ShadowSyncPhase.MASTERNODES, ShadowSyncPhase.FILTERS ->
-            "Kotlin sync: scan ${syncPct(progress.filterHeight, progress.filterTarget)}%"
+        ShadowSyncPhase.CONNECTING -> "Kotlin 0%"
+        ShadowSyncPhase.HEADERS, ShadowSyncPhase.FILTER_HEADERS,
+        ShadowSyncPhase.MASTERNODES, ShadowSyncPhase.FILTERS -> {
+            val done = progress.headerHeight + progress.filterHeight
+            val target = progress.headerTarget + progress.filterTarget
+            // Cap below 100 while scanning: only the SYNCED phase may claim 100%.
+            "Kotlin ${syncPct(done, target).coerceAtMost(99)}%"
+        }
         ShadowSyncPhase.SYNCED -> when (status) {
             // The scan is done AND the latest parity probe matched dashj.
-            L1VerificationStatus.VERIFIED -> "Kotlin sync 100% ✓"
+            L1VerificationStatus.VERIFIED -> "Kotlin 100% ✓"
             // Terminal harness stand-down — the tester should send logs.
-            L1VerificationStatus.FAILED -> "Kotlin sync 100% (verification failed)"
-            else -> "Kotlin sync 100%"
+            L1VerificationStatus.FAILED -> "Kotlin 100% (verification failed)"
+            else -> "Kotlin 100%"
         }
-        ShadowSyncPhase.ERROR -> "Kotlin sync: error"
+        ShadowSyncPhase.ERROR -> "Kotlin: error"
     }
 
 /** Integer percent of h/t, clamped to 0..100; 0 while the target is unknown. */

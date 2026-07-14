@@ -1580,47 +1580,57 @@ class L1ShadowSyncServiceTest {
     // ── kotlinSyncLabel (home-screen debug indicator) ─────────────────
 
     @Test
-    fun kotlinSyncLabel_idleHides_scanPhasesDeriveFromCounts_syncedIs100() {
+    fun kotlinSyncLabel_idleHides_percentCombinesHeadersAndFilters_syncedIs100() {
         assertNull(kotlinSyncLabel(ShadowSyncProgress.IDLE, L1VerificationStatus.UNKNOWN))
+        // Combined percent: (1260660 + 24000) / (1514660 + 1514660) = 42%.
         assertEquals(
-            "Kotlin sync: headers 83%",
+            "Kotlin 42%",
             kotlinSyncLabel(
                 ShadowSyncProgress(ShadowSyncPhase.HEADERS, 0.3, 1_260_660, 1_514_660, 24_000, 1_514_660),
                 L1VerificationStatus.SCANNING
             )
         )
-        // The SDK's own overallPercent said 1.0% here — the label must use the filter counts instead.
+        // The SDK's own overallPercent said 1.0% here — the label must combine the raw counts:
+        // (1514660 + 1402000) / (1514660 + 1514660) = 96%.
         assertEquals(
-            "Kotlin sync: scan 92%",
+            "Kotlin 96%",
             kotlinSyncLabel(
                 ShadowSyncProgress(ShadowSyncPhase.FILTERS, 1.0, 1_514_660, 1_514_660, 1_402_000, 1_514_660),
                 L1VerificationStatus.SCANNING
             )
         )
+        // Only SYNCED may claim 100% — a still-scanning phase at target caps at 99%.
         assertEquals(
-            "Kotlin sync 100%",
+            "Kotlin 99%",
+            kotlinSyncLabel(
+                ShadowSyncProgress(ShadowSyncPhase.FILTERS, 1.0, 100, 100, 100, 100),
+                L1VerificationStatus.SCANNING
+            )
+        )
+        assertEquals(
+            "Kotlin 100%",
             kotlinSyncLabel(
                 ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100, 100, 100, 100),
                 L1VerificationStatus.PROBING
             )
         )
         assertEquals(
-            "Kotlin sync 100% \u2713",
+            "Kotlin 100% \u2713",
             kotlinSyncLabel(
                 ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100, 100, 100, 100),
                 L1VerificationStatus.VERIFIED
             )
         )
         assertEquals(
-            "Kotlin sync 100% (verification failed)",
+            "Kotlin 100% (verification failed)",
             kotlinSyncLabel(
                 ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100, 100, 100, 100),
                 L1VerificationStatus.FAILED
             )
         )
-        // Unknown targets must not divide by zero or exceed the clamp.
+        // Unknown targets must not divide by zero.
         assertEquals(
-            "Kotlin sync: scan 0%",
+            "Kotlin 0%",
             kotlinSyncLabel(
                 ShadowSyncProgress(ShadowSyncPhase.FILTERS, 0.0, 0, 0, 0, 0),
                 L1VerificationStatus.SCANNING
