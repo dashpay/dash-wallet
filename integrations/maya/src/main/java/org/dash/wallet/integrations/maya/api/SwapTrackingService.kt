@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.api
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -68,34 +69,51 @@ class SwapTrackingService @Inject constructor(
             return
         }
         trackingJob = scope.launch {
-            swapOrderDao.observeOrdersWithStatus(SwapOrderStatus.active)
-                .distinctUntilChanged()
-                .collectLatest { orders ->
-                    while (isActive) {
-                        val (trackable, expired) = orders.partition {
-                            System.currentTimeMillis() - it.timestamp < MAX_TRACKING_AGE_MS
-                        }
-                        // An order the tracker never resolved within MAX_TRACKING_AGE_MS is
-                        // aged out to FAILED so the UI stops showing an in-flight swap.
-                        // FAILED is terminal, so the write drops it from the observed query
-                        // and this collect restarts with only the remaining live orders.
-                        expired.forEach { order ->
-                            log.info("swap {}: still {} after 24h, aging out to FAILED", order.txId, order.status)
-                            swapOrderDao.updateOrder(
-                                order.copy(
-                                    status = SwapOrderStatus.FAILED,
-                                    lastChecked = System.currentTimeMillis()
-                                )
-                            )
-                        }
-                        if (expired.isNotEmpty() || trackable.isEmpty()) {
-                            break
-                        }
-                        trackable.forEach { checkOrder(it) }
-                        delay(POLL_PERIOD)
-                    }
+            // start() is only called once per process (app start), so an escaped exception —
+            // a Room flow error, a DB write failing under connection-pool pressure — would
+            // otherwise end tracking for the rest of the process lifetime and strand every
+            // in-flight order in its last status. Restart the collection after a poll period.
+            while (isActive) {
+                try {
+                    trackActiveOrders()
+                } catch (ex: CancellationException) {
+                    throw ex
+                } catch (ex: Exception) {
+                    log.error("swap tracking failed, restarting in {}: {}", POLL_PERIOD, ex.toString())
                 }
+                delay(POLL_PERIOD)
+            }
         }
+    }
+
+    private suspend fun trackActiveOrders() {
+        swapOrderDao.observeOrdersWithStatus(SwapOrderStatus.active)
+            .distinctUntilChanged()
+            .collectLatest { orders ->
+                while (true) {
+                    val (trackable, expired) = orders.partition {
+                        System.currentTimeMillis() - it.timestamp < MAX_TRACKING_AGE_MS
+                    }
+                    // An order the tracker never resolved within MAX_TRACKING_AGE_MS is
+                    // aged out to FAILED so the UI stops showing an in-flight swap.
+                    // FAILED is terminal, so the write drops it from the observed query
+                    // and this collect restarts with only the remaining live orders.
+                    expired.forEach { order ->
+                        log.info("swap {}: still {} after 24h, aging out to FAILED", order.txId, order.status)
+                        swapOrderDao.updateOrder(
+                            order.copy(
+                                status = SwapOrderStatus.FAILED,
+                                lastChecked = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                    if (expired.isNotEmpty() || trackable.isEmpty()) {
+                        break
+                    }
+                    trackable.forEach { checkOrder(it) }
+                    delay(POLL_PERIOD)
+                }
+            }
     }
 
     fun stop() {
@@ -106,6 +124,10 @@ class SwapTrackingService @Inject constructor(
     private fun isNearRoute(order: SwapOrder): Boolean {
         return order.provider?.contains("NEAR", ignoreCase = true) == true
     }
+
+    /** The tracker fills legs it hasn't seen with an all-zero hash (0x000…0) — not a real tx. */
+    private fun isPlaceholderHash(hash: String): Boolean =
+        hash.removePrefix("0x").isNotEmpty() && hash.removePrefix("0x").all { it == '0' }
 
     private suspend fun checkOrder(order: SwapOrder) {
         val txHash = order.txId.toString()
@@ -128,8 +150,20 @@ class SwapTrackingService @Inject constructor(
         // indexed the tx yet) — keep the current state and retry on the next tick.
         val status = result.status?.let { SwapOrderStatus.fromTrackStatus(it) } ?: return
 
+        // NOT_STARTED (typically alongside an all-zero outbound hash) is the tracker's way of
+        // saying it hasn't indexed the swap yet. Every order here has an already-broadcast
+        // deposit, so it never supersedes real progress — writing it would regress PENDING
+        // (as seen in the field: "status PENDING -> NOT_STARTED") and, being cosmetic-only,
+        // leave a completed swap stuck un-"Converted". Treat it like "no information".
+        if (status == SwapOrderStatus.NOT_STARTED && order.status != SwapOrderStatus.NOT_STARTED) {
+            return
+        }
+
         val outboundTxHash = result.legs.orEmpty()
-            .lastOrNull { !it.hash.isNullOrEmpty() && !it.hash.equals(txHash, ignoreCase = true) }
+            .lastOrNull {
+                !it.hash.isNullOrEmpty() && !isPlaceholderHash(it.hash) &&
+                    !it.hash.equals(txHash, ignoreCase = true)
+            }
             ?.hash ?: order.outboundTxHash
         val updated = order.copy(
             status = status,
