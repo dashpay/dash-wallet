@@ -118,6 +118,61 @@ internal fun shieldedOutcomeNotification(state: ShieldedSubmitState): ShieldedOu
 private val INSUFFICIENT_SHIELDED_BALANCE =
     Regex("""Insufficient shielded balance: available (\d+), required (\d+)""")
 
+/**
+ * The asset-lock coin-selection shortfall rs-platform-wallet reports when
+ * the requested amount + the L1 fee exceeds the SDK wallet's spendable
+ * funds (asset_lock/build.rs `map_builder_error` promotes the builder's
+ * InsufficientFunds shapes to `AssetLockInsufficientFunds`). Raised while
+ * BUILDING the asset-lock transaction — strictly pre-broadcast (see the
+ * asset-lock rule in `classifyBroadcastFailure`). Unlike the shielded
+ * note-selection message, its `required` figure does NOT include the fee
+ * (available == required in the live incident), so no exact deficit can
+ * be parsed — the retry must ESTIMATE a reserve instead
+ * ([assetLockMaxFeeReserve]).
+ */
+private const val ASSET_LOCK_SELECTION_SHORT = "asset lock coin selection is short"
+
+/**
+ * [failure]'s reason plus its cause chain's messages (bounded), the shared
+ * traversal behind the message-matched max-spend retry rules.
+ */
+private fun notBroadcastMessages(failure: SdkWriteResult.NotBroadcast): List<String> = buildList {
+    add(failure.reason)
+    var t: Throwable? = failure.cause
+    var depth = 0
+    while (t != null && depth < 10) {
+        t.message?.let(::add)
+        t = t.cause
+        depth++
+    }
+}
+
+/** Whether [failure] is the pre-broadcast asset-lock coin-selection shortfall. */
+internal fun isAssetLockSelectionShort(failure: SdkWriteResult.NotBroadcast): Boolean =
+    notBroadcastMessages(failure).any { it.contains(ASSET_LOCK_SELECTION_SHORT) }
+
+/**
+ * The L1 fee reserve to withhold from a max ("spend everything") shield
+ * whose asset-lock coin selection came up short.
+ *
+ * Rust builds the asset lock at `DEFAULT_FEE_PER_KB = 1000` duffs/kB
+ * (rs-platform-wallet asset_lock/manager.rs) — 1 duff per byte — and a max
+ * spend selects (essentially) every spendable UTXO as an input. So the fee
+ * is bounded by the transaction size: ~148 vbytes per input plus ~300
+ * bytes for the outputs, the asset-lock payload and overhead, doubled as a
+ * safety margin. Over-reserving is LOSSLESS: the builder returns any
+ * excess as an L1 change output, so a too-big reserve merely leaves a few
+ * duffs unshielded in the wallet. [spendableUtxoCount] comes from dashj,
+ * which is a valid proxy for the SDK wallet's input count because the two
+ * are kept in byte-exact UTXO parity (the dual-engine parity harness gates
+ * every wallet shield). Clamped to a 1000-duff minimum so a degenerate
+ * count still reserves something meaningful.
+ */
+internal fun assetLockMaxFeeReserve(spendableUtxoCount: Int): Dash {
+    val estimatedTxBytes = spendableUtxoCount.coerceAtLeast(0).toLong() * 148L + 300L
+    return Dash((estimatedTxBytes * 2L).coerceAtLeast(1000L))
+}
+
 /** A one-shot fee adjustment for a max shielded withdraw — see [shieldedMaxFeeAdjustment]. */
 internal data class ShieldedMaxFeeAdjustment(val deficitCredits: Long, val adjustedAmount: Dash)
 
@@ -140,17 +195,8 @@ internal fun shieldedMaxFeeAdjustment(
     requested: Dash,
     failure: SdkWriteResult.NotBroadcast
 ): ShieldedMaxFeeAdjustment? {
-    val messages = buildList {
-        add(failure.reason)
-        var t: Throwable? = failure.cause
-        var depth = 0
-        while (t != null && depth < 10) {
-            t.message?.let(::add)
-            t = t.cause
-            depth++
-        }
-    }
-    val match = messages.firstNotNullOfOrNull { INSUFFICIENT_SHIELDED_BALANCE.find(it) } ?: return null
+    val match = notBroadcastMessages(failure)
+        .firstNotNullOfOrNull { INSUFFICIENT_SHIELDED_BALANCE.find(it) } ?: return null
     val available = match.groupValues[1].toLongOrNull() ?: return null
     val required = match.groupValues[2].toLongOrNull() ?: return null
     val deficitCredits = required - available
@@ -277,13 +323,20 @@ class ShieldedTransferExecutor @Inject constructor(
      * is atomic under [this], so two racing confirmations can never both
      * pass the gate.
      *
-     * [isMaxSpend] — the user confirmed the full available shielded
-     * balance (FromShielded only): the exact note-selection fee is
-     * Rust-computed and not knowable app-side, so instead of failing the
-     * spend, ONE fee-adjusted retry is made inside the same Proving
-     * operation when note selection reports the exact deficit — see
-     * [shieldedMaxFeeAdjustment]. Safe: that failure is provably
-     * pre-broadcast (nothing submitted, notes released).
+     * [isMaxSpend] — the user confirmed the full available balance
+     * ("spend everything"): the exact fee is not knowable app-side in
+     * either direction, so instead of failing the Max flow, ONE
+     * fee-adjusted retry is made inside the same Proving operation when
+     * the first attempt fails a provably-pre-broadcast selection:
+     * - FromShielded: the Rust-computed note-selection fee — the failure
+     *   reports the exact deficit, which the retry subtracts
+     *   ([shieldedMaxFeeAdjustment]);
+     * - ToShielded: the L1 asset-lock fee — the shortfall message carries
+     *   no fee figure, so the retry withholds an ESTIMATED reserve sized
+     *   from the wallet's spendable UTXO count ([assetLockMaxFeeReserve];
+     *   over-reserve is lossless — the builder returns excess as change).
+     * Safe either way: both failures are strictly pre-broadcast (nothing
+     * submitted, selections released).
      */
     fun submit(direction: ShieldedTransferDirection, amount: Dash, isMaxSpend: Boolean = false): Boolean {
         synchronized(this) {
@@ -327,26 +380,60 @@ class ShieldedTransferExecutor @Inject constructor(
                 }
             }
             var result = withContext(ioDispatcher) { attemptSpend(direction, amount) }
-            // Max-spend fee convergence: the Rust note selection just told
-            // us the exact deficit (amount + fee vs available), the failure
-            // is provably pre-broadcast (nothing submitted, notes released),
-            // and a max spend selects all notes either way — so ONE retry
-            // with the deficit-adjusted amount is safe and converges. Still
-            // inside Proving; the watchdog spans both attempts.
+            // Max-spend fee convergence: the first attempt failed a
+            // provably-pre-broadcast selection (nothing submitted, the
+            // selection released), and a max spend selects everything
+            // either way — so ONE fee-adjusted retry is safe. FromShielded
+            // subtracts the exact deficit the note selection reported;
+            // ToShielded withholds an estimated (lossless — excess returns
+            // as change) L1 fee reserve, since the asset-lock shortfall
+            // message carries no fee figure. One shot only: the retry
+            // result never re-adjusts. Still inside Proving; the watchdog
+            // spans both attempts.
             val firstResult = result
-            if (direction == ShieldedTransferDirection.FromShielded && isMaxSpend &&
-                firstResult is SdkWriteResult.NotBroadcast
-            ) {
-                val adjustment = shieldedMaxFeeAdjustment(amount, firstResult)
-                if (adjustment != null) {
-                    log.info(
-                        "max withdraw auto-adjusting for shielded fee: requested {}, deficit {} credits, " +
-                            "retrying once with {}",
-                        amount,
-                        adjustment.deficitCredits,
-                        adjustment.adjustedAmount
-                    )
-                    result = withContext(ioDispatcher) { attemptSpend(direction, adjustment.adjustedAmount) }
+            if (isMaxSpend && firstResult is SdkWriteResult.NotBroadcast) {
+                when (direction) {
+                    ShieldedTransferDirection.FromShielded -> {
+                        val adjustment = shieldedMaxFeeAdjustment(amount, firstResult)
+                        if (adjustment != null) {
+                            log.info(
+                                "max withdraw auto-adjusting for shielded fee: requested {}, " +
+                                    "deficit {} credits, retrying once with {}",
+                                amount,
+                                adjustment.deficitCredits,
+                                adjustment.adjustedAmount
+                            )
+                            result = withContext(ioDispatcher) {
+                                attemptSpend(direction, adjustment.adjustedAmount)
+                            }
+                        }
+                    }
+                    ShieldedTransferDirection.ToShielded -> {
+                        if (isAssetLockSelectionShort(firstResult)) {
+                            val utxoCount = try {
+                                walletDataProvider.spendableUtxoCount()
+                            } catch (e: Exception) {
+                                log.warn(
+                                    "max shield: spendable UTXO count unavailable — not auto-adjusting",
+                                    e
+                                )
+                                null
+                            }
+                            val reserve = utxoCount?.let(::assetLockMaxFeeReserve)
+                            val adjusted = reserve?.let { amount - it }
+                            if (reserve != null && adjusted != null && adjusted.isPositive) {
+                                log.info(
+                                    "max shield auto-adjusting for L1 asset-lock fee: requested {}, " +
+                                        "reserve {} duffs ({} UTXOs), retrying once with {}",
+                                    amount,
+                                    reserve.duffs,
+                                    utxoCount,
+                                    adjusted
+                                )
+                                result = withContext(ioDispatcher) { attemptSpend(direction, adjusted) }
+                            }
+                        }
+                    }
                 }
             }
             watchdog.cancel()

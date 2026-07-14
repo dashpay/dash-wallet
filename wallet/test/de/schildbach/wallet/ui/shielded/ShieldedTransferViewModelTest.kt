@@ -528,6 +528,57 @@ class ShieldedTransferViewModelTest {
         coVerify(exactly = 1) { shieldedService.withdrawToCore(any(), any()) }
     }
 
+    /**
+     * The asset-lock coin-selection rejection as the service surfaces it:
+     * classified NotBroadcast with the original error (whose `required`
+     * figure excludes the L1 fee — no deficit to parse) as the cause.
+     */
+    private fun assetLockShortResult() = SdkWriteResult.NotBroadcast(
+        "pre-broadcast asset-lock coin-selection failure",
+        RuntimeException(
+            "shielded fund-from-asset-lock failed: asset lock coin selection is short: " +
+                "available 58999510 duffs, required 58999510 duffs"
+        )
+    )
+
+    @Test
+    fun maxToShielded_confirm_isMaxSpend_executorRetriesFeeReserved() = runTest(dispatcher) {
+        // Confirming exactly the available wallet balance (the Max tap)
+        // must thread isMaxSpend = true in the ToShielded direction too:
+        // the asset-lock fee shortfall then gets ONE reserve-adjusted
+        // retry instead of dead-ending the Max flow.
+        coEvery { shieldedService.shieldFromWallet(any()) } returnsMany
+            listOf(assetLockShortResult(), SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED))
+        every { walletData.spendableUtxoCount() } returns 4
+        val vm = viewModel()
+
+        vm.onMaxClick()
+        vm.onContinue()
+        vm.onConfirm()
+
+        assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
+        // first the full 3.00 DASH balance, then minus the estimated
+        // reserve for 4 UTXOs: (4 × 148 + 300) × 2 = 1784 duffs →
+        // 300_000_000 − 1_784 = 299_998_216
+        coVerifyOrder {
+            shieldedService.shieldFromWallet(Dash.parse("3.00"))
+            shieldedService.shieldFromWallet(Dash(299_998_216L))
+        }
+        coVerify(exactly = 2) { shieldedService.shieldFromWallet(any()) }
+    }
+
+    @Test
+    fun nonMaxToShielded_confirm_isNotMaxSpend_noFeeReservedRetry() = runTest(dispatcher) {
+        coEvery { shieldedService.shieldFromWallet(any()) } returns assetLockShortResult()
+        val vm = viewModel()
+
+        vm.typeAmountAndConfirm() // 1 DASH ≠ the 3.00 available balance
+
+        // a typed (non-Max) amount never auto-adjusts: single attempt, NotSent
+        assertTrue(vm.uiState.value.submitState is ShieldedSubmitState.NotSent)
+        coVerify(exactly = 1) { shieldedService.shieldFromWallet(any()) }
+    }
+
     // ── AC3: L1 sync gate ───────────────────────────────────────────────
 
     @Test

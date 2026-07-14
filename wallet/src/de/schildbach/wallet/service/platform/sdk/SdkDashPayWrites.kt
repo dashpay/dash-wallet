@@ -164,6 +164,19 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
             m.contains("No unspent shielded notes available")
     } == true ->
         SdkWriteResult.NotBroadcast("pre-broadcast shielded note-selection failure", t)
+    // Asset-lock coin selection (rs-platform-wallet asset_lock/build.rs
+    // `map_builder_error`) rejects the spend while BUILDING the asset-lock
+    // transaction — strictly before any broadcast, nothing was submitted
+    // (`BuilderError::InsufficientFunds` / a coin-selection
+    // `SelectionError::InsufficientFunds` are promoted to the typed
+    // `AssetLockInsufficientFunds`, which carries this message). Observed
+    // live on a Max shield: "shielded fund-from-asset-lock failed: asset
+    // lock coin selection is short: available N duffs, required M duffs" —
+    // `required` does NOT include the L1 fee, so available == required is a
+    // real shape. Message-matched until the SDK exposes typed errors.
+    // Retryable with a smaller amount.
+    t.message?.contains("asset lock coin selection is short") == true ->
+        SdkWriteResult.NotBroadcast("pre-broadcast asset-lock coin-selection failure", t)
     // The SDK's SPV client wasn't running when broadcast was attempted, so the
     // tx never left the device (observed live: the interim shield pipeline
     // broadcasts via the shadow SPV, which our recovery paths stop/reset — the

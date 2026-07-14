@@ -56,6 +56,15 @@ interface WalletDataProvider {
 
     fun getWalletBalance(): Coin
 
+    /**
+     * Number of spendable unspent outputs coin selection can draw on —
+     * `calculateAllSpendCandidates(false, false)`, the exact output set
+     * `getBalance(ESTIMATED)` sums (all keychains) — or 0 while no wallet
+     * is loaded.
+     */
+    @Suppress("DEPRECATION")
+    fun spendableUtxoCount(): Int = wallet?.calculateAllSpendCandidates(false, false)?.size ?: 0
+
     fun observeWalletChanged(): Flow<Unit>
 
     fun observeWalletReset(): Flow<Unit>

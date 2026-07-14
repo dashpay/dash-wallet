@@ -1312,6 +1312,16 @@ public class WalletApplication extends MultiDexApplication
         return  walletBalanceObserver.getTotalBalance().getValue();
     }
 
+    @Override
+    public int spendableUtxoCount() {
+        final Wallet wallet = this.wallet;
+        if (wallet == null) {
+            return 0;
+        }
+        // the exact output set getBalance(ESTIMATED) sums — see the interface doc
+        return wallet.calculateAllSpendCandidates(false, false).size();
+    }
+
     @NonNull
     @Override
     public Flow<Coin> observeTotalBalance() {

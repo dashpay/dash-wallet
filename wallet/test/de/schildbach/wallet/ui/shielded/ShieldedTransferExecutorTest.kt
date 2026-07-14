@@ -264,6 +264,103 @@ class ShieldedTransferExecutorTest {
         )
     }
 
+    // ── Max-spend fee reserve (ToShielded) ──────────────────────────────
+
+    /**
+     * The live incident shape: the user's Max shield failed asset-lock
+     * coin selection because the requested amount left no room for the L1
+     * fee. Amounts in duffs; note available == required — the message's
+     * `required` figure does NOT include the fee, so (unlike FromShielded)
+     * no exact deficit can be parsed and the retry must reserve an
+     * ESTIMATE sized from the spendable UTXO count.
+     */
+    private val liveAssetLockShortMessage =
+        "shielded fund-from-asset-lock failed: asset lock coin selection is short: " +
+            "available 58999510 duffs, required 58999510 duffs"
+
+    private fun assetLockShortResult() = SdkWriteResult.NotBroadcast(
+        "pre-broadcast asset-lock coin-selection failure",
+        RuntimeException(liveAssetLockShortMessage)
+    )
+
+    /** What the user's Max tap requested: the shown wallet balance, whole duffs. */
+    private val maxShieldRequested = Dash(58_999_510L)
+
+    @Test
+    fun maxShield_selectionShort_retriesOnceWithTheFeeReservedAmount() = runTest(dispatcher) {
+        coEvery { shieldedService.shieldFromWallet(any()) } returnsMany
+            listOf(assetLockShortResult(), SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED))
+        every { walletData.spendableUtxoCount() } returns 7
+        val executor = executor()
+
+        assertTrue(executor.submit(ShieldedTransferDirection.ToShielded, maxShieldRequested, isMaxSpend = true))
+
+        // one reserve-adjusted retry inside the same operation, then Success
+        assertEquals(ShieldedSubmitState.Success, executor.submitState.value)
+        // first the full balance, then requested minus the estimated
+        // reserve for 7 UTXOs: (7 × 148 + 300) × 2 = 2672 duffs →
+        // 58_999_510 − 2_672 = 58_996_838
+        coVerifyOrder {
+            shieldedService.shieldFromWallet(maxShieldRequested)
+            shieldedService.shieldFromWallet(Dash(58_996_838L))
+        }
+        coVerify(exactly = 2) { shieldedService.shieldFromWallet(any()) }
+    }
+
+    @Test
+    fun nonMaxShield_selectionShort_isNotSent_withoutAnyRetry() = runTest(dispatcher) {
+        coEvery { shieldedService.shieldFromWallet(any()) } returns assetLockShortResult()
+        val executor = executor()
+
+        executor.submit(ShieldedTransferDirection.ToShielded, maxShieldRequested)
+
+        assertTrue(executor.submitState.value is ShieldedSubmitState.NotSent)
+        coVerify(exactly = 1) { shieldedService.shieldFromWallet(any()) }
+    }
+
+    @Test
+    fun maxShield_retryAlsoShort_isNotSent_neverAThirdAttempt() = runTest(dispatcher) {
+        coEvery { shieldedService.shieldFromWallet(any()) } returns assetLockShortResult()
+        every { walletData.spendableUtxoCount() } returns 7
+        val executor = executor()
+
+        executor.submit(ShieldedTransferDirection.ToShielded, maxShieldRequested, isMaxSpend = true)
+
+        // one shot only: the reserve adjustment never cascades
+        assertTrue(executor.submitState.value is ShieldedSubmitState.NotSent)
+        coVerify(exactly = 2) { shieldedService.shieldFromWallet(any()) }
+    }
+
+    @Test
+    fun assetLockMaxFeeReserve_sizesFromTheUtxoCount_withTheMinimumClamp() {
+        // 0 UTXOs (or a degenerate negative) → the 1000-duff minimum
+        assertEquals(Dash(1_000L), assetLockMaxFeeReserve(0))
+        assertEquals(Dash(1_000L), assetLockMaxFeeReserve(-3))
+        // 1 UTXO: (148 + 300) × 2 = 896 — still under the clamp
+        assertEquals(Dash(1_000L), assetLockMaxFeeReserve(1))
+        // typical counts: (n × 148 + 300) × 2
+        assertEquals(Dash(2_672L), assetLockMaxFeeReserve(7))
+        assertEquals(Dash(30_200L), assetLockMaxFeeReserve(100))
+    }
+
+    @Test
+    fun isAssetLockSelectionShort_matchesReasonOrCauseChain_only() {
+        // in the cause chain (the classifier's NotBroadcast shape)
+        assertTrue(isAssetLockSelectionShort(assetLockShortResult()))
+        // …or in the reason string itself
+        assertTrue(isAssetLockSelectionShort(SdkWriteResult.NotBroadcast(liveAssetLockShortMessage)))
+        // anything else never triggers the reserve retry
+        assertFalse(isAssetLockSelectionShort(SdkWriteResult.NotBroadcast("flag off")))
+        assertFalse(
+            isAssetLockSelectionShort(
+                SdkWriteResult.NotBroadcast(
+                    "pre-broadcast shielded note-selection failure",
+                    RuntimeException("Insufficient shielded balance: available 1, required 2")
+                )
+            )
+        )
+    }
+
     // ── Outcome surfacing: backgrounded → system notification ───────────
 
     @Test

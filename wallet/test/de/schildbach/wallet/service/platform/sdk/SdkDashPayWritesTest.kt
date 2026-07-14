@@ -215,6 +215,26 @@ class SdkDashPayWritesTest {
     }
 
     @Test
+    fun classify_assetLockCoinSelectionShort_isNotBroadcast() {
+        // The live Max-shield failure: rs-platform-wallet's asset-lock coin
+        // selection rejects the spend while BUILDING the asset-lock
+        // transaction (asset_lock/build.rs map_builder_error promotes the
+        // builder's InsufficientFunds shapes) — strictly before any
+        // broadcast, nothing submitted — so it must surface as the
+        // retryable NotSent, not the terminal "may have gone through"
+        // Ambiguous. Note available == required: the message's `required`
+        // excludes the L1 fee. Message-matched until the SDK exposes typed
+        // errors.
+        val liveShape = DashSdkError.PlatformWallet.WalletOperation(
+            "shielded fund-from-asset-lock failed: asset lock coin selection is short: " +
+                "available 58999510 duffs, required 58999510 duffs"
+        )
+        val result = classifyBroadcastFailure(liveShape)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertSame(liveShape, (result as SdkWriteResult.NotBroadcast).cause)
+    }
+
+    @Test
     fun classify_everythingElse_isAmbiguous() {
         val possiblyBroadcast = listOf<Throwable>(
             DashSdkError.NetworkError("connection reset"),
