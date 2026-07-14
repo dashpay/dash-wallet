@@ -1576,4 +1576,55 @@ class L1ShadowSyncServiceTest {
             shadowProgressLine(mapped)
         )
     }
+
+    // ── kotlinSyncLabel (home-screen debug indicator) ─────────────────
+
+    @Test
+    fun kotlinSyncLabel_idleHides_scanPhasesDeriveFromCounts_syncedIs100() {
+        assertNull(kotlinSyncLabel(ShadowSyncProgress.IDLE, L1VerificationStatus.UNKNOWN))
+        assertEquals(
+            "Kotlin sync: headers 83%",
+            kotlinSyncLabel(
+                ShadowSyncProgress(ShadowSyncPhase.HEADERS, 0.3, 1_260_660, 1_514_660, 24_000, 1_514_660),
+                L1VerificationStatus.SCANNING
+            )
+        )
+        // The SDK's own overallPercent said 1.0% here — the label must use the filter counts instead.
+        assertEquals(
+            "Kotlin sync: scan 92%",
+            kotlinSyncLabel(
+                ShadowSyncProgress(ShadowSyncPhase.FILTERS, 1.0, 1_514_660, 1_514_660, 1_402_000, 1_514_660),
+                L1VerificationStatus.SCANNING
+            )
+        )
+        assertEquals(
+            "Kotlin sync 100%",
+            kotlinSyncLabel(
+                ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100, 100, 100, 100),
+                L1VerificationStatus.PROBING
+            )
+        )
+        assertEquals(
+            "Kotlin sync 100% \u2713",
+            kotlinSyncLabel(
+                ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100, 100, 100, 100),
+                L1VerificationStatus.VERIFIED
+            )
+        )
+        assertEquals(
+            "Kotlin sync 100% (verification failed)",
+            kotlinSyncLabel(
+                ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100, 100, 100, 100),
+                L1VerificationStatus.FAILED
+            )
+        )
+        // Unknown targets must not divide by zero or exceed the clamp.
+        assertEquals(
+            "Kotlin sync: scan 0%",
+            kotlinSyncLabel(
+                ShadowSyncProgress(ShadowSyncPhase.FILTERS, 0.0, 0, 0, 0, 0),
+                L1VerificationStatus.SCANNING
+            )
+        )
+    }
 }

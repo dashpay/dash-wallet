@@ -85,6 +85,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private var firstPageLoadStartTime: Long = 0L
     private var onViewCreatedTime: Long = 0L
     private var pendingManualRefresh: Boolean = false
+    // Debug-only "Kotlin sync" label (null on release / shadow idle) — see MainViewModel.kotlinSyncStatus.
+    private var kotlinSyncStatus: String? = null
 
     private val viewModel by activityViewModels<MainViewModel>()
     private val giftCardViewModel by activityViewModels<GiftCardViewModel>()
@@ -315,6 +317,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             updateSyncState()
         }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.kotlinSyncStatus.collect {
+                kotlinSyncStatus = it
+                updateSyncState()
+            }
+        }
 
         // Collect live PagingData and submit to the live (PagingDataAdapter) adapter.
         viewLifecycleOwner.lifecycleScope.launch {
@@ -507,16 +515,23 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun updateSyncState() {
         val isSynced = viewModel.isBlockchainSynced.value
         val percentage = viewModel.blockchainSyncPercentage.value
+        val kotlinLabel = kotlinSyncStatus
 
         if (isSynced != null && isSynced) {
-            binding.syncing.isVisible = false
+            // dashj is done; the debug-only Kotlin shadow label (if any)
+            // keeps the header visible so testers can see the SDK scan
+            // reach 100% without reading logs.
+            binding.syncing.isVisible = kotlinLabel != null
+            binding.syncing.text = kotlinLabel
         } else {
             binding.syncing.isVisible = true
             var syncing = getString(R.string.syncing)
 
             if (percentage == null || percentage == 0) {
                 syncing += "…"
-                binding.syncing.text = syncing
+                binding.syncing.text = kotlinLabel?.let { "$syncing · $it" } ?: syncing
+            } else if (kotlinLabel != null) {
+                binding.syncing.text = "$syncing $percentage% · $kotlinLabel"
             } else {
                 val str = SpannableStringBuilder("$syncing $percentage%")
                 val start = syncing.length + 1

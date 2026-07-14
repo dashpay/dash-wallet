@@ -43,6 +43,9 @@ import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.TxDisplayCacheService
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.kotlinSyncLabel
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.BaseContactsViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationCountLiveData
@@ -118,9 +121,24 @@ class MainViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     dashPayContactRequestDao: DashPayContactRequestDao,
     private val txDisplayCacheService: TxDisplayCacheService,
-    private val crowdNodeApi: CrowdNodeApi
+    private val crowdNodeApi: CrowdNodeApi,
+    l1ShadowSyncService: L1ShadowSyncService
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false
+
+    /**
+     * Debug-only "Kotlin sync" home-screen label — the SDK shadow scan's
+     * progress and completion ([kotlinSyncLabel]); null hides it (release
+     * builds, shadow flag off, or shadow idle).
+     */
+    val kotlinSyncStatus: StateFlow<String?> =
+        if (BuildConfig.DEBUG) {
+            l1ShadowSyncService.progress
+                .combine(l1ShadowSyncService.verificationStatus, ::kotlinSyncLabel)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        } else {
+            MutableStateFlow(null)
+        }
 
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)

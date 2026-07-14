@@ -212,6 +212,14 @@ class MainViewModelTest {
         every { signUpStatus } returns MutableStateFlow(SignUpStatus.NotStarted)
         every { balance } returns MutableStateFlow(Resource.success(Dash.ZERO))
     }
+    private val l1ShadowSyncService = mockk<de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService> {
+        every { progress } returns MutableStateFlow(
+            de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress.IDLE
+        )
+        every { verificationStatus } returns MutableStateFlow(
+            de.schildbach.wallet.service.platform.sdk.L1VerificationStatus.UNKNOWN
+        )
+    }
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
 
@@ -299,7 +307,8 @@ class MainViewModelTest {
                 mockDashPayConfig,
                 dashPayContactRequestDao,
                 txDisplayCacheService,
-                crowdNodeApi
+                crowdNodeApi,
+                l1ShadowSyncService
             )
         )
 
@@ -337,7 +346,8 @@ class MainViewModelTest {
                 mockDashPayConfig,
                 dashPayContactRequestDao,
                 txDisplayCacheService,
-                crowdNodeApi
+                crowdNodeApi,
+                l1ShadowSyncService
             )
         )
 
