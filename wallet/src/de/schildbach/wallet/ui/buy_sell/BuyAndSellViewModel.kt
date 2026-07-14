@@ -44,6 +44,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepository
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
+import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
+import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.dash.wallet.integrations.uphold.api.TopperClient
 import org.dash.wallet.integrations.uphold.api.UpholdClient
 import org.dash.wallet.integrations.uphold.api.getDashBalance
@@ -74,7 +76,8 @@ class BuyAndSellViewModel @Inject constructor(
     private val networkState: NetworkStateInt,
     exchangeRates: ExchangeRatesProvider,
     private val walletData: WalletDataProvider,
-    private val walletUIConfig: WalletUIConfig
+    private val walletUIConfig: WalletUIConfig,
+    private val swapProvider: DispatchingSwapProvider
 ): ViewModel() {
 
     companion object {
@@ -167,6 +170,10 @@ class BuyAndSellViewModel @Inject constructor(
                 isAuthenticated = coinBaseRepository.isAuthenticated
             }
             ServiceType.MAYA -> {
+                hasValidCredentials = true
+                isAuthenticated = false
+            }
+            ServiceType.SWAPKIT -> {
                 hasValidCredentials = true
                 isAuthenticated = false
             }
@@ -269,6 +276,15 @@ class BuyAndSellViewModel @Inject constructor(
 
     fun logEvent(eventName: String) {
         analytics.logEvent(eventName, mapOf())
+    }
+
+    /**
+     * Switches the cross-chain swap backend before the user enters the Maya portal
+     * screens. Both the Maya and SwapKit menu entries flow into the same UI; this
+     * call decides which backend the ViewModels there will use.
+     */
+    fun setSwapBackend(backend: SwapBackend) {
+        swapProvider.setBackend(backend)
     }
 
     private suspend fun coinbaseBalanceString(): String =

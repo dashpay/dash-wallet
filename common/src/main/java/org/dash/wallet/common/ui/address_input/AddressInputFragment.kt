@@ -193,6 +193,10 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
                 binding.errorText.isVisible = false
             } catch (ex: Exception) {
                 log.error("problem processing $input", ex)
+                // Reset to the address-format error: continueAction() (a subclass) may have replaced
+                // errorText with a swap-specific message on a previous, valid-format attempt, so an
+                // unparseable address must restore the correct "not a valid address" copy.
+                binding.errorText.text = getString(R.string.not_valid_address, viewModel.currency)
                 binding.inputWrapper.isErrorEnabled = true
                 binding.errorText.isVisible = true
             }

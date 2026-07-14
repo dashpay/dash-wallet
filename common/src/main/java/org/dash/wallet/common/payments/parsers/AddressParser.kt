@@ -42,7 +42,7 @@ open class AddressParser(pattern: String, val params: NetworkParameters?) {
     private val addressPattern = Regex(pattern)
 
     open fun exactMatch(inputText: String): Boolean {
-        return addressPattern.matches(inputText)
+        return addressPattern.matches(inputText) && isAddressValid(inputText)
     }
 
     open fun findAll(inputText: String): List<IntRange> {
@@ -69,5 +69,12 @@ open class AddressParser(pattern: String, val params: NetworkParameters?) {
 
     protected open fun verifyAddress(addressCandidate: String) {
         params?.let { Address.fromString(params, addressCandidate) }
+    }
+
+    protected fun isAddressValid(addressCandidate: String) = try {
+        verifyAddress(addressCandidate)
+        true
+    } catch (_: Exception) {
+        false
     }
 }

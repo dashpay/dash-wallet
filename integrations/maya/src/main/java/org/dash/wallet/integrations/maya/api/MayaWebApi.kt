@@ -171,7 +171,9 @@ open class MayaWebApi @Inject constructor(
     }
 
     suspend fun getDefaultSwapQuote(to: String, value: Long = 1_0000_0000): SwapQuote? {
-        return MayaCurrencyList[to]?.exampleAddress?.let { destination ->
+        // Session-generated placeholder destination — avoids quoting against the well-known
+        // hardcoded example address.
+        return MayaCurrencyList[to]?.getNewExampleAddress()?.let { destination ->
             return getSwapQuote("DASH.DASH", to, value, destination)
         }
     }

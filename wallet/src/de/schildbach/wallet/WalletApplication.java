@@ -109,6 +109,7 @@ import org.dash.wallet.integrations.uphold.api.UpholdClient;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
+import org.dash.wallet.integrations.maya.api.SwapTrackingService;
 import org.dash.wallet.integrations.uphold.utils.UpholdConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -239,6 +240,8 @@ public class WalletApplication extends MultiDexApplication
     SecurityInitializer securityInitializer;
     @Inject
     TxDisplayCacheService txDisplayCacheService;
+    @Inject
+    SwapTrackingService swapTrackingService;
     private WalletBalanceObserver walletBalanceObserver;
     private CoinJoinService coinJoinService;
     @Inject
@@ -291,6 +294,9 @@ public class WalletApplication extends MultiDexApplication
         resetBlockchainSyncProgress();
         anrSupervisor = new AnrSupervisor();
         anrSupervisor.start();
+
+        // resume status polling for any DEX swaps still in flight
+        swapTrackingService.start();
 
         // enable TLS 1.3 support on Android 9 and lower
         // Android 10 and above support TLS 1.3 by default
