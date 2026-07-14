@@ -110,4 +110,30 @@ class DashPayConfigSeedTest {
 
         assertFalse(store.containsKey(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS))
     }
+
+    @Test
+    fun mainnetSeedList_isOnlyTheReadOnlyL1Shadow() {
+        // prodDebug (the external mainnet validation build) must never seed
+        // the shielded pool or SDK write paths against real funds.
+        assertEquals(
+            listOf(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW),
+            DashPayConfig.debugSeedFlags(isMainnet = true)
+        )
+    }
+
+    @Test
+    fun testnetSeedList_isAllFourFlags_neverL1Send() {
+        val flags = DashPayConfig.debugSeedFlags(isMainnet = false)
+        assertEquals(
+            listOf(
+                DashPayConfig.USE_KOTLIN_SDK_DPNS_READS,
+                DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES,
+                DashPayConfig.USE_KOTLIN_SDK_SHIELDED,
+                DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW
+            ),
+            flags
+        )
+        assertFalse(DashPayConfig.USE_KOTLIN_SDK_L1_SEND in DashPayConfig.debugSeedFlags(isMainnet = true))
+        assertFalse(DashPayConfig.USE_KOTLIN_SDK_L1_SEND in flags)
+    }
 }

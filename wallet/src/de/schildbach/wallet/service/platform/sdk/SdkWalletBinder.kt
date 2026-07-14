@@ -154,16 +154,19 @@ internal fun isBoundWalletStale(latchedFingerprint: String?, currentFingerprint:
  * ## Eligibility gate (checked in order, cheapest first)
  *
  * 1. One of [DashPayConfig.USE_KOTLIN_SDK_DPNS_READS],
- *    [DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES] or
- *    [DashPayConfig.USE_KOTLIN_SDK_SHIELDED] is ON (re-read every
+ *    [DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES],
+ *    [DashPayConfig.USE_KOTLIN_SDK_SHIELDED] or
+ *    [DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] is ON (re-read every
  *    call; all OFF → return before touching the SDK, the mnemonic
  *    provider, or the identity config — the inertness contract).
  * 2. [Constants.SUPPORTS_PLATFORM] (64-bit builds only).
  * 3. The app actually has (or is creating) a platform identity
  *    ([BlockchainIdentityConfig.loadBase] reports `creationState != NONE`
- *    or a stored identity id) — OR `USE_KOTLIN_SDK_SHIELDED` is ON:
- *    shielding and the shielded-funded username creation need a bound
- *    wallet BEFORE the first identity exists, so fresh wallets bind too
+ *    or a stored identity id) — OR `USE_KOTLIN_SDK_SHIELDED` /
+ *    `USE_KOTLIN_SDK_L1_SHADOW` is ON: shielding and the shielded-funded
+ *    username creation need a bound wallet BEFORE the first identity
+ *    exists, and the read-only L1 shadow scan must run on wallets with
+ *    no platform identity at all, so those wallets bind too
  *    (binding-only; identity discovery defers until an id is stored).
  *
  * ## Trust model / seed hygiene
@@ -532,11 +535,15 @@ class SdkWalletBinder internal constructor(
         //    because shielding and the shielded-funded username creation
         //    both need a bound wallet BEFORE the first identity exists
         //    (the fresh-wallet path: fund → shield → create from pool).
+        //    The L1 shadow widens the gate the same way: the shadow scan
+        //    is read-only parity instrumentation over the bound seed and
+        //    must run on wallets with no platform identity at all (the
+        //    mainnet validation case: shadow flag on, everything else off).
         val identity = identityConfig.loadBase()
         val hasPlatformIdentity =
             identity.creationState != IdentityCreationState.NONE || identity.userId != null
-        if (!hasPlatformIdentity && !shieldedFlagEnabled()) {
-            log.info("SDK binding skipped: no platform identity on this wallet and shielded features off")
+        if (!hasPlatformIdentity && !shieldedFlagEnabled() && !l1ShadowFlagEnabled()) {
+            log.info("SDK binding skipped: no platform identity on this wallet and shielded/L1-shadow features off")
             return
         }
 
@@ -694,7 +701,12 @@ class SdkWalletBinder internal constructor(
     private suspend fun anyFlagEnabled(): Boolean = try {
         dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) == true ||
             dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) == true ||
-            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true ||
+            // The L1 shadow scan needs a bound wallet (L1ShadowSyncService's
+            // "requires a bound wallet" contract) — a shadow flag that can't
+            // cause a bind would silently never run when it is the ONLY
+            // flag on (the read-only mainnet validation configuration).
+            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true
     } catch (e: Exception) {
         log.warn("failed to read Kotlin-SDK flags; treating as off", e)
         false
@@ -705,6 +717,14 @@ class SdkWalletBinder internal constructor(
         dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
     } catch (e: Exception) {
         log.warn("failed to read USE_KOTLIN_SDK_SHIELDED; treating as off", e)
+        false
+    }
+
+    /** The L1 shadow widens the identity gate too (binding-only, read-only scan). Read failure = off. */
+    private suspend fun l1ShadowFlagEnabled(): Boolean = try {
+        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true
+    } catch (e: Exception) {
+        log.warn("failed to read USE_KOTLIN_SDK_L1_SHADOW; treating as off", e)
         false
     }
 

@@ -24,6 +24,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import de.schildbach.wallet.Constants
+import org.bitcoinj.core.NetworkParameters
 import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
@@ -229,6 +231,28 @@ open class DashPayConfig @Inject constructor(
         val USE_KOTLIN_SDK_L1_SEND = booleanPreferencesKey("use_kotlin_sdk_l1_send")
 
         /**
+         * The `USE_KOTLIN_SDK_*` flags a DEBUG build seeds ON when unset —
+         * pure so [seedDebugDefaultsIfUnset]'s network split is
+         * host-testable. Mainnet debug builds (prodDebug — the external
+         * large-wallet validation vehicle) seed ONLY the read-only L1
+         * shadow: the shielded pool and the SDK write paths are not
+         * validated on mainnet, and seeding them would expose shielded UI
+         * and platform writes to real funds. The shadow flag alone binds
+         * the wallet (SdkWalletBinder counts it) and runs the read-only
+         * parity scan. `USE_KOTLIN_SDK_L1_SEND` is never seeded anywhere.
+         */
+        internal fun debugSeedFlags(isMainnet: Boolean) = if (isMainnet) {
+            listOf(USE_KOTLIN_SDK_L1_SHADOW)
+        } else {
+            listOf(
+                USE_KOTLIN_SDK_DPNS_READS,
+                USE_KOTLIN_SDK_DASHPAY_WRITES,
+                USE_KOTLIN_SDK_SHIELDED,
+                USE_KOTLIN_SDK_L1_SHADOW
+            )
+        }
+
+        /**
          * Wall-clock ms of the last L1 shadow reset
          * ([de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService.resetShadowState]).
          * Persisted (not in-memory) so a reset survives a process death:
@@ -270,18 +294,16 @@ open class DashPayConfig @Inject constructor(
      * (binder, shadow, shielded) goes inert with no log trail — observed
      * live: the duck-say overnight restore ran with the SDK dark. The
      * wipe path calls this after clearing (debug builds only; a no-op on
-     * release where BuildConfig.DEBUG gates the caller).
+     * release where BuildConfig.DEBUG gates the caller). Which flags are
+     * seeded is network-dependent — see [debugSeedFlags].
      */
     suspend fun seedDebugDefaultsIfUnset() {
         if (!BuildConfig.DEBUG) return
         try {
             val seeded = mutableListOf<String>()
             val alreadySet = mutableListOf<String>()
-            val debugDefaultOnFlags = listOf(
-                USE_KOTLIN_SDK_DPNS_READS,
-                USE_KOTLIN_SDK_DASHPAY_WRITES,
-                USE_KOTLIN_SDK_SHIELDED,
-                USE_KOTLIN_SDK_L1_SHADOW
+            val debugDefaultOnFlags = debugSeedFlags(
+                isMainnet = Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET
             )
 
             for (flag in debugDefaultOnFlags) {

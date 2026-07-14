@@ -169,7 +169,8 @@ class SdkWalletBinderTest {
     private fun dashPayConfig(
         readsFlag: Boolean?,
         writesFlag: Boolean? = false,
-        shieldedFlag: Boolean? = false
+        shieldedFlag: Boolean? = false,
+        l1ShadowFlag: Boolean? = false
     ): DashPayConfig = mockk {
         if (readsFlag == null) {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) } throws
@@ -188,6 +189,12 @@ class SdkWalletBinderTest {
                 IllegalStateException("datastore unavailable")
         } else {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns shieldedFlag
+        }
+        if (l1ShadowFlag == null) {
+            coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } throws
+                IllegalStateException("datastore unavailable")
+        } else {
+            coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns l1ShadowFlag
         }
     }
 
@@ -343,6 +350,30 @@ class SdkWalletBinderTest {
 
         assertEquals(1, mnemonic.calls)
         assertEquals(1, sdk.bindCalls)
+    }
+
+    @Test
+    fun noPlatformIdentity_onlyL1ShadowFlagOn_bindsWallet_discoveryDeferred() = runBlocking {
+        // The read-only L1 shadow scan requires a bound wallet and must run
+        // on wallets with no platform identity at all — the mainnet
+        // validation configuration (shadow flag on, everything else off).
+        // The shadow flag alone must open BOTH gates (any-flag + identity).
+        val sdk = readySdk()
+        val mnemonic = FakeMnemonicProvider { words }
+        val binder = binder(
+            sdk, mnemonic,
+            identity = identityConfig(identityBase(IdentityCreationState.NONE, userId = null)),
+            config = dashPayConfig(
+                readsFlag = false, writesFlag = false, shieldedFlag = false, l1ShadowFlag = true
+            ),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, mnemonic.calls)
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(0, sdk.discoverCalls) // no id to attach — binding-only
     }
 
     @Test
