@@ -33,6 +33,7 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.slf4j.LoggerFactory
 import java.math.RoundingMode
 
@@ -120,13 +121,17 @@ class DEXRefundAddressFragment : Fragment() {
         // The entered amount is shared via the nav-graph-scoped DEXEnterAmountViewModel; convert it to
         // the human-unit crypto sell amount and hand it to the ViewModel, which validates the address
         // and creates the buy order with SwapKit. Navigation happens via onOrderCreated on success.
-        val sellAmount = enterAmountViewModel.enteredAmount().crypto
-            .setScale(SELL_AMOUNT_SCALE, RoundingMode.HALF_UP)
-            .stripTrailingZeros()
-            .toPlainString()
+        // Quantized DOWN to the asset's on-chain decimals (formatSwapAmount): the same string is
+        // registered with the SwapKit quote and encoded in the deposit URI, so the deposited amount
+        // can never fall short of the quoted one — NEAR Intents refunds even a one-base-unit deficit.
+        val crypto = enterAmountViewModel.enteredAmount().crypto
+        val sellAmount = MayaCurrencyList[args.asset]?.formatSwapAmount(crypto)
+            ?: crypto.setScale(FALLBACK_SELL_AMOUNT_SCALE, RoundingMode.DOWN)
+                .stripTrailingZeros()
+                .toPlainString()
         log.info("DEX buy: continue for asset={} sellAmount={}", args.asset, sellAmount)
         viewModel.submitOrder(sellAmount)
     }
 }
 
-private const val SELL_AMOUNT_SCALE = 8
+private const val FALLBACK_SELL_AMOUNT_SCALE = 8
