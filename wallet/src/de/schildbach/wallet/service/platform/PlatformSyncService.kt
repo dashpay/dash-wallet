@@ -86,6 +86,7 @@ import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dashj.platform.contracts.wallet.TxMetadataDocument
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dashpay.UsernameRequestStatus
+import org.dashj.platform.dashpay.UsernameStatus
 import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ContestedDocumentResourceVotePoll
@@ -1824,6 +1825,7 @@ class PlatformSynchronizationService @Inject constructor(
             // update contacts, profiles and other platform data
             else {
                 checkVotingStatus(identityData)
+                reconcileUsernameStatus(identityData)
 
                 if (!updatingContacts.get()) {
                     updateContactRequests(initialSync = true)
@@ -1836,6 +1838,119 @@ class PlatformSynchronizationService @Inject constructor(
     override suspend fun checkUsernameVotingStatus() {
         identityConfig.load()?.let {
             checkVotingStatus(it)
+            reconcileUsernameStatus(it)
+        }
+    }
+
+    /**
+     * Repair pass for the local username REGISTRATION status: when platform
+     * truth shows a username registered to this identity but the local
+     * status never reached CONFIRMED, adopt the platform truth (and finish
+     * the stuck creation state machine).
+     *
+     * Why this exists (observed live: username test12345, identity
+     * G2HnoKSdqpTzcfd1HcU1RYk3R7Zmrc7yPYExrS3bXiDf): a shielded-funded
+     * creation registers the DPNS name on chain and hands the identity to
+     * `RestoreIdentityWorker`; when that worker runs before Drive has
+     * indexed the new domain document, `recoverUsernames` finds nothing and
+     * the worker aborts with `restoring = false` and `creationState =
+     * USERNAME_REGISTERING` — after which NOTHING ever re-checked platform:
+     * [preBlockDownload]'s recovery discovery only fires while `identityData
+     * == null || restoring`, and [checkVotingStatus] is gated on
+     * `creationState == VOTING`. The local status then read NOT_PRESENT
+     * forever while another device could find the name via search. This
+     * pass runs from the same triggers as the voting checker and only ever
+     * acts on POSITIVE platform evidence.
+     */
+    private suspend fun reconcileUsernameStatus(identityData: BlockchainIdentityData) {
+        // VOTING has its own checker (checkVotingStatus); before
+        // IDENTITY_REGISTERED there is no identity to own a name.
+        if (identityData.creationState < IdentityCreationState.IDENTITY_REGISTERED ||
+            identityData.creationState == IdentityCreationState.VOTING
+        ) {
+            return
+        }
+        val userId = identityData.userId ?: return
+        val identityId = try {
+            Identifier.from(userId)
+        } catch (e: Exception) {
+            return
+        }
+        var confirmedName: String? = null
+        var updated = false
+
+        val username = identityData.username
+        if (username != null && identityData.usernameStatus != UsernameStatus.CONFIRMED &&
+            isUsernameRegisteredToIdentity(username, identityId)
+        ) {
+            log.info(
+                "reconcile: platform shows username '{}' registered to {} — correcting local status {} -> CONFIRMED",
+                username,
+                userId,
+                identityData.usernameStatus
+            )
+            identityData.usernameStatus = UsernameStatus.CONFIRMED
+            confirmedName = username
+            updated = true
+        }
+
+        val secondary = identityData.usernameSecondary
+        if (secondary != null && identityData.usernameSecondaryStatus != UsernameStatus.CONFIRMED &&
+            isUsernameRegisteredToIdentity(secondary, identityId)
+        ) {
+            log.info(
+                "reconcile: platform shows secondary username '{}' registered to {} — " +
+                    "correcting local status {} -> CONFIRMED",
+                secondary,
+                userId,
+                identityData.usernameSecondaryStatus
+            )
+            identityData.usernameSecondaryStatus = UsernameStatus.CONFIRMED
+            confirmedName = confirmedName ?: secondary
+            updated = true
+        }
+
+        if (!updated) {
+            return
+        }
+
+        if (identityData.creationState < IdentityCreationState.DONE) {
+            // The interrupted flow can never finish its own state machine —
+            // the name is already on chain, so a "retry" from the stuck
+            // state would double-register. Complete it here.
+            identityData.creationState = IdentityCreationState.DONE_AND_DISMISS
+            identityData.creationStateErrorMessage = null
+        }
+        identityRepository.updateBlockchainIdentityData(identityData)
+
+        // Same follow-up as the won-vote path: the local profile row must
+        // carry the confirmed name.
+        confirmedName?.let { name ->
+            identityRepository.getLocalUserProfile()?.let { profile ->
+                if (profile.username.isEmpty()) {
+                    dashPayProfileDao.insert(profile.copy(username = name))
+                }
+            }
+        }
+    }
+
+    /**
+     * Platform truth for one label: SUCCESS + a domain document whose
+     * identity record points at [identityId]. Errors and misses are false —
+     * the reconcile only ever acts on positive evidence.
+     */
+    private fun isUsernameRegisteredToIdentity(username: String, identityId: Identifier): Boolean {
+        return try {
+            val resource = platformRepo.getUsername(username)
+            val document = resource.data
+            if (resource.status != Status.SUCCESS || document == null) {
+                return false
+            }
+            val domain = DomainDocument(document)
+            domain.dashUniqueIdentityId == identityId || domain.dashAliasIdentityId == identityId
+        } catch (e: Exception) {
+            log.warn("reconcile: username lookup failed for '{}'", username, e)
+            false
         }
     }
 
