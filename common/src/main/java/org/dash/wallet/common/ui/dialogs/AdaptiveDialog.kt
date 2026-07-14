@@ -99,6 +99,27 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
             ).apply { isCancelable = false }
         }
 
+        /**
+         * Indeterminate progress WITH an explicit dismiss button, for
+         * operations that keep running app-side after the dialog is closed
+         * (the caller's work must not be tied to the dialog's lifecycle).
+         * The button resolves the result callback with `false`.
+         */
+        @JvmStatic
+        fun progress(
+            message: String,
+            dismissButtonText: String
+        ): AdaptiveDialog {
+            return create(
+                R.layout.dialog_progress_dismissible,
+                null,
+                null,
+                message,
+                dismissButtonText,
+                null
+            ).apply { isCancelable = true }
+        }
+
         @JvmStatic
         fun create(
             @DrawableRes icon: Int?,

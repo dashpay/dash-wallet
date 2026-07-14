@@ -43,6 +43,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -52,6 +53,7 @@ import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -326,4 +328,99 @@ class RequestUserNameViewModelTest {
 
             assertFalse(viewModel.uiState.value.enoughBalance)
         }
+
+    @Test
+    fun checkUsernameValid_shieldedSource_contestedName_gateRecomputesWhenTheSyncCompletes() =
+        runTest(dispatcher) {
+            // The live silent-swallow: the user typed the contested name
+            // while the pool was still syncing (gate false), the sync
+            // reached READY seconds later — and nothing ever recomputed
+            // the gate, leaving the submit button disabled with no
+            // explanation. The gate must self-correct from the shielded
+            // status/balance flows without retyping.
+            shieldedSyncStatusFlow.value = ShieldedSyncStatus.NOT_READY
+            shieldedBalanceFlow.value = Dash.ZERO
+            val viewModel = viewModel()
+            viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+            viewModel.checkUsernameValid("alice", de.schildbach.wallet.ui.username.UsernameType.Primary)
+            assertFalse(viewModel.uiState.value.enoughBalance)
+
+            shieldedBalanceFlow.value = Dash(30_000_000L) // 0.3 DASH
+            shieldedSyncStatusFlow.value = ShieldedSyncStatus.READY
+
+            assertTrue(viewModel.uiState.value.enoughBalance)
+        }
+
+    @Test
+    fun checkUsernameValid_shieldedSource_contestedName_gateFailureNamesTheDenomination() =
+        runTest(dispatcher) {
+            // The insufficient-balance row must name the 0.3 funding
+            // denomination the contested creation actually needs, not the
+            // 0.25 fee (or a hardcoded L1 amount).
+            shieldedSyncStatusFlow.value = ShieldedSyncStatus.READY
+            shieldedBalanceFlow.value = Dash(10_000_000L) // 0.1 DASH — not enough
+            val viewModel = viewModel()
+            viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+
+            viewModel.checkUsernameValid("alice", de.schildbach.wallet.ui.username.UsernameType.Primary)
+
+            val state = viewModel.uiState.value
+            assertFalse(state.enoughBalance)
+            assertEquals(Dash(30_000_000L).toPlainString(), state.requiredAmount)
+        }
+
+    // ── Never-silent submits ────────────────────────────────────────────────
+
+    @Test
+    fun submit_shieldedRefused_surfacesTheErrorState_neverSilent() = runTest(dispatcher) {
+        // The executor refusing a submit (no scope / busy) used to be
+        // swallowed: no dialog, no state change — the user saw nothing.
+        every { shieldedUsernameCreation.submit(any(), any()) } returns false
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice2"
+        viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+
+        viewModel.submit()
+
+        verify(exactly = 1, timeout = 5_000) { shieldedUsernameCreation.submit("alice2", null) }
+        // The error state lands on the IO continuation right after the
+        // refused call — await it instead of racing it.
+        viewModel.uiState.first { it.usernameSubmittedError }
+        assertTrue(viewModel.uiState.value.usernameSubmittedError)
+    }
+
+    @Test
+    fun submit_shieldedRefusedWhileAmbiguous_surfacesAmbiguous_neverTheRetryableError() =
+        runTest(dispatcher) {
+            // A refusal caused by the sticky may-have-gone-through state
+            // must re-surface the funds-safety dialog, not the "try again
+            // at no extra cost" error.
+            every { shieldedUsernameCreation.submit(any(), any()) } returns false
+            shieldedSubmitState.value = ShieldedUsernameSubmitState.MayHaveGoneThrough
+            val viewModel = viewModel()
+            viewModel.requestedUserName = "alice2"
+            viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+
+            viewModel.submit()
+
+            verify(exactly = 1, timeout = 5_000) { shieldedUsernameCreation.submit("alice2", null) }
+            viewModel.uiState.first { it.usernameSubmittedAmbiguous }
+            val state = viewModel.uiState.value
+            assertTrue(state.usernameSubmittedAmbiguous)
+            assertFalse(state.usernameSubmittedError)
+        }
+
+    @Test
+    fun submit_dashSource_showsAProcessingStatus() = runTest(dispatcher) {
+        // The L1/asset-lock path hands off to CreateIdentityService with a
+        // feedback gap until the identity state machine flips — the submit
+        // must still show a processing status immediately.
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice2"
+
+        viewModel.submit()
+
+        verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
+        assertTrue(viewModel.uiState.value.usernameRequestSubmitting)
+    }
 }

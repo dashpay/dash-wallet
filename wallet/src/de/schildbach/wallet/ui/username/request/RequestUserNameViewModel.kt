@@ -187,12 +187,18 @@ class RequestUserNameViewModel @Inject constructor(
             launch {
                 shieldedBalanceService.observeShieldedBalance()
                     .catch { log.warn("shielded balance flow failed", it) }
-                    .collect { _shieldedBalance.value = it }
+                    .collect {
+                        _shieldedBalance.value = it
+                        recomputeBalanceGate()
+                    }
             }
             launch {
                 shieldedBalanceService.shieldedSyncStatus
                     .catch { log.warn("shielded status flow failed", it) }
-                    .collect { _shieldedSyncStatus.value = it }
+                    .collect {
+                        _shieldedSyncStatus.value = it
+                        recomputeBalanceGate()
+                    }
             }
         }
     }
@@ -468,14 +474,44 @@ class RequestUserNameViewModel @Inject constructor(
                 // reuse-transaction submissions never reach here — their
                 // funding is already committed elsewhere.
                 log.info("routing username creation to the shielded-funded SDK path")
-                shieldedUsernameCreation.submit(requestedUserName!!, requestedUsernameSecondary)
+                val accepted = shieldedUsernameCreation.submit(requestedUserName!!, requestedUsernameSecondary)
+                if (!accepted) {
+                    // A refused submit must NEVER die silently (observed
+                    // live: a swallowed submit reads as a broken app).
+                    // Surface a state the dialogs react to, matched to why
+                    // the executor refused.
+                    val state = shieldedUsernameCreation.submitState.value
+                    log.info("username submit rejected: shielded creation refused (executor state: {})", state)
+                    _uiState.update {
+                        when (state) {
+                            // An earlier operation is still proving — show
+                            // its processing status instead of an error.
+                            ShieldedUsernameSubmitState.Proving ->
+                                it.copy(usernameRequestSubmitting = true)
+                            // Sticky unconfirmed outcome: never a retryable
+                            // error dialog.
+                            ShieldedUsernameSubmitState.MayHaveGoneThrough ->
+                                it.copy(usernameSubmittedAmbiguous = true)
+                            else -> it.copy(usernameSubmittedError = true)
+                        }
+                    }
+                }
             } else {
+                // The L1/asset-lock path (Dash balance, invite, dual and
+                // reuse-transaction submissions): CreateIdentityService
+                // takes over and the screen closes once the identity state
+                // machine starts, but that leaves a feedback gap between
+                // the tap and the state flip. Show the same processing
+                // status the shielded path shows; it is dismissed with the
+                // screen (or replaced by the error state below).
+                _uiState.update { it.copy(usernameRequestSubmitting = true) }
                 triggerIdentityCreation(reuseTransaction)
             }
         }
     }
 
     fun reset() {
+        lastGateUsername = null
         _uiState.update { RequestUserNameUIState() }
     }
 
@@ -605,11 +641,26 @@ class RequestUserNameViewModel @Inject constructor(
         return Regex("[2-9]").containsMatchIn(uname)
     }
 
-    fun checkUsernameValid(username: String, usernameType: UsernameType): Boolean {
-        val validLength = validateUsernameSize(username, usernameType)
-        val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
-        val contestable = Names.isUsernameContestable(username)
+    /**
+     * The last username the balance gate was computed for, so
+     * [recomputeBalanceGate] can re-resolve `enoughBalance`/`requiredAmount`
+     * when an INPUT of the gate changes after typing stopped. Load-bearing
+     * for the shielded source: the pool sync typically reaches READY (and
+     * the balance becomes evidence) seconds AFTER the user typed the name —
+     * without the recompute the contested-name gate froze at `false` and
+     * the submit button stayed silently disabled (observed live:
+     * test-demo1/test-demo11 swallowed with no explanation).
+     */
+    private var lastGateUsername: String? = null
 
+    /**
+     * `enoughBalance` + the DASH amount the insufficient-balance row must
+     * name, resolved for the chosen payment source. Every failed gate is
+     * logged at info level — a submit attempt that bounces must always
+     * leave a forensic trail (Brian: the contested attempts left ZERO log
+     * lines).
+     */
+    private fun computeBalanceGate(username: String, contestable: Boolean): Pair<Boolean, String> {
         val identityBalance = _identityBalance.value
         val walletBalance = _walletBalance.value
         val inviteBalance = _inviteBalance.value
@@ -649,6 +700,55 @@ class RequestUserNameViewModel @Inject constructor(
             contestable -> Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
             else -> Constants.DASH_PAY_FEE.toPlainString()
         }
+        if (!enoughBalance) {
+            log.info(
+                "username balance gate failed for '{}': source={} contestable={} required={} DASH " +
+                    "(walletBalance={} identityCredits={} inviteBalance={} shieldedBalance={} shieldedSync={})",
+                username,
+                paymentSource,
+                contestable,
+                requiredAmount,
+                walletBalance.toPlainString(),
+                identityBalance,
+                inviteBalance.toPlainString(),
+                _shieldedBalance.value.toPlainString(),
+                _shieldedSyncStatus.value
+            )
+        }
+        return enoughBalance to requiredAmount
+    }
+
+    /**
+     * Re-resolve the balance gate for the last-checked username after a
+     * gate INPUT changed (shielded sync reaching READY, pool balance
+     * landing). Only the gate fields are touched — the availability check
+     * flags stay whatever the platform query left them, so a recompute
+     * never knocks out an already-completed availability result.
+     */
+    private fun recomputeBalanceGate() {
+        val username = lastGateUsername ?: return
+        val contestable = try {
+            Names.isUsernameContestable(username)
+        } catch (e: Exception) {
+            return
+        }
+        val (enoughBalance, requiredAmount) = computeBalanceGate(username, contestable)
+        _uiState.update {
+            if (it.enoughBalance == enoughBalance && it.requiredAmount == requiredAmount) {
+                it
+            } else {
+                it.copy(enoughBalance = enoughBalance, requiredAmount = requiredAmount)
+            }
+        }
+    }
+
+    fun checkUsernameValid(username: String, usernameType: UsernameType): Boolean {
+        val validLength = validateUsernameSize(username, usernameType)
+        val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
+        val contestable = Names.isUsernameContestable(username)
+
+        lastGateUsername = username
+        val (enoughBalance, requiredAmount) = computeBalanceGate(username, contestable)
         _uiState.update {
             it.copy(
                 usernameLengthValid = validLength,

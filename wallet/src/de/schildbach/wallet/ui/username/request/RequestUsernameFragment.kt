@@ -168,23 +168,13 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             showKeyboard()
         }
 
-        requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
-            // Shielded submissions run an app-scoped ~30s proof while this
-            // screen stays visible — show a DISMISSIBLE processing dialog
-            // (Brian: submitting silently dropped back to the entry screen
-            // with no feedback). Terminal states below replace it.
-            if (it.usernameRequestSubmitting) {
-                showProcessingDialog()
-            } else {
-                dismissProcessingDialog()
-            }
-            if (it.usernameSubmittedError) {
-                showErrorDialog()
-            }
-            if (it.usernameSubmittedAmbiguous) {
-                showAmbiguousDialog()
-            }
+        // The submit-status dialogs (processing / error / ambiguous) are the
+        // SHARED component every username-flow screen installs — see
+        // UsernameSubmitStatusDialogs (Brian: submitting silently dropped
+        // back to the entry screen with no feedback).
+        UsernameSubmitStatusDialogs(this, requestUserNameViewModel).observe()
 
+        requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
             // Hide voting period elements for Secondary username type (instant usernames)
             binding.votingPeriodProgress.isVisible = it.checkingUsername && usernameType != UsernameType.Secondary
             binding.votingPeriodContainer.isVisible = !it.checkingUsername && usernameType != UsernameType.Secondary
@@ -453,52 +443,6 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
 
     private fun hideKeyboard() {
         KeyboardUtil.hideKeyboard(requireContext(), binding.usernameInput)
-    }
-
-    private fun showErrorDialog() {
-        val dialog = AdaptiveDialog.create(
-            R.drawable.ic_error,
-            getString(R.string.something_wrong_title),
-            getString(R.string.there_was_a_network_error),
-            getString(R.string.close),
-            getString(R.string.try_again)
-        )
-        dialog.show(requireActivity()) {
-            if (it == true) {
-                requestUserNameViewModel.submit()
-            }
-        }
-    }
-
-    private var processingDialog: AdaptiveDialog? = null
-
-    /** Dismissible: the creation runs on the app scope and survives the dialog. */
-    private fun showProcessingDialog() {
-        if (processingDialog?.dialog?.isShowing == true) return
-        processingDialog = AdaptiveDialog.progress(getString(R.string.username_creation_processing))
-            .apply { isCancelable = true }
-            .also { it.show(requireActivity()) { } }
-    }
-
-    private fun dismissProcessingDialog() {
-        processingDialog?.dismissAllowingStateLoss()
-        processingDialog = null
-    }
-
-    /**
-     * The shielded creation's outcome is unconfirmed — it may already be
-     * on chain, so this dialog must NOT offer a retry and must not claim
-     * "no extra cost" (the generic [showErrorDialog] said both, observed
-     * live). Close-only; the app reconciles automatically.
-     */
-    private fun showAmbiguousDialog() {
-        AdaptiveDialog.create(
-            R.drawable.ic_error,
-            getString(R.string.username_request_ambiguous_title),
-            getString(R.string.username_request_ambiguous_message),
-            getString(R.string.close),
-            null
-        ).show(requireActivity()) { }
     }
 
     private fun checkUsername(username: String) {

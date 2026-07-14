@@ -87,23 +87,11 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
             //findNavController().popBackStack()
         }
 
-        requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
-//            if (it.usernameSubmittedSuccess) {
-//                requireActivity().finish()
-//            }
-
-//            if (it.usernameSubmittedError) {
-//                showErrorDialog()
-//            }
-//
-//             if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess) {
-//
-//                if (it.usernameVerified) {
-//                    hideKeyboard()
-//                    checkViewConfirmDialog()
-//                }
-//            }
-        }
+        // A submit can be triggered while THIS screen is the visible
+        // destination (the cancelled-verification shortcut below, or the
+        // confirm dialog stacked on top of it) — without the shared
+        // status dialogs those submissions ran with zero feedback here.
+        UsernameSubmitStatusDialogs(this, requestUserNameViewModel).observe()
     }
 
     private fun hideKeyboard() {
