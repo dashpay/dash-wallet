@@ -38,6 +38,24 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.AuthenticationManager
 import javax.inject.Inject
 
+/** Where a dismissed terminal transfer outcome leaves the flow — see [shieldedTransferExitTarget]. */
+internal enum class ShieldedExitTarget { FINISH, HOME }
+
+/**
+ * Where dismissing a terminal, non-success transfer outcome (Ambiguous /
+ * LockedPendingShield / Stalled) must take the user — pure, host-testable.
+ *
+ * - Opened from the More/payments card: the activity sits directly on that
+ *   screen, so a plain finish() returns to it ([ShieldedExitTarget.FINISH]).
+ * - Opened via the username/invite "Shield your funds first" path
+ *   ([shieldFirst]): the activity sits ON TOP of the create-username/invite
+ *   flow (and its still-open dialogs). A finish() would unwind that stack one
+ *   screen at a time (live bug); instead clear straight to home in one step
+ *   ([ShieldedExitTarget.HOME]), which also drops the username-flow dialogs.
+ */
+internal fun shieldedTransferExitTarget(shieldFirst: Boolean): ShieldedExitTarget =
+    if (shieldFirst) ShieldedExitTarget.HOME else ShieldedExitTarget.FINISH
+
 /**
  * Host of the flag-gated shielded-balances flows (Figma canvas 231:200
  * "Payments"): the internal-transfer flow (the default, opened from the
@@ -51,6 +69,14 @@ class ShieldedBalanceActivity : LockScreenActivity() {
     companion object {
         private const val EXTRA_SCREEN = "screen"
 
+        /**
+         * True when this activity was opened via the username/invite "Shield
+         * your funds first" path (it sits on top of the create-username flow),
+         * as opposed to the More/payments card. Controls where a dismissed
+         * terminal outcome leaves the flow ([shieldedTransferExitTarget]).
+         */
+        private const val EXTRA_SHIELD_FIRST = "shield_first"
+
         /** "Internal transfer" flow (Figma 1746:18462 / 1746:18478). */
         const val SCREEN_TRANSFER = 0
 
@@ -62,9 +88,19 @@ class ShieldedBalanceActivity : LockScreenActivity() {
 
         @JvmStatic
         @JvmOverloads
-        fun createIntent(context: Context, screen: Int = SCREEN_TRANSFER): Intent =
+        fun createIntent(
+            context: Context,
+            screen: Int = SCREEN_TRANSFER,
+            shieldFirst: Boolean = false
+        ): Intent =
             Intent(context, ShieldedBalanceActivity::class.java)
                 .putExtra(EXTRA_SCREEN, screen)
+                .putExtra(EXTRA_SHIELD_FIRST, shieldFirst)
+                // Merely opening this screen must NOT re-prompt for the PIN
+                // (the user already authenticated in-session to reach here) —
+                // the SendCoins/TransactionResult precedent. The actual spend
+                // is authorized at submit time by authenticateAndConfirmTransfer.
+                .putExtra(LockScreenActivity.INTENT_EXTRA_KEEP_UNLOCKED, true)
     }
 
     private val transferViewModel: ShieldedTransferViewModel by viewModels()
@@ -91,6 +127,7 @@ class ShieldedBalanceActivity : LockScreenActivity() {
     lateinit var transferExecutor: ShieldedTransferExecutor
 
     private var screen = SCREEN_TRANSFER
+    private var shieldFirst = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -101,6 +138,7 @@ class ShieldedBalanceActivity : LockScreenActivity() {
         }
 
         screen = intent.getIntExtra(EXTRA_SCREEN, SCREEN_TRANSFER)
+        shieldFirst = intent.getBooleanExtra(EXTRA_SHIELD_FIRST, false)
         if (savedInstanceState == null) {
             when (screen) {
                 SCREEN_TRANSFER -> transferViewModel.reset()
@@ -125,7 +163,7 @@ class ShieldedBalanceActivity : LockScreenActivity() {
                     else -> ShieldedTransferScreen(
                         viewModel = transferViewModel,
                         onBackClick = { finish() },
-                        onFinished = { finish() },
+                        onFinished = ::leaveTransferAfterOutcome,
                         onConfirm = ::authenticateAndConfirmTransfer,
                         onSuccess = ::navigateToMoreAfterTransfer
                     )
@@ -166,6 +204,24 @@ class ShieldedBalanceActivity : LockScreenActivity() {
      * delivers the destination to the existing MainActivity beneath this
      * one and pops everything above it; finish() covers the cold-start case.
      */
+    /**
+     * A terminal, non-success transfer outcome (Ambiguous / LockedPendingShield
+     * / Stalled) was dismissed. From the More/payments card a plain finish()
+     * returns to it; from the "Shield your funds first" path this activity is
+     * stacked on the create-username/invite flow, so finishing would unwind
+     * that stack (with its dialogs) one screen at a time — go straight home
+     * instead, clearing the whole flow in one step (Bug 1).
+     */
+    private fun leaveTransferAfterOutcome() {
+        when (shieldedTransferExitTarget(shieldFirst)) {
+            ShieldedExitTarget.HOME -> {
+                startActivity(MainActivity.createIntent(this))
+                finish()
+            }
+            ShieldedExitTarget.FINISH -> finish()
+        }
+    }
+
     private fun navigateToMoreAfterTransfer() {
         startActivity(
             MainActivity.createIntent(

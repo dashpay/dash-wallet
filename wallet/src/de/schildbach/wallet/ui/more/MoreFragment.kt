@@ -633,11 +633,23 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         if (shouldShowProfileSection) {
             binding.editUpdateSwitcher.visibility = View.VISIBLE
             binding.editUpdateSwitcher.displayedChild = PROFILE_VIEW
+            // For a dual (contested + instant) username still in voting, the
+            // freshly-created profile carries the CONTESTED primary name while
+            // only the INSTANT secondary name is actually owned — so the
+            // identity's activeUsername is authoritative and matches what a
+            // profile refresh persists on re-entry (Bug 2). Single-username
+            // wallets fall through to the profile's own name, unchanged.
+            val identity = createIdentityViewModel.blockchainIdentity.value
+            val displayUsername = profileDisplayUsername(
+                profile.username,
+                identity?.activeUsername,
+                identity?.showSecondaryUsername == true
+            )
             if (profile.displayName.isNotEmpty()) {
                 binding.username1.text = profile.displayName
-                binding.username2.text = profile.username
+                binding.username2.text = displayUsername
             } else {
-                binding.username1.text = profile.username
+                binding.username1.text = displayUsername
                 binding.username2.visibility = View.GONE
             }
 
@@ -693,6 +705,29 @@ internal fun mapShieldedCardDisplay(
     status == ShieldedSyncStatus.READY -> ShieldedCardDisplay.AMOUNT
     status == ShieldedSyncStatus.NOT_READY && !hasShieldedContext -> ShieldedCardDisplay.AMOUNT
     else -> ShieldedCardDisplay.SYNCING
+}
+
+/**
+ * The username to show under the More-screen avatar — pure, host-testable.
+ *
+ * A dual (contested + instant) username sits in voting with only the
+ * INSTANT/secondary name confirmed and owned; the CONTESTED primary name is
+ * not yet the user's. Right after creation the local profile is seeded with
+ * the primary (contested) name, but a profile refresh on re-entry persists
+ * the owned instant name — so the two renders disagreed (Bug 2). When the
+ * identity reports [BlockchainIdentityData.showSecondaryUsername] its
+ * [BlockchainIdentityData.activeUsername] (the confirmed secondary name) is
+ * authoritative and shown immediately. Otherwise the profile's own username
+ * is used, so single-username wallets are unchanged.
+ */
+internal fun profileDisplayUsername(
+    profileUsername: String,
+    identityActiveUsername: String?,
+    showSecondaryUsername: Boolean
+): String = if (showSecondaryUsername && !identityActiveUsername.isNullOrEmpty()) {
+    identityActiveUsername
+} else {
+    profileUsername
 }
 
 /**

@@ -97,7 +97,9 @@ class InviteShieldedFundingDialogFragment :
                         // Shield funds in the internal-transfer flow; leaving
                         // the invite flow returns the user to the originating
                         // screen, from which they can re-start the invitation.
-                        startActivity(ShieldedBalanceActivity.createIntent(requireContext()))
+                        startActivity(
+                            ShieldedBalanceActivity.createIntent(requireContext(), shieldFirst = true)
+                        )
                         dismiss()
                     },
                     onContinueWithoutPrivacy = { toFeeDialog() },

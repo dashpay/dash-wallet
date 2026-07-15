@@ -51,8 +51,11 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
                 }
                 UsernamePaymentDialogFragment.ACTION_SHIELD_FIRST -> {
                     // The user shields funds in the internal-transfer flow and
-                    // comes back to this screen to continue.
-                    startActivity(ShieldedBalanceActivity.createIntent(requireContext()))
+                    // comes back to this screen to continue (a terminal transfer
+                    // outcome, though, leaves straight to home — shieldFirst).
+                    startActivity(
+                        ShieldedBalanceActivity.createIntent(requireContext(), shieldFirst = true)
+                    )
                 }
             }
         }
