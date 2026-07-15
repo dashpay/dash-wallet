@@ -22,7 +22,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
-import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,13 +55,11 @@ enum class InviteShieldedFundingPrompt { NONE, MAKE_INVITE_PRIVATE }
  * UI state for the shielded-funding decision step of the create-invitation
  * flow.
  *
- * The shielded contested/non-contested costs are resolved from the SAME
- * denomination source the create-username flow uses
- * ([shieldedIdentityFundingRequirement]) — never hardcoded: an invitation
- * funds a fixed amount (non-contested [Constants.DASH_PAY_FEE] 0.03 DASH /
- * contested [Constants.DASH_PAY_FEE_CONTESTED] 0.25 DASH), and its shielded
- * equivalent is the smallest fixed Type-20 exit denomination covering that
- * fee (0.1 / 0.3 DASH).
+ * The shielded contested/non-contested "amount to shield" figures come
+ * from the same fund-minimum constants the create-username flow shows
+ * ([Constants.SHIELDED_USERNAME_FUND_MIN] 0.15 DASH / 
+ * [Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED] 0.35 DASH) — the 0.1 /
+ * 0.3 Type-20 exit denomination padded for the shielded-spend fee.
  *
  * The balance/sync pair follows the More-screen balance-card rule: a
  * shielded balance is only trusted when the sync status is
@@ -84,16 +81,16 @@ data class InviteShieldedFundingUIState(
     val resolved: Boolean = false
 ) {
     /**
-     * The shielded pool amount a NON-contested invitation would require: the
-     * smallest fixed Type-20 exit denomination (0.1/0.3/0.5/1.0 DASH)
-     * covering [nonContestedFee]. Null when no denomination covers it.
+     * The shielded balance a NON-contested invitation requires the user to
+     * hold: [Constants.SHIELDED_USERNAME_FUND_MIN] (0.15 DASH) — the 0.1
+     * Type-20 exit denomination padded for the shielded-spend fee. This is
+     * the "amount to shield" the sheet asks for, NOT the bare exit
+     * denomination (0.1), which is only what finally leaves the pool.
      */
-    val nonContestedShieldedCost: Dash?
-        get() = shieldedIdentityFundingRequirement(nonContestedFee)
+    val nonContestedShieldedCost: Dash = Dash(Constants.SHIELDED_USERNAME_FUND_MIN.value)
 
-    /** The shielded pool amount a CONTESTED invitation would require. */
-    val contestedShieldedCost: Dash?
-        get() = shieldedIdentityFundingRequirement(contestedFee)
+    /** The shielded balance a CONTESTED invitation requires (0.35 DASH). */
+    val contestedShieldedCost: Dash = Dash(Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED.value)
 
     /**
      * The sheet to show at the invite decision point. Until the flag read

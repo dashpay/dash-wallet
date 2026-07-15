@@ -215,8 +215,8 @@ private fun SheetIntro(title: String, description: String) {
 @Composable
 private fun InviteShieldedFundingPreview() {
     InviteShieldedFundingSheet(
-        nonContestedShieldedCost = "0.1",
-        contestedShieldedCost = "0.3",
+        nonContestedShieldedCost = "0.15",
+        contestedShieldedCost = "0.35",
         canShieldMinimum = true,
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},
@@ -228,8 +228,8 @@ private fun InviteShieldedFundingPreview() {
 @Composable
 private fun InviteShieldedFundingBelowMinimumPreview() {
     InviteShieldedFundingSheet(
-        nonContestedShieldedCost = "0.1",
-        contestedShieldedCost = "0.3",
+        nonContestedShieldedCost = "0.15",
+        contestedShieldedCost = "0.35",
         canShieldMinimum = false,
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},

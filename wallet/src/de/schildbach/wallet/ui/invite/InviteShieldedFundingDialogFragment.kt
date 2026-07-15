@@ -90,10 +90,8 @@ class InviteShieldedFundingDialogFragment :
                 }
 
                 InviteShieldedFundingSheet(
-                    nonContestedShieldedCost = state.nonContestedShieldedCost?.toPlainString()
-                        ?: Constants.DASH_PAY_FEE.toPlainString(),
-                    contestedShieldedCost = state.contestedShieldedCost?.toPlainString()
-                        ?: Constants.DASH_PAY_FEE_CONTESTED.toPlainString(),
+                    nonContestedShieldedCost = state.nonContestedShieldedCost.toPlainString(),
+                    contestedShieldedCost = state.contestedShieldedCost.toPlainString(),
                     canShieldMinimum = state.canShieldMinimum,
                     onShieldFirst = {
                         // Shield funds in the internal-transfer flow; leaving

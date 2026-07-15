@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.invite
 
 import org.dash.wallet.common.money.Dash
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -57,28 +56,28 @@ class InviteShieldedFundingUIStateTest {
     }
 
     @Test
-    fun `shielded costs come from the shared denomination source, not the bare fee`() {
+    fun `shielded costs are the fund-minimum amounts to shield, not the bare exit denomination`() {
         val state = InviteShieldedFundingUIState(
             shieldedEnabled = true,
             resolved = true,
             nonContestedFee = nonContestedFee,
             contestedFee = contestedFee
         )
-        // 0.03 fee → smallest covering Type-20 denomination 0.1 DASH.
-        assertEquals(Dash(10_000_000L), state.nonContestedShieldedCost)
-        // 0.25 fee → 0.3 DASH (0.1 cannot cover the contested prefunded vote).
-        assertEquals(Dash(30_000_000L), state.contestedShieldedCost)
+        // The sheet asks for the amount to SHIELD: 0.15 / 0.35 (the 0.1/0.3
+        // exit denomination padded for the shielded-spend fee), not 0.1/0.3.
+        assertEquals(Dash(15_000_000L), state.nonContestedShieldedCost)
+        assertEquals(Dash(35_000_000L), state.contestedShieldedCost)
     }
 
     @Test
-    fun `shielded cost is null when no denomination covers the fee`() {
+    fun `shielded costs are fixed fund-minimums independent of the L1 fee input`() {
         val state = InviteShieldedFundingUIState(
             shieldedEnabled = true,
             resolved = true,
             nonContestedFee = Dash.ZERO,
-            contestedFee = Dash(200_000_000L) // 2.0 DASH — above the largest denomination
+            contestedFee = Dash.ZERO
         )
-        assertNull(state.nonContestedShieldedCost)
-        assertNull(state.contestedShieldedCost)
+        assertEquals(Dash(15_000_000L), state.nonContestedShieldedCost)
+        assertEquals(Dash(35_000_000L), state.contestedShieldedCost)
     }
 }
