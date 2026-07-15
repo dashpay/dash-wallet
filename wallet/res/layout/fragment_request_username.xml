@@ -283,6 +283,32 @@
             </LinearLayout>
         </FrameLayout>
 
+        <!-- Advisory platform-health warning (RequestUserNameUIState.networkSlow):
+             informational only, never gates the request button. -->
+        <LinearLayout
+            android:id="@+id/network_slow_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <ImageView
+                android:id="@+id/network_slow_icon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_warning_triangle"
+                />
+            <TextView
+                style="@style/Overline.Medium"
+                android:id="@+id/network_slow_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/username_network_slow_warning"
+                />
+        </LinearLayout>
+
         <LinearLayout
             android:id="@+id/invite_only_noncontested"
             android:layout_width="match_parent"

@@ -31,6 +31,8 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.platform.PlatformHealth
+import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
@@ -115,7 +117,15 @@ data class RequestUserNameUIState(
     val requiredAmount: String = "",
     val usernameNonContestedChars: Boolean = false,
     val usernameNonContestedLength: Boolean = false,
-    val votingPeriodStart: Long = System.currentTimeMillis()
+    val votingPeriodStart: Long = System.currentTimeMillis(),
+    /**
+     * ADVISORY network-health flag: the platform side reported a core
+     * chain height lagging our local tip when the screen was entered
+     * (see [PlatformHealthProbe]) — asset-lock-funded operations will
+     * likely take extra minutes. Renders as a warning row only; it must
+     * NEVER disable the submit button (probe failures stay false).
+     */
+    val networkSlow: Boolean = false
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -129,7 +139,8 @@ class RequestUserNameViewModel @Inject constructor(
     val analytics: AnalyticsService,
     val topUpRepository: TopUpRepository,
     private val shieldedUsernameCreation: SdkShieldedUsernameCreation,
-    private val shieldedBalanceService: ShieldedBalanceService
+    private val shieldedBalanceService: ShieldedBalanceService,
+    private val platformHealthProbe: PlatformHealthProbe
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
@@ -421,6 +432,33 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Whether a network-health probe is currently in flight — the screen
+     * calls [checkNetworkHealth] on every entry, and a still-running
+     * probe must not be duplicated (it is a network call).
+     */
+    private var networkHealthProbeInFlight = false
+
+    /**
+     * One-shot ADVISORY platform-health probe, run when the username
+     * entry screen is entered (once per entry; never per keystroke).
+     * DEGRADED shows the "network is running slower than usual" row;
+     * UNKNOWN and probe failures show nothing. The result must never
+     * gate the submit button.
+     */
+    fun checkNetworkHealth() {
+        if (networkHealthProbeInFlight) return
+        networkHealthProbeInFlight = true
+        viewModelScope.launch {
+            try {
+                val health = platformHealthProbe.probe()
+                _uiState.update { it.copy(networkSlow = health == PlatformHealth.DEGRADED) }
+            } finally {
+                networkHealthProbeInFlight = false
+            }
+        }
+    }
+
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
         val username = requestedUserName!!
         val usernameSecondary = requestedUsernameSecondary
@@ -522,7 +560,9 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun reset() {
         lastGateUsername = null
-        _uiState.update { RequestUserNameUIState() }
+        // networkSlow is screen-entry-scoped (advisory probe result), not
+        // per-username state — clearing the input must not wipe it.
+        _uiState.update { RequestUserNameUIState(networkSlow = it.networkSlow) }
     }
 
     private fun resetUiForRetrySubmit() {

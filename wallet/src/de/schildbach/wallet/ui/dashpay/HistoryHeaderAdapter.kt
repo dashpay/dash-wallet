@@ -90,6 +90,20 @@ class HistoryHeaderAdapter(
             }
         }
 
+    /**
+     * Transient retry-status hint for the identity processing tile
+     * (why the current step is taking longer than usual — e.g. "waiting
+     * for the network to catch up"); null hides the line. Fed from
+     * [IdentityCreationStatusHolder] by the fragment.
+     */
+    var statusHint: String? = null
+        set(value) {
+            field = value
+            if (::binding.isInitialized) {
+                bindBlockchainIdentity(blockchainIdentityData)
+            }
+        }
+
     private fun bindInvitation(invitation: InvitationLinkData?, isSynced: Boolean) {
         if (blockchainIdentityData != null && !shouldShowAcceptInvitation(invitation, isSynced)) {
             binding.acceptInvitation.root.isVisible = false
@@ -162,6 +176,15 @@ class HistoryHeaderAdapter(
 
         binding.identityCreation.root.isVisible = true
         binding.identityCreation.root.setOnClickListener { onIdentityClicked?.invoke() }
+
+        // Secondary status line: only meaningful while the state machine is
+        // actively working a step (a terminal/voting tile has nothing to
+        // explain; the error tile has its own copy).
+        val showStatusHint = statusHint != null &&
+            blockchainIdentityData.creationStateErrorMessage == null &&
+            blockchainIdentityData.creationState < IdentityCreationState.VOTING
+        binding.identityCreation.statusHint.isVisible = showStatusHint
+        binding.identityCreation.statusHint.text = statusHint
 
         if (blockchainIdentityData.creationStateErrorMessage != null) {
             val creationStateErrorMessage = blockchainIdentityData.creationStateErrorMessage!!

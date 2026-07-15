@@ -34,6 +34,8 @@ import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
+import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
+import de.schildbach.wallet.ui.dashpay.RetryStatusHint
 import de.schildbach.wallet.ui.invite.InviteHandler
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -99,6 +101,9 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private lateinit var header: HistoryHeaderAdapter
     @Inject
     lateinit var identityRepository: IdentityRepository
+
+    @Inject
+    lateinit var identityCreationStatus: IdentityCreationStatusHolder
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -392,6 +397,18 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             if (identity != null) {
                 (requireActivity() as? LockScreenActivity)?.imitateUserInteraction()
                 header.blockchainIdentityData = identity
+            }
+        }
+
+        // Transient retry-status hint on the identity processing tile —
+        // why the current step is taking longer than usual (e.g. platform
+        // consensus core height lagging a fresh funding tx; no IS lock
+        // yet). Cleared by the service on success/fresh runs.
+        identityCreationStatus.statusHint.observe(viewLifecycleOwner) { hint ->
+            header.statusHint = when (hint) {
+                RetryStatusHint.CORE_HEIGHT_LAG -> getString(R.string.identity_processing_network_catching_up)
+                RetryStatusHint.WAITING_FOR_ISLOCK -> getString(R.string.identity_processing_waiting_confirmation)
+                null -> null
             }
         }
 

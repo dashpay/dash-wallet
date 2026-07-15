@@ -179,7 +179,14 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             requireActivity().finish()
         }.observe()
 
+        // One ADVISORY platform-health probe per screen entry: warn when
+        // the platform side lags the local chain (asset-lock operations
+        // will retry for extra minutes) — never gates the button.
+        requestUserNameViewModel.checkNetworkHealth()
+
         requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
+            binding.networkSlowContainer.isVisible = it.networkSlow
+
             // Hide voting period elements for Secondary username type (instant usernames)
             binding.votingPeriodProgress.isVisible = it.checkingUsername && usernameType != UsernameType.Secondary
             binding.votingPeriodContainer.isVisible = !it.checkingUsername && usernameType != UsernameType.Secondary

@@ -94,7 +94,8 @@ class PlatformRepo @Inject constructor(
     val dashPayConfig: DashPayConfig,
     private val sdkUsernameQueries: SdkUsernameQueries,
     private val sdkVotingQueries: SdkVotingQueries,
-    private val sdkProfileQueries: SdkProfileQueries
+    private val sdkProfileQueries: SdkProfileQueries,
+    private val identityCreationStatus: IdentityCreationStatusHolder
 ) {
 
     @EntryPoint
@@ -107,6 +108,15 @@ class PlatformRepo @Inject constructor(
         private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
         const val TIMESPAN: Long = DateUtils.DAY_IN_MILLIS * 90 // 90 days
         const val TOP_CONTACT_COUNT = 4
+
+        /**
+         * How long a `registerIdentity` call may run before the
+         * home-screen tile hints that the network is catching up —
+         * see [registerIdentityWithSlowRegistrationHint]. A healthy
+         * registration completes within seconds; dashj's internal
+         * chain-lock retry waits ~2.5 minutes per attempt.
+         */
+        const val REGISTRATION_SLOW_HINT_DELAY_MS = 30_000L
     }
 
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
@@ -303,15 +313,52 @@ class PlatformRepo @Inject constructor(
         for (i in 0 until 3) {
             try {
                 val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
-                blockchainIdentity.registerIdentity(keyParameter, true, true)
+                registerIdentityWithSlowRegistrationHint(blockchainIdentity, keyParameter)
                 timer.logTiming() // we won't log timing for failed registrations
+                identityCreationStatus.clear()
                 return
             } catch (e: InvalidInstantAssetLockProofException) {
+                // Per-attempt hint: no IS lock on the funding tx (yet) —
+                // the tile shows "waiting for network confirmation" while
+                // we wait out the retry delay.
+                identityCreationStatus.setHint(identityRetryStatusHint(e))
                 log.info("instantSendLock error: retry registerIdentity again ($i)")
                 delay(3000)
             }
         }
         throw InvalidInstantAssetLockProofException("failed after 3 tries")
+    }
+
+    /**
+     * Runs the (blocking) dashj registration with a status watchdog.
+     *
+     * dashj's `BlockchainIdentity.registerIdentity` retries the
+     * chain-lock proof INTERNALLY — on "Asset Lock proof core chain
+     * height N is higher than the current consensus core height M" it
+     * waits for the next local block and tries again, swallowing every
+     * per-attempt throwable, so app code never sees an error while it
+     * loops (live incident: ~10 minutes of invisible retries). The only
+     * app-side observable is duration, so once the call outlives
+     * [REGISTRATION_SLOW_HINT_DELAY_MS] (a normal registration completes
+     * in seconds; each dashj retry waits a whole ~2.5 min block) the
+     * home-screen tile hint flips to "waiting for the network to catch
+     * up".
+     */
+    private suspend fun registerIdentityWithSlowRegistrationHint(
+        blockchainIdentity: BlockchainIdentity,
+        keyParameter: KeyParameter?
+    ) = coroutineScope {
+        val slowHintWatchdog = launch {
+            delay(REGISTRATION_SLOW_HINT_DELAY_MS)
+            log.info("identity registration still running after {}ms — surfacing catch-up hint",
+                REGISTRATION_SLOW_HINT_DELAY_MS)
+            identityCreationStatus.setHint(RetryStatusHint.CORE_HEIGHT_LAG)
+        }
+        try {
+            blockchainIdentity.registerIdentity(keyParameter, true, true)
+        } finally {
+            slowHintWatchdog.cancel()
+        }
     }
 
     //

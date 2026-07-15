@@ -21,6 +21,8 @@ import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.service.platform.PlatformHealth
+import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
@@ -112,6 +114,10 @@ class RequestUserNameViewModelTest {
     // full-suite flakes).
     private val createdViewModels = mutableListOf<RequestUserNameViewModel>()
 
+    private val platformHealthProbe = mockk<PlatformHealthProbe> {
+        coEvery { probe() } returns PlatformHealth.UNKNOWN
+    }
+
     private fun viewModel(
         platformRepo: PlatformRepo = mockk<PlatformRepo>(relaxed = true)
     ) = RequestUserNameViewModel(
@@ -123,7 +129,8 @@ class RequestUserNameViewModelTest {
         analytics = mockk<AnalyticsService>(relaxed = true),
         topUpRepository = mockk<TopUpRepository>(relaxed = true),
         shieldedUsernameCreation = shieldedUsernameCreation,
-        shieldedBalanceService = shieldedBalanceService
+        shieldedBalanceService = shieldedBalanceService,
+        platformHealthProbe = platformHealthProbe
     ).also { createdViewModels += it }
 
     @Before
@@ -476,6 +483,47 @@ class RequestUserNameViewModelTest {
         assertFalse(state.usernameExists)
         assertFalse(state.usernameContested)
         assertFalse(state.usernameBlocked)
+    }
+
+    // ── Advisory network-health warning ─────────────────────────────────────
+
+    @Test
+    fun checkNetworkHealth_degraded_setsNetworkSlow_neverGatesTheButtonInputs() = runTest(dispatcher) {
+        coEvery { platformHealthProbe.probe() } returns PlatformHealth.DEGRADED
+        val viewModel = viewModel()
+
+        viewModel.checkNetworkHealth()
+
+        viewModel.uiState.first { it.networkSlow }
+        val state = viewModel.uiState.value
+        assertTrue(state.networkSlow)
+        // Advisory only: none of the gate inputs may be touched by the probe.
+        assertFalse(state.usernameCheckFailed)
+        assertFalse(state.usernameSubmittedError)
+    }
+
+    @Test
+    fun checkNetworkHealth_unknown_showsNoWarning() = runTest(dispatcher) {
+        coEvery { platformHealthProbe.probe() } returns PlatformHealth.UNKNOWN
+        val viewModel = viewModel()
+
+        viewModel.checkNetworkHealth()
+
+        assertFalse(viewModel.uiState.value.networkSlow)
+    }
+
+    @Test
+    fun reset_preservesTheNetworkSlowAdvisory() = runTest(dispatcher) {
+        // Clearing the input resets the per-username state — the
+        // screen-entry-scoped health advisory must survive it.
+        coEvery { platformHealthProbe.probe() } returns PlatformHealth.DEGRADED
+        val viewModel = viewModel()
+        viewModel.checkNetworkHealth()
+        viewModel.uiState.first { it.networkSlow }
+
+        viewModel.reset()
+
+        assertTrue(viewModel.uiState.value.networkSlow)
     }
 
     @Test

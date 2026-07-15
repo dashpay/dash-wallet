@@ -88,6 +88,9 @@
     <string name="processing_error_retry">Retry</string>
     <string name="processing_username_unavailable_title">Username Unavailable</string>
     <string name="processing_username_unavailable_subtitle">Please choose another</string>
+    <!-- Transient status hints on the identity processing tile while the registration retries -->
+    <string name="identity_processing_network_catching_up">Waiting for the network to catch up — this can take a few extra minutes.</string>
+    <string name="identity_processing_waiting_confirmation">Waiting for network confirmation of your payment…</string>
 
     <string name="dashpay_upgrade_fee">Upgrade Fee</string>
     <string name="dashpay_invite_fee">Invite Fee</string>
@@ -324,6 +327,8 @@
     <string name="request_username_unavailable">Username is unavailable or blocked</string>
     <string name="request_username_taken">Username is taken</string>
     <string name="username_check_failed">Couldn\'t verify username availability. Check your connection and try again.</string>
+    <!-- Advisory network-health warning on the username entry screen (never blocks submission) -->
+    <string name="username_network_slow_warning">The network is running slower than usual right now. Your request may take longer than normal.</string>
     <string name="request_username_taken_results">Username was taken by another user</string>
     <string name="requesting_your_username_title">Creating your username</string>
     <string name="requesting_your_username_message">Your username %s is being requested on the Dash network. It may take some time.</string>
