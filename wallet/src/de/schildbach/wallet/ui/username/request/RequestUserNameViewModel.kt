@@ -40,8 +40,11 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.RetryStatusHint
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
+import de.schildbach.wallet.ui.main.resolveRequestedUsernameDisplay
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.CancellationException
@@ -140,7 +143,8 @@ class RequestUserNameViewModel @Inject constructor(
     val topUpRepository: TopUpRepository,
     private val shieldedUsernameCreation: SdkShieldedUsernameCreation,
     private val shieldedBalanceService: ShieldedBalanceService,
-    private val platformHealthProbe: PlatformHealthProbe
+    private val platformHealthProbe: PlatformHealthProbe,
+    private val identityCreationStatus: IdentityCreationStatusHolder
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
@@ -161,6 +165,17 @@ class RequestUserNameViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
+
+    /**
+     * The live transient registration status hint (30s "network catching
+     * up" watchdog, per-attempt "waiting for confirmation"), surfaced by
+     * the shared registration path via [IdentityCreationStatusHolder]. The
+     * home-screen tile already shows this, but during creation the user is
+     * watching the processing dialog — [UsernameSubmitStatusDialogs]
+     * observes this to show the same copy as a live secondary line there.
+     */
+    val identityCreationStatusHint: StateFlow<RetryStatusHint?>
+        get() = identityCreationStatus.statusHint
 
     private val _requestedUserNameLink = MutableStateFlow<String?>(null)
     val requestedUserNameLink: StateFlow<String?> = _requestedUserNameLink.asStateFlow()
@@ -349,7 +364,27 @@ class RequestUserNameViewModel @Inject constructor(
                 } ?: 0
                 log.info("identity balance: {}", identityBalance)
                 if (requestedUserName == null) {
-                    requestedUserName = identityConfig.get(USERNAME)
+                    // Prefer the DISPLAY form of the name: the restore path
+                    // historically persisted the DPNS-normalized label into
+                    // the USERNAME pref, and the display label lives on the
+                    // locally known username request (also makes the
+                    // requestId lookup below match — rows are keyed by the
+                    // display label).
+                    requestedUserName = identityConfig.get(USERNAME)?.let { stored ->
+                        if (stored.isEmpty()) {
+                            stored
+                        } else {
+                            resolveRequestedUsernameDisplay(
+                                stored,
+                                it,
+                                try {
+                                    usernameRequestDao.getRequestsByNormalizedLabel(stored)
+                                } catch (e: Exception) {
+                                    emptyList()
+                                }
+                            )
+                        }
+                    }
                 }
             }
             .flatMapLatest { usernameRequestDao.observeRequest(UsernameRequest.getRequestId(it, requestedUserName ?: "")) }

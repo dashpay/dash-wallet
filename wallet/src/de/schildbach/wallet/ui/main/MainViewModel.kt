@@ -33,7 +33,9 @@ import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
@@ -116,6 +118,7 @@ class MainViewModel @Inject constructor(
     val biometricHelper: BiometricHelper,
     private val deviceInfo: DeviceInfoProvider,
     private val invitationsDao: InvitationsDao,
+    private val usernameRequestDao: UsernameRequestDao,
     userAlertDao: UserAlertDao,
     dashPayProfileDao: DashPayProfileDao,
     private val dashPayConfig: DashPayConfig,
@@ -564,8 +567,25 @@ class MainViewModel @Inject constructor(
         return platformRepo.loadProfileByUserId(profileId)
     }
 
-    suspend fun getRequestedUsername(): String =
-        blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME) ?: ""
+    /**
+     * The requested username in the user's own DISPLAY form ("contested1"),
+     * never the DPNS-normalized label ("c0ntested1"). The identity restore
+     * path historically persisted the normalized label into the USERNAME
+     * pref (observed live on the More-screen tile), so when the stored
+     * value matches a known request's normalizedLabel, the request's
+     * display label wins — see [resolveRequestedUsernameDisplay].
+     */
+    suspend fun getRequestedUsername(): String {
+        val stored = blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME) ?: ""
+        if (stored.isEmpty()) return stored
+        val identityId = blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID)
+        val candidates = try {
+            usernameRequestDao.getRequestsByNormalizedLabel(stored)
+        } catch (e: Exception) {
+            emptyList()
+        }
+        return resolveRequestedUsernameDisplay(stored, identityId, candidates)
+    }
     suspend fun getInviteHistory() = invitationsDao.loadAll()
 
     private fun combineLatestData(): Boolean {
@@ -660,4 +680,27 @@ class MainViewModel @Inject constructor(
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
+}
+
+/**
+ * Pick the DISPLAY form of the requested username, pure and host-testable.
+ *
+ * [stored] is whatever the USERNAME pref holds — the display form the user
+ * typed ("contested1") on the direct creation path, but the DPNS-normalized
+ * label ("c0ntested1", homoglyphs folded o→0/l→1) when the identity restore
+ * path persisted `blockchainIdentity.primaryUsername` from the contested-
+ * names index. [candidates] are the locally known username requests whose
+ * normalizedLabel equals [stored]; the one belonging to [identityId] (any,
+ * when the identity is unknown) carries the display label the contender
+ * document was created with. Falls back to [stored] when no request
+ * matches — never worse than the old behavior.
+ */
+internal fun resolveRequestedUsernameDisplay(
+    stored: String,
+    identityId: String?,
+    candidates: List<UsernameRequest>
+): String {
+    val match = candidates.firstOrNull { identityId == null || it.identity == identityId }
+        ?: return stored
+    return match.username.ifEmpty { stored }
 }

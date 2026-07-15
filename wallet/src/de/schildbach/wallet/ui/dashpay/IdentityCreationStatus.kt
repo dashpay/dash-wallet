@@ -16,6 +16,8 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import androidx.annotation.StringRes
+import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,6 +66,23 @@ internal fun identityRetryStatusHint(t: Throwable): RetryStatusHint? {
         depth++
     }
     return null
+}
+
+/**
+ * The user-facing string for a [RetryStatusHint], or null when there is
+ * no hint to show. Kept as a pure `@StringRes` lookup (no Context) so both
+ * the home-screen processing tile
+ * ([de.schildbach.wallet.ui.main.WalletTransactionsFragment]) and the
+ * username-flow processing dialog
+ * ([de.schildbach.wallet.ui.username.request.UsernameSubmitStatusDialogs])
+ * render the SAME copy, and so the mapping can be unit-tested without an
+ * Android runtime.
+ */
+@StringRes
+internal fun retryStatusHintTextRes(hint: RetryStatusHint?): Int? = when (hint) {
+    RetryStatusHint.CORE_HEIGHT_LAG -> R.string.identity_processing_network_catching_up
+    RetryStatusHint.WAITING_FOR_ISLOCK -> R.string.identity_processing_waiting_confirmation
+    null -> null
 }
 
 /**

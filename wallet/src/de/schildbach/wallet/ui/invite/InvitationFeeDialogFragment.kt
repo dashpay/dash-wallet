@@ -25,7 +25,6 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import org.bitcoinj.core.Coin
-import de.schildbach.wallet.ui.CheckPinDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogInvitationFeeBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,15 +46,13 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
         super.onViewCreated(view, savedInstanceState)
         setMode(true)
         binding.mixButton.setOnClickListener {
-            CheckPinDialog.show(requireActivity()) { pin ->
-                if (pin != null) {
-                    findNavController().navigate(
-                        InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value, args.source)
-                    )
-                    // TODO: why doesn't safeNavigate work
-                    // safeNavigate(InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value))
-                }
-            }
+            // Authentication happens on the confirm screen, right before the
+            // spend (ConfirmInviteDialogFragment) — the app's standard order is
+            // amount-confirm THEN authenticate. The previous PIN prompt here
+            // ran before the amount was even shown and discarded its result.
+            findNavController().navigate(
+                InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value, args.source)
+            )
         }
         viewModel.walletData.observeTotalBalance().observe(viewLifecycleOwner) { walletBalance ->
             spendableBalance = walletBalance

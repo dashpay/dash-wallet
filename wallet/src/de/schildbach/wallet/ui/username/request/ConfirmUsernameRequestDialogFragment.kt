@@ -103,6 +103,11 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
             binding.dashAmountView.text = it.amountStr
             binding.fiatSymbolView.text = it.fiatSymbol
             binding.fiatAmountView.text = it.fiatAmountStr
+            // Shielded-funded creations spend the pool's exit denomination —
+            // say so under the amount instead of letting it read as an L1
+            // wallet spend.
+            binding.costSourceLabel.isVisible =
+                it.fromShieldedBalance && !requestUserNameViewModel.isUsingInvite()
         }
 
         if (requestUserNameViewModel.isUsingInvite()) {

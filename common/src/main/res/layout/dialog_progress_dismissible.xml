@@ -48,6 +48,28 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/dialog_message" />
 
+    <!--
+      Live secondary status line, hidden by default. Long-running operations
+      (e.g. identity registration waiting out a network catch-up) push a
+      status hint here via AdaptiveDialog.updateSecondaryMessage so the user
+      watching the dialog sees WHY it is taking longer than the headline
+      "~30 seconds" said.
+    -->
+    <TextView
+        android:id="@+id/dialog_secondary_message"
+        style="@style/Caption.Secondary"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:gravity="center_horizontal"
+        android:textAlignment="gravity"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/progress_ring"
+        tools:text="Waiting for the network to catch up — this can take a few extra minutes."
+        tools:visibility="visible" />
+
     <TextView
         android:id="@+id/dialog_negative_button"
         style="@style/Button.Tertiary.Blue"
@@ -56,7 +78,7 @@
         android:layout_marginTop="5dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/progress_ring"
+        app:layout_constraintTop_toBottomOf="@id/dialog_secondary_message"
         app:layout_constraintBottom_toBottomOf="parent"
         tools:text="Close" />
 </androidx.constraintlayout.widget.ConstraintLayout>

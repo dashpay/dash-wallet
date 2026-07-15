@@ -38,6 +38,7 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.service.DeviceInfoProvider
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
@@ -139,6 +140,9 @@ class MainViewModelTest {
     }
     private val invitationsDaoMock = mockk<InvitationsDao> {
         coEvery { loadAll() } returns listOf()
+    }
+    private val usernameRequestDaoMock = mockk<UsernameRequestDao> {
+        coEvery { getRequestsByNormalizedLabel(any()) } returns listOf()
     }
     private val userAgentDaoMock = mockk<UserAlertDao> {
         every { observe(any()) } returns flow { }
@@ -302,6 +306,7 @@ class MainViewModelTest {
                 biometricHelper,
                 deviceInfoProvider,
                 invitationsDaoMock,
+                usernameRequestDaoMock,
                 userAgentDaoMock,
                 dashPayProfileDaoMock,
                 mockDashPayConfig,
@@ -341,6 +346,7 @@ class MainViewModelTest {
                 biometricHelper,
                 deviceInfoProvider,
                 invitationsDaoMock,
+                usernameRequestDaoMock,
                 userAgentDaoMock,
                 dashPayProfileDaoMock,
                 mockDashPayConfig,

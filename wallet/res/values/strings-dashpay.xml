@@ -458,6 +458,10 @@
          payment source × contested-ness (L1 0.03/0.25, shielded denomination
          0.1/0.3, identity credits 0.01/0.2). -->
     <string name="request_username_balance_requirement_amount">You need to have %s DASH to create this username</string>
+    <!-- Source label under the amount on the username confirm sheet when the
+         creation is funded from the shielded pool (the amount is the exit
+         denomination actually leaving that balance). -->
+    <string name="username_cost_from_shielded_balance">from shielded balance</string>
     <string name="request_username_requirements_message_invite_noncontested">The username must meet one of these criteria</string>
     <string name="request_username_requirements_message">The username must meet these criteria</string>
     <string name="request_username_length_requirement">Between 3 and 23 characters</string>
@@ -653,5 +657,15 @@
     <string name="username_payment_privacy_tip_message">Funds move to your shielded balance in seconds. For full privacy, wait at least 2 hours before creating your username.</string>
     <string name="username_payment_shield_first">Shield your funds first</string>
     <string name="username_payment_continue_without_privacy">Continue without privacy</string>
+
+    <!-- Create-invitation shielded-funding decision sheet (Figma 25163:53221):
+         mirrors the create-username "Make your username private" arm, shown
+         before the fee/confirm step. The button labels are reused from the
+         username flow (username_payment_shield_first /
+         username_payment_continue_without_privacy). -->
+    <string name="invite_payment_private_title">Make your invitation private</string>
+    <string name="invite_payment_private_message">To help keep your activity private, you can shield the funds for this invitation before sending it.</string>
+    <string name="invite_payment_cost_amount">%s Dash</string>
+    <string name="invite_payment_privacy_tip_message">Funds move to your shielded balance in seconds. For full privacy, wait at least 2 hours before creating your invitation.</string>
 
 </resources>

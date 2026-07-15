@@ -16,6 +16,7 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import de.schildbach.wallet_test.R
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -107,5 +108,31 @@ class IdentityRetryStatusHintTest {
         val b = RuntimeException("inner", a)
         a.initCause(b)
         assertNull(identityRetryStatusHint(a))
+    }
+
+    // ── retryStatusHintTextRes: hint → copy ─────────────────────────────────
+    // The shared mapping both the home tile and the processing dialog use, so
+    // the two surfaces never drift apart on wording.
+
+    @Test
+    fun coreHeightLag_mapsToCatchingUpString() {
+        assertEquals(
+            R.string.identity_processing_network_catching_up,
+            retryStatusHintTextRes(RetryStatusHint.CORE_HEIGHT_LAG)
+        )
+    }
+
+    @Test
+    fun waitingForIsLock_mapsToWaitingConfirmationString() {
+        assertEquals(
+            R.string.identity_processing_waiting_confirmation,
+            retryStatusHintTextRes(RetryStatusHint.WAITING_FOR_ISLOCK)
+        )
+    }
+
+    @Test
+    fun nullHint_mapsToNull() {
+        // No hint → no secondary line (the dialog/tile clears it).
+        assertNull(retryStatusHintTextRes(null))
     }
 }

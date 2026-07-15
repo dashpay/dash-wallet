@@ -31,6 +31,7 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameCreationOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameNameStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -130,7 +131,8 @@ class RequestUserNameViewModelTest {
         topUpRepository = mockk<TopUpRepository>(relaxed = true),
         shieldedUsernameCreation = shieldedUsernameCreation,
         shieldedBalanceService = shieldedBalanceService,
-        platformHealthProbe = platformHealthProbe
+        platformHealthProbe = platformHealthProbe,
+        identityCreationStatus = IdentityCreationStatusHolder()
     ).also { createdViewModels += it }
 
     @Before

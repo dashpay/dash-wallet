@@ -223,11 +223,14 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
                 retry(errorMessage)
             } else {
-                if (createInviteViewModel.blockchainIdentity.value?.showSecondaryUsername == true) {
-                    createIdentityViewModel.hideRequestedUsernameContainer()
-                } else {
-                    startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
-                }
+                // A username in voting opens its request-status screen
+                // (CreateUsernameActivity resolves its start destination to
+                // VotingRequestDetailsFragment for that state). This tap
+                // must NEVER dismiss the tile — the old dual-username
+                // branch flipped the creation state to DONE_AND_DISMISS,
+                // which made the tile vanish with no navigation (observed
+                // live).
+                startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
             }
         }
 
@@ -277,11 +280,17 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             } else if (it.creationState == IdentityCreationState.VOTING) {
                 binding.joinDashpayContainer.visibility = View.GONE
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
-                val votingPeriod = it.votingPeriodStart?.let { startTime ->
-                    val endTime = startTime + UsernameRequest.VOTING_PERIOD_MILLIS
+                // The pre-voting branches disable the tile; voting states
+                // must re-enable it so the tap opens the request-status
+                // screen even after an in-place state transition.
+                binding.requestedUsernameContainer.isEnabled = true
+                // A voting start that was never persisted properly arrives
+                // as 0 (epoch) — rendering it produced "Results on
+                // Dec 31, 1969" (observed live). Omit the date instead.
+                val votingPeriod = usernameVotingEndTime(it.votingPeriodStart)?.let { endTime ->
                     val dateFormat = DateFormat.getMediumDateFormat(requireContext())
                     String.format("%s", dateFormat.format(endTime))
-                } ?: "Voting Period not found"
+                }
                 when (it.usernameRequested) {
                     UsernameRequestStatus.SUBMITTING,
                     UsernameRequestStatus.SUBMITTED -> {
@@ -293,9 +302,11 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                     }
                     UsernameRequestStatus.VOTING -> {
                         binding.requestedUsernameTitle.text = mainActivityViewModel.getRequestedUsername()
-                        binding.requestedUsernameSubtitleTwo.isVisible = true
-                        binding.requestedUsernameSubtitleTwo.text =
-                            getString(R.string.requested_voting_duration, votingPeriod)
+                        binding.requestedUsernameSubtitleTwo.isVisible = votingPeriod != null
+                        votingPeriod?.let { period ->
+                            binding.requestedUsernameSubtitleTwo.text =
+                                getString(R.string.requested_voting_duration, period)
+                        }
                         binding.retryRequestButton.isVisible = false
                         binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay)
                         binding.requestedUsernameArrow.isVisible = true
@@ -683,6 +694,16 @@ internal fun mapShieldedCardDisplay(
     status == ShieldedSyncStatus.NOT_READY && !hasShieldedContext -> ShieldedCardDisplay.AMOUNT
     else -> ShieldedCardDisplay.SYNCING
 }
+
+/**
+ * When the voting period for a requested username ends, in epoch millis —
+ * or null when the persisted voting start is missing or non-positive
+ * (0/-1 placeholders), in which case NO date must be rendered. Guards the
+ * More-screen tile against the "Results on Dec 31, 1969" epoch render
+ * observed live when the restore path persisted a 0 voting start.
+ */
+internal fun usernameVotingEndTime(votingPeriodStart: Long?): Long? =
+    votingPeriodStart?.takeIf { it > 0 }?.let { it + UsernameRequest.VOTING_PERIOD_MILLIS }
 
 /**
  * Whether this wallet has (or is creating/restoring) a platform identity —

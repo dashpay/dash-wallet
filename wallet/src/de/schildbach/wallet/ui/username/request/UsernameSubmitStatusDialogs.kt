@@ -21,6 +21,8 @@ import org.dash.wallet.common.services.AuthenticationManager
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.Lifecycle
+import de.schildbach.wallet.ui.dashpay.RetryStatusHint
+import de.schildbach.wallet.ui.dashpay.retryStatusHintTextRes
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.observe
@@ -66,6 +68,15 @@ class UsernameSubmitStatusDialogs(
     private var ambiguousDialogShown = false
 
     fun observe() {
+        // The transient registration status hint (30s "network catching up"
+        // watchdog / per-retry "waiting for confirmation") is already shown
+        // on the home tile, but during creation the user is watching THIS
+        // processing dialog — mirror the hint into it as a live secondary
+        // line so the >30s wait is explained here too, not just after the
+        // screen finishes to home.
+        viewModel.identityCreationStatusHint.observe(fragment.viewLifecycleOwner) { hint ->
+            applyStatusHint(hint)
+        }
         viewModel.uiState.observe(fragment.viewLifecycleOwner) { state ->
             if (state.usernameRequestSubmitting) {
                 showProcessingDialog()
@@ -96,6 +107,11 @@ class UsernameSubmitStatusDialogs(
             fragment.getString(R.string.username_creation_processing),
             fragment.getString(R.string.close)
         ).also { dialog ->
+            // A hint may already be live (the watchdog fired before the
+            // dialog was (re)shown — e.g. after the lock screen tore it
+            // down mid-creation). Seed it so the secondary line is present
+            // on first frame instead of only on the next emission.
+            applyStatusHint(viewModel.identityCreationStatusHint.value, dialog)
             dialog.show(fragment.requireActivity()) { result ->
                 // `false` is the explicit dismiss button; `null` is a
                 // cancel (tap-outside/back) OR teardown — the RESUMED
@@ -111,6 +127,16 @@ class UsernameSubmitStatusDialogs(
                 }
             }
         }
+    }
+
+    /**
+     * Push the current [RetryStatusHint] into the processing dialog's live
+     * secondary line (or clear it when null). Uses the shared
+     * [retryStatusHintTextRes] mapping so the copy matches the home tile.
+     */
+    private fun applyStatusHint(hint: RetryStatusHint?, dialog: AdaptiveDialog? = processingDialog) {
+        val text = retryStatusHintTextRes(hint)?.let { fragment.getString(it) }
+        dialog?.updateSecondaryMessage(text)
     }
 
     private fun dismissProcessingDialog() {
