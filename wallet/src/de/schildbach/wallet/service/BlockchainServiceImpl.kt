@@ -1923,6 +1923,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     resetMNLists(false)
                     if (deleteWalletFileOnShutdown) {
                         log.info("removing wallet file and app data")
+                        // The Kotlin-SDK engines must be provably down before the wipe
+                        // deletes app data. DEBUG builds deliberately skip the engine
+                        // stops in platformSyncService.shutdown() above (warm-SPV
+                        // battery trade-off for testing) — this explicit stop keeps the
+                        // wipe path safe on every build type (no-op when already
+                        // stopped, as on release where shutdown() stopped them).
+                        platformSyncService.stopSdkEngines()
                         application.finalizeWipe()
                     }
                     //Clear the blockchain identity

@@ -274,7 +274,7 @@ class ShieldedTransferExecutor @Inject constructor(
          * kept the coroutine RUNNABLE inside the JNI call for 11+
          * minutes — uncancellable from Kotlin).
          */
-        internal const val STALL_TIMEOUT_MS = 90L * 1000
+        internal const val STALL_TIMEOUT_MS = 35L * 1000
     }
 
     /** Test seam: the spend blocks for a ~30s Halo 2 proof and must stay off main. */

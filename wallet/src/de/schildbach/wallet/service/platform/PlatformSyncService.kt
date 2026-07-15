@@ -127,6 +127,17 @@ interface PlatformSyncService {
      */
     suspend fun stopSync()
 
+    /**
+     * Unconditionally stop the two Kotlin-SDK background engines (the L1
+     * shadow SPV and the shielded sync loop). Both stops are best-effort,
+     * failure-contained no-ops when not running. Split out of [shutdown]
+     * because DEBUG builds deliberately SKIP the engine stops on the routine
+     * service teardown (see [shutdown]) — the destructive paths (wallet
+     * wipe, before `finalizeWipe()` deletes app data) call this directly so
+     * the engines are provably down regardless of build type.
+     */
+    suspend fun stopSdkEngines()
+
     fun updateSyncStatus(stage: PreBlockStage)
     fun preBlockDownload(future: SettableFuture<Boolean>)
 
@@ -332,10 +343,27 @@ class PlatformSynchronizationService @Inject constructor(
         // and the shielded sync loop whenever the blockchain service is
         // torn down. Both stops are no-ops when not running and must never
         // block the rest of the cleanup.
-        runCatching { l1ShadowSyncService.stop() }
-            .onFailure { log.warn("failed to stop the L1 shadow sync on shutdown", it) }
-        runCatching { shieldedBalanceService.stop() }
-            .onFailure { log.warn("failed to stop the shielded runtime on shutdown", it) }
+        //
+        // DEBUG builds skip the engine stops here — a deliberate battery
+        // trade-off for testing: dashj's BlockchainService stops itself
+        // whenever it idles ("idling detected, stopping service"), and every
+        // engine restart left the SDK's SPV with stale quorum state — a live
+        // shielded transfer right after such a restart could not verify its
+        // asset lock's InstantSend lock and waited a full block (~3 min).
+        // Keeping the engines warm across these routine teardowns removes
+        // that window. The destructive paths are NOT weakened: the wallet
+        // wipe calls stopSdkEngines() explicitly before finalizeWipe(), and
+        // the shadow recovery paths (resetShadowState /
+        // recoverByRecreatingWallet) stop the SPV directly themselves.
+        if (BuildConfig.DEBUG) {
+            log.info(
+                "keeping Kotlin-SDK engines running across service teardown (debug): warm SPV " +
+                    "avoids the asset-lock islock-verification delay; wipe/reset still stop " +
+                    "them explicitly"
+            )
+        } else {
+            stopSdkEngines()
+        }
 
         if (platformSyncJob != null && identityRepository.hasBlockchainIdentity) {
             Preconditions.checkState(platformSyncJob!!.isActive)
@@ -352,6 +380,13 @@ class PlatformSynchronizationService @Inject constructor(
             }
             txMetadataJob = null
         }
+    }
+
+    override suspend fun stopSdkEngines() {
+        runCatching { l1ShadowSyncService.stop() }
+            .onFailure { log.warn("failed to stop the L1 shadow sync on shutdown", it) }
+        runCatching { shieldedBalanceService.stop() }
+            .onFailure { log.warn("failed to stop the shielded runtime on shutdown", it) }
     }
 
     override suspend fun stopSync() {
