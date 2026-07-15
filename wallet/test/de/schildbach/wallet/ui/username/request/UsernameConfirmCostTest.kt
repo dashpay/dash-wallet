@@ -99,28 +99,29 @@ class UsernameConfirmCostTest {
     }
 
     @Test
-    fun `dual-flow secondary confirm on the shielded path never shows zero`() {
-        // The Secondary confirm of the dual flow triggers the combined
-        // submit; isContestable reflects the PRIMARY (contested) name.
+    fun `dual-flow secondary (instant) confirm is free even on the shielded path`() {
+        // The instant/secondary name adds no incremental cost; the identity
+        // funding (0.3 shielded) is disclosed on the PRIMARY confirm. Showing
+        // a price here would wrongly imply the instant name costs something.
         val cost = resolveUsernameConfirmCost(
             UsernameType.Secondary,
             isContestable = true,
             hasIdentity = false,
             paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
         )
-        assertEquals(shieldedContestedDenomination, cost.amount)
-        assertTrue(cost.fromShieldedBalance)
+        assertEquals(Coin.ZERO, cost.amount)
+        assertFalse(cost.fromShieldedBalance)
     }
 
     @Test
-    fun `dual-flow secondary confirm on the L1 path shows the contested fee`() {
+    fun `dual-flow secondary (instant) confirm is free on the L1 path too`() {
         val cost = resolveUsernameConfirmCost(
             UsernameType.Secondary,
             isContestable = true,
             hasIdentity = false,
             paymentSource = UsernamePaymentSource.DASH_BALANCE
         )
-        assertEquals(Constants.DASH_PAY_FEE_CONTESTED, cost.amount)
+        assertEquals(Coin.ZERO, cost.amount)
         assertFalse(cost.fromShieldedBalance)
     }
 

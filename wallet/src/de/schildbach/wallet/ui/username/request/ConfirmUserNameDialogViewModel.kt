@@ -58,19 +58,22 @@ internal data class UsernameConfirmCost(val amount: Coin, val fromShieldedBalanc
 /**
  * The cost the confirm sheet's tap actually incurs, pure and host-testable.
  *
- * The sheet is the LAST confirmation before the spend, so it must show the
- * amount leaving whichever pool pays — never a nominal per-name fee:
+ * The identity-funding cost belongs to the IDENTITY (and its primary,
+ * contested name), never to an additional name:
  *
- * - Secondary confirm while an identity already exists: the instant name is
- *   registered from the identity's existing credits — no new wallet spend.
- * - Shielded-funded creation (single or dual — the Secondary confirm of the
- *   dual flow triggers the combined submit): the whole Type-20 exit
- *   denomination leaves the shielded pool (0.1 non-contested / 0.3
- *   contested; [isContestable] reflects the PRIMARY name in the dual flow).
- *   The old sheet hardcoded the Secondary confirm to 0.00 — observed live
- *   as "0.00 DASH / $0.00" on a shielded dual creation.
- * - L1 paths keep the fee schedule (0.25 contested / 0.03 otherwise;
- *   contested-name-only registration from identity credits keeps its fee).
+ * - Secondary ("instant") confirm — ALWAYS free. The extra name adds no
+ *   incremental cost: on an existing identity it is registered from the
+ *   identity's credits, and in the dual flow (primary + instant submitted
+ *   together at this confirm) the identity funding is the SAME amount with
+ *   or without the instant name — it is disclosed on the primary confirm.
+ *   Showing a price here would wrongly imply the instant name costs
+ *   something.
+ * - Primary shielded-funded creation: the whole Type-20 exit denomination
+ *   leaves the shielded pool (0.1 non-contested / 0.3 contested) — shown
+ *   here, the conceptual "paid" step.
+ * - Primary L1 paths keep the fee schedule (0.25 contested / 0.03
+ *   otherwise; contested-name-only registration from identity credits
+ *   keeps its own fee).
  */
 internal fun resolveUsernameConfirmCost(
     usernameType: UsernameType,
@@ -78,7 +81,9 @@ internal fun resolveUsernameConfirmCost(
     hasIdentity: Boolean,
     paymentSource: UsernamePaymentSource
 ): UsernameConfirmCost = when {
-    usernameType == UsernameType.Secondary && hasIdentity ->
+    // The instant/secondary name is always free — the identity funding is
+    // disclosed on the primary confirm and is unchanged by adding it.
+    usernameType == UsernameType.Secondary ->
         UsernameConfirmCost(Coin.ZERO, fromShieldedBalance = false)
     paymentSource == UsernamePaymentSource.SHIELDED_BALANCE -> {
         val fee = if (isContestable) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
