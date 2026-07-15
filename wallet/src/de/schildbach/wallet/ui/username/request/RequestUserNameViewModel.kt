@@ -42,6 +42,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import de.schildbach.wallet.ui.username.UsernameType
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -80,6 +81,15 @@ data class RequestUserNameUIState(
     val usernameRequestSubmitted: Boolean = false,
     val checkingUsername: Boolean = false,
     val usernameCheckSuccess: Boolean = false,
+    /**
+     * The availability lookup itself failed (network/DAPI/SDK read path)
+     * — distinct from "checked and taken". Fail CLOSED: a failed lookup
+     * says nothing about availability, so the request button stays
+     * disabled and the screen says the check could not run (the old
+     * default read a failed lookup as "name is free" — observed live
+     * with an already-registered name). Cleared by the next re-check.
+     */
+    val usernameCheckFailed: Boolean = false,
     val usernameSubmittedError: Boolean = false,
     /**
      * The shielded creation's outcome is UNCONFIRMED (may already be on
@@ -540,39 +550,67 @@ class RequestUserNameViewModel @Inject constructor(
     fun checkUsername(requestedUserName: String?) {
         viewModelScope.launch {
             requestedUserName?.let { username ->
-                _uiState.update { it.copy(checkingUsername = true) }
+                _uiState.update { it.copy(checkingUsername = true, usernameCheckFailed = false) }
                 val usernameSearchResult = withContext(Dispatchers.IO) { platformRepo.getUsername(username) }
-                val usernameExists = when (usernameSearchResult.status) {
-                    Status.SUCCESS -> {
-                        usernameSearchResult.data != null
+                if (usernameSearchResult.status != Status.SUCCESS) {
+                    // Fail CLOSED: a lookup that never completed says
+                    // nothing about availability — the old default read it
+                    // as "name is free" (observed live: a registered name
+                    // showed as available on-device).
+                    log.warn(
+                        "checkUsername('{}'): availability lookup failed (status={}, message={})",
+                        username, usernameSearchResult.status, usernameSearchResult.message,
+                        usernameSearchResult.exception
+                    )
+                    _uiState.update {
+                        it.copy(checkingUsername = false, usernameCheckSuccess = false, usernameCheckFailed = true)
                     }
-                    else -> false
+                    return@launch
                 }
-                var usernameContested: Boolean
+                val usernameExists = usernameSearchResult.data != null
+                var usernameContested = false
                 var firstCreatedAt = -1L
-                val usernameBlocked = withContext(Dispatchers.IO) {
-                    val contenders = platformRepo.getVoteContenders(username)
-                    usernameContested = contenders.map.isNotEmpty()
-                    var maxApprovalVotes = 0
-                    firstCreatedAt = try {
-                        contenders.map.values.minOf { contender ->
-                            val document = contender.serializedDocument?.let {
-                                DomainDocument(platformRepo.platform.names.deserialize(it))
+                val usernameBlocked = try {
+                    withContext(Dispatchers.IO) {
+                        val contenders = platformRepo.getVoteContendersOrThrow(username)
+                        usernameContested = contenders.map.isNotEmpty()
+                        var maxApprovalVotes = 0
+                        firstCreatedAt = try {
+                            contenders.map.values.minOf { contender ->
+                                val document = contender.serializedDocument?.let {
+                                    DomainDocument(platformRepo.platform.names.deserialize(it))
+                                }
+                                maxApprovalVotes = max(contender.votes, maxApprovalVotes)
+                                document?.createdAt ?: -1
                             }
-                            maxApprovalVotes = max(contender.votes, maxApprovalVotes)
-                            document?.createdAt ?: -1
+                        } catch (e: NoSuchElementException) {
+                            -1L
                         }
-                    } catch (e: NoSuchElementException) {
-                        -1L
-                    }
 
-                    // is the name blocked
-                    firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
+                        // is the name blocked
+                        firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Same fail-closed discipline: a failed contest lookup
+                    // must not pass as "not contested".
+                    log.warn("checkUsername('{}'): vote-contenders lookup failed", username, e)
+                    _uiState.update {
+                        it.copy(checkingUsername = false, usernameCheckSuccess = false, usernameCheckFailed = true)
+                    }
+                    return@launch
                 }
+                // One line per completed query, for on-device forensics.
+                log.info(
+                    "checkUsername('{}'): exists={} contested={} blocked={}",
+                    username, usernameExists, usernameContested, usernameBlocked
+                )
                 _uiState.update {
                     it.copy(
                         checkingUsername = false,
                         usernameCheckSuccess = true,
+                        usernameCheckFailed = false,
                         usernameSubmittedError = false,
                         usernameContested = usernameContested, usernameExists = usernameExists,
                         usernameBlocked = usernameBlocked,
@@ -759,6 +797,7 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameCheckSuccess = false,
+                usernameCheckFailed = false,
                 usernameNonContestedLength = validateNonContestedUsernameSize(username),
                 usernameNonContestedChars = validateNonContestedUsernameCharacters(username)
             )

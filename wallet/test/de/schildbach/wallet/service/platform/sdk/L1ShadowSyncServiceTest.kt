@@ -916,7 +916,7 @@ class L1ShadowSyncServiceTest {
         val source = inflatedSource()
         val service = service(source)
         assertTrue(service.startIfEnabled())
-        source.progressFlow.value = syncedComplete
+        source.emitWithoutEdgeProbe(syncedComplete) // this test counts the streak manually
 
         repeat(2) { service.probeParity(walletIdHex) }
         assertEquals(0, source.clearL1RowsCalls) // below the threshold
@@ -1105,6 +1105,22 @@ class L1ShadowSyncServiceTest {
         masternodes = sub(SpvSyncState.SYNCED, 1_511_575, 1_511_575)
     )
 
+    /**
+     * Emit a progress snapshot while the SYNCED-edge auto-probe is parked
+     * (dashj side unavailable → the edge probe skips without publishing):
+     * for tests that drive every DECIDER-feeding probe manually and count
+     * the decision streak — the edge probe (a production feature, see
+     * [L1ShadowSyncService.parityLoop]) would otherwise consume part of
+     * it. Deterministic on the Unconfined scope: the skip completes
+     * inside the assignment.
+     */
+    private fun FakeSource.emitWithoutEdgeProbe(snapshot: SpvSyncProgressData) {
+        val saved = dashjBalances
+        dashjBalances = null
+        progressFlow.value = snapshot
+        dashjBalances = saved
+    }
+
     /** The stuck post-broken-reset state: SDK sees NOTHING, dashj holds funds. */
     private fun emptyDeficitSource() = FakeSource(boundWalletId = walletIdHex).apply {
         sdkConfirmed = 0
@@ -1125,7 +1141,7 @@ class L1ShadowSyncServiceTest {
             source, lastResetMs = 900_000L, markerWrites = markerWrites, recreator = recreator
         )
         assertTrue(service.startIfEnabled())
-        source.progressFlow.value = syncedComplete
+        source.emitWithoutEdgeProbe(syncedComplete) // this test counts the streak manually
 
         repeat(2) { service.probeParity(walletIdHex) }
         assertTrue(recreator.events.isEmpty()) // below the threshold
@@ -1218,8 +1234,9 @@ class L1ShadowSyncServiceTest {
         source.progressFlow.value = syncing(headers = sub(SpvSyncState.SYNCING, 10, 100))
         assertEquals(L1VerificationStatus.SCANNING, service.verificationStatus.value)
 
-        // Chain synced: parity still needs confirming.
-        source.progressFlow.value = synced
+        // Chain synced: parity still needs confirming. (The edge auto-probe
+        // is parked — this test confirms parity with the manual probe below.)
+        source.emitWithoutEdgeProbe(synced)
         assertEquals(L1VerificationStatus.PROBING, service.verificationStatus.value)
 
         // A synced probe matching on BOTH balance variants → VERIFIED…
@@ -1400,6 +1417,55 @@ class L1ShadowSyncServiceTest {
         assertEquals(1, source.startCalls) // no restart launched
     }
 
+    // ── SYNCED-edge probe (funding-gate freshness) ────────────────────
+
+    @Test
+    fun parityLoop_probesImmediatelyOnTheSyncedEdge_notAFullIntervalLater() = runBlocking {
+        // The live gap: every dashj idle-cycle restarts the shadow, which
+        // re-syncs in seconds — but the next 60s parity tick was up to a
+        // minute away, and the funding gate (which requires a FRESH
+        // report) stayed closed for the whole wait (measured 53s per
+        // cycle, recurring).
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var probes = 0
+        source.onProbe = { probes++ }
+        val service = service(source) // default 60s interval: no tick during the test
+        assertTrue(service.startIfEnabled())
+        val startupProbes = probes // the loop's immediate first probe
+
+        source.progressFlow.value = synced // the edge into SYNCED
+        withTimeout(5_000) {
+            while (probes < startupProbes + 1) delay(5)
+        }
+        assertEquals(startupProbes + 1, probes)
+        service.stop()
+    }
+
+    @Test
+    fun parityLoop_syncedEdgeFlapping_firesAtMostOneProbePerEdge() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var probes = 0
+        source.onProbe = { probes++ }
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        val startupProbes = probes
+
+        source.progressFlow.value = synced // edge 1
+        source.progressFlow.value = syncing(filters = sub(SpvSyncState.SYNCING, 50, 100)) // leaves SYNCED
+        source.progressFlow.value = synced // edge 2
+        withTimeout(5_000) {
+            while (probes < startupProbes + 1) delay(5)
+        }
+        delay(300) // let any over-delivery surface
+        assertTrue("probes=$probes", probes <= startupProbes + 2)
+
+        // No storm afterwards: the interval pacing is otherwise intact.
+        val settled = probes
+        delay(300)
+        assertEquals(settled, probes)
+        service.stop()
+    }
+
     // ── Probe watchdog ────────────────────────────────────────────────
 
     @Test
@@ -1478,8 +1544,11 @@ class L1ShadowSyncServiceTest {
         service.probeParity(walletIdHex) // pre-sync mismatch: expected, no diff
         assertEquals(0, source.sdkUtxoFetches)
 
-        source.progressFlow.value = synced
+        // Balances match BEFORE the SYNCED edge, so the edge auto-probe is
+        // a synced MATCH too — this test is about match/pre-sync probes
+        // never computing the diff.
         source.sdkConfirmed = 100_000
+        source.progressFlow.value = synced
         service.probeParity(walletIdHex) // synced MATCH: no diff
         assertEquals(0, source.sdkUtxoFetches)
     }

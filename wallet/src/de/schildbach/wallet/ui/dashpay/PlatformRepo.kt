@@ -191,19 +191,29 @@ class PlatformRepo @Inject constructor(
     }
 
     fun getVoteContenders(username: String): Contenders {
+        return try {
+            getVoteContendersOrThrow(username)
+        } catch (e: Exception) {
+            Contenders(Optional.empty(), mapOf(), 0, 0)
+        }
+    }
+
+    /**
+     * [getVoteContenders] with failures PROPAGATED instead of collapsed
+     * into "no contenders" — for the availability check, which must fail
+     * CLOSED (an empty result and a failed read mean different things
+     * there: the latter must never enable the request button).
+     */
+    fun getVoteContendersOrThrow(username: String): Contenders {
         // Phase 3d (docs/kotlin-sdk-migration-plan.md): Kotlin-SDK read path
         // behind USE_KOTLIN_SDK_DPNS_READS (default off). Returns null when
         // the flag is off or on ANY SDK-path failure, falling through to the
         // unchanged dashj-platform path below.
         sdkVotingQueries.getVoteContendersOrNull(username)?.let { return it }
-        return try {
-            val watch = Stopwatch.createStarted()
-            val contenders = platform.names.getVoteContenders(Names.normalizeString(username))
-            log.info("getVoteContenders took {}", watch)
-            contenders
-        } catch (e: Exception) {
-            Contenders(Optional.empty(), mapOf(), 0, 0)
-        }
+        val watch = Stopwatch.createStarted()
+        val contenders = platform.names.getVoteContenders(Names.normalizeString(username))
+        log.info("getVoteContenders took {}", watch)
+        return contenders
     }
 
     fun getFromProfiles(

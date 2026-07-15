@@ -28,6 +28,7 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameCreationOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameNameStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -111,11 +112,13 @@ class RequestUserNameViewModelTest {
     // full-suite flakes).
     private val createdViewModels = mutableListOf<RequestUserNameViewModel>()
 
-    private fun viewModel() = RequestUserNameViewModel(
+    private fun viewModel(
+        platformRepo: PlatformRepo = mockk<PlatformRepo>(relaxed = true)
+    ) = RequestUserNameViewModel(
         walletApplication = walletApplication,
         identityConfig = identityConfig,
         walletData = walletData,
-        platformRepo = mockk<PlatformRepo>(relaxed = true),
+        platformRepo = platformRepo,
         usernameRequestDao = mockk<UsernameRequestDao>(relaxed = true),
         analytics = mockk<AnalyticsService>(relaxed = true),
         topUpRepository = mockk<TopUpRepository>(relaxed = true),
@@ -409,6 +412,71 @@ class RequestUserNameViewModelTest {
             assertTrue(state.usernameSubmittedAmbiguous)
             assertFalse(state.usernameSubmittedError)
         }
+
+    // ── Fail-closed availability check ──────────────────────────────────────
+
+    @Test
+    fun checkUsername_lookupFailure_failsClosed_neverReadsAsAvailable() = runTest(dispatcher) {
+        // The live bug: a failed getUsername (network error, DAPI timeout)
+        // defaulted to usernameExists=false with usernameCheckSuccess=true —
+        // an already-registered name showed as available on-device.
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("brian-s21-demo") } returns Resource.error("DAPI timeout", null)
+        }
+        val viewModel = viewModel(platformRepo)
+
+        viewModel.checkUsername("brian-s21-demo")
+
+        // checkUsername hops over Dispatchers.IO — await the failed state.
+        viewModel.uiState.first { it.usernameCheckFailed }
+        val state = viewModel.uiState.value
+        assertFalse(state.usernameCheckSuccess)
+        assertFalse(state.checkingUsername)
+        // Failed before the contest lookup: nothing else queried.
+        verify(exactly = 0) { platformRepo.getVoteContendersOrThrow(any()) }
+    }
+
+    @Test
+    fun checkUsername_contendersFailure_failsClosed_neverReadsAsNotContested() = runTest(dispatcher) {
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } returns Resource.success(null)
+            every { getVoteContendersOrThrow("alice") } throws IllegalStateException("DPNS read failed")
+        }
+        val viewModel = viewModel(platformRepo)
+
+        viewModel.checkUsername("alice")
+
+        viewModel.uiState.first { it.usernameCheckFailed }
+        val state = viewModel.uiState.value
+        assertFalse(state.usernameCheckSuccess)
+        assertFalse(state.checkingUsername)
+    }
+
+    @Test
+    fun checkUsername_retriggerAfterFailure_clearsTheFailedStateAndCompletes() = runTest(dispatcher) {
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } returns
+                Resource.error("DAPI timeout", null) andThen Resource.success(null)
+            every { getVoteContendersOrThrow("alice") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        viewModel.checkUsername("alice")
+        viewModel.uiState.first { it.usernameCheckFailed }
+
+        // The debounced re-check (retyping / retry) clears the failure and
+        // completes normally: available, uncontested, unblocked.
+        viewModel.checkUsername("alice")
+        viewModel.uiState.first { it.usernameCheckSuccess }
+        val state = viewModel.uiState.value
+        assertFalse(state.usernameCheckFailed)
+        assertFalse(state.usernameExists)
+        assertFalse(state.usernameContested)
+        assertFalse(state.usernameBlocked)
+    }
 
     @Test
     fun submit_dashSource_showsAProcessingStatus() = runTest(dispatcher) {

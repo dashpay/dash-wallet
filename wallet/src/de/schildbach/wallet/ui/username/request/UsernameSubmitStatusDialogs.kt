@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui.username.request
 
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.observe
@@ -44,9 +45,19 @@ import org.dash.wallet.common.util.observe
  */
 class UsernameSubmitStatusDialogs(
     private val fragment: Fragment,
-    private val viewModel: RequestUserNameViewModel
+    private val viewModel: RequestUserNameViewModel,
+    /**
+     * Invoked when the USER closes the processing dialog (the explicit
+     * dismiss button or a cancel) — never for the programmatic dismissal
+     * that replaces it with a terminal dialog, and never for lifecycle
+     * teardown. The L1/asset-lock screens finish to the home screen here:
+     * the dialog is the user's "informed when ready" acknowledgement, so
+     * the screen must not leave (auto-dismissing the dialog) before it.
+     */
+    private val onProcessingDismissedByUser: (() -> Unit)? = null
 ) {
     private var processingDialog: AdaptiveDialog? = null
+    private var processingDismissedProgrammatically = false
     private var errorDialogShown = false
     private var ambiguousDialogShown = false
 
@@ -76,13 +87,30 @@ class UsernameSubmitStatusDialogs(
     /** Dismissible: the creation runs on the app scope and survives the dialog. */
     private fun showProcessingDialog() {
         if (processingDialog?.dialog?.isShowing == true) return
+        processingDismissedProgrammatically = false
         processingDialog = AdaptiveDialog.progress(
             fragment.getString(R.string.username_creation_processing),
             fragment.getString(R.string.close)
-        ).also { it.show(fragment.requireActivity()) { } }
+        ).also { dialog ->
+            dialog.show(fragment.requireActivity()) { result ->
+                // `false` is the explicit dismiss button; `null` is a
+                // cancel (tap-outside/back) OR teardown — the RESUMED
+                // check tells a user cancel apart from a rotation/finish
+                // destroying the dialog under us.
+                val userDismissed = !processingDismissedProgrammatically &&
+                    (
+                        result == false ||
+                            fragment.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+                        )
+                if (userDismissed) {
+                    onProcessingDismissedByUser?.invoke()
+                }
+            }
+        }
     }
 
     private fun dismissProcessingDialog() {
+        processingDismissedProgrammatically = true
         processingDialog?.dismissAllowingStateLoss()
         processingDialog = null
     }

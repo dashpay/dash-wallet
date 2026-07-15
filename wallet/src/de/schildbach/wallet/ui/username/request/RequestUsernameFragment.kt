@@ -172,7 +172,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         // SHARED component every username-flow screen installs — see
         // UsernameSubmitStatusDialogs (Brian: submitting silently dropped
         // back to the entry screen with no feedback).
-        UsernameSubmitStatusDialogs(this, requestUserNameViewModel).observe()
+        UsernameSubmitStatusDialogs(this, requestUserNameViewModel) {
+            // The user explicitly closed the processing dialog: the
+            // creation keeps running (foreground service / app scope) and
+            // the home screen reports the result — leave to it.
+            requireActivity().finish()
+        }.observe()
 
         requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
             // Hide voting period elements for Secondary username type (instant usernames)
@@ -308,7 +313,15 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             } else {
                 binding.votingPeriodContainer.isVisible = false
                 binding.walletBalanceContainer.isVisible = false
-                binding.usernameAvailableContainer.isVisible = false
+                // Fail-closed surface: the button is disabled either way
+                // (usernameCheckSuccess is false), but a lookup failure has
+                // to SAY so — silence here read as "available" before the
+                // check was made fail-closed.
+                binding.usernameAvailableContainer.isVisible = it.usernameCheckFailed
+                if (it.usernameCheckFailed) {
+                    binding.usernameAvailableMessage.text = getString(R.string.username_check_failed)
+                    binding.checkAvailable.setImageResource(getCheckMarkImage(false, false))
+                }
                 binding.requestUsernameButton.isEnabled = false
             }
         }
@@ -364,12 +377,16 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // why are we closing, we should allow the user to chose a new name
                 // requireActivity().finish()
             } else if ((it?.creationState?.ordinal ?: 0) > IdentityCreationState.NONE.ordinal) {
-                // completeUsername = it.username ?: ""
-                // showCompleteState()
-                // for now, just go to the home screen
-                // requireActivity().finish()
-                // Navigate to MoreFragment instead of UsernameRegistrationFragment
-                requireActivity().finish()
+                // The L1 submit's processing dialog must stay up until ITS
+                // explicit dismiss button — finishing here on the identity
+                // state machine's first flip auto-closed it under the user
+                // (observed live). While it shows, the dialog's dismissal
+                // callback does the finishing; entries with a creation
+                // already in flight (no submit this session) keep the
+                // immediate exit.
+                if (!requestUserNameViewModel.uiState.value.usernameRequestSubmitting) {
+                    requireActivity().finish()
+                }
             }
         }
         binding.nonContestedNameInfoButton.setOnClickListener {

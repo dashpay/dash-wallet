@@ -25,6 +25,7 @@ import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -38,6 +39,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.WalletDataProvider
 import org.dashfoundation.dashsdk.wallet.SpvSyncProgressData
@@ -970,7 +972,9 @@ internal class DashSdkShadowWalletRecreator(
  * app's `filesDir/spv/<network>` convention, so a later real cutover can
  * start from a clean directory decision.
  *
- * ## The probe (every 60s while running, including after SYNCED)
+ * ## The probe (every 60s while running, including after SYNCED, plus
+ * one immediate probe on each transition into SYNCED — see
+ * [syncedEdgeSignal])
  *
  * Compares (a) SDK confirmed+unconfirmed L1 balance vs dashj
  * `getBalance(ESTIMATED)` — plus the confirmed-only variant vs
@@ -1047,6 +1051,17 @@ class L1ShadowSyncService internal constructor(
     private var monitorJob: Job? = null
     private var parityJob: Job? = null
     private var watchdogJob: Job? = null
+
+    /**
+     * Wakes [parityLoop] early on the progress feed's transition INTO
+     * SYNCED. The funding gate needs a FRESH parity report
+     * (ShieldedBalanceServiceImpl's evaluateWalletFundingGate), and after
+     * every dashj idle-restart the shadow re-syncs in seconds while the
+     * next [parityIntervalMs] tick was up to a minute away — measured 53s
+     * of gate-closed per idle cycle. CONFLATED: at most one ping is ever
+     * pending, so a flapping phase can never queue a probe storm.
+     */
+    private val syncedEdgeSignal = Channel<Unit>(Channel.CONFLATED)
 
     /**
      * Heartbeat: wall-clock time of the last parity-loop iteration START
@@ -1275,6 +1290,12 @@ class L1ShadowSyncService internal constructor(
                     } else if (_verificationStatus.value != L1VerificationStatus.VERIFIED) {
                         updateVerificationStatus(L1VerificationStatus.PROBING)
                     }
+                    if (mapped.phase == ShadowSyncPhase.SYNCED && lastPhase != ShadowSyncPhase.SYNCED) {
+                        // One ping per edge into SYNCED: the parity loop
+                        // probes immediately instead of leaving the funding
+                        // gate closed until its next interval tick.
+                        syncedEdgeSignal.trySend(Unit)
+                    }
                     val now = nowMs()
                     val terminalTransition = mapped.phase != lastPhase &&
                         (mapped.phase == ShadowSyncPhase.SYNCED || mapped.phase == ShadowSyncPhase.ERROR)
@@ -1294,6 +1315,9 @@ class L1ShadowSyncService internal constructor(
     }
 
     private suspend fun parityLoop(walletIdHex: String) {
+        // A ping left over from a previous run (or a pre-start edge) must
+        // not double the startup probe below.
+        while (syncedEdgeSignal.tryReceive().isSuccess) { /* drain */ }
         while (currentCoroutineContext().isActive) {
             lastProbeHeartbeatMs = nowMs()
             try {
@@ -1302,7 +1326,9 @@ class L1ShadowSyncService internal constructor(
                 if (t is CancellationException) throw t
                 log.warn("L1Parity probe failed; will retry on the next tick", t)
             }
-            delay(parityIntervalMs)
+            // The interval tick OR one SYNCED-edge ping, whichever comes
+            // first — the schedule is otherwise unchanged.
+            withTimeoutOrNull(parityIntervalMs) { syncedEdgeSignal.receive() }
         }
     }
 

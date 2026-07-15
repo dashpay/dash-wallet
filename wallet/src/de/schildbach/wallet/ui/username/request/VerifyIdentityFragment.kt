@@ -73,8 +73,12 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
                             requireActivity().finish()
                         } else {
                             val creationState = it?.creationState ?: IdentityCreationState.NONE
-                            if (creationState.ordinal > IdentityCreationState.NONE.ordinal) {
-                                // Navigate to MoreFragment instead of UsernameRegistrationFragment  
+                            if (creationState.ordinal > IdentityCreationState.NONE.ordinal &&
+                                !requestUserNameViewModel.uiState.value.usernameRequestSubmitting
+                            ) {
+                                // Same rule as RequestUsernameFragment: while
+                                // the processing dialog shows, ITS dismiss
+                                // button finishes — never this state flip.
                                 requireActivity().finish()
                             }
                         }
@@ -91,7 +95,11 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
         // destination (the cancelled-verification shortcut below, or the
         // confirm dialog stacked on top of it) — without the shared
         // status dialogs those submissions ran with zero feedback here.
-        UsernameSubmitStatusDialogs(this, requestUserNameViewModel).observe()
+        UsernameSubmitStatusDialogs(this, requestUserNameViewModel) {
+            // Explicit user dismissal of the processing dialog: the
+            // creation keeps running app-side; leave to the home screen.
+            requireActivity().finish()
+        }.observe()
     }
 
     private fun hideKeyboard() {

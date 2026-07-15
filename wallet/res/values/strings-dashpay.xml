@@ -323,6 +323,7 @@
     <string name="request_username_available">Username is available</string>
     <string name="request_username_unavailable">Username is unavailable or blocked</string>
     <string name="request_username_taken">Username is taken</string>
+    <string name="username_check_failed">Couldn\'t verify username availability. Check your connection and try again.</string>
     <string name="request_username_taken_results">Username was taken by another user</string>
     <string name="requesting_your_username_title">Creating your username</string>
     <string name="requesting_your_username_message">Your username %s is being requested on the Dash network. It may take some time.</string>
@@ -440,7 +441,7 @@
          costs are the amounts withdrawn from the shielded balance. -->
     <string name="username_cost_info_title">Shielded username costs</string>
     <!-- Dismissible processing dialog while the shielded creation proves (~30s). -->
-    <string name="username_creation_processing">Creating your username… This could take about 30 seconds. You can close this dialog — the request keeps running.</string>
+    <string name="username_creation_processing">Creating your username… This could take about 30 seconds. You can close this dialog — the request keeps running and you will be informed when it is ready.</string>
     <!-- Shielded creation outcome unconfirmed (may be on chain) — no retry offered. -->
     <string name="username_request_ambiguous_title">Request may have gone through</string>
     <string name="username_request_ambiguous_message">We could not confirm the result. Do not submit again — the app will check and recover automatically.</string>
