@@ -25,6 +25,9 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.services.AuthenticationManager
+import javax.inject.Inject
+import kotlinx.coroutines.launch
 import de.schildbach.wallet.ui.compose_views.createInstantUsernameDialog
 import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet_test.R
@@ -38,6 +41,9 @@ import org.dash.wallet.common.util.observe
 
 @AndroidEntryPoint
 class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_username_request) {
+
+    @Inject
+    lateinit var authManager: AuthenticationManager
     private val binding by viewBinding(DialogConfirmUsernameRequestBinding::bind)
 
     private val viewModel by viewModels<ConfirmUserNameDialogViewModel>()
@@ -68,13 +74,17 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
                             dismiss()
                         },
                         onCancel = {
-                            requestUserNameViewModel.submit()
-                            dismiss()
+                            lifecycleScope.launch {
+                                authenticateThenSubmit(this@ConfirmUsernameRequestDialogFragment, authManager, requestUserNameViewModel)
+                                dismiss()
+                            }
                         }
                     ).show(requireActivity())
                 } else {
-                    requestUserNameViewModel.submit()
-                    dismiss()
+                    lifecycleScope.launch {
+                        authenticateThenSubmit(this@ConfirmUsernameRequestDialogFragment, authManager, requestUserNameViewModel)
+                        dismiss()
+                    }
                 }
             }
         }

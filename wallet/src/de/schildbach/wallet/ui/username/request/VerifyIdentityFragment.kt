@@ -11,6 +11,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import org.dash.wallet.common.services.AuthenticationManager
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
@@ -24,6 +26,9 @@ import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
 class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
+
+    @Inject
+    lateinit var authManager: AuthenticationManager
     private val binding by viewBinding(FragmentVerfiyIdentityBinding::bind)
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
     private val viewModel by viewModels<VerifyIdentityViewModel>()
@@ -95,7 +100,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
         // destination (the cancelled-verification shortcut below, or the
         // confirm dialog stacked on top of it) — without the shared
         // status dialogs those submissions ran with zero feedback here.
-        UsernameSubmitStatusDialogs(this, requestUserNameViewModel) {
+        UsernameSubmitStatusDialogs(this, requestUserNameViewModel, authManager) {
             // Explicit user dismissal of the processing dialog: the
             // creation keeps running app-side; leave to the home screen.
             requireActivity().finish()
@@ -109,7 +114,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
     private suspend fun checkViewConfirmDialog() {
         // TODO: Can we cancel the request?
         if (requestUserNameViewModel.hasUserCancelledVerification()) {
-            requestUserNameViewModel.submit()
+            authenticateThenSubmit(this, authManager, requestUserNameViewModel)
         } else {
             safeNavigate(
                 VerifyIdentityFragmentDirections.verifyIdentityFragmentToConfirmUsernameRequestDialog(

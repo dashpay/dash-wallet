@@ -17,6 +17,9 @@
 package de.schildbach.wallet.ui.username.request
 
 import androidx.fragment.app.Fragment
+import org.dash.wallet.common.services.AuthenticationManager
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.Lifecycle
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -46,6 +49,7 @@ import org.dash.wallet.common.util.observe
 class UsernameSubmitStatusDialogs(
     private val fragment: Fragment,
     private val viewModel: RequestUserNameViewModel,
+    private val authManager: AuthenticationManager,
     /**
      * Invoked when the USER closes the processing dialog (the explicit
      * dismiss button or a cancel) — never for the programmatic dismissal
@@ -124,7 +128,11 @@ class UsernameSubmitStatusDialogs(
             fragment.getString(R.string.try_again)
         ).show(fragment.requireActivity()) {
             if (it == true) {
-                viewModel.submit()
+                // The retry is a fresh spend attempt — same auth rule as
+                // the original submit (see authenticateThenSubmit).
+                fragment.lifecycleScope.launch {
+                    authenticateThenSubmit(fragment, authManager, viewModel)
+                }
             }
         }
     }

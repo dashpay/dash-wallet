@@ -15,6 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import org.dash.wallet.common.services.AuthenticationManager
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -35,6 +37,9 @@ import java.util.Date
 
 @AndroidEntryPoint
 open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
+
+    @Inject
+    lateinit var authManager: AuthenticationManager
     private val binding by viewBinding(FragmentRequestUsernameBinding::bind)
 
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
@@ -172,7 +177,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         // SHARED component every username-flow screen installs — see
         // UsernameSubmitStatusDialogs (Brian: submitting silently dropped
         // back to the entry screen with no feedback).
-        UsernameSubmitStatusDialogs(this, requestUserNameViewModel) {
+        UsernameSubmitStatusDialogs(this, requestUserNameViewModel, authManager) {
             // The user explicitly closed the processing dialog: the
             // creation keeps running (foreground service / app scope) and
             // the home screen reports the result — leave to it.
@@ -440,7 +445,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
     private suspend fun checkViewConfirmDialog() {
         // TODO: Can we cancel the request?
         if (requestUserNameViewModel.hasUserCancelledVerification()) {
-            requestUserNameViewModel.submit()
+            authenticateThenSubmit(this, authManager, requestUserNameViewModel)
         } else {
             when (usernameType) {
                 UsernameType.Primary -> safeNavigate(
