@@ -223,6 +223,7 @@ class MainViewModelTest {
         every { verificationStatus } returns MutableStateFlow(
             de.schildbach.wallet.service.platform.sdk.L1VerificationStatus.UNKNOWN
         )
+        every { latestParity } returns MutableStateFlow(null)
     }
     private val cutoverCoordinator = mockk<de.schildbach.wallet.service.platform.sdk.CutoverCoordinator> {
         coEvery { dashjEngineMayStart() } returns true
