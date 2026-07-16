@@ -16,7 +16,18 @@
  */
 package de.schildbach.wallet.payments
 
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
+import org.bitcoinj.core.ECKey
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.params.TestNet3Params
+import org.bitcoinj.script.ScriptBuilder
+import org.bitcoinj.wallet.SendRequest
+import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
 
 /**
@@ -48,5 +59,109 @@ class CutoverSendRouteTest {
         assertEquals(CutoverSendRoute.FAIL_CLOSED, cutoverSendRoute(true, hasCustomSelector = true, emptyWallet = false))
         assertEquals(CutoverSendRoute.FAIL_CLOSED, cutoverSendRoute(true, hasCustomSelector = false, emptyWallet = true))
         assertEquals(CutoverSendRoute.FAIL_CLOSED, cutoverSendRoute(true, hasCustomSelector = true, emptyWallet = true))
+    }
+}
+
+/**
+ * Phase 5d: [extractSdkRoutablePayment] — identifying the ONE payment a
+ * completed SendRequest carries, or refusing (null → fail closed). The
+ * main send UI submits its own signed SendRequest to the funnel, so this
+ * extraction is what lets those sends route via the SDK post-cutover.
+ */
+class ExtractSdkRoutablePaymentTest {
+
+    private val params = TestNet3Params.get()
+    private val payee: Address = Address.fromKey(params, ECKey())
+    private val change: Address = Address.fromKey(params, ECKey())
+    private val isMine: (Address) -> Boolean = { it == change }
+
+    @Before
+    fun setup() {
+        Context.propagate(Context(params))
+    }
+
+    private fun request(build: Transaction.() -> Unit): SendRequest =
+        SendRequest.forTx(Transaction(params).apply(build))
+
+    @Test
+    fun simpleSend_paymentPlusChange_extractsTheForeignOutput() {
+        val request = request {
+            addOutput(Coin.valueOf(5_000_000), payee)
+            addOutput(Coin.valueOf(94_900_000), change)
+        }
+        assertEquals(
+            payee to Coin.valueOf(5_000_000),
+            extractSdkRoutablePayment(request, params, isMine)
+        )
+    }
+
+    @Test
+    fun noChangeOutput_stillExtractsTheSingleForeignOutput() {
+        val request = request { addOutput(Coin.valueOf(5_000_000), payee) }
+        assertEquals(
+            payee to Coin.valueOf(5_000_000),
+            extractSdkRoutablePayment(request, params, isMine)
+        )
+    }
+
+    @Test
+    fun notRoutable_returnsNull_forEveryConservativeRefusal() {
+        // Send-all.
+        assertNull(
+            extractSdkRoutablePayment(
+                request { addOutput(Coin.valueOf(5_000_000), payee) }.apply { emptyWallet = true },
+                params,
+                isMine
+            )
+        )
+        // Custom (non-zero-conf) coin selector.
+        assertNull(
+            extractSdkRoutablePayment(
+                request { addOutput(Coin.valueOf(5_000_000), payee) }
+                    .apply { coinSelector = org.bitcoinj.wallet.CoinSelector { _, _ -> throw UnsupportedOperationException() } },
+                params,
+                isMine
+            )
+        )
+        // The default zero-conf selector IS routable — sanity-check the inverse.
+        assertEquals(
+            payee to Coin.valueOf(5_000_000),
+            extractSdkRoutablePayment(
+                request { addOutput(Coin.valueOf(5_000_000), payee) }
+                    .apply { coinSelector = ZeroConfCoinSelector.get() },
+                params,
+                isMine
+            )
+        )
+        // Multiple foreign recipients (BIP70 multi-output).
+        assertNull(
+            extractSdkRoutablePayment(
+                request {
+                    addOutput(Coin.valueOf(5_000_000), payee)
+                    addOutput(Coin.valueOf(1_000_000), Address.fromKey(params, ECKey()))
+                },
+                params,
+                isMine
+            )
+        )
+        // Send-to-self only (no identifiable payment).
+        assertNull(
+            extractSdkRoutablePayment(
+                request { addOutput(Coin.valueOf(5_000_000), change) },
+                params,
+                isMine
+            )
+        )
+        // Non-standard output script (OP_RETURN payload).
+        assertNull(
+            extractSdkRoutablePayment(
+                request {
+                    addOutput(Coin.valueOf(5_000_000), payee)
+                    addOutput(Coin.ZERO, ScriptBuilder.createOpReturnScript(byteArrayOf(1, 2, 3)))
+                },
+                params,
+                isMine
+            )
+        )
     }
 }
