@@ -224,6 +224,9 @@ class MainViewModelTest {
             de.schildbach.wallet.service.platform.sdk.L1VerificationStatus.UNKNOWN
         )
     }
+    private val cutoverCoordinator = mockk<de.schildbach.wallet.service.platform.sdk.CutoverCoordinator> {
+        coEvery { dashjEngineMayStart() } returns true
+    }
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
 
@@ -313,7 +316,8 @@ class MainViewModelTest {
                 dashPayContactRequestDao,
                 txDisplayCacheService,
                 crowdNodeApi,
-                l1ShadowSyncService
+                l1ShadowSyncService,
+                cutoverCoordinator
             )
         )
 
@@ -353,7 +357,8 @@ class MainViewModelTest {
                 dashPayContactRequestDao,
                 txDisplayCacheService,
                 crowdNodeApi,
-                l1ShadowSyncService
+                l1ShadowSyncService,
+                cutoverCoordinator
             )
         )
 

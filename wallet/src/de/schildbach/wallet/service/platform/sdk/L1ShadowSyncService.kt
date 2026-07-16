@@ -1830,6 +1830,81 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
+     * Wallet-wipe ("Reset this wallet") cleanup: destroy ALL SDK-side
+     * wallet state so the NEXT wallet the user sets up binds FRESH and
+     * cannot inherit this wallet's SDK bound-id or discovered identity.
+     * Same destructive collaborators as [recoverByRecreatingWallet] —
+     * stop shadow + shielded, [ShadowWalletRecreator.removeSdkWallet]
+     * (full Room + Keystore cascade), delete the SPV dataDir,
+     * [ShadowWalletRecreator.resetBinderLatch] — but WITHOUT the rebind /
+     * shadow restart: after a wipe there is no seed to bind until the user
+     * creates or restores the next wallet, whose setup runs its own first
+     * bind.
+     *
+     * This closes the reset-time resurrection race for the SDK path — the
+     * SDK twin of the [PlatformSyncService] guard in
+     * [de.schildbach.wallet.WalletApplicationExt] `clearDatabasesInner`. A
+     * stale binder latch (`completed == true` with the previous
+     * `boundWalletIdHex`) or a lingering SDK wallet row let the PREVIOUS
+     * wallet's discovered identity keep driving the DashPay UI on the next
+     * (identity-less) wallet — observed live as the "Join DashPay" entry
+     * points staying hidden after a reset because the old DONE creation
+     * state never cleared (the app kept reading the old SDK wallet). The
+     * intermittence matches a race: whether an in-flight bind/discovery
+     * pass re-attaches before the clears win depends on process lifecycle.
+     *
+     * SDK-side state ONLY — dashj is untouched (see
+     * [recoverByRecreatingWallet]'s safety contract: no collaborator here
+     * exposes a dashj surface, and the seed's canonical copy lives in the
+     * dashj wallet, which the wipe removes separately). Never throws;
+     * every step is failure-contained so one failure cannot abort the
+     * rest (a partial clear is exactly the resurrection bug).
+     */
+    suspend fun clearForWalletWipe() {
+        val recreator = this.recreator ?: run {
+            log.info("wallet-wipe SDK cleanup skipped: no recreator wired (test construction?)")
+            return
+        }
+        try {
+            recoveryMutex.withLock {
+                val walletIdHex = runningWalletIdHex.value ?: source.boundWalletIdOrNull()
+                log.warn(
+                    "wallet-wipe SDK cleanup for wallet {}: stopping shadow + shielded sync, " +
+                        "removing the SDK wallet (full cascade), deleting the SPV dataDir, clearing " +
+                        "the binder latch — NO rebind (the next wallet setup binds fresh). " +
+                        "SDK-side state only; dashj is untouched",
+                    walletIdHex?.take(8) ?: "none"
+                )
+                stop() // takes the main mutex itself; cancels loops + stops the Rust client
+                runCatching { recreator.stopShieldedSync() }
+                    .onFailure { log.warn("wipe cleanup: shielded stop failed; continuing", it) }
+                mutex.withLock {
+                    if (walletIdHex != null) {
+                        runCatching { recreator.removeSdkWallet(walletIdHex) }
+                            .onFailure { log.warn("wipe cleanup: removeSdkWallet failed; continuing", it) }
+                    }
+                    runCatching { deleteSpvDataDir() }
+                        .onFailure { log.warn("wipe cleanup: dataDir delete failed; continuing", it) }
+                    runCatching { recreator.resetBinderLatch() }
+                        .onFailure { log.warn("wipe cleanup: binder latch reset failed; continuing", it) }
+                }
+                log.info(
+                    "wallet-wipe SDK cleanup complete for wallet {}: the next wallet binds fresh",
+                    walletIdHex?.take(8) ?: "none"
+                )
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.error(
+                "wallet-wipe SDK cleanup FAILED — the next wallet's first bind still re-derives " +
+                    "from the new seed, so a fresh (identity-less) wallet recovers; a stale bound " +
+                    "identity could linger until then",
+                t
+            )
+        }
+    }
+
+    /**
      * The hard-reset destroy step: recursively delete the shadow SPV
      * dataDir at the filesystem level — the only reset that provably
      * removes the Rust header store and scan watermark (the SDK's

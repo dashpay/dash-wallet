@@ -86,6 +86,14 @@ object WalletApplicationExt {
         runCatching { platformSyncService.clearDatabases() }
             .onFailure { rethrowCancellation(it); log.warn("platform-sync clear failed during reset", it) }
         if (isWalletWipe) {
+            // SDK twin of the platform-sync resurrection guard above: destroy
+            // this wallet's SDK state (bound wallet + binder latch) so the NEXT
+            // wallet binds fresh and cannot inherit the previous wallet's
+            // discovered identity — observed as the DashPay "Join" entry points
+            // staying hidden after a "Reset this wallet". Wipe only: the restore
+            // path re-binds to the restored seed instead of destroying it.
+            runCatching { l1ShadowSyncService.clearForWalletWipe() }
+                .onFailure { rethrowCancellation(it); log.warn("SDK wallet clear failed during wipe", it) }
             runCatching { transactionMetadataProvider.clear() }
                 .onFailure { rethrowCancellation(it); log.warn("tx-metadata clear failed during wipe", it) }
         }

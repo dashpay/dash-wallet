@@ -1402,6 +1402,65 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
+    fun clearForWalletWipe_stopsRemovesAndResetsTheBinder_butNEVERRebinds() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+        assertTrue(service.startIfEnabled())
+        val startsBefore = source.startCalls
+
+        service.clearForWalletWipe()
+
+        // Same destructive teardown as recovery, but the rebind must NOT run —
+        // after a wipe there is no seed to bind until the next wallet's setup.
+        assertEquals(
+            listOf("stopShielded", "removeWallet", "resetBinderLatch"),
+            recreator.events
+        )
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertTrue(source.stopCalls > 0) // the shadow SPV was stopped
+        assertEquals(startsBefore, source.startCalls) // and never restarted
+    }
+
+    @Test
+    fun clearForWalletWipe_withNoWalletBound_skipsRemoveButStillResetsTheBinder() = runBlocking {
+        val source = FakeSource(boundWalletId = null)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+
+        service.clearForWalletWipe()
+
+        // Nothing to remove, but the latch must still clear so the next wallet
+        // binds fresh; still no rebind.
+        assertEquals(listOf("stopShielded", "resetBinderLatch"), recreator.events)
+        assertTrue(recreator.removedWalletIds.isEmpty())
+        assertEquals(0, source.startCalls)
+    }
+
+    @Test
+    fun clearForWalletWipe_swallowsARemoveFailure_andStillResetsTheBinder() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        recreator.onRemove = { throw IllegalStateException("native removeWallet failed") }
+        val service = service(source, recreator = recreator)
+
+        service.clearForWalletWipe()
+
+        // A failing removal is contained — the binder latch still clears (a
+        // partial clear that skipped the latch is exactly the resurrection bug).
+        assertTrue(recreator.events.contains("resetBinderLatch"))
+        assertEquals(0, source.startCalls)
+    }
+
+    @Test
+    fun clearForWalletWipe_skipsWithoutARecreatorWired() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source) // recreator = null (test default)
+        service.clearForWalletWipe() // must be a no-op, never throw
+        assertEquals(0, source.stopCalls)
+    }
+
+    @Test
     fun recoverByRecreatingWallet_swallowsARemoveFailure_andSkipsTheRebind() = runBlocking {
         val source = FakeSource(boundWalletId = walletIdHex)
         val recreator = FakeRecreator()
