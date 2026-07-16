@@ -4,25 +4,6 @@
     <string name="request_coins_share_dialog_title">Compartir sol·licitud de Dash…</string>
     <!-- Generic buttons -->
     <string name="button_dismiss">Descarta</string>
-    <string name="button_cancel">Cancel·la</string>
     <string name="button_retry">Re-intenta</string>
     <string name="button_share">Comparteix</string>
-    <string name="exchange_rate_not_found">No es pot trobar el preu de canvi.</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Enviant report utilitzant…</string>
-
-    <!-- scan -->
-    <string name="scan_camera_problem_dialog_title">Disculpes</string>
-    <string name="scan_camera_problem_dialog_message">La càmera té un problema. Probablement necessites reiniciar el dispositiu.</string>
-    <!-- address input -->
-    <string name="address_input_title">Envia Dash</string>
-    <!-- input parser -->
-    <string name="input_parser_io_error">No es poden llegir les dades:\n%s</string>
-    <string name="input_parser_cannot_classify">No es pot reconèixer l\'entrada:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Adreça de Dash no vàlida:\n%s</string>
-    <string name="input_parser_invalid_address">Direcció rebuda de Dash no vàlida.!\n(Mixing up mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">No es pot verificar la petició de pagament:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Petició de pagament no vàlida:\n%s</string>
-    <string name="input_parser_invalid_transaction">Transacció no vàlida:\n%s</string>
-    <string name="insufficient_money_title">No hi ha suficients monedes</string>
-    <string name="send_coins_error_msg">Hi ha un problema enviant les monedes!</string>
     </resources>

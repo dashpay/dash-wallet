@@ -20,6 +20,9 @@ package org.dash.wallet.common.util
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.toFiat
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.NumberFormat
@@ -47,6 +50,40 @@ fun BigDecimal.toCoin() : Coin {
 
 fun BigDecimal.toFiat(currency: String) : Fiat {
     return Fiat.valueOf(currency, this.scaleByPowerOfTen(Fiat.SMALLEST_UNIT_EXPONENT).toLong())
+}
+
+/** Neutral counterpart of [BigDecimal.toCoin] for modules that don't depend on dashj. */
+fun BigDecimal.toDash(): Dash {
+    return Dash(this.scaleByPowerOfTen(Coin.SMALLEST_UNIT_EXPONENT).toLong())
+}
+
+/** Neutral counterpart of [BigDecimal.toFiat] for modules that don't depend on dashj. */
+fun BigDecimal.toFiatValue(currency: String): FiatValue {
+    return FiatValue(currency, this.scaleByPowerOfTen(Fiat.SMALLEST_UNIT_EXPONENT).toLong())
+}
+
+/** Neutral counterpart of [Fiat.isCurrencyFirst] for modules that don't depend on dashj. */
+fun FiatValue.isCurrencyFirst(): Boolean {
+    return toFiat().isCurrencyFirst()
+}
+
+/** Neutral counterpart of [Fiat.toFormattedString] for modules that don't depend on dashj. */
+fun FiatValue.toFormattedString(): String {
+    return toFiat().toFormattedString()
+}
+
+/** Neutral counterpart of [Fiat.toFormattedStringRoundUp] for modules that don't depend on dashj. */
+fun FiatValue.toFormattedStringRoundUp(): String {
+    return toFiat().toFormattedStringRoundUp()
+}
+
+/** Neutral counterpart of [Fiat.discountBy] for modules that don't depend on dashj. */
+fun FiatValue.discountBy(fraction: Double): FiatValue =
+    FiatValue(currencyCode, (value * (1.0 - fraction)).toLong())
+
+/** Neutral counterpart of [Fiat.toFormattedStringNoCode] for modules that don't depend on dashj. */
+fun FiatValue.toFormattedStringNoCode(): String {
+    return toFiat().toFormattedStringNoCode()
 }
 
 val Fiat.currencySymbol: String

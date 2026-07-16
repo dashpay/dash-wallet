@@ -40,7 +40,6 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -67,6 +66,45 @@ enum class ContactsScreenMode {
     VIEW_REQUESTS
 }
 
+/** Decision produced by [ContactsIdentityGate] for one blockchainIdentity emission. */
+enum class ContactsIdentityRouting {
+    /** Identity not loaded yet, or this view is already routed — do nothing. */
+    NONE,
+    SHOW_CONTACTS,
+    SHOW_EVO_UPGRADE
+}
+
+/**
+ * One-shot identity routing gate for the contacts screen.
+ *
+ * blockchainIdentity LiveData is populated asynchronously from DataStore and
+ * can emit repeatedly (BlockchainIdentityData is not deduped by
+ * distinctUntilChanged, and DataStore emits on any preference change), so the
+ * first non-null emission decides the routing and later emissions are ignored.
+ *
+ * The gate is one-shot PER VIEW, so a new instance must be created in
+ * onViewCreated. A fragment-scoped flag regressed here: the fragment instance
+ * survives a back-stack pop while its view (and binding) are recreated, and
+ * the stale resolved flag left the recreated view permanently blank —
+ * container hidden, toolbar bare (no title/menu), no adapter or observers.
+ */
+class ContactsIdentityGate {
+    private var resolved = false
+
+    fun route(hasUsername: Boolean?): ContactsIdentityRouting {
+        if (hasUsername == null || resolved) {
+            return ContactsIdentityRouting.NONE
+        }
+
+        resolved = true
+        return if (hasUsername) {
+            ContactsIdentityRouting.SHOW_CONTACTS
+        } else {
+            ContactsIdentityRouting.SHOW_EVO_UPGRADE
+        }
+    }
+}
+
 @AndroidEntryPoint
 class ContactsFragment : Fragment(),
         ContactSearchResultsAdapter.Listener,
@@ -83,8 +121,6 @@ class ContactsFragment : Fragment(),
     private val args by navArgs<ContactsFragmentArgs>()
     private var initialSearch = true
     private var searchEventSent = false
-    private var identityResolved = false
-    private var viewsInitialized = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_contacts_root, container, false)
@@ -93,43 +129,33 @@ class ContactsFragment : Fragment(),
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // DashPayUserBottomSheet is shown on the activity's FragmentManager (via show(activity)),
-        // so listen there for its result.
-        requireActivity().supportFragmentManager.setFragmentResultListener(
-            DashPayUserBottomSheet.REQUEST_KEY,
-            viewLifecycleOwner
-        ) { _, bundle ->
-            if (bundle.getBoolean(DashPayUserBottomSheet.KEY_CHANGED, false)) {
-                searchContacts()
-            }
-        }
-        // blockchainIdentity LiveData is populated asynchronously from DataStore.
-        // Reading hasIdentity synchronously can return false before the first
-        // emission, misrouting users who have a username to the EvoUpgrade screen.
-        // The observer can fire repeatedly (BlockchainIdentityData is not deduped
-        // by distinctUntilChanged, and DataStore emits on any preference change),
-        // so identityResolved makes the routing decision one-shot.
+        // Reading hasIdentity synchronously can return false before DataStore's
+        // first emission, misrouting users who have a username to the EvoUpgrade
+        // screen — so wait for the first real emission instead. The gate lives
+        // and dies with the view (see ContactsIdentityGate).
+        val identityGate = ContactsIdentityGate()
         binding.container.isVisible = false
         mainViewModel.blockchainIdentity.observe(viewLifecycleOwner) { identityData ->
-            if (identityData == null || identityResolved) return@observe
-
-            identityResolved = true
-            if (!identityData.hasUsername) {
-                // No username: don't initialize the contacts UI or trigger any
-                // platform queries (PlatformRepo/blockchainIdentity are not set up
-                // without a username); just route to the upgrade screen.
-                safeNavigate(ContactsFragmentDirections.contactsToEvoUpgrade())
-            } else {
-                binding.container.isVisible = true
-                setupContactsViews()
+            when (identityGate.route(identityData?.hasUsername)) {
+                ContactsIdentityRouting.SHOW_EVO_UPGRADE -> {
+                    // No username: don't initialize the contacts UI or trigger any
+                    // platform queries (PlatformRepo/blockchainIdentity are not set
+                    // up without a username); just route to the upgrade screen.
+                    safeNavigate(ContactsFragmentDirections.contactsToEvoUpgrade())
+                }
+                ContactsIdentityRouting.SHOW_CONTACTS -> {
+                    binding.container.isVisible = true
+                    setupContactsViews()
+                }
+                ContactsIdentityRouting.NONE -> {}
             }
         }
     }
 
+    // Called at most once per view lifecycle (gated by ContactsIdentityGate in
+    // onViewCreated); everything here targets the current view's binding, so it
+    // must run again whenever the view is recreated.
     private fun setupContactsViews() {
-        if (viewsInitialized) return
-        viewsInitialized = true
-
         enterTransition = MaterialFadeThrough()
         binding.appBar.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
@@ -260,6 +286,12 @@ class ContactsFragment : Fragment(),
         dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner) {
             imitateUserInteraction()
             contactsAdapter.sendContactRequestWorkStateMap = it
+            // A failed accept/send must never be a silent no-op — the row only
+            // reverts to its pending state — so surface newly-failed
+            // operations started from this screen.
+            if (dashPayViewModel.consumeNewSendContactRequestErrors(it).isNotEmpty()) {
+                showSendContactRequestError()
+            }
         }
         dashPayViewModel.contactsUpdatedLiveData.observe(viewLifecycleOwner) {
             if (it?.data != null && it.data) {
@@ -323,18 +355,6 @@ class ContactsFragment : Fragment(),
     override fun onResume() {
         super.onResume()
         dashPayViewModel.updateDashPayState()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        // identityResolved and viewsInitialized are one-shot guards scoped to a single view
-        // lifecycle, but the fragment instance (and these fields) survives on the navigation back
-        // stack while the view is destroyed and later recreated. If we don't reset them, returning
-        // to this screen (e.g. back from SearchUserFragment) leaves the blockchainIdentity observer
-        // early-returning and setupContactsViews() skipped, so the container stays hidden and the
-        // contact list never repopulates. Reset so a recreated view re-runs the full setup.
-        identityResolved = false
-        viewsInitialized = false
     }
 
     private fun processResults(data: List<UsernameSearchResult>) {
@@ -424,7 +444,7 @@ class ContactsFragment : Fragment(),
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
         when (args.mode) {
             ContactsScreenMode.SEARCH_CONTACTS, ContactsScreenMode.VIEW_REQUESTS -> {
-                DashPayUserBottomSheet.newInstance(usernameSearchResult).show(requireActivity())
+                startActivity(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult))
             }
             ContactsScreenMode.SELECT_CONTACT -> {
                 handleString(usernameSearchResult.toContactRequest!!.toUserId, true, R.string.scan_to_pay_username_dialog_message)
@@ -438,6 +458,18 @@ class ContactsFragment : Fragment(),
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+    }
+
+    private fun showSendContactRequestError() {
+        // The only contact-request action on this screen is accepting an
+        // incoming request (onAcceptRequest → sendContactRequest), so use the
+        // accept wording.
+        AdaptiveDialog.create(
+            R.drawable.ic_warning_yellow_circle,
+            getString(R.string.accept_contact_request_error_title),
+            getString(R.string.accept_contact_request_error_message),
+            getString(R.string.button_ok)
+        ).show(requireActivity())
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

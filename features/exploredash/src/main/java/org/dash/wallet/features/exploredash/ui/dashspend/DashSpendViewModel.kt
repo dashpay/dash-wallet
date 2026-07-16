@@ -35,20 +35,21 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.MoneyFormat
+import org.dash.wallet.common.money.fiatToDash
+import org.dash.wallet.common.money.moneyFormat
+import org.dash.wallet.common.needsLeftoverBalanceWarning
+import org.dash.wallet.common.observeTotalDashBalance
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
@@ -157,22 +158,22 @@ class DashSpendViewModel @Inject constructor(
     private val ctxSpendRepository = providers[GiftCardProviderType.CTX]!!
     private val piggyCardsRepository = providers[GiftCardProviderType.PiggyCards]!!
 
-    val dashFormat: MonetaryFormat
-        get() = configuration.format
+    val dashFormat: MoneyFormat
+        get() = configuration.moneyFormat
 
-    private val _balance = MutableLiveData<Coin>().apply {
+    private val _balance = MutableLiveData<Dash>().apply {
         savedStateHandle.get<Long>(BALANCE_KEY)?.let {
-            value = Coin.valueOf(it)
+            value = Dash.valueOf(it)
         }
     }
-    val balance: LiveData<Coin>
+    val balance: LiveData<Dash>
         get() = _balance
 
-    val balanceWithDiscount: Coin?
+    val balanceWithDiscount: Dash?
         get() = _balance.value?.let { balance ->
             _giftCardMerchant.value?.let { merchant ->
                 val d = merchant.savingsFraction
-                Coin.valueOf((balance.value / (1.0 - d)).toLong()).minus(Transaction.DEFAULT_TX_FEE.multiply(20))
+                Dash.valueOf((balance.duffs / (1.0 - d)).toLong()).minus(Constants.DEFAULT_TX_FEE.multiply(20))
             }
         }
 
@@ -207,10 +208,10 @@ class DashSpendViewModel @Inject constructor(
         savedStateHandle[MERCHANT_ID_KEY] = merchant?.merchantId
     }
 
-    var minCardPurchaseCoin: Coin = Coin.ZERO
-    var minCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
-    var maxCardPurchaseCoin: Coin = Coin.ZERO
-    var maxCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+    var minCardPurchaseDash: Dash = Dash.ZERO
+    var minCardPurchaseFiat: FiatValue = FiatValue.valueOf(Constants.USD_CURRENCY, 0)
+    var maxCardPurchaseDash: Dash = Dash.ZERO
+    var maxCardPurchaseFiat: FiatValue = FiatValue.valueOf(Constants.USD_CURRENCY, 0)
 
     var openedCTXSpendTermsAndConditions = false
 
@@ -224,14 +225,14 @@ class DashSpendViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         walletDataProvider
-            .observeTotalBalance()
+            .observeTotalDashBalance()
             .distinctUntilChanged()
             .onEach(_balance::postValue)
             .launchIn(viewModelScope)
 
         // Save balance changes to SavedStateHandle
-        _balance.observeForever { coin ->
-            savedStateHandle[BALANCE_KEY] = coin?.value
+        _balance.observeForever { balance ->
+            savedStateHandle[BALANCE_KEY] = balance?.duffs
         }
 
         blockchainStateProvider.observeState()
@@ -307,14 +308,14 @@ class DashSpendViewModel @Inject constructor(
         } ?: throw CTXSpendException("purchaseGiftCard error: no merchant")
     }
 
-    suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash = withContext(Dispatchers.IO) {
-        val transaction = sendPaymentService.payWithDashUrl(
+    suspend fun createSendingRequestFromDashUri(paymentUri: String): String = withContext(Dispatchers.IO) {
+        val txId = sendPaymentService.payAndGetTxId(
             paymentUri,
             _giftCardMerchant.value?.source?.lowercase() ?: ServiceName.CTXSpend
         )
-        log.info("ctx spend transaction: ${transaction.txId}")
+        log.info("ctx spend transaction: $txId")
         transactionMetadata.markGiftCardTransaction(
-            transaction.txId,
+            txId,
             selectedProvider!!.serviceName,
             _giftCardMerchant.value?.logoLocation
         )
@@ -323,7 +324,7 @@ class DashSpendViewModel @Inject constructor(
 //                transactionMetadata.setTransactionMemo(transaction.txId, memo)
 //            }
 //        }
-        transaction.txId
+        txId
     }
 
     /** updates merchant details according to the currently selected provider [selectedProvider]
@@ -482,24 +483,24 @@ class DashSpendViewModel @Inject constructor(
         _giftCardMerchant.value?.let { merchant ->
             val minCardPurchase = merchant.minCardPurchase ?: 0.0
             val maximumCardPurchase = merchant.maxCardPurchase ?: 0.0
-            minCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, minCardPurchase.toString())
-            maxCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, maximumCardPurchase.toString())
+            minCardPurchaseFiat = FiatValue.parseFiat(Constants.USD_CURRENCY, minCardPurchase.toString())
+            maxCardPurchaseFiat = FiatValue.parseFiat(Constants.USD_CURRENCY, maximumCardPurchase.toString())
             updatePurchaseLimits()
         }
     }
 
-    fun withinLimits(purchaseAmount: Coin): Boolean {
+    fun withinLimits(purchaseAmount: Dash): Boolean {
         return _giftCardMerchant.value?.let { merchant ->
             if (merchant.fixedDenomination) {
                 true
             } else {
-                !purchaseAmount.isLessThan(minCardPurchaseCoin) &&
-                    !purchaseAmount.isGreaterThan(maxCardPurchaseCoin)
+                !purchaseAmount.isLessThan(minCardPurchaseDash) &&
+                    !purchaseAmount.isGreaterThan(maxCardPurchaseDash)
             }
         } ?: false
     }
 
-    fun withinLimits(purchaseAmount: Fiat): Boolean {
+    fun withinLimits(purchaseAmount: FiatValue): Boolean {
         return _giftCardMerchant.value?.let { merchant ->
             if (merchant.fixedDenomination) {
                 true
@@ -549,11 +550,11 @@ class DashSpendViewModel @Inject constructor(
         providers[provider]?.logout()
     }
 
-    fun saveGiftCardDummy(txId: Sha256Hash, giftCards: List<GiftCardInfo>) {
+    fun saveGiftCardDummy(txId: String, giftCards: List<GiftCardInfo>) {
         log.info("saving {} dummy gift cards: {}", giftCards.size, txId)
         var index = 0
         val giftCard = giftCards.map {
-            GiftCard(
+            GiftCard.fromHex(
                 txId = txId,
                 merchantName = _giftCardMerchant.value?.name ?: "",
                 price = it.fiatAmount?.toDouble() ?: 0.0,
@@ -568,13 +569,8 @@ class DashSpendViewModel @Inject constructor(
         }
     }
 
-    fun needsCrowdNodeWarning(dashAmount: Coin): Boolean {
-        return try {
-            walletDataProvider.checkSendingConditions(null, dashAmount)
-            false
-        } catch (_: LeftoverBalanceException) {
-            true
-        }
+    fun needsCrowdNodeWarning(dashAmount: Dash): Boolean {
+        return walletDataProvider.needsLeftoverBalanceWarning(dashAmount)
     }
 
     fun setIsFixedDenomination(isFixed: Boolean?) {
@@ -585,7 +581,7 @@ class DashSpendViewModel @Inject constructor(
         _isFixedDenominationMultiple.value = isMultiple
     }
 
-    fun setGiftCardOrderInfo(fiat: Fiat, quantity: Int) {
+    fun setGiftCardOrderInfo(fiat: FiatValue, quantity: Int) {
         _giftCardOrderInfo.value = mapOf(fiat.toBigDecimal().toDouble() to quantity)
     }
 
@@ -728,9 +724,8 @@ class DashSpendViewModel @Inject constructor(
 
     private fun updatePurchaseLimits() {
         _exchangeRate.value?.let {
-            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-            minCardPurchaseCoin = myRate.fiatToCoin(minCardPurchaseFiat)
-            maxCardPurchaseCoin = myRate.fiatToCoin(maxCardPurchaseFiat)
+            minCardPurchaseDash = it.fiatToDash(minCardPurchaseFiat)
+            maxCardPurchaseDash = it.fiatToDash(maxCardPurchaseFiat)
         }
     }
 
@@ -738,9 +733,9 @@ class DashSpendViewModel @Inject constructor(
         analytics.logError(ctxSpendException, message)
     }
 
-    fun getFirstCardValueAsFiat(): Fiat {
+    fun getFirstCardValueAsFiat(): FiatValue {
         val firstCardValue = giftCardOrderInfo.value.keys.firstOrNull() ?: 0.0
-        return Fiat.parseFiat(
+        return FiatValue.parseFiat(
             Constants.USD_CURRENCY,
             firstCardValue.toBigDecimal().setScale(2, RoundingMode.UP).toString()
         )

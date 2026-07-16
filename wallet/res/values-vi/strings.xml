@@ -348,5 +348,4 @@
 
     <string name="upgrade_pin_description">Thiết lập mã PIN mới</string>
     <string name="upgrade_pin_continue">Tiếp tục</string>
-
-    </resources>
+</resources>

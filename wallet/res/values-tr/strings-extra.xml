@@ -279,10 +279,6 @@
     <string name="about_license">GNU Genel Kamu Lisansı v3.0</string>
     <string name="about_last_explore_device_sync">Son Explore cihaz senkronizasyonu</string>
     <string name="about_last_explore_server_update">Son Explore sunucu güncellemesi</string>
-    <string name="about_explore_section">Dash\'i Keşfet</string>
-    <string name="about_last_device_sync">Son cihaz senkronizasyonu</string>
-    <string name="about_last_server_update">Son sunucu güncellemesi</string>
-    <string name="about_value_not_available">Mevcut değil</string>
     <string name="about_firebase_installation_id">Firebase kurulum kimliği</string>
     <string name="about_fcm_token">Firebase bulut mesajlaşma jetonu</string>
     <string name="about_last_explore_dash_update_error">getirilemiyor</string>

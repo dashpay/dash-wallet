@@ -13,49 +13,20 @@
     <string name="button_dismiss">Отхвърляне</string>
     <string name="button_continue">Продължи</string>
     <string name="button_close">Затвори</string>
-    <string name="button_cancel">Отказ</string>
-    <string name="button_confirm">Потвърди</string>
     <string name="button_retry">Отново</string>
     <string name="button_copy_address">Копирай адрес</string>
     <string name="button_share">Сподели</string>
-    <string name="button_skip">Пропусни</string>
     <string name="verify">Провери</string>
     <string name="receive_enter_amount_button">Посочете сума</string>
-    <string name="try_again">Опитай отново</string>
 
-    <string name="max">Макс</string>
+    <string name="max">Максимум</string>
     <string name="dash">Dash</string>
     <string name="send_coins_error_dusty_send">Тази сума е прекалено малка за да бъде изпратена.</string>
     <string name="send_coins_error_insufficient_money">Недостатъчно средства</string>
-    <string name="syncing">Синхронизиране</string>
     <string name="rate_not_available">Не е налично</string>
 
-    <!-- Send coins -->
-    <string name="payment_request_problem_title">Плащането не бе потвърдено</string>
-    <string name="payment_protocol_default_error_title">Грешка при плащане</string>
-    <string name="exchange_rate_not_found">Не може да намери обменните курсове.</string>
-    <string name="send_coins_fragment_hint_replaying">В момента плащанията не са възможни, защото портфейлът не е напълно синхронизиран с мрежата</string>
+    <string name="syncing">Синхронизиране</string>
 
     <string name="enter_amount_available">налично</string>
     <string name="transaction_row_rate_not_available">Не е налично</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Изпрати доклад използвайки…</string>
-
-    <!-- scan -->
-    <string name="scan_camera_problem_dialog_title">Съжалявам</string>
-    <string name="scan_camera_problem_dialog_message">Камерата има проблем. Може би е необходимо да рестартирате устройството.</string>
-    <string name="scan_camera_permission_dialog_title">Разрешение камера</string>
-    <string name="scan_camera_permission_dialog_message">За да сканирате QR кодове, трябва да дадете разрешение за използване на камерата.</string>
-
-    <!-- address input -->
-    <string name="address_input_title">Изпрати Dash</string>
-    <!-- input parser -->
-    <string name="input_parser_io_error">Не може да прочете информацията:\\n%s</string>
-    <string name="input_parser_cannot_classify">Не може да разпознае входа:\\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Невалиден Dash URI:\\n%s</string>
-    <string name="input_parser_invalid_address">Имате невалиден Dash адрес!\\n(смесване mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Не може да се провери заявката за плащанеt:\\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Невалидно искане за плащанеt:\\n%s</string>
-    <string name="input_parser_invalid_transaction">Невалидна транзакция:\\n%s</string>
-    <string name="insufficient_money_title">Няма достатъчно монети</string>
-    <string name="send_coins_error_msg">Проблем с изпращане на монети!</string>
-    </resources>
+</resources>

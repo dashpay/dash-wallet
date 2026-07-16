@@ -32,12 +32,12 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.MoneyFormat
+import org.dash.wallet.common.money.fiatValue
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.AuthenticationManager
-import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.isLeftoverBalanceWarning
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -72,8 +72,8 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private var loadingDialog: AdaptiveDialog? = null
     @Inject lateinit var securityFunctions: AuthenticationManager
     @Inject lateinit var confirmTransactionLauncher: ConfirmTransactionService
-    private var dashValue: Coin = Coin.ZERO
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    private var dashValue: Dash = Dash.ZERO
+    private val dashFormat = MoneyFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
     private var onBackPressedCallback: OnBackPressedCallback? = null
 
@@ -110,7 +110,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         enterAmountToTransferViewModel.localCurrencyExchangeRate.observe(viewLifecycleOwner) { rate ->
-            binding.transferView.exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
+            binding.transferView.exchangeRate = rate?.fiatValue
         }
 
         enterAmountToTransferViewModel.onContinueTransferEvent.observe(viewLifecycleOwner){
@@ -348,11 +348,15 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         enterAmountToTransferViewModel.keyboardStateCallback.value = !isSyncing
     }
 
-    private suspend fun handleSend(value: Coin, isEmptyWallet: Boolean): Boolean {
+    private suspend fun handleSend(value: Dash, isEmptyWallet: Boolean): Boolean {
         try {
             transferDashViewModel.sendDash(value, isEmptyWallet, true)
             return true
-        } catch (ex: LeftoverBalanceException) {
+        } catch (ex: Exception) {
+            if (!ex.isLeftoverBalanceWarning) {
+                throw ex
+            }
+
             val result = MinimumBalanceDialog().showAsync(requireActivity())
 
             if (result == true) {

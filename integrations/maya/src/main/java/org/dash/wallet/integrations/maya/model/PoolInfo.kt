@@ -21,9 +21,8 @@ import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
-import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.util.toFiatValue
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import java.math.BigDecimal
 
@@ -44,7 +43,7 @@ data class PoolInfo(
     @SerializedName("bondable") val bondable: Boolean = false
 ) : Parcelable {
     @IgnoredOnParcel
-    var assetPriceFiat: Fiat = Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
+    var assetPriceFiat: FiatValue = FiatValue.zero(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
 
     @IgnoredOnParcel
     val assetPriceInCacao: BigDecimal
@@ -55,10 +54,10 @@ data class PoolInfo(
             return cacaoBd.divide(assetBd, 8, java.math.RoundingMode.HALF_UP)
         }
 
-    fun setAssetPrice(cacaoToFiatRate: Fiat) {
+    fun setAssetPrice(cacaoToFiatRate: FiatValue) {
         assetPriceFiat = assetPriceInCacao
             .multiply(cacaoToFiatRate.toBigDecimal())
-            .toFiat(cacaoToFiatRate.currencyCode)
+            .toFiatValue(cacaoToFiatRate.currencyCode)
     }
 
     val currencyCode: String

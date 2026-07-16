@@ -297,14 +297,11 @@
     <string name="about_review_and_rate">Κρίνετε και βαθμολογήστε την εφαρμογή</string>
     <string name="about_contact_support">Επικοινωνήστε με την υποστήριξη</string>
     <string name="about_fork_disclaimer">Πρόκειται για μια εφαρμογή ανοιχτού κώδικα που διαχωρίστηκε από το Bitcoin πορτοφόλι</string>
+    <string name="about_copyright">Copyright © %1$d Dash Core Group</string>
     <string name="about_license">Γενική Άδεια Δημόσιας Χρήσης GNU v3.0</string>
     <string name="about_version_name">Dash Πορτοφόλι %s</string>
     <string name="about_last_explore_device_sync">Τελευταίος συγχρονισμός συσκευής εξερεύνησης</string>
     <string name="about_last_explore_server_update">Τελευταία ενημέρωση διακομιστή εξερεύνησης</string>
-    <string name="about_explore_section">Εξερευνήστε το Dash</string>
-    <string name="about_last_device_sync">Τελευταίος συγχρονισμός συσκευής</string>
-    <string name="about_last_server_update">Τελευταία ενημέρωση διακομιστή</string>
-    <string name="about_value_not_available">Μη διαθέσιμο</string>
     <string name="about_firebase_installation_id">ID εγκατάστασης Firebase</string>
     <string name="about_fcm_token">Firebase cloud messaging token</string>
     <string name="about_last_explore_dash_update_error">δεν μπορεί να λάβει</string>

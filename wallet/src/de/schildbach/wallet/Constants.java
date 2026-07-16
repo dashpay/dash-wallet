@@ -121,7 +121,10 @@ public final class Constants {
                 if (SUPPORTS_PLATFORM) {
                     SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 }
-                org.dash.wallet.common.util.Constants.FAUCET_URL = "http://faucet.testnet.networks.dash.org/";
+                // Same faucet the iOS example app uses (it replaced
+                // faucet.testnet.networks.dash.org, which no longer accepts
+                // connections and whose captcha challenge fails).
+                org.dash.wallet.common.util.Constants.FAUCET_URL = "https://faucet.thepasta.org/";
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v4-testnet.db");
                 break;
             }
@@ -315,6 +318,14 @@ public final class Constants {
     public static final Coin DASH_PAY_FEE_CONTESTED = Coin.parseCoin("0.25");
     public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.20");
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
+
+    // How much the user should SHIELD (L1 -> pool) to afford a username via
+    // the shielded path. The pool must hold the whole exit denomination
+    // (0.1 non-contested / 0.3 contested), and the Shield operation's fee
+    // is deducted from the locked amount — so shielding the bare
+    // denomination lands just short. Padded guidance per Brian (2026-07-12).
+    public static final Coin SHIELDED_USERNAME_FUND_MIN = Coin.parseCoin("0.15");
+    public static final Coin SHIELDED_USERNAME_FUND_MIN_CONTESTED = Coin.parseCoin("0.35");
 
     // 150,000,000
     public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);

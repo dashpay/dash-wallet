@@ -28,11 +28,13 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.MoneyFormat
+import org.dash.wallet.common.money.dashToFiat
+import org.dash.wallet.common.money.moneyFormat
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -43,8 +45,8 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 data class CoinbaseServicesUIState(
-    val balance: Coin = Coin.ZERO,
-    val balanceFiat: Fiat? = null,
+    val balance: Dash = Dash.ZERO,
+    val balanceFiat: FiatValue? = null,
     val isBalanceUpdating: Boolean = false,
     val isLoggedIn: Boolean = true,
     val error: CoinbaseErrorType = CoinbaseErrorType.NONE
@@ -69,22 +71,19 @@ class CoinbaseServicesViewModel @Inject constructor(
     )
     val uiState: StateFlow<CoinbaseServicesUIState> = _uiState.asStateFlow()
 
-    val balanceFormat: MonetaryFormat
-        get() = preferences.format.noCode()
+    val balanceFormat: MoneyFormat
+        get() = preferences.moneyFormat.noCode()
 
     init {
         config.observe(CoinbaseConfig.LAST_BALANCE)
-            .map { uiState.value.copy(balance = Coin.valueOf(it ?: 0)) }
+            .map { uiState.value.copy(balance = Dash.valueOf(it ?: 0)) }
             .filterNotNull()
             .flatMapLatest { state ->
                 walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
                     .filterNotNull()
                     .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
                     .map { exchangeRate ->
-                        val fiatBalance = exchangeRate?.let {
-                            val rate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRate.fiat)
-                            rate.coinToFiat(state.balance)
-                        }
+                        val fiatBalance = exchangeRate?.dashToFiat(state.balance)
                         state.copy(balanceFiat = fiatBalance)
                     }
             }.onEach { state -> _uiState.value = state }
@@ -101,7 +100,7 @@ class CoinbaseServicesViewModel @Inject constructor(
                 val response = coinBaseRepository.getUserAccount()
                 config.set(
                     CoinbaseConfig.LAST_BALANCE,
-                    response.coinBalance().value
+                    response.coinBalance().duffs
                 )
             } catch (ex: IllegalStateException) {
                 _uiState.value = _uiState.value.copy(error = CoinbaseErrorType.USER_ACCOUNT_ERROR)

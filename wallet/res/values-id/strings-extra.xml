@@ -69,11 +69,6 @@
 
     <string name="pay_title">Kirim</string>
     <string name="history_title">Riwayat</string>
-    <string name="wallet_transactions_building_cache">Menentukan riwayat transaksi…</string>
-    <string name="history_refresh_dialog_title">Perbarui Daftar Transaksi</string>
-    <string name="history_refresh_dialog_message">Ini akan menghapus cache tampilan transaksi dan membangunnya kembali dari awal. Daftar tersebut akan tidak tersedia untuk sementara waktu selama proses pembangunan kembali.</string>
-    <string name="history_refresh_dialog_confirm">Segarkan</string>
-    <string name="history_refresh_complete">Daftar Transaksi disegarkan</string>
     <string name="more_title">Lebih</string>
     <string name="settings_title">Pengaturan</string>
     <string name="security_title">Keamanan</string>
@@ -294,14 +289,11 @@
     <string name="about_review_and_rate">Tinjau dan beri peringkat aplikasi</string>
     <string name="about_contact_support">Hubungi Dukungan</string>
     <string name="about_fork_disclaimer">Ini adalah aplikasi open source yang bercabang dari Bitcoin Wallet</string>
+    <string name="about_copyright">Hak Cipta © %1$d Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dompet DashPay %s</string>
     <string name="about_last_explore_device_sync">Sinkronisasi perangkat Explore Terakhir</string>
     <string name="about_last_explore_server_update">Pembaruan server Explore terakhir</string>
-    <string name="about_explore_section">Jelajahi Dash</string>
-    <string name="about_last_device_sync">Sinkronisasi perangkat terakhir</string>
-    <string name="about_last_server_update">Pembaruan server terakhir</string>
-    <string name="about_value_not_available">Tak tersedia</string>
     <string name="about_firebase_installation_id">ID penginstalan Firebase</string>
     <string name="about_fcm_token">Token perpesanan cloud Firebase</string>
     <string name="about_last_explore_dash_update_error">tidak bisa mengambil</string>

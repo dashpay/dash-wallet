@@ -412,8 +412,6 @@
     <string name="reason">理由</string>
     <string name="link_account">お客様のアカウントをリンク</string>
     <string name="buy_no_account_needed">Dashを購入 · アカウント不要</string>
-    <string name="convert_no_account_needed">Dashをスワップ · アカウント不要</string>
-
     <string name="recipient_address">受取人のアドレス</string>
     <string name="not_dash_address">無効なDashアドレスやURLリクエスト</string>
     <string name="send_to_address">アドレスに送金する</string>
@@ -441,5 +439,4 @@
     <string name="upgrade_pin_title">PINコードのアップグレードが必要です</string>
     <string name="upgrade_pin_description">新しいPINを設定する</string>
     <string name="upgrade_pin_continue">続ける</string>
-
-    </resources>
+</resources>

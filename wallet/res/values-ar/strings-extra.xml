@@ -282,8 +282,6 @@
     <string name="about_license">رخصة GNUالعمومية العامة الإصدار 3.0</string>
     <string name="about_last_explore_device_sync">آخر استكشاف مزامنة الجهاز</string>
     <string name="about_last_explore_server_update">آخر تحديث لاستكشاف الخادم</string>
-    <string name="about_explore_section">اكتشف داش</string>
-    <string name="about_value_not_available">غير متاح</string>
     <string name="about_firebase_installation_id">معرّف تثبيت Firebase</string>
     <string name="about_fcm_token">رمز Firebase للرسائل السحابية</string>
     <string name="about_last_explore_dash_update_error">لا يمكن جلبه</string>

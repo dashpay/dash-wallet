@@ -47,7 +47,23 @@ interface WalletDataProvider {
     fun freshReceiveAddress(): Address
     fun currentReceiveAddress(): Address
 
+    // Neutral (dashj-free) accessors for feature/integration modules.
+    // Default implementations delegate to the dashj-typed methods above.
+    val networkId: String
+        get() = networkParameters.id
+    fun freshReceiveAddressString(): String = freshReceiveAddress().toBase58()
+    fun currentReceiveAddressString(): String = currentReceiveAddress().toBase58()
+
     fun getWalletBalance(): Coin
+
+    /**
+     * Number of spendable unspent outputs coin selection can draw on —
+     * `calculateAllSpendCandidates(false, false)`, the exact output set
+     * `getBalance(ESTIMATED)` sums (all keychains) — or 0 while no wallet
+     * is loaded.
+     */
+    @Suppress("DEPRECATION")
+    fun spendableUtxoCount(): Int = wallet?.calculateAllSpendCandidates(false, false)?.size ?: 0
 
     fun observeWalletChanged(): Flow<Unit>
 

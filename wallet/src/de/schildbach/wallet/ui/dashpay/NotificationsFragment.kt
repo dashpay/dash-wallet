@@ -16,6 +16,7 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.view.View
@@ -34,8 +35,8 @@ import de.schildbach.wallet.data.NotificationItemPayment
 import de.schildbach.wallet.data.NotificationItemUserAlert
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.notification.NotificationsViewModel
-import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentNotificationsBinding
@@ -129,15 +130,6 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
         if (mode == MODE_NOTIFICATIONS) {
             dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.NOTIFICATIONS_HOME_SCREEN)
         }
-
-        requireActivity().supportFragmentManager.setFragmentResultListener(
-            DashPayUserBottomSheet.REQUEST_KEY,
-            viewLifecycleOwner
-        ) { _, bundle ->
-            if (bundle.getBoolean(DashPayUserBottomSheet.KEY_CHANGED, false)) {
-                searchNotifications()
-            }
-        }
     }
 
     private fun initViewModel() {
@@ -155,6 +147,12 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
         }
         dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner) {
             notificationsAdapter.sendContactRequestWorkStateMap = it
+            // A failed accept must never be a silent no-op — the row only
+            // reverts to its pending state — so surface newly-failed
+            // operations started from this screen.
+            if (dashPayViewModel.consumeNewSendContactRequestErrors(it).isNotEmpty()) {
+                showSendContactRequestError()
+            }
         }
         dashPayViewModel.recentlyModifiedContactsLiveData.observe(viewLifecycleOwner) {
             notificationsAdapter.recentlyModifiedContacts = it
@@ -236,7 +234,7 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
             is NotificationItemContact -> {
                 dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.NOTIFICATIONS_CONTACT_DETAILS)
                 val usernameSearchResult = notificationItem.usernameSearchResult
-                DashPayUserBottomSheet.newInstance(usernameSearchResult).show(requireActivity())
+                startActivityForResult(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult), DashPayUserActivity.REQUEST_CODE_DEFAULT)
             }
             is NotificationItemPayment -> {
                 val tx = notificationItem.tx!!
@@ -268,6 +266,18 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
 
     private fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         // this Ignore Request function is not currently implemented
+    }
+
+    private fun showSendContactRequestError() {
+        // Every contact-request action on the notifications screen is an
+        // ACCEPT (onAcceptRequest → sendContactRequest), so use the accept
+        // wording.
+        AdaptiveDialog.create(
+            R.drawable.ic_warning_yellow_circle,
+            getString(R.string.accept_contact_request_error_title),
+            getString(R.string.accept_contact_request_error_message),
+            getString(R.string.button_ok)
+        ).show(requireActivity())
     }
 
     private fun sendContactRequest(usernameSearchResult: UsernameSearchResult) {
@@ -303,6 +313,13 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
                     dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
                 }
             }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
+            searchNotifications()
         }
     }
 

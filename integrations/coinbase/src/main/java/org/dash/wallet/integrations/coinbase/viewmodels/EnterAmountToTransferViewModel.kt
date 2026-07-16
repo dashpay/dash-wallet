@@ -21,22 +21,21 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.getDashBalance
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.*
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.model.CoinbaseToDashExchangeRateUIModel
 import java.math.BigDecimal
@@ -57,18 +56,18 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
     var coinbaseExchangeRate: CoinbaseToDashExchangeRateUIModel? = null
     private var maxAmountInDashWalletFormatted: String = CoinbaseConstants.VALUE_ZERO
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    private val dashFormat = MoneyFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
     val decimalSeparator =
         DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
-    private val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode()
+    private val format = Constants.SEND_PAYMENT_LOCAL_MONEY_FORMAT.noCode()
 
-    var fiatAmount: Fiat? = null
+    var fiatAmount: FiatValue? = null
     var fiatBalance: String = ""
     var inputValue: String = CoinbaseConstants.VALUE_ZERO
     var isMaxAmountSelected: Boolean = false
     var formattedValue: String = ""
-    val onContinueTransferEvent = SingleLiveEvent<Pair<Fiat, Coin>>()
+    val onContinueTransferEvent = SingleLiveEvent<Pair<FiatValue, Dash>>()
     var isFiatSelected: Boolean = false
         set(value) {
             if (field != value) {
@@ -80,8 +79,8 @@ class EnterAmountToTransferViewModel @Inject constructor(
     val transferDirectionState: LiveData<Boolean>
         get() = _isTransferFromWalletToCoinbase.asLiveData()
 
-    private val _dashBalanceInWallet = MutableStateFlow(walletDataProvider.getWalletBalance())
-    val dashBalanceInWalletState: StateFlow<Coin>
+    private val _dashBalanceInWallet = MutableStateFlow(walletDataProvider.getDashBalance())
+    val dashBalanceInWalletState: StateFlow<Dash>
         get() = _dashBalanceInWallet
 
     var localCurrencyCode: String = Constants.USD_CURRENCY
@@ -91,8 +90,8 @@ class EnterAmountToTransferViewModel @Inject constructor(
     val localCurrencyExchangeRate: LiveData<ExchangeRate?>
         get() = _localCurrencyExchangeRate
 
-    private val _enteredConvertDashAmount = MutableLiveData<Pair<Fiat, Coin>>()
-    val enteredConvertDashAmount: LiveData<Pair<Fiat, Coin>>
+    private val _enteredConvertDashAmount = MutableLiveData<Pair<FiatValue, Dash>>()
+    val enteredConvertDashAmount: LiveData<Pair<FiatValue, Dash>>
         get() = _enteredConvertDashAmount
 
     private val _isBlockchainSynced = MutableLiveData<Boolean>()
@@ -144,11 +143,11 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
         return if (localCurrencyCode == monetaryCode) {
             val cleanedValue = GenericUtils.formatFiatWithoutComma(inputValue)
-            fiatAmount = Fiat.parseFiat(localCurrencyCode, cleanedValue)
+            fiatAmount = FiatValue.parseFiat(localCurrencyCode, cleanedValue)
             val localCurrencySymbol = GenericUtils.getLocalCurrencySymbol(localCurrencyCode)
 
             fiatBalance = if (isFraction && lengthOfDecimalPart > 2) {
-                format.format(fiatAmount).toString()
+                format.format(fiatAmount!!).toString()
             } else {
                 inputValue
             }
@@ -234,16 +233,16 @@ class EnterAmountToTransferViewModel @Inject constructor(
         } ?: CoinbaseConstants.VALUE_ZERO
     }
 
-    fun applyExchangeRateToFiat(fiatValue: Fiat): Coin {
+    fun applyExchangeRateToFiat(fiatValue: FiatValue): Dash {
         return coinbaseExchangeRate?.let {
             val cleanedValue = fiatValue.toBigDecimal() * it.currencyToDashExchangeRate
             val plainValue = cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
             try {
-                Coin.parseCoin(plainValue)
+                Dash.parse(plainValue)
             } catch (x: Exception) {
-                Coin.ZERO
+                Dash.ZERO
             }
-        } ?: Coin.ZERO
+        } ?: Dash.ZERO
     }
 
     private val applyCoinbaseExchangeRateToFiat: String
@@ -259,11 +258,11 @@ class EnterAmountToTransferViewModel @Inject constructor(
             }
         }
 
-    private val amountInDash: Coin
+    private val amountInDash: Dash
         get() {
             val scaledValue = scaleValue(inputValue)
             return if (scaledValue.isEmpty()) {
-                Coin.ZERO
+                Dash.ZERO
             } else {
                 toCoin(scaledValue)
             }
@@ -294,21 +293,21 @@ class EnterAmountToTransferViewModel @Inject constructor(
             }
             val formatDash = dashFormat.format(dashAmt).toString()
             val rateApplied = applyCoinbaseExchangeRate(formatDash)
-            val fiatAmt = Fiat.parseFiat(localCurrencyCode, rateApplied)
+            val fiatAmt = FiatValue.parseFiat(localCurrencyCode, rateApplied)
 
             _enteredConvertDashAmount.value = Pair(fiatAmt, dashAmt)
         } else {
             _enteredConvertDashAmount.value =
-                Pair(Fiat.parseFiat(localCurrencyCode, CoinbaseConstants.VALUE_ZERO), Coin.ZERO)
+                Pair(FiatValue.parseFiat(localCurrencyCode, CoinbaseConstants.VALUE_ZERO), Dash.ZERO)
         }
     }
 
     fun getCoinbaseBalanceInFiatFormat(dashAmt: String): String = getFiat(dashAmt).toFormattedString()
 
-    fun getExchangeRate(): org.bitcoinj.utils.ExchangeRate? {
+    fun getExchangeRate(): ExchangeRate? {
         return coinbaseExchangeRate?.let {
             val rate = BigDecimal.ONE.divide(it.currencyToDashExchangeRate, 10, RoundingMode.HALF_UP)
-            org.bitcoinj.utils.ExchangeRate(rate.toFiat(localCurrencyCode))
+            ExchangeRate(localCurrencyCode, rate.toString())
         }
     }
 
@@ -319,18 +318,18 @@ class EnterAmountToTransferViewModel @Inject constructor(
         } ?: ""
     }
 
-    private fun toCoin(inputVal: String) : Coin {
+    private fun toCoin(inputVal: String) : Dash {
         val formattedValue = GenericUtils.formatFiatWithoutComma(inputVal)
         return try {
-            Coin.parseCoin(formattedValue)
+            Dash.parse(formattedValue)
         } catch (x: Exception) {
-            Coin.ZERO
+            Dash.ZERO
         }
     }
 
-    private fun getFiat(dashValue: String): Fiat {
+    private fun getFiat(dashValue: String): FiatValue {
         val rateApplied = applyCoinbaseExchangeRate(dashValue)
         val formattedValue = GenericUtils.formatFiatWithoutComma(rateApplied)
-        return Fiat.parseFiat(localCurrencyCode, formattedValue)
+        return FiatValue.parseFiat(localCurrencyCode, formattedValue)
     }
 }

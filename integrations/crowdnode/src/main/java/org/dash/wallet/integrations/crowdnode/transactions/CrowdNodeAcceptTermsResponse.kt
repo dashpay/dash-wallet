@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.crowdnode.transactions
 
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.transactions.filters.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
@@ -30,6 +31,6 @@ class CrowdNodeAcceptTermsResponse(networkParams: NetworkParameters) : CoinsFrom
 ) {
     companion object {
         val ACCEPT_TERMS_RESPONSE_CODE: Coin =
-            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.PleaseAcceptTerms.code)
+            CrowdNodeConstants.API_OFFSET.toCoin() + Coin.valueOf(ApiCode.PleaseAcceptTerms.code)
     }
 }

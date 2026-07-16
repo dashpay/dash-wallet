@@ -19,7 +19,6 @@ package de.schildbach.wallet.database
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
-import androidx.room.migration.AutoMigrationSpec
 import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -74,8 +73,7 @@ open class DatabaseMigrationTest {
     @JvmField
     val testHelper: MigrationTestHelper = MigrationTestHelper(
         InstrumentationRegistry.getInstrumentation(),
-        AppDatabase::class.java,
-        emptyList<AutoMigrationSpec>(),
+        AppDatabase::class.java.canonicalName,
         FrameworkSQLiteOpenHelperFactory()
     )
 

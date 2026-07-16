@@ -17,7 +17,9 @@
 package org.dash.wallet.common.services
 
 import androidx.fragment.app.FragmentActivity
+import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.data.entity.ExchangeRate as ExchangeRateEntity
 
 interface ConfirmTransactionService {
     suspend fun showTransactionDetailsPreview(
@@ -31,4 +33,30 @@ interface ConfirmTransactionService {
         payeeVerifiedBy: String? = null,
         buttonText: String? = null
     ): Boolean
+
+    /**
+     * Neutral counterpart of [showTransactionDetailsPreview] taking the app's
+     * [ExchangeRateEntity] instead of a dashj rate, for modules that don't depend on dashj.
+     */
+    suspend fun showTransactionDetailsPreview(
+        activity: FragmentActivity,
+        address: String,
+        amount: String,
+        exchangeRate: ExchangeRateEntity?,
+        fee: String,
+        total: String,
+        payeeName: String? = null,
+        payeeVerifiedBy: String? = null,
+        buttonText: String? = null
+    ): Boolean = showTransactionDetailsPreview(
+        activity,
+        address,
+        amount,
+        exchangeRate?.let { ExchangeRate(Coin.COIN, it.fiat) },
+        fee,
+        total,
+        payeeName,
+        payeeVerifiedBy,
+        buttonText
+    )
 }

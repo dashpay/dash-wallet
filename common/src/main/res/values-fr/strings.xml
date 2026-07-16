@@ -148,5 +148,4 @@
     <string name="send_coins_error_msg">Problème durant l\'envoi  des fonds !</string>
     <string name="from_dash_wallet_on_this_device">Depuis le portefeuille Dash sur cet appareil</string>
     <string name="preposition_at">à</string>
-    <string name="info">Info</string>
 </resources>

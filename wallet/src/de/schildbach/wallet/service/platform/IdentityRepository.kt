@@ -17,6 +17,8 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
+import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TIMESPAN
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TOP_CONTACT_COUNT
@@ -66,6 +68,35 @@ import java.util.HashMap
 import java.util.HashSet
 import java.util.NoSuchElementException
 import javax.inject.Inject
+
+/**
+ * No-resurrection guard for the persisted blockchain identity.
+ *
+ * Observed live: "Reset Wallet" does not restart the process, and a platform
+ * sync iteration that loaded a fully-populated [BlockchainIdentityData]
+ * BEFORE the reset can re-persist it AFTER [BlockchainIdentityConfig.clear]
+ * ran (e.g. the fire-and-forget persists in PlatformSynchronizationService's
+ * checkVotingStatus / the DONE_AND_DISMISS transition in
+ * updateContactRequests). That resurrects the previous wallet's identity —
+ * username, CONFIRMED/DONE_AND_DISMISS state — onto a brand-new wallet and
+ * re-enables the whole DashPay UI.
+ *
+ * A cleared store has no CREATION_STATE (or NONE). No legitimate flow writes
+ * a DONE/DONE_AND_DISMISS identity over a cleared store in a single step:
+ * creation, restore (RestoreIdentityWorker) and invite flows all march the
+ * persisted creationState through intermediate states first. So "store says
+ * NONE/absent, incoming object says DONE" can only be a stale pre-reset
+ * object and must never be written.
+ */
+internal fun isResurrectingClearedIdentity(
+    persistedCreationState: String?,
+    incomingState: IdentityCreationState
+): Boolean {
+    if (incomingState < IdentityCreationState.DONE) {
+        return false
+    }
+    return persistedCreationState == null || persistedCreationState == IdentityCreationState.NONE.name
+}
 
 interface IdentityRepository {
     val blockchainIdentity: BlockchainIdentity?
@@ -117,6 +148,8 @@ class IdentityRepositoryImpl @Inject constructor(
     private val platformRepo: PlatformRepo,
     private val dashPayConfig: DashPayConfig,
     private val dashSystemService: DashSystemService,
+    private val sdkUsernameQueries: SdkUsernameQueries,
+    private val sdkProfileQueries: SdkProfileQueries,
 ) : IdentityRepository {
     companion object {
         private val log = LoggerFactory.getLogger(IdentityRepository::class.java)
@@ -326,6 +359,23 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
+        // Defense in depth against a wallet reset racing the platform sync
+        // loop: re-read the persisted creationState immediately before
+        // persisting and refuse to write a completed (>= DONE) identity over
+        // a cleared store — see [isResurrectingClearedIdentity].
+        if (blockchainIdentityData.creationState >= IdentityCreationState.DONE) {
+            val persistedState = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.CREATION_STATE)
+            if (isResurrectingClearedIdentity(persistedState, blockchainIdentityData.creationState)) {
+                log.warn(
+                    "refusing to persist {} identity ({}) over a cleared store (persisted creationState={}) — " +
+                        "stale object surviving a wallet reset",
+                    blockchainIdentityData.creationState,
+                    blockchainIdentityData.username,
+                    persistedState
+                )
+                return
+            }
+        }
         blockchainIdentityDataStorage.insert(blockchainIdentityData)
     }
 
@@ -439,16 +489,23 @@ class IdentityRepositoryImpl @Inject constructor(
             //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
             // Sometimes when onlyExactUsername = true, an exception is thrown here and that results in a crash
             // it is not clear why a search for an existing username results in a failure to find it again.
-            val nameDocuments = if (!onlyExactUsername) {
-                platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
-            } else {
-                val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
-                if (nameDocument != null) {
-                    listOf(nameDocument)
+            // Phase 3c (docs/kotlin-sdk-migration-plan.md): name-document
+            // retrieval via the Kotlin SDK behind USE_KOTLIN_SDK_DPNS_READS
+            // (default off). Null means "flag off or SDK path failed" —
+            // fall through to the unchanged dashj-platform queries. The rest
+            // of this pipeline (profiles, contacts, contested filtering) is
+            // dashj either way.
+            val nameDocuments = sdkUsernameQueries.searchDomainDocumentsOrNull(text, onlyExactUsername, limit)
+                ?: if (!onlyExactUsername) {
+                    platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
                 } else {
-                    listOf()
+                    val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
+                    if (nameDocument != null) {
+                        listOf(nameDocument)
+                    } else {
+                        listOf()
+                    }
                 }
-            }
             // determine if multiple names belong to the same identity. If so, don't show any non-contested names
             val identifierDocumentMap = hashMapOf<Identifier, ArrayList<DomainDocument>>()
             nameDocuments.forEach { document ->
@@ -478,7 +535,12 @@ class IdentityRepositoryImpl @Inject constructor(
             }.toSet().toList()
 
             val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
-                val profileDocuments = platform.profiles.getList(userIds)
+                // Phase 3d (docs/kotlin-sdk-migration-plan.md): profile
+                // retrieval via the Kotlin SDK behind USE_KOTLIN_SDK_DPNS_READS
+                // (default off). Null means "flag off or SDK path failed" —
+                // fall through to the unchanged dashj-platform query.
+                val profileDocuments = sdkProfileQueries.getProfileDocumentsOrNull(userIds)
+                    ?: platform.profiles.getList(userIds)
                 profileDocuments.associateBy({ it.ownerId }, { it })
             } else {
                 log.warn("search usernames: userIdList is empty, though nameDocuments has ${nameDocuments.size} items")

@@ -21,6 +21,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CreditBalanceInfo
@@ -34,6 +35,7 @@ import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
@@ -233,6 +235,24 @@ open class DashPayViewModel @Inject constructor(
 
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
 
+    /** The failures already surfaced to the user — see [consumeNewSendContactRequestErrors]. */
+    private val surfacedContactRequestErrors = hashSetOf<String>()
+
+    /**
+     * The toUserIds in [stateMap] whose send/accept contact request — started
+     * from this screen via [sendContactRequest] — has newly FAILED. Each
+     * failure is returned exactly once, so the caller can surface it (dialog)
+     * without re-showing on every re-emission of the WorkManager state map.
+     * Failures of operations not started from this screen (WorkManager keeps
+     * FAILED work around, including from previous sessions) are ignored.
+     */
+    fun consumeNewSendContactRequestErrors(stateMap: Map<String, Resource<WorkInfo>>): List<String> =
+        newSendContactRequestErrors(
+            stateMap,
+            recentlyModifiedContactsLiveData.value ?: emptySet(),
+            surfacedContactRequestErrors
+        )
+
     fun sendContactRequest(toUserId: String) {
         var recentlyModifiedContacts = recentlyModifiedContactsLiveData.value
         if (recentlyModifiedContacts == null) {
@@ -327,5 +347,36 @@ open class DashPayViewModel @Inject constructor(
 
     suspend fun hasEnoughCredits(): CreditBalanceInfo? {
         return identityRepository.getIdentityBalance()
+    }
+}
+
+/**
+ * The newly-surfaceable failures in a send/accept contact request work-state
+ * map ([SendContactRequestOperation.allOperationsStatus]).
+ *
+ * A failed accept/send must never be a silent no-op, but the raw map cannot
+ * be surfaced blindly: WorkManager retains FAILED work (including from
+ * previous app sessions), and the map is re-emitted on every work-state
+ * change. So a failure surfaces only when the operation was started by the
+ * user on this screen ([startedByUser] — the recently-modified contact set)
+ * and hasn't been surfaced yet ([alreadySurfaced], mutated here; the latch
+ * clears when the operation runs again, so a retry's failure surfaces anew).
+ *
+ * Top-level pure(ish) function so the decision is host-JVM unit-testable.
+ */
+internal fun <T> newSendContactRequestErrors(
+    stateMap: Map<String, Resource<T>>,
+    startedByUser: Set<String>,
+    alreadySurfaced: MutableSet<String>
+): List<String> = stateMap.mapNotNull { (toUserId, state) ->
+    when {
+        state.status != Status.ERROR -> {
+            // The operation is running again (retry) — re-arm its latch.
+            if (state.status == Status.LOADING) alreadySurfaced.remove(toUserId)
+            null
+        }
+        toUserId !in startedByUser -> null
+        !alreadySurfaced.add(toUserId) -> null
+        else -> toUserId
     }
 }

@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
@@ -54,7 +55,7 @@ fun SettingsScreen(
     onBatteryOptimizationClick: () -> Unit = {}
 ) {
     val viewModel: SettingsViewModel = hiltViewModel()
-    
+
     SettingsScreen(
         uiStateFlow = viewModel.uiState,
         onBackClick = onBackClick,
@@ -63,7 +64,10 @@ fun SettingsScreen(
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
-        onBatteryOptimizationClick = onBatteryOptimizationClick
+        onBatteryOptimizationClick = onBatteryOptimizationClick,
+        onUseKotlinSdkL1SendChanged = viewModel::setUseKotlinSdkL1Send,
+        onRunSdkSoakSend = viewModel::runSdkSoakSend,
+        onRunTxMetadataDecryptProof = viewModel::runTxMetadataDecryptProof
     )
 }
 
@@ -76,10 +80,13 @@ fun SettingsScreen(
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {},
+    onUseKotlinSdkL1SendChanged: (Boolean) -> Unit = {},
+    onRunSdkSoakSend: () -> Unit = {},
+    onRunTxMetadataDecryptProof: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
-    
+
     SettingsScreenContent(
         uiState = uiState,
         onBackClick = onBackClick,
@@ -88,7 +95,10 @@ fun SettingsScreen(
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
-        onBatteryOptimizationClick = onBatteryOptimizationClick
+        onBatteryOptimizationClick = onBatteryOptimizationClick,
+        onUseKotlinSdkL1SendChanged = onUseKotlinSdkL1SendChanged,
+        onRunSdkSoakSend = onRunSdkSoakSend,
+        onRunTxMetadataDecryptProof = onRunTxMetadataDecryptProof
     )
 }
 
@@ -101,7 +111,10 @@ private fun SettingsScreenContent(
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {},
+    onUseKotlinSdkL1SendChanged: (Boolean) -> Unit = {},
+    onRunSdkSoakSend: () -> Unit = {},
+    onRunTxMetadataDecryptProof: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -181,6 +194,54 @@ private fun SettingsScreenContent(
                     icon = R.drawable.ic_battery,
                     action = onBatteryOptimizationClick
                 )
+
+                // Debug-only Phase 5b soak switch: routes real L1 sends
+                // through the Kotlin SDK (DashPayConfig.USE_KOTLIN_SDK_L1_SEND
+                // — deliberately never debug-seeded, opt-in only).
+                // BuildConfig.DEBUG is a compile-time constant, so this block
+                // does not exist in release builds; strings are deliberately
+                // hardcoded (never shipped, never translated).
+                if (BuildConfig.DEBUG) {
+                    MenuItem(
+                        title = "Use Kotlin SDK for L1 sends",
+                        subtitle = "Debug only: routes real sends through the new SDK engine " +
+                            "instead of dashj. Leave off unless soak-testing Phase 5b.",
+                        // Live send-gate state (polled ~2s while visible):
+                        // whether a send right now would take the SDK engine
+                        // or fall back to dashj — and why.
+                        subtitle2 = uiState.sdkSendGateStatus,
+                        checked = uiState.useKotlinSdkL1Send,
+                        onCheckedChange = onUseKotlinSdkL1SendChanged
+                    )
+
+                    // One-tap Phase 5b soak send through the routed path
+                    // (SendCoinsTaskRunner's NEUTRAL overload): with the
+                    // toggle above ON it exercises the SDK engine end to
+                    // end, OFF it is a dashj control send. The outcome
+                    // lands inline in the subtitle; re-taps are ignored
+                    // while a send is in flight.
+                    MenuItem(
+                        title = "Run SDK soak send (0.05 to self)",
+                        subtitle = uiState.soakSendStatus
+                            ?: "Debug only: sends 0.05 Dash to a fresh own address via the " +
+                                "routed (neutral) send path. Real coins, real fees.",
+                        action = { if (!uiState.soakSendInFlight) onRunSdkSoakSend() }
+                    )
+
+                    // Wire-compat decrypt proof (dashpay/platform#4091):
+                    // fetches this identity's LEGACY-written encrypted
+                    // txMetadata documents through the new SDK and checks
+                    // they decrypt + parse. Read-only — never creates
+                    // documents. The verdict lands inline in the subtitle
+                    // (full trail: adb logcat -s TxMetaDecryptProof).
+                    MenuItem(
+                        title = "Verify legacy TxMetadata decrypt",
+                        subtitle = uiState.txMetadataProofStatus
+                            ?: "Debug only: proves the SDK decrypts the legacy encrypted " +
+                                "txMetadata documents (read-only, no writes).",
+                        action = { if (!uiState.txMetadataProofInFlight) onRunTxMetadataDecryptProof() }
+                    )
+                }
             }
         }
     }

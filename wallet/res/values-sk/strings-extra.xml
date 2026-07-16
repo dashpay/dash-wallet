@@ -303,14 +303,11 @@
     <string name="about_review_and_rate">Pridať recenziu alebo ohodnotiť applikáciu</string>
     <string name="about_contact_support">Kontaktovať podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
+    <string name="about_copyright">Autorské práva © %1$d Dash Core Group</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
     <string name="about_version_name">Peňaženka DashPay %s</string>
     <string name="about_last_explore_device_sync">Posledná synchronizácia preskúmania zariadenia</string>
     <string name="about_last_explore_server_update">Posledná synchronizácia preskúmania servera</string>
-    <string name="about_explore_section">Objavte Dash</string>
-    <string name="about_last_device_sync">Posledná synchronizácia zariadenia</string>
-    <string name="about_last_server_update">Posledná synchronizácia servera</string>
-    <string name="about_value_not_available">Nie je k dispozícií</string>
     <string name="about_firebase_installation_id">ID inštalácie Firebase</string>
     <string name="about_fcm_token">Token cloudových správ Firebase</string>
     <string name="about_last_explore_dash_update_error">nedá sa načítať</string>

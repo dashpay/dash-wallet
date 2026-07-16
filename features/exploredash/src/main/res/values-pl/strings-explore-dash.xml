@@ -213,7 +213,6 @@
     <string name="purchase_gift_card_details">Szczegóły karty podarunkowej</string>
     <string name="purchase_original_purchase">Pierwszy zakup</string>
     <string name="purchase_check_current_balance">Zobacz szczegóły karty</string>
-    <string name="purchase_redeem_url_challange">Wyzwanie</string>
     <string name="purchase_card_number">Numer Karty</string>
     <string name="purchase_card_pin">PIN Karty</string>
     <string name="purchase_view_transaction">Zobacz Szczegóły Transakcji</string>

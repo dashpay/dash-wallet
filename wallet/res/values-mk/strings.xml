@@ -7,6 +7,7 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d денови заостанува</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d недели заостанува</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d месеци заостанува</string>
+    <string name="blockchain_state_progress_downloading">Се синхронизира со мрежата (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Синхронизацијата застана</string>
     <string name="blockchain_state_progress_problem_storage">Се синхронизира: Проблем со простор за складирање</string>
     <string name="blockchain_state_progress_problem_network">Се синхронизира: Проблем со мрежата</string>
@@ -91,6 +92,12 @@
     <string name="import_export_keys_dialog_show">Прикажи лозинка</string>
     <string name="import_export_keys_dialog_failure_title">Грешка</string>
     <string name="import_keys_intent_filter_action">Поврати Биткоин клуч</string>
+    <string name="scan_camera_problem_dialog_title">Извини</string>
+    <string name="scan_camera_problem_dialog_message">Камерата јавува проблем. Најверојатно треба да го рестартираш уредот.</string>
+    <string name="input_parser_cannot_classify">Не може да се класифицира внесот:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Невалидно Биткоин URI:\n%s</string>
+    <string name="input_parser_invalid_address">Невалидна биткоин адреса!\n(Згреши со Mainnet/Testnet?)</string>
+    <string name="input_parser_invalid_transaction">Невалидна трансакција:\n%s</string>
     <string name="preferences_activity_title">Поставувања</string>
     <string name="preferences_category_diagnostics">Дијагностицирање</string>
     <string name="preferences_category_labs">Лабораторија</string>
@@ -114,6 +121,7 @@
     <string name="report_issue_dialog_collect_installed_packages">Прикачи листа со инсталирани пакети</string>
     <string name="report_issue_dialog_collect_application_log">Додај го дневникот на апликацијата</string>
     <string name="report_issue_dialog_collect_wallet_dump">Додај го отпадот на паричникот</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Испрати извештај со…</string>
     <string name="about_title">За апликацијата</string>
     <string name="about_license_title">Лиценца</string>
     <string name="about_credits_icon_title">Оваа апликација користи икона од \'bitboy\'</string>

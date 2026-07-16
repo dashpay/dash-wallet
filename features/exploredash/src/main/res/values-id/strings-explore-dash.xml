@@ -46,8 +46,6 @@
     <string name="explore_no_atms">Tidak ada ATM</string>
     <string name="distance_miles">%smil</string>
     <string name="distance_kilometers">%s kilometer</string>
-    <string name="explore_fee">Biaya %s%%</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="other">%dtoko</item>
     </plurals>
@@ -178,22 +176,14 @@
     <string name="purchase_gift_card_at">pada</string>
     <string name="purchase_gift_card_min">Min: %s</string>
     <string name="purchase_gift_card_max">Max: %s</string>
-    <string name="gift_card_tab_single">Tunggal</string>
-    <string name="gift_card_tab_multiple">Beberapa</string>
     <string name="gift_card_buy_title">Beli kartu hadiah</string>
     <string name="purchase_gift_card_discount_hint">Anda membeli %s kartu hadiah untuk %s (%s diskon)</string>
     <string name="button_next">Lanjut</string>
     <string name="purchase_gift_card_from">Dari</string>
     <string name="purchase_gift_card_to">Ke</string>
     <string name="purchase_confirm_transaction">Memastikan</string>
-    <string name="purchase_gift_card_total_label">Nilai Kartu hadiah</string>
     <string name="purchase_gift_card_discount">Diskon</string>
     <string name="purchase_gift_card_you_pay">Anda membayar</string>
-    <string name="purchase_gift_card_quantity_label">Kuantitas</string>
-    <plurals name="purchase_gift_card_quantity_value">
-        <item quantity="other">%d kartu</item>
-    </plurals>
-    <string name="purchase_gift_card_denomination_label">Nilai kartu</string>
     <string name="purchase_gift_card_confirm">Memastikan</string>
     <string name="purchase_gift_card_details">Detail kartu hadiah</string>
     <string name="purchase_original_purchase">Pembelian asli</string>
@@ -209,9 +199,6 @@
     <string name="purchase_tell_the_cashier">Beri tahu kasir bahwa Anda membayar dengan kartu hadiah digital. Kasir: ketik jumlah total pada kolom Bankcard, lalu ketik nomor kartu hadiah di kolom Rekening dan tekan Enter.</string>
     <string name="purchase_in_the_payment_section">Di bagian pembayaran, masukkan nomor kartu hadiah digital Anda ke bidang kartu hadiah.</string>
     <string name="purchase_powered_by">Didukung Oleh</string>
-    <string name="purchase_cashier_instructions">Instruksi kasir</string>
-    <string name="purchase_cashier_instructions_body">Terima kartu hadiah atau eGift Card saat checkout dan proses sebagai pembayaran.</string>
-    <string name="purchase_gift_card_date_format">%1$s pada %2$s</string>
     <string name="insufficient_money_title">Koin tidak cukup</string>
     <string name="insufficient_money_msg">Dana tidak mencukupi</string>
     <string name="send_coins_error_msg">Gagal mengirim koin!</string>
@@ -219,11 +206,6 @@
     <string name="gift_card_tx_title">Kartu hadiah · %s</string>
     <string name="select_amount">Pilih jumlah</string>
     <string name="select_fixed_amount">Pedagang ini menjual kartu hadiah dengan harga tetap</string>
-    <string name="purchase_gift_card_max_multiple_error">Anda dapat membeli sampai %s kartu hadiah per pesanan</string>
-    <string name="purchase_gift_card_insufficient_money_error">Jumlah Dash tidak mencukupi untuk membeli kartu hadiah ini</string>
-    <string name="purchase_gift_card_insufficient_inventory">Persediaan %s tidak mencukupi untuk membeli %d x %s kartu.</string>
-    <string name="purchase_gift_card_inventory_toast">Pedagang hanya mempunyai %dkartu tersedia</string>
-    <string name="purchase_gift_card_single_card_only_toast">Anda hanya dapat memilih jumlah satu kartu</string>
     <string name="purchase_gift_card_reset">Atur-ulang</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Masukkan Kode verifikasi</string>
@@ -258,7 +240,6 @@
     <string name="accept_to_proceed">Untuk membuat akun di DashSpend Anda harus menerima syarat dan ketentuan DashSpend</string>
     <string name="view_terms_conditions">Syarat &amp; kondisi</string>
     <string name="barcode_placeholder">Harap tunggu hingga rincian kartu hadiah dikirimkan.</string>
-    <string name="purchase_order_number">Nomor Pesanan</string>
     <string name="gift_card_contact_ctx">Hubungi dukungan CTX</string>
     <string name="gift_card_contact_piggycards">Hubungi dukungan PiggyCards</string>
     <string name="gift_card_contact_support">Hubungi Dukungan</string>

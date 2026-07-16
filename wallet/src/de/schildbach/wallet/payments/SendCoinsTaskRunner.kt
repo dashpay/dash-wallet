@@ -28,6 +28,11 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.L1SendProbeService
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.AnrException
 import kotlinx.coroutines.*
@@ -38,16 +43,19 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okio.BufferedSink
 import okio.IOException
-import org.bitcoin.protocols.payments.Protos
-import org.bitcoin.protocols.payments.Protos.Payment
+import org.dash.wallet.common.payments.bip70.Protos
+import org.dash.wallet.common.payments.bip70.Protos.Payment
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IKey
 import org.bitcoinj.crypto.KeyCrypterException
-import org.bitcoinj.protocols.payments.PaymentProtocol
-import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentRequestURL
+import org.dash.wallet.common.payments.bip70.PaymentProtocol
+import org.dash.wallet.common.payments.bip70.PaymentProtocolException.InvalidPaymentRequestURL
 import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.*
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.toCoin
+import org.dash.wallet.common.money.toDash
 import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.LeftoverBalanceException
@@ -74,7 +82,10 @@ class SendCoinsTaskRunner @Inject constructor(
     private val identityConfig: BlockchainIdentityConfig,
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
-    private val metadataProvider: TransactionMetadataProvider
+    private val metadataProvider: TransactionMetadataProvider,
+    private val sdkL1SendService: SdkL1SendService,
+    private val l1ShadowSyncService: L1ShadowSyncService,
+    private val l1SendProbeService: L1SendProbeService
 ) : SendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
@@ -107,6 +118,127 @@ class SendCoinsTaskRunner @Inject constructor(
             checkBalanceConditions = false,
             beforeSending = beforeSending
         )
+    }
+
+    /**
+     * Phase 5b (`docs/kotlin-sdk-migration-plan.md`): this NEUTRAL overload —
+     * the integrations path (Coinbase / Maya / feature modules) — is the ONLY
+     * send routed through the Kotlin SDK, behind
+     * [de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.USE_KOTLIN_SDK_L1_SEND]
+     * (default OFF ⇒ this method is byte-for-byte the old dashj path apart
+     * from one DataStore flag read). The dashj-typed overload above — the
+     * main send UI, CrowdNode's selector/locked-output sends, BIP70 — stays
+     * untouched this phase: those call sites depend on dashj-specific
+     * machinery (custom [CoinSelector]s, `canSendLockedOutput` predicates,
+     * the returned [Transaction] object for listeners/metadata) that the
+     * SDK send surface has no equivalent for yet; they cut over in Phase 5c
+     * after this narrow path has soak-validated on real funds.
+     *
+     * Routing contract (same as [SdkDashPayWrites]):
+     * - `Broadcast(txid)` → return the txid; the dashj send MUST NOT run
+     *   (callers only consume the returned txid hex — identical either way).
+     * - `NotBroadcast` → fall through to the unchanged dashj path.
+     * - `Ambiguous` → rethrow like a dashj broadcast failure; NEVER retry
+     *   via dashj (its coin selection may pick different UTXOs — a dashj
+     *   retry after a maybe-sent SDK tx is a potential double PAY).
+     *
+     * The SDK route replicates this path's only pre-send condition (the
+     * leftover-balance check) via `beforeBroadcast`, so
+     * [LeftoverBalanceException] surfaces identically on both routes.
+     */
+    @Throws(LeftoverBalanceException::class)
+    override suspend fun sendCoins(
+        address: String,
+        amount: Dash,
+        emptyWallet: Boolean,
+        checkBalanceConditions: Boolean
+    ): String {
+        val sdkResult = sdkL1SendService.sendToAddress(address, amount, emptyWallet) {
+            // Same conditions the dashj-typed overload enforces before its
+            // broadcast; throws (e.g. LeftoverBalanceException) propagate
+            // to the caller exactly as they do on the dashj path.
+            val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+            val dashAddress = Address.fromString(walletData.networkParameters, address)
+            if (checkBalanceConditions && !wallet.isAddressMine(dashAddress)) {
+                walletData.checkSendingConditions(dashAddress, amount.toCoin())
+            }
+        }
+        when (sdkResult) {
+            is SdkWriteResult.Broadcast -> {
+                // Phase 5c.0/5c.1 fee-parity + bridge-feasibility probes
+                // (L1SendProbeService): DEBUG-only, fire-and-forget, contains
+                // every failure — the send result is already decided here.
+                if (BuildConfig.DEBUG) {
+                    l1SendProbeService.probeSdkSendInBackground(
+                        txidHex = sdkResult.value,
+                        addressBase58 = address,
+                        amountDuffs = amount.duffs,
+                        emptyWallet = emptyWallet
+                    ) { dashjDryRunFeeDuffs(address, amount, emptyWallet) }
+                }
+                return sdkResult.value
+            }
+            is SdkWriteResult.Ambiguous ->
+                throw (sdkResult.cause as? Exception ?: RuntimeException(sdkResult.cause))
+            is SdkWriteResult.NotBroadcast -> Unit // dashj path below, unchanged
+        }
+
+        val dashAddress = Address.fromString(walletData.networkParameters, address)
+        // Phase 5c.0 dashj-route baseline (DEBUG-only): capture the dry-run
+        // estimate starting BEFORE the send commits its spend, then log the
+        // actual-vs-estimated comparison after; detached, never blocks or
+        // fails the send.
+        val baselineEstimate = if (BuildConfig.DEBUG) {
+            l1SendProbeService.dryRunEstimateAsync { dashjDryRunFeeDuffs(address, amount, emptyWallet) }
+        } else {
+            null
+        }
+        val transaction = try {
+            sendCoins(
+                dashAddress,
+                amount.toCoin(),
+                emptyWallet = emptyWallet,
+                checkBalanceConditions = checkBalanceConditions
+            )
+        } catch (t: Throwable) {
+            baselineEstimate?.cancel()
+            throw t
+        }
+        if (baselineEstimate != null) {
+            l1SendProbeService.probeDashjSendInBackground(
+                tx = transaction,
+                addressBase58 = address,
+                amountDuffs = amount.duffs,
+                emptyWallet = emptyWallet,
+                estimatedFeeDuffs = baselineEstimate
+            )
+        }
+        return transaction.txId.toString()
+    }
+
+    /**
+     * The 5c.0 probe's dashj dry-run: the EXISTING [estimateNetworkFee]
+     * path for the same `{address, amount, emptyWallet}`, reduced to the
+     * fee in duffs (null when the completed request reports no fee).
+     * Debug-probe-only; throws propagate to the probe's containment.
+     */
+    private suspend fun dashjDryRunFeeDuffs(address: String, amount: Dash, emptyWallet: Boolean): Long? {
+        val details = estimateNetworkFee(
+            Address.fromString(walletData.networkParameters, address),
+            amount.toCoin(),
+            emptyWallet
+        )
+        return details.fee.takeIf { it.isNotEmpty() }?.let { Coin.parseCoin(it).value }
+    }
+
+    override suspend fun estimateNetworkFee(
+        address: String,
+        amount: Dash,
+        emptyWallet: Boolean
+    ): SendPaymentService.TransactionEstimate {
+        val dashAddress = Address.fromString(walletData.networkParameters, address)
+        val details = estimateNetworkFee(dashAddress, amount.toCoin(), emptyWallet)
+        return SendPaymentService.TransactionEstimate(details.fee, details.amountToSend.toDash(), details.totalAmount)
     }
 
     override suspend fun estimateNetworkFee(
@@ -514,6 +646,15 @@ class SendCoinsTaskRunner @Inject constructor(
             log.info("send successful, transaction committed in {}: {} ", watch, transaction.txId.toString())
             log.info("  transaction: {}", transaction.toStringHex())
             walletApplication.broadcastTransaction(transaction)
+            // EVERY dashj spend of the shared UTXOs (main send UI, CrowdNode,
+            // BIP70 — they all funnel through here) briefly inflates the SDK's
+            // shadow view by the fee until the next mined block, exactly like
+            // a Phase 5b SDK self-spend. Arm the same grace marker so the
+            // parity decider's INFLATED auto-reset cannot false-fire while a
+            // block is pending; a plain timestamp write, no-op cost when the
+            // shadow flag is off. Never affects the send result.
+            runCatching { l1ShadowSyncService.noteSelfSpendBroadcast() }
+                .onFailure { log.warn("failed to record the self-spend marker", it) }
             logSendTxEvent(transaction, wallet)
             monitorJob.cancel()
             transaction
@@ -535,34 +676,7 @@ class SendCoinsTaskRunner @Inject constructor(
     suspend fun logSendTxEvent(
         transaction: Transaction,
         wallet: Wallet
-    ) {
-        identityConfig.get(IDENTITY_ID)?.let {
-            val valueSent: Long = transaction.outputs.filter {
-                !it.isMine(wallet)
-            }.sumOf {
-                it.value.value
-            }
-            val isSentToContact = try {
-                identityRepository.blockchainIdentity?.getContactForTransaction(transaction) != null
-            } catch (e: Exception) {
-                false
-            }
-            analyticsService.logEvent(
-                AnalyticsConstants.SendReceive.SEND_TX,
-                mapOf(
-                    AnalyticsConstants.Parameter.VALUE to valueSent
-                )
-            )
-            if (isSentToContact) {
-                analyticsService.logEvent(
-                    AnalyticsConstants.SendReceive.SEND_TX_CONTACT,
-                    mapOf(
-                        AnalyticsConstants.Parameter.VALUE to valueSent
-                    )
-                )
-            }
-        }
-    }
+    ) = logSendTxEvent(transaction, wallet, identityConfig, identityRepository, analyticsService)
 
     fun signSendRequest(sendRequest: SendRequest) {
         val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
@@ -632,4 +746,46 @@ class SendCoinsTaskRunner @Inject constructor(
             .build()
     }
 
+}
+
+/**
+ * The dashj send tail's analytics (SEND_TX / SEND_TX_CONTACT with the value
+ * sent, identity users only) — extracted from [SendCoinsTaskRunner] so the
+ * Phase 5c.2 bridged-commit tail
+ * ([de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory])
+ * runs the exact same hook as the dashj path.
+ */
+suspend fun logSendTxEvent(
+    transaction: Transaction,
+    wallet: Wallet,
+    identityConfig: BlockchainIdentityConfig,
+    identityRepository: IdentityRepository,
+    analyticsService: AnalyticsService
+) {
+    identityConfig.get(IDENTITY_ID)?.let {
+        val valueSent: Long = transaction.outputs.filter {
+            !it.isMine(wallet)
+        }.sumOf {
+            it.value.value
+        }
+        val isSentToContact = try {
+            identityRepository.blockchainIdentity?.getContactForTransaction(transaction) != null
+        } catch (e: Exception) {
+            false
+        }
+        analyticsService.logEvent(
+            AnalyticsConstants.SendReceive.SEND_TX,
+            mapOf(
+                AnalyticsConstants.Parameter.VALUE to valueSent
+            )
+        )
+        if (isSentToContact) {
+            analyticsService.logEvent(
+                AnalyticsConstants.SendReceive.SEND_TX_CONTACT,
+                mapOf(
+                    AnalyticsConstants.Parameter.VALUE to valueSent
+                )
+            )
+        }
+    }
 }

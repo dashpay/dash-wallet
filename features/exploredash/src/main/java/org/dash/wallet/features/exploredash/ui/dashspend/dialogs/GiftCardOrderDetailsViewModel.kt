@@ -29,9 +29,11 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
-import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.getIcon
+import org.dash.wallet.common.services.observeTransactionMetadata
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import javax.inject.Inject
 
@@ -47,13 +49,13 @@ class GiftCardOrderDetailsViewModel @Inject constructor(
     private val giftCardDao: GiftCardDao,
     private val metadataProvider: TransactionMetadataProvider
 ) : ViewModel() {
-    lateinit var transactionId: Sha256Hash
+    lateinit var transactionId: String
         private set
 
     private val _uiState = MutableStateFlow(GiftCardOrderUIState())
     val uiState: StateFlow<GiftCardOrderUIState> = _uiState.asStateFlow()
 
-    fun init(transactionId: Sha256Hash) {
+    fun init(transactionId: String) {
         this.transactionId = transactionId
 
         metadataProvider.observeTransactionMetadata(transactionId)
@@ -61,14 +63,14 @@ class GiftCardOrderDetailsViewModel @Inject constructor(
             .onEach { metadata ->
                 _uiState.update { current ->
                     current.copy(
-                        merchantIcon = metadata.customIconId?.let { metadataProvider.getIcon(it) },
+                        merchantIcon = metadata.customIconIdHex?.let { metadataProvider.getIcon(it) },
                         serviceName = metadata.service
                     )
                 }
             }
             .launchIn(viewModelScope)
 
-        giftCardDao.observeCardForTransaction(transactionId)
+        giftCardDao.observeCardForTransaction(TxIds.toBytes(transactionId))
             .filterNotNull()
             .distinctUntilChanged()
             .onEach { giftCards ->

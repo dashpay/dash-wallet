@@ -88,6 +88,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         const val EXTRA_RESET_BLOCKCHAIN = "reset_blockchain"
         private const val EXTRA_INVITE = "extra_invite"
         private const val EXTRA_NAVIGATION_DESTINATION = "extra_destination"
+        private const val EXTRA_NAVIGATION_ARGS = "extra_destination_args"
 
         fun createIntent(context: Context): Intent {
             return Intent(context, MainActivity::class.java).apply {
@@ -101,6 +102,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 putExtra(EXTRA_NAVIGATION_DESTINATION, destination)
                 addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
+        }
+
+        /** [createIntent] variant passing [args] to the destination as its fragment arguments. */
+        fun createIntent(context: Context, @NavigationRes destination: Int, args: Bundle): Intent {
+            return createIntent(context, destination).putExtra(EXTRA_NAVIGATION_ARGS, args)
         }
 
         fun createIntent(context: Context, invite: InvitationLinkData): Intent {
@@ -346,7 +352,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             try {
                 val destination = intent.extras!!.getInt(EXTRA_NAVIGATION_DESTINATION)
                 val navController = findNavController(R.id.nav_host_fragment)
-                navController.navigate(destination)
+                navController.navigate(destination, intent.getBundleExtra(EXTRA_NAVIGATION_ARGS))
             } catch (e: IllegalStateException) {
                 // swallow for now, this happens when the MainActivity is first created?
             }

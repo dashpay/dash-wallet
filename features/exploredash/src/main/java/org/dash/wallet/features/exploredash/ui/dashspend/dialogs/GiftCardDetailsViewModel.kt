@@ -25,15 +25,21 @@ import com.google.zxing.BarcodeFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.getTransactionHex
+import org.dash.wallet.common.getTransactionValue
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.TxIds
+import org.dash.wallet.common.money.dashToFiat
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.getIcon
+import org.dash.wallet.common.services.getTransactionMetadata
+import org.dash.wallet.common.services.observeTransactionMetadata
+import org.dash.wallet.common.services.updateGiftCardBarcode
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.*
@@ -84,18 +90,19 @@ class GiftCardDetailsViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
     }
 
-    lateinit var transactionId: Sha256Hash
+    lateinit var transactionId: String
         private set
     private var cardIndex: Int = 0
     private var tickerJob: Job? = null
 
-    private var exchangeRate: ExchangeRate? = null
+    /** The metadata exchange rate: the fiat price of one Dash. */
+    private var exchangeRate: FiatValue? = null
     private var retries = 3
 
     private val _uiState = MutableStateFlow(GiftCardUIState())
     val uiState: StateFlow<GiftCardUIState> = _uiState.asStateFlow()
 
-    fun init(transactionId: Sha256Hash, cardIndex: Int = 0) {
+    fun init(transactionId: String, cardIndex: Int = 0) {
         this.transactionId = transactionId
         this.cardIndex = cardIndex
 
@@ -103,7 +110,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             .filterNotNull()
             .onEach { metadata ->
                 if (!metadata.currencyCode.isNullOrEmpty() && !metadata.rate.isNullOrEmpty()) {
-                    exchangeRate = ExchangeRate(Fiat.parseFiat(metadata.currencyCode, metadata.rate))
+                    exchangeRate = FiatValue.parseFiat(metadata.currencyCode!!, metadata.rate!!)
                 }
 
                 _uiState.update { currentState ->
@@ -112,14 +119,14 @@ class GiftCardDetailsViewModel @Inject constructor(
                             Instant.ofEpochMilli(metadata.timestamp),
                             ZoneId.systemDefault()
                         ),
-                        icon = metadata.customIconId?.let { metadataProvider.getIcon(it) },
+                        icon = metadata.customIconIdHex?.let { metadataProvider.getIcon(it) },
                         serviceName = metadata.service
                     )
                 }
             }
             .launchIn(viewModelScope)
 
-        giftCardDao.observeCardForTransaction(transactionId)
+        giftCardDao.observeCardForTransaction(TxIds.toBytes(transactionId))
             .filterNotNull()
             .distinctUntilChanged()
             .onEach { giftCards ->
@@ -158,9 +165,9 @@ class GiftCardDetailsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             if (tickerJob?.isActive != true) {
                 // let's delete the card numbers and other information to force a reload
-                val cards = giftCardDao.getCardForTransaction(transactionId)
+                val cards = giftCardDao.getCardForTransaction(TxIds.toBytes(transactionId))
                 val newCards = cards.map {
-                    it.copy(
+                    it.copyCard(
                         number = null,
                         pin = null,
                         barcodeValue = null,
@@ -179,7 +186,7 @@ class GiftCardDetailsViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchGiftCardInfo(txid: Sha256Hash) = withContext(Dispatchers.IO) {
+    private suspend fun fetchGiftCardInfo(txid: String) = withContext(Dispatchers.IO) {
         val metadata = metadataProvider.getTransactionMetadata(txid)
         when (metadata?.service) {
             ServiceName.CTXSpend -> {
@@ -197,11 +204,11 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }
 
                 try {
-                    val orderId = giftCardDao.getCardForTransaction(txid).firstOrNull()?.note
+                    val orderId = giftCardDao.getCardForTransaction(TxIds.toBytes(txid)).firstOrNull()?.note
                     val giftCards = if (orderId != null) {
                         ctxSpendRepository.getGiftCard(orderId)
                     } else {
-                        ctxSpendRepository.getGiftCardByTxId(txid.toStringBase58())
+                        ctxSpendRepository.getGiftCardByTxId(TxIds.toBase58(txid))
                     }
                     val giftCard = giftCards.firstOrNull()
                     // Single state update with all changes
@@ -214,7 +221,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     error = CTXSpendException(
                                         "gift card status unpaid, but transaction sent",
                                         giftCard,
-                                        txid.toStringBase58()
+                                        TxIds.toBase58(txid)
                                     )
                                 )
                             }
@@ -226,7 +233,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     error = CTXSpendException(
                                         "gift card status paid, not fulfilled",
                                         giftCard,
-                                        txid.toStringBase58()
+                                        TxIds.toBase58(txid)
                                     )
                                 )
                             }
@@ -364,14 +371,14 @@ class GiftCardDetailsViewModel @Inject constructor(
                     return@withContext
                 }
 
-                val orderId = giftCardDao.getCardForTransaction(txid).firstOrNull()?.note
+                val orderId = giftCardDao.getCardForTransaction(TxIds.toBytes(txid)).firstOrNull()?.note
                 if (orderId == null) {
                     log.error("piggycards order # is missing for $txid")
                     return@withContext
                 }
                 log.info(
                     "piggycard tx: {} and order: {}",
-                    walletData.getTransaction(txid)?.toStringHex(),
+                    walletData.getTransactionHex(txid),
                     orderId
                 )
 
@@ -388,7 +395,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     error = CTXSpendException(
                                         "gift card status unpaid, but transaction sent",
                                         giftCard,
-                                        txid.toString()
+                                        txid
                                     )
                                 )
                             }
@@ -400,7 +407,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     error = CTXSpendException(
                                         "gift card status paid, not fulfilled",
                                         giftCard,
-                                        txid.toString()
+                                        txid
                                     )
                                 )
                             }
@@ -438,7 +445,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         val nextIndex = cardToCopy.index + 1
                                         val missing = giftCards.size - uiState.value.giftCards.size
                                         val added = (0 until missing).map { i ->
-                                            cardToCopy.copy(
+                                            cardToCopy.copyCard(
                                                 index = nextIndex + i,
                                                 number = null,
                                                 pin = null,
@@ -569,7 +576,7 @@ class GiftCardDetailsViewModel @Inject constructor(
         val giftCard = uiState.value.giftCards.find { it.index == index } ?: return
         applicationScope.launch {
             metadataProvider.updateGiftCardMetadata(
-                giftCard.copy(
+                giftCard.copyCard(
                     number = number,
                     pin = pinCode
                 )
@@ -584,7 +591,7 @@ class GiftCardDetailsViewModel @Inject constructor(
 
         applicationScope.launch {
             metadataProvider.updateGiftCardMetadata(
-                giftCard.copy(
+                giftCard.copyCard(
                     merchantUrl = redeemUrl,
                     redeemUrlChallenge = redeemUrlChallenge
                 )
@@ -684,8 +691,7 @@ class GiftCardDetailsViewModel @Inject constructor(
         )
 
         exchangeRate?.let {
-            val transaction = walletData.getTransaction(transactionId)
-            val fiatValue = it.coinToFiat(transaction?.getValue(walletData.transactionBag) ?: Coin.ZERO)
+            val fiatValue = it.dashToFiat(walletData.getTransactionValue(transactionId) ?: Dash.ZERO)
 
             analyticsService.logEvent(
                 AnalyticsConstants.DashSpend.PURCHASE_AMOUNT,

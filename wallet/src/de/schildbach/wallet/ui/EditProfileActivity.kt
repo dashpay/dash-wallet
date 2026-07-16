@@ -470,6 +470,7 @@ class EditProfileActivity : LockScreenActivity() {
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
+        binding.profileUsername.text = profile.username
         if (!isEditing) {
             ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile)
             initialAboutMe = profile.publicMessage

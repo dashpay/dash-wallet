@@ -135,6 +135,14 @@ class UsernameRequestsViewModel @Inject constructor(
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
+    override fun onCleared() {
+        // viewModelScope is cancelled by the framework, but the IO worker
+        // scope is ours to stop — its launchIn collectors never complete on
+        // their own and would outlive the screen.
+        workerJob.cancel()
+        super.onCleared()
+    }
+
     private val _uiState = MutableStateFlow(UsernameRequestsUIState())
     val uiState: StateFlow<UsernameRequestsUIState> = _uiState.asStateFlow()
 

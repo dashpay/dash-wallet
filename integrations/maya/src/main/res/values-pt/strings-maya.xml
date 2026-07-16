@@ -111,8 +111,6 @@
     <string name="maya_error_invalid_destination_address">Endereço de destino inválido</string>
     <string name="maya_error_below_recommended_minimum">O valor informado é menor que o mínimo recomendado</string>
     <string name="maya_error_trading_halted">As negociações foram interrompidas em %s.</string>
-    <string name="maya_error_below_allowed_minimum">O valor informado é menor que o mínimo permitido</string>
-    <string name="maya_error_quote">Não foi possível obter uma cotação da Maya para esta conversão</string>
     <string name="maya_halted_label">Interrompido </string>
     <string name="maya_halted_coins_toast">Algumas moedas estão temporariamente suspensas e indisponíveis para negociação</string>
 

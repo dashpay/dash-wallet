@@ -210,7 +210,7 @@ class ShortcutsViewModel @Inject constructor(
     suspend fun getTopperUrl(walletName: String): String {
         return topperClient.getOnRampUrl(
             walletUIConfig.getExchangeCurrencyCode(),
-            walletData.freshReceiveAddress(),
+            walletData.freshReceiveAddressString(),
             walletName
         )
     }

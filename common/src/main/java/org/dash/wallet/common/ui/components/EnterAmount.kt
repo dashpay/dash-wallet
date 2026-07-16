@@ -26,8 +26,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -167,13 +169,26 @@ fun EnterAmount(
         }
 
         if (showCurrencyPicker && currencyCodes.size >= 2) {
+            // The vertical picker needs explicit bounds: SegmentedPicker's options use
+            // weight(1f)/fillMaxWidth internally, so without them it collapses to zero
+            // height inside scrollable parents and eats the amount column's width.
+            // Sizing and style mirror the proven usage in EnterAmountFragment.
             SegmentedPicker(
                 options = currencyCodes.map { SegmentedOption(it) },
                 selectedIndex = primaryIndex,
                 style = SegmentedPickerStyle(
                     displayMode = PickerDisplayMode.Vertical,
+                    cornerRadius = 8f,
+                    backgroundColor = Color.Transparent,
+                    thumbColor = MyTheme.Colors.primary5,
+                    textStyle = MyTheme.Typography.LabelSmallMedium, // caption-2 11sp per Figma
+
+                    shadowElevation = 0
                 ),
-                onOptionSelected = onCurrencyPickerSelect
+                onOptionSelected = onCurrencyPickerSelect,
+                modifier = Modifier
+                    .width(44.dp)
+                    .height(52.dp)
             )
         }
     }

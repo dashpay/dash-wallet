@@ -9,32 +9,9 @@
     <string name="request_coins_share_dialog_title">Podeli zahtev za Dash...</string>
     <!-- Generic buttons -->
     <string name="button_dismiss">Odbaci</string>
-    <string name="button_cancel">Otkaži</string>
-    <string name="button_confirm">Potvrdi</string>
     <string name="button_retry">Pokušaj opet</string>
     <string name="button_copy_address">Kopiraj adresu</string>
     <string name="button_share">Podeli</string>
     <string name="dash">Dash</string>
     <string name="send_coins_error_dusty_send">Iznos je suviše mali da bi bio poslat</string>
-    <string name="exchange_rate_not_found">Ne može da se pronadje kurs za razmenu.</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Pošalji izveštaj koristeći...</string>
-
-    <!-- scan -->
-    <string name="scan_camera_problem_dialog_title">Izvinite</string>
-    <string name="scan_camera_problem_dialog_message">Postoji problem sa kamerom. Verovatno treba da restartujete uređaj.</string>
-    <string name="scan_camera_permission_dialog_title">Dozvola za kameru</string>
-    <string name="scan_camera_permission_dialog_message">Kako biste mogli da skenirate QR kodove potrebno je da date dozvolu za korišćenje kamere.</string>
-
-    <!-- address input -->
-    <string name="address_input_title">Pošalji Dash</string>
-    <!-- input parser -->
-    <string name="input_parser_io_error">Podaci ne mogu da se pročitaju:\n%s</string>
-    <string name="input_parser_cannot_classify">Unos nije prepoznat:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Neispravan Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Dobijena je neispravna Dash adresa!\n(Možda je pomešan mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Ne može da se verifikuje zahtev za uplatu:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Neispravan zahtev za uplatu:\n%s</string>
-    <string name="input_parser_invalid_transaction">Neispravna transakcija:\n%s</string>
-    <string name="insufficient_money_title">Nema dovoljno novčića</string>
-    <string name="send_coins_error_msg">Problem u slanju novčića!</string>
     </resources>

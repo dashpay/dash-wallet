@@ -88,6 +88,9 @@
     <string name="processing_error_retry">Retry</string>
     <string name="processing_username_unavailable_title">Username Unavailable</string>
     <string name="processing_username_unavailable_subtitle">Please choose another</string>
+    <!-- Transient status hints on the identity processing tile while the registration retries -->
+    <string name="identity_processing_network_catching_up">Waiting for the network to catch up — this can take a few extra minutes.</string>
+    <string name="identity_processing_waiting_confirmation">Waiting for network confirmation of your payment…</string>
 
     <string name="dashpay_upgrade_fee">Upgrade Fee</string>
     <string name="dashpay_invite_fee">Invite Fee</string>
@@ -104,18 +107,8 @@
     <string name="search_user_no_results">There are no users that match</string>
     <string name="search_user_loading">Searching for username <b>\"%\"</b> on the Dash Network</string>
     <string name="contact_request_pending">Contact Request Pending</string>
-    <string name="send_contact_request_short">Send request</string>
-    <string name="contact_request_sent_short">Request sent</string>
-    <string name="send_button_label">Send</string>
-    <string name="contact_history_disclaimer_pending_plain">Once %1$s accepts your request you can pay directly to the username</string>
     <string name="pay">Pay</string>
     <string name="contact_request_received_title">%s has requested to be a friend</string>
-    <string name="contact_request_received_card_title">%s has sent you a contact request</string>
-    <string name="contact_request_received_card_message">If you don\'t want %s to be in your contact list you can tap the \"Ignore\" button. They will not be notified about your decision.</string>
-    <string name="contact_request_row_received">%s sent you a contact request</string>
-    <string name="contact_request_row_sent">Contact request sent</string>
-    <string name="contact_request_row_established_incoming">You accepted the request from %s</string>
-    <string name="contact_request_row_established_outgoing">%s has accepted your contact request</string>
     <string name="contact_request_accept">Accept</string>
     <string name="contact_request_ignore">Ignore</string>
 
@@ -145,6 +138,10 @@
     <string name="notifications_you_have_accepted">You have accepted the contact request from %s</string>
     <string name="notifications_you_sent">You sent a contact request to %s</string>
     <string name="notifications_you_received">%s has sent you a contact request</string>
+    <string name="send_contact_request_error_title">Contact request not sent</string>
+    <string name="send_contact_request_error_message">There was an error sending the contact request. Please try again.</string>
+    <string name="accept_contact_request_error_title">Contact request not accepted</string>
+    <string name="accept_contact_request_error_message">There was an error accepting the contact request. Please try again.</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
     <string name="request_complete_message">Your username %s has been successfully requested on the Dash Network</string>
@@ -329,6 +326,9 @@
     <string name="request_username_available">Username is available</string>
     <string name="request_username_unavailable">Username is unavailable or blocked</string>
     <string name="request_username_taken">Username is taken</string>
+    <string name="username_check_failed">Couldn\'t verify username availability. Check your connection and try again.</string>
+    <!-- Advisory network-health warning on the username entry screen (never blocks submission) -->
+    <string name="username_network_slow_warning">The network is running slower than usual right now. Your request may take longer than normal.</string>
     <string name="request_username_taken_results">Username was taken by another user</string>
     <string name="requesting_your_username_title">Creating your username</string>
     <string name="requesting_your_username_message">Your username %s is being requested on the Dash network. It may take some time.</string>
@@ -435,6 +435,39 @@
     <string name="request_username_character_requirement">Letters, numbers and hyphens only</string>
     <string name="request_username_character_requirement_invite_noncontested">Numbers 2-9</string>
     <string name="request_username_balance_requirement">You need to have 0.25 DASH to create this username</string>
+    <!-- Make-username-private sheet: the private-username funding bar (%s = 0.1,
+         the smallest shielded exit denomination). -->
+    <string name="username_payment_min_shield">You need to shield at least %s Dash for a private username</string>
+    <!-- Shown when the wallet balance is below the funding bar and the
+         shield-first button is disabled (%s = 0.1). -->
+    <string name="username_payment_shield_minimum">Minimum of %s Dash is required to shield funds</string>
+    <!-- ⓘ explainer on the make-username-private sheet: contested vs
+         non-contested, worded from the request screen's validation rules;
+         costs are the amounts withdrawn from the shielded balance. -->
+    <string name="username_cost_info_title">Shielded username costs</string>
+    <!-- Dismissible processing dialog while the shielded creation proves (~30s). -->
+    <string name="username_creation_processing">Creating your username… This could take about 30 seconds. You can close this dialog — the request keeps running and you will be informed when it is ready.</string>
+    <!-- Shielded creation outcome unconfirmed (may be on chain) — no retry offered. -->
+    <string name="username_request_ambiguous_title">Request may have gone through</string>
+    <string name="username_request_ambiguous_message">We could not confirm the result. Do not submit again — the app will check and recover automatically.</string>
+    <!-- Calm notice when a shielded submit reached the SDK before the pool
+         finished syncing — nothing was spent; it just needs a moment. -->
+    <string name="username_shielded_pool_syncing_title">Almost ready</string>
+    <string name="username_shielded_pool_syncing">Your shielded balance is still syncing. Please wait a moment and try again.</string>
+    <!-- Disabled request-button label while the shielded pool is still syncing. -->
+    <string name="username_preparing_shielded_balance">Preparing shielded balance…</string>
+    <string name="username_cost_info_noncontested_title">Non-contested username</string>
+    <string name="username_cost_info_noncontested_message">Contains a number from 2 to 9 or is 20–23 characters long. Shield at least 0.15 Dash.</string>
+    <string name="username_cost_info_contested_title">Contested username</string>
+    <string name="username_cost_info_contested_message">3–19 characters using only letters, the numbers 0 and 1, and hyphens. The Dash network votes on these usernames. Shield at least 0.35 Dash.</string>
+    <!-- The path-dependent variant: %s is the actual requirement of the chosen
+         payment source × contested-ness (L1 0.03/0.25, shielded denomination
+         0.1/0.3, identity credits 0.01/0.2). -->
+    <string name="request_username_balance_requirement_amount">You need to have %s DASH to create this username</string>
+    <!-- Source label under the amount on the username confirm sheet when the
+         creation is funded from the shielded pool (the amount is the exit
+         denomination actually leaving that balance). -->
+    <string name="username_cost_from_shielded_balance">from shielded balance</string>
     <string name="request_username_requirements_message_invite_noncontested">The username must meet one of these criteria</string>
     <string name="request_username_requirements_message">The username must meet these criteria</string>
     <string name="request_username_length_requirement">Between 3 and 23 characters</string>
@@ -529,5 +562,116 @@
     <string name="create_instant_username_description">Your requested username will be voted on for 2 weeks. For immediate contacts and payments, you can create a similar instant username.\n\nIf your original request is approved, it replaces the instant one, preserving contacts and history. If not, continue using the instant one uninterrupted.</string>
     <string name="create_instant_username_button">Create instant username</string>
     <string name="create_instant_username_cancel">Cancel</string>
+
+    <!-- Shielded balance (Kotlin SDK migration Phase 4, gated by USE_KOTLIN_SDK_SHIELDED) -->
+    <string name="shielded_balance_title">Shielded balance</string>
+    <string name="shielded_balance_card_title">Shielded</string>
+    <string name="shielded_wallet_name">Dash Wallet</string>
+    <string name="shielded_credits_symbol">C</string>
+    <!-- Shown on the More-screen "Shielded" card while the pool is still
+         syncing, so a funded wallet never briefly reads a misleading "0". -->
+    <string name="shielded_balance_syncing">Syncing…</string>
+    <string name="shielded_tab_receive">Receive</string>
+    <string name="shielded_tab_internal">Internal</string>
+    <string name="shielded_tab_send">Send</string>
+    <string name="shielded_your_address">Your shielded address</string>
+    <string name="shielded_address_unavailable">Your shielded address will appear here once the shielded balance is ready</string>
+    <string name="shielded_share_address">Share address</string>
+    <string name="shielded_copy_address">Copy address</string>
+    <string name="shielded_address_copied">Address copied</string>
+    <string name="shielded_internal_transfer_to_from">Internal transfer to/from</string>
+    <string name="shielded_scan_qr">Scan QR</string>
+    <string name="shielded_send_to_address">Send to address</string>
+    <string name="shielded_internal_transfer">Internal transfer</string>
+    <string name="shielded_from">From</string>
+    <string name="shielded_to">To</string>
+    <string name="shielded_swap_direction">Reverse transfer direction</string>
+    <string name="shielded_you_will_transfer">You will transfer</string>
+    <string name="shielded_confirm">Confirm</string>
+    <string name="shielded_total_credits">Total credits</string>
+    <string name="shielded_total">Total</string>
+    <string name="shielded_privacy_tip_title">Privacy tip</string>
+    <string name="shielded_privacy_tip_message">For best privacy, wait at least 2 hours before using these credits.</string>
+    <string name="shielded_delay_tip_title">Up to 10 minutes to spend</string>
+    <string name="shielded_delay_tip_message">After this transfer, it can take up to 10 minutes before you can use your Dash. This delay is part of how your privacy is protected.</string>
+    <string name="shielded_timing_title">Transfers take different times</string>
+    <string name="shielded_timing_to_title">From Dash Wallet to Shielded balance</string>
+    <string name="shielded_timing_to_message">The transfer takes about 30 seconds</string>
+    <string name="shielded_timing_from_title">From Shielded balance to Dash Wallet</string>
+    <string name="shielded_timing_from_message">The transfer could take up to 10 minutes</string>
+    <string name="shielded_timing_got_it">I got it</string>
+    <string name="shielded_proving_title">Sending your transfer…</string>
+    <!-- Proving dialog body: backgrounding/dismissing is safe — the spend runs on the
+         app scope (ShieldedTransferExecutor) and the outcome is announced by an in-app
+         toast or a system notification. Must not imply the app has to stay open. -->
+    <string name="shielded_proving_message">This could take about 30 seconds. We will notify you when it’s done.</string>
+    <!-- Hides the proving dialog only; the transfer keeps running in the background. -->
+    <string name="shielded_proving_dismiss">Hide</string>
+    <string name="shielded_transfer_completed">Transfer completed</string>
+    <!-- System-notification / outcome-toast bodies for a user who is no longer looking at
+         the transfer screen when the ~30s proving finishes. Titles reuse the in-screen
+         strings (shielded_transfer_completed, shielded_locked_pending_title,
+         shielded_transfer_failed, shielded_transfer_ambiguous_title). -->
+    <string name="shielded_notification_success_message">Your shielded balance is updated</string>
+    <string name="shielded_notification_pending_message">It will complete automatically the next time the app syncs</string>
+    <string name="shielded_transfer_failed">This transfer was not sent</string>
+    <string name="shielded_transfer_failed_message">Nothing left your balance. Check the details and try again.</string>
+    <string name="shielded_transfer_ambiguous_title">Transfer status unknown</string>
+    <string name="shielded_transfer_ambiguous_message">Your transfer may have gone through. Do not send it again — your balances will update after the next sync.</string>
+    <!-- Stall watchdog (ShieldedTransferExecutor.STALL_TIMEOUT_MS without a terminal
+         result): funds-honest — we do NOT know whether anything broadcast, so no
+         failure wording and no retry. The transfer may still complete in the
+         background; leaving the screen is safe (the spend runs on the app scope). -->
+    <string name="shielded_transfer_stalled_title">This is taking longer than expected</string>
+    <string name="shielded_transfer_stalled_message">Your transfer may still complete in the background — your balances will update if it does. It’s safe to close this screen; we will let you know when there’s an update.</string>
+    <string name="shielded_error_insufficient_funds">Insufficient funds</string>
+    <!-- Secondary line under the From "Dash Wallet" balance: the not-yet-ChainLocked part of the total balance, e.g. "0.25 pending" -->
+    <string name="shielded_pending_funds">%s pending</string>
+    <string name="shielded_error_not_ready">Wait until the chain is fully synced to make transfers</string>
+    <!-- Shielded pool still syncing (ShieldedSyncStatus != READY): the chain IS synced but the
+         pool's note/anchor state hasn't caught up, so BOTH transfer directions stay blocked
+         (spends against a stale pool were the source of live Ambiguous failures). -->
+    <string name="shielded_error_pool_syncing">Shielded balance is syncing — transfers will be available shortly</string>
+    <!-- Funding verification pending: the chain IS synced, but the L1 balance-evidence
+         gate (shadow-SPV parity) hasn't passed yet — deliberately NOT sync-flavored,
+         unlike shielded_error_not_ready. -->
+    <string name="shielded_error_wallet_funding_pending">Verifying your balance — transfers from Dash Wallet will be available shortly</string>
+    <!-- Live variants of shielded_error_wallet_funding_pending, fed by the L1 shadow-sync
+         harness. Scanning args: 1 scanned blocks, 2 target blocks (both pre-formatted with
+         digit grouping), 3 overall percent. -->
+    <string name="shielded_verifying_scanning">Verifying your balance — scanning block %1$s of %2$s (%3$d%%)</string>
+    <string name="shielded_verifying_almost_done">Verifying your balance — almost done</string>
+    <!-- Terminal harness stand-down: the tester should flag it with exported logs. -->
+    <string name="shielded_verification_failed">Balance verification failed — please export logs via Report an Issue</string>
+    <string name="shielded_locked_pending_title">Transfer in progress</string>
+    <string name="shielded_locked_pending_message">Your Dash was reserved on the network, but the shielded transfer hasn’t finished yet. It will finish automatically the next time the app syncs — do not send it again.</string>
+    <string name="shielded_send_title">Send to shielded address</string>
+    <string name="shielded_send_address_hint">Shielded address</string>
+    <string name="shielded_paste">Paste</string>
+    <string name="shielded_close">Close</string>
+
+    <!-- Create-username payment sheets (shielded funds; Figma flow 555:811,
+         sheets 1856:1805 "Select your payment option" and 1856:1519
+         "Make your username private"). -->
+    <string name="username_payment_select_title">Select your payment option</string>
+    <string name="username_payment_select_message">To help keep your payment activity private, we recommend paying for the username from your shielded balance</string>
+    <string name="username_payment_option_shielded">Shielded balance</string>
+    <string name="username_payment_option_shielded_hint">Keeps your username private</string>
+    <string name="username_payment_option_dash">Dash balance</string>
+    <string name="username_payment_option_dash_hint">Funds will be traceable to your username</string>
+    <string name="username_payment_private_title">Make your username private</string>
+    <string name="username_payment_privacy_tip_message">Funds move to your shielded balance in seconds. For full privacy, wait at least 2 hours before creating your username.</string>
+    <string name="username_payment_shield_first">Shield your funds first</string>
+    <string name="username_payment_continue_without_privacy">Continue without privacy</string>
+
+    <!-- Create-invitation shielded-funding decision sheet (Figma 25163:53221):
+         mirrors the create-username "Make your username private" arm, shown
+         before the fee/confirm step. The button labels are reused from the
+         username flow (username_payment_shield_first /
+         username_payment_continue_without_privacy). -->
+    <string name="invite_payment_private_title">Make your invitation private</string>
+    <string name="invite_payment_private_message">To help keep your activity private, you can shield the funds for this invitation before sending it.</string>
+    <string name="invite_payment_cost_amount">%s Dash</string>
+    <string name="invite_payment_privacy_tip_message">Funds move to your shielded balance in seconds. For full privacy, wait at least 2 hours before creating your invitation.</string>
 
 </resources>

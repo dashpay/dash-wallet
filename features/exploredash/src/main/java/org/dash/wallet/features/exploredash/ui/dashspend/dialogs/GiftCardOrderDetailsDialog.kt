@@ -44,6 +44,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -52,15 +54,14 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
-import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarClose
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Currency
@@ -70,7 +71,8 @@ class GiftCardOrderDetailsDialog : ComposeBottomSheet() {
     companion object {
         private const val ARG_TRANSACTION_ID = "transactionId"
 
-        fun newInstance(transactionId: Sha256Hash) =
+        /** [transactionId] is the hex transaction id (`Sha256Hash.toString()` format). */
+        fun newInstance(transactionId: String) =
             GiftCardOrderDetailsDialog().apply {
                 arguments = bundleOf(ARG_TRANSACTION_ID to transactionId)
             }
@@ -93,14 +95,14 @@ class GiftCardOrderDetailsDialog : ComposeBottomSheet() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let {
+        requireArguments().getString(ARG_TRANSACTION_ID)?.let {
             viewModel.init(it)
         }
     }
 
     private fun onCardClick(giftCard: GiftCard) {
         GiftCardDetailsDialog
-            .newInstance(giftCard.txId, cardIndex = giftCard.index)
+            .newInstance(giftCard.txIdHex, cardIndex = giftCard.index)
             .show(requireActivity())
     }
 }
@@ -161,12 +163,27 @@ private fun MerchantHeader(uiState: GiftCardOrderUIState) {
                 .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
-            MerchantLogo(
-                merchantName = uiState.merchantName,
-                logoBitmap = uiState.merchantIcon,
-                size = 50.dp,
-                shape = CircleShape
-            )
+            if (uiState.merchantIcon != null) {
+                uiState.merchantIcon?.let { icon ->
+                    Image(
+                        bitmap = icon.asImageBitmap(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(CircleShape)
+                    )
+                }
+            } else {
+                Image(
+                    painter = painterResource(R.drawable.ic_gift_card_tx),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                )
+            }
         }
         Text(
             text = uiState.merchantName,
@@ -239,8 +256,8 @@ private fun PoweredByFooter(serviceName: String?) {
 
 // ─── Previews ────────────────────────────────────────────────────────────────
 
-private fun fakeCard(index: Int, price: Double) = GiftCard(
-    txId = Sha256Hash.ZERO_HASH,
+private fun fakeCard(index: Int, price: Double) = GiftCard.fromHex(
+    txId = TxIds.ZERO_HASH_HEX,
     merchantName = "Amazon",
     price = price,
     index = index

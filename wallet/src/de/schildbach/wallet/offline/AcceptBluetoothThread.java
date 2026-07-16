@@ -21,11 +21,11 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 
-import org.bitcoin.protocols.payments.Protos;
-import org.bitcoin.protocols.payments.Protos.PaymentACK;
+import org.dash.wallet.common.payments.bip70.Protos;
+import org.dash.wallet.common.payments.bip70.Protos.PaymentACK;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.dash.wallet.common.payments.bip70.PaymentProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

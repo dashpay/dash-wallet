@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         compileSdk 35
-        minSdkVersion 24
+        minSdkVersion 29
         targetSdkVersion 35
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -50,7 +50,6 @@ dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
-    implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
 

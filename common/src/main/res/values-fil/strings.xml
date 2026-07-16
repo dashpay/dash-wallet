@@ -124,7 +124,6 @@
     <string name="address_input_title">Ipadala ang Dash</string>
     <string name="show_clipboard">Ipakita ang nilalaman sa clipboard</string>
     <string name="tap_to_paste">I-tap ang address mula sa clipboard para i-paste ito</string>
-    <string name="not_valid_address">Hindi wasto %s ang address o kahilingan sa URL</string>
     <string name="recipient_address">Address ng Tatanggap</string>
 
     <!-- input parser -->
@@ -135,7 +134,6 @@
     <string name="input_parser_unverifyable_paymentrequest">Hindi ma-beripika ang hiniling na bayad:\n%s</string>
     <string name="input_parser_invalid_paymentrequest">Invalid ang hiniling na bayad:\n%s</string>
     <string name="input_parser_invalid_transaction">Invalid ang transaksyon:\n%s</string>
-    <string name="address_input_paste_from">I-paste mula sa%s</string>
     <string name="input_connect">kumonekta</string>
 
     <!-- others -->
@@ -144,8 +142,7 @@
     <string name="yes_cancel">Oo, kanselahin</string>
     <string name="no_keep_it">Hindi, panatilihin ito</string>
     <string name="insufficient_money_title">Hindi sapat ang barya</string>
-    <string name="insufficient_money_msg">Ang halaga ng mga barya sa wallet ay masyadong maliit para sa transaksyong ito.</string>
     <string name="send_coins_error_msg">Nagkaproblema sa pagpapadala ng barya!</string>
     <string name="from_dash_wallet_on_this_device">Mula sa Dash wallet sa device na ito</string>
     <string name="preposition_at">sa</string>
-    </resources>
+</resources>

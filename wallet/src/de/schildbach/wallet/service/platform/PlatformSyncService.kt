@@ -47,6 +47,13 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.NonInteractiveWalletUnlock
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.SdkIdentityVerifyQueries
+import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
+import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
+import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.OnContactsUpdated
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
@@ -79,6 +86,7 @@ import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dashj.platform.contracts.wallet.TxMetadataDocument
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dashpay.UsernameRequestStatus
+import org.dashj.platform.dashpay.UsernameStatus
 import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ContestedDocumentResourceVotePoll
@@ -105,6 +113,30 @@ interface PlatformSyncService {
     suspend fun initSync(runFirstUpdateBlocking: Boolean = false)
     fun resume()
     suspend fun shutdown()
+
+    /**
+     * Unconditionally stop the platform sync machinery and (bounded) wait for
+     * in-flight iterations to die. Called by the wallet reset/rescan path
+     * BEFORE the persisted identity is cleared: a live sync iteration holds a
+     * pre-clear [BlockchainIdentityData] and would re-persist ("resurrect") it
+     * after the clear. Unlike [shutdown], this does not gate on an identity
+     * being present — the reset path may already have nulled it, which is
+     * exactly why [shutdown] used to leave the ticker running across a reset.
+     * Sync restarts naturally with the next blockchain service start
+     * (preBlockDownload → initSync).
+     */
+    suspend fun stopSync()
+
+    /**
+     * Unconditionally stop the two Kotlin-SDK background engines (the L1
+     * shadow SPV and the shielded sync loop). Both stops are best-effort,
+     * failure-contained no-ops when not running. Split out of [shutdown]
+     * because DEBUG builds deliberately SKIP the engine stops on the routine
+     * service teardown (see [shutdown]) — the destructive paths (wallet
+     * wipe, before `finalizeWipe()` deletes app data) call this directly so
+     * the engines are provably down regardless of build type.
+     */
+    suspend fun stopSdkEngines()
 
     fun updateSyncStatus(stage: PreBlockStage)
     fun preBlockDownload(future: SettableFuture<Boolean>)
@@ -150,6 +182,13 @@ class PlatformSynchronizationService @Inject constructor(
     private val topUpRepository: TopUpRepository,
     private val identityRepository: IdentityRepository,
     private val walletDataProvider: WalletDataProvider,
+    private val sdkProfileQueries: SdkProfileQueries,
+    private val sdkUsernameQueries: SdkUsernameQueries,
+    private val sdkIdentityVerifyQueries: SdkIdentityVerifyQueries,
+    private val sdkWalletBinder: SdkWalletBinder,
+    private val nonInteractiveWalletUnlock: NonInteractiveWalletUnlock,
+    private val l1ShadowSyncService: L1ShadowSyncService,
+    private val shieldedBalanceService: ShieldedBalanceService,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -162,6 +201,7 @@ class PlatformSynchronizationService @Inject constructor(
         val CUTOFF_MAX = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 6.minutes else 6.hours
         private val PUBLISH = MarkerFactory.getMarker("PUBLISH")
         val NON_CONTACTS_UPDATE_PERIOD = 1.minutes.inWholeMilliseconds
+        val STOP_SYNC_JOIN_TIMEOUT = 5.seconds
     }
 
     private var platformSyncJob: Job? = null
@@ -184,11 +224,50 @@ class PlatformSynchronizationService @Inject constructor(
             identityRepository.init()
             initializeStateRepository()
         }
+        // Phase 3f (docs/kotlin-sdk-migration-plan.md): bind the app wallet
+        // into the Kotlin SDK and attach its identity — fire-and-forget so
+        // platform-sync startup latency is unaffected, and provably inert
+        // unless a USE_KOTLIN_SDK_* flag is on. The unlock provider runs
+        // only after the binder's eligibility gate passes: it recovers the
+        // wallet-crypter key non-interactively ([NonInteractiveWalletUnlock]
+        // — the SecurityGuard-stored password, no user prompt; extracted so
+        // the L1 shadow recovery path reuses the identical recipe).
+        kickSdkEngines()
         log.info("Starting the platform sync job")
     }
 
+    // Phase 5a (docs/kotlin-sdk-migration-plan.md): after the bind pass
+    // finishes (success or not — the service re-checks the bound state
+    // itself), kick the L1 shadow-sync parity harness. Fire-and-forget,
+    // provably inert unless USE_KOTLIN_SDK_L1_SHADOW is on (debug-only
+    // instrumentation — it runs a second SPV engine), and failures are
+    // logged+swallowed inside startIfEnabled(). Bind is single-flight and
+    // startIfEnabled() is idempotent, so re-running the recipe is safe.
+    private fun kickSdkEngines() {
+        val bindJob = sdkWalletBinder.bindInBackground(nonInteractiveWalletUnlock::unlockOrNull)
+        syncScope.launch {
+            bindJob.join()
+            l1ShadowSyncService.startIfEnabled()
+            // DIP-15 friend-chain backfill (docs/kotlin-sdk-migration-plan.md;
+            // scratchpad/txdiff/FINDINGS.md): the app keeps DashPay contacts on
+            // dashj and never drives the SDK's contact-sync path, so the bound
+            // SDK L1 wallet derives NONE of the m/9'/coin'/15' friend chains and
+            // misses contact/username payments. Provision them now that the bind
+            // pass has (attempted to) attach the identity. Forced so it runs
+            // promptly on every service (re)start; fire-and-forget and provably
+            // inert unless a USE_KOTLIN_SDK_* flag is on and a wallet is bound.
+            sdkWalletBinder.provisionContactAccountsInBackground(force = true)
+        }
+    }
+
     override fun resume() {
-        // This method may not be required.  initSync must be called by PreBlockDownload handler
+        // shutdown() stops the Kotlin-SDK background engines whenever the
+        // blockchain service is torn down (unclean-kill corruption guard),
+        // but this process outlives the service — so every service
+        // (re)start must kick them again, or the shadow parity harness
+        // stays down for the rest of the process lifetime and the shielded
+        // transfer gate never reopens ("Verifying your balance" forever).
+        kickSdkEngines()
     }
 
     override suspend fun initSync(runFirstUpdateBlocking: Boolean) {
@@ -257,6 +336,35 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun shutdown() {
+        // Best-effort teardown of the Kotlin-SDK background engines. The
+        // shadow SPV service had NO stop path before this (its Rust header
+        // store was observed regressing after unclean kills — the suspected
+        // trigger of the inflated-SDK parity corruption), so stop both it
+        // and the shielded sync loop whenever the blockchain service is
+        // torn down. Both stops are no-ops when not running and must never
+        // block the rest of the cleanup.
+        //
+        // DEBUG builds skip the engine stops here — a deliberate battery
+        // trade-off for testing: dashj's BlockchainService stops itself
+        // whenever it idles ("idling detected, stopping service"), and every
+        // engine restart left the SDK's SPV with stale quorum state — a live
+        // shielded transfer right after such a restart could not verify its
+        // asset lock's InstantSend lock and waited a full block (~3 min).
+        // Keeping the engines warm across these routine teardowns removes
+        // that window. The destructive paths are NOT weakened: the wallet
+        // wipe calls stopSdkEngines() explicitly before finalizeWipe(), and
+        // the shadow recovery paths (resetShadowState /
+        // recoverByRecreatingWallet) stop the SPV directly themselves.
+        if (BuildConfig.DEBUG) {
+            log.info(
+                "keeping Kotlin-SDK engines running across service teardown (debug): warm SPV " +
+                    "avoids the asset-lock islock-verification delay; wipe/reset still stop " +
+                    "them explicitly"
+            )
+        } else {
+            stopSdkEngines()
+        }
+
         if (platformSyncJob != null && identityRepository.hasBlockchainIdentity) {
             Preconditions.checkState(platformSyncJob!!.isActive)
             log.info("Shutting down the platform sync job")
@@ -272,6 +380,49 @@ class PlatformSynchronizationService @Inject constructor(
             }
             txMetadataJob = null
         }
+    }
+
+    override suspend fun stopSdkEngines() {
+        runCatching { l1ShadowSyncService.stop() }
+            .onFailure { log.warn("failed to stop the L1 shadow sync on shutdown", it) }
+        runCatching { shieldedBalanceService.stop() }
+            .onFailure { log.warn("failed to stop the shielded runtime on shutdown", it) }
+    }
+
+    override suspend fun stopSync() {
+        log.info("stopping the platform sync machinery for a wallet reset/rescan")
+        platformSyncJob?.cancel(CancellationException("wallet reset"))
+        platformSyncJob = null
+        txMetadataJob?.cancel(CancellationException("wallet reset"))
+        txMetadataJob = null
+
+        // Cancel every in-flight child (an iteration may hold a pre-reset
+        // BlockchainIdentityData) and wait for them, bounded: a thread parked
+        // in a non-cancellable network call must not stall the wipe. Any
+        // straggler that outlives this window is caught by the
+        // no-resurrection guard in IdentityRepositoryImpl.updateBlockchainIdentityData.
+        val children = syncJob.children.toList()
+        children.forEach { it.cancel(CancellationException("wallet reset")) }
+        if (children.isNotEmpty()) {
+            val stopped = withTimeoutOrNull(STOP_SYNC_JOIN_TIMEOUT.inWholeMilliseconds) {
+                children.joinAll()
+            } != null
+            if (!stopped) {
+                log.warn(
+                    "platform sync children did not stop within {} — relying on the no-resurrection guard",
+                    STOP_SYNC_JOIN_TIMEOUT
+                )
+            }
+        }
+
+        // Reset the in-memory sync state so a post-reset restart starts clean.
+        updatingContacts.set(false)
+        preDownloadBlocks.set(false)
+        lastPreBlockStage = PreBlockStage.None
+        hasCheckedTopups = false
+        lastTopupUpdateTime = 0L
+        lastMetadataUpdateTime = 0L
+        log.info("platform sync machinery stopped")
     }
 
     var counterForReport = 0
@@ -508,6 +659,17 @@ class PlatformSynchronizationService @Inject constructor(
                 fireContactsUpdatedListeners()
             }
 
+            // Keep the SDK L1 wallet's DIP-15 friend chains in step with the
+            // dashj contact set: this dashj sync just (re)built the DashPay
+            // receiving/sending keychains, but the SDK wallet only learns of
+            // contacts through its own contact-sync path (never driven here).
+            // Provision them so contact/username payments are captured on the
+            // SDK scan too. Forced when a contact was just (un)established so
+            // the new friend account provisions immediately; otherwise
+            // throttled — the binder no-ops unless a USE_KOTLIN_SDK_* flag is
+            // on and a wallet is bound. Fire-and-forget (never blocks sync).
+            sdkWalletBinder.provisionContactAccountsInBackground(force = addedContact)
+
             updateSyncStatus(PreBlockStage.Complete)
 
             log.info("updating contacts and profiles took $watch")
@@ -555,7 +717,11 @@ class PlatformSynchronizationService @Inject constructor(
             if (!platformRepo.walletApplication.wallet!!.hasReceivingKeyChain(contact)) {
                 Context.propagate(walletApplication.wallet!!.context)
                 log.info("adding accepted/send request to wallet: ${contactRequest.toUserId}")
-                val contactIdentity = platform.identities.get(contactRequest.toUserId)
+                // getContactIdentity tolerates the legacy identity cache being
+                // unable to CBOR-serialize a v4.1 identity (e.g. an iOS contact);
+                // identities.get would otherwise throw "No converter for ..."
+                // and drop this reconciled contact.
+                val contactIdentity = platform.getContactIdentity(contactRequest.toUserId)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
@@ -604,7 +770,11 @@ class PlatformSynchronizationService @Inject constructor(
             Context.propagate(platformRepo.walletApplication.wallet!!.context)
             if (!platformRepo.walletApplication.wallet!!.hasSendingKeyChain(contact)) {
                 log.info("adding received request: ${contactRequest.ownerId} to wallet")
-                val contactIdentity = platform.identities.get(contactRequest.ownerId)
+                // getContactIdentity tolerates the legacy identity cache being
+                // unable to CBOR-serialize a v4.1 identity (e.g. an iOS contact);
+                // identities.get would otherwise throw "No converter for ..." and
+                // this received request would never be added to the wallet.
+                val contactIdentity = platform.getContactIdentity(contactRequest.ownerId)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
@@ -679,13 +849,27 @@ class PlatformSynchronizationService @Inject constructor(
         try {
             if (userIdList.isNotEmpty()) {
                 val identifierList = userIdList.map { Identifier.from(it) }
-                val profileDocuments = platform.profiles.getList(
-                    identifierList,
-                    lastContactRequestTime
-                )
+                // Phase 3d (docs/kotlin-sdk-migration-plan.md): profile
+                // retrieval via the Kotlin SDK behind USE_KOTLIN_SDK_DPNS_READS
+                // (default off). Null means "flag off or SDK path failed" —
+                // fall through to the unchanged dashj-platform query. dashj's
+                // getList ignores lastContactRequestTime (getListHelper builds
+                // only whereIn($ownerId) + orderBy), so parity needs no
+                // $updatedAt clause on the SDK path.
+                val profileDocuments = sdkProfileQueries.getProfileDocumentsOrNull(identifierList)
+                    ?: platform.profiles.getList(
+                        identifierList,
+                        lastContactRequestTime
+                    )
                 val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
-                val nameDocuments = platform.names.getList(identifierList).map { DomainDocument(it) }
+                // Phase 3e: domain documents for the contact ids via the
+                // Kotlin SDK behind the same read flag; null = flag off or
+                // SDK path failed — fall through to the dashj query.
+                val nameDocuments = (
+                    sdkUsernameQueries.getDomainDocumentsForIdentitiesOrNull(identifierList)
+                        ?: platform.names.getList(identifierList)
+                    ).map { DomainDocument(it) }
                 val documentsByName = nameDocuments.associateBy({ it.normalizedLabel }, { it })
                 val idByNameMap = nameDocuments.associateBy({ it.normalizedLabel }, { it.ownerId })
 
@@ -1248,7 +1432,7 @@ class PlatformSynchronizationService @Inject constructor(
                     val previouslySavedItems = transactionMetadataDocumentDao.getTransactionMetadata(tx.txId)
                     val previouslySaved = mergeTransactionMetadataDocuments(tx.txId, previouslySavedItems)
                     val currentItem = transactionMetadataProvider.getTransactionMetadata(tx.txId)!!
-                    val giftCard = giftCardDao.getCardForTransaction(tx.txId)
+                    val giftCard = giftCardDao.getCardForTransaction(tx.txId.bytes)
 
                     if (!previouslySaved.compare(currentItem, giftCard.firstOrNull())) {
                         listOfUnsaved.add(tx)
@@ -1274,7 +1458,7 @@ class PlatformSynchronizationService @Inject constructor(
         txes?.forEachIndexed { i, tx ->
             if (tx.updateTime.time >= alreadySaved) {
                 transactionMetadataProvider.getTransactionMetadata(tx.txId)?.let { metadata ->
-                    val giftCard = giftCardDao.getCardForTransaction(tx.txId)
+                    val giftCard = giftCardDao.getCardForTransaction(tx.txId.bytes)
 
                     // make sure it is not already saved?
 
@@ -1452,7 +1636,19 @@ class PlatformSynchronizationService @Inject constructor(
                                 }
 
                                 if (contestedDocument != null) {
-                                    val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
+                                    // dashpay/platform#4088 (light way): the contender's
+                                    // verification link via the Kotlin SDK's generic
+                                    // document search behind USE_KOTLIN_SDK_DPNS_READS
+                                    // (default off); null = flag off or SDK path failed —
+                                    // fall through to the unchanged dashj query.
+                                    // Optional.empty() = the SDK definitively reported no
+                                    // link, so dashj is NOT queried again.
+                                    val sdkUrl = sdkIdentityVerifyQueries.getVerificationUrl(identifier, name)
+                                    val verificationUrl = if (sdkUrl != null) {
+                                        sdkUrl.orElse(null)
+                                    } else {
+                                        IdentityVerify(platform.platform).get(identifier, name)?.url
+                                    }
 
                                     val requestId = UsernameRequest.getRequestId(identifier.toString(), normalizedLabel)
                                     val lastVote = votes.lastOrNull()
@@ -1462,7 +1658,7 @@ class PlatformSynchronizationService @Inject constructor(
                                         normalizedLabel = name,
                                         createdAt = contestedDocument.createdAt ?: -1L,
                                         identity = identifier.toString(),
-                                        link = identityVerifyDocument?.url,
+                                        link = verificationUrl,
                                         votes = contender.votes,
                                         lockVotes = voteContender.lockVoteTally,
                                         isApproved = lastVote?.let { it.identity == identifier.toString() } ?: false
@@ -1533,7 +1729,16 @@ class PlatformSynchronizationService @Inject constructor(
 
                 if (!hasWinner) {
                     if (contestedDocument != null) {
-                        val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
+                        // dashpay/platform#4088 (light way): same routing as
+                        // updateUsernameRequestsWithVotes above — SDK first
+                        // behind USE_KOTLIN_SDK_DPNS_READS, dashj fallback
+                        // only when the SDK path was not used.
+                        val sdkUrl = sdkIdentityVerifyQueries.getVerificationUrl(identifier, name)
+                        val verificationUrl = if (sdkUrl != null) {
+                            sdkUrl.orElse(null)
+                        } else {
+                            IdentityVerify(platform.platform).get(identifier, name)?.url
+                        }
 
                         val requestId = UsernameRequest.getRequestId(identifier.toString(), name)
                         val votes = usernameVoteDao.getVotes(name)
@@ -1545,7 +1750,7 @@ class PlatformSynchronizationService @Inject constructor(
                             normalizedLabel = name,
                             createdAt = contestedDocument.createdAt ?: -1L,
                             identity = identifier.toString(),
-                            link = identityVerifyDocument?.url,
+                            link = verificationUrl,
                             votes = contender.votes,
                             lockVotes = voteContender.lockVoteTally,
                             isApproved = lastVote?.let { it.identity == identifier.toString() } ?: false
@@ -1655,6 +1860,7 @@ class PlatformSynchronizationService @Inject constructor(
             // update contacts, profiles and other platform data
             else {
                 checkVotingStatus(identityData)
+                reconcileUsernameStatus(identityData)
 
                 if (!updatingContacts.get()) {
                     updateContactRequests(initialSync = true)
@@ -1667,6 +1873,119 @@ class PlatformSynchronizationService @Inject constructor(
     override suspend fun checkUsernameVotingStatus() {
         identityConfig.load()?.let {
             checkVotingStatus(it)
+            reconcileUsernameStatus(it)
+        }
+    }
+
+    /**
+     * Repair pass for the local username REGISTRATION status: when platform
+     * truth shows a username registered to this identity but the local
+     * status never reached CONFIRMED, adopt the platform truth (and finish
+     * the stuck creation state machine).
+     *
+     * Why this exists (observed live: username test12345, identity
+     * G2HnoKSdqpTzcfd1HcU1RYk3R7Zmrc7yPYExrS3bXiDf): a shielded-funded
+     * creation registers the DPNS name on chain and hands the identity to
+     * `RestoreIdentityWorker`; when that worker runs before Drive has
+     * indexed the new domain document, `recoverUsernames` finds nothing and
+     * the worker aborts with `restoring = false` and `creationState =
+     * USERNAME_REGISTERING` — after which NOTHING ever re-checked platform:
+     * [preBlockDownload]'s recovery discovery only fires while `identityData
+     * == null || restoring`, and [checkVotingStatus] is gated on
+     * `creationState == VOTING`. The local status then read NOT_PRESENT
+     * forever while another device could find the name via search. This
+     * pass runs from the same triggers as the voting checker and only ever
+     * acts on POSITIVE platform evidence.
+     */
+    private suspend fun reconcileUsernameStatus(identityData: BlockchainIdentityData) {
+        // VOTING has its own checker (checkVotingStatus); before
+        // IDENTITY_REGISTERED there is no identity to own a name.
+        if (identityData.creationState < IdentityCreationState.IDENTITY_REGISTERED ||
+            identityData.creationState == IdentityCreationState.VOTING
+        ) {
+            return
+        }
+        val userId = identityData.userId ?: return
+        val identityId = try {
+            Identifier.from(userId)
+        } catch (e: Exception) {
+            return
+        }
+        var confirmedName: String? = null
+        var updated = false
+
+        val username = identityData.username
+        if (username != null && identityData.usernameStatus != UsernameStatus.CONFIRMED &&
+            isUsernameRegisteredToIdentity(username, identityId)
+        ) {
+            log.info(
+                "reconcile: platform shows username '{}' registered to {} — correcting local status {} -> CONFIRMED",
+                username,
+                userId,
+                identityData.usernameStatus
+            )
+            identityData.usernameStatus = UsernameStatus.CONFIRMED
+            confirmedName = username
+            updated = true
+        }
+
+        val secondary = identityData.usernameSecondary
+        if (secondary != null && identityData.usernameSecondaryStatus != UsernameStatus.CONFIRMED &&
+            isUsernameRegisteredToIdentity(secondary, identityId)
+        ) {
+            log.info(
+                "reconcile: platform shows secondary username '{}' registered to {} — " +
+                    "correcting local status {} -> CONFIRMED",
+                secondary,
+                userId,
+                identityData.usernameSecondaryStatus
+            )
+            identityData.usernameSecondaryStatus = UsernameStatus.CONFIRMED
+            confirmedName = confirmedName ?: secondary
+            updated = true
+        }
+
+        if (!updated) {
+            return
+        }
+
+        if (identityData.creationState < IdentityCreationState.DONE) {
+            // The interrupted flow can never finish its own state machine —
+            // the name is already on chain, so a "retry" from the stuck
+            // state would double-register. Complete it here.
+            identityData.creationState = IdentityCreationState.DONE_AND_DISMISS
+            identityData.creationStateErrorMessage = null
+        }
+        identityRepository.updateBlockchainIdentityData(identityData)
+
+        // Same follow-up as the won-vote path: the local profile row must
+        // carry the confirmed name.
+        confirmedName?.let { name ->
+            identityRepository.getLocalUserProfile()?.let { profile ->
+                if (profile.username.isEmpty()) {
+                    dashPayProfileDao.insert(profile.copy(username = name))
+                }
+            }
+        }
+    }
+
+    /**
+     * Platform truth for one label: SUCCESS + a domain document whose
+     * identity record points at [identityId]. Errors and misses are false —
+     * the reconcile only ever acts on positive evidence.
+     */
+    private fun isUsernameRegisteredToIdentity(username: String, identityId: Identifier): Boolean {
+        return try {
+            val resource = platformRepo.getUsername(username)
+            val document = resource.data
+            if (resource.status != Status.SUCCESS || document == null) {
+                return false
+            }
+            val domain = DomainDocument(document)
+            domain.dashUniqueIdentityId == identityId || domain.dashAliasIdentityId == identityId
+        } catch (e: Exception) {
+            log.warn("reconcile: username lookup failed for '{}'", username, e)
+            false
         }
     }
 
@@ -1731,9 +2050,21 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun clearDatabases() {
-        // push all changes to platform before clearing the database tables
+        // Push all changes to platform before clearing the database tables —
+        // best-effort and time-bounded: this is a NETWORK + signing operation
+        // running inside a wallet reset (the wallet may already be unloading),
+        // and a hang or throw here must never block the wipe or prevent the
+        // clears below (partially-cleared DashPay state resurrects the
+        // DashPay UI on the next wallet).
         if (Constants.SUPPORTS_PLATFORM && dashPayConfig.shouldSaveOnReset()) {
-            publishChangeCache(System.currentTimeMillis(), saveAll = true) // Before now - push everything
+            try {
+                withTimeout(30_000) {
+                    publishChangeCache(System.currentTimeMillis(), saveAll = true) // Before now - push everything
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException && e !is TimeoutCancellationException) throw e
+                log.warn("pre-reset metadata publish failed/timed out; continuing with the clears", e)
+            }
         }
         transactionMetadataChangeCacheDao.clear()
         transactionMetadataDocumentDao.clear()

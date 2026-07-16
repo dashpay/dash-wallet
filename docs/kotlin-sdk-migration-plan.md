@@ -10,12 +10,19 @@
   funds remain visible and spendable via the standard coin selector; historical mixing transactions
   keep their grouped display. Verified: `assemble_testNet3Debug` builds and the full wallet unit-test
   suite passes.
-- 🔄 **Phase 1 — seam neutralization: STARTED.** Done so far: neutral `SyncStage` enum in common
-  (`BlockchainStateProvider` no longer exposes `PeerGroup.SyncStage`/`AbstractBlockChain`); dead
-  `SendPaymentService.isFeeTooHigh` removed; duplicate `observeSpendableBalance` consolidated into
-  `observeTotalBalance`. Remaining (large): neutral money types to replace `Coin`/`Fiat`/
-  `MonetaryFormat`/`ExchangeRate.fiat` across integrations; `WalletDataProvider`/`SendPaymentService`
-  money-typed methods; crowdnode transaction-model redesign. See Phase 1 section for the full list.
+- ✅ **Phase 1 — seam neutralization: SUBSTANTIALLY DONE.** Neutral `SyncStage`;
+  `BlockchainStateProvider` dashj-free; dead APIs removed. New neutral money kit in
+  `org.dash.wallet.common.money` (`Dash`, `FiatValue`, `MoneyFormat`, `DashAddressValidator`,
+  `TxIds`, `DashUri`, entity-`ExchangeRate` conversions) mirroring the dashj APIs and delegating to
+  dashj internally, so behavior is identical. **uphold, exploredash, maya, and coinbase no longer
+  depend on dashj-core at all** (their dashj-transaction internals — Maya swap builder,
+  FakeDashSpendService — moved into the wallet module behind neutral interfaces).
+  `SendPaymentService` has neutral send/estimate overloads. **crowdnode:** UI/ViewModel/API surface
+  fully neutral; only its transaction-protocol layer (tx filters, confirmation handshake — the code
+  that moves real funds and will be rewritten against the SDK in Phase 5) keeps dashj deliberately.
+  dashj-file counts: uphold/exploredash/maya/coinbase 0 (was 3/15/20/22), crowdnode 25→protocol-only
+  (was 33 incl. UI), wallet 209 (expected — it keeps dashj until Phase 5), common 65 (kit adapters,
+  by design). Verified: full `assemble_testNet3Debug` + unit tests of every module green.
 - ⬜ Phases 0, 3–6: not started (Phase 0 lives in the platform repo).
 
 ---
@@ -213,3 +220,425 @@ Phases 1 and 2 are pure app work and can ship to production on dashj long before
 - Keep historical mixing-tx grouping UI or flatten old mixing txs to plain rows?
 - Fleet stats: 32-bit devices, API 24–28 devices, pre-BIP39 wallets.
 - Where does the app's PIN sit relative to SDK Keystore/biometric gating (one gate or two)?
+
+## Phase 0 status (updated 2026-07-08)
+
+- ✅ **CoinJoin-restore verdict: SAFE at the pinned rust-dashcore rev (`647fa982`, 2026-07-06), with
+  conditions.** Restore-from-mnemonic auto-creates the CoinJoin account at the dashj-matching DIP-9
+  path `m/9'/coin_type'/4'/account'` (external + internal branches, gap limit 30) and its addresses
+  are in the SPV compact-filter watch set from registration — no explicit binding needed.
+  **Conditions:** (1) never regress the rust-dashcore pin below `647fa982` — the March rev derived
+  the WRONG CoinJoin path (`m/9'/coin'/account'`, missing `4'`) and would silently lose funds; add a
+  CI pin guard + a dashj-vs-SDK address-derivation test vector. (2) The migration must pass
+  `birthHeight = 0` (or the wallet's creation height) to `createWallet` — default resolves to the
+  SPV tip and scans nothing historical. (3) Verify heavy mixers don't exceed the 30-address CoinJoin
+  gap limit; raise it for migration scans if needed.
+- ✅ **Maven publishing added** to `packages/kotlin-sdk/sdk/build.gradle.kts` on platform branch
+  `feat/kotlin-sdk-maven-publish` (local worktree): `org.dashfoundation:dash-sdk-android`,
+  release AAR + sources + POM; `publishToMavenLocal` verified resolving. Remote repo block pending a
+  hosting decision.
+- ✅ **App prerequisites applied:** minSdk 29 (all modules), 64-bit-only ABIs (arm64-v8a + x86_64),
+  BIP70 vendored from dashj-core 22.0.3 sources into `org.dash.wallet.common.payments.bip70`
+  (all usages repointed; 15 BIP70 tests green).
+- 🔄 **Native SDK build** (cargo-ndk, NDK r28, both ABIs) running locally; on completion:
+  `:sdk:publishToMavenLocal`, then Phase 3 wiring can begin against the local artifact.
+
+## Phase 3 status (updated 2026-07-08)
+
+- ✅ **3a — SDK bootstrap scaffold**: `DashSdkService` (lazy `ensureStarted()`: Sdk init → Room →
+  WalletStorage → WalletManagerStore.activate → loadPersistedWallets, mirroring the example app's
+  AppContainer). No production invocation by default.
+- ✅ **3b — seed bridge**: `SecurityGuardMnemonicProvider` over the canonical
+  `SecurityFunctions.decryptSeed` path (caller owns auth); `bindAppWallet` idempotently
+  creates/rehydrates the SDK wallet (birthHeight=0 until Phase 5 maps creation time → height).
+- ✅ **3c — first production flow on the SDK**: DPNS reads (`PlatformRepo.getUsername` resolve;
+  `IdentityRepository.searchUsernames` prefix/exact) routed through `SdkUsernameQueries` behind
+  `DashPayConfig.USE_KOTLIN_SDK_DPNS_READS` (default OFF; re-read per lookup; any SDK failure
+  falls back to the dashj path automatically).
+- ✅ **3d — contested-name vote state + profile reads**: `SdkVotingQueries`
+  (`getVoteContenders` via `sdk.voting.contestedResourceVoteState`) and `SdkProfileQueries`
+  (`profiles.get`/`getList` via `sdk.documents.search` on the DashPay contract), same flag,
+  same auto-fallback.
+- ✅ **3e — key-derivation parity gate + remaining DPNS reads + first WRITE seam**:
+  - **Task A verdict — CONDITIONAL PARITY.** dashj (dashj-core 22.0.3 bytecode:
+    `DerivationPathFactory`, `AuthenticationGroupExtension`, `BlockchainIdentity`) registers
+    identity auth key `i` at `m/9'/coin'/5'/0'/0'/0'/i'` (ECDSA secp256k1, all hardened;
+    coin 5' main / 1' test; 4 keys at i=0–3: MASTER/AUTH, HIGH/AUTH, MEDIUM/ENCRYPTION,
+    CRITICAL/TRANSFER; funding `m/9'/coin'/5'/1'`, topup `…/2'`, invitations `…/3'`).
+    The Kotlin SDK (rust-dashcore @647fa982 `key-wallet/src/dip9.rs`,
+    `rs-platform-wallet .../identity_handle.rs`) derives
+    `m/9'/coin'/5'/0'(auth)/0'(ECDSA)/identity_index'/key_index'` — identical trees for
+    `identity_index = 0`, the only chain dashj creates. So the SDK CAN sign for a
+    dashj-registered identity once that identity is discovered/managed by the SDK wallet.
+    Registration ROLE tables differ (SDK: MASTER/CRITICAL/HIGH/TRANSFER at 0–3) — irrelevant
+    for signing existing identities, relevant if the SDK ever registers new ones.
+    NOT yet verified: DIP-15 friendship/payment derivation parity (see 3e gaps below).
+  - `names.getByOwnerId`/`names.getList` routed via `sdk.dpns.usernames` in
+    `SdkUsernameQueries` (same read flag, same fallback; per-identity loop replaces dashj's
+    100-id `whereIn(records.identity)` batches).
+  - **Write seam** `SdkDashPayWrites` behind NEW flag `USE_KOTLIN_SDK_DASHPAY_WRITES`
+    (default OFF): `PlatformBroadcastService.sendContactRequest` + `broadcastUpdatedProfile`
+    route through the SDK's wallet-bound dashpay ops with a three-valued
+    no-double-broadcast contract (`Broadcast` / `NotBroadcast` = provably nothing submitted →
+    dashj fallback / `Ambiguous` = may have landed → surface error, NEVER dashj retry).
+    Preflights (wallet bound via `bindAppWallet`, identity managed by SDK wallet) fail fast
+    to `NotBroadcast`; since nothing binds the wallet in production yet, the path is inert
+    even with the flag on. On SDK success, local state reconciles from Platform via dashj
+    reads (`watchContactRequest` / `profiles.get`) and the unchanged bookkeeping tail
+    (DIP-15 keychain add, DB rows, listeners).
+- **SDK issues to file**: (1) `dpns.resolve` returns InternalError with a message instead of a
+  NotFound code/null for unregistered names; (2) DPNS projections lack `$createdAt`/document
+  id/alias records; (3) `dpns.usernames(limit=0)` defaults to 10 — callers must pass an
+  explicit limit for dashj parity; (4) `Dashpay.createOrUpdateProfile` takes raw
+  `avatarBytes` only (recomputes hash+fingerprint Rust-side) — profiles that carry
+  `avatarHash`/`avatarFingerprint` without raw bytes cannot be routed; (5) no public
+  "is identity managed" probe (Phase 3e uses `dashpay.syncState(id) != null`).
+- **3e gaps / 3f next**:
+  - Wire `bindAppWallet` + SDK **identity discovery** into a production flow so the app's
+    dashj-registered identity becomes a managed identity (the write path's preflight
+    currently always falls back). `PlatformWalletManager.identityRegistration` has the
+    discovery bridge.
+  - **Verify DIP-15 parity** (friendship xpub + accountReference derivation, dashj
+    `FEATURE_PURPOSE_DASHPAY 15'` vs rust-dashcore dip9.rs `FEATURE_PURPOSE_DASHPAY = 15`)
+    before enabling `USE_KOTLIN_SDK_DASHPAY_WRITES` anywhere real: an SDK-sent contact
+    request whose embedded xpub dashj cannot re-derive would watch wrong friendship
+    addresses.
+  - Then: ~~accept-contact-request~~ (3g: verified covered by the sendContactRequest
+    routing — see the Phase 3g section), identity registration/topup via the SDK
+    asset-lock bridge, and the DashPay sync loops.
+
+## Phase 4 design references (added 2026-07-08)
+
+Shielded-balances UX designs (iOS Figma, "DashPay – iOS" file — convert to Android/Compose as
+appropriate, mapping to the app's existing design system and Common Components):
+- https://www.figma.com/design/O6RLY0jppyI1SSMY6kttS1/DashPay---iOS?node-id=1693-15911&m=dev
+- https://www.figma.com/design/O6RLY0jppyI1SSMY6kttS1/DashPay---iOS?node-id=231-200&m=dev
+- https://www.figma.com/design/O6RLY0jppyI1SSMY6kttS1/DashPay---iOS?node-id=1746-18462&m=dev
+- https://www.figma.com/design/O6RLY0jppyI1SSMY6kttS1/DashPay---iOS?node-id=1746-18478&m=dev
+Implementation should go through the figma-to-compose flow (fetch design context, map to existing
+components, vector drawables for missing icons).
+
+## Phase 3e/3f verdicts (updated 2026-07-08)
+
+- **DIP-13 identity-key parity: VERIFIED byte-identical** for identity index 0 (the only chain
+  dashj creates) — the SDK can derive and sign with dashj-registered identity keys.
+- **DIP-15 friendship-key parity: FUNDS-SAFE (PARTIAL).** The friendship xpub a contact request
+  carries and the derived/watched payment addresses are byte-identical across dashj and the SDK
+  (same path m/9'/coin'/15'/0'/idA/idB, same 69-byte compact xpub, same ECDH+AES-256-CBC).
+  One non-funds mismatch: `accountReference` extracts a different 28-bit HMAC slice
+  (dashj: u32_LE(hmac[0..4])>>4; SDK rs-platform-encryption: u32_BE(hmac[28..32])>>4, "iOS
+  convention"). Impact: possible duplicate contact-request documents / rotation-detection noise if
+  both stacks author for the same channel — file an SDK issue to reconcile
+  rs-platform-encryption/src/account_reference.rs (confirm iOS's deployed convention first).
+- **3f production wiring done**: `SdkWalletBinder` binds the app wallet + attaches the existing
+  identity via `identityRegistration.discoverIdentities` (no SDK gap) at two key-in-scope call
+  sites (PlatformSynchronizationService.init, PlatformDocumentBroadcastService writes),
+  fire-and-forget, single-flight, provably inert with flags off. 171 tests green.
+
+## Phase 3g — accept-contact-request routing (verified 2026-07-08)
+
+- **Verdict: already covered by the 3e routing — no new seam needed.** In this app there is no
+  dedicated dashj "accept" broadcast: accepting an incoming contact request IS the reciprocal
+  `sendContactRequest`. Traced every accept entry point (NotificationsFragment `onAcceptRequest`,
+  ContactsFragment, DashPayUserActivity accept button, SendCoinsFragment) →
+  `DashPayViewModel.sendContactRequest` → `SendContactRequestOperation`/`SendContactRequestWorker`
+  → `PlatformDocumentBroadcastService.sendContactRequest(toUserId = requester)` — the method
+  already routed through `SdkDashPayWrites` (same preflight / three-valued no-double-broadcast
+  contract). Flag off ⇒ byte-identical dashj behavior.
+- **SDK's dedicated `Dashpay.acceptContactRequest`/`acceptIncomingRequest` deliberately NOT
+  used**: it requires the incoming request in the SDK wallet's LOCAL contact state (returns
+  false otherwise — the app doesn't keep that synced), and its Rust-side external-account
+  registration would duplicate/diverge from the app's dashj DIP-15 keychain bookkeeping. The
+  Platform document it broadcasts is the same reciprocal `contactRequest`.
+- **Reconciliation-tail parity review (Broadcast case, accept direction)**: complete.
+  - Incoming half (sending-to-requester DIP-15 keychain via `addPaymentKeyChainToContact` +
+    `fromContactRequest` DB row) is done by `PlatformSyncService.updateContactRequests` /
+    `checkAndAddReceivedRequest` when the incoming request syncs — independent of which stack
+    broadcasts the reciprocal.
+  - Outgoing half is `finalizeSentContactRequest`, shared verbatim by the dashj and SDK paths:
+    receiving keychain (`addPaymentKeyChainFromContact` reads xpub/accountReference back from the
+    watched document — works for the SDK-authored document too, modulo the already-documented
+    DIP-15 accountReference-slice mismatch), bloom-filter refresh, `DashPayContactRequest` DB row,
+    contact profile refresh, contacts-updated listeners. "Established" state is derived from
+    having both DB rows; the dashj path has no additional accept-only bookkeeping.
+- **Remaining unrouted DashPay-adjacent writes** (inventory of `PlatformBroadcastService` + repos):
+  - `broadcastIdentityVerify` (live via `BroadcastIdentityVerifyWorker`) — the Kotlin SDK has NO
+    identityVerify surface yet; stays on dashj. File an SDK feature request if it should route.
+  - `broadcastUsernameVotes` — masternode contested-resource votes signed with masternode voting
+    keys, not a wallet-identity DashPay write; out of the `USE_KOTLIN_SDK_DASHPAY_WRITES` scope.
+    (The SDK does expose `voting/VoteCasting.castVote` if this is ever migrated separately.)
+  - `PlatformRepo.createDashPayProfile` — `@Deprecated`, zero callers; dead code, nothing to route.
+  - Identity registration / username preorder+register / topups / invitations — identity writes,
+    tracked as their own later phase (SDK asset-lock bridge), unchanged here.
+
+## Live testnet validation (2026-07-08, Galaxy S22 Ultra, testnet)
+
+Verified on-device with the debug flags ON:
+- SDK bootstrap + native lib load + Room/Keystore storage + wallet persistence across restarts.
+- Seed bridge: PIN-derived key → bindAppWallet → SDK wallet from the app's mnemonic (idempotent).
+- **Identity discovery found and attached the dashj-registered identity — empirical DIP-13 parity.**
+- Phase 2 regression: correct balance incl. previously-mixed funds; grouped mixing history intact.
+- DashPay flows: username search, profile view, contact request sent → received → accepted.
+- Write fallback contract validated live: SDK attempt → pre-broadcast signing rejection →
+  clean dashj fallback (request delivered), no double-broadcast.
+- Bugs found live and fixed: Firebase-less builds crashed at startup (3 spots); `syncState`
+  throws on not-managed identity; signing failure misclassified as ambiguous; discovered
+  identities lacked signable keys (SDK persistence bridge silently skips key storage outside
+  the 30s auth-gated Keystore window) — now healed with byte-verified derivation + retry.
+- Remaining friction for full SDK-path writes: the SDK's auth-gated key alias (30s window);
+  needs an SDK-side policy option or app-supplied auth gate.
+
+## Phase 4 status (updated 2026-07-08)
+
+- ✅ **Service layer DONE** (`ShieldedBalanceService` behind `USE_KOTLIN_SDK_SHIELDED`, default OFF):
+  lifecycle (configureShielded → bindShielded → sync loop + prover warm-up, single-flight,
+  inert when off), `observeShieldedBalance(): Flow<Dash>` + activity feed (neutral types),
+  all four ops (shield-from-credits / transfer / unshield / withdraw-to-L1) under the
+  SdkWriteResult no-double-broadcast contract. ShieldedSpendUnconfirmed = Ambiguous,
+  non-retryable. 42 tests. UI notes: ~30s blocking Halo2 proof with NO progress hook
+  (indeterminate progress required); prover pre-warmed; withdraw fee pinned to 1 duff/byte
+  (Fibonacci constraint); bech32m Orchard addresses (dash1…/tdash1…).
+- ⬜ **UI from the Figma designs** (links in the design-references section): requires a session
+  with the Figma dev-mode MCP connected; implement via the figma-to-compose flow on top of
+  ShieldedBalanceService.
+
+## Phase 4 UI + SDK fixes status (updated 2026-07-08 late)
+
+- ✅ **Phase 4 UI implemented from the Figma designs** (`ui/shielded/`): hub (balance cards,
+  Receive QR / Internal / Send tabs), internal-transfer with confirm/timing sheets, send-to-
+  address; proving/Ambiguous write-contract UX; Settings entry point gated by
+  SUPPORTS_PLATFORM + USE_KOTLIN_SDK_SHIELDED. Polish backlog: activity timeline,
+  unshield-to-credits + memo surfaces, on-device visual pass, QR URI-scheme parsing.
+  Product review needed: "Dash Wallet → Shielded" currently maps to shield-from-credits
+  (service has no L1 asset-lock→shielded wrapper yet); "Shielded → Dash Wallet" = withdraw.
+- ✅ **SDK issues filed**: dashpay/platform#4051–#4059 (assigned quantumexplorer).
+- ✅ **Blocking SDK fixes PR'd**: dashpay/platform#4060 (KeySecurityPolicy AUTH_GATED/
+  DEVICE_BOUND + pendingIdentityKeys, typed SigningKeyUnavailable, syncState→null).
+  Wallet follow-up once merged/published: adopt DEVICE_BOUND at bootstrap, replace the
+  message-matching in classifyBroadcastFailure/isIdentityManaged with the typed paths.
+
+## Phase 4/5 live-test status (updated 2026-07-10)
+
+- ✅ **L1→shielded validated at scale on-device** (Galaxy S22, testnet): 0.01 single-account
+  and 0.2 multi-account shields completed end-to-end with balances updating; reverse
+  (shielded→L1) round trip previously validated. Multi-account funding (BIP44 + legacy
+  CoinJoin) shipped via dashpay/platform#4074 against #4073.
+- ✅ **Three SDK defects found by the Phase 5a parity harness and fixed in PR #4074**:
+  (1) exponential BranchAndBound coin selection hung the FFI on many-denomination CoinJoin
+  accounts → pinned LargestFirst + stage tracing + bounded-time regression test;
+  (2) key-wallet's TransactionRouter omits CoinJoin/DashPay accounts from AssetLock
+  relevance, so spends of those inputs are never debited (balance inflates by the spent
+  amount, on relay AND on rescan) → upstream router patch, temporarily vendored into the
+  workspace via [patch] + third_party/rust-dashcore until rust-dashcore lands it;
+  (3) broadcast-time debit mitigation kept as belt-and-braces (idempotent with the fix).
+- ✅ **Wallet-side hardening from the same session**: SDK engines restart on every
+  blockchain-service start (resume() was a stub while shutdown() stopped them);
+  shieldFromWallet arms the parity self-spend grace before broadcasting; app-scoped
+  ShieldedTransferExecutor (spend survives screen death, re-attach can't resubmit,
+  dismissible proving dialog, 3-min stall watchdog with funds-honest Stalled state);
+  transfer outcomes announced via a durable system notification whenever the user is
+  off the transfer screen.
+- ⬜ **Next**: full-balance (Max) shield retest on the router-fixed native lib, then the
+  Phase 5b SDK L1-send soak (needs an in-app debug toggle for USE_KOTLIN_SDK_L1_SEND).
+
+### 2026-07-10 addendum: CoinJoin gap-limit finding (Phase-0 risk confirmed live)
+
+The Phase-0 "check 30-address coinjoin gap limit for heavy mixers" risk materialized on the
+test device: key-wallet's DEFAULT_COINJOIN_GAP_LIMIT of 30 (vs dashj DeterministicKeyChain
+lookahead 100) skipped mixing txs beyond the window — outputs never became UTXOs AND their
+spent inputs were never debited. Fixed 30→100 in the PR #4074 vendored key-wallet (+ upstream
+patch coinjoin-gap-limit.patch). Note for cutover: wallets persisted under the old gap keep
+it in pool state — migration must bump via set_gap_limit or re-create.
+
+## Phase 3h (addendum 2026-07-10): retire the legacy org.dashj.platform stack
+
+Gap found in review: Phase 3 seamed *operations* behind flags but never scheduled removing
+the legacy dashj-platform library (org.dashj.platform:dash-sdk-{java,kotlin,android},
+per-flavor dppVersions matrix in wallet/build.gradle — prod 2.0.6-SNAPSHOT, testnet
+4.0.0-RC2-SNAPSHOT). 38 wallet files still import org.dashj.platform.*; both stacks ship
+on the classpath today. Feature areas and their state:
+
+| Area | Coupling | New-SDK equivalent | Today |
+|---|---|---|---|
+| A. BlockchainIdentity state machine (register/topup/recover) | Very deep — legacy Identity blob serialized into BlockchainIdentityData; IdentityStatus/UsernameStatus/KeyType persisted BY ENUM ORDINAL in Room converters | Partial (IdentityRegistration; no topup surface, no state object) | Always-on legacy |
+| B. Contact-request crypto (DIP-15 ECDH/accountReference) | Deep — Room entity fields | Yes, funds-safe; 28-bit accountReference slice mismatch outstanding | Flag seam exists, default legacy |
+| C. TxMetadata publish/fetch (encrypted docs, batching) | Deep — PlatformSyncService tickers, publish via legacy BlockchainIdentity.publishTxMetaData | NONE — SDK documents API is plaintext-only (no encrypted create, no decrypt-on-fetch) | Always-on legacy, unconditional |
+| D. Usernames/DPNS/voting | Medium — Room entities reference legacy types | Reads yes (flagged); vote casting exists but masternode-key writes unported | Reads flagged; vote broadcast legacy |
+| E. Invitations | Shallow-medium | None dedicated | Always-on legacy |
+| F. Profiles/avatars | Medium | Partial (createOrUpdateProfile needs avatarHash-without-bytes support) | Reads/writes flagged |
+| G. identityVerify | Medium | NONE | Always-on legacy |
+| H. PlatformService object graph (Platform+DapiClient+DPP) | Root of A–G | Structurally yes (Sdk) | Both instantiated |
+
+Ordered retirement steps: (1) neutral IdentityState in common + string-keyed Room converters
+(migration away from ordinals) + registration/topup/recovery behind USE_KOTLIN_SDK_IDENTITY;
+(2) contact-crypto default-on after accountReference reconciliation + parity test vector;
+(3) TxMetadata after the SDK gains encrypted-document create + decrypt-on-fetch (hardest gap);
+(4) reads default-on + vote casting decision; (5) identityVerify surface or keep-on-dashj
+decision; (6) delete the artifacts + dppVersions matrix, grep org.dashj.platform == 0.
+
+Six MUST-HAVE SDK gaps drafted as paste-ready issues (accountReference slice, encrypted-doc
+create, decrypt-on-fetch, identity topup surface, avatarHash-only profiles, identityVerify) —
+see the 2026-07-10 audit in the session records; file against dashpay/platform.
+
+## Phase 5c breakdown (2026-07-10 design pass)
+
+Full analysis in session records; essentials. In 5c dashj still runs SPV and stays
+wallet-of-record — only build/sign/broadcast moves. That enables the BRIDGE strategy (the
+key unlock): the SDK's signed raw tx bytes → dashj Transaction → wallet.maybeCommitTx →
+the returned instance is the live confidence-table object, so waitToMatchFilters /
+LockedTransaction / lockOutput / memo+exchangeRate persistence / result-screen IS
+animations work with zero per-call-site changes. maybeCommitTx handles the bloom-filter
+double-commit race (same as the BIP70 path); arm noteSelfSpendBroadcast on every bridged send.
+
+SDK gaps to file (dashpay/platform): GAP-1 return {rawTxBytes, fee, changeAddress} from
+sendToAddresses (bytes exist Rust-side; small FFI accessor — FIRST ask); GAP-2 CoreSendOptions
+(drainAccount/send-all, feeRate, fundingAddresses, include/excludeOutpoints, changeAddress,
+allowUnconfirmed) — unblocks CrowdNode protocol + send-max; GAP-3 estimateSend preflight
+(fee/change preview must equal the actual send); GAP-4 split build/broadcast + reservation
+release (BIP70 deferred submission); NICE: GAP-5 OP_RETURN/output-order (Maya — last
+holdout with asset locks), GAP-6 broadcast-time persistence contract, GAP-7 fee-rate default docs.
+
+Wallet-side order: NOW → 5c.0 fee/change parity probe (dashj dry-run vs SDK Room row per
+send), 5c.1 bridge feasibility probe (Room-row latency, dashj bloom latency, reconstruct+
+maybeCommitTx dry-run), 5c.2 SdkBridgedTransactionFactory, 5c.3 Coinbase completion.
+After GAP-1 → 5c.4 main Send UI cutover (fee preview stays dashj until GAP-3 + probe
+evidence). After GAP-2/3/4 → 5c.5/5c.6 CrowdNode (ByAddressCoinSelector→fundingAddresses,
+ExactOutputsSelector→includeOutpoints, lockOutput→excludeOutpoints, change pinning), 5c.7
+BIP70. Deferred: Maya (GAP-5), asset locks (own phase). Risks: fee-policy divergence
+(ECONOMIC_FEE 1000/kB vs undocumented Rust default — don't flip main UI until probe deltas
+~zero), unconfirmed-input policy unknown (measure; ZeroConfCoinSelector chains off pending
+change), CrowdNode API-layer auto-retries must be audited before 5c.6 (Ambiguous must never
+be re-driven), isTransactionPending false-negatives fixed by bridging even txid-only sites.
+
+## Username creation via L2 fund-hop (spec, 2026-07-11 — replaces direct L1 asset-lock create)
+
+Verified: the hop is a first-class SDK endpoint at every layer. AssetLockFundingType::
+AssetLockAddressTopUp (discriminant 4) → ManagedPlatformWallet.fundFromAssetLock(amountDuffs,
+fundingAccountIndex, platformAccountIndex, recipients=[FundRecipient(addr, credits=null)],
+signerHandle, coreSignerHandle) builds+broadcasts the L1 asset lock, waits IS (300s) with
+unbounded CL fallback (never "failed", NOT cancellation-safe — app-scope executor + stall
+watchdog patterns), validates proof-attested AddressInfos, persists balances BEFORE
+returning (List<UpdatedBalance>), marks the lock consumed; crash recovery via
+resumeFundFromAssetLock(outpoint). Credits are immediately visible to
+registerFromAddresses (same address_credit_balance store; the hop changeset can feed
+inputs directly) → IdentityCreateFromAddressesTransition, no Core tx, no IS/CL wait, then
+registerDpnsName. Hop granularity: one lock consumed in full to a single remainder
+recipient — size the hop to the EXACT authorized cost (+fee headroom) at build time.
+
+Product rule (Brian, 2026-07-11): NO L2 movement before the user authorizes the username
+payment — authorization requires the chosen username (contested 0.25 vs non-contested
+fee) so the full cost is displayed first; the hop fires only inside the authorized
+operation. No background pre-funding.
+
+Plan: (0) prereq — widen SdkWalletBinder eligibility to identity-less wallets;
+(1) SdkAddressHopUsernameCreation service: authorize → hop (SdkWriteResult contract,
+tracked-lock resume, Ambiguous sticky) → registerFromAddresses from changeset → DPNS,
+behind a flag with the legacy L1 path as fallback; (2) route paymentSource=DASH_BALANCE
+through it (UI unchanged); (3) contested-name support falls out naturally (hop sized to
+0.25); (4) at cutover, retire the legacy compound asset-lock-create path — all three
+funding sources (dash-via-hop, platform credits, shielded pool Type-20) then share the
+L2 creation path. Unresolved: whether identity keys must pre-exist for
+registerFromAddresses input signing on a fresh wallet (same key-derivation recipe as
+Type-20 — reuse previewRegistrationKeySet + repairIdentityKey persistence).
+
+### To-do (added 2026-07-11, per Brian): contested-username support across the new funding paths
+
+Contested usernames are currently L1-gated in the shielded flow. Required work:
+1. Shielded usernames: support contested names (0.3 denomination) — includes teaching
+   SdkShieldedUsernameCreation the SECONDARY username (dual-usernames latent gap: it takes
+   only the primary today; secondaries exist exactly when the primary is contestable).
+2. Invitations: shielded-funding + cost-messaging parity (canPayFromShielded mirror into
+   CreateInviteViewModel/InvitationFeeDialogFragment/ConfirmInviteDialogFragment; amounts in
+   Constants.java DASH_PAY_FEE*/DASH_PAY_INVITE_MIN; strings-dashpay.xml:41-42,503-508).
+3. Dual usernames under shielded funding (follows from 1).
+Cost model reminder: shielded path 0.1 non-contested / 0.3 contested (denomination-bound,
+temporary protocol limitation); non-private path keeps ~0.03 / ~0.3 (not denomination-bound).
+
+## Baseline correction + cross-platform contact crash (2026-07-11, from shipped-code review)
+
+CORRECTION to the Phase 3h legacy matrix: shipped **v11.8.2** (tag, HEAD 618ac7b, 2026-07-09)
+unified all flavors to **dpp 4.0.0** (PR #1508) on dashj-core 22.0.4. Our migration branch
+forked the pre-#1508 baseline (prod 2.0.6-SNAPSHOT / testnet 4.0.0-RC2-SNAPSHOT). The Phase 3h
+"retire org.dashj.platform" table's version cells are stale — shipped prod is dpp 4.0.0, not
+2.0.6-SNAPSHOT. Retirement scope is otherwise unchanged.
+
+CROSS-PLATFORM CONTACT CRASH (release-relevant, independent of this migration):
+- Root cause: `IdentityPublicKey.contractBounds` (a v4.x contract-bound-key feature; iOS/Rust-SDK
+  identities carry one, year-old dashj Android identities do not). dashj-platform
+  `IdentityPublicKey.toObject()` does `put("contractBounds", this)` — the RAW ContractBounds
+  object — so `Cbor.addValueToMapBuilder` throws `No converter for SingleContractDocumentType`
+  (Cbor.kt:186) when `PlatformStateRepository.storeIdentity` CBOR-encodes the fetched identity
+  into its in-memory cache.
+- WIRE-VS-CACHE VERDICT (bytecode-verified): breaks ONLY the local in-memory identity cache, NOT
+  the contactRequest wire. The identity fetches+parses fine; the throw is post-fetch,
+  pre-return, so the caller loses a good identity. contactRequest documents + DIP-15 crypto are
+  version-agnostic. One-directional: only a dashj client caching an identity WITH contract-bound
+  keys (iOS/v4.x sender) crashes; old-Android → iOS is fine.
+- Shipped v11.8.2 almost certainly affected: the fix is NOT on kotlin-platform master/feat, only
+  on unmerged branch `fix/contract-bounds` (one line: `put("contractBounds", this.toObject())`).
+  Could not obtain the exact dpp-4.0.0-final jar to be 100% certain — needs the build machine's
+  artifact to confirm.
+- Fix options: (1) app-side catch/bypass (implemented uncommitted this session:
+  IdentityCacheTolerance.kt + PlatformService.getContactIdentity, wired into send + receive),
+  Android-only, restores both directions; (3) library one-liner on fix/contract-bounds → dpp
+  point release (fixes all clients); (2) full SDK routing (overkill). No coordinated iOS release
+  needed. RELEASE DECISION PENDING (user): where the fix lands — our branch, a v11.8.x hotfix,
+  or both.
+
+## Phase 5d — Migration without data loss (cutover coordinator design, 2026-07-12)
+
+Cutover criterion #4: an existing install crosses from dashj persistence to SDK persistence
+in ONE flag-gated switch, with history/metadata/identity state intact, never both engines
+live for one user, and a rollback path. This section is the enforceable design.
+
+### Data-survival inventory
+
+**Survives by construction (seed-derived / chain-derived — no copying):**
+- Keys & addresses (BIP44 + DIP-9 CoinJoin + identity chains: derivation parity proven).
+- Balances & confirmed tx history (SDK SPV rescan from birth height; parity harness proves
+  estimated/confirmed/tx-count/outpoint equality live).
+- Identities + usernames (SDK identity discovery + key heal; DPNS reads).
+- Shielded pool (already SDK-native — no dashj involvement to migrate).
+
+**Survives because it is keyed by txid/address in the APP's Room DB (verify at cutover,
+no copy needed — the keys are engine-independent):**
+- Tx metadata (memos, taxCategory, fiat-at-time, service names), gift cards, address labels,
+  exchange-integration records. RISK: rows referencing txids the SDK rescan does not
+  reproduce would orphan — the parity harness's outpoint-level equality is the guard.
+
+**Deliberately dropped (engine-internal, rebuilt or obsolete):**
+- dashj SPVBlockStore/headers/bloom state, masternode list store (SDK keeps its own),
+  fee-file caches, tx display cache (rebuilds).
+
+**At-risk states — cutover BLOCKERS (the readiness evaluator's job):**
+1. Unconfirmed self-authored dashj txs (mempool-only): an SDK rescan cannot see them until
+   mined → funds would look missing and change could be double-spendable. Block until 0.
+2. In-flight identity creation / username registration (creationState between NONE and
+   DONE, usernameRequested in submit/voting windows that require the legacy state machine).
+3. Pending shielded top-up locks (tracked, resumable — must be drained: consumed or void).
+4. Parity not proven: require a MATCH streak (N consecutive probes over a minimum window,
+   estimated+confirmed+txCount) with synced=true, not just one lucky probe.
+5. Shielded runtime not READY while the shielded flag is on.
+6. No fresh `.wallet` backup on disk (the escape hatch must exist before the switch).
+
+### Cutover state machine (per-install, persisted)
+
+DUAL_RUNNING (today) → READY_OBSERVED (evaluator Ready) → CUT_OVER (flags flipped in one
+transaction: SDK becomes source of truth; dashj engine not started on next launch; wallet
+file retained read-only) → SETTLED (N releases later: dashj artifacts removable for this
+install). Rollback: CUT_OVER → DUAL_RUNNING is legal until SETTLED — dashj re-reads its
+untouched wallet file and resyncs; SDK state is kept (it is always rebuildable). The flip
+itself must be a single atomic config write; every engine start site consults it first
+(never both engines in one process).
+
+### Implementation order
+
+1. `CutoverReadiness` — pure evaluator (this commit): evidence in, Ready/Blocked(reasons)
+   out; host-JVM tests. Consumed first as a debug Settings readout (deferred until the
+   SettingsViewModel flaky-test fix lands in the parallel session), then as the coordinator's
+   gate.
+2. Readiness evidence collectors (parity-streak recorder on L1ShadowSyncService probes;
+   pending-op counters).
+3. The atomic flip config + engine-start gating + rollback trigger (debug broadcast first).
+4. Migration telemetry (rescan duration, discovered-balance match, failure rates) per the
+   Phase 5 rollout plan.

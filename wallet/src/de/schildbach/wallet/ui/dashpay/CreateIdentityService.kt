@@ -150,6 +150,7 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var securityFunctions: SecurityFunctions
     @Inject lateinit var usernameRequestDao: UsernameRequestDao
     @Inject lateinit var walletDataProvider: WalletDataProvider
+    @Inject lateinit var identityCreationStatus: IdentityCreationStatusHolder
     private lateinit var securityGuard: SecurityGuard
     
     private val walletWipeListener: suspend () -> Unit = {
@@ -182,6 +183,11 @@ class CreateIdentityService : LifecycleService() {
         log.error(exception.message, exception)
         analytics.logError(exception, "Failed to create Identity")
         analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_ERROR, mapOf())
+        // Terminal failure: keep the hint only when the error is one of
+        // the KNOWN transient network shapes (its copy still explains
+        // what the retry will wait on); anything unknown clears it —
+        // the tile's error state covers the rest.
+        identityCreationStatus.setHint(identityRetryStatusHint(exception))
 
         GlobalScope.launch {
             var isInvite = false
@@ -269,6 +275,7 @@ class CreateIdentityService : LifecycleService() {
 
     private fun handleCreateIdentityAction(username: String?, usernameSecondary: String?, retryWithNewUserName: Boolean = false) {
         workInProgress = true
+        identityCreationStatus.clear() // fresh run — drop any stale hint
         serviceScope.launch(createIdentityExceptionHandler) {
             createIdentity(username, usernameSecondary, retryWithNewUserName)
             workInProgress = false
@@ -504,6 +511,7 @@ class CreateIdentityService : LifecycleService() {
 
     private fun handleCreateIdentityFromInvitationAction(username: String?, usernameSecondary: String?, invite: InvitationLinkData?) {
         workInProgress = true
+        identityCreationStatus.clear() // fresh run — drop any stale hint
         serviceScope.launch(createIdentityExceptionHandler) {
             createIdentityFromInvitation(username, usernameSecondary, invite)
             workInProgress = false
@@ -829,6 +837,7 @@ class CreateIdentityService : LifecycleService() {
         platformSyncService.initSync()
 
         timerStep3.logTiming()
+        identityCreationStatus.clear() // registration finished — no transient status left to explain
         // aaaand we're done :)
         log.info("username registration complete")
     }

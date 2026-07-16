@@ -124,7 +124,6 @@
     <string name="address_input_title">Dash senden</string>
     <string name="show_clipboard">Inhalt der Zwischenablage anzeigen</string>
     <string name="tap_to_paste">Tippe auf die Adresse in der Zwischenablage, um sie einzufügen.</string>
-    <string name="not_valid_address">Keine gültige %s Adresse oder URL-Anfrage</string>
     <string name="recipient_address">Adresse des Empfängers</string>
 
     <!-- input parser -->
@@ -135,7 +134,6 @@
     <string name="input_parser_unverifyable_paymentrequest">Kann Zahlungsanforderung nicht verifizieren:\n%s</string>
     <string name="input_parser_invalid_paymentrequest">Ungültige Zahlungsanforderung:\n%s</string>
     <string name="input_parser_invalid_transaction">Ungültige Transaktion:\n%s</string>
-    <string name="address_input_paste_from">Einfügen von %s</string>
     <string name="input_connect">Verbinde</string>
 
     <!-- others -->
@@ -144,9 +142,7 @@
     <string name="yes_cancel">Ja, abbrechen</string>
     <string name="no_keep_it">Nein, beibehalten</string>
     <string name="insufficient_money_title">Nicht genug Dash</string>
-    <string name="insufficient_money_msg">Die Menge an Coins in der Wallet ist zu klein für diese Transaktion.</string>
     <string name="send_coins_error_msg">Problem beim Versenden der Dash!</string>
     <string name="from_dash_wallet_on_this_device">Von der Dash Wallet auf diesem Gerät</string>
     <string name="preposition_at">bei</string>
-    <string name="info">Info</string>
 </resources>

@@ -101,7 +101,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var hasLocationBeenRequested: Boolean = false
     private var previousScreenState: ScreenState = ScreenState.SearchResults
     private var onBackPressedCallback: OnBackPressedCallback? = null
-    private var transitionAnimator: AnimatorSet? = null
 
     private val isPhysicalSearch: Boolean
         get() = viewModel.exploreTopic == ExploreTopic.ATMs || viewModel.filterMode.value == FilterMode.Nearby
@@ -316,14 +315,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    override fun onDestroyView() {
-        // Cancel any in-flight transition so its doOnEnd callback doesn't run
-        // against a destroyed view binding.
-        transitionAnimator?.cancel()
-        transitionAnimator = null
-        super.onDestroyView()
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         try {
@@ -333,19 +324,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
         onBackPressedCallback?.remove()
     }
-
-    private fun startTransitionAnimator(animator: AnimatorSet) {
-        transitionAnimator?.cancel()
-        transitionAnimator = animator
-        animator.start()
-    }
-
-    // True only when the view binding can be safely accessed. Note that during onDestroyView()
-    // the view's LifecycleOwner is already DESTROYED while getView() is still non-null, so checking
-    // the view alone isn't enough to guard a transition's doOnEnd callback against cancellation.
-    private val isViewBindingReady: Boolean
-        get() = view != null &&
-            viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.INITIALIZED)
 
     private fun refreshManageGpsView() {
         val isLocationEnabled = viewModel.isLocationEnabled.value ?: false
@@ -679,31 +657,29 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         // Keep drag indicator visible if bottom sheet is draggable
         if (bottomSheet.isDraggable) {
-            startTransitionAnimator(
-                AnimatorSet().apply {
+            AnimatorSet()
+                .apply {
                     playTogether(animResults, animBackButton, animDetails)
                     duration = 200
                     doOnEnd {
-                        if (!isViewBindingReady) return@doOnEnd
                         binding.searchResults.isVisible = false
                         binding.backToNearestBtn.isVisible = false
                     }
                 }
-            )
+                .start()
         } else {
             val animDrag = ObjectAnimator.ofFloat(binding.dragIndicator, View.ALPHA, 0f)
-            startTransitionAnimator(
-                AnimatorSet().apply {
+            AnimatorSet()
+                .apply {
                     playTogether(animResults, animBackButton, animDrag, animDetails)
                     duration = 200
                     doOnEnd {
-                        if (!isViewBindingReady) return@doOnEnd
                         binding.searchResults.isVisible = false
                         binding.dragIndicator.isVisible = false
                         binding.backToNearestBtn.isVisible = false
                     }
                 }
-            )
+                .start()
         }
     }
 
@@ -731,17 +707,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val animResults = ObjectAnimator.ofFloat(binding.searchResults, View.ALPHA, 1f)
         val animDrag = ObjectAnimator.ofFloat(binding.dragIndicator, View.ALPHA, 1f)
         val animDetails = ObjectAnimator.ofFloat(binding.itemDetails, View.ALPHA, 0f)
-        startTransitionAnimator(
-            AnimatorSet().apply {
+        AnimatorSet()
+            .apply {
                 playTogether(animResults, animDrag, animDetails)
                 duration = 200
                 doOnEnd {
-                    if (!isViewBindingReady) return@doOnEnd
                     binding.itemDetails.isVisible = false
                     binding.filterPanel.isVisible = shouldShowFiltersPanel()
                 }
             }
-        )
+            .start()
     }
 
     private fun transitToAllMerchantLocations(expand: Boolean) {
@@ -779,16 +754,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val animResults = ObjectAnimator.ofFloat(binding.searchResults, View.ALPHA, 1f)
         val animBackButton = ObjectAnimator.ofFloat(binding.backToNearestBtn, View.ALPHA, 1f)
         val animDetails = ObjectAnimator.ofFloat(binding.itemDetails, View.ALPHA, 0f)
-        startTransitionAnimator(
-            AnimatorSet().apply {
+        AnimatorSet()
+            .apply {
                 playTogether(animResults, animBackButton, animDetails)
                 duration = 200
-                doOnEnd {
-                    if (!isViewBindingReady) return@doOnEnd
-                    binding.itemDetails.isVisible = false
-                }
+                doOnEnd { binding.itemDetails.isVisible = false }
             }
-        )
+            .start()
     }
 
     private fun getToolbarTitle(): String {

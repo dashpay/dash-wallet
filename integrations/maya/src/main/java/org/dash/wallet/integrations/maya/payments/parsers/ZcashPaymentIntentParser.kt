@@ -18,7 +18,6 @@ package org.dash.wallet.integrations.maya.payments.parsers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.AddressFormatException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
@@ -31,7 +30,7 @@ import org.slf4j.LoggerFactory
  * Supports transparent t-addresses (`t1...`, `t3...`), Sapling shielded addresses (`zs1...`),
  * and unified addresses (`u1...`).
  */
-class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZEC", "z", null) {
+class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZEC", "z") {
     private val log = LoggerFactory.getLogger(ZcashPaymentIntentParser::class.java)
     private val addressParser = ZcashAddressParser()
 
@@ -50,7 +49,7 @@ class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZE
         } else if (addressParser.exactMatch(input)) {
             try {
                 return@withContext createPaymentIntent(input)
-            } catch (ex: AddressFormatException) {
+            } catch (ex: Exception) {
                 log.info("got invalid address", ex)
                 throw PaymentIntentParserException(
                     ex,

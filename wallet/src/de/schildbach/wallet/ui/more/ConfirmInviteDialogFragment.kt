@@ -41,6 +41,9 @@ import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_topup) {
+
+    @javax.inject.Inject
+    lateinit var authManager: org.dash.wallet.common.services.AuthenticationManager
     companion object {
         private val log = LoggerFactory.getLogger(ConfirmInviteDialogFragment::class.java)
     }
@@ -66,6 +69,10 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                         binding.confirmMessage.isVisible = true
                         return@launch
                     }
+                    // Authenticate right before the spend — the amount has been
+                    // confirmed on this screen (standard order; the fee screen no
+                    // longer prompts). A cancelled prompt spends nothing.
+                    authManager.authenticate(requireActivity()) ?: return@launch
                     // invitationFragmentViewModel.logEvent(AnalyticsConstants.UsersContacts.TOPUP_CONFIRM)
                     val identityId = invitationFragmentViewModel.sendInviteTransaction(inviteAmount)
                     findNavController().navigate(

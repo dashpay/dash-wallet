@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.crowdnode.utils
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.services.LeftoverBalanceException
 import kotlin.jvm.Throws
 
@@ -42,7 +43,7 @@ class CrowdNodeBalanceCondition {
             }
 
             val leftoverBalance = walletBalance.subtract(amount)
-            val minimumLeftoverBalance = CrowdNodeConstants.MINIMUM_LEFTOVER_BALANCE
+            val minimumLeftoverBalance = CrowdNodeConstants.MINIMUM_LEFTOVER_BALANCE.toCoin()
 
             if (leftoverBalance.isLessThan(minimumLeftoverBalance)) {
                 throw LeftoverBalanceException(

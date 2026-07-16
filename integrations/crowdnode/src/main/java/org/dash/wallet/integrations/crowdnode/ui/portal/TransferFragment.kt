@@ -32,8 +32,10 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.dashToFiat
+import org.dash.wallet.common.money.fiatValue
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -131,11 +133,12 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         }
 
         amountViewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
-            binding.toolbarSubtitle.text = if (rate != null) {
+            val rateFiat = rate?.fiatValue
+            binding.toolbarSubtitle.text = if (rateFiat != null) {
                 getString(
                     R.string.exchange_rate_template,
-                    Coin.COIN.toPlainString(),
-                    rate.fiat.toFormattedString()
+                    Dash.COIN.toPlainString(),
+                    rateFiat.toFormattedString()
                 )
             } else {
                 ""
@@ -150,12 +153,12 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             updateAvailableBalance()
         }
 
-        amountViewModel.amount.observe(viewLifecycleOwner) { amount ->
+        amountViewModel.amountDash.observe(viewLifecycleOwner) { amount ->
             val maxValue = if (args.withdraw) {
                 viewModel.crowdNodeBalance.value?.balance
             } else {
                 viewModel.dashBalance.value
-            } ?: Coin.ZERO
+            } ?: Dash.ZERO
 
             binding.balanceText.setTextAppearance(
                 if (amount > maxValue) {
@@ -166,7 +169,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             )
         }
 
-        amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
+        amountViewModel.onContinueDashEvent.observe(viewLifecycleOwner) { pair ->
             lifecycleScope.launch {
                 continueTransfer(pair.first, args.withdraw)
             }
@@ -216,7 +219,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         }
     }
 
-    private suspend fun continueTransfer(value: Coin, isWithdraw: Boolean) {
+    private suspend fun continueTransfer(value: Dash, isWithdraw: Boolean) {
         if (!isWithdraw) {
             if (viewModel.shouldShowFirstDepositBanner &&
                 value.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
@@ -259,7 +262,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         }
     }
 
-    private suspend fun handleDeposit(value: Coin): Boolean {
+    private suspend fun handleDeposit(value: Dash): Boolean {
         try {
             viewModel.deposit(value, true)
             return true
@@ -275,7 +278,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         return false
     }
 
-    private suspend fun handleWithdraw(value: Coin): Boolean {
+    private suspend fun handleWithdraw(value: Dash): Boolean {
         return try {
             return viewModel.withdraw(value)
         } catch (ex: WithdrawalLimitsException) {
@@ -289,12 +292,12 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             viewModel.crowdNodeBalance.value?.balance
         } else {
             viewModel.dashBalance.value
-        } ?: Coin.ZERO
+        } ?: Dash.ZERO
 
         val minValue = if (args.withdraw) {
             balance.div(ApiCode.WithdrawAll.code)
         } else {
-            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
+            CrowdNodeConstants.API_OFFSET + Dash.valueOf(ApiCode.MaxCode.code)
         }
 
         amountViewModel.setMinAmount(minValue)
@@ -305,14 +308,14 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         setAvailableBalanceText(balance, rate, dashToFiat)
     }
 
-    private fun setAvailableBalanceText(balance: Coin, exchangeRate: ExchangeRate?, dashToFiat: Boolean) {
-        val rate = exchangeRate?.let { org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat) }
+    private fun setAvailableBalanceText(balance: Dash, exchangeRate: ExchangeRate?, dashToFiat: Boolean) {
+        val rate = exchangeRate?.fiatValue
 
         binding.balanceText.text = when {
             dashToFiat -> getString(R.string.available_balance, balance.toFriendlyString())
             rate != null -> getString(
                 R.string.available_balance,
-                rate.coinToFiat(balance).toFormattedString()
+                exchangeRate.dashToFiat(balance).toFormattedString()
             )
             else -> ""
         }

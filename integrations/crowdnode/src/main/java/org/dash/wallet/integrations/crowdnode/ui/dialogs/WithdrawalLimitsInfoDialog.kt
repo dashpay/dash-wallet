@@ -23,8 +23,8 @@ import android.view.View
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
@@ -33,13 +33,13 @@ import org.dash.wallet.integrations.crowdnode.model.WithdrawalLimitPeriod
 import java.lang.IllegalArgumentException
 
 class WithdrawalLimitsInfoDialog(
-    private val limitPerTx: Coin,
-    private val limitPerHour: Coin,
-    private val limitPerDay: Coin,
+    private val limitPerTx: Dash,
+    private val limitPerHour: Dash,
+    private val limitPerDay: Dash,
     private val highlightedLimit: WithdrawalLimitPeriod? = null,
     private val okButtonText: String? = null
 ) : AdaptiveDialog(R.layout.dialog_withdrawal_limits) {
-    private val limitFormat = MonetaryFormat.BTC.minDecimals(0).optionalDecimals(0).noCode()
+    private val limitFormat = MoneyFormat.BTC.minDecimals(0).optionalDecimals(0).noCode()
     private val binding by viewBinding(DialogWithdrawalLimitsBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

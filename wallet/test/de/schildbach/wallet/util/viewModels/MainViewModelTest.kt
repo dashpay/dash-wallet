@@ -38,6 +38,7 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.service.DeviceInfoProvider
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
@@ -65,6 +66,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
@@ -139,6 +141,9 @@ class MainViewModelTest {
     private val invitationsDaoMock = mockk<InvitationsDao> {
         coEvery { loadAll() } returns listOf()
     }
+    private val usernameRequestDaoMock = mockk<UsernameRequestDao> {
+        coEvery { getRequestsByNormalizedLabel(any()) } returns listOf()
+    }
     private val userAgentDaoMock = mockk<UserAlertDao> {
         every { observe(any()) } returns flow { }
     }
@@ -209,7 +214,15 @@ class MainViewModelTest {
     private val txDisplayCacheService = mockk<TxDisplayCacheService>(relaxed = true)
     private val crowdNodeApi = mockk<CrowdNodeApi> {
         every { signUpStatus } returns MutableStateFlow(SignUpStatus.NotStarted)
-        every { balance } returns MutableStateFlow(Resource.success(Coin.ZERO))
+        every { balance } returns MutableStateFlow(Resource.success(Dash.ZERO))
+    }
+    private val l1ShadowSyncService = mockk<de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService> {
+        every { progress } returns MutableStateFlow(
+            de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress.IDLE
+        )
+        every { verificationStatus } returns MutableStateFlow(
+            de.schildbach.wallet.service.platform.sdk.L1VerificationStatus.UNKNOWN
+        )
     }
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
@@ -293,12 +306,14 @@ class MainViewModelTest {
                 biometricHelper,
                 deviceInfoProvider,
                 invitationsDaoMock,
+                usernameRequestDaoMock,
                 userAgentDaoMock,
                 dashPayProfileDaoMock,
                 mockDashPayConfig,
                 dashPayContactRequestDao,
                 txDisplayCacheService,
-                crowdNodeApi
+                crowdNodeApi,
+                l1ShadowSyncService
             )
         )
 
@@ -331,12 +346,14 @@ class MainViewModelTest {
                 biometricHelper,
                 deviceInfoProvider,
                 invitationsDaoMock,
+                usernameRequestDaoMock,
                 userAgentDaoMock,
                 dashPayProfileDaoMock,
                 mockDashPayConfig,
                 dashPayContactRequestDao,
                 txDisplayCacheService,
-                crowdNodeApi
+                crowdNodeApi,
+                l1ShadowSyncService
             )
         )
 

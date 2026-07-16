@@ -273,10 +273,10 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             return
         }
 
-        // Some translations of this array are missing items - fall back to the enum name
-        val sortOptionNames = resources.getStringArray(R.array.sort_by_options_names)
-        val optionNames = sortOptions.map { option ->
-            IconifiedViewItem(sortOptionNames.getOrElse(option.ordinal) { option.name })
+        val optionNames = sortOptions.map {
+            IconifiedViewItem(
+                resources.getStringArray(R.array.sort_by_options_names)[it.ordinal]
+            )
         }
         this.sortOptions = sortOptions
 

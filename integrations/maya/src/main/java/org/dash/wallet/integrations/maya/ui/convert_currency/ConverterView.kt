@@ -24,9 +24,8 @@ import android.view.LayoutInflater
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedString
@@ -37,7 +36,7 @@ import java.math.RoundingMode
 
 class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
     private val binding = ConverterViewBinding.inflate(LayoutInflater.from(context), this)
-    private val dashFormat = GenericUtils.dashFormat
+    private val dashFormat = GenericUtils.dashMoneyFormat
 
     private var onCurrencyChooserClicked: (() -> Unit)? = null
 
@@ -57,15 +56,16 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
             updateAmount()
         }
 
-    private var _dashInput: Coin? = null
-    var dashInput: Coin?
+    private var _dashInput: Dash? = null
+    var dashInput: Dash?
         get() = _dashInput
         set(value) {
             _dashInput = value
             updateUiWithSwap()
         }
 
-    var exchangeRate: ExchangeRate? = null
+    /** fiat price of one Dash */
+    var exchangeRate: FiatValue? = null
         set(value) {
             field = value
         }
@@ -78,7 +78,7 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
             }
         }
 
-    var fiatInput: Fiat? = null
+    var fiatInput: FiatValue? = null
         set(value) {
             if (field != value) {
                 field = value
@@ -128,8 +128,8 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
 
             if (dashInput != null && fiatInput != null) {
                 binding.convertFromBtn.setConvertItemAmounts(
-                    "${dashFormat.format(dashInput ?: Coin.ZERO)}",
-                    "${Constants.PREFIX_ALMOST_EQUAL_TO} ${ (fiatInput ?: Fiat.valueOf("USD", 0)).toFormattedString() }"
+                    "${dashFormat.format(dashInput ?: Dash.ZERO)}",
+                    "${Constants.PREFIX_ALMOST_EQUAL_TO} ${ (fiatInput ?: FiatValue.zero("USD")).toFormattedString() }"
                 )
             }
         } else {
@@ -162,9 +162,9 @@ class ConverterView(context: Context, attrs: AttributeSet) : ConstraintLayout(co
 
                 val balance = it.balance.toBigDecimal().setScale(8, RoundingMode.HALF_UP).toString()
                 val coin = try {
-                    Coin.parseCoin(balance)
+                    Dash.parse(balance)
                 } catch (x: Exception) {
-                    Coin.ZERO
+                    Dash.ZERO
                 }
             }
         }

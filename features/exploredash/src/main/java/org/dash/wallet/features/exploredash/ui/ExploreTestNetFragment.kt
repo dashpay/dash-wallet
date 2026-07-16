@@ -49,11 +49,11 @@ class ExploreTestNetFragment : Fragment(R.layout.fragment_explore_testnet) {
         }
 
         binding.getDashBtn.setOnClickListener {
-            val receiveAddress = walletDataProvider.freshReceiveAddress()
+            val receiveAddress = walletDataProvider.freshReceiveAddressString()
             val clipboardManager =
                 requireActivity().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
-            clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash address", receiveAddress.toString()))
+            clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash address", receiveAddress))
 
             val faucetIntent = Intent(
                 Intent.ACTION_VIEW,

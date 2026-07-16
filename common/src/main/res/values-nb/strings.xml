@@ -4,25 +4,6 @@
     <string name="request_coins_share_dialog_title">Del forespørsel etter Dash…</string>
     <!-- Generic buttons -->
     <string name="button_dismiss">Lukk</string>
-    <string name="button_cancel">Avbryt</string>
     <string name="button_retry">Prøv igjen</string>
     <string name="button_share">Del</string>
-    <string name="exchange_rate_not_found">Kunne ikke finne valutakurser.</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Send rapport ved hjelp av…</string>
-
-    <!-- scan -->
-    <string name="scan_camera_problem_dialog_title">Beklager</string>
-    <string name="scan_camera_problem_dialog_message">Det er et problem med kameraet. En omstart av enheten er sannsynligvis nødvendig.</string>
-    <!-- address input -->
-    <string name="address_input_title">Send Dash</string>
-    <!-- input parser -->
-    <string name="input_parser_io_error">Kan ikke lese data:\n%s</string>
-    <string name="input_parser_cannot_classify">Kan ikke gjenkjenne input:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Ugyldig Dash-URI:\n%s</string>
-    <string name="input_parser_invalid_address">Fikk ugyldig Dash-adresse!\n(Blanding av Mainnet/Testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Kan ikke verifisere betalingsforespørsel:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Ugyldig betalingsforespørsel:\n%s</string>
-    <string name="input_parser_invalid_transaction">Ugyldig transaksjon:\n%s</string>
-    <string name="insufficient_money_title">Ikke nok mynter</string>
-    <string name="send_coins_error_msg">Problem under sending av mynter!</string>
     </resources>

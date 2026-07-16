@@ -15,17 +15,8 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="maya_service_name">Maya</string>
-    <string name="maya_portal_convert_title">Konversi Dash</string>
-    <string name="maya_portal_convert_to_title">Konversi Dash ke</string>
-    <string name="maya_portal_convert_subtitle">Dari Dompet Dash ke kripto apapun</string>
-    <string name="maya_portal_subtitle">Konversikan Dash dari Dash Wallet ke mata uang kripto apa pun yang didukung di Maya dan kirimkan ke dompet mana pun.</string>
-    <string name="maya_address_input_hint">%s Alamat</string>
-    <string name="maya_address_input_title">Konversi Dash ke %s</string>
-    <string name="maya_crypto_convert_title">Konversi Dash</string>
     <string name="maya_crypto_convert_order_preview_title">Pratinjau Pesanan</string>
 
-    <string name="cryptocurrency_any_network">% Jaringan</string>
     <string name="cryptocurrency_bitcoin_network">Bitcoin</string>
     <string name="cryptocurrency_dash_network">Dash</string>
     <string name="cryptocurrency_rune_network">Thorchain</string>
@@ -57,11 +48,6 @@
     <string name="cryptocurrency_xrd_network">Radix</string>
     <string name="cryptocurrency_maya_network">Maya (Maya)</string>
 
-    <string name="maya_error">Kesalahan Maya</string>
-    <string name="maya_error_not_available">Layanan Maya tidak tersedia. Silakan coba lagi nanti.</string>
-    <string name="maya_error_report_issue">Silakan laporkan masalah ini kepada tim dukungan Dash Wallet menggunakan \"Hubungi Dukungan\" dari menu utama.</string>
-    <string name="maya_error_address_not_valid">Alamat tidak valid</string>
-
     <!-- taken from Coinbase -->
     <string name="entered_amount_is_too_low">Jumlah minimum transaksi adalah</string>
     <string name="entered_amount_is_too_high">Jumlah transaksi maksimum adalah</string>
@@ -78,7 +64,6 @@
     <string name="send_to_wallet_error">Tidak dapat mengirim jumlah ini tanpa melampaui batas aplikasi</string>
     <string name="purchase_successful">Pembelian berhasil</string>
     <string name="maya_it_could_take_up_to_2_3_minutes">Diperlukan waktu hingga 2–3 menit agar Dash ditransfer ke Dash Wallet Anda di perangkat ini.</string>
-    <string name="maya_it_could_take_up_to_5_minutes">Proses konversi %s dari Dash Wallet ke %s dan pengirimannya ke alamat yang diberikan dapat memakan waktu hingga 2 menit.</string>
     <string name="maya_it_could_take_up_to_5_minutes_to_coinbase">Diperlukan waktu hingga 5 menit untuk mengonversi Dash dari Dash Wallet di perangkat ini menjadi %s di akun Coinbase anda.</string>
     <string name="conversion_failed">Konversi Gagal</string>
     <string name="transfer_dash_successful">Transfer berhasil</string>
@@ -87,10 +72,6 @@
     <string name="conversion_successful">Konversi berhasil</string>
     <string name="transfer_dash_failed_msg">Ada masalah saat mentransfernya ke Dash Wallet di perangkat ini.</string>
     <string name="auth_limit_description">Anda melampaui batas otorisasi di Coinbase.</string>
-    <string name="you_will_receive">Jumlah diterima</string>
-    <string name="contact_maya_support">Hubungi Dukungan Maya</string>
-    <string name="maya_fees_in_crypto_purchase">Biaya Maya dalam konversi kripto</string>
-    <string name="maya_fee_info_msg_content">Terdapat berbagai biaya masuk, keluar, dan likuiditas yang terkait dengan transaksi Maya. Jumlah yang Anda masukkan adalah jumlah yang akan diterima.</string>
     <string name="learn_more">Pelajari lebih lanjut</string>
     <string name="debit_money">Debit uang dari akun Anda</string>
     <string name="change_limit">Ubah batas ini</string>
@@ -101,20 +82,6 @@
     <string name="you_send">Anda mengirim</string>
     <string name="from_your_coinbase_account">Dari akun Coinbase Anda</string>
     <string name="you_receive">Anda menerima</string>
-    <string name="to_dash_wallet_on_this_device">Dari dompet Dash di perangkat ini</string>
     <string name="purchase">Beli</string>
-    <string name="maya_fee">Biaya Maya</string>
     <string name="total">Total</string>
-    <string name="to_external_address">ke %s</string>
-
-    <string name="maya_error_information">%s%n Mata uang kripto: %s</string>
-    <string name="maya_error_invalid_destination_address">Alamat tujuan tidak valid</string>
-    <string name="maya_error_below_recommended_minimum">Jumlah yang dimasukkan lebih rendah dari jumlah minimum yang disarankan.</string>
-    <string name="maya_error_trading_halted">Perdagangan telah dihentikan pada %s.</string>
-    <string name="maya_error_below_allowed_minimum">Jumlah yang dimasukkan lebih rendah dari jumlah minimum yang di izinkan.</string>
-    <string name="maya_error_quote">Tidak dapat memperoleh penawaran harga dari Maya untuk konversi ini</string>
-    <string name="maya_halted_label">Dihentikan</string>
-    <string name="maya_halted_coins_toast">Beberapa koin dihentikan sementara dan tidak tersedia untuk diperdagangkan.</string>
-
-
-</resources>
+    </resources>

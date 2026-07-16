@@ -348,5 +348,4 @@
 
     <string name="upgrade_pin_description">Задайте нов ПИН</string>
     <string name="upgrade_pin_continue">Продължи</string>
-
-    </resources>
+</resources>

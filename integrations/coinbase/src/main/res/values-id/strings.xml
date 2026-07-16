@@ -21,7 +21,6 @@
     <string name="coinbase_transfer_details">Antara Dash Wallet dan akun Coinbase Anda</string>
     <string name="coinbase_dash_wallet_error_title">Kami tidak menemukan Dompet Dash di akun Coinbase Anda.</string>
     <string name="coinbase_dash_wallet_error_message">Silakan buat Dompet Dash di Coinbase untuk melanjutkan.</string>
-    <string name="coinbase_usd_wallet_error_message">Akun Coinbase anda tidak mendukung USD.</string>
     <string name="create_dash_account">Buat Akun Dash</string>
     <string name="close">Tutup</string>
     <string name="retry">Coba lagi</string>

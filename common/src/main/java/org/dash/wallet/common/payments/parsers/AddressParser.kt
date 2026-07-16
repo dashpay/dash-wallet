@@ -22,6 +22,9 @@ import org.bitcoinj.core.Base58
 import org.bitcoinj.core.NetworkParameters
 
 open class AddressParser(pattern: String, val params: NetworkParameters?) {
+    /** Neutral (dashj-free) constructor for pattern-only parsers in modules that must not depend on dashj. */
+    constructor(pattern: String) : this(pattern, null)
+
     companion object {
         val PATTERN_BITCOIN_ADDRESS = "[${Base58.ALPHABET.joinToString(separator = "")}]{20,40}"
         private const val PATTERN_ETHEREUM_ADDRESS = "0x[a-fA-F0-9]{40}"
@@ -69,5 +72,18 @@ open class AddressParser(pattern: String, val params: NetworkParameters?) {
 
     protected open fun verifyAddress(addressCandidate: String) {
         params?.let { Address.fromString(params, addressCandidate) }
+    }
+
+    /**
+     * Neutral (dashj-free) validation for callers that must not catch bitcoinj exceptions:
+     * true if [addressCandidate] passes [verifyAddress] without throwing.
+     */
+    fun isValidAddress(addressCandidate: String): Boolean {
+        return try {
+            verifyAddress(addressCandidate)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 }

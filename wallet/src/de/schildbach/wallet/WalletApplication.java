@@ -57,7 +57,6 @@ import com.google.firebase.FirebaseApp;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
@@ -101,6 +100,11 @@ import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.service.platform.IdentityRepository;
 import de.schildbach.wallet.service.platform.TopUpRepository;
+import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator;
+import de.schildbach.wallet.service.platform.sdk.CutoverDebugReadout;
+import de.schildbach.wallet.service.platform.sdk.CutoverEvidenceCollector;
+import de.schildbach.wallet.service.platform.sdk.L1ShadowDebugReset;
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService;
 import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
@@ -223,6 +227,8 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     PlatformSyncService platformSyncService;
     @Inject
+    de.schildbach.wallet.ui.dashpay.utils.DashPayConfig dashPayConfig;
+    @Inject
     TopUpRepository topUpRepository;
     @Inject
     PackageInfoProvider packageInfoProvider;
@@ -238,6 +244,12 @@ public class WalletApplication extends MultiDexApplication
     SecurityInitializer securityInitializer;
     @Inject
     TxDisplayCacheService txDisplayCacheService;
+    @Inject
+    L1ShadowSyncService l1ShadowSyncService;
+    @Inject
+    CutoverCoordinator cutoverCoordinator;
+    @Inject
+    CutoverEvidenceCollector cutoverEvidenceCollector;
     private WalletBalanceObserver walletBalanceObserver;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;
@@ -257,6 +269,19 @@ public class WalletApplication extends MultiDexApplication
         super.onCreate();
         initLogging();
         FirebaseApp.initializeApp(this);
+        if (FirebaseApp.getApps(this).isEmpty()) {
+            // Built without google-services.json (the Firebase config is intentionally optional,
+            // see gradle/google-services.gradle). Initialize a placeholder app so DI-provided
+            // Firebase services (auth, analytics) can be constructed; their network calls fail
+            // soft inside existing error handling instead of crashing the process.
+            log.warn("no Firebase config in this build; initializing placeholder FirebaseApp");
+            FirebaseApp.initializeApp(this, new com.google.firebase.FirebaseOptions.Builder()
+                    .setApplicationId("1:000000000000:android:0000000000000000000000")
+                    .setProjectId("dash-wallet-local-build")
+                    // must match Firebase's AIza[0-9A-Za-z\-_]{35} API-key format check
+                    .setApiKey("AIzaSyPlaceholderLocalBuild000000000000")
+                    .build());
+        }
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("STARTUP WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
@@ -289,6 +314,13 @@ public class WalletApplication extends MultiDexApplication
         resetBlockchainSyncProgress();
         anrSupervisor = new AnrSupervisor();
         anrSupervisor.start();
+
+        // DEBUG-only adb trigger for an L1 shadow hard reset; provably a
+        // no-op in release builds (the method returns before registering).
+        L1ShadowDebugReset.registerIfDebug(this, l1ShadowSyncService);
+        // DEBUG-only adb trigger for a one-shot Phase 5d cutover readiness
+        // readout (advisory only — can never commit a cutover).
+        CutoverDebugReadout.registerIfDebug(this, cutoverCoordinator, cutoverEvidenceCollector);
 
         // enable TLS 1.3 support on Android 9 and lower
         // Android 10 and above support TLS 1.3 by default
@@ -421,25 +453,6 @@ public class WalletApplication extends MultiDexApplication
         // TODO: do we need this commented out for saving
         // org.bitcoinj.core.Context.enableStrictMode();
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
-
-        // Pre-warm RegTestParams on this single-threaded startup path.
-        //
-        // dashj's ZeroConfCoinSelector.isTransactionSelectable() compares a pending tx's params
-        // against RegTestParams.get() for *every* pending output it considers. This selector is
-        // used by getAnonymizableBalance(), send flows and ByAddressCoinSelector. RegTestParams.get()
-        // lazily runs the RegTestParams constructor, which recomputes the regtest genesis X11 hash
-        // and checkState()s it against a hardcoded value. When that lazy construction first happens
-        // on a contended background thread (notably CoinJoin's IO coroutines, which do heavy
-        // concurrent X11 hashing) a transient bad X11 result makes the checkState throw and crashes
-        // balance calculation - even though this wallet never runs on regtest.
-        //
-        // Forcing the (synchronized, cached) construction here, before any concurrent hashing
-        // begins, makes the instance compute correctly once and be reused forever, closing the race.
-        try {
-            RegTestParams.get();
-        } catch (Throwable t) {
-            log.warn("failed to pre-warm RegTestParams", t);
-        }
 
         log.info("=== starting app using configuration: {}, {}", BuildConfig.FLAVOR,
                 Constants.NETWORK_PARAMETERS.getId());
@@ -951,18 +964,38 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void clearDatastorePrefs() {
+        // Clear live DataStore-backed configs through their API first: deleting the
+        // backing file of a LIVE DataStore out-of-band leaves its in-memory cache
+        // populated while disk is empty (memory/disk desync — observed live as the
+        // debug SDK flags never reseeding after a Reset Wallet and datastore files
+        // recreated with a random subset of keys). The API-level clear resets
+        // memory and disk atomically.
+        final Set<String> apiCleared = WalletApplicationExt.INSTANCE.clearLiveConfigs();
+
+        // File-delete only the datastore files with no live DataStore instance
+        // (configs never instantiated this process have no in-memory cache, so raw
+        // deletion is safe for them). Deleting an api-cleared file here would
+        // desynchronize its live cache again.
+        final List<String> fileDeleted = new ArrayList<>();
         final File folder = new File(getFilesDir(), Constants.Files.DATASTORE_PREFS_DIRECTORY);
 
         if (folder.isDirectory()) {
-            log.info("removing datastore preferences");
             final File[] files = folder.listFiles();
 
             if (files != null) {
-                for (File file: files) {
-                    file.delete();
+                for (File file : files) {
+                    if (!apiCleared.contains(file.getName())) {
+                        if (file.delete()) {
+                            fileDeleted.add(file.getName());
+                        } else {
+                            log.warn("failed to delete datastore preferences file: '{}'", file.getName());
+                        }
+                    }
                 }
             }
         }
+
+        log.info("datastore preferences cleared; api-cleared: {}, file-deleted: {}", apiCleared, fileDeleted);
     }
 
     private void clearWebCookies() {
@@ -1253,12 +1286,40 @@ public class WalletApplication extends MultiDexApplication
     }
 
     @NotNull
+    @Override
+    public String getNetworkId() {
+        return getNetworkParameters().getId();
+    }
+
+    @NotNull
+    @Override
+    public String currentReceiveAddressString() {
+        return currentReceiveAddress().toBase58();
+    }
+
+    @NotNull
+    @Override
+    public String freshReceiveAddressString() {
+        return freshReceiveAddress().toBase58();
+    }
+
+    @NotNull
     public Coin getWalletBalance() {
         if (wallet == null || walletBalanceObserver == null) {
             return Coin.ZERO;
         }
 
         return  walletBalanceObserver.getTotalBalance().getValue();
+    }
+
+    @Override
+    public int spendableUtxoCount() {
+        final Wallet wallet = this.wallet;
+        if (wallet == null) {
+            return 0;
+        }
+        // the exact output set getBalance(ESTIMATED) sums — see the interface doc
+        return wallet.calculateAllSpendCandidates(false, false).size();
     }
 
     @NonNull

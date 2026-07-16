@@ -119,6 +119,16 @@ object TransactionUtils {
     }
 
     fun Transaction.isEntirelySelf(bag: TransactionBag): Boolean {
+        // A transaction that spends nothing of ours cannot be a self-transfer.
+        // Without this guard, an input-less transaction — e.g. a Platform
+        // credit-withdrawal (asset-unlock) payout, which is funded from the
+        // credit pool and quorum-signed in its payload — whose outputs all pay
+        // our own addresses satisfies both loops below vacuously and renders
+        // as an internal transfer instead of a receive.
+        if (inputs.isEmpty()) {
+            return false
+        }
+
         for (input in inputs) {
             val connectedOutput = input.connectedOutput
 

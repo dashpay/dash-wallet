@@ -5,26 +5,7 @@
     <string name="request_coins_share_dialog_title">Ndaje kërkesën për Dash</string>
     <!-- Generic buttons -->
     <string name="button_dismiss">Shpërfille</string>
-    <string name="button_cancel">Anulo</string>
     <string name="button_retry">Provo prapë</string>
     <string name="button_share">Shpërndaje</string>
     <string name="dash">Dash</string>
-    <string name="exchange_rate_not_found">Nuk mund të gjej kursin e këmbimit.</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Dërgo raporting duke përdorur…</string>
-
-    <!-- scan -->
-    <string name="scan_camera_problem_dialog_title">Na vjen keq</string>
-    <string name="scan_camera_problem_dialog_message">Ka një problem me kamerën, ju duhet ndoshta të ristartoni pajisjen tuaj.</string>
-    <!-- address input -->
-    <string name="address_input_title">Dërgo Dash</string>
-    <!-- input parser -->
-    <string name="input_parser_io_error">Nuk mund të lexojë: \n%s</string>
-    <string name="input_parser_cannot_classify">Nuk mund të njoh hyrjen:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Jovalid Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Dash adresë jovalide!\(Keni ngatërruar mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Nuk mund të verifikohet kërkesa për pages:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Kërkes jo valide për pages:\n%s</string>
-    <string name="input_parser_invalid_transaction">Transaksion jo valid:\n%s</string>
-    <string name="insufficient_money_title">Nuk keni mjaft monedha</string>
-    <string name="send_coins_error_msg">Problem gjatë dërgimit të monedhave!</string>
     </resources>

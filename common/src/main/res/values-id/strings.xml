@@ -124,7 +124,6 @@
     <string name="address_input_title">Kirim Dash</string>
     <string name="show_clipboard">Tunjukkan konten dalam clipboard</string>
     <string name="tap_to_paste">Ketuk alamat dari clipboard untuk menempelkannya</string>
-    <string name="not_valid_address">Bukan Alamat %s atau permintaan URL yang valid.</string>
     <string name="recipient_address">Alamat penerima</string>
 
     <!-- input parser -->
@@ -135,7 +134,6 @@
     <string name="input_parser_unverifyable_paymentrequest">Tidak dapat memverifikasi permintaan pembayaran:\n%s</string>
     <string name="input_parser_invalid_paymentrequest">Permintaan pembayaran tidak valid:\n%s</string>
     <string name="input_parser_invalid_transaction">Transaksi tidak valid:\n%s</string>
-    <string name="address_input_paste_from">Tempel dari %s</string>
     <string name="input_connect">hubungkan</string>
 
     <!-- others -->
@@ -144,8 +142,7 @@
     <string name="yes_cancel">Ya, batalkan</string>
     <string name="no_keep_it">Tidak, simpan saja</string>
     <string name="insufficient_money_title">Koin tidak cukup</string>
-    <string name="insufficient_money_msg">Jumlah koin di dompet terlalu kecil untuk transaksi ini.</string>
     <string name="send_coins_error_msg">Gagal mengirim koin!</string>
     <string name="from_dash_wallet_on_this_device">Dari dompet Dash di perangkat ini</string>
     <string name="preposition_at">pada</string>
-    </resources>
+</resources>

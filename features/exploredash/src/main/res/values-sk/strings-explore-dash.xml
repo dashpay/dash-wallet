@@ -46,8 +46,6 @@
     <string name="explore_no_atms">Žiadne bankomaty</string>
     <string name="distance_miles">%s míľ</string>
     <string name="distance_kilometers">%s kilometrov</string>
-    <string name="explore_fee">poplatok %s%%</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d obchodník</item>
         <item quantity="few">%d obchodníci</item>
@@ -190,25 +188,14 @@
     <string name="purchase_gift_card_at">v</string>
     <string name="purchase_gift_card_min">Min: %s</string>
     <string name="purchase_gift_card_max">Max: %s</string>
-    <string name="gift_card_tab_single">Jedna</string>
-    <string name="gift_card_tab_multiple">Viacero</string>
     <string name="gift_card_buy_title">Kúpiť darčekovú poukážku</string>
     <string name="purchase_gift_card_discount_hint">Kupujete darčekovú poukážku v hodnote %s pre %s (%s zľava)</string>
     <string name="button_next">Ďalej</string>
     <string name="purchase_gift_card_from">Od</string>
     <string name="purchase_gift_card_to">Komu</string>
     <string name="purchase_confirm_transaction">Potvrdiť</string>
-    <string name="purchase_gift_card_total_label">Hodnota darčekovej karty</string>
     <string name="purchase_gift_card_discount">Zľava</string>
     <string name="purchase_gift_card_you_pay">Platíte</string>
-    <string name="purchase_gift_card_quantity_label">Množstvo</string>
-    <plurals name="purchase_gift_card_quantity_value">
-        <item quantity="one">%d karta</item>
-        <item quantity="few">%d karty</item>
-        <item quantity="many">%d kariet</item>
-        <item quantity="other">%d kariet</item>
-    </plurals>
-    <string name="purchase_gift_card_denomination_label">Hodnota karty</string>
     <string name="purchase_gift_card_confirm">Potvrdiť</string>
     <string name="purchase_gift_card_details">Podrobnosti darčekovej karty</string>
     <string name="purchase_original_purchase">Pôvodná kúpa</string>
@@ -224,9 +211,6 @@
     <string name="purchase_tell_the_cashier">Povedzte pokladníkovi, že platíte digitálnou darčekovou kartou. Pokladňa: do poľa Banková karta zadajte celkovú sumu, potom do poľa Účet zadajte číslo darčekovej karty a stlačte kláves Enter.</string>
     <string name="purchase_in_the_payment_section">V sekcii platby zadajte do poľa darčekovej karty číslo digitálnej darčekovej karty.</string>
     <string name="purchase_powered_by">Používa technológiu</string>
-    <string name="purchase_cashier_instructions">Pokyny od pokladníka</string>
-    <string name="purchase_cashier_instructions_body">Prijmite darčekovú kartu alebo elektronickú darčekovú kartu pri pokladni a spracujte ju ako platbu.</string>
-    <string name="purchase_gift_card_date_format">%1$s po %2$s</string>
     <string name="insufficient_money_title">Nedostatok mincí</string>
     <string name="insufficient_money_msg">Nedostatok prostriedkov</string>
     <string name="send_coins_error_msg">Problém pri odosielaní!</string>
@@ -234,11 +218,6 @@
     <string name="gift_card_tx_title">Darčeková karta %s</string>
     <string name="select_amount">Vyberte sumu</string>
     <string name="select_fixed_amount">Tento obchodník predáva darčekové karty za fixné ceny</string>
-    <string name="purchase_gift_card_max_multiple_error">Na objednávku si môžete kúpiť darčekové karty v hodnote až %s</string>
-    <string name="purchase_gift_card_insufficient_money_error">Nedostatok Dashu na kúpu týchto darčekových kariet</string>
-    <string name="purchase_gift_card_insufficient_inventory">Nedostatočný počet zásob pre %s na kúpu %d z %s kariet</string>
-    <string name="purchase_gift_card_inventory_toast">Obchodník má k dispozícii iba %d kariet</string>
-    <string name="purchase_gift_card_single_card_only_toast">Môžete si vybrať iba jednu hodnotu karty</string>
     <string name="purchase_gift_card_reset">Reset</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Zadajte overovací kód</string>
@@ -273,7 +252,6 @@
     <string name="accept_to_proceed">Ak si chcete vytvoriť účet na DashSpend, musíte prijať zmluvné podmienky DashSpend</string>
     <string name="view_terms_conditions">Zmluvné podmienky</string>
     <string name="barcode_placeholder">Počkajte na doručenie údajov o darčekovej karte.</string>
-    <string name="purchase_order_number">Číslo objednávky</string>
     <string name="gift_card_contact_ctx">Kontaktovať podporu CTX</string>
     <string name="gift_card_contact_piggycards">Kontaktovať podporu PiggyCards</string>
     <string name="gift_card_contact_support">Kontaktovať podporu</string>

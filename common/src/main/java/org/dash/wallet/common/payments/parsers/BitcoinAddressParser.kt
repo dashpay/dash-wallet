@@ -22,6 +22,9 @@ import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.NetworkParameters
 
 class BitcoinAddressParser(params: NetworkParameters) : AddressParser(PATTERN_BITCOIN_ADDRESS, params) {
+    /** Neutral (dashj-free) mainnet constructor for modules that must not depend on dashj. */
+    constructor() : this(BitcoinMainNetParams())
+
     private val bech32Parser = Bech32AddressParser(39, 59, params)
 
     override fun exactMatch(inputText: String): Boolean {

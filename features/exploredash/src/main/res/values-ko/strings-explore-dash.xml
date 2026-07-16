@@ -46,8 +46,6 @@
     <string name="explore_no_atms">ATM 없음</string>
     <string name="distance_miles">%s 마일</string>
     <string name="distance_kilometers">%s 킬로미터</string>
-    <string name="explore_fee">수수료 %s%%</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="other">%d 상점</item>
     </plurals>
@@ -178,22 +176,14 @@
     <string name="purchase_gift_card_at">이곳에서</string>
     <string name="purchase_gift_card_min">최소: %s</string>
     <string name="purchase_gift_card_max">최대: %s</string>
-    <string name="gift_card_tab_single">단일</string>
-    <string name="gift_card_tab_multiple">다중</string>
     <string name="gift_card_buy_title">기프트 카드 구매하기</string>
     <string name="purchase_gift_card_discount_hint">%s 기프트 카드를 %s에 구매합니다 (%s 할인)</string>
     <string name="button_next">다음</string>
     <string name="purchase_gift_card_from">다음으로부터</string>
     <string name="purchase_gift_card_to">다음으로</string>
     <string name="purchase_confirm_transaction">승인</string>
-    <string name="purchase_gift_card_total_label">기프트 카드 가치</string>
     <string name="purchase_gift_card_discount">할인</string>
     <string name="purchase_gift_card_you_pay">금액</string>
-    <string name="purchase_gift_card_quantity_label">수량</string>
-    <plurals name="purchase_gift_card_quantity_value">
-        <item quantity="other">%d 카드</item>
-    </plurals>
-    <string name="purchase_gift_card_denomination_label">카드 가치</string>
     <string name="purchase_gift_card_confirm">승인</string>
     <string name="purchase_gift_card_details">기프트 카드 상세 정보</string>
     <string name="purchase_original_purchase">초기 구매</string>
@@ -209,9 +199,6 @@
     <string name="purchase_tell_the_cashier">캐셔에게 디지털 기프트 카드로 결제한다고 말씀하세요. 캐셔: 은행카드 란에 총 금액을 입력하고, 어카운트 란에 기프트 카드 번호를 입력한 후 확인을 누르세요.</string>
     <string name="purchase_in_the_payment_section">지불란에서, 당신의 디지털 기프트 카드 번호를 기프트 카드란에 입력하세요.</string>
     <string name="purchase_powered_by">제작</string>
-    <string name="purchase_cashier_instructions">캐셔 안내</string>
-    <string name="purchase_cashier_instructions_body">계산대에서 기프트 카드 혹은 e기프트 카드를 받고 이를 지불로 처리합니다.</string>
-    <string name="purchase_gift_card_date_format">%2$s의 %1$s</string>
     <string name="insufficient_money_title">보유 금액 부족</string>
     <string name="insufficient_money_msg">잔액 부족</string>
     <string name="send_coins_error_msg">송금 중 알 수 없는 문제가 발생했습니다!</string>
@@ -219,11 +206,6 @@
     <string name="gift_card_tx_title">기프트 카드 · %s</string>
     <string name="select_amount">금액 선택하기</string>
     <string name="select_fixed_amount">이 판매자는 고정된 가격에 기프트 카드를 판매합니다</string>
-    <string name="purchase_gift_card_max_multiple_error">주문 당 %s를 기프트 카드로 구매할 수 있습니다 </string>
-    <string name="purchase_gift_card_insufficient_money_error">기프트 카드를 구매하기에 대시 잔고가 충분하지 않습니다</string>
-    <string name="purchase_gift_card_insufficient_inventory">%d x %s 카드를 구매하기에 %s 잔고가 충분하지 않습니다</string>
-    <string name="purchase_gift_card_inventory_toast">판매자에게 %d 카드만 남아있습니다</string>
-    <string name="purchase_gift_card_single_card_only_toast">한 가지 카드 잔고만을 선택할 수 있습니다</string>
     <string name="purchase_gift_card_reset">리셋</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">인증 코드 입력</string>
@@ -258,7 +240,6 @@
     <string name="accept_to_proceed">DashSpend에 계정을 생성하기 위해서는 DashSpend 이용 약관에 동의해야 합니다</string>
     <string name="view_terms_conditions">이용 약관</string>
     <string name="barcode_placeholder">기프트 카드 세부 내용이 전달될 때까지 기다려 주십시오.</string>
-    <string name="purchase_order_number">주문 번호</string>
     <string name="gift_card_contact_ctx">CTX 지원팀에 문의하기</string>
     <string name="gift_card_contact_piggycards">PiggyCards 지원팀에 문의하기</string>
     <string name="gift_card_contact_support">고객 지원부에 문의하기</string>

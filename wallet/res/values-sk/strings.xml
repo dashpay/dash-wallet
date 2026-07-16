@@ -412,8 +412,6 @@
     <string name="reason">Dôvod</string>
     <string name="link_account">Pripojiť váš účet</string>
     <string name="buy_no_account_needed">Kúpiť Dash · Nie je potrebný žiadny účet</string>
-    <string name="convert_no_account_needed">Zameniť Dash · Nie je potrebný účet</string>
-
     <string name="recipient_address">Adresa príjemcu</string>
     <string name="not_dash_address">Neplatná Dash adresa alebo URL žiadosť</string>
     <string name="send_to_address">Poslať na adresu</string>
@@ -441,5 +439,4 @@
     <string name="upgrade_pin_title">Musíte aktualizovať svoj PIN</string>
     <string name="upgrade_pin_description">Nastaviť nový PIN kód</string>
     <string name="upgrade_pin_continue">Pokračovať</string>
-
-    </resources>
+</resources>

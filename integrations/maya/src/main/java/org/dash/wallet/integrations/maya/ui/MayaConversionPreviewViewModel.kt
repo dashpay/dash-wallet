@@ -24,18 +24,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.observeTransactionLocked
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.money.TxIds
+import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.transactions.filters.LockedTransaction
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.MayaErrorResponse
@@ -96,9 +96,9 @@ class MayaConversionPreviewViewModel @Inject constructor(
                 // Dash IS locks typically arrive within 1-2 seconds; we allow up to 10 seconds
                 // before proceeding anyway (the tx was sent; lock may arrive later).
                 val txId = result.value.txid
-                if (txId != Sha256Hash.ZERO_HASH) {
+                if (txId != TxIds.ZERO_HASH_HEX) {
                     val locked = withTimeoutOrNull(IS_LOCK_TIMEOUT_MS) {
-                        walletDataProvider.observeTransactions(true, LockedTransaction(txId)).first()
+                        walletDataProvider.observeTransactionLocked(txId).first()
                     }
                     if (locked != null) {
                         log.info("maya swap tx {} IS-locked or confirmed", txId)
@@ -128,7 +128,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                if (result.throwable is InsufficientMoneyException) {
+                if (result.throwable is InsufficientFundsException) {
                     onInsufficientMoneyCallback.call()
                     return@launch
                 }

@@ -37,12 +37,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
-import org.bitcoin.protocols.payments.Protos
+import org.dash.wallet.common.payments.bip70.Protos
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.TestNet3Params
-import org.bitcoinj.protocols.payments.PaymentProtocol
+import org.dash.wallet.common.payments.bip70.PaymentProtocol
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletProtobufSerializer
@@ -71,7 +71,7 @@ import java.net.HttpURLConnection
  */
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(application = HiltTestApplication::class, sdk = [28], manifest = Config.NONE)
+@Config(application = HiltTestApplication::class, sdk = [29], manifest = Config.NONE)
 class SendCoinsTaskRunnerBIP70Test {
 
     private lateinit var mockWebServer: MockWebServer
@@ -140,7 +140,16 @@ class SendCoinsTaskRunnerBIP70Test {
                 identityConfig,
                 identityRepo,
                 platformRepo,
-                metadataProvider
+                metadataProvider,
+                // Phase 5b routing is exercised in SendCoinsTaskRunnerSdkRoutingTest;
+                // these BIP70 flows never touch the neutral overload.
+                mockk(relaxed = true),
+                // Self-spend grace arming is exercised in
+                // SendCoinsTaskRunnerSelfSpendGraceTest.
+                mockk(relaxed = true),
+                // 5c.0/5c.1 debug probes (L1SendProbeServiceTest): these
+                // BIP70 flows never touch the neutral overload.
+                mockk(relaxed = true)
             )
         )
 

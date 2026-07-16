@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.crowdnode.transactions
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
+import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
@@ -29,7 +30,7 @@ class CrowdNodeTopUpTx(
     private val bag: TransactionBag
 ) : CoinsToAddressTxFilter(
     accountAddress,
-    CrowdNodeConstants.REQUIRED_FOR_SIGNUP
+    CrowdNodeConstants.REQUIRED_FOR_SIGNUP.toCoin()
 ) {
     override fun matches(tx: Transaction): Boolean {
         return super.matches(tx) && tx.isEntirelySelf(bag)

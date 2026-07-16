@@ -62,6 +62,11 @@ class DashPayUserActivity : LockScreenActivity() {
     private lateinit var binding: ActivityDashpayUserBinding
     @Inject lateinit var walletDataProvider: WalletDataProvider
 
+    // This screen can both SEND an outgoing contact request and ACCEPT an
+    // incoming one (both funnel through sendContactRequest()), so remember which
+    // the user last initiated to pick the correct error wording if it fails.
+    private var pendingContactRequestIsAccept = false
+
     private val showContactHistoryDisclaimer by lazy {
         intent.getBooleanExtra(EXTRA_SHOW_CONTACT_HISTORY_DISCLAIMER, false)
     }
@@ -115,12 +120,14 @@ class DashPayUserActivity : LockScreenActivity() {
         binding.contactRequestPane.setOnUserActionListener(object : ContactRequestPane.OnUserActionListener {
             override fun onSendContactRequestClick() {
                 dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SEND_REQUEST)
+                pendingContactRequestIsAccept = false
                 // check credit balance
                 sendContactRequest()
                 setResult(RESULT_CODE_CHANGED)
             }
 
             override fun onAcceptClick() {
+                pendingContactRequestIsAccept = true
                 // check credit balance
                 sendContactRequest()
                 setResult(RESULT_CODE_CHANGED)
@@ -170,6 +177,25 @@ class DashPayUserActivity : LockScreenActivity() {
         viewModel.sendContactRequestState.observe(this) { state ->
             imitateUserInteraction()
             updateContactRelationUi()
+        }
+
+        // A failed send/accept must never be a silent no-op — the pane above
+        // only reverts to its pre-send state — so surface the failure, with
+        // wording matching whichever action the user last initiated.
+        viewModel.sendContactRequestError.observe(this) {
+            val strings = contactRequestErrorStrings(
+                isAccept = pendingContactRequestIsAccept,
+                acceptTitleRes = R.string.accept_contact_request_error_title,
+                acceptMessageRes = R.string.accept_contact_request_error_message,
+                sendTitleRes = R.string.send_contact_request_error_title,
+                sendMessageRes = R.string.send_contact_request_error_message
+            )
+            AdaptiveDialog.create(
+                R.drawable.ic_warning_yellow_circle,
+                getString(strings.titleRes),
+                getString(strings.messageRes),
+                getString(R.string.button_ok)
+            ).show(this)
         }
 
         viewModel.notifications.observe(this) { notifications ->
@@ -338,4 +364,24 @@ class DashPayUserActivity : LockScreenActivity() {
     fun onUserAlertDismiss(alertId: Int) {
         Toast.makeText(this, "Dismiss", Toast.LENGTH_SHORT).show()
     }
+}
+
+/** The title + message string resources for a failed contact-request action. */
+internal data class ContactRequestErrorStrings(val titleRes: Int, val messageRes: Int)
+
+/**
+ * Pick the error-dialog strings for a failed contact-request action:
+ * ACCEPT wording when [isAccept], otherwise SEND wording. Pure (resource ids
+ * passed in) so the accept-vs-send selection is host-JVM unit-testable.
+ */
+internal fun contactRequestErrorStrings(
+    isAccept: Boolean,
+    acceptTitleRes: Int,
+    acceptMessageRes: Int,
+    sendTitleRes: Int,
+    sendMessageRes: Int
+): ContactRequestErrorStrings = if (isAccept) {
+    ContactRequestErrorStrings(acceptTitleRes, acceptMessageRes)
+} else {
+    ContactRequestErrorStrings(sendTitleRes, sendMessageRes)
 }

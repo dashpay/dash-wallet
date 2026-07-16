@@ -25,6 +25,9 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.services.AuthenticationManager
+import javax.inject.Inject
+import kotlinx.coroutines.launch
 import de.schildbach.wallet.ui.compose_views.createInstantUsernameDialog
 import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet_test.R
@@ -38,6 +41,9 @@ import org.dash.wallet.common.util.observe
 
 @AndroidEntryPoint
 class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_username_request) {
+
+    @Inject
+    lateinit var authManager: AuthenticationManager
     private val binding by viewBinding(DialogConfirmUsernameRequestBinding::bind)
 
     private val viewModel by viewModels<ConfirmUserNameDialogViewModel>()
@@ -47,6 +53,9 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
         super.onViewCreated(view, savedInstanceState)
         viewModel.isContestableUsername = requestUserNameViewModel.isUsernameContestable()
         viewModel.hasIdentity = requestUserNameViewModel.identity != null
+        // Shielded-funded creations show the denomination actually leaving
+        // the shielded balance (0.1/0.3), not the L1 fee schedule.
+        viewModel.paymentSource = requestUserNameViewModel.paymentSource
         val usernameType = args.usernameType
         viewModel.usernameType = usernameType
         binding.confirmBtn.setOnClickListener {
@@ -65,13 +74,17 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
                             dismiss()
                         },
                         onCancel = {
-                            requestUserNameViewModel.submit()
-                            dismiss()
+                            lifecycleScope.launch {
+                                authenticateThenSubmit(this@ConfirmUsernameRequestDialogFragment, authManager, requestUserNameViewModel)
+                                dismiss()
+                            }
                         }
                     ).show(requireActivity())
                 } else {
-                    requestUserNameViewModel.submit()
-                    dismiss()
+                    lifecycleScope.launch {
+                        authenticateThenSubmit(this@ConfirmUsernameRequestDialogFragment, authManager, requestUserNameViewModel)
+                        dismiss()
+                    }
                 }
             }
         }
@@ -90,6 +103,11 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
             binding.dashAmountView.text = it.amountStr
             binding.fiatSymbolView.text = it.fiatSymbol
             binding.fiatAmountView.text = it.fiatAmountStr
+            // Shielded-funded creations spend the pool's exit denomination —
+            // say so under the amount instead of letting it read as an L1
+            // wallet spend.
+            binding.costSourceLabel.isVisible =
+                it.fromShieldedBalance && !requestUserNameViewModel.isUsingInvite()
         }
 
         if (requestUserNameViewModel.isUsingInvite()) {

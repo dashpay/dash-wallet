@@ -22,6 +22,11 @@ import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.platform.sdk.SdkDashPayWrites
+import de.schildbach.wallet.service.platform.sdk.SdkIdentityVerifyWrites
+import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.WalletUnlock
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.ECKey
@@ -33,6 +38,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
+import org.dashj.platform.dashpay.ContactRequest
+import org.dashj.platform.dashpay.RetryDelayType
 import org.dashj.platform.dashpay.callback.SimpleSignerCallback
 import org.dashj.platform.dashpay.callback.WalletSignerCallback
 import org.dashj.platform.dpp.identifier.Identifier
@@ -65,7 +72,10 @@ class PlatformDocumentBroadcastService @Inject constructor(
     val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
     val walletDataProvider: WalletDataProvider,
-    val platformSyncService: PlatformSyncService
+    val platformSyncService: PlatformSyncService,
+    val sdkDashPayWrites: SdkDashPayWrites,
+    val sdkIdentityVerifyWrites: SdkIdentityVerifyWrites,
+    val sdkWalletBinder: SdkWalletBinder
 ) : PlatformBroadcastService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformDocumentBroadcastService::class.java)
@@ -86,10 +96,87 @@ class PlatformDocumentBroadcastService @Inject constructor(
 
     @Throws(Exception::class)
     override suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest {
-        val potentialContactIdentity = platform.identities.get(toUserId)
-        log.info("potential contact identity: $potentialContactIdentity")
+        // getContactIdentity (not identities.get) tolerates the legacy dashj
+        // identity cache being unable to CBOR-serialize a v4.1 identity — e.g.
+        // an iOS username being ACCEPTED here (accept is this reciprocal
+        // sendContactRequest). identities.get fetches the identity fine but its
+        // storeIdentity cache write throws "No converter for ...", losing the
+        // fetched identity and aborting the accept before any broadcast (SDK or
+        // dashj) is even attempted. Both branches below need this identity, so
+        // recovering it uncached fixes the SDK Broadcast path and the dashj
+        // fallback alike.
+        val potentialContactIdentity = platform.getContactIdentity(Identifier.from(toUserId))
+        // NEVER string-interpolate a legacy dashj Identity/BaseObject: its
+        // toString() routes through hashCode() -> CBOR toBuffer(), which throws
+        // "No converter for ..." on v4.x contract-bound identities (the exact
+        // crash getContactIdentity above just recovered from). Log the id only.
+        log.info("potential contact identity: ${potentialContactIdentity?.id}")
         val blockchainIdentity = identityRepository.blockchainIdentity
             ?: throw IllegalStateException("blockchain identity not available; ensure identity is loaded before calling PlatformBroadcastService.sendContactRequest")
+
+        // Phase 3f: opportunistic background (re)bind — this call site
+        // already holds the wallet decrypt key, so a bind that failed (or
+        // never ran) at platform-sync start is healed here and the NEXT
+        // write can take the SDK path. Fire-and-forget: never blocks or
+        // fails this broadcast; inert unless a USE_KOTLIN_SDK_* flag is on.
+        sdkWalletBinder.bindInBackground(WalletUnlock.EncryptionKey(encryptionKey))
+
+        // Phase 3e/3g (docs/kotlin-sdk-migration-plan.md): DashPay write path
+        // behind USE_KOTLIN_SDK_DASHPAY_WRITES (default off). This single
+        // routing also covers ACCEPTING an incoming contact request — in this
+        // app "accept" is exactly this reciprocal sendContactRequest (all
+        // accept UI actions funnel here via SendContactRequestWorker); the
+        // direction-specific bookkeeping (sending keychain + incoming DB row)
+        // is done by PlatformSyncService when the incoming request is synced,
+        // independent of which stack broadcasts the reciprocal. The result is
+        // three-valued to keep the no-double-broadcast invariant:
+        // NotBroadcast → the SDK definitively submitted nothing, run the
+        // dashj path below unchanged; Broadcast → the request is on
+        // Platform, reconcile local state from it and do NOT run dashj;
+        // Ambiguous → surface the failure exactly like a dashj broadcast
+        // failure — never retry via dashj in the same call.
+        when (val sdkResult = sdkDashPayWrites.sendContactRequest(blockchainIdentity.uniqueIdString, toUserId)) {
+            is SdkWriteResult.Broadcast -> {
+                log.info("contact request sent via Kotlin SDK; reconciling from platform")
+                // The SDK confirmed the broadcast, so the document is
+                // committed; watch fetches it (with retries for propagation).
+                val document = platform.contactRequests.watchContactRequest(
+                    Identifier.from(blockchainIdentity.uniqueIdString),
+                    Identifier.from(toUserId),
+                    10,
+                    1000,
+                    RetryDelayType.LINEAR
+                ) ?: throw IllegalStateException(
+                    "contact request was broadcast via the Kotlin SDK but could not be retrieved " +
+                        "from platform; local state will reconcile on the next contact sync"
+                )
+                return finalizeSentContactRequest(
+                    ContactRequest(document),
+                    blockchainIdentity,
+                    potentialContactIdentity!!,
+                    toUserId,
+                    encryptionKey
+                )
+            }
+            is SdkWriteResult.Ambiguous -> {
+                log.error(
+                    "SDK contact request outcome ambiguous (may be broadcast); surfacing error " +
+                        "without dashj retry"
+                )
+                throw sdkResult.cause as? Exception ?: RuntimeException(sdkResult.cause)
+            }
+            is SdkWriteResult.NotBroadcast -> {
+                // Fall through to the unchanged dashj path.
+            }
+        }
+
+        // The legacy create below signs with the identity's HIGH/AUTHENTICATION key, resolved
+        // through AuthenticationKeyChain.findKeyFromPubKey — which only knows keys ISSUED on
+        // the BLOCKCHAIN_IDENTITY chain. SDK-created identities that were handed to dashj via
+        // the restore path have none issued (the chain has lookahead 0), so signing fails with
+        // "signer callback returned 0". Backfill any missing chain keys here; this repairs
+        // wallets restored before the fix in RestoreIdentityWorker and is a no-op otherwise.
+        platformRepo.ensureIdentityChainKeys(blockchainIdentity.identity, encryptionKey)
 
         // Create Contact Request
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
@@ -97,6 +184,23 @@ class PlatformDocumentBroadcastService @Inject constructor(
         timer.logTiming()
         log.info("contact request sent")
 
+        return finalizeSentContactRequest(cr, blockchainIdentity, potentialContactIdentity, toUserId, encryptionKey)
+    }
+
+    /**
+     * Post-broadcast bookkeeping shared by the dashj and Kotlin-SDK contact
+     * request paths (extracted unchanged from the dashj flow): add the
+     * DIP-15 receiving friendship keychain for this contact if missing,
+     * refresh bloom filters, persist the request + contact profile, and
+     * notify listeners.
+     */
+    private suspend fun finalizeSentContactRequest(
+        cr: ContactRequest,
+        blockchainIdentity: org.dashj.platform.dashpay.BlockchainIdentity,
+        potentialContactIdentity: org.dashj.platform.dpp.identity.Identity,
+        toUserId: String,
+        encryptionKey: KeyParameter
+    ): DashPayContactRequest {
         // add our receiving from this contact keychain if it doesn't exist
         val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
 
@@ -119,6 +223,52 @@ class PlatformDocumentBroadcastService @Inject constructor(
     override suspend fun broadcastIdentityVerify(username: String, url: String, encryptionKey: KeyParameter?): IdentityVerifyDocument {
         val blockchainIdentity = identityRepository.blockchainIdentity
             ?: throw IllegalStateException("blockchain identity not available; ensure identity is loaded before calling PlatformBroadcastService.broadcastIdentityVerify")
+
+        // Opportunistic background (re)bind, mirroring sendContactRequest:
+        // this call site holds the wallet decrypt key, so a bind that failed
+        // (or never ran) at platform-sync start is healed here and the NEXT
+        // write can take the SDK path. Fire-and-forget; inert unless a
+        // USE_KOTLIN_SDK_* flag is on.
+        encryptionKey?.let { sdkWalletBinder.bindInBackground(WalletUnlock.EncryptionKey(it)) }
+
+        // dashpay/platform#4088 (light way): the identityVerify document is
+        // routed through the Kotlin SDK's GENERIC document-create API behind
+        // USE_KOTLIN_SDK_DASHPAY_WRITES (default off) — same trust domain as
+        // the other Platform document writes, no dedicated SDK surface. The
+        // result is three-valued to keep the no-double-broadcast invariant:
+        // NotBroadcast → the SDK definitively submitted nothing, run the
+        // dashj path below unchanged; Broadcast → the document is on
+        // Platform, return the rebuilt document (all fields are
+        // client-determined) and do NOT run dashj; Ambiguous → surface the
+        // failure exactly like a dashj broadcast failure — never retry via
+        // dashj in the same call.
+        when (
+            val sdkResult = sdkIdentityVerifyWrites.createForDashDomain(
+                blockchainIdentity.uniqueIdString,
+                username,
+                url
+            )
+        ) {
+            is SdkWriteResult.Broadcast -> {
+                log.info("identity verify document sent via Kotlin SDK")
+                return sdkResult.value
+            }
+            is SdkWriteResult.Ambiguous -> {
+                log.error(
+                    "SDK identity verify outcome ambiguous (may be broadcast); surfacing error " +
+                        "without dashj retry"
+                )
+                throw sdkResult.cause as? Exception ?: RuntimeException(sdkResult.cause)
+            }
+            is SdkWriteResult.NotBroadcast -> {
+                // Fall through to the unchanged dashj path.
+            }
+        }
+
+        // Same WalletSignerCallback → findKeyFromPubKey resolution as the contact request
+        // path: backfill identity chain keys that were never issued (SDK-created identities
+        // restored into dashj); no-op otherwise.
+        platformRepo.ensureIdentityChainKeys(blockchainIdentity.identity, encryptionKey)
 
         // Create Identity Verify
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
@@ -193,6 +343,59 @@ class PlatformDocumentBroadcastService @Inject constructor(
         val displayName = if (dashPayProfile.displayName.isNotEmpty()) dashPayProfile.displayName else null
         val publicMessage = if (dashPayProfile.publicMessage.isNotEmpty()) dashPayProfile.publicMessage else null
         val avatarUrl = if (dashPayProfile.avatarUrl.isNotEmpty()) dashPayProfile.avatarUrl else null
+
+        // Phase 3f: opportunistic background (re)bind while the decrypt key
+        // is in scope — see sendContactRequest. Fire-and-forget; inert
+        // unless a USE_KOTLIN_SDK_* flag is on.
+        sdkWalletBinder.bindInBackground(WalletUnlock.EncryptionKey(encryptionKey))
+
+        // Phase 3e (docs/kotlin-sdk-migration-plan.md): profile write via
+        // the Kotlin SDK behind USE_KOTLIN_SDK_DASHPAY_WRITES (default off).
+        // NotBroadcast → run the dashj path below unchanged; Broadcast →
+        // fetch the committed document and update the database, do NOT run
+        // dashj; Ambiguous → surface like a dashj broadcast failure, never
+        // retry via dashj in the same call. Profiles carrying an avatar
+        // hash/fingerprint always come back NotBroadcast (SDK gap — it
+        // recomputes both from raw avatar bytes the app no longer has).
+        val sdkResult = sdkDashPayWrites.createOrUpdateProfile(
+            ownUserId = blockchainIdentity.uniqueIdString,
+            displayName = displayName,
+            publicMessage = publicMessage,
+            avatarUrl = avatarUrl,
+            hasAvatarDigest = dashPayProfile.avatarHash != null || dashPayProfile.avatarFingerprint != null,
+            doCreate = dashPayProfile.createdAt == 0L
+        )
+        when (sdkResult) {
+            is SdkWriteResult.Broadcast -> {
+                log.info("profile broadcast via Kotlin SDK; reconciling from platform")
+                // The SDK write waits for platform confirmation, so the new
+                // revision is committed and a plain read returns it.
+                val document = platform.profiles.get(blockchainIdentity.uniqueIdString)
+                    ?: throw IllegalStateException(
+                        "profile was broadcast via the Kotlin SDK but could not be retrieved from " +
+                            "platform; local state will reconcile on the next profile sync"
+                    )
+                val updatedDashPayProfile = DashPayProfile.fromDocument(document, dashPayProfile.username)
+                platformRepo.updateDashPayProfile(updatedDashPayProfile)
+                return updatedDashPayProfile
+            }
+            is SdkWriteResult.Ambiguous -> {
+                log.error(
+                    "SDK profile broadcast outcome ambiguous (may be broadcast); surfacing error " +
+                        "without dashj retry"
+                )
+                throw sdkResult.cause as? Exception ?: RuntimeException(sdkResult.cause)
+            }
+            is SdkWriteResult.NotBroadcast -> {
+                // Fall through to the unchanged dashj path.
+            }
+        }
+
+        // Legacy Profiles.create/replace sign with the identity's HIGH key through
+        // WalletSignerCallback → AuthenticationKeyChain.findKeyFromPubKey, which only knows
+        // ISSUED chain keys — backfill any missing ones (SDK-created identities restored
+        // into dashj have none); no-op for legacy-created identities.
+        platformRepo.ensureIdentityChainKeys(blockchainIdentity.identity, encryptionKey)
 
         //Create Contact Request
         val timer: AnalyticsTimer

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Allows builds without google-services.json (where the Crashlytics gradle plugin is not
+  applied and no build ID is injected) to start without crashing in Crashlytics init.
+  Builds with the real Firebase config have a build ID, so this has no effect on them.
+-->
+<resources>
+    <bool name="com.crashlytics.RequireBuildId">false</bool>
+</resources>

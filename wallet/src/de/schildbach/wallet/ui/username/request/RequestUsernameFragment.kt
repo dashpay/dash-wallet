@@ -15,6 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import org.dash.wallet.common.services.AuthenticationManager
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -35,6 +37,9 @@ import java.util.Date
 
 @AndroidEntryPoint
 open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
+
+    @Inject
+    lateinit var authManager: AuthenticationManager
     private val binding by viewBinding(FragmentRequestUsernameBinding::bind)
 
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
@@ -168,43 +173,64 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             showKeyboard()
         }
 
+        // The submit-status dialogs (processing / error / ambiguous) are the
+        // SHARED component every username-flow screen installs — see
+        // UsernameSubmitStatusDialogs (Brian: submitting silently dropped
+        // back to the entry screen with no feedback).
+        UsernameSubmitStatusDialogs(this, requestUserNameViewModel, authManager) {
+            // The user explicitly closed the processing dialog: the
+            // creation keeps running (foreground service / app scope) and
+            // the home screen reports the result — leave to it.
+            requireActivity().finish()
+        }.observe()
+
+        // One ADVISORY platform-health probe per screen entry: warn when
+        // the platform side lags the local chain (asset-lock operations
+        // will retry for extra minutes) — never gates the button.
+        requestUserNameViewModel.checkNetworkHealth()
+
         requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
-            if (it.usernameSubmittedError) {
-                showErrorDialog()
-            }
+            binding.networkSlowContainer.isVisible = it.networkSlow
 
             // Hide voting period elements for Secondary username type (instant usernames)
             binding.votingPeriodProgress.isVisible = it.checkingUsername && usernameType != UsernameType.Secondary
             binding.votingPeriodContainer.isVisible = !it.checkingUsername && usernameType != UsernameType.Secondary
 
-            binding.checkLetters.setImageResource(getCheckMarkImage(it.usernameCharactersValid, it.usernameTooShort))
-            binding.checkLength.setImageResource(getCheckMarkImage(it.usernameLengthValid, it.usernameTooShort))
-
-            if (!requestUserNameViewModel.isUsingInvite() || requestUserNameViewModel.isInviteForContestedNames()) {
+            // The row LABELS follow the same split as below (see the
+            // inviteBalance observer): the invite-for-contested flow shows
+            // the general validity rules; everyone else shows the
+            // NON-CONTESTED QUALIFIERS ("contains 2–9" / "20–23 chars") —
+            // and the checkmarks must be computed from the SAME rule set as
+            // the labels (they previously mixed general validity under
+            // qualifier labels: a 15-char name showed green on "Between 20
+            // and 23 characters" — Brian).
+            val inviteContestedRows = requestUserNameViewModel.isUsingInvite() &&
+                requestUserNameViewModel.isInviteForContestedNames()
+            if (inviteContestedRows) {
                 binding.checkLetters.setImageResource(
-                    getCheckMarkImage(
-                        it.usernameCharactersValid,
-                        it.usernameTooShort
-                    )
+                    getCheckMarkImage(it.usernameCharactersValid, it.usernameTooShort)
                 )
                 binding.checkLength.setImageResource(
-                    getCheckMarkImage(
-                        it.usernameLengthValid,
-                        it.usernameTooShort
-                    )
+                    getCheckMarkImage(it.usernameLengthValid, it.usernameTooShort)
                 )
             } else {
-                val charsValid = it.usernameCharactersValid && it.usernameNonContestedChars
+                // The qualifiers are meet-ONE-of, so each row is LITERAL:
+                // green only when ITS rule matched, neutral when unmatched
+                // (the other rule may still qualify — an unmatched rule is
+                // not an error), red only for a real validity problem on
+                // that dimension (illegal character / over the 23-char max).
                 binding.checkLetters.setImageResource(
                     getCheckMarkImage(
-                        charsValid,
-                        it.usernameTooShort || (!charsValid && it.usernameNonContestedLength)
+                        check = it.usernameCharactersValid && it.usernameNonContestedChars,
+                        empty = it.usernameTooShort ||
+                            (it.usernameCharactersValid && !it.usernameNonContestedChars)
                     )
                 )
                 binding.checkLength.setImageResource(
                     getCheckMarkImage(
-                        it.usernameNonContestedLength,
-                        it.usernameTooShort || (charsValid && !it.usernameNonContestedLength)
+                        check = it.usernameLengthValid && it.usernameNonContestedLength,
+                        empty = it.usernameTooShort ||
+                            (it.usernameLengthValid && !it.usernameNonContestedLength)
                     )
                 )
             }
@@ -215,6 +241,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // binding.walletBalanceContainer.isVisible = !it.enoughBalance
                 if ((!requestUserNameViewModel.isUsingInvite() || isInviteContested) && usernameType != UsernameType.Secondary) {
                     binding.walletBalanceContainer.isVisible = !it.enoughBalance
+                    if (it.requiredAmount.isNotEmpty()) {
+                        binding.balanceRequirementText.text = getString(
+                            R.string.request_username_balance_requirement_amount,
+                            it.requiredAmount
+                        )
+                    }
 
                     if (it.usernameContestable || it.usernameContested) {
                         val startDate = Date(it.votingPeriodStart)
@@ -273,12 +305,30 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                         binding.checkAvailable.setImageResource(getCheckMarkImage(true))
                     }
                 }
-                // For Secondary username type, enable button if username is valid (no balance check)
-                binding.requestUsernameButton.isEnabled = if (usernameType == UsernameType.Secondary) {
-                    !it.usernameExists && !it.usernameContestable
-                } else {
-                    it.enoughBalance && !it.usernameExists
-                }
+                // The button's enabled state + label follow the pure gate
+                // (see usernameSubmitButtonState): the shielded funding path
+                // reflects the LIVE pool status, so while it is still syncing
+                // the button is a disabled "Preparing shielded balance…"
+                // pending state that re-enables automatically at READY —
+                // never a stale-cache enabled button that lets a submit
+                // reach the SDK and bounce (Fix B). L1 path is unaffected.
+                val buttonState = usernameSubmitButtonState(
+                    usernameType = usernameType,
+                    paymentSource = requestUserNameViewModel.paymentSource,
+                    shieldedSyncStatus = it.shieldedSyncStatus,
+                    enoughBalance = it.enoughBalance,
+                    usernameExists = it.usernameExists,
+                    usernameContestable = it.usernameContestable
+                )
+                binding.requestUsernameButton.isEnabled =
+                    buttonState == UsernameSubmitButtonState.Enabled
+                binding.requestUsernameButton.setText(
+                    if (buttonState == UsernameSubmitButtonState.PreparingShielded) {
+                        R.string.username_preparing_shielded_balance
+                    } else {
+                        R.string.request_username
+                    }
+                )
 
                 if (it.usernameRequestSubmitting) {
                     binding.usernameInput.isFocusable = false
@@ -293,8 +343,20 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             } else {
                 binding.votingPeriodContainer.isVisible = false
                 binding.walletBalanceContainer.isVisible = false
-                binding.usernameAvailableContainer.isVisible = false
+                // Fail-closed surface: the button is disabled either way
+                // (usernameCheckSuccess is false), but a lookup failure has
+                // to SAY so — silence here read as "available" before the
+                // check was made fail-closed.
+                binding.usernameAvailableContainer.isVisible = it.usernameCheckFailed
+                if (it.usernameCheckFailed) {
+                    binding.usernameAvailableMessage.text = getString(R.string.username_check_failed)
+                    binding.checkAvailable.setImageResource(getCheckMarkImage(false, false))
+                }
                 binding.requestUsernameButton.isEnabled = false
+                // No completed check yet — the "Preparing…" label only
+                // applies where the button would otherwise be enabled, so
+                // keep the normal label here.
+                binding.requestUsernameButton.setText(R.string.request_username)
             }
         }
 
@@ -333,7 +395,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             )
             binding.inviteOnlyNoncontested.isVisible = requestUserNameViewModel.isUsingInvite() &&
                     !isInviteForContestedNames
-            binding.usernameRequirements.isVisible = requestUserNameViewModel.isUsingInvite() && !isInviteForContestedNames
+            // "The username must meet one of these criteria" — shown to
+            // EVERYONE who sees the non-contested qualifier rows (not just
+            // invites): without it the meet-one-of semantics are invisible
+            // and the rows read as two hard requirements (Brian).
+            binding.usernameRequirements.isVisible =
+                !isInviteContested && usernameType != UsernameType.Secondary
         }
 
         dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
@@ -344,12 +411,16 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // why are we closing, we should allow the user to chose a new name
                 // requireActivity().finish()
             } else if ((it?.creationState?.ordinal ?: 0) > IdentityCreationState.NONE.ordinal) {
-                // completeUsername = it.username ?: ""
-                // showCompleteState()
-                // for now, just go to the home screen
-                // requireActivity().finish()
-                // Navigate to MoreFragment instead of UsernameRegistrationFragment
-                requireActivity().finish()
+                // The L1 submit's processing dialog must stay up until ITS
+                // explicit dismiss button — finishing here on the identity
+                // state machine's first flip auto-closed it under the user
+                // (observed live). While it shows, the dialog's dismissal
+                // callback does the finishing; entries with a creation
+                // already in flight (no submit this session) keep the
+                // immediate exit.
+                if (!requestUserNameViewModel.uiState.value.usernameRequestSubmitting) {
+                    requireActivity().finish()
+                }
             }
         }
         binding.nonContestedNameInfoButton.setOnClickListener {
@@ -396,7 +467,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
     private suspend fun checkViewConfirmDialog() {
         // TODO: Can we cancel the request?
         if (requestUserNameViewModel.hasUserCancelledVerification()) {
-            requestUserNameViewModel.submit()
+            authenticateThenSubmit(this, authManager, requestUserNameViewModel)
         } else {
             when (usernameType) {
                 UsernameType.Primary -> safeNavigate(
@@ -423,21 +494,6 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
 
     private fun hideKeyboard() {
         KeyboardUtil.hideKeyboard(requireContext(), binding.usernameInput)
-    }
-
-    private fun showErrorDialog() {
-        val dialog = AdaptiveDialog.create(
-            R.drawable.ic_error,
-            getString(R.string.something_wrong_title),
-            getString(R.string.there_was_a_network_error),
-            getString(R.string.close),
-            getString(R.string.try_again)
-        )
-        dialog.show(requireActivity()) {
-            if (it == true) {
-                requestUserNameViewModel.submit()
-            }
-        }
     }
 
     private fun checkUsername(username: String) {

@@ -46,8 +46,6 @@
     <string name="explore_no_atms">هیچ خودپردازی یافت نشد</string>
     <string name="distance_miles">%s مایل</string>
     <string name="distance_kilometers">%sکیلومتر</string>
-    <string name="explore_fee">کارمزد%s%%</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%dفروشنده</item>
         <item quantity="other">%dفروشنده</item>
@@ -182,23 +180,13 @@
     <string name="purchase_gift_card_at">در</string>
     <string name="purchase_gift_card_min">حداقل: %s</string>
     <string name="purchase_gift_card_max">حداکثر: %s</string>
-    <string name="gift_card_tab_single">تکی</string>
-    <string name="gift_card_tab_multiple">چندتایی</string>
-    <string name="gift_card_buy_title">خرید کارت هدیه</string>
     <string name="purchase_gift_card_discount_hint">شما در حال خرید یک کارت هدیه %s به قیمت %s (با %s تخفیف) هستند. </string>
     <string name="button_next">بعدی</string>
     <string name="purchase_gift_card_from">از</string>
     <string name="purchase_gift_card_to">به</string>
     <string name="purchase_confirm_transaction">تائید</string>
-    <string name="purchase_gift_card_total_label">ارزش کارت هدیه</string>
     <string name="purchase_gift_card_discount">تخفیف</string>
     <string name="purchase_gift_card_you_pay">مبلغی که پرداخت می‌کنید</string>
-    <string name="purchase_gift_card_quantity_label">تعداد</string>
-    <plurals name="purchase_gift_card_quantity_value">
-        <item quantity="one">%dکارت</item>
-        <item quantity="other">%d کارت</item>
-    </plurals>
-    <string name="purchase_gift_card_denomination_label">ارزش کارت</string>
     <string name="purchase_gift_card_confirm">تائید</string>
     <string name="purchase_gift_card_details">جزئيات کارت هدیه</string>
     <string name="purchase_original_purchase">خرید اصلی</string>
@@ -214,9 +202,6 @@
     <string name="purchase_tell_the_cashier">به صندوقدار بگویید که با یک کارت هدیه دیجیتال پرداخت می‌کنید. رقم کل را وارد کنید و سپس شماره کارت هدیه را در بخش شماره حساب وارد کنید و سپس دگمه انتر را بزنید. </string>
     <string name="purchase_in_the_payment_section">در بخش پرداخت، شماره کارت هدیه دیجیتال را در بخش کارت هدیه وارد کنید. </string>
     <string name="purchase_powered_by">قدرت گرفته از</string>
-    <string name="purchase_cashier_instructions">دستورالعمل صندوقدار</string>
-    <string name="purchase_cashier_instructions_body">کارت هدیه یا کارت هدیه الکترونیکی را در صندوق بپذیرید و آن را به عنوان پرداخت پردازش کنید. </string>
-    <string name="purchase_gift_card_date_format">%1$sدر %2$s</string>
     <string name="insufficient_money_title">موجودی کافی نیست</string>
     <string name="insufficient_money_msg">موجودی ناکافی</string>
     <string name="send_coins_error_msg">مشکل در ارسال مبلغ مورد نظر!</string>
@@ -224,11 +209,6 @@
     <string name="gift_card_tx_title">کارت هدیه. %s</string>
     <string name="select_amount">مبلغ را انتخاب کنید</string>
     <string name="select_fixed_amount">این فروشنده کارت‌های هدیه را با قیمت‌های ثابت به فروش می‌رساند</string>
-    <string name="purchase_gift_card_max_multiple_error">می‌توانید تا سقف %s در کارت‌های هدیه در هر سفارش خرید کنید</string>
-    <string name="purchase_gift_card_insufficient_money_error">برای خرید این کارت‌های هدیه موجودی دش‌تان کافی نیست</string>
-    <string name="purchase_gift_card_insufficient_inventory">موجودی ناکافی برای %sبرای خرید %dدر %sکارت</string>
-    <string name="purchase_gift_card_inventory_toast">فروشنده فقط %dکارت برای فروش دارد</string>
-    <string name="purchase_gift_card_single_card_only_toast">فقط می‌توانید یک کارت انتخاب کنید</string>
     <string name="purchase_gift_card_reset">بازنشانی</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">شماره تائید را وارد کنید</string>
@@ -263,7 +243,6 @@
     <string name="accept_to_proceed">برای ایجاد حساب در دش‌اسپند باید شرایط و مقررات دش‌اسپند را بپذیرید. </string>
     <string name="view_terms_conditions">شرایط  &amp;  مقررات</string>
     <string name="barcode_placeholder">لطفاً منتظر بمانید تا اطلاعات کارت هدیه‌تان را دریافت کنید. </string>
-    <string name="purchase_order_number">شماره سفارش</string>
     <string name="gift_card_contact_ctx">تماس با پشتیبانی CTX</string>
     <string name="gift_card_contact_piggycards">با پشتیبانی پیگی‌کارتس تماس بگیرید</string>
     <string name="gift_card_contact_support">تماس با پشتیبانی</string>

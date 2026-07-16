@@ -22,6 +22,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.ScriptPattern
+import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
@@ -236,7 +237,7 @@ open class CrowdNodeBlockchainApi @Inject constructor(
     open fun getApiAddressConfirmationTx(): Transaction? {
         val apiConfirmationFilter = CoinsReceivedTxFilter(
             walletData.transactionBag,
-            CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT
+            CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT.toCoin()
         ) // account address is unknown at this point
 
         val potentialApiConfirmationTxs = walletData.getTransactions(apiConfirmationFilter)
@@ -265,11 +266,11 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         // lock the outputs
         lockAccountAddressOutput(confirmationTx, accountAddress)
         val selector = ExactOutputsSelector(
-            listOf(confirmationTx.outputs.first { it.value == CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT })
+            listOf(confirmationTx.outputs.first { it.value == CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT.toCoin() })
         )
         val resentTx = paymentService.sendCoins(
             CrowdNodeConstants.getCrowdNodeAddress(params),
-            CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT,
+            CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT.toCoin(),
             selector,
             emptyWallet = true,
             checkBalanceConditions = false,

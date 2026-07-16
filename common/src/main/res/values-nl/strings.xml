@@ -124,7 +124,6 @@
     <string name="address_input_title">Dash versturen</string>
     <string name="show_clipboard">Toon inhoud op het klembord</string>
     <string name="tap_to_paste">Tik op het adres van het klembord om het te plakken</string>
-    <string name="not_valid_address">Geen geldig %s adres of URL verzoek</string>
     <string name="recipient_address">Adres van ontvanger</string>
 
     <!-- input parser -->
@@ -135,7 +134,6 @@
     <string name="input_parser_unverifyable_paymentrequest">Je betalingsverzoek:\n%s kan niet geverifieerd worden</string>
     <string name="input_parser_invalid_paymentrequest">Ongeldig betalingsverzoek:\n%s</string>
     <string name="input_parser_invalid_transaction">Ongeldige transactie:\n%s</string>
-    <string name="address_input_paste_from">Plakken van %s</string>
     <string name="input_connect">Verbind</string>
 
     <!-- others -->
@@ -144,8 +142,7 @@
     <string name="yes_cancel">Ja, annuleer</string>
     <string name="no_keep_it">Nee, hou het</string>
     <string name="insufficient_money_title">Onvoldoende munten</string>
-    <string name="insufficient_money_msg">Het aantal munten in de portemonnee is te klein voor deze transactie.</string>
     <string name="send_coins_error_msg">Er is een probleem opgetreden bij het versturen van munten!</string>
     <string name="from_dash_wallet_on_this_device">Van Dash portemonnee op dit apparaat</string>
     <string name="preposition_at">ter hoogte van</string>
-    </resources>
+</resources>

@@ -18,7 +18,6 @@
 package de.schildbach.wallet.database.entity
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.text.format.DateUtils
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -82,11 +81,7 @@ data class TxDisplayCacheEntry(
      *  correct userId instead of accidentally re-using [rowId] (which is a transaction hex). */
     val contactUserId: String?,
     /** Bitmask used for SQL-side filtering. See [FLAG_SENT], [FLAG_RECEIVED], [FLAG_GIFT_CARD]. */
-    val filterFlags: Int = 0,
-    /** Hex id of the merchant/service icon bitmap in the `icon_bitmaps` table, or null if none.
-     *  The bitmap itself is not cached here — it is re-loaded at display time from the
-     *  [TransactionMetadataProvider] so the row stays small. See [toTransactionRowView]. */
-    val customIconId: String? = null
+    val filterFlags: Int = 0
 ) {
     companion object {
         // ── Icon type constants (stable across app versions) ────────────────────────
@@ -115,12 +110,7 @@ data class TxDisplayCacheEntry(
         private const val DATE_TIME_FORMAT = DateUtils.FORMAT_SHOW_TIME
 
         /** Convert a [TransactionRowView] (which uses current resource IDs) to a cache entry. */
-        fun fromTransactionRowView(
-            row: TransactionRowView,
-            context: Context,
-            filterFlags: Int = 0,
-            customIconId: String? = null
-        ): TxDisplayCacheEntry {
+        fun fromTransactionRowView(row: TransactionRowView, context: Context, filterFlags: Int = 0): TxDisplayCacheEntry {
             val iconType = when (row.icon) {
                 R.drawable.ic_transaction_sent        -> ICON_SENT
                 R.drawable.ic_internal                -> ICON_INTERNAL
@@ -157,22 +147,13 @@ data class TxDisplayCacheEntry(
                 contactDisplayName     = row.contact?.displayName,
                 contactAvatarUrl       = row.contact?.avatarUrl,
                 contactUserId          = row.contact?.userId,
-                filterFlags            = filterFlags,
-                customIconId           = customIconId
+                filterFlags            = filterFlags
             )
         }
     }
 
-    /**
-     * Convert back to [TransactionRowView] for the adapter, optionally injecting [contact]
-     * and the merchant/service [iconBitmap] (re-loaded from metadata, since it isn't cached
-     * in this table). When [iconBitmap] is non-null the adapter renders it as the primary
-     * icon — e.g. the gift card merchant logo — instead of the static [iconType] drawable.
-     */
-    fun toTransactionRowView(
-        contact: DashPayProfile? = null,
-        iconBitmap: Bitmap? = null
-    ): TransactionRowView {
+    /** Convert back to [TransactionRowView] for the adapter, optionally injecting [contact]. */
+    fun toTransactionRowView(contact: DashPayProfile? = null): TransactionRowView {
         val iconRes = when (iconType) {
             ICON_SENT      -> R.drawable.ic_transaction_sent
             ICON_INTERNAL  -> R.drawable.ic_internal
@@ -211,7 +192,7 @@ data class TxDisplayCacheEntry(
             exchangeRate      = rate,
             contact           = resolvedContact,
             icon              = iconRes,
-            iconBitmap        = iconBitmap,    // merchant/service logo re-injected from metadata
+            iconBitmap        = null,    // service icons loaded separately from metadata
             iconBackground    = bgRes,
             statusRes         = -1,      // use statusText field instead for cached rows
             comment           = comment,

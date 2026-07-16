@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.R
@@ -39,13 +40,13 @@ class CrowdNodeAPIConfirmationForwarded(
     params: NetworkParameters
 ) : CoinsToAddressTxFilter(
     CrowdNodeConstants.getCrowdNodeAddress(params),
-    CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT,
+    CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT.toCoin(),
     includeFee = true
 )
 
 open class CrowdNodeAPIConfirmationTx(
     address: Address
-) : CoinsToAddressTxFilter(address, CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT)
+) : CoinsToAddressTxFilter(address, CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT.toCoin())
 
 class CrowdNodeAPIConfirmationHandler(
     private val apiAddress: Address,

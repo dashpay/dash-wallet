@@ -21,6 +21,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.ScriptPattern
+import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
@@ -56,7 +57,7 @@ class CrowdNodeDepositTx(private val accountAddress: Address) : TransactionFilte
     }
 
     private fun isApiRequest(coin: Coin): Boolean {
-        val toCheck = (coin - CrowdNodeConstants.API_OFFSET).value
+        val toCheck = (coin - CrowdNodeConstants.API_OFFSET.toCoin()).value
 
         return toCheck <= ApiCode.MaxCode.code
     }

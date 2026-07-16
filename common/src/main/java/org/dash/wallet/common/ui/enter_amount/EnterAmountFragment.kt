@@ -42,6 +42,10 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentEnterAmountBinding
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.toCoin
+import org.dash.wallet.common.money.toDash
+import org.dash.wallet.common.money.toFiatValue
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
@@ -93,6 +97,28 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
                 arguments = args
             }
         }
+
+        /** Neutral counterpart of [newInstance] for modules that don't depend on dashj. */
+        @JvmStatic
+        fun newInstanceDash(
+            dashToFiat: Boolean = false,
+            initialAmount: Dash? = null,
+            isMaxButtonVisible: Boolean = true,
+            showCurrencySelector: Boolean = true,
+            isCurrencyOptionsPickerVisible: Boolean = true,
+            showAmountResultContainer: Boolean = true,
+            faitCurrencyCode: String? = null,
+            requirePinForMaxButton: Boolean = false
+        ): EnterAmountFragment = newInstance(
+            dashToFiat,
+            initialAmount?.toCoin(),
+            isMaxButtonVisible,
+            showCurrencySelector,
+            isCurrencyOptionsPickerVisible,
+            showAmountResultContainer,
+            faitCurrencyCode,
+            requirePinForMaxButton
+        )
     }
 
     private val binding by viewBinding(FragmentEnterAmountBinding::bind)
@@ -145,10 +171,10 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.setOnClickListener {
-            viewModel.onContinueEvent.value = Pair(
-                binding.amountView.dashAmount,
-                binding.amountView.fiatAmount
-            )
+            val dashAmount = binding.amountView.dashAmount
+            val fiatAmount = binding.amountView.fiatAmount
+            viewModel.onContinueEvent.value = Pair(dashAmount, fiatAmount)
+            viewModel.onContinueDashEvent.value = Pair(dashAmount.toDash(), fiatAmount.toFiatValue())
         }
 
         viewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->

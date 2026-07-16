@@ -19,9 +19,8 @@ package org.dash.wallet.integrations.crowdnode.ui.dialogs
 
 import android.os.Bundle
 import android.view.View
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.uri.BitcoinURI
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.payments.parsers.DashUri
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Qr
@@ -29,8 +28,8 @@ import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.DialogQrBinding
 
 class QRDialog(
-    private val address: Address,
-    private val amount: Coin
+    private val address: String,
+    private val amount: Dash
 ) : OffsetDialogFragment(R.layout.dialog_qr) {
     private val binding by viewBinding(DialogQrBinding::bind)
 
@@ -42,7 +41,7 @@ class QRDialog(
             amount.toFriendlyString()
         )
 
-        val paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, "", "")
+        val paymentRequestUri = DashUri.toUri(address, amount)
         val qrCodeBitmap = Qr.themeAwareDrawable(paymentRequestUri, resources)
         binding.qrPreview.setImageDrawable(qrCodeBitmap)
     }

@@ -38,6 +38,9 @@ import de.schildbach.wallet.service.AndroidActionsService
 import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.L1SendProbeService
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.more.tools.ZenLedgerApi
 import de.schildbach.wallet.ui.more.tools.ZenLedgerClient
@@ -56,7 +59,9 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.integrations.uphold.api.UpholdClient
-import org.dash.wallet.features.exploredash.network.service.stubs.FakeDashSpendService
+import de.schildbach.wallet.payments.FakeDashSpendService
+import de.schildbach.wallet.payments.MayaBlockchainApiImpl
+import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import javax.inject.Singleton
 
 @Module
@@ -112,9 +117,12 @@ abstract class AppModule {
             identityConfig: BlockchainIdentityConfig,
             identityRepository: IdentityRepository,
             platformRepo: PlatformRepo,
-            transactionMetadataProvider: TransactionMetadataProvider
+            transactionMetadataProvider: TransactionMetadataProvider,
+            sdkL1SendService: SdkL1SendService,
+            l1ShadowSyncService: L1ShadowSyncService,
+            l1SendProbeService: L1SendProbeService
         ): SendPaymentService {
-            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider)
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider, sdkL1SendService, l1ShadowSyncService, l1SendProbeService)
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService
@@ -164,4 +172,10 @@ abstract class AppModule {
     @Singleton
     @Binds
     abstract fun provideDashSystemService(dashSystemService: DashSystemServiceImpl): DashSystemService
+
+    // Bound here rather than in integrations/maya so that the swap-transaction construction
+    // (which requires dashj) stays inside the wallet module.
+    @Binds
+    @Singleton
+    abstract fun bindMayaBlockchainApi(mayaBlockchainApi: MayaBlockchainApiImpl): MayaBlockchainApi
 }

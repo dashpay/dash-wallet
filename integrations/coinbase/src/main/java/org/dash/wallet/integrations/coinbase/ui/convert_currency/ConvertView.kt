@@ -25,9 +25,10 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.MoneyFormat
+import org.dash.wallet.common.money.dashToFiat
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedString
@@ -38,7 +39,7 @@ import java.math.RoundingMode
 
 class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
     private val binding = ConvertViewBinding.inflate(LayoutInflater.from(context), this)
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    private val dashFormat = MoneyFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
 
     private var onCurrencyChooserClicked: (() -> Unit)? = null
@@ -60,14 +61,15 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
             updateAmount()
         }
 
-    private var _dashInput: Coin? = null
-    var dashInput: Coin?
+    private var _dashInput: Dash? = null
+    var dashInput: Dash?
         get() = _dashInput
         set(value) {
             _dashInput = value
         }
 
-    var exchangeRate: ExchangeRate? = null
+    /** fiat price of one Dash */
+    var exchangeRate: FiatValue? = null
         set(value) {
             field = value
         }
@@ -165,9 +167,9 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
 
                 val balance = it.balance.toBigDecimal().setScale(8, RoundingMode.HALF_UP).toString()
                 val coin = try {
-                    Coin.parseCoin(balance)
+                    Dash.parse(balance)
                 } catch (x: Exception) {
-                    Coin.ZERO
+                    Dash.ZERO
                 }
 
                 binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
@@ -192,8 +194,7 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
 
         exchangeRate?.let { currentExchangeRate ->
             dashInput?.let { dash ->
-                val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
-                val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
+                val fiatAmount = currentExchangeRate.dashToFiat(dash).toFormattedString()
                 binding.convertFromDashBalance.text = "${dashFormat.minDecimals(0)
                     .optionalDecimals(0,8).format(dash)} DASH"
 

@@ -111,8 +111,6 @@
     <string name="maya_error_invalid_destination_address">宛先のアドレスが無効です</string>
     <string name="maya_error_below_recommended_minimum">入力した金額は、推奨の最低金額を下回っています</string>
     <string name="maya_error_trading_halted">%sでの取引は停止されています。</string>
-    <string name="maya_error_below_allowed_minimum">入力した金額が最低許容額を下回っています</string>
-    <string name="maya_error_quote">この変換ではMayaからの見積もりを取得できませんでした</string>
     <string name="maya_halted_label">取引停止しました</string>
     <string name="maya_halted_coins_toast">一部のコインは一時的に取引が停止されており、利用できません</string>
 

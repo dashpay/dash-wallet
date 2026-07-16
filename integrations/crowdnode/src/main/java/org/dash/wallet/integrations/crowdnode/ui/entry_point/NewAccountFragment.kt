@@ -93,7 +93,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.copyAddressBtn.setOnClickListener {
-            viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
+            viewModel.accountAddress.value?.copy(requireActivity(), "dash address")
         }
 
         viewModel.termsAccepted.observe(viewLifecycleOwner) {
@@ -101,7 +101,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         viewModel.accountAddress.observe(viewLifecycleOwner) {
-            binding.dashAddressTxt.text = it.toBase58()
+            binding.dashAddressTxt.text = it
         }
 
         viewModel.observeSignUpStatus().observe(viewLifecycleOwner) {

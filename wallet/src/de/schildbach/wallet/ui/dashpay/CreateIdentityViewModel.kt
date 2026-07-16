@@ -79,13 +79,4 @@ class CreateIdentityViewModel @Inject constructor(
             }
         }
     }
-
-    fun hideRequestedUsernameContainer() {
-        viewModelScope.launch {
-            blockchainIdentityDataDao.set(
-                BlockchainIdentityConfig.CREATION_STATE,
-                IdentityCreationState.DONE_AND_DISMISS.name
-            )
-        }
-    }
 }

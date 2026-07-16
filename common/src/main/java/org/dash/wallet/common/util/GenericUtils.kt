@@ -19,6 +19,7 @@ package org.dash.wallet.common.util
 
 import android.os.LocaleList
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MoneyFormat
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
@@ -163,6 +164,10 @@ object GenericUtils {
         get() = MonetaryFormat().withLocale(getDeviceLocale()).noCode().minDecimals(0).repeatOptionalDecimals(1, 8)
     val fiatFormat: MonetaryFormat
         get() = MonetaryFormat().withLocale(getDeviceLocale()).noCode().minDecimals(getCurrencyDigits())
+
+    /** Neutral counterpart of [dashFormat] for modules that don't depend on dashj. Same format, wrapped in [MoneyFormat]. */
+    val dashMoneyFormat: MoneyFormat
+        get() = MoneyFormat(dashFormat)
 
     fun toLocalizedString(value: BigDecimal, isCrypto: Boolean, currencyCode: String): String {
         return if (isCrypto) {

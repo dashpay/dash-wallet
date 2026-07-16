@@ -412,8 +412,6 @@
     <string name="reason">Dahilan</string>
     <string name="link_account">I-link ang iyong account</string>
     <string name="buy_no_account_needed">Bumili ng Dash · Walang kinakailangang account</string>
-    <string name="convert_no_account_needed">Swap Dash · Walang account na kailangan</string>
-
     <string name="recipient_address">Address ng Tatanggap</string>
     <string name="not_dash_address">Hindi wastong Dash Address o kahilingan sa URL</string>
     <string name="send_to_address">Ipadala sa address</string>
@@ -441,5 +439,4 @@
     <string name="upgrade_pin_title">Kailangan mong i-upgrade ang iyong PIN</string>
     <string name="upgrade_pin_description">Mag set up ng bagong PIN</string>
     <string name="upgrade_pin_continue">Ipagpatuloy</string>
-
-    </resources>
+</resources>

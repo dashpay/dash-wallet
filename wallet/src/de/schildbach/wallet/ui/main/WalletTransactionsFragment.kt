@@ -30,9 +30,12 @@ import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.ConcatAdapter
 import de.schildbach.wallet.ui.CreateUsernameActivity
+import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
+import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
+import de.schildbach.wallet.ui.dashpay.RetryStatusHint
 import de.schildbach.wallet.ui.invite.InviteHandler
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -50,7 +53,6 @@ import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.InviteHandlerViewModel
-import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.registerLockScreenDeactivated
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
@@ -85,6 +87,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private var firstPageLoadStartTime: Long = 0L
     private var onViewCreatedTime: Long = 0L
     private var pendingManualRefresh: Boolean = false
+    // Debug-only "Kotlin sync" label (null on release / shadow idle) — see MainViewModel.kotlinSyncStatus.
+    private var kotlinSyncStatus: String? = null
 
     private val viewModel by activityViewModels<MainViewModel>()
     private val giftCardViewModel by activityViewModels<GiftCardViewModel>()
@@ -98,6 +102,9 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     @Inject
     lateinit var identityRepository: IdentityRepository
 
+    @Inject
+    lateinit var identityCreationStatus: IdentityCreationStatusHolder
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         onViewCreatedTime = System.currentTimeMillis()
@@ -107,7 +114,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             viewLifecycleOwner.lifecycleScope.launch {
                 if (rowView is TransactionRowView) {
                     if (isProfileClick && rowView.contact != null) {
-                    DashPayUserBottomSheet.newInstance(rowView.contact).show(requireActivity())
+                        requireContext().startActivity(
+                            DashPayUserActivity.createIntent(
+                                requireContext(),
+                                rowView.contact
+                            )
+                        )
                     } else {
                         // For rows loaded from the display cache, txWrapper is null.
                         // Fall back to the live wrapper list so CoinJoin/CrowdNode groups still open.
@@ -125,7 +137,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                 // CrowdNode) icon for non-group wrappers, so route here instead.
                                 if (ServiceName.isDashSpend(rowView.service)) {
                                     viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
-                                    val txId = Sha256Hash.wrap(rowView.id)
+                                    val txId = rowView.id
                                     if (giftCardViewModel.getGiftCardCount(txId) > 1) {
                                         GiftCardOrderDetailsDialog.newInstance(txId)
                                     } else {
@@ -139,7 +151,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
                             ServiceName.isDashSpend(rowView.service) -> {
                                 viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
-                                val txId = Sha256Hash.wrap(rowView.id)
+                                val txId = rowView.id
                                 if (giftCardViewModel.getGiftCardCount(txId) > 1) {
                                     GiftCardOrderDetailsDialog.newInstance(txId)
                                 } else {
@@ -310,6 +322,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             updateSyncState()
         }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.kotlinSyncStatus.collect {
+                kotlinSyncStatus = it
+                updateSyncState()
+            }
+        }
 
         // Collect live PagingData and submit to the live (PagingDataAdapter) adapter.
         viewLifecycleOwner.lifecycleScope.launch {
@@ -379,6 +397,18 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             if (identity != null) {
                 (requireActivity() as? LockScreenActivity)?.imitateUserInteraction()
                 header.blockchainIdentityData = identity
+            }
+        }
+
+        // Transient retry-status hint on the identity processing tile —
+        // why the current step is taking longer than usual (e.g. platform
+        // consensus core height lagging a fresh funding tx; no IS lock
+        // yet). Cleared by the service on success/fresh runs.
+        identityCreationStatus.statusHint.observe(viewLifecycleOwner) { hint ->
+            header.statusHint = when (hint) {
+                RetryStatusHint.CORE_HEIGHT_LAG -> getString(R.string.identity_processing_network_catching_up)
+                RetryStatusHint.WAITING_FOR_ISLOCK -> getString(R.string.identity_processing_waiting_confirmation)
+                null -> null
             }
         }
 
@@ -502,6 +532,24 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun updateSyncState() {
         val isSynced = viewModel.isBlockchainSynced.value
         val percentage = viewModel.blockchainSyncPercentage.value
+        val kotlinLabel = kotlinSyncStatus
+
+        // Debug-only two-engine format ("DashJ 63% · Kotlin 19%") whenever
+        // the Kotlin shadow label is present; the production "Syncing N%"
+        // rendering below stays byte-identical when it is not (release
+        // builds, shadow off). The header stays visible after dashj
+        // finishes so testers can watch the SDK scan reach 100% ✓ without
+        // reading logs.
+        if (kotlinLabel != null) {
+            val dashjPart = when {
+                isSynced == true -> "DashJ 100%"
+                percentage == null || percentage == 0 -> "DashJ…"
+                else -> "DashJ $percentage%"
+            }
+            binding.syncing.isVisible = true
+            binding.syncing.text = "$dashjPart · $kotlinLabel"
+            return
+        }
 
         if (isSynced != null && isSynced) {
             binding.syncing.isVisible = false

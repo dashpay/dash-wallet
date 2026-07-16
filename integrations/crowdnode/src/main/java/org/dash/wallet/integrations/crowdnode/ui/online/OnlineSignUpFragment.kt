@@ -53,8 +53,8 @@ class OnlineSignUpFragment : WebViewFragment() {
 
         super.onViewCreated(view, savedInstanceState)
 
-        LOGIN_PREFIX = CrowdNodeConstants.getLoginUrl(viewModel.networkParameters)
-        ACCOUNT_PREFIX = CrowdNodeConstants.getCrowdNodeBaseUrl(viewModel.networkParameters)
+        LOGIN_PREFIX = CrowdNodeConstants.getLoginUrl(viewModel.networkId)
+        ACCOUNT_PREFIX = CrowdNodeConstants.getCrowdNodeBaseUrl(viewModel.networkId)
 
         viewModel.observeOnlineAccountStatus().observe(viewLifecycleOwner) { status ->
             if (status == OnlineAccountStatus.Done) {

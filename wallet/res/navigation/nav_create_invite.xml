@@ -18,7 +18,24 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_host_create_invite"
-    app:startDestination="@+id/invitationFeeDialog">
+    app:startDestination="@+id/inviteShieldedFundingDialog">
+
+    <dialog
+        android:id="@+id/inviteShieldedFundingDialog"
+        android:name="de.schildbach.wallet.ui.invite.InviteShieldedFundingDialogFragment"
+        android:layout="@layout/dialog_invite_shielded_funding"
+        android:label="Invite Shielded Funding Dialog">
+
+        <argument
+            android:name="source"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/toInvitationFeeDialog"
+            app:destination="@id/invitationFeeDialog"
+            app:popUpTo="@id/inviteShieldedFundingDialog"
+            app:popUpToInclusive="true" />
+    </dialog>
 
     <fragment
         android:id="@+id/inviteCreatedFragment"

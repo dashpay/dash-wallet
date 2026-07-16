@@ -24,10 +24,16 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import de.schildbach.wallet.Constants
+import org.bitcoinj.core.NetworkParameters
 import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
+import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
@@ -94,6 +100,8 @@ open class DashPayConfig @Inject constructor(
     )
 ) {
     companion object {
+        private val log = org.slf4j.LoggerFactory.getLogger(DashPayConfig::class.java)
+
         const val DISABLE_NOTIFICATIONS: Long = -1
 
         const val PREFERENCES_NAME = "dashpay"
@@ -125,6 +133,196 @@ open class DashPayConfig @Inject constructor(
         val TRANSACTION_METADATA_LAST_PAST_SAVE = longPreferencesKey("transaction_metadata_last_save_work_timestamp")
         val INVITATION_LINK = stringPreferencesKey("invitation_link")
         val INVITATION_FROM_ONBOARDING = booleanPreferencesKey("invitation_link_from_onboarding")
+
+        /**
+         * Whether the "Transfers take different times" sheet (Figma
+         * 1740:16412) has been shown on the shielded internal-transfer
+         * screen. It auto-opens once on the user's first visit and is set
+         * on dismissal; the nav-bar info icon re-opens it manually any
+         * time. Follows the *_INFO_SHOWN precedents above.
+         */
+        val SHIELDED_TIMING_INFO_SHOWN = booleanPreferencesKey("shielded_timing_info_shown")
+
+        /**
+         * Phase 3c of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): route read-only DPNS
+         * username resolution/search through the Dash Platform Kotlin SDK
+         * instead of dashj-platform. Default OFF — the dashj path is
+         * untouched unless this is explicitly enabled, and any SDK-path
+         * failure falls back to dashj per call. Re-read on every lookup, so
+         * toggling either direction is instant (no restart).
+         * See [de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries].
+         */
+        val USE_KOTLIN_SDK_DPNS_READS = booleanPreferencesKey("use_kotlin_sdk_dpns_reads")
+
+        /**
+         * Phase 3e of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): route the DashPay WRITE
+         * operations (send contact request, create/update profile) through
+         * the Dash Platform Kotlin SDK instead of dashj-platform. Default
+         * OFF. Unlike the read flag, a failed SDK write only falls back to
+         * dashj when the SDK path DEFINITIVELY did not broadcast (see
+         * [de.schildbach.wallet.service.platform.sdk.SdkDashPayWrites] for
+         * the decision table) — an ambiguous failure surfaces as an error
+         * exactly like a dashj broadcast failure would, never as a silent
+         * second broadcast. Re-read on every write, so toggling either
+         * direction is instant (no restart).
+         */
+        val USE_KOTLIN_SDK_DASHPAY_WRITES = booleanPreferencesKey("use_kotlin_sdk_dashpay_writes")
+
+        /**
+         * Phase 4 of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): enable the SHIELDED
+         * (Orchard) balance runtime — the per-network commitment-tree
+         * store, the wallet's shielded sub-wallet binding, the background
+         * shielded sync loop, and the shielded spend operations (shield /
+         * transfer / unshield / withdraw). Default OFF: with the flag off
+         * the shielded service is provably inert (no native call, no
+         * SQLite file, no sync loop). Spends follow the
+         * [de.schildbach.wallet.service.platform.sdk.SdkWriteResult]
+         * no-double-broadcast contract — see
+         * [de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService].
+         * Re-read on every call, so toggling ON is instant; toggling OFF
+         * stops gating new work but does not tear down a running sync loop
+         * (call `ShieldedBalanceService.stop()` for that).
+         */
+        val USE_KOTLIN_SDK_SHIELDED = booleanPreferencesKey("use_kotlin_sdk_shielded")
+
+        /**
+         * Phase 5a of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): run the Kotlin SDK's Rust
+         * SPV client ALONGSIDE dashj as a shadow — a verification harness
+         * for the eventual L1 cutover, changing nothing user-facing. While
+         * on (and the app wallet is bound to the SDK), the shadow service
+         * starts the SDK's compact-filter sync into its own storage
+         * directory and probes balance/tx-count parity against the dashj
+         * wallet every minute, logging `L1Parity` one-liners. Default OFF:
+         * with the flag off the service is provably inert (no native call,
+         * no SPV storage, no probe loop).
+         *
+         * DEBUG-ONLY INSTRUMENTATION: shadow mode runs TWO SPV engines
+         * (dashj + Rust) — double network and battery cost. It is seeded ON
+         * only in debug builds (below) and must never ship enabled to prod.
+         * See [de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService].
+         */
+        val USE_KOTLIN_SDK_L1_SHADOW = booleanPreferencesKey("use_kotlin_sdk_l1_shadow")
+
+        /**
+         * Phase 5b of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): route the NORMAL L1 send —
+         * a plain Dash payment to a base58 address — through the Kotlin
+         * SDK's Core send pipeline (build + sign + broadcast over the SDK's
+         * SPV peers) instead of dashj. Scope: ONLY the neutral
+         * `SendPaymentService.sendCoins(String, Dash)` overload (the
+         * integrations path — Coinbase/Maya); the dashj-typed main-UI send
+         * stays on dashj until Phase 5c. Every send is hard-gated on the
+         * same shadow-sync parity evidence as the shielded funding pipeline
+         * (see `SdkL1SendService`), and any outcome where the SDK provably
+         * broadcast nothing falls back to the unchanged dashj path.
+         *
+         * Default OFF and — unlike the other migration flags —
+         * DELIBERATELY NOT seeded ON by the debug-build init block below:
+         * this flag moves real user funds through the SDK's own
+         * build/sign/broadcast stack, so it stays opt-in even for testers
+         * (adb/debug-screen toggle) until the shadow-parity harness has
+         * soak-validated the SDK's L1 view across enough devices. Re-read
+         * on every send, so toggling either direction is instant.
+         */
+        val USE_KOTLIN_SDK_L1_SEND = booleanPreferencesKey("use_kotlin_sdk_l1_send")
+
+        /**
+         * The `USE_KOTLIN_SDK_*` flags a DEBUG build seeds ON when unset —
+         * pure so [seedDebugDefaultsIfUnset]'s network split is
+         * host-testable. Mainnet debug builds (prodDebug — the external
+         * large-wallet validation vehicle) seed ONLY the read-only L1
+         * shadow: the shielded pool and the SDK write paths are not
+         * validated on mainnet, and seeding them would expose shielded UI
+         * and platform writes to real funds. The shadow flag alone binds
+         * the wallet (SdkWalletBinder counts it) and runs the read-only
+         * parity scan. `USE_KOTLIN_SDK_L1_SEND` is never seeded anywhere.
+         */
+        internal fun debugSeedFlags(isMainnet: Boolean) = if (isMainnet) {
+            listOf(USE_KOTLIN_SDK_L1_SHADOW)
+        } else {
+            listOf(
+                USE_KOTLIN_SDK_DPNS_READS,
+                USE_KOTLIN_SDK_DASHPAY_WRITES,
+                USE_KOTLIN_SDK_SHIELDED,
+                USE_KOTLIN_SDK_L1_SHADOW
+            )
+        }
+
+        /**
+         * Wall-clock ms of the last L1 shadow reset
+         * ([de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService.resetShadowState]).
+         * Persisted (not in-memory) so a reset survives a process death:
+         * the reset-aftermath deficit detector uses it to distinguish
+         * "the previous reset broke the shadow state" (recover with one
+         * hard reset) from an organic SDK scan deficit (stand down) —
+         * see `ShadowResetDecider`'s decision table.
+         */
+        val L1_SHADOW_LAST_RESET = longPreferencesKey("l1_shadow_last_reset")
+
+        /**
+         * Phase 5d cutover state machine (see docs/kotlin-sdk-migration-plan.md
+         * and [de.schildbach.wallet.service.platform.sdk.CutoverState]).
+         * Persisted per-install so the engine-start decision survives process
+         * death; absent = [de.schildbach.wallet.service.platform.sdk
+         * .CutoverState.DUAL_RUNNING] (today's behavior). The transition to
+         * CUT_OVER is the single atomic write that makes the SDK the L1
+         * source of truth; every engine-start site consults it first.
+         */
+        val CUTOVER_STATE = stringPreferencesKey("cutover_state")
+    }
+
+    init {
+        // Debug builds seed the Kotlin SDK migration flags ON (once, only if unset) so
+        // flag-gated SDK paths get exercised during testnet verification; release/prod
+        // builds keep them OFF until rollout. QA can still toggle them afterwards.
+        if (BuildConfig.DEBUG) {
+            CoroutineScope(Dispatchers.IO).launch {
+                seedDebugDefaultsIfUnset()
+            }
+        }
+    }
+
+    /**
+     * Idempotent debug-flag seeding — callable OUTSIDE the init block
+     * because a Reset Wallet wipes this DataStore MID-PROCESS: the
+     * singleton already exists, so the init-time pass never re-runs, all
+     * `USE_KOTLIN_SDK_*` flags silently read as OFF, and every SDK path
+     * (binder, shadow, shielded) goes inert with no log trail — observed
+     * live: the duck-say overnight restore ran with the SDK dark. The
+     * wipe path calls this after clearing (debug builds only; a no-op on
+     * release where BuildConfig.DEBUG gates the caller). Which flags are
+     * seeded is network-dependent — see [debugSeedFlags].
+     */
+    suspend fun seedDebugDefaultsIfUnset() {
+        if (!BuildConfig.DEBUG) return
+        try {
+            val seeded = mutableListOf<String>()
+            val alreadySet = mutableListOf<String>()
+            val debugDefaultOnFlags = debugSeedFlags(
+                isMainnet = Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET
+            )
+
+            for (flag in debugDefaultOnFlags) {
+                if (get(flag) == null) {
+                    set(flag, true)
+                    seeded.add(flag.name)
+                } else {
+                    alreadySet.add(flag.name)
+                }
+            }
+
+            log.info("debug SDK flag seeding: seeded ON = {}, already set (skipped) = {}", seeded, alreadySet)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // best-effort seeding; unset flags simply stay at their OFF default —
+            // but that darkens every flag-gated SDK surface, so it must be loud
+            log.warn("debug SDK flag seeding failed; unset USE_KOTLIN_SDK_* flags stay OFF", e)
+        }
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {

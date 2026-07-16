@@ -1,0 +1,745 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.service.platform.sdk
+
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.dash.wallet.common.WalletDataProvider
+import org.dashj.platform.dpp.identifier.Identifier
+import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicBoolean
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * The NON-INTERACTIVE wallet-unlock recipe shared by every background
+ * binding trigger — originally inlined at
+ * [de.schildbach.wallet.service.platform.PlatformSynchronizationService.init],
+ * extracted so the shadow-state recovery path
+ * ([de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+ * .recoverByRecreatingWallet]) reuses the exact same recipe instead of
+ * duplicating it.
+ *
+ * Recovers the wallet-crypter key the same way the platform sync loops do
+ * ([PlatformRepo.getWalletEncryptionKey] — the SecurityGuard-stored
+ * password, scrypt-derived, NO user prompt ever). Returns null when no
+ * unlock is obtainable right now (wallet not loaded, or the password
+ * retrieval failed) — callers treat that as "skip this pass, retry on the
+ * next trigger". The [WalletUnlock] trust model holds: this class asserts
+ * the user already authorized background platform work by setting up
+ * DashPay (the same assertion the pre-extraction call sites made).
+ */
+@Singleton
+class NonInteractiveWalletUnlock @Inject constructor(
+    private val walletData: WalletDataProvider,
+    private val platformRepo: PlatformRepo
+) {
+    /**
+     * The current unlock proof, or null when unavailable. Potentially
+     * expensive (scrypt key derivation) — call from a background
+     * dispatcher only, and only after cheap eligibility gates have passed
+     * (the [SdkWalletBinder.bindInBackground] lazy-provider contract).
+     */
+    suspend fun unlockOrNull(): WalletUnlock? {
+        val wallet = walletData.wallet
+        return when {
+            wallet == null -> null
+            !wallet.isEncrypted -> WalletUnlock.Unencrypted
+            else -> platformRepo.getWalletEncryptionKey()?.let { WalletUnlock.EncryptionKey(it) }
+        }
+    }
+}
+
+/**
+ * Message fragment of the SDK's mnemonic-resolver failure when a bound
+ * wallet has no phrase in the Keystore-backed `WalletStorage`
+ * (`DashSdkError… "mnemonic resolver: no mnemonic stored for the supplied
+ * wallet_id"`, observed live from [DashSdkService.discoverIdentities]).
+ * Hit when an earlier bind pass died between `createWallet` and the
+ * phrase persist (locked/dozing Keystore) — message-matched until the SDK
+ * exposes a typed resolver error.
+ */
+internal const val NO_MNEMONIC_STORED_MESSAGE = "no mnemonic stored"
+
+/**
+ * Whether [t] (or a cause within a bounded chain walk) is the
+ * missing-mnemonic resolver failure — pure, host-testable.
+ */
+internal fun isMissingMnemonicError(t: Throwable): Boolean {
+    var current: Throwable? = t
+    repeat(8) {
+        val cause = current ?: return false
+        if (cause.message?.contains(NO_MNEMONIC_STORED_MESSAGE) == true) return true
+        current = cause.cause
+    }
+    return false
+}
+
+/**
+ * Whether the binder's bound/latched state belongs to a DIFFERENT app
+ * wallet than the one currently loaded — the pure decision behind
+ * [SdkWalletBinder]'s per-trigger latch revalidation (the
+ * [ShadowResetDecider]-style pure-core + thin-wiring pattern).
+ *
+ * Live incident (S21, Reset Wallet → restore-from-seed WITHOUT a process
+ * restart): the success latch kept the PREVIOUS wallet's SDK binding, so
+ * every bound-wallet consumer (L1 shadow parity, shielded runtime, DashPay
+ * writes) kept comparing/operating against the OLD deterministic wallet id
+ * — an error class no shadow reset can fix (the parity decider hard-reset
+ * in vain) and that only a manual app restart used to clear.
+ *
+ * [latchedFingerprint] is the app-wallet fingerprint captured when the
+ * bind pass handed the seed to the SDK; [currentFingerprint] is the
+ * fingerprint of the wallet loaded right now. Stale means: the current
+ * wallet is fingerprintable AND it differs from what was latched —
+ * including a latch captured while no wallet was fingerprintable
+ * (`latchedFingerprint == null`), which cannot prove it covers the current
+ * wallet. A currently-unfingerprintable wallet (`currentFingerprint ==
+ * null`, e.g. momentarily unloaded) keeps the latch: there is no evidence
+ * of a replacement, and the next trigger re-checks anyway.
+ */
+internal fun isBoundWalletStale(latchedFingerprint: String?, currentFingerprint: String?): Boolean =
+    currentFingerprint != null && latchedFingerprint != currentFingerprint
+
+/**
+ * Phase 3f production wiring (`docs/kotlin-sdk-migration-plan.md`): make
+ * the Kotlin-SDK wallet binding ([DashSdkService.bindAppWallet]) and
+ * identity discovery ([DashSdkService.discoverIdentities]) actually happen
+ * for platform users, so the flag-gated read/write paths (Phases 3c–3e)
+ * become live-testable — with both flags OFF (the default) this class is
+ * provably inert.
+ *
+ * ## What one successful pass establishes
+ *
+ * 1. The app's BIP39 seed is bound into the SDK
+ *    ([DashSdkService.bindAppWallet] — idempotent, phrase persisted in the
+ *    SDK's Keystore-backed `WalletStorage`), and
+ * 2. the app's EXISTING on-chain identity (id from
+ *    [BlockchainIdentityConfig], registered by dashj at identity index 0)
+ *    is attached to that wallet's Rust `IdentityManager` via the DIP-9
+ *    gap-limit discovery scan — after which
+ *    [DashSdkService.isIdentityManaged] is true, `dashpay.syncState(id)`
+ *    is non-null, and the [SdkDashPayWrites] preflight can pass; and
+ * 3. the identity's PRIVATE keys are derived from the seed and stored in
+ *    the SDK's Keystore-backed key store
+ *    ([DashSdkService.ensureIdentityKeysSignable], Phase 3f-b) so the FFI
+ *    signer can actually sign — discovery alone leaves this store empty
+ *    when its auto-derive hits an expired Keystore auth window ("no
+ *    private key stored for <pubkeyHex>" observed live on-device).
+ *
+ * ## Eligibility gate (checked in order, cheapest first)
+ *
+ * 1. One of [DashPayConfig.USE_KOTLIN_SDK_DPNS_READS],
+ *    [DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES],
+ *    [DashPayConfig.USE_KOTLIN_SDK_SHIELDED] or
+ *    [DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] is ON (re-read every
+ *    call; all OFF → return before touching the SDK, the mnemonic
+ *    provider, or the identity config — the inertness contract).
+ * 2. [Constants.SUPPORTS_PLATFORM] (64-bit builds only).
+ * 3. The app actually has (or is creating) a platform identity
+ *    ([BlockchainIdentityConfig.loadBase] reports `creationState != NONE`
+ *    or a stored identity id) — OR `USE_KOTLIN_SDK_SHIELDED` /
+ *    `USE_KOTLIN_SDK_L1_SHADOW` is ON: shielding and the shielded-funded
+ *    username creation need a bound wallet BEFORE the first identity
+ *    exists, and the read-only L1 shadow scan must run on wallets with
+ *    no platform identity at all, so those wallets bind too
+ *    (binding-only; identity discovery defers until an id is stored).
+ *
+ * ## Trust model / seed hygiene
+ *
+ * The binder NEVER prompts and never touches `SecurityGuard`: call sites
+ * pass a [WalletUnlock] (or a lazy provider of one) proving the user
+ * already authorized seed access — the same contract as
+ * [PlatformMnemonicProvider]. The unlock provider is invoked only AFTER
+ * the eligibility gate passes (so the scrypt key derivation some
+ * providers perform is never paid while the flags are off), the decrypted
+ * words go straight to [DashSdkService.bindAppWallet], and no reference
+ * outlives the call. Nothing seed-derived is ever logged.
+ *
+ * ## Concurrency / failure contract
+ *
+ * - **Single-flight**: a [Mutex] serializes passes; concurrent callers
+ *   wait, then see the success latch and no-op.
+ * - **Idempotent**: after a fully successful pass (wallet bound AND
+ *   identity attached, or bound with provably nothing to attach) every
+ *   later call returns at the latch. Partial progress is kept — if the
+ *   bind succeeded but discovery failed (network), the next call retries
+ *   discovery WITHOUT re-requesting the seed.
+ * - **Never throws** (except [CancellationException]): binding is
+ *   opportunistic; any failure is logged and swallowed so the calling
+ *   flow (platform sync start, a DashPay broadcast) is never broken by
+ *   it. dashj behavior is unchanged either way — the SDK write preflight
+ *   simply keeps reporting "not bound / not managed" and falls back.
+ *
+ * Call sites (Phase 3f):
+ * - [de.schildbach.wallet.service.platform.PlatformSynchronizationService.init]
+ *   — platform work already starts here and the wallet encryption key is
+ *   obtainable non-interactively (`PlatformRepo.getWalletEncryptionKey`).
+ * - [de.schildbach.wallet.service.platform.PlatformDocumentBroadcastService]
+ *   — the DashPay writes already hold the decrypt key; an opportunistic
+ *   background (re)bind there heals a failed startup bind so the NEXT
+ *   write can take the SDK path.
+ */
+@Singleton
+class SdkWalletBinder internal constructor(
+    private val sdkService: DashSdkService,
+    private val mnemonicProvider: PlatformMnemonicProvider,
+    private val identityConfig: BlockchainIdentityConfig,
+    private val dashPayConfig: DashPayConfig,
+    private val walletData: WalletDataProvider,
+    private val scope: CoroutineScope,
+    private val supportsPlatform: () -> Boolean,
+    // Injectable clock so the friend-chain provisioning throttle is
+    // deterministically testable on the host JVM. Production uses wall time.
+    private val now: () -> Long = { System.currentTimeMillis() }
+) {
+    @Inject
+    constructor(
+        sdkService: DashSdkService,
+        mnemonicProvider: PlatformMnemonicProvider,
+        identityConfig: BlockchainIdentityConfig,
+        dashPayConfig: DashPayConfig,
+        walletData: WalletDataProvider,
+        scope: CoroutineScope
+    ) : this(
+        sdkService = sdkService,
+        mnemonicProvider = mnemonicProvider,
+        identityConfig = identityConfig,
+        dashPayConfig = dashPayConfig,
+        walletData = walletData,
+        scope = scope,
+        supportsPlatform = { Constants.SUPPORTS_PLATFORM }
+    )
+
+    /** Serializes passes — the single-flight guarantee. */
+    private val mutex = Mutex()
+
+    /** Bound SDK wallet id (hex); survives a failed discovery so the retry skips the seed hand-off. */
+    @Volatile
+    private var boundWalletIdHex: String? = null
+
+    /**
+     * Fingerprint of the APP wallet whose seed the bind pass handed to the
+     * SDK (captured next to [boundWalletIdHex], cleared with it). The SDK
+     * wallet id is a deterministic function of the seed, so this records
+     * WHICH wallet the bound id (and the [completed] latch) belong to —
+     * see [currentWalletFingerprint] for what the fingerprint is and
+     * [isBoundWalletStale] for how it is compared.
+     */
+    @Volatile
+    private var boundWalletFingerprint: String? = null
+
+    /**
+     * Success latch: wallet bound, identity attached AND its keys healed
+     * to a settled state (or provably nothing to attach). Deliberately NOT
+     * set while a transient key-heal failure is outstanding, so the next
+     * trigger retries the heal (cheap: bind + discovery are both skipped).
+     *
+     * Only valid FOR THE WALLET fingerprinted in [boundWalletFingerprint]:
+     * every pass revalidates it against the currently-loaded app wallet
+     * ([revalidateBoundWallet]) before honoring it, because the app can
+     * replace its wallet IN-PROCESS (Reset Wallet → restore-from-seed) and
+     * a latch surviving that replacement pins every SDK consumer to the
+     * WRONG deterministic wallet id (observed live on the S21).
+     */
+    @Volatile
+    private var completed = false
+
+    /**
+     * Single-flights the DIP-15 friend-chain provisioning pass. Distinct
+     * from the bind [mutex]: provisioning does its own network I/O (a
+     * DashPay sweep) and must neither block nor be blocked by a bind pass.
+     */
+    private val provisioning = AtomicBoolean(false)
+
+    /**
+     * Wall-clock of the last provisioning pass — throttles the non-forced
+     * heartbeat trigger (the 15 s contact ticker) so it doesn't drive a
+     * network DashPay sweep every tick. Forced passes (bind completion, a
+     * freshly established contact) ignore it.
+     */
+    @Volatile
+    private var lastProvisionAtMs = 0L
+
+    /**
+     * Forget everything a previous pass established — the shadow-state
+     * recovery hook ([L1ShadowSyncService.recoverByRecreatingWallet])
+     * calls this right after [DashSdkService.removeAppWallet] destroyed
+     * the bound SDK wallet, so the NEXT [bindIfEnabled] pass runs the
+     * full first-bind path again: the mnemonic dedup finds nothing (the
+     * manager holds no wallets and the phrase was deleted from
+     * `WalletStorage` by the removal cascade), `createWallet` re-derives
+     * the SAME deterministic wallet id from the same seed — this time
+     * with the checkpoint-mapped birth height — and identity discovery +
+     * key healing re-attach the app identity to the fresh wallet rows.
+     *
+     * Serialized under the binder [mutex] so an in-flight pass finishes
+     * (against the doomed wallet — harmless, it is removed after) before
+     * the latch clears; the reset itself can never interleave with a
+     * half-done pass.
+     */
+    internal suspend fun resetForWalletRecreation() {
+        mutex.withLock {
+            log.warn(
+                "binder state reset for SDK wallet re-creation: bound wallet id and success " +
+                    "latch cleared — the next binding trigger runs a full bind + discovery pass"
+            )
+            boundWalletIdHex = null
+            boundWalletFingerprint = null
+            completed = false
+        }
+    }
+
+    /**
+     * A cheap fingerprint of the CURRENTLY-LOADED app wallet's seed: the
+     * dashj wallet's watching key (the public account-level xpub — already
+     * derived in memory, no unlock, no scrypt; the same public material
+     * `WalletApplication` logs at startup). It is a deterministic function
+     * of the exact seed the bind pass feeds into the SDK's deterministic
+     * wallet-id derivation ([DashSdkService.bindAppWallet]), so equal
+     * fingerprints ⇔ same SDK binding — a restore of the SAME phrase keeps
+     * the latch (correct: the deterministic id is unchanged), any other
+     * wallet invalidates it. No new key-material handling: strictly public
+     * bytes, never logged beyond a prefix. Null when no wallet is loaded
+     * or the wallet cannot produce a watching key (treated as "no
+     * evidence" — see [isBoundWalletStale]).
+     */
+    private fun currentWalletFingerprint(): String? = try {
+        walletData.wallet?.watchingKey?.pubKeyHash?.joinToString("") { "%02x".format(it) }
+    } catch (t: Throwable) {
+        log.warn("failed to fingerprint the app wallet; keeping the current binder state", t)
+        null
+    }
+
+    /**
+     * Per-trigger latch revalidation (caller holds [mutex]): if the app
+     * wallet was REPLACED IN-PROCESS since the bind (Reset Wallet →
+     * restore-from-seed, no process restart — the live S21 incident),
+     * everything the previous pass established is for the WRONG wallet.
+     * Treat as unbound: clear the bound id + latch so THIS pass runs the
+     * full bind (seed hand-off, orphan prune of the old SDK wallet,
+     * discovery + key heal) against the new wallet.
+     *
+     * Wiring note: `WalletDataProvider.observeWalletChanged()` exists and
+     * could push this eagerly, but subscribing would need an
+     * always-running collector from construction — breaking the binder's
+     * do-nothing-until-triggered posture — and adds no coverage:
+     * binding triggers already fire on every platform-sync start and every
+     * DashPay broadcast, and a stale binding only matters when something
+     * is about to USE it, i.e. exactly at those triggers.
+     */
+    private fun revalidateBoundWallet() {
+        if (boundWalletIdHex == null && !completed) return // nothing latched to revalidate
+        val current = currentWalletFingerprint()
+        if (!isBoundWalletStale(boundWalletFingerprint, current)) return
+        log.warn(
+            "app wallet replaced in-process (fingerprint {}… -> {}…): dropping bound SDK " +
+                "wallet {}… and the success latch — this pass re-runs the full bind " +
+                "(orphan prune + creation) against the current wallet",
+            boundWalletFingerprint?.take(8) ?: "none", current?.take(8),
+            boundWalletIdHex?.take(8) ?: "none"
+        )
+        boundWalletIdHex = null
+        boundWalletFingerprint = null
+        completed = false
+    }
+
+    /**
+     * Fire-and-forget variant for call sites that must not wait (the
+     * calling flow's latency is unaffected; failures are logged inside).
+     * The [unlock] proof is captured until the background pass finishes —
+     * pass the wallet-crypter [WalletUnlock.EncryptionKey] (which the app
+     * already keeps in scope for the duration of any platform broadcast),
+     * never raw seed material.
+     */
+    fun bindInBackground(unlock: WalletUnlock): Job = bindInBackground { unlock }
+
+    /** Lazy fire-and-forget variant: [unlockProvider] runs only if the eligibility gate passes. */
+    fun bindInBackground(unlockProvider: suspend () -> WalletUnlock?): Job =
+        scope.launch { bindIfEnabled(unlockProvider) }
+
+    /**
+     * Fire-and-forget DIP-15 friend-chain provisioning for the bound SDK
+     * wallet ([DashSdkService.provisionDashPayContactAccounts]): drive the
+     * SDK's contact-sync + account-drain so the SDK L1 wallet derives and
+     * watches the addresses DashPay contacts pay us on — the gap the
+     * dashj-only contact bookkeeping leaves (see that method's KDoc /
+     * `scratchpad/txdiff/FINDINGS.md`). Gated by the SAME eligibility the
+     * bind pass uses, single-flight, and throttled for non-[force] triggers.
+     * Never throws into the caller.
+     *
+     * Independent of the bind success latch: provisioning must keep running
+     * on later triggers (a drain registers accounts asynchronously, and the
+     * follow-up sweep that re-scans their funding heights has to land on a
+     * SUBSEQUENT pass), whereas the bind pass latches once and stops.
+     *
+     * @param force run even if the throttle window hasn't elapsed — use on
+     *   bind completion and when a contact was just established. The
+     *   single-flight guard still applies.
+     */
+    fun provisionContactAccountsInBackground(force: Boolean = false): Job =
+        scope.launch { provisionContactAccountsIfEnabled(force) }
+
+    /** As [provisionContactAccountsInBackground], but awaitable. Never throws. */
+    suspend fun provisionContactAccountsIfEnabled(force: Boolean = false) {
+        try {
+            // Same posture as bind: inert unless a USE_KOTLIN_SDK_* flag is
+            // on and platform is supported. Read failures are treated as off.
+            if (!anyFlagEnabled() || !supportsPlatform()) return
+            // A friend chain hangs off the bound wallet; until a bind pass
+            // has produced a bound id there is nothing to provision (the
+            // next bind trigger will, and then this).
+            val walletId = boundWalletIdHex ?: return
+            // Throttle non-forced heartbeat triggers BEFORE the identity read
+            // so a rate-limited tick costs only the flag reads above.
+            val nowMs = now()
+            if (!force && nowMs - lastProvisionAtMs < PROVISION_MIN_INTERVAL_MS) return
+            // No identity ⇒ no contacts ⇒ no friend chains. Mirrors the bind
+            // identity gate; a config read failure falls through to "return".
+            if (identityConfig.loadBase().userId == null) return
+            // Single-flight: the sweep does network I/O and must not stack.
+            if (!provisioning.compareAndSet(false, true)) return
+            try {
+                lastProvisionAtMs = nowMs
+                val report = sdkService.provisionDashPayContactAccounts(walletId)
+                when {
+                    !report.bound -> log.debug(
+                        "DashPay friend-chain provisioning: SDK wallet {}… not loaded yet",
+                        walletId.take(8)
+                    )
+                    report.pendingBefore > 0 || report.drainScheduled -> log.info(
+                        "DashPay friend-chain provisioning on {}…: sweep ok={}/err={}, " +
+                            "{} account build(s) queued, drainScheduled={}",
+                        walletId.take(8), report.syncSuccess, report.syncErrors,
+                        report.pendingBefore, report.drainScheduled
+                    )
+                    else -> log.debug(
+                        "DashPay friend-chain provisioning on {}…: steady " +
+                            "(sweep ok={}/err={}, nothing queued)",
+                        walletId.take(8), report.syncSuccess, report.syncErrors
+                    )
+                }
+            } finally {
+                provisioning.set(false)
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // Opportunistic by contract: dashj funds discovery is unaffected.
+            log.warn(
+                "DashPay friend-chain provisioning pass failed; SDK contact-payment " +
+                    "discovery may lag until the next pass",
+                t
+            )
+        }
+    }
+
+    /**
+     * Bind the app wallet into the SDK and attach its identity, if (and
+     * only if) the eligibility gate passes. Never throws (see class KDoc).
+     *
+     * @param unlock proof of an already-completed wallet unlock; the
+     *   caller owns authentication ([WalletUnlock] trust model).
+     */
+    suspend fun bindIfEnabled(unlock: WalletUnlock) = bindIfEnabled { unlock }
+
+    /**
+     * As [bindIfEnabled], but the unlock is produced lazily — only after
+     * the flag/platform/identity eligibility checks pass — so providers
+     * that derive the wallet key (scrypt, ~seconds) cost nothing while
+     * the feature flags are off. A null from [unlockProvider] means "no
+     * unlock available right now"; the pass is skipped and retried on the
+     * next trigger.
+     */
+    suspend fun bindIfEnabled(unlockProvider: suspend () -> WalletUnlock?) {
+        try {
+            mutex.withLock {
+                // In-process wallet replacement check BEFORE honoring the
+                // latch — a latch for a replaced wallet is worse than no
+                // latch (it pins every consumer to the wrong SDK wallet).
+                revalidateBoundWallet()
+                if (completed) return
+                try {
+                    bindLocked(unlockProvider)
+                } catch (t: Throwable) {
+                    if (t !is CancellationException) noteMissingMnemonic(t)
+                    throw t
+                }
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // Opportunistic by contract: never break the calling flow.
+            log.warn("SDK wallet binding pass failed; dashj behavior unchanged", t)
+        }
+    }
+
+    /**
+     * "no mnemonic stored" from any post-bind step means the bound SDK
+     * wallet has no phrase in `WalletStorage` (an earlier bind pass died
+     * between `createWallet` and the phrase persist). Retrying discovery
+     * against that wallet can never succeed — the re-store lives in
+     * [DashSdkService.bindAppWallet]'s already-exists recovery — so drop
+     * the cached bound id, forcing the NEXT trigger through the full bind
+     * pass (seed hand-off + mnemonic re-store) instead of re-failing
+     * forever. The pass itself stays failed-but-retryable, never latched.
+     * Caller holds [mutex].
+     */
+    private fun noteMissingMnemonic(t: Throwable) {
+        if (!isMissingMnemonicError(t)) return
+        val bound = boundWalletIdHex ?: return
+        boundWalletIdHex = null
+        boundWalletFingerprint = null
+        log.warn(
+            "SDK wallet {}… has no stored mnemonic — clearing the cached bind so the next " +
+                "binding trigger re-runs the full bind pass (which re-stores the phrase)",
+            bound.take(8)
+        )
+    }
+
+    /** One pass; caller holds [mutex]. Throws freely — [bindIfEnabled] contains the fallout. */
+    private suspend fun bindLocked(unlockProvider: suspend () -> WalletUnlock?) {
+        // 1. Flags (both default OFF). Read failure = off.
+        if (!anyFlagEnabled()) return
+
+        // 2. Platform support is fixed per device/build.
+        if (!supportsPlatform()) {
+            log.info("SDK binding skipped: platform not supported on this device")
+            return
+        }
+
+        // 3. Platform-user check: wire wallets that have (or are creating)
+        //    an identity — OR any wallet when the shielded features are on,
+        //    because shielding and the shielded-funded username creation
+        //    both need a bound wallet BEFORE the first identity exists
+        //    (the fresh-wallet path: fund → shield → create from pool).
+        //    The L1 shadow widens the gate the same way: the shadow scan
+        //    is read-only parity instrumentation over the bound seed and
+        //    must run on wallets with no platform identity at all (the
+        //    mainnet validation case: shadow flag on, everything else off).
+        val identity = identityConfig.loadBase()
+        val hasPlatformIdentity =
+            identity.creationState != IdentityCreationState.NONE || identity.userId != null
+        if (!hasPlatformIdentity && !shieldedFlagEnabled() && !l1ShadowFlagEnabled()) {
+            log.info("SDK binding skipped: no platform identity on this wallet and shielded/L1-shadow features off")
+            return
+        }
+
+        // 4. Bind the seed (skipped when a previous pass already bound it).
+        val walletId = boundWalletIdHex ?: run {
+            val unlock = unlockProvider()
+            if (unlock == null) {
+                log.info("SDK binding skipped: no wallet unlock available at this call site")
+                return
+            }
+            // Record WHICH wallet this pass binds (same wallet the mnemonic
+            // provider reads the seed from) so later triggers can detect an
+            // in-process wallet replacement — see revalidateBoundWallet().
+            val fingerprint = currentWalletFingerprint()
+            // Decrypt + hand off; the words are function-local and the
+            // reference dies with this call (see PlatformMnemonicProvider).
+            val words = mnemonicProvider.getMnemonicWords(unlock)
+            val birthTimeSecs = walletData.wallet?.earliestKeyCreationTime
+            sdkService.bindAppWallet(words, birthTimeSecs).also {
+                boundWalletIdHex = it
+                boundWalletFingerprint = fingerprint
+            }
+        }
+
+        // 4b. Prune orphan SDK wallets. The app-side Reset Wallet clears the
+        // app's own stores but NOT the SDK's Rust-side persistence, so after
+        // a reset the manager can hold the OLD wallet next to the new one —
+        // and every `singleOrNull()`-based bound-wallet lookup (shielded
+        // runtime, L1 shadow, DashPay writes) then returns null forever
+        // ("app wallet not bound to the SDK yet" observed live post-reset on
+        // the S21). An orphan's seed no longer exists in this app, so it is
+        // unusable by definition; removing it (removeWallet cascade) is the
+        // self-heal. Best-effort: a prune failure must not fail the bind.
+        pruneOrphanSdkWallets(walletId)
+
+        // 5. Attach the existing on-chain identity so the SDK can derive
+        //    its keys (identity index 0 — key-parity note in SdkDashPayWrites).
+        val userId = identity.userId
+        if (userId == null) {
+            // Identity creation in flight but nothing registered on chain
+            // yet — binding-only for now; a later pass (creation sets the
+            // id) completes the attach. Deliberately NOT latched.
+            log.info("SDK wallet bound; identity not yet registered — discovery deferred")
+            return
+        }
+        val identityId = try {
+            Identifier.from(userId).toBuffer()
+        } catch (e: Exception) {
+            log.warn("SDK identity discovery skipped: stored identity id is malformed")
+            return
+        }
+
+        if (sdkService.isIdentityManaged(walletId, identityId)) {
+            log.info("SDK wallet {}… already manages the app identity", walletId.take(8))
+            // Managed is necessary but NOT sufficient: an earlier discovery
+            // pass may have attached the identity while the Keystore auth
+            // window was expired, leaving zero stored private keys (the
+            // "no private key stored" FFI signing failure seen live). Heal
+            // before latching so a later pass retries a transient failure.
+            completed = healIdentityKeys(walletId, identityId)
+            return
+        }
+
+        // Full rescan from identity index 0 — the only index dashj creates.
+        val found = sdkService.discoverIdentities(walletId, startIndex = 0)
+        if (sdkService.isIdentityManaged(walletId, identityId)) {
+            log.info(
+                "SDK identity discovery attached the app identity to wallet {}… " +
+                    "({} identity(ies) discovered)",
+                walletId.take(8), found.size
+            )
+            // Discovery persists the PUBLIC keys; the private halves only
+            // become signable once derived+stored (Phase 3f-b). Latch only
+            // when nothing retryable is left.
+            completed = healIdentityKeys(walletId, identityId)
+        } else {
+            // Scan ran but our identity wasn't on the probed keys — e.g. a
+            // dashj identity whose registered master key doesn't match the
+            // DIP-9 slot-0 derivation. Not retried in-process (the scan is
+            // deterministic); logged for the Phase 3f live-test report.
+            log.warn(
+                "SDK identity discovery did NOT find the app identity {}… on wallet {}… " +
+                    "({} other identity(ies) discovered); SDK writes will keep falling back to dashj",
+                userId.take(8), walletId.take(8), found.size
+            )
+            completed = true
+        }
+    }
+
+    /**
+     * Phase 3f-b: make the attached identity's private keys signable
+     * ([DashSdkService.ensureIdentityKeysSignable] — the example app's
+     * key-health Repair flow, run automatically). Returns whether the
+     * binder may latch: true when the heal is settled (every key signable
+     * or provably watch-only — deterministic, so retrying is pointless),
+     * false on transient failures (expired Keystore auth window, FFI or
+     * Room hiccup) so the NEXT trigger — e.g. the broadcast-service rebind
+     * that runs right before a DashPay write — retries the heal without
+     * re-running discovery. Never throws (binding stays non-fatal).
+     */
+    private suspend fun healIdentityKeys(walletId: String, identityId: ByteArray): Boolean = try {
+        val report = sdkService.ensureIdentityKeysSignable(walletId, identityId)
+        when {
+            report.allSignable -> log.info(
+                "app identity keys signable on SDK wallet {}… ({} healthy, {} repaired); " +
+                    "SDK write preflight can now pass",
+                walletId.take(8), report.healthy, report.repaired
+            )
+            report.settled -> log.warn(
+                "app identity attached to SDK wallet {}… but {} of {} key(s) are watch-only " +
+                    "(not derivable from this seed); SDK writes signing with those keys will " +
+                    "fall back to dashj",
+                walletId.take(8), report.watchOnly, report.keysChecked
+            )
+            else -> log.warn(
+                "app identity key heal incomplete on SDK wallet {}… " +
+                    "({} checked, {} failed transiently); will retry on the next binding trigger",
+                walletId.take(8), report.keysChecked, report.failed
+            )
+        }
+        report.settled
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        // A missing-mnemonic failure here needs the same full-rebind
+        // treatment as one from discovery (heal derives via the resolver).
+        noteMissingMnemonic(t)
+        log.warn("app identity key heal failed; will retry on the next binding trigger", t)
+        false
+    }
+
+    /** See step 4b in [bindLocked]. Never throws. */
+    private suspend fun pruneOrphanSdkWallets(currentWalletId: String) {
+        val orphans = try {
+            sdkService.loadedWalletIds().filter { it != currentWalletId }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("orphan-wallet scan failed; skipping prune", t)
+            return
+        }
+        for (orphan in orphans) {
+            try {
+                sdkService.removeAppWallet(orphan)
+                log.warn(
+                    "removed orphan SDK wallet {}… left behind by an earlier app wallet " +
+                        "(reset/wipe does not clear SDK-side persistence)",
+                    orphan.take(8)
+                )
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("failed to remove orphan SDK wallet {}…; will retry next bind pass", orphan.take(8), t)
+            }
+        }
+    }
+
+    private suspend fun anyFlagEnabled(): Boolean = try {
+        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) == true ||
+            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) == true ||
+            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true ||
+            // The L1 shadow scan needs a bound wallet (L1ShadowSyncService's
+            // "requires a bound wallet" contract) — a shadow flag that can't
+            // cause a bind would silently never run when it is the ONLY
+            // flag on (the read-only mainnet validation configuration).
+            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true
+    } catch (e: Exception) {
+        log.warn("failed to read Kotlin-SDK flags; treating as off", e)
+        false
+    }
+
+    /** Shielded features widen the identity gate (fresh wallets bind too). Read failure = off. */
+    private suspend fun shieldedFlagEnabled(): Boolean = try {
+        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+    } catch (e: Exception) {
+        log.warn("failed to read USE_KOTLIN_SDK_SHIELDED; treating as off", e)
+        false
+    }
+
+    /** The L1 shadow widens the identity gate too (binding-only, read-only scan). Read failure = off. */
+    private suspend fun l1ShadowFlagEnabled(): Boolean = try {
+        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true
+    } catch (e: Exception) {
+        log.warn("failed to read USE_KOTLIN_SDK_L1_SHADOW; treating as off", e)
+        false
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(SdkWalletBinder::class.java)
+
+        /**
+         * Floor between non-forced friend-chain provisioning passes. The
+         * contact ticker fires every 15 s; a full DashPay sweep every tick
+         * would waste network, but the pass must run often enough that the
+         * post-drain rescan follow-up lands promptly. One minute balances
+         * both — forced passes (bind completion, a new contact) bypass it,
+         * and the underlying sweep is high-water-cursor incremental so
+         * steady-state passes are cheap.
+         */
+        internal const val PROVISION_MIN_INTERVAL_MS = 60_000L
+    }
+}

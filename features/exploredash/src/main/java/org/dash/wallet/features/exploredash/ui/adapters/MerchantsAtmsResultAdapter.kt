@@ -21,9 +21,6 @@ import android.content.res.Resources
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
@@ -31,7 +28,6 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
-import org.dash.wallet.common.ui.components.MerchantNameIcon
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
@@ -85,11 +81,6 @@ class MerchantsAtmsResultAdapter(private val clickListener: (SearchResult, Recyc
         return when (viewType) {
             R.layout.merchant_row -> {
                 val binding = MerchantRowBinding.inflate(inflater, parent, false)
-                // RecyclerView-friendly strategy: dispose the composition when the row is
-                // detached or returned to the pool, so recycled rows don't leak compositions.
-                binding.logoCompose.setViewCompositionStrategy(
-                    ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool
-                )
                 MerchantViewHolder(binding)
             }
             R.layout.atm_row -> {
@@ -138,41 +129,24 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
             binding.discountValue.text = text
         }
 
-        if (merchant?.logoLocation.isNullOrBlank()) {
-            // No logo URL — show a generated full-name icon instead of the grey placeholder.
-            // Keep logoImg INVISIBLE (not GONE) so it still reserves space and the title,
-            // which is constrained to its end, stays anchored over the ComposeView.
-            binding.logoImg.visibility = View.INVISIBLE
-            binding.logoCompose.isVisible = true
-            binding.logoCompose.setContent {
-                MerchantNameIcon(
-                    merchantName = merchant?.name ?: "",
-                    size = 36.dp,
-                    shape = CircleShape
-                )
-            }
-        } else {
-            binding.logoCompose.isVisible = false
-            binding.logoImg.visibility = View.VISIBLE
-            binding.logoImg.load(merchant.logoLocation) {
-                crossfade(200)
-                scale(Scale.FILL)
-                placeholder(R.drawable.ic_image_placeholder)
-                error(R.drawable.ic_image_placeholder)
-                transformations(
-                    RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
-                )
-                listener(
-                    onError = { _, result ->
-                        log.error(
-                            "Image load error for ${
-                            merchant?.name
-                            }: ${merchant?.logoLocation}: ${result.throwable.message}",
-                            result.throwable
-                        )
-                    }
-                )
-            }
+        binding.logoImg.load(merchant?.logoLocation) {
+            crossfade(200)
+            scale(Scale.FILL)
+            placeholder(R.drawable.ic_image_placeholder)
+            error(R.drawable.ic_image_placeholder)
+            transformations(
+                RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
+            )
+            listener(
+                onError = { _, result ->
+                    log.error(
+                        "Image load error for ${
+                        merchant?.name
+                        }: ${merchant?.logoLocation}: ${result.throwable.message}",
+                        result.throwable
+                    )
+                }
+            )
         }
 
         when (merchant?.paymentMethod?.trim()?.lowercase()) {

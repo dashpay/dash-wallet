@@ -27,17 +27,16 @@ import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.SphericalUtil
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlin.coroutines.resume
 import kotlin.math.*
 
 data class UserLocation(var latitude: Double, var longitude: Double, var accuracy: Double)
@@ -189,21 +188,41 @@ constructor(private val context: Context, private val client: FusedLocationProvi
         )
     }
 
-    // Runs entirely on Dispatchers.IO. Using suspendCancellableCoroutine with a Play Services
-    // OnSuccessListener would post the callback (and the blocking Geocoder.getFromLocation call)
-    // back to the main thread, causing an ANR. await() keeps the whole flow off the main thread.
     @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
-    override suspend fun getCountryCodeFromLocation(): String = withContext(Dispatchers.IO) {
-        try {
-            val location = client.lastLocation.await() ?: return@withContext ""
-            val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
-            geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                ?.firstOrNull()
-                ?.countryCode
-                .orEmpty()
-        } catch (e: Exception) {
-            log.info("GeocoderException ${e.message}")
-            ""
+    override suspend fun getCountryCodeFromLocation(): String {
+        return suspendCancellableCoroutine { continuation ->
+            client.lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    try {
+                        val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
+                        val results = geocoder.getFromLocation(location.latitude, location.longitude, 1)
+                        continuation.resume(results?.firstOrNull()?.countryCode ?: "")
+                    } catch (e: Exception) {
+                        log.info("GeocoderException ${e.message}")
+                        continuation.resume("")
+                    }
+                } else {
+                    continuation.resume("")
+                }
+            }.addOnFailureListener {
+                continuation.resume("")
+            }
         }
     }
+
+    // TODO: this doesn't give the country name, though it doesn't use callbacks
+//    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
+//    override suspend fun getCountryCodeFromLocation(): String = withContext(Dispatchers.IO) {
+//        try {
+//            val location = client.lastLocation.await() ?: return@withContext ""
+//            val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
+//            geocoder.getFromLocation(location.latitude, location.longitude, 1)
+//                ?.firstOrNull()
+//                ?.countryCode
+//                        .orEmpty()
+//        } catch (e: Exception) {
+//            log.info("GeocoderException ${e.message}")
+//            ""
+//        }
+//    }
 }

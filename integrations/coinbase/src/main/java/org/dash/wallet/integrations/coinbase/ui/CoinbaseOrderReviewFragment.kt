@@ -26,7 +26,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
@@ -52,7 +52,7 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
     private val binding by viewBinding(FragmentCoinbaseOrderReviewBinding::bind)
     private val viewModel by coinbaseViewModels<CoinbaseBuyDashViewModel>()
     private val sharedViewModel by coinbaseViewModels<CoinbaseViewModel>()
-    private val dashFormat = MonetaryFormat().withLocale(
+    private val dashFormat = MoneyFormat().withLocale(
         GenericUtils.getDeviceLocale()
     ).noCode().minDecimals(6).optionalDecimals()
     private var onBackPressedCallback: OnBackPressedCallback? = null
