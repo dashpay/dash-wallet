@@ -244,6 +244,8 @@ class MainViewModelTest {
 
         every { blockchainStateMock.observeState() } returns flow { BlockchainState() }
         every { blockchainStateMock.observeSyncStage() } returns MutableStateFlow(SyncStage.BLOCKS)
+        // Self-healing Platform-availability poll in MainViewModel.init calls this.
+        coEvery { platformService.isPlatformAvailable() } returns true
         every { exchangeRatesMock.observeExchangeRate(any()) } returns flow { ExchangeRate("USD", "100") }
         every { walletDataMock.observeTotalBalance() } returns flow { Coin.COIN }
         every { walletDataMock.observeMostRecentTransaction() } returns flow {

@@ -72,6 +72,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
@@ -378,6 +380,25 @@ class MainViewModel @Inject constructor(
             }
             .catch { e -> log.error("sync stage flow error", e) }
             .launchIn(viewModelScope)
+
+        // Self-heal a transient DAPI "unavailable" verdict. The sync-stage
+        // check above fires only when the STAGE changes (distinctUntilChanged),
+        // so a `false` returned once the stage settles at BLOCKS would latch
+        // forever — permanently hiding both Join DashPay entry points (the home
+        // card and the More-screen DashPay section, each gated on
+        // isAbleToCreateIdentity) until an app restart. Retry until Platform is
+        // reachable, then stop; nothing here flips it back to false.
+        if (Constants.SUPPORTS_PLATFORM) {
+            viewModelScope.launch {
+                while (isActive && !isPlatformAvailable.value) {
+                    if (runCatching { platformService.isPlatformAvailable() }.getOrDefault(false)) {
+                        isPlatformAvailable.value = true
+                    } else {
+                        delay(PLATFORM_AVAILABILITY_RETRY_MS)
+                    }
+                }
+            }
+        }
         restoringBackup = config.isRestoringBackup
     }
 
@@ -691,6 +712,8 @@ class MainViewModel @Inject constructor(
         private const val DIRECTION_KEY = "tx_direction"
         private const val CROWDNODE_REMINDER_SHOWN_KEY = "crowdnode_withdrawal_reminder_shown"
         private const val TIME_SKEW_TOLERANCE = 3600000L // 1 hour
+        /** Retry cadence for the self-healing Platform-availability poll (see init). */
+        private const val PLATFORM_AVAILABILITY_RETRY_MS = 30_000L
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
