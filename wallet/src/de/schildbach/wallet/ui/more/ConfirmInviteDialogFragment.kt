@@ -74,7 +74,25 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                     // longer prompts). A cancelled prompt spends nothing.
                     authManager.authenticate(requireActivity()) ?: return@launch
                     // invitationFragmentViewModel.logEvent(AnalyticsConstants.UsersContacts.TOPUP_CONFIRM)
-                    val identityId = invitationFragmentViewModel.sendInviteTransaction(inviteAmount)
+                    val identityId = if (args.shielded) {
+                        // SHIELDED (L2) invite: fund a note directly from the
+                        // shielded pool. Contested-ness follows the fee the
+                        // inviter picked (0.25 → contested → 0.3 denomination).
+                        val contested = inviteAmount.value >=
+                            de.schildbach.wallet.Constants.DASH_PAY_FEE_CONTESTED.value
+                        when (val result = invitationFragmentViewModel.createShieldedInvite(contested)) {
+                            is de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast ->
+                                result.value.user
+                            else -> {
+                                binding.confirmMessage.text =
+                                    getString(R.string.error_sending_invite_transaction)
+                                binding.confirmMessage.isVisible = true
+                                return@launch
+                            }
+                        }
+                    } else {
+                        invitationFragmentViewModel.sendInviteTransaction(inviteAmount)
+                    }
                     findNavController().navigate(
                         ConfirmInviteDialogFragmentDirections.toInviteCreatedFragment(identityId, args.source)
                     )

@@ -27,8 +27,12 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
+import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.SdkShieldedInviteCreation
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
@@ -64,6 +68,8 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val platformRepo: PlatformRepo,
     private val invitationDao: InvitationsDao,
+    private val identityRepository: IdentityRepository,
+    private val sdkShieldedInviteCreation: SdkShieldedInviteCreation,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
@@ -107,6 +113,39 @@ open class InvitationFragmentViewModel @Inject constructor(
             .enqueue()
         return fundingAddress
     }
+
+    /**
+     * The shielded (L2) invitation link, once created. Null until a shielded
+     * invite is successfully funded — the shielded path has no WorkManager
+     * output (the L1 [sendInviteStatusLiveData] source), so the created-invite
+     * screen reads the link from here for the shielded branch.
+     */
+    private val _shieldedInviteLink = MutableStateFlow<InvitationLinkData?>(null)
+    val shieldedInviteLink: StateFlow<InvitationLinkData?>
+        get() = _shieldedInviteLink
+
+    /**
+     * Fund a SHIELDED (L2) invitation directly from the shielded pool — the
+     * private-invitation counterpart of [sendInviteTransaction]. [contested]
+     * (derived from the fee the inviter picked) selects the exit denomination.
+     * On success the funded link is published to [shieldedInviteLink]. Runs the
+     * ~30s proof off the main thread.
+     */
+    suspend fun createShieldedInvite(contested: Boolean): SdkWriteResult<InvitationLinkData> =
+        withContext(Dispatchers.IO) {
+            val profile = identityRepository.getLocalUserProfile()
+                ?: return@withContext SdkWriteResult.NotBroadcast("no local user profile")
+            val result = sdkShieldedInviteCreation.createShieldedInvite(
+                username = profile.username,
+                displayName = profile.displayName,
+                avatarUrl = profile.avatarUrl,
+                contested = contested
+            )
+            if (result is SdkWriteResult.Broadcast) {
+                _shieldedInviteLink.value = result.value
+            }
+            result
+        }
 
     val invitationPreviewImageFile by lazy {
         try {

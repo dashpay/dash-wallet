@@ -22,6 +22,9 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_TEXT
 import de.schildbach.wallet.ui.dashpay.work.GetUsernameVotingResultOperation
@@ -151,6 +154,8 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var usernameRequestDao: UsernameRequestDao
     @Inject lateinit var walletDataProvider: WalletDataProvider
     @Inject lateinit var identityCreationStatus: IdentityCreationStatusHolder
+    @Inject lateinit var sdkShieldedUsernameCreation: SdkShieldedUsernameCreation
+    @Inject lateinit var dashPayConfig: DashPayConfig
     private lateinit var securityGuard: SecurityGuard
     
     private val walletWipeListener: suspend () -> Unit = {
@@ -519,6 +524,41 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
+    private suspend fun isShieldedEnabled(): Boolean = try {
+        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+    } catch (e: Exception) {
+        log.warn("failed to read USE_KOTLIN_SDK_SHIELDED; treating as off", e)
+        false
+    }
+
+    /**
+     * Claim a SHIELDED (L2) invitation: create the identity directly from the
+     * invite's one-time Orchard key (Type-20). On success the identity is on
+     * chain and the caller's existing recovery + DPNS + contact-request tail
+     * runs. A double-claim (the note's nullifier is already spent) maps to the
+     * same "Invite has already been used" state the L1 outpoint-collision path
+     * throws; any other failure is surfaced as a claim error.
+     */
+    private suspend fun claimShieldedInvitation(invite: InvitationLinkData, username: String) {
+        when (val result = sdkShieldedUsernameCreation.createIdentityFromInvitation(
+            oneTimeSkHex = invite.oneTimeKey,
+            fundingHeight = invite.fundingHeight,
+            label = username
+        )) {
+            is SdkWriteResult.Broadcast ->
+                log.info("shielded invite claimed — identity {} is on chain", result.value)
+            is SdkWriteResult.NotBroadcast ->
+                if (SdkShieldedUsernameCreation.isInviteAlreadyUsedReason(result.reason)) {
+                    log.warn("shielded invite has already been used")
+                    throw IllegalStateException("Invite has already been used")
+                } else {
+                    throw IllegalStateException("shielded invite claim failed: ${result.reason}", result.cause)
+                }
+            is SdkWriteResult.Ambiguous ->
+                throw IllegalStateException("shielded invite claim outcome unconfirmed", result.cause)
+        }
+    }
+
     private suspend fun createIdentityFromInvitation(username: String?, usernameSecondary: String?, invite: InvitationLinkData?, retryWithNewUserName: Boolean = false) {
         log.info("username registration starting from invitation")
         val timerInviteProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_INVITATION_CLAIM)
@@ -623,15 +663,29 @@ class CreateIdentityService : LifecycleService() {
 
         val blockchainIdentity = identityRepository.initBlockchainIdentity(blockchainIdentityData, wallet)
 
+        // SHIELDED (L2) invitation claim: when the link carries a one-time
+        // Orchard key (and the flag is on) the identity is funded DIRECTLY
+        // from that key's note (Type-20 create-from-one-time-key), not an L1
+        // asset lock. The whole asset-lock funding + legacy registerIdentity
+        // is replaced by the SDK create below; the unchanged L1 claim runs
+        // untouched when this is null.
+        val shieldedInvite = blockchainIdentityData.invite
+            ?.takeIf { it.isShielded && isShieldedEnabled() }
 
         if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CREATING) {
             identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
             //
             // Step 2: Create and send the credit funding transaction
             //
-            topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
-        } else {
+            if (shieldedInvite != null) {
+                claimShieldedInvitation(shieldedInvite, blockchainIdentityData.username!!)
+            } else {
+                topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
+            }
+        } else if (shieldedInvite == null) {
             // if we are retrying, then we need to initialize the credit funding tx
+            // (the shielded claim has no L1 asset lock to re-obtain — the note
+            // was already spent creating the identity on chain).
             topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
         }
 
@@ -656,6 +710,14 @@ class CreateIdentityService : LifecycleService() {
                 val existingIdentity = identityRepository.getIdentityFromPublicKeyId()
                 if (existingIdentity != null) {
                     val encryptionKey = platformRepo.getWalletEncryptionKey()
+                    val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
+                    platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
+                } else if (shieldedInvite != null) {
+                    // The L2 claim already put the identity on chain (funded
+                    // from the invite's one-time note) — there is no asset lock
+                    // to registerIdentity with. Recover it by its slot-0 public
+                    // key (SDK/dashj DIP-9 index-0 key parity), exactly as the
+                    // existing-identity branch does.
                     val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
                     platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
                 } else {

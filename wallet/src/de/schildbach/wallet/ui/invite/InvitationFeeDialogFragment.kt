@@ -51,7 +51,9 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
             // amount-confirm THEN authenticate. The previous PIN prompt here
             // ran before the amount was even shown and discarded its result.
             findNavController().navigate(
-                InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value, args.source)
+                InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(
+                    selectedFee.value, args.source, args.shielded
+                )
             )
         }
         viewModel.walletData.observeTotalBalance().observe(viewLifecycleOwner) { walletBalance ->

@@ -63,6 +63,8 @@ fun InviteShieldedFundingSheet(
     nonContestedShieldedCost: String,
     contestedShieldedCost: String,
     canShieldMinimum: Boolean,
+    canCreatePrivateInvite: Boolean,
+    onCreatePrivateInvite: () -> Unit,
     onShieldFirst: () -> Unit,
     onContinueWithoutPrivacy: () -> Unit,
     onClose: () -> Unit
@@ -139,13 +141,25 @@ fun InviteShieldedFundingSheet(
                 .padding(horizontal = 60.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            DashButton(
-                text = stringResource(R.string.username_payment_shield_first),
-                style = Style.Filled,
-                size = Size.Large,
-                isEnabled = canShieldMinimum,
-                onClick = onShieldFirst
-            )
+            // Primary action: when the shielded pool can already fund an
+            // invitation, offer the L2 "Create a private invitation" path;
+            // otherwise fall back to "Shield your funds first" (L1 shield).
+            if (canCreatePrivateInvite) {
+                DashButton(
+                    text = stringResource(R.string.invite_payment_create_private),
+                    style = Style.Filled,
+                    size = Size.Large,
+                    onClick = onCreatePrivateInvite
+                )
+            } else {
+                DashButton(
+                    text = stringResource(R.string.username_payment_shield_first),
+                    style = Style.Filled,
+                    size = Size.Large,
+                    isEnabled = canShieldMinimum,
+                    onClick = onShieldFirst
+                )
+            }
             DashButton(
                 text = stringResource(R.string.username_payment_continue_without_privacy),
                 style = Style.TintedBlue,
@@ -218,6 +232,8 @@ private fun InviteShieldedFundingPreview() {
         nonContestedShieldedCost = "0.15",
         contestedShieldedCost = "0.35",
         canShieldMinimum = true,
+        canCreatePrivateInvite = false,
+        onCreatePrivateInvite = {},
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},
         onClose = {}
@@ -231,6 +247,23 @@ private fun InviteShieldedFundingBelowMinimumPreview() {
         nonContestedShieldedCost = "0.15",
         contestedShieldedCost = "0.35",
         canShieldMinimum = false,
+        canCreatePrivateInvite = false,
+        onCreatePrivateInvite = {},
+        onShieldFirst = {},
+        onContinueWithoutPrivacy = {},
+        onClose = {}
+    )
+}
+
+@Preview(showBackground = true, widthDp = 393, name = "Make invitation private — pool can fund")
+@Composable
+private fun InviteShieldedFundingCreatePrivatePreview() {
+    InviteShieldedFundingSheet(
+        nonContestedShieldedCost = "0.15",
+        contestedShieldedCost = "0.35",
+        canShieldMinimum = true,
+        canCreatePrivateInvite = true,
+        onCreatePrivateInvite = {},
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},
         onClose = {}

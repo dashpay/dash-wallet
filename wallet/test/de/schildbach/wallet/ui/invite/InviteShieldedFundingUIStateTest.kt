@@ -80,4 +80,51 @@ class InviteShieldedFundingUIStateTest {
         assertEquals(Dash(15_000_000L), state.nonContestedShieldedCost)
         assertEquals(Dash(35_000_000L), state.contestedShieldedCost)
     }
+
+    // ── Decision-sheet option set (pure, no Constants) ────────────────────
+
+    @Test
+    fun options_poolCanFund_offersCreatePrivateInsteadOfShieldFirst() {
+        // Pool can fund AND wallet could shield — the private-invite path wins;
+        // shield-first is not shown.
+        assertEquals(
+            listOf(
+                InviteShieldedOption.CREATE_PRIVATE_INVITE,
+                InviteShieldedOption.CONTINUE_WITHOUT_PRIVACY
+            ),
+            inviteShieldedOptions(canCreatePrivateInvite = true, canShieldMinimum = true)
+        )
+    }
+
+    @Test
+    fun options_poolCannotFundButWalletCanShield_offersShieldFirst() {
+        assertEquals(
+            listOf(
+                InviteShieldedOption.SHIELD_FIRST,
+                InviteShieldedOption.CONTINUE_WITHOUT_PRIVACY
+            ),
+            inviteShieldedOptions(canCreatePrivateInvite = false, canShieldMinimum = true)
+        )
+    }
+
+    @Test
+    fun options_neitherAvailable_onlyContinueWithoutPrivacy() {
+        assertEquals(
+            listOf(InviteShieldedOption.CONTINUE_WITHOUT_PRIVACY),
+            inviteShieldedOptions(canCreatePrivateInvite = false, canShieldMinimum = false)
+        )
+    }
+
+    @Test
+    fun options_continueWithoutPrivacyIsAlwaysPresentAndLast() {
+        for (canCreate in listOf(true, false)) {
+            for (canShield in listOf(true, false)) {
+                val options = inviteShieldedOptions(canCreate, canShield)
+                assertEquals(
+                    InviteShieldedOption.CONTINUE_WITHOUT_PRIVACY,
+                    options.last()
+                )
+            }
+        }
+    }
 }

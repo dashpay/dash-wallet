@@ -108,6 +108,26 @@ class SdkShieldedUsernameCreationTest {
         coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns flag
     }
 
+    // ── Invitation-claim fixtures ────────────────────────────────────────
+    private val oneTimeKeyHex = "0011223344556677889900aabbccddeeff00112233445566778899aabbccddee"
+    private val changeAddressRaw43 = ByteArray(43) { 5 }
+    private val fundingHeight = 123_456
+
+    /** A source primed for the L2 invitation-claim path. */
+    private fun claimSource() = mockk<ShieldedUsernameSource> {
+        coEvery { boundWalletIdOrNull() } returns walletIdHex
+        coEvery { managedIdentityCount(walletIdHex) } returns 0
+        coEvery { previewRegistrationKeySet(walletIdHex, 0) } returns registrationKeys
+        coEvery { persistRegistrationKey(walletIdHex, any(), 0, any()) } just Runs
+        coEvery { fallbackPlatformAddressOrNull(walletIdHex) } returns fallbackAddress
+        coEvery { ownDefaultOrchardAddressRaw43(walletIdHex) } returns changeAddressRaw43
+        coEvery {
+            createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys, any(), any(), any()
+            )
+        } returns identityId
+    }
+
     private class HandoffRecorder {
         val identities = mutableListOf<String>()
         var throwOnCall = false
@@ -618,5 +638,122 @@ class SdkShieldedUsernameCreationTest {
 
         assertFalse(executor.submit("alice2"))
         assertEquals(ShieldedUsernameSubmitState.Idle, executor.submitState.value)
+    }
+
+    // ── Invitation claim (createIdentityFromInvitation) ───────────────────
+
+    @Test
+    fun claim_flagOff_isInert() = runTest {
+        val result = service(source = mockk(), flag = false, balance = mockk())
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+    }
+
+    @Test
+    fun claim_happyPath_broadcastsIdentity_fromTheOneTimeKey_nonContestedDenomination() = runTest {
+        val source = claimSource()
+
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+
+        assertEquals(identityIdBase58, (result as SdkWriteResult.Broadcast).value)
+        // The one-time key (decoded to 32 bytes), the claimer's own change
+        // address, the non-contested 0.1 denomination and the funding-height
+        // hint are all threaded through.
+        coVerify {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex,
+                match { it.size == 32 && it[0].toInt() == 0x00 && (it[1].toInt() and 0xFF) == 0x11 },
+                changeAddressRaw43,
+                0,
+                registrationKeys,
+                denominationCredits,
+                match { it.size == 21 && it[0].toInt() == 0x00 },
+                fundingHeight
+            )
+        }
+    }
+
+    @Test
+    fun claim_contestedUsername_spendsTheContestedDenomination() = runTest {
+        val source = claimSource()
+        coEvery {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                contestedDenominationCredits, any(), any()
+            )
+        } returns identityId
+
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice")
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        coVerify {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                contestedDenominationCredits, any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun claim_doubleClaim_nullifierAlreadySpent_mapsToInviteAlreadyUsed() = runTest {
+        val source = claimSource()
+        coEvery {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        } throws DashSdkError.InvalidState("orchard nullifier already spent on chain")
+
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(SdkShieldedUsernameCreation.isInviteAlreadyUsedReason(reason))
+    }
+
+    @Test
+    fun claim_malformedOneTimeKey_notBroadcast_neverAttempted() = runTest {
+        val source = claimSource()
+        val result = service(source = source)
+            .createIdentityFromInvitation("not-hex", fundingHeight, "alice2")
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        coVerify(exactly = 0) {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun claim_noBoundShieldedSubWallet_notBroadcast() = runTest {
+        val source = claimSource()
+        coEvery { source.ownDefaultOrchardAddressRaw43(walletIdHex) } returns null
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        coVerify(exactly = 0) {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun claim_unprovableFailure_isAmbiguous_neverRetried() = runTest {
+        val source = claimSource()
+        coEvery {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        } throws DashSdkError.Timeout("dapi timeout")
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+        assertTrue(result is SdkWriteResult.Ambiguous)
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun hexToBytes32_decodesLowercaseHex() {
+        val bytes = SdkShieldedUsernameCreation.hexToBytes32(oneTimeKeyHex)
+        assertEquals(32, bytes.size)
+        assertEquals(0x00, bytes[0].toInt() and 0xFF)
+        assertEquals(0x11, bytes[1].toInt() and 0xFF)
+        assertEquals(0xee, bytes[31].toInt() and 0xFF)
     }
 }

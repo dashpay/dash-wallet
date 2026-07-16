@@ -80,7 +80,7 @@ class InviteShieldedFundingDialogFragment :
                         )
 
                 if (skip) {
-                    LaunchedEffect(Unit) { toFeeDialog() }
+                    LaunchedEffect(Unit) { toFeeDialog(shielded = false) }
                     return@setContent
                 }
 
@@ -93,6 +93,13 @@ class InviteShieldedFundingDialogFragment :
                     nonContestedShieldedCost = state.nonContestedShieldedCost.toPlainString(),
                     contestedShieldedCost = state.contestedShieldedCost.toPlainString(),
                     canShieldMinimum = state.canShieldMinimum,
+                    canCreatePrivateInvite = state.canCreatePrivateInvite,
+                    onCreatePrivateInvite = {
+                        // The shielded pool can already fund an invite — go to
+                        // the fee step in SHIELDED mode; the invitation is then
+                        // funded directly from the pool (L2) at confirm.
+                        toFeeDialog(shielded = true)
+                    },
                     onShieldFirst = {
                         // Shield funds in the internal-transfer flow; leaving
                         // the invite flow returns the user to the originating
@@ -102,18 +109,18 @@ class InviteShieldedFundingDialogFragment :
                         )
                         dismiss()
                     },
-                    onContinueWithoutPrivacy = { toFeeDialog() },
+                    onContinueWithoutPrivacy = { toFeeDialog(shielded = false) },
                     onClose = ::dismiss
                 )
             }
         }
     }
 
-    private fun toFeeDialog() {
+    private fun toFeeDialog(shielded: Boolean) {
         if (forwarded) return
         forwarded = true
         findNavController().navigate(
-            InviteShieldedFundingDialogFragmentDirections.toInvitationFeeDialog(args.source)
+            InviteShieldedFundingDialogFragmentDirections.toInvitationFeeDialog(args.source, shielded)
         )
     }
 }

@@ -52,6 +52,42 @@ import javax.inject.Inject
 enum class InviteShieldedFundingPrompt { NONE, MAKE_INVITE_PRIVATE }
 
 /**
+ * The action buttons the shielded-funding decision sheet offers, in display
+ * order. Derived purely from [InviteShieldedFundingUIState] (balance/sync),
+ * so the option set is host-JVM unit-testable:
+ *
+ * - [CONTINUE_WITHOUT_PRIVACY]: always present — the unchanged L1 asset-lock
+ *   invite path.
+ * - [CREATE_PRIVATE_INVITE]: present when the shielded pool already holds
+ *   enough to fund an invitation directly (L2) — routes to the new shielded
+ *   inviter path. When present it REPLACES [SHIELD_FIRST] (there is nothing to
+ *   shield first).
+ * - [SHIELD_FIRST]: present only when the pool CANNOT yet fund an invite but
+ *   the L1 wallet holds enough to shield first.
+ */
+enum class InviteShieldedOption { CREATE_PRIVATE_INVITE, SHIELD_FIRST, CONTINUE_WITHOUT_PRIVACY }
+
+/**
+ * Pure decision for the sheet's option set (extracted from the `Constants`-
+ * referencing [InviteShieldedFundingUIState] getters so it is host-JVM
+ * unit-testable): given whether the shielded pool can already fund an invite
+ * ([canCreatePrivateInvite]) and whether the L1 wallet holds the shield-first
+ * minimum ([canShieldMinimum]), pick the buttons in display order. "Continue
+ * without privacy" (L1) is always offered; the private-invite path replaces
+ * shield-first when the pool can fund; shield-first shows only when it cannot.
+ */
+internal fun inviteShieldedOptions(
+    canCreatePrivateInvite: Boolean,
+    canShieldMinimum: Boolean
+): List<InviteShieldedOption> = buildList {
+    when {
+        canCreatePrivateInvite -> add(InviteShieldedOption.CREATE_PRIVATE_INVITE)
+        canShieldMinimum -> add(InviteShieldedOption.SHIELD_FIRST)
+    }
+    add(InviteShieldedOption.CONTINUE_WITHOUT_PRIVACY)
+}
+
+/**
  * UI state for the shielded-funding decision step of the create-invitation
  * flow.
  *
@@ -113,6 +149,32 @@ data class InviteShieldedFundingUIState(
      */
     val canShieldMinimum: Boolean
         get() = walletBalance >= Dash(Constants.SHIELDED_USERNAME_FUND_MIN.value)
+
+    /**
+     * Whether the shielded pool already holds enough to fund an invitation
+     * directly (the L2 "Create a private invitation" path). Requires the
+     * shielded features on, the pool [ShieldedSyncStatus.READY] (a mid-sync
+     * `Dash.ZERO` is a placeholder, never evidence), and a trusted balance of
+     * at least the NON-contested invite fund-minimum
+     * ([Constants.SHIELDED_USERNAME_FUND_MIN], 0.15 DASH — the 0.1 exit
+     * denomination padded for the shielded-spend fee). The contested choice
+     * (0.35) is re-checked when the inviter picks the username kind at the fee
+     * step; here we only gate whether ANY private invite is offerable.
+     */
+    val canCreatePrivateInvite: Boolean
+        get() = shieldedEnabled &&
+            syncStatus == ShieldedSyncStatus.READY &&
+            shieldedBalance >= Dash(Constants.SHIELDED_USERNAME_FUND_MIN.value)
+
+    /**
+     * The action buttons the sheet renders, in display order. See
+     * [InviteShieldedOption]: "Continue without privacy" (L1) is always last;
+     * "Create a private invitation" (L2) is offered when the pool can already
+     * fund an invite and then REPLACES "Shield your funds first", which only
+     * shows when the pool cannot yet fund but the L1 wallet can shield.
+     */
+    val options: List<InviteShieldedOption>
+        get() = inviteShieldedOptions(canCreatePrivateInvite, canShieldMinimum)
 }
 
 /**

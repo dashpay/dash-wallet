@@ -84,6 +84,12 @@
             android:name="source"
             app:argType="string" />
 
+        <!-- true = fund this invitation directly from the shielded pool (L2). -->
+        <argument
+            android:name="shielded"
+            app:argType="boolean"
+            android:defaultValue="false" />
+
         <action
             android:id="@+id/toInviteCreatedFragment"
             app:destination="@id/inviteCreatedFragment"
@@ -101,6 +107,12 @@
         <argument
             android:name="source"
             app:argType="string" />
+
+        <!-- Threaded from the decision sheet: true = shielded (L2) invite. -->
+        <argument
+            android:name="shielded"
+            app:argType="boolean"
+            android:defaultValue="false" />
 
         <action
             android:id="@+id/toConfirmInviteDialog"

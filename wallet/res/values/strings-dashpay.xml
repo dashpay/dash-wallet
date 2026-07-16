@@ -673,5 +673,9 @@
     <string name="invite_payment_private_message">To help keep your activity private, you can shield the funds for this invitation before sending it.</string>
     <string name="invite_payment_cost_amount">%s Dash</string>
     <string name="invite_payment_privacy_tip_message">Funds move to your shielded balance in seconds. For full privacy, wait at least 2 hours before creating your invitation.</string>
+    <!-- Shown on the decision sheet in place of "Shield your funds first" once
+         the shielded balance already covers an invitation: funds the invite
+         directly from the shielded pool (L2) instead of an L1 asset lock. -->
+    <string name="invite_payment_create_private">Create a private invitation</string>
 
 </resources>

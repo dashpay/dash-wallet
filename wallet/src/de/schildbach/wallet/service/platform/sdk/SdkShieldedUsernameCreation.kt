@@ -170,6 +170,14 @@ interface ShieldedUsernameSource {
     suspend fun fallbackPlatformAddressOrNull(walletIdHex: String): String?
 
     /**
+     * The wallet's OWN 43-byte default Orchard payment address (ZIP-32
+     * account 0) — the `changeAddressRaw43` the L2 invitation-claim FFI
+     * ([createIdentityFromOneTimeKey]) sends any over-funding change note to.
+     * Null when the SDK has no bound shielded sub-wallet for the wallet yet.
+     */
+    suspend fun ownDefaultOrchardAddressRaw43(walletIdHex: String): ByteArray?
+
+    /**
      * Type 20: create an identity directly from the shielded pool. Spends
      * a note of the fixed [denominationCredits] denomination; the metered
      * creation fee comes out of it and the change returns to the pool;
@@ -183,6 +191,30 @@ interface ShieldedUsernameSource {
         keys: List<IdentityKeyPreview>,
         denominationCredits: Long,
         fallbackAddress21: ByteArray
+    ): ByteArray
+
+    /**
+     * Type 20, INVITATION-CLAIM variant: create an identity funded from the
+     * one-time Orchard spending key [oneTimeSk] (32 bytes) carried by a
+     * shielded (L2) invitation link, instead of the wallet's own pool. The
+     * SDK derives that key's viewing keys, transiently scans for the note(s)
+     * funded to it, and spends a note of the fixed [denominationCredits]
+     * denomination to fund a new identity at [identityIndex].
+     * [changeAddressRaw43] is the CLAIMER's own 43-byte default Orchard
+     * address that receives any over-funding change (zero for a well-formed
+     * invitation); [fundingBirthHeight] is an advisory scan hint (null = no
+     * hint). [keys] / [fallbackAddress21] match [createIdentityFromPool].
+     * Blocks for the ~30s Halo 2 proof. Returns the new 32-byte identity id.
+     */
+    suspend fun createIdentityFromOneTimeKey(
+        walletIdHex: String,
+        oneTimeSk: ByteArray,
+        changeAddressRaw43: ByteArray,
+        identityIndex: Int,
+        keys: List<IdentityKeyPreview>,
+        denominationCredits: Long,
+        fallbackAddress21: ByteArray,
+        fundingBirthHeight: Int?
     ): ByteArray
 
     /**
@@ -263,6 +295,9 @@ internal class DashSdkShieldedUsernameSource(
         return row?.address
     }
 
+    override suspend fun ownDefaultOrchardAddressRaw43(walletIdHex: String): ByteArray? =
+        manager().shieldedDefaultAddress(walletId(walletIdHex), account = 0)
+
     override suspend fun createIdentityFromPool(
         walletIdHex: String,
         identityIndex: Int,
@@ -275,6 +310,26 @@ internal class DashSdkShieldedUsernameSource(
         keys = keys,
         denomination = denominationCredits,
         fallbackAddress = fallbackAddress21
+    )
+
+    override suspend fun createIdentityFromOneTimeKey(
+        walletIdHex: String,
+        oneTimeSk: ByteArray,
+        changeAddressRaw43: ByteArray,
+        identityIndex: Int,
+        keys: List<IdentityKeyPreview>,
+        denominationCredits: Long,
+        fallbackAddress21: ByteArray,
+        fundingBirthHeight: Int?
+    ): ByteArray = manager().shieldedIdentityCreateFromOneTimeKey(
+        walletId = walletId(walletIdHex),
+        oneTimeSk = oneTimeSk,
+        changeAddressRaw43 = changeAddressRaw43,
+        identityIndex = identityIndex,
+        keys = keys,
+        denomination = denominationCredits,
+        fallbackAddress = fallbackAddress21,
+        fundingBirthHeight = fundingBirthHeight
     )
 
     override suspend fun registerDpnsName(
@@ -683,6 +738,147 @@ class SdkShieldedUsernameCreation internal constructor(
     }
 
     /**
+     * The INVITATION-CLAIM counterpart of [createUsernameFromShielded]: put a
+     * new identity on chain funded from a shielded (L2) invitation's one-time
+     * Orchard key [oneTimeSkHex] (lowercase hex of the 32-byte scalar carried
+     * by the link), instead of the wallet's own pool. Unlike the pool path
+     * this does NOT preflight the wallet's shielded balance — the funds come
+     * from the invite note, which the FFI transiently scans for from
+     * [fundingHeight] (advisory hint; null = no hint). [label] is the username
+     * the claimer will register (only used to pick the funding denomination,
+     * the same contested→0.3 / non-contested→0.1 mapping the pool path uses).
+     *
+     * On success returns [SdkWriteResult.Broadcast] with the new identity id
+     * (base58) — the legacy claim tail then recovers it by its slot-0 public
+     * key and registers the DPNS name + contact-request. A SECOND claim of the
+     * same invite fails at broadcast because the note's nullifier is already
+     * published; that (and the L1-parity "outpoint already exists") is mapped
+     * to [SdkWriteResult.NotBroadcast] with [REASON_INVITE_ALREADY_USED] so the
+     * caller can surface the existing "invite already used" state. Registering
+     * the DPNS name and sending the contact request are the CALLER's job (the
+     * legacy path already owns those steps) — this method only creates the
+     * identity.
+     */
+    suspend fun createIdentityFromInvitation(
+        oneTimeSkHex: String,
+        fundingHeight: Int?,
+        label: String
+    ): SdkWriteResult<String> {
+        if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
+        val name = label.trim()
+        if (name.isEmpty()) return notBroadcast("empty username", null)
+
+        val oneTimeSk = try {
+            hexToBytes32(oneTimeSkHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast("malformed one-time key", t)
+        }
+
+        val contested = try {
+            Names.isUsernameContestable(name)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast("contested-ness check failed", t)
+        }
+        val fee = try {
+            feeCredits(contested)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast("username fee unavailable", t)
+        }
+        val denominationCredits = chooseShieldedIdentityDenominationCredits(fee)
+            ?: return notBroadcast("no shielded denomination covers the username fee", null)
+
+        // The runtime must be up (viewing-key derivation + the transient note
+        // scan run on it), but we do NOT gate on the wallet's own pool balance
+        // — the note funding this claim belongs to the one-time key.
+        if (!shieldedBalanceService.ensureShieldedReady()) {
+            return notBroadcast(REASON_RUNTIME_NOT_READY, null)
+        }
+
+        val walletId = try {
+            source.boundWalletIdOrNull()
+                ?: return notBroadcast("app wallet not bound to the SDK", null)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast("SDK bootstrap/bind lookup failed", t)
+        }
+
+        val identityIndex: Int
+        val keys: List<IdentityKeyPreview>
+        try {
+            identityIndex = source.managedIdentityCount(walletId)
+            keys = source.previewRegistrationKeySet(walletId, identityIndex)
+            check(keys.isNotEmpty()) { "empty registration key set" }
+            keys.forEachIndexed { keyIndex, key ->
+                source.persistRegistrationKey(walletId, key.publicKey, identityIndex, keyIndex)
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast("registration key derivation/persist failed", t)
+        }
+
+        val fallbackAddress = try {
+            source.fallbackPlatformAddressOrNull(walletId)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast("fallback platform address lookup failed", t)
+        } ?: return notBroadcast("no platform receive address in the SDK store yet", null)
+        val fallbackRaw21 = decodePlatformAddressRaw21(fallbackAddress, displayHrpSafe())
+            ?: return notBroadcast("malformed fallback platform address", null)
+
+        val changeAddressRaw43 = try {
+            source.ownDefaultOrchardAddressRaw43(walletId)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast("own default orchard address lookup failed", t)
+        } ?: return notBroadcast("no bound shielded sub-wallet for the claimer yet", null)
+
+        // THE claim spend — one attempt, ~30s Halo 2 proof.
+        val identityId = try {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex = walletId,
+                oneTimeSk = oneTimeSk,
+                changeAddressRaw43 = changeAddressRaw43,
+                identityIndex = identityIndex,
+                keys = keys,
+                denominationCredits = denominationCredits,
+                fallbackAddress21 = fallbackRaw21,
+                fundingBirthHeight = fundingHeight
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            if (isInviteAlreadyUsedFailure(t)) {
+                log.warn("shielded invite claim rejected — the one-time note is already spent", t)
+                return SdkWriteResult.NotBroadcast(REASON_INVITE_ALREADY_USED, t)
+            }
+            return when (val classified = classifyBroadcastFailure(t)) {
+                is SdkWriteResult.NotBroadcast -> {
+                    log.warn("shielded invite claim rejected pre-broadcast", t)
+                    classified
+                }
+                else -> {
+                    log.error(
+                        "shielded invite claim outcome unconfirmed — the identity MAY be on chain; do NOT retry",
+                        t
+                    )
+                    SdkWriteResult.Ambiguous(t)
+                }
+            }
+        }
+        val identityIdBase58 = Identifier.from(identityId).toString()
+        log.info(
+            "shielded-invite-claimed identity created at index {} ({}…) — {} denomination, contested={}",
+            identityIndex,
+            identityIdBase58.take(8),
+            creditsToDash(denominationCredits).toPlainString(),
+            contested
+        )
+        return SdkWriteResult.Broadcast(identityIdBase58)
+    }
+
+    /**
      * One best-effort DPNS registration for an identity that already
      * exists on chain — a failure demotes the name's status, never the
      * creation result. The [classifyBroadcastFailure] contract holds per
@@ -746,6 +942,49 @@ class SdkShieldedUsernameCreation internal constructor(
          */
         const val REASON_RUNTIME_NOT_READY = "shielded runtime not ready"
         const val REASON_POOL_STILL_SYNCING = "shielded pool still syncing"
+
+        /**
+         * [createIdentityFromInvitation] refusal meaning the shielded invite
+         * was ALREADY CLAIMED: the one-time note's nullifier is already
+         * published (or, at L1 parity, its outpoint already exists), so this
+         * second claim spent nothing. The caller maps it to the existing
+         * "invite already used" surface. Distinguished from the transient
+         * pool-not-ready reasons by [isInviteAlreadyUsedReason].
+         */
+        const val REASON_INVITE_ALREADY_USED = "shielded invite already used"
+
+        /**
+         * Whether a [createIdentityFromInvitation] [SdkWriteResult.NotBroadcast]
+         * reason is the already-claimed case ([REASON_INVITE_ALREADY_USED]).
+         */
+        fun isInviteAlreadyUsedReason(reason: String): Boolean =
+            reason == REASON_INVITE_ALREADY_USED
+
+        /**
+         * Whether a native claim-spend failure is the double-claim case — the
+         * invite note's nullifier is already spent, or (L1 asset-lock parity)
+         * its outpoint already exists on chain. Message-matched until the SDK
+         * exposes typed nullifier/outpoint-collision errors; these strings are
+         * what the Orchard bundle validation and Drive surface for a re-spend.
+         */
+        internal fun isInviteAlreadyUsedFailure(t: Throwable): Boolean {
+            val m = t.message ?: return false
+            return m.contains("nullifier", ignoreCase = true) ||
+                m.contains("already spent", ignoreCase = true) ||
+                m.contains("already exists", ignoreCase = true) ||
+                m.contains("OutPointAlreadyExists", ignoreCase = true) ||
+                m.contains("outpoint already", ignoreCase = true) ||
+                m.contains("double spend", ignoreCase = true)
+        }
+
+        /** Decode a 64-char lowercase-hex 32-byte scalar; throws on bad input. */
+        internal fun hexToBytes32(hex: String): ByteArray {
+            val clean = hex.trim()
+            require(clean.length == 64) { "expected 64 hex chars, got ${clean.length}" }
+            return ByteArray(32) { i ->
+                clean.substring(i * 2, i * 2 + 2).toInt(16).toByte()
+            }
+        }
 
         /**
          * Whether a [ShieldedUsernameSubmitState.NotSent]/
