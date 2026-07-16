@@ -1706,4 +1706,34 @@ class L1ShadowSyncServiceTest {
             )
         )
     }
+
+    // ── shadowSyncPercent (post-cutover home "Syncing N%" source) ─────
+
+    @Test
+    fun shadowSyncPercent_idleAndConnectingAreZero_scanningCombinesAndCapsAt99_syncedIs100() {
+        // Idle/connecting: 0% (nothing to show yet).
+        assertEquals(0, shadowSyncPercent(ShadowSyncProgress.IDLE))
+        assertEquals(0, shadowSyncPercent(ShadowSyncProgress(ShadowSyncPhase.CONNECTING, 0.0, 0, 0, 0, 0)))
+        // Same combined header+filter metric as kotlinSyncLabel:
+        // (1260660 + 24000) / (1514660 + 1514660) = 42%.
+        assertEquals(
+            42,
+            shadowSyncPercent(
+                ShadowSyncProgress(ShadowSyncPhase.HEADERS, 0.3, 1_260_660, 1_514_660, 24_000, 1_514_660)
+            )
+        )
+        // Only SYNCED may claim 100% — a still-scanning phase at target caps at 99%.
+        assertEquals(
+            99,
+            shadowSyncPercent(ShadowSyncProgress(ShadowSyncPhase.FILTERS, 1.0, 100, 100, 100, 100))
+        )
+        assertEquals(
+            100,
+            shadowSyncPercent(ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100, 100, 100, 100))
+        )
+        // Unknown targets must not divide by zero.
+        assertEquals(0, shadowSyncPercent(ShadowSyncProgress(ShadowSyncPhase.FILTERS, 0.0, 0, 0, 0, 0)))
+        // Error phase reads as 0 (nothing trustworthy to show).
+        assertEquals(0, shadowSyncPercent(ShadowSyncProgress(ShadowSyncPhase.ERROR, 0.0, 100, 100, 100, 100)))
+    }
 }

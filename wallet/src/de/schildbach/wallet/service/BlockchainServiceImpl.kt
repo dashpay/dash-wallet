@@ -264,6 +264,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Inject lateinit var serviceConfig: BlockchainServiceConfig
     @Inject lateinit var analyticsService: AnalyticsService
     @Inject lateinit var securityFunctions: AuthenticationManager
+    @Inject lateinit var cutoverCoordinator: de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
+
+    /**
+     * Phase 5d cutover gate, resolved ONCE per launch just before
+     * [onCreateCompleted] (so [checkService], which awaits it, always sees a
+     * settled value). Default true = today's behavior; only a committed
+     * cutover (CUT_OVER/SETTLED) flips it false, holding the dashj L1 engine
+     * so the SDK owns L1. Reversible via the ROLLBACK debug trigger.
+     */
+    @Volatile
+    private var dashjEngineMayStart = true
 
     private var blockStore: BlockStore? = null
     private var headerStore: BlockStore? = null
@@ -985,6 +996,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             log.info("check()")
             val wallet = application.wallet
             if (impediments.isEmpty() && peerGroup == null) {
+                if (!dashjEngineMayStart) {
+                    // Phase 5d cutover committed: the SDK owns L1 this launch,
+                    // so the dashj peergroup must never start (never two live
+                    // SPV engines for one user). Reversible via ROLLBACK.
+                    log.info("cutover committed — holding the dashj L1 engine; SDK owns L1 this launch")
+                    return
+                }
                 log.debug("acquiring wakelock")
                 wakeLock!!.acquire()
 
@@ -1633,6 +1651,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 ).distinctUntilChanged()
                     .onEach { updateTxConfidence() }
                     .launchIn(serviceScope)
+
+                // Phase 5d: resolve the cutover engine gate ONCE, before we
+                // release onCreateCompleted — checkService() awaits that latch,
+                // so the gate is always settled by the time it decides whether
+                // to start the peergroup. Failure defaults to true (start dashj).
+                dashjEngineMayStart = runCatching { cutoverCoordinator.dashjEngineMayStart() }
+                    .getOrDefault(true)
+                log.info("Phase 5d cutover gate: dashjEngineMayStart={}", dashjEngineMayStart)
 
                 onCreateCompleted.complete(Unit)
                 log.info(".onCreate() finished")

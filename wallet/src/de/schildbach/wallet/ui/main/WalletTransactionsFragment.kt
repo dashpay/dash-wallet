@@ -87,8 +87,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private var firstPageLoadStartTime: Long = 0L
     private var onViewCreatedTime: Long = 0L
     private var pendingManualRefresh: Boolean = false
-    // Debug-only "Kotlin sync" label (null on release / shadow idle) — see MainViewModel.kotlinSyncStatus.
-    private var kotlinSyncStatus: String? = null
 
     private val viewModel by activityViewModels<MainViewModel>()
     private val giftCardViewModel by activityViewModels<GiftCardViewModel>()
@@ -322,11 +320,14 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             updateSyncState()
         }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
+        // Phase 5d: after a committed cutover the header reads the SDK L1 scan
+        // instead of dashj (viewModel.sdkOwnsL1); collect those sources so the
+        // single "Syncing N%" status updates from whichever engine owns L1.
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.kotlinSyncStatus.collect {
-                kotlinSyncStatus = it
-                updateSyncState()
-            }
+            viewModel.sdkSyncPercentage.collect { updateSyncState() }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.sdkL1Synced.collect { updateSyncState() }
         }
 
         // Collect live PagingData and submit to the live (PagingDataAdapter) adapter.
@@ -530,26 +531,13 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun updateSyncState() {
-        val isSynced = viewModel.isBlockchainSynced.value
-        val percentage = viewModel.blockchainSyncPercentage.value
-        val kotlinLabel = kotlinSyncStatus
-
-        // Debug-only two-engine format ("DashJ 63% · Kotlin 19%") whenever
-        // the Kotlin shadow label is present; the production "Syncing N%"
-        // rendering below stays byte-identical when it is not (release
-        // builds, shadow off). The header stays visible after dashj
-        // finishes so testers can watch the SDK scan reach 100% ✓ without
-        // reading logs.
-        if (kotlinLabel != null) {
-            val dashjPart = when {
-                isSynced == true -> "DashJ 100%"
-                percentage == null || percentage == 0 -> "DashJ…"
-                else -> "DashJ $percentage%"
-            }
-            binding.syncing.isVisible = true
-            binding.syncing.text = "$dashjPart · $kotlinLabel"
-            return
-        }
+        // Phase 5d: the single "Syncing N%" header reads from whichever engine
+        // owns L1 this launch — the SDK L1 scan after a committed cutover
+        // (viewModel.sdkOwnsL1), dashj otherwise. Pre-cutover (every install
+        // today) this is byte-identical to the original dashj-only rendering.
+        val sdkOwnsL1 = viewModel.sdkOwnsL1.value
+        val isSynced = if (sdkOwnsL1) viewModel.sdkL1Synced.value else viewModel.isBlockchainSynced.value
+        val percentage = if (sdkOwnsL1) viewModel.sdkSyncPercentage.value else viewModel.blockchainSyncPercentage.value
 
         if (isSynced != null && isSynced) {
             binding.syncing.isVisible = false

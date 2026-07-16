@@ -45,9 +45,9 @@ import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.TxDisplayCacheService
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
-import de.schildbach.wallet.service.platform.sdk.kotlinSyncLabel
-import de.schildbach.wallet_test.BuildConfig
+import de.schildbach.wallet.service.platform.sdk.shadowSyncPercent
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.BaseContactsViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationCountLiveData
@@ -67,7 +67,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -125,23 +127,35 @@ class MainViewModel @Inject constructor(
     dashPayContactRequestDao: DashPayContactRequestDao,
     private val txDisplayCacheService: TxDisplayCacheService,
     private val crowdNodeApi: CrowdNodeApi,
-    l1ShadowSyncService: L1ShadowSyncService
+    l1ShadowSyncService: L1ShadowSyncService,
+    cutoverCoordinator: CutoverCoordinator
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false
 
     /**
-     * Debug-only "Kotlin sync" home-screen label — the SDK shadow scan's
-     * progress and completion ([kotlinSyncLabel]); null hides it (release
-     * builds, shadow flag off, or shadow idle).
+     * Phase 5d: has the cutover flipped so the SDK owns L1 this launch
+     * (state CUT_OVER/SETTLED)? Resolved once, mirroring the per-launch
+     * engine gate in BlockchainServiceImpl, so the home "Syncing N%" header
+     * reads from whichever engine actually drives L1 this launch — the SDK
+     * L1 scan post-cutover ([sdkSyncPercentage]/[sdkL1Synced]), dashj before
+     * ([blockchainSyncPercentage]/[isBlockchainSynced]). false (dashj) for
+     * every install until a deliberate cutover commit.
      */
-    val kotlinSyncStatus: StateFlow<String?> =
-        if (BuildConfig.DEBUG) {
-            l1ShadowSyncService.progress
-                .combine(l1ShadowSyncService.verificationStatus, ::kotlinSyncLabel)
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-        } else {
-            MutableStateFlow(null)
-        }
+    val sdkOwnsL1: StateFlow<Boolean> =
+        flow { emit(runCatching { !cutoverCoordinator.dashjEngineMayStart() }.getOrDefault(false)) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /** SDK L1 scan progress as a single 0..100 percent, for the header when [sdkOwnsL1]. */
+    val sdkSyncPercentage: StateFlow<Int> =
+        l1ShadowSyncService.progress
+            .map { shadowSyncPercent(it) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    /** Whether the SDK L1 scan has reached SYNCED — hides the header when [sdkOwnsL1]. */
+    val sdkL1Synced: StateFlow<Boolean> =
+        l1ShadowSyncService.progress
+            .map { it.synced }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)

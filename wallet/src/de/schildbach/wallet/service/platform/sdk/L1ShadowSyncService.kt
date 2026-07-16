@@ -165,6 +165,23 @@ private fun syncPct(h: Long, t: Long): Int =
     if (t <= 0) 0 else ((h * 100) / t).toInt().coerceIn(0, 100)
 
 /**
+ * The SDK L1 scan progress as a single 0..100 percent, for the home-screen
+ * "Syncing N%" header AFTER cutover (Phase 5d) when the SDK owns L1 and the
+ * dashj percent no longer advances. Same combined header+filter metric as
+ * [kotlinSyncLabel] (the SDK's own `overallPercent` under-reports during the
+ * filter scan); only the SYNCED phase may claim 100%. Pure — host-testable.
+ */
+fun shadowSyncPercent(progress: ShadowSyncProgress): Int = when (progress.phase) {
+    ShadowSyncPhase.IDLE, ShadowSyncPhase.CONNECTING -> 0
+    ShadowSyncPhase.SYNCED -> 100
+    ShadowSyncPhase.ERROR -> 0
+    else -> syncPct(
+        progress.headerHeight + progress.filterHeight,
+        progress.headerTarget + progress.filterTarget
+    ).coerceAtMost(99)
+}
+
+/**
  * Map the SDK's SPV progress snapshot to the app-side shape. Pure — the
  * SDK type is a plain data class, so this is host-JVM unit-testable.
  * While the overall state is SYNCING, the phase is the FIRST pipeline
