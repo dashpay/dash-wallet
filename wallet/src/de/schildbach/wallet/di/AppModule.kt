@@ -120,9 +120,10 @@ abstract class AppModule {
             transactionMetadataProvider: TransactionMetadataProvider,
             sdkL1SendService: SdkL1SendService,
             l1ShadowSyncService: L1ShadowSyncService,
-            l1SendProbeService: L1SendProbeService
+            l1SendProbeService: L1SendProbeService,
+            bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
         ): SendPaymentService {
-            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider, sdkL1SendService, l1ShadowSyncService, l1SendProbeService)
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider, sdkL1SendService, l1ShadowSyncService, l1SendProbeService, bridgedTransactionFactory)
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService

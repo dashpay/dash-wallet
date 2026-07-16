@@ -97,6 +97,10 @@ class SendCoinsTaskRunnerSdkRoutingTest {
         every { walletDataProvider.networkParameters } returns networkParams
 
         sdkL1SendService = mockk()
+        // Phase 5d: pre-cutover in every routing test — the typed overload's
+        // route decision, the neutral overload's NotBroadcast fall-through,
+        // and the SendRequest-funnel backstop all read it.
+        coEvery { sdkL1SendService.cutoverCommitted() } returns false
 
         runner = spyk(
             SendCoinsTaskRunner(
@@ -113,6 +117,9 @@ class SendCoinsTaskRunnerSdkRoutingTest {
                 mockk(relaxed = true),
                 // 5c.0/5c.1 debug probes: relaxed — fire-and-forget observation
                 // that must never affect routing.
+                mockk(relaxed = true),
+                // Phase 5d bridge factory: only reached under a committed
+                // cutover (SDK_BRIDGED route), which these tests never take.
                 mockk(relaxed = true)
             )
         )

@@ -73,6 +73,35 @@ import java.util.function.Consumer
 import java.util.function.Predicate
 import javax.inject.Inject
 
+/**
+ * Phase 5d: where a dashj-typed send routes once the cutover state is
+ * consulted. PURE so the decision is host-testable in isolation:
+ *
+ * - [DASHJ]: cutover not committed — today's unchanged dashj path
+ *   (byte-identical for every install until a deliberate COMMIT).
+ * - [SDK_BRIDGED]: cutover committed and the send is a simple
+ *   pay-to-address — broadcast via the SDK, then bridge the tx into the
+ *   dashj wallet so the caller still gets the live dashj [Transaction].
+ * - [FAIL_CLOSED]: cutover committed but the send needs dashj-only
+ *   machinery the SDK has no equivalent for (a custom [CoinSelector] —
+ *   CrowdNode — or an empty-wallet send-all). Failing with a clear error
+ *   BEATS falling through to dashj: its peergroup is held, so a dashj
+ *   "send" would commit a tx that silently queues and then broadcasts on
+ *   a later ROLLBACK, long after the user was told it failed.
+ */
+enum class CutoverSendRoute { DASHJ, SDK_BRIDGED, FAIL_CLOSED }
+
+/** The pure routing decision — see [CutoverSendRoute]. */
+fun cutoverSendRoute(
+    cutoverCommitted: Boolean,
+    hasCustomSelector: Boolean,
+    emptyWallet: Boolean
+): CutoverSendRoute = when {
+    !cutoverCommitted -> CutoverSendRoute.DASHJ
+    hasCustomSelector || emptyWallet -> CutoverSendRoute.FAIL_CLOSED
+    else -> CutoverSendRoute.SDK_BRIDGED
+}
+
 class SendCoinsTaskRunner @Inject constructor(
     private val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
@@ -85,7 +114,8 @@ class SendCoinsTaskRunner @Inject constructor(
     private val metadataProvider: TransactionMetadataProvider,
     private val sdkL1SendService: SdkL1SendService,
     private val l1ShadowSyncService: L1ShadowSyncService,
-    private val l1SendProbeService: L1SendProbeService
+    private val l1SendProbeService: L1SendProbeService,
+    private val bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
 ) : SendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
@@ -111,6 +141,19 @@ class SendCoinsTaskRunner @Inject constructor(
             walletData.checkSendingConditions(address, amount)
         }
 
+        // Phase 5d: once the cutover is committed the dashj engine is held,
+        // so this path must not build/commit a dashj send (see
+        // [cutoverSendRoute]). Pre-cutover the route is DASHJ and the code
+        // below is byte-identical to today.
+        when (cutoverSendRoute(sdkL1SendService.cutoverCommitted(), coinSelector != null, emptyWallet)) {
+            CutoverSendRoute.DASHJ -> Unit // unchanged path below
+            CutoverSendRoute.SDK_BRIDGED -> return sendViaSdkBridged(address, amount, beforeSending)
+            CutoverSendRoute.FAIL_CLOSED -> throw IllegalStateException(
+                "cutover committed: this send type (custom coin selection or send-all) is not " +
+                    "SDK-routable yet and dashj cannot broadcast while held — ROLLBACK_CUTOVER restores it"
+            )
+        }
+
         val sendRequest =
             createSendRequest(address, amount, coinSelector, emptyWallet, canSendLockedOutput = canSendLockedOutput)
         return sendCoins(
@@ -118,6 +161,52 @@ class SendCoinsTaskRunner @Inject constructor(
             checkBalanceConditions = false,
             beforeSending = beforeSending
         )
+    }
+
+    /**
+     * Phase 5d SDK-routed send for the dashj-typed callers, used ONLY when
+     * the cutover is committed: broadcast via the SDK, then SYNCHRONOUSLY
+     * bridge the tx into the dashj wallet so the caller gets the LIVE dashj
+     * [Transaction] its listeners/metadata expect. [beforeSending] runs on
+     * the bridged instance — the tx is already broadcast at that point, so
+     * only metadata-style mutations (memo, exchange rate) take effect;
+     * that matches how every current caller uses it.
+     *
+     * Failure semantics (money-path, deliberately explicit):
+     * - SDK [SdkWriteResult.NotBroadcast] → throw. NEVER fall back to dashj
+     *   here: the held engine would queue-not-send (see [cutoverSendRoute]).
+     * - [SdkWriteResult.Ambiguous] → rethrow, never retried (double-pay risk).
+     * - broadcast OK but bridge failed → throw with the txid in the message.
+     *   The coins ARE on the network; the wallet reconciles via the next
+     *   sync, and the error text says exactly that.
+     */
+    private suspend fun sendViaSdkBridged(
+        address: Address,
+        amount: Coin,
+        beforeSending: Consumer<Transaction>?
+    ): Transaction {
+        val result = sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = false)
+        return when (result) {
+            is SdkWriteResult.Broadcast -> {
+                when (val bridged = bridgedTransactionFactory.bridge(result.value)) {
+                    is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged -> {
+                        beforeSending?.accept(bridged.transaction)
+                        bridged.transaction
+                    }
+                    is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged -> throw RuntimeException(
+                        "send broadcast via SDK (txid ${result.value}) but the wallet display bridge " +
+                            "failed (${bridged.reason}) — the funds ARE sent; the transaction appears " +
+                            "after the next sync"
+                    )
+                }
+            }
+            is SdkWriteResult.Ambiguous ->
+                throw (result.cause as? Exception ?: RuntimeException(result.cause))
+            is SdkWriteResult.NotBroadcast -> throw IllegalStateException(
+                "cutover committed but the SDK send was not attempted (${result.reason}) — " +
+                    "dashj cannot broadcast while held; ROLLBACK_CUTOVER restores sends"
+            )
+        }
     }
 
     /**
@@ -180,7 +269,16 @@ class SendCoinsTaskRunner @Inject constructor(
             }
             is SdkWriteResult.Ambiguous ->
                 throw (sdkResult.cause as? Exception ?: RuntimeException(sdkResult.cause))
-            is SdkWriteResult.NotBroadcast -> Unit // dashj path below, unchanged
+            is SdkWriteResult.NotBroadcast ->
+                // Phase 5d: post-cutover there is no dashj fallback — the held
+                // engine would queue-not-send (see cutoverSendRoute). Pre-cutover
+                // this is the unchanged fall-through to the dashj path below.
+                if (sdkL1SendService.cutoverCommitted()) {
+                    throw IllegalStateException(
+                        "cutover committed but the SDK send was not attempted (${sdkResult.reason}) — " +
+                            "dashj cannot broadcast while held; ROLLBACK_CUTOVER restores sends"
+                    )
+                }
         }
 
         val dashAddress = Address.fromString(walletData.networkParameters, address)
@@ -600,6 +698,18 @@ class SendCoinsTaskRunner @Inject constructor(
         beforeSending: Consumer<Transaction>? = null,
         serviceName: String? = null
     ): Transaction = withContext(Dispatchers.IO) {
+        // Phase 5d backstop for direct-SendRequest callers (BIP70,
+        // CrowdNode's sendTransaction) that bypass the typed overload's
+        // routing: post-cutover a dashj broadcast would queue-not-send on
+        // the held peergroup (see cutoverSendRoute), so fail closed. The
+        // typed overload's SDK_BRIDGED route never reaches here; its DASHJ
+        // route re-reads a provably-false flag (one DataStore read).
+        if (sdkL1SendService.cutoverCommitted()) {
+            throw IllegalStateException(
+                "cutover committed: direct SendRequest sends are not SDK-routable yet and dashj " +
+                    "cannot broadcast while held — ROLLBACK_CUTOVER restores them"
+            )
+        }
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
         val watch = Stopwatch.createStarted()

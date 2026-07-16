@@ -109,6 +109,9 @@ class SendCoinsTaskRunnerSelfSpendGraceTest {
                 mockk(relaxed = true),
                 l1ShadowSyncService,
                 // 5c.0/5c.1 debug probes: relaxed — observation only.
+                mockk(relaxed = true),
+                // Phase 5d bridge factory: only reached under a committed
+                // cutover, which these flows never take.
                 mockk(relaxed = true)
             )
         )

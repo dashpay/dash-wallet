@@ -419,9 +419,29 @@ class SdkL1SendService internal constructor(
     }
 
     private suspend fun isEnabled(): Boolean = try {
-        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SEND) == true
+        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SEND) == true || cutoverCommitted()
     } catch (e: Exception) {
         log.warn("failed to read USE_KOTLIN_SDK_L1_SEND; keeping dashj path", e)
+        false
+    }
+
+    /**
+     * Phase 5d: has the cutover been COMMITTED (persisted state CUT_OVER or
+     * SETTLED — the states where [dashjEngineMayStart] is false)? Post-commit
+     * the dashj L1 engine is held, so:
+     * - this service is enabled regardless of the soak flag (see [isEnabled]),
+     * - callers must FAIL CLOSED on [SdkWriteResult.NotBroadcast] instead of
+     *   falling back to dashj — dashj's peergroup is dead, and a "fallback"
+     *   send would commit a tx that silently queues until a rollback
+     *   resurrects the engine and broadcasts it long after the user was told
+     *   the send failed.
+     * Contained: a config read failure reads as NOT committed (dashj rules,
+     * today's behavior).
+     */
+    suspend fun cutoverCommitted(): Boolean = try {
+        !dashjEngineMayStart(CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)))
+    } catch (e: Exception) {
+        log.warn("failed to read the cutover state; treating as not committed", e)
         false
     }
 

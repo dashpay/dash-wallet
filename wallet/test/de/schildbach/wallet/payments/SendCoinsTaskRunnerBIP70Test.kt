@@ -149,6 +149,10 @@ class SendCoinsTaskRunnerBIP70Test {
                 mockk(relaxed = true),
                 // 5c.0/5c.1 debug probes (L1SendProbeServiceTest): these
                 // BIP70 flows never touch the neutral overload.
+                mockk(relaxed = true),
+                // Phase 5d bridge factory: only reached under a committed
+                // cutover, which these flows never take (relaxed
+                // SdkL1SendService.cutoverCommitted() reads false).
                 mockk(relaxed = true)
             )
         )

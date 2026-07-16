@@ -43,7 +43,7 @@ class SendCoinsTaskRunnerTest {
         every { wallet.context } returns Context(MainNetParams.get())
         val application = mockk<WalletApplication>()
 
-        val sendCoinsTaskRunner = SendCoinsTaskRunner(application, mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk())
+        val sendCoinsTaskRunner = SendCoinsTaskRunner(application, mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk())
         val request = sendCoinsTaskRunner.createSendRequest(
             Address.fromBase58(MainNetParams.get(), "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"),
             Coin.COIN,
@@ -61,7 +61,7 @@ class SendCoinsTaskRunnerTest {
         val application = mockk<WalletApplication>()
         every { application.wallet } returns wallet
 
-        val sendCoinsTaskRunner = SendCoinsTaskRunner(application, mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk())
+        val sendCoinsTaskRunner = SendCoinsTaskRunner(application, mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk(), mockk())
         val request = sendCoinsTaskRunner.createSendRequest(
             Address.fromBase58(MainNetParams.get(), "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"),
             Coin.COIN,

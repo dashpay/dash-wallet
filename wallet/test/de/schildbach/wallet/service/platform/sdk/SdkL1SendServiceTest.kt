@@ -76,12 +76,15 @@ class SdkL1SendServiceTest {
         }
     }
 
-    private fun config(enabled: Boolean?): DashPayConfig = mockk {
+    private fun config(enabled: Boolean?, cutoverState: String? = null): DashPayConfig = mockk {
         if (enabled == null) {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SEND) } throws
                 IllegalStateException("datastore unavailable")
+            coEvery { get(DashPayConfig.CUTOVER_STATE) } throws
+                IllegalStateException("datastore unavailable")
         } else {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SEND) } returns enabled
+            coEvery { get(DashPayConfig.CUTOVER_STATE) } returns cutoverState
         }
     }
 
@@ -105,12 +108,13 @@ class SdkL1SendServiceTest {
     private fun service(
         source: FakeSource,
         enabled: Boolean? = true,
+        cutoverState: String? = null,
         parity: () -> ParityReport? = { matchingParity() },
         addressValid: (String) -> Boolean = { it == validAddress },
         bridgeAfterBroadcast: (String) -> Unit = { bridgedTxids += it }
     ) = SdkL1SendService(
         source = source,
-        dashPayConfig = config(enabled),
+        dashPayConfig = config(enabled, cutoverState),
         isValidAddress = addressValid,
         l1Parity = parity,
         onSelfSpendBroadcast = { selfSpendMarks++ },
@@ -545,5 +549,33 @@ class SdkL1SendServiceTest {
             .sendToAddress(validAddress, amount, emptyWallet = false)
         assertTrue(result is SdkWriteResult.NotBroadcast)
         assertNull((result as SdkWriteResult.NotBroadcast).cause)
+    }
+
+    // ── Phase 5d: cutover-committed gate ─────────────────────────────────
+
+    @Test
+    fun cutoverCommitted_followsThePersistedState_andFailsSafeToFalse() = runBlocking {
+        // Unset / pre-flip states → not committed (today's behavior).
+        assertFalse(service(readySource(), enabled = false).cutoverCommitted())
+        assertFalse(service(readySource(), enabled = false, cutoverState = "DUAL_RUNNING").cutoverCommitted())
+        assertFalse(service(readySource(), enabled = false, cutoverState = "READY_OBSERVED").cutoverCommitted())
+        // Flipped states → committed.
+        assertTrue(service(readySource(), enabled = false, cutoverState = "CUT_OVER").cutoverCommitted())
+        assertTrue(service(readySource(), enabled = false, cutoverState = "SETTLED").cutoverCommitted())
+        // Garbage parses as DUAL_RUNNING; a config read failure is contained.
+        assertFalse(service(readySource(), enabled = false, cutoverState = "garbage").cutoverCommitted())
+        assertFalse(service(readySource(), enabled = null).cutoverCommitted())
+    }
+
+    @Test
+    fun committedCutover_enablesTheSendPath_withTheSoakFlagOff() = runBlocking {
+        val source = readySource()
+        val result = service(source, enabled = false, cutoverState = "CUT_OVER")
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+        // With the soak flag OFF, pre-cutover this send would be
+        // NotBroadcast("flag off") — the committed cutover alone must open
+        // the path all the way to a broadcast.
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(1, source.sendCalls)
     }
 }
