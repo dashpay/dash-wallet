@@ -81,6 +81,7 @@ import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -643,7 +644,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             val displayUsername = profileDisplayUsername(
                 profile.username,
                 identity?.activeUsername,
-                identity?.showSecondaryUsername == true
+                identity?.showSecondaryUsername == true,
+                Names::normalizeString
             )
             if (profile.displayName.isNotEmpty()) {
                 binding.username1.text = profile.displayName
@@ -723,11 +725,21 @@ internal fun mapShieldedCardDisplay(
 internal fun profileDisplayUsername(
     profileUsername: String,
     identityActiveUsername: String?,
-    showSecondaryUsername: Boolean
-): String = if (showSecondaryUsername && !identityActiveUsername.isNullOrEmpty()) {
-    identityActiveUsername
-} else {
-    profileUsername
+    showSecondaryUsername: Boolean,
+    normalize: (String) -> String
+): String = when {
+    !showSecondaryUsername || identityActiveUsername.isNullOrEmpty() -> profileUsername
+    // The identity's activeUsername is the DPNS-NORMALIZED secondary label
+    // (homoglyphs folded: o→0, l/i→1 — e.g. "c0ntested11-2"). Once the
+    // profile refresh lands, profileUsername is that same name in DISPLAY
+    // form (the domain document's .label, "contested11-2"); prefer it so the
+    // user sees what they typed. Detect that by normalizing the profile name
+    // and matching it to the active label.
+    normalize(profileUsername) == identityActiveUsername -> profileUsername
+    // Profile not yet refreshed to the secondary (first render still shows
+    // the primary) — the normalized active label is the only secondary value
+    // available until the refresh; better than showing the primary name.
+    else -> identityActiveUsername
 }
 
 /**

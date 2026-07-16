@@ -30,16 +30,37 @@ import org.junit.Test
  */
 class ProfileDisplayUsernameTest {
 
+    // DPNS homoglyph fold used by the real Names.normalizeString (o->0, l/i->1).
+    private val normalize: (String) -> String = { s ->
+        s.replace('o', '0').replace('l', '1').replace('i', '1')
+    }
+
     @Test
-    fun `dual username in voting shows the confirmed instant name`() {
-        // Profile seeded with the contested primary; identity reports the
-        // secondary is confirmed (showSecondaryUsername) → use the secondary.
+    fun `dual first render (profile still primary) shows the normalized secondary`() {
+        // Profile not yet refreshed to the secondary — activeUsername (the
+        // normalized secondary) is the best available value.
         assertEquals(
-            "alice2",
+            "b0b2",
             profileDisplayUsername(
-                profileUsername = "alice",
-                identityActiveUsername = "alice2",
-                showSecondaryUsername = true
+                profileUsername = "alice",           // still the primary
+                identityActiveUsername = "b0b2",     // normalized secondary
+                showSecondaryUsername = true,
+                normalize = normalize
+            )
+        )
+    }
+
+    @Test
+    fun `dual after refresh shows the DISPLAY-form secondary, not the normalized label`() {
+        // Profile refreshed to the secondary's display label ("bob2"); its
+        // normalized form ("b0b2") matches activeUsername → prefer the display.
+        assertEquals(
+            "bob2",
+            profileDisplayUsername(
+                profileUsername = "bob2",            // secondary DISPLAY label
+                identityActiveUsername = "b0b2",     // normalized secondary
+                showSecondaryUsername = true,
+                normalize = normalize
             )
         )
     }
@@ -51,7 +72,8 @@ class ProfileDisplayUsernameTest {
             profileDisplayUsername(
                 profileUsername = "alice",
                 identityActiveUsername = "alice",
-                showSecondaryUsername = false
+                showSecondaryUsername = false,
+                normalize = normalize
             )
         )
     }
@@ -66,7 +88,8 @@ class ProfileDisplayUsernameTest {
             profileDisplayUsername(
                 profileUsername = "alice",
                 identityActiveUsername = null,
-                showSecondaryUsername = false
+                showSecondaryUsername = false,
+                normalize = normalize
             )
         )
     }
@@ -80,7 +103,8 @@ class ProfileDisplayUsernameTest {
             profileDisplayUsername(
                 profileUsername = "alice",
                 identityActiveUsername = "",
-                showSecondaryUsername = true
+                showSecondaryUsername = true,
+                normalize = normalize
             )
         )
     }
