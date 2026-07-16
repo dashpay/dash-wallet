@@ -116,7 +116,7 @@ class PlatformRepo @Inject constructor(
          * registration completes within seconds; dashj's internal
          * chain-lock retry waits ~2.5 minutes per attempt.
          */
-        const val REGISTRATION_SLOW_HINT_DELAY_MS = 30_000L
+        const val REGISTRATION_SLOW_HINT_DELAY_MS = 35_000L
     }
 
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
