@@ -88,8 +88,10 @@ class RequestUserNameViewModelTest {
 
     private val walletApplication = mockk<WalletApplication>(relaxed = true)
 
+    private val creationStateFlow = MutableStateFlow<String?>(null)
     private val identityConfig = mockk<BlockchainIdentityConfig> {
         every { observe(BlockchainIdentityConfig.IDENTITY_ID) } returns emptyFlow()
+        every { observe(BlockchainIdentityConfig.CREATION_STATE) } returns creationStateFlow
         coEvery { get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK) } returns null
         coEvery { get(BlockchainIdentityConfig.USERNAME) } returns null
         coEvery { set(BlockchainIdentityConfig.USERNAME, any()) } just Runs
@@ -184,6 +186,32 @@ class RequestUserNameViewModelTest {
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
         verify(exactly = 0) { shieldedUsernameCreation.submit(any(), any()) }
+    }
+
+    @Test
+    fun l1Creation_terminalState_clearsTheProcessingDialog() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice2"
+        viewModel.submit() // L1 path: sets usernameRequestSubmitting = true
+        verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
+
+        // CreateIdentityService completes out-of-band; the persisted state flips DONE.
+        creationStateFlow.value = IdentityCreationState.DONE.name
+
+        // The dialog gate must clear so the processing dialog dismisses.
+        assertEquals(false, viewModel.uiState.value.usernameRequestSubmitting)
+        assertEquals(true, viewModel.uiState.value.usernameRequestSubmitted)
+    }
+
+    @Test
+    fun l1Creation_terminalState_withNoSubmitInFlight_isIgnored() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        // No submit() — a pre-existing DONE state (e.g. re-entering the screen)
+        // must not fabricate a "submitted" completion.
+        creationStateFlow.value = IdentityCreationState.DONE.name
+
+        assertEquals(false, viewModel.uiState.value.usernameRequestSubmitting)
+        assertEquals(false, viewModel.uiState.value.usernameRequestSubmitted)
     }
 
     @Test

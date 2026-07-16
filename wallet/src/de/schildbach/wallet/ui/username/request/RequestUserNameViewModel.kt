@@ -435,6 +435,32 @@ class RequestUserNameViewModel @Inject constructor(
                 identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
             }
         }
+        // L1/non-shielded creation completion feedback. The L1 branch of
+        // submit() starts CreateIdentityService and sets
+        // usernameRequestSubmitting=true, but that service runs out-of-band
+        // and never reported back — so the processing dialog stayed up
+        // forever until the user dismissed it manually (the identity was
+        // already created behind it). Observe the persisted creation state
+        // and, once it reaches a terminal state while a submit is in
+        // flight, clear submitting (the dialog dismisses) and mark the
+        // request submitted so the flow completes. The shielded path clears
+        // submitting via its own executor states, so this is a no-op there.
+        identityConfig.observe(CREATION_STATE)
+            .filterNotNull()
+            .onEach { raw ->
+                val state = runCatching { IdentityCreationState.valueOf(raw) }
+                    .getOrDefault(IdentityCreationState.NONE)
+                val terminal = state == IdentityCreationState.DONE ||
+                    state == IdentityCreationState.DONE_AND_DISMISS ||
+                    state == IdentityCreationState.VOTING
+                if (terminal && _uiState.value.usernameRequestSubmitting) {
+                    log.info("identity creation reached {} — clearing the processing dialog", state)
+                    _uiState.update {
+                        it.copy(usernameRequestSubmitting = false, usernameRequestSubmitted = true)
+                    }
+                }
+            }
+            .launchIn(viewModelScope)
         identityConfig.observe(IDENTITY_ID)
             .filterNotNull()
             .onEach {
