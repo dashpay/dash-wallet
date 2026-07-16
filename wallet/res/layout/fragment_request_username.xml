@@ -107,7 +107,7 @@
         android:fillViewport="true"
         android:layout_marginHorizontal="15dp"
         app:layout_constraintTop_toBottomOf="@+id/top_stack"
-        app:layout_constraintBottom_toTopOf="@+id/request_username_button">
+        app:layout_constraintBottom_toTopOf="@+id/shielded_wait_container">
 
     <LinearLayout
         android:id="@+id/requirements_stack"
@@ -353,6 +353,40 @@
 
     </LinearLayout>
     </ScrollView>
+
+    <!-- Persistent privacy advisory shown ONLY while the shielded funding
+         path is selected and the pool is not yet READY (the button reads
+         "Preparing shielded balance…"): the user is creating the username
+         before the shield's recommended ~2h privacy window has elapsed.
+         Floats just above the button and stays until the pool reaches
+         READY (confirmation/sync complete). See RequestUsernameFragment. -->
+    <LinearLayout
+        android:id="@+id/shielded_wait_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginBottom="12dp"
+        android:gravity="center_vertical"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintBottom_toTopOf="@+id/request_username_button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/shielded_wait_icon"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_hourglass" />
+
+        <TextView
+            style="@style/Overline.Medium"
+            android:id="@+id/shielded_wait_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/username_shielded_wait_2hrs" />
+    </LinearLayout>
 
     <Button
         android:id="@+id/request_username_button"

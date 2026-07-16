@@ -329,6 +329,11 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                         R.string.request_username
                     }
                 )
+                // The shield is still confirming/syncing (button reads
+                // "Preparing shielded balance…") — surface the privacy-window
+                // advisory just above the button until the pool reaches READY.
+                binding.shieldedWaitContainer.isVisible =
+                    buttonState == UsernameSubmitButtonState.PreparingShielded
 
                 if (it.usernameRequestSubmitting) {
                     binding.usernameInput.isFocusable = false
@@ -357,6 +362,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // applies where the button would otherwise be enabled, so
                 // keep the normal label here.
                 binding.requestUsernameButton.setText(R.string.request_username)
+                binding.shieldedWaitContainer.isVisible = false
             }
         }
 
