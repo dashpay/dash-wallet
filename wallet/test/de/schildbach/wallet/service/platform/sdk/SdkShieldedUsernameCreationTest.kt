@@ -254,8 +254,33 @@ class SdkShieldedUsernameCreationTest {
             statusFlow.value = status
             val result = service(source = mockk()).createUsernameFromShielded("alice2")
             assertTrue("status=$status", result is SdkWriteResult.NotBroadcast)
+            // The refusal reason must classify as pool-not-ready so the UI
+            // shows the calm "still preparing" surface, not a hard error.
+            val reason = (result as SdkWriteResult.NotBroadcast).reason
+            assertTrue(
+                "status=$status reason=$reason",
+                SdkShieldedUsernameCreation.isPoolNotReadyReason(reason)
+            )
         }
         statusFlow.value = ShieldedSyncStatus.READY
+    }
+
+    @Test
+    fun isPoolNotReadyReason_classifiesOnlyTheTransientPoolReasons() {
+        assertTrue(
+            SdkShieldedUsernameCreation.isPoolNotReadyReason(
+                SdkShieldedUsernameCreation.REASON_POOL_STILL_SYNCING
+            )
+        )
+        assertTrue(
+            SdkShieldedUsernameCreation.isPoolNotReadyReason(
+                SdkShieldedUsernameCreation.REASON_RUNTIME_NOT_READY
+            )
+        )
+        // Genuine errors must NOT be softened into the "still preparing" surface.
+        assertFalse(SdkShieldedUsernameCreation.isPoolNotReadyReason("flag off"))
+        assertFalse(SdkShieldedUsernameCreation.isPoolNotReadyReason("app wallet not bound to the SDK"))
+        assertFalse(SdkShieldedUsernameCreation.isPoolNotReadyReason("malformed fallback platform address"))
     }
 
     @Test

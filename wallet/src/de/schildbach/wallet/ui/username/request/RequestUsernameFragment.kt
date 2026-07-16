@@ -305,12 +305,30 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                         binding.checkAvailable.setImageResource(getCheckMarkImage(true))
                     }
                 }
-                // For Secondary username type, enable button if username is valid (no balance check)
-                binding.requestUsernameButton.isEnabled = if (usernameType == UsernameType.Secondary) {
-                    !it.usernameExists && !it.usernameContestable
-                } else {
-                    it.enoughBalance && !it.usernameExists
-                }
+                // The button's enabled state + label follow the pure gate
+                // (see usernameSubmitButtonState): the shielded funding path
+                // reflects the LIVE pool status, so while it is still syncing
+                // the button is a disabled "Preparing shielded balance…"
+                // pending state that re-enables automatically at READY —
+                // never a stale-cache enabled button that lets a submit
+                // reach the SDK and bounce (Fix B). L1 path is unaffected.
+                val buttonState = usernameSubmitButtonState(
+                    usernameType = usernameType,
+                    paymentSource = requestUserNameViewModel.paymentSource,
+                    shieldedSyncStatus = it.shieldedSyncStatus,
+                    enoughBalance = it.enoughBalance,
+                    usernameExists = it.usernameExists,
+                    usernameContestable = it.usernameContestable
+                )
+                binding.requestUsernameButton.isEnabled =
+                    buttonState == UsernameSubmitButtonState.Enabled
+                binding.requestUsernameButton.setText(
+                    if (buttonState == UsernameSubmitButtonState.PreparingShielded) {
+                        R.string.username_preparing_shielded_balance
+                    } else {
+                        R.string.request_username
+                    }
+                )
 
                 if (it.usernameRequestSubmitting) {
                     binding.usernameInput.isFocusable = false
@@ -335,6 +353,10 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                     binding.checkAvailable.setImageResource(getCheckMarkImage(false, false))
                 }
                 binding.requestUsernameButton.isEnabled = false
+                // No completed check yet — the "Preparing…" label only
+                // applies where the button would otherwise be enabled, so
+                // keep the normal label here.
+                binding.requestUsernameButton.setText(R.string.request_username)
             }
         }
 

@@ -97,6 +97,17 @@ data class RequestUserNameUIState(
     val usernameCheckFailed: Boolean = false,
     val usernameSubmittedError: Boolean = false,
     /**
+     * A shielded submit was refused because the pool is not ready YET
+     * (runtime still bringing up, or still syncing so its balance is a
+     * mid-sync placeholder) — see [SdkShieldedUsernameCreation
+     * .isPoolNotReadyReason]. Provably nothing was spent, so this is a
+     * calm "still preparing, try again in a moment" surface, NOT the red
+     * network-error dialog. Fix B's live gate normally keeps the button
+     * disabled while syncing; this handles the residual race where a
+     * submit still reaches the SDK.
+     */
+    val usernameSubmittedPoolSyncing: Boolean = false,
+    /**
      * The shielded creation's outcome is UNCONFIRMED (may already be on
      * chain; the spent notes stay reserved) — the UI must NOT offer a
      * retry and must not claim "no extra cost"; the app reconciles on
@@ -128,8 +139,76 @@ data class RequestUserNameUIState(
      * likely take extra minutes. Renders as a warning row only; it must
      * NEVER disable the submit button (probe failures stay false).
      */
-    val networkSlow: Boolean = false
+    val networkSlow: Boolean = false,
+    /**
+     * LIVE shielded pool sync status, mirrored from the shielded service
+     * so the request button can gate reactively (Fix B): while the
+     * shielded funding path is selected and this is not [ShieldedSyncStatus
+     * .READY] the button shows the disabled "Preparing shielded balance…"
+     * pending state instead of an enabled "Request Username", and
+     * re-enables automatically when the status reaches READY. Only ever
+     * consulted for the shielded path — see [usernameSubmitButtonState].
+     */
+    val shieldedSyncStatus: ShieldedSyncStatus = ShieldedSyncStatus.NOT_READY
 )
+
+/**
+ * Tri-state of the username request button, computed PURELY so the
+ * decision is unit-testable in isolation (the fragment only maps the
+ * result to `isEnabled` + label).
+ */
+enum class UsernameSubmitButtonState {
+    /** Ready to submit — enabled, normal "Request Username" label. */
+    Enabled,
+
+    /**
+     * Shielded funding is selected but the pool is not READY yet — a
+     * DISABLED "Preparing shielded balance…" pending state that re-enables
+     * automatically once the sync reaches READY (Fix B).
+     */
+    PreparingShielded,
+
+    /** Not submittable (validity / availability / balance not satisfied). */
+    Disabled
+}
+
+/**
+ * Pure decision for the request button's enabled state and label. Only
+ * the shielded funding path is gated on [shieldedSyncStatus]: while that
+ * path is selected and the pool is not [ShieldedSyncStatus.READY] the
+ * button is the disabled [UsernameSubmitButtonState.PreparingShielded]
+ * pending state (the button must reflect the LIVE pool status, never a
+ * stale READY cache that let a submit reach the SDK and bounce with a
+ * generic error). The L1/Dash-balance path is NEVER gated on the shielded
+ * status. Secondary (instant) usernames are funded from the already-created
+ * identity, so the shielded status is irrelevant to them.
+ */
+fun usernameSubmitButtonState(
+    usernameType: UsernameType,
+    paymentSource: UsernamePaymentSource,
+    shieldedSyncStatus: ShieldedSyncStatus,
+    enoughBalance: Boolean,
+    usernameExists: Boolean,
+    usernameContestable: Boolean
+): UsernameSubmitButtonState {
+    if (usernameType == UsernameType.Secondary) {
+        return if (!usernameExists && !usernameContestable) {
+            UsernameSubmitButtonState.Enabled
+        } else {
+            UsernameSubmitButtonState.Disabled
+        }
+    }
+    if (paymentSource == UsernamePaymentSource.SHIELDED_BALANCE &&
+        shieldedSyncStatus != ShieldedSyncStatus.READY
+    ) {
+        return UsernameSubmitButtonState.PreparingShielded
+    }
+    return if (enoughBalance && !usernameExists) {
+        UsernameSubmitButtonState.Enabled
+    } else {
+        UsernameSubmitButtonState.Disabled
+    }
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -233,6 +312,12 @@ class RequestUserNameViewModel @Inject constructor(
                     .catch { log.warn("shielded status flow failed", it) }
                     .collect {
                         _shieldedSyncStatus.value = it
+                        // Mirror the LIVE status into uiState so the request
+                        // button's gate is reactive (Fix B) — the button
+                        // re-enables the moment the pool reaches READY.
+                        _uiState.update { s ->
+                            if (s.shieldedSyncStatus == it) s else s.copy(shieldedSyncStatus = it)
+                        }
                         recomputeBalanceGate()
                     }
             }
@@ -443,11 +528,23 @@ class RequestUserNameViewModel @Inject constructor(
                     }
                     is ShieldedUsernameSubmitState.NotSent -> {
                         log.warn("shielded username creation not sent: {}", state.reason)
+                        // The pool-not-ready refusals ("still syncing" /
+                        // "runtime not ready") are transient, not errors —
+                        // surface the calm "still preparing" message rather
+                        // than the red "network error" dialog (Fix A).
+                        val poolNotReady = SdkShieldedUsernameCreation.isPoolNotReadyReason(state.reason)
                         _uiState.update {
-                            it.copy(usernameRequestSubmitting = false, usernameSubmittedError = true)
+                            if (poolNotReady) {
+                                it.copy(
+                                    usernameRequestSubmitting = false,
+                                    usernameSubmittedPoolSyncing = true
+                                )
+                            } else {
+                                it.copy(usernameRequestSubmitting = false, usernameSubmittedError = true)
+                            }
                         }
-                        // Provably nothing spent — retry-safe; reset so the
-                        // error dialog's "Try again" can re-submit.
+                        // Provably nothing spent — retry-safe; reset so a
+                        // retry can re-submit.
                         shieldedUsernameCreation.acknowledge()
                     }
                     ShieldedUsernameSubmitState.MayHaveGoneThrough -> {
@@ -604,6 +701,7 @@ class RequestUserNameViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 usernameSubmittedError = false,
+                usernameSubmittedPoolSyncing = false,
                 usernameRequestSubmitted = false,
                 usernameRequestSubmitting = false
             )
@@ -687,6 +785,7 @@ class RequestUserNameViewModel @Inject constructor(
                         usernameCheckSuccess = true,
                         usernameCheckFailed = false,
                         usernameSubmittedError = false,
+                        usernameSubmittedPoolSyncing = false,
                         usernameContested = usernameContested, usernameExists = usernameExists,
                         usernameBlocked = usernameBlocked,
                         votingPeriodStart = if (firstCreatedAt == -1L) System.currentTimeMillis() else firstCreatedAt
@@ -871,6 +970,7 @@ class RequestUserNameViewModel @Inject constructor(
                 requiredAmount = requiredAmount,
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
+                usernameSubmittedPoolSyncing = false,
                 usernameCheckSuccess = false,
                 usernameCheckFailed = false,
                 usernameNonContestedLength = validateNonContestedUsernameSize(username),

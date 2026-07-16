@@ -450,6 +450,12 @@
     <!-- Shielded creation outcome unconfirmed (may be on chain) — no retry offered. -->
     <string name="username_request_ambiguous_title">Request may have gone through</string>
     <string name="username_request_ambiguous_message">We could not confirm the result. Do not submit again — the app will check and recover automatically.</string>
+    <!-- Calm notice when a shielded submit reached the SDK before the pool
+         finished syncing — nothing was spent; it just needs a moment. -->
+    <string name="username_shielded_pool_syncing_title">Almost ready</string>
+    <string name="username_shielded_pool_syncing">Your shielded balance is still syncing. Please wait a moment and try again.</string>
+    <!-- Disabled request-button label while the shielded pool is still syncing. -->
+    <string name="username_preparing_shielded_balance">Preparing shielded balance…</string>
     <string name="username_cost_info_noncontested_title">Non-contested username</string>
     <string name="username_cost_info_noncontested_message">Contains a number from 2 to 9 or is 20–23 characters long. Shield at least 0.15 Dash.</string>
     <string name="username_cost_info_contested_title">Contested username</string>

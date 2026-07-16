@@ -563,12 +563,12 @@ class SdkShieldedUsernameCreation internal constructor(
 
         // Shielded runtime preflights — nothing submitted if any fails.
         if (!shieldedBalanceService.ensureShieldedReady()) {
-            return notBroadcast("shielded runtime not ready", null)
+            return notBroadcast(REASON_RUNTIME_NOT_READY, null)
         }
         if (shieldedBalanceService.shieldedSyncStatus.value != ShieldedSyncStatus.READY) {
             // A mid-sync zero (or partial) balance is a placeholder, not
             // evidence — never spend against it.
-            return notBroadcast("shielded pool still syncing", null)
+            return notBroadcast(REASON_POOL_STILL_SYNCING, null)
         }
         val balance = try {
             shieldedBalanceService.observeShieldedBalance().first()
@@ -731,5 +731,30 @@ class SdkShieldedUsernameCreation internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkShieldedUsernameCreation::class.java)
+
+        /**
+         * The two preflight refusal reasons that mean "the shielded pool is
+         * not ready YET" (as opposed to a genuine error): the runtime has
+         * not finished bringing up, or the pool is still syncing so its
+         * balance is a mid-sync placeholder. Both are transient and
+         * retry-safe — nothing was spent — so the UI surfaces a calm "still
+         * preparing, try again in a moment" message instead of the red
+         * network-error dialog. These are the [SdkWriteResult.NotBroadcast]
+         * / [ShieldedUsernameSubmitState.NotSent] reasons emitted at the
+         * two preflights above; classify with [isPoolNotReadyReason]
+         * rather than string-matching at the call site.
+         */
+        const val REASON_RUNTIME_NOT_READY = "shielded runtime not ready"
+        const val REASON_POOL_STILL_SYNCING = "shielded pool still syncing"
+
+        /**
+         * Whether a [ShieldedUsernameSubmitState.NotSent]/
+         * [SdkWriteResult.NotBroadcast] reason is one of the transient
+         * pool-not-ready cases ([REASON_RUNTIME_NOT_READY] /
+         * [REASON_POOL_STILL_SYNCING]) — the caller should show the calm
+         * "still preparing" surface, not a hard error.
+         */
+        fun isPoolNotReadyReason(reason: String): Boolean =
+            reason == REASON_RUNTIME_NOT_READY || reason == REASON_POOL_STILL_SYNCING
     }
 }

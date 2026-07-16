@@ -33,6 +33,7 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.username.UsernameType
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
@@ -248,7 +249,44 @@ class RequestUserNameViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.usernameRequestSubmitting)
         assertTrue(state.usernameSubmittedError)
+        assertFalse(state.usernameSubmittedPoolSyncing)
         verify(exactly = 1) { shieldedUsernameCreation.acknowledge() }
+    }
+
+    @Test
+    fun shieldedNotSent_poolStillSyncing_surfacesCalmSyncingState_notTheRedError() =
+        runTest(dispatcher) {
+            // The live incident: the pool dropped back to SYNCING after a
+            // service teardown and the submit reached the SDK, which refused
+            // with "shielded pool still syncing". That must surface the calm
+            // "still preparing" state — NOT the red network-error dialog.
+            val viewModel = viewModel()
+
+            shieldedSubmitState.value = ShieldedUsernameSubmitState.Proving
+            shieldedSubmitState.value = ShieldedUsernameSubmitState.NotSent(
+                SdkShieldedUsernameCreation.REASON_POOL_STILL_SYNCING
+            )
+
+            val state = viewModel.uiState.value
+            assertFalse(state.usernameRequestSubmitting)
+            assertTrue(state.usernameSubmittedPoolSyncing)
+            assertFalse(state.usernameSubmittedError)
+            // Retry-safe (nothing spent) — acknowledged so a later submit works.
+            verify(exactly = 1) { shieldedUsernameCreation.acknowledge() }
+        }
+
+    @Test
+    fun shieldedNotSent_runtimeNotReady_alsoSurfacesTheCalmSyncingState() = runTest(dispatcher) {
+        val viewModel = viewModel()
+
+        shieldedSubmitState.value = ShieldedUsernameSubmitState.Proving
+        shieldedSubmitState.value = ShieldedUsernameSubmitState.NotSent(
+            SdkShieldedUsernameCreation.REASON_RUNTIME_NOT_READY
+        )
+
+        val state = viewModel.uiState.value
+        assertTrue(state.usernameSubmittedPoolSyncing)
+        assertFalse(state.usernameSubmittedError)
     }
 
     @Test
@@ -540,5 +578,138 @@ class RequestUserNameViewModelTest {
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
         assertTrue(viewModel.uiState.value.usernameRequestSubmitting)
+    }
+
+    // ── Pure request-button gate (Fix B) ────────────────────────────────────
+
+    @Test
+    fun buttonState_shieldedPathSyncing_isPreparingShielded() {
+        assertEquals(
+            UsernameSubmitButtonState.PreparingShielded,
+            usernameSubmitButtonState(
+                usernameType = UsernameType.Primary,
+                paymentSource = UsernamePaymentSource.SHIELDED_BALANCE,
+                shieldedSyncStatus = ShieldedSyncStatus.SYNCING,
+                enoughBalance = true,
+                usernameExists = false,
+                usernameContestable = true
+            )
+        )
+    }
+
+    @Test
+    fun buttonState_shieldedPathNotReady_isPreparingShielded() {
+        assertEquals(
+            UsernameSubmitButtonState.PreparingShielded,
+            usernameSubmitButtonState(
+                usernameType = UsernameType.Primary,
+                paymentSource = UsernamePaymentSource.SHIELDED_BALANCE,
+                shieldedSyncStatus = ShieldedSyncStatus.NOT_READY,
+                enoughBalance = true,
+                usernameExists = false,
+                usernameContestable = false
+            )
+        )
+    }
+
+    @Test
+    fun buttonState_shieldedPathReadyWithEnoughBalance_isEnabled() {
+        assertEquals(
+            UsernameSubmitButtonState.Enabled,
+            usernameSubmitButtonState(
+                usernameType = UsernameType.Primary,
+                paymentSource = UsernamePaymentSource.SHIELDED_BALANCE,
+                shieldedSyncStatus = ShieldedSyncStatus.READY,
+                enoughBalance = true,
+                usernameExists = false,
+                usernameContestable = true
+            )
+        )
+    }
+
+    @Test
+    fun buttonState_shieldedPathReadyButShortBalance_isDisabled() {
+        assertEquals(
+            UsernameSubmitButtonState.Disabled,
+            usernameSubmitButtonState(
+                usernameType = UsernameType.Primary,
+                paymentSource = UsernamePaymentSource.SHIELDED_BALANCE,
+                shieldedSyncStatus = ShieldedSyncStatus.READY,
+                enoughBalance = false,
+                usernameExists = false,
+                usernameContestable = true
+            )
+        )
+    }
+
+    @Test
+    fun buttonState_l1PathUnaffectedBySyncStatus() {
+        // The L1/Dash-balance path must never be gated on the shielded
+        // status: a syncing pool is irrelevant when paying from L1.
+        assertEquals(
+            UsernameSubmitButtonState.Enabled,
+            usernameSubmitButtonState(
+                usernameType = UsernameType.Primary,
+                paymentSource = UsernamePaymentSource.DASH_BALANCE,
+                shieldedSyncStatus = ShieldedSyncStatus.SYNCING,
+                enoughBalance = true,
+                usernameExists = false,
+                usernameContestable = false
+            )
+        )
+        assertEquals(
+            UsernameSubmitButtonState.Disabled,
+            usernameSubmitButtonState(
+                usernameType = UsernameType.Primary,
+                paymentSource = UsernamePaymentSource.DASH_BALANCE,
+                shieldedSyncStatus = ShieldedSyncStatus.SYNCING,
+                enoughBalance = false,
+                usernameExists = false,
+                usernameContestable = false
+            )
+        )
+    }
+
+    @Test
+    fun buttonState_secondaryPathIgnoresShieldedSyncStatus() {
+        // Secondary (instant) usernames are funded from the already-created
+        // identity — the shielded status never gates them.
+        assertEquals(
+            UsernameSubmitButtonState.Enabled,
+            usernameSubmitButtonState(
+                usernameType = UsernameType.Secondary,
+                paymentSource = UsernamePaymentSource.SHIELDED_BALANCE,
+                shieldedSyncStatus = ShieldedSyncStatus.SYNCING,
+                enoughBalance = false,
+                usernameExists = false,
+                usernameContestable = false
+            )
+        )
+        assertEquals(
+            UsernameSubmitButtonState.Disabled,
+            usernameSubmitButtonState(
+                usernameType = UsernameType.Secondary,
+                paymentSource = UsernamePaymentSource.SHIELDED_BALANCE,
+                shieldedSyncStatus = ShieldedSyncStatus.READY,
+                enoughBalance = true,
+                usernameExists = true,
+                usernameContestable = false
+            )
+        )
+    }
+
+    @Test
+    fun buttonState_existingName_isDisabledEvenWhenReadyAndFunded() {
+        assertEquals(
+            UsernameSubmitButtonState.Disabled,
+            usernameSubmitButtonState(
+                usernameType = UsernameType.Primary,
+                paymentSource = UsernamePaymentSource.DASH_BALANCE,
+                shieldedSyncStatus = ShieldedSyncStatus.READY,
+                enoughBalance = true,
+                usernameExists = true,
+                usernameContestable = false
+            )
+        )
     }
 }

@@ -65,6 +65,7 @@ class UsernameSubmitStatusDialogs(
     private var processingDialog: AdaptiveDialog? = null
     private var processingDismissedProgrammatically = false
     private var errorDialogShown = false
+    private var poolSyncingDialogShown = false
     private var ambiguousDialogShown = false
 
     fun observe() {
@@ -91,6 +92,14 @@ class UsernameSubmitStatusDialogs(
                 showErrorDialog()
             } else if (!state.usernameSubmittedError) {
                 errorDialogShown = false
+            }
+            // The pool-not-ready refusal is NOT an error: a calm "still
+            // preparing" surface (Fix A), not the red network-error dialog.
+            if (state.usernameSubmittedPoolSyncing && !poolSyncingDialogShown) {
+                poolSyncingDialogShown = true
+                showPoolSyncingDialog()
+            } else if (!state.usernameSubmittedPoolSyncing) {
+                poolSyncingDialogShown = false
             }
             if (state.usernameSubmittedAmbiguous && !ambiguousDialogShown) {
                 ambiguousDialogShown = true
@@ -161,6 +170,24 @@ class UsernameSubmitStatusDialogs(
                 }
             }
         }
+    }
+
+    /**
+     * The shielded pool was not ready yet when the submit reached the SDK
+     * (still syncing / runtime bringing up) — provably nothing was spent
+     * and it will be ready shortly, so this is a calm single-button
+     * notice, NOT the red "network error" dialog. Fix B's live gate
+     * normally keeps the button disabled until the pool is READY; this
+     * covers the residual race.
+     */
+    private fun showPoolSyncingDialog() {
+        AdaptiveDialog.create(
+            R.drawable.ic_hourglass,
+            fragment.getString(R.string.username_shielded_pool_syncing_title),
+            fragment.getString(R.string.username_shielded_pool_syncing),
+            fragment.getString(R.string.button_ok),
+            null
+        ).show(fragment.requireActivity()) { }
     }
 
     /**
