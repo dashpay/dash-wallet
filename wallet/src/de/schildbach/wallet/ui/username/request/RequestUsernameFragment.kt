@@ -18,6 +18,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import org.dash.wallet.common.services.AuthenticationManager
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.username.CreateUsernameActions
@@ -52,6 +53,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
     private var handler: Handler = Handler()
     private lateinit var checkUsernameNotExistRunnable: Runnable
     private lateinit var keyboardUtil: KeyboardUtil
+
+    // Guards the post-completion route/finish: the identity observer can emit
+    // repeatedly and the dialog dismiss can race it, but the completion must
+    // route and finish exactly once (a contested completion would otherwise
+    // stack a second More-screen activity).
+    private var completionHandled = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -180,8 +187,10 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         UsernameSubmitStatusDialogs(this, requestUserNameViewModel, authManager) {
             // The user explicitly closed the processing dialog: the
             // creation keeps running (foreground service / app scope) and
-            // the home screen reports the result — leave to it.
-            requireActivity().finish()
+            // the destination screen reports the result. Route contested
+            // completions to the More screen's voting tile, non-contested
+            // ones back to Home.
+            finishAfterCompletion()
         }.observe()
 
         // One ADVISORY platform-health probe per screen entry: warn when
@@ -438,9 +447,11 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // (observed live). While it shows, the dialog's dismissal
                 // callback does the finishing; entries with a creation
                 // already in flight (no submit this session) keep the
-                // immediate exit.
+                // immediate exit. Contested completions route to the More
+                // screen's voting tile instead of Home (see
+                // finishAfterCompletion).
                 if (!requestUserNameViewModel.uiState.value.usernameRequestSubmitting) {
-                    requireActivity().finish()
+                    finishAfterCompletion()
                 }
             }
         }
@@ -483,6 +494,30 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             check -> R.drawable.ic_check_circle_green
             else -> R.drawable.ic_error_circle
         }
+    }
+
+    /**
+     * End the create-username flow, routing to where the completed username
+     * belongs: a CONTESTED / in-voting username has no home welcome tile —
+     * its status lives on the More screen's username-voting tile — so bring
+     * MainActivity forward on the More tab (the established
+     * `createIntent(destination)` path, mirroring ShieldedTransferExecutor's
+     * post-success route) before finishing. Non-contested completions return
+     * to Home, where fix (a)'s welcome tile shows. Shared by both finish
+     * sites (the L1 processing-dialog dismiss and the identity-state
+     * observer) and guarded so it runs exactly once.
+     */
+    private fun finishAfterCompletion() {
+        if (completionHandled) return
+        completionHandled = true
+        val route = usernameCompletionRoute(
+            creationState = dashPayViewModel.blockchainIdentity.value?.creationState,
+            usernameContestable = requestUserNameViewModel.uiState.value.usernameContestable
+        )
+        if (route == UsernameCompletionRoute.MORE) {
+            startActivity(MainActivity.createIntent(requireContext(), R.id.moreFragment))
+        }
+        requireActivity().finish()
     }
 
     private suspend fun checkViewConfirmDialog() {

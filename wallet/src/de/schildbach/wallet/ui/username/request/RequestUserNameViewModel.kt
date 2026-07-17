@@ -210,6 +210,40 @@ fun usernameSubmitButtonState(
     }
 }
 
+/** Where the create-username flow lands the user after a completed submit. */
+enum class UsernameCompletionRoute {
+    /** Back to Home — a non-contested completion shows the home welcome tile. */
+    HOME,
+
+    /**
+     * To the More screen — a CONTESTED / in-voting username has no home
+     * welcome tile; its status lives on the More screen's username-voting
+     * tile, so the completion must land there instead of returning to Home.
+     */
+    MORE
+}
+
+/**
+ * Pure post-completion routing decision (host-JVM unit-testable, following
+ * the [usernameSubmitButtonState] helper pattern). A contested name goes to
+ * [IdentityCreationState.VOTING] and is surfaced on the More screen's voting
+ * tile, so route [UsernameCompletionRoute.MORE]; everything else returns
+ * [UsernameCompletionRoute.HOME]. Both signals are OR-ed so either the
+ * persisted identity state (VOTING) OR the UI-known contestability of the
+ * just-submitted name is sufficient — whichever is available at the finish
+ * site.
+ */
+fun usernameCompletionRoute(
+    creationState: IdentityCreationState?,
+    usernameContestable: Boolean
+): UsernameCompletionRoute {
+    return if (creationState == IdentityCreationState.VOTING || usernameContestable) {
+        UsernameCompletionRoute.MORE
+    } else {
+        UsernameCompletionRoute.HOME
+    }
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class RequestUserNameViewModel @Inject constructor(
