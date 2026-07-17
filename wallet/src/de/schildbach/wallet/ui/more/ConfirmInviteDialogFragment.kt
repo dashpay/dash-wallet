@@ -50,7 +50,11 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
     private val binding by viewBinding(DialogConfirmTopupBinding::bind)
 
     private val viewModel by viewModels<ConfirmTopupDialogViewModel>()
-    private val invitationFragmentViewModel by viewModels<InvitationFragmentViewModel>()
+    // activity-scoped so the shielded invite link this dialog publishes is
+    // observed by InviteCreatedFragment (same shared VM), not lost to a fresh
+    // fragment-scoped instance (which left the created screen on "Loading
+    // Invite…" forever for shielded invites).
+    private val invitationFragmentViewModel by activityViewModels<InvitationFragmentViewModel>()
     private val args by navArgs<ConfirmInviteDialogFragmentArgs>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

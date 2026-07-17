@@ -20,7 +20,7 @@ package de.schildbach.wallet.ui.invite
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
@@ -56,7 +56,7 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     private val shieldedContestedFee = Coin.parseCoin("0.3")
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val viewModel by viewModels<InvitationFragmentViewModel>()
+    private val viewModel by activityViewModels<InvitationFragmentViewModel>()
     private val args by navArgs<InvitationFeeDialogFragmentArgs>()
 
     @OptIn(ExperimentalCoroutinesApi::class)
