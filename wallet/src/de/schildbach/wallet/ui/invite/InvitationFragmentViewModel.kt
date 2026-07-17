@@ -70,24 +70,24 @@ import javax.inject.Inject
  * unit-testable). Drives both the "Confirm and pay" gate ([inviteFeeGate])
  * and the insufficiency message.
  *
- * - Private invite ([shielded] == true): the shielded-pool fund-minimum —
- *   [Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED] (0.35) contested /
- *   [Constants.SHIELDED_USERNAME_FUND_MIN] (0.15) non-contested (the 0.3 /
- *   0.1 Type-20 exit denomination padded for the shielded-spend fee).
+ * - Private invite ([shielded] == true): the Type-20 exit denomination the
+ *   invite withdraws from the pool — 0.3 contested / 0.1 non-contested — so
+ *   the payment validation matches the amount shown on the tiles and the
+ *   confirm screen (not the padded 0.15/0.35 pool fund-minimum).
  * - L1 invite: the L1 fee — [Constants.DASH_PAY_FEE_CONTESTED] (0.25)
  *   contested / [Constants.DASH_PAY_FEE] (0.03) non-contested.
  */
 internal fun inviteFeeRequirement(shielded: Boolean, contestedSelected: Boolean): Coin {
     return if (shielded) {
-        if (contestedSelected) {
-            Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED
-        } else {
-            Constants.SHIELDED_USERNAME_FUND_MIN
-        }
+        if (contestedSelected) SHIELDED_INVITE_CONTESTED else SHIELDED_INVITE_NON_CONTESTED
     } else {
         if (contestedSelected) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
     }
 }
+
+/** Type-20 exit denominations withdrawn from the shielded pool for an invite. */
+private val SHIELDED_INVITE_NON_CONTESTED: Coin = Coin.parseCoin("0.1")
+private val SHIELDED_INVITE_CONTESTED: Coin = Coin.parseCoin("0.3")
 
 /**
  * Pure "Confirm and pay" gate for the invitation-fee dialog (host-JVM

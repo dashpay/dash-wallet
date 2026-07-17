@@ -46,12 +46,11 @@ class InviteFeeGateTest {
     }
 
     @Test
-    fun `requirement is the shielded-pool minimum for a private invite`() {
-        assertEquals(Constants.SHIELDED_USERNAME_FUND_MIN, inviteFeeRequirement(shielded = true, contestedSelected = false))
-        assertEquals(
-            Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED,
-            inviteFeeRequirement(shielded = true, contestedSelected = true)
-        )
+    fun `requirement is the withdrawn Type-20 denomination for a private invite`() {
+        // Matches the amount shown on the tiles / confirm screen (0.1 / 0.3),
+        // not the padded pool fund-minimum.
+        assertEquals(Coin.parseCoin("0.1"), inviteFeeRequirement(shielded = true, contestedSelected = false))
+        assertEquals(Coin.parseCoin("0.3"), inviteFeeRequirement(shielded = true, contestedSelected = true))
     }
 
     // ---- L1 invite (args.shielded == false) ----
@@ -92,7 +91,7 @@ class InviteFeeGateTest {
                 shielded = true,
                 l1Balance = Coin.ZERO,
                 shieldedReady = true,
-                shieldedBalance = Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED, // 0.35
+                shieldedBalance = Coin.parseCoin("0.3"), // the withdrawn contested amount
                 contestedSelected = true
             )
         )
@@ -100,13 +99,13 @@ class InviteFeeGateTest {
 
     @Test
     fun `shielded ready between the two minimums allows only the non-contested selection`() {
-        val balance = Coin.parseCoin("0.20") // 0.15 <= balance < 0.35
+        val balance = Coin.parseCoin("0.20") // 0.1 <= balance < 0.3
         assertFalse(
-            "contested needs 0.35",
+            "contested needs 0.3",
             inviteFeeGate(true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance, contestedSelected = true)
         )
         assertTrue(
-            "non-contested needs only 0.15",
+            "non-contested needs only 0.1",
             inviteFeeGate(true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance, contestedSelected = false)
         )
     }
