@@ -61,4 +61,44 @@ class UsernameCompletionRouteTest {
             usernameCompletionRoute(null, usernameContestable = false)
         )
     }
+
+    @Test
+    fun `dual creation routes to More via the primary contestability`() {
+        // Dual (contested primary + instant secondary): the SECONDARY screen
+        // finishes last, so its own contestable flag is false and the state
+        // may not have flipped to VOTING yet — the primary's contestability
+        // must still route MORE (observed live: dual completion went Home).
+        assertEquals(
+            UsernameCompletionRoute.MORE,
+            usernameCompletionRoute(
+                IdentityCreationState.USERNAME_SECONDARY_REGISTERING,
+                usernameContestable = false,
+                primaryUsernameContestable = true
+            )
+        )
+    }
+
+    @Test
+    fun `dual creation with the state already at VOTING routes to More`() {
+        assertEquals(
+            UsernameCompletionRoute.MORE,
+            usernameCompletionRoute(
+                IdentityCreationState.VOTING,
+                usernameContestable = false,
+                primaryUsernameContestable = true
+            )
+        )
+    }
+
+    @Test
+    fun `non-contested single with a non-contestable primary still routes Home`() {
+        assertEquals(
+            UsernameCompletionRoute.HOME,
+            usernameCompletionRoute(
+                IdentityCreationState.DONE,
+                usernameContestable = false,
+                primaryUsernameContestable = false
+            )
+        )
+    }
 }

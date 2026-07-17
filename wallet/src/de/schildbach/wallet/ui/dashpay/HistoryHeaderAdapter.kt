@@ -32,12 +32,56 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HistoryHeaderViewBinding
 import org.slf4j.LoggerFactory
 
+/**
+ * Pure hello-card visibility gate (host-JVM unit-testable, following the
+ * `usernameSubmitButtonState` helper pattern). The card shows for:
+ *
+ * - a creation in progress / complete / errored, until dismissed (the
+ *   pre-existing gate); and
+ * - a DUAL creation whose contested PRIMARY is still in VOTING but whose
+ *   INSTANT secondary is already registered ([BlockchainIdentityBaseData
+ *   .usernameSecondary] present): the instant name is usable immediately, so
+ *   the welcome card must show for it while the vote runs (observed live: a
+ *   dual creation had no welcome tile). [votingDualDismissed] is that card's
+ *   own persisted dismissal — the state machine's DONE_AND_DISMISS cannot be
+ *   used while the state is VOTING.
+ *
+ * A contested-only creation in VOTING (no secondary) still shows NO card —
+ * nothing is usable yet; its status lives on the More screen's voting tile.
+ * Restore paths land on DONE_AND_DISMISS and stay hidden, as before.
+ */
+internal fun helloCardEligible(
+    blockchainIdentityData: BlockchainIdentityBaseData,
+    votingDualDismissed: Boolean
+): Boolean {
+    val votingWithInstantUsername = blockchainIdentityData.votingInProgress &&
+        !blockchainIdentityData.usernameSecondary.isNullOrEmpty() &&
+        !votingDualDismissed
+    return votingWithInstantUsername ||
+        (
+            (
+                blockchainIdentityData.creationInProgress ||
+                    blockchainIdentityData.creationComplete ||
+                    blockchainIdentityData.creationError
+                ) &&
+                !blockchainIdentityData.creationCompleteDismissed
+            )
+}
+
 class HistoryHeaderAdapter(
     private val preferences: SharedPreferences
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     companion object {
         const val PREFS_FILE_NAME = "TransactionsAdapter.prefs"
         const val PREFS_KEY_HIDE_JOIN_DASHPAY_CARD = "hide_join_dashpay_card"
+
+        /**
+         * Persisted dismissal of the DUAL-creation welcome card shown while
+         * the contested primary is in VOTING (see [helloCardEligible]) — a
+         * SharedPreferences flag because the state machine's DONE_AND_DISMISS
+         * must not be written while the state is VOTING.
+         */
+        const val PREFS_KEY_HIDE_VOTING_DUAL_HELLO_CARD = "hide_voting_dual_hello_card"
         private val log = LoggerFactory.getLogger(HistoryHeaderAdapter::class.java)
     }
 
@@ -273,9 +317,22 @@ class HistoryHeaderAdapter(
                 binding.identityCreation.icon.visibility = View.GONE
                 binding.identityCreation.forwardArrow.visibility = View.VISIBLE
                 binding.identityCreation.progress.visibility = View.GONE
-                binding.identityCreation.title.text = binding.root.context.getString(R.string.processing_done_title,
-                    blockchainIdentityData.username)
-                binding.identityCreation.subtitle.setText(R.string.processing_voting_subtitle)
+                val instantUsername = blockchainIdentityData.usernameSecondary
+                if (!instantUsername.isNullOrEmpty()) {
+                    // DUAL creation: the INSTANT secondary is registered and
+                    // usable right now, so this is its welcome card — the
+                    // contested primary's voting status lives on the More
+                    // screen's voting tile (see helloCardEligible).
+                    binding.identityCreation.title.text = binding.root.context.getString(
+                        R.string.processing_done_title,
+                        instantUsername
+                    )
+                    binding.identityCreation.subtitle.setText(R.string.processing_done_subtitle)
+                } else {
+                    binding.identityCreation.title.text = binding.root.context.getString(R.string.processing_done_title,
+                        blockchainIdentityData.username)
+                    binding.identityCreation.subtitle.setText(R.string.processing_voting_subtitle)
+                }
             }
             IdentityCreationState.DONE -> {
                 binding.identityCreation.icon.visibility = View.GONE
@@ -305,10 +362,22 @@ class HistoryHeaderAdapter(
     }
 
     private fun shouldShowHelloCard(blockchainIdentityData: BlockchainIdentityBaseData): Boolean {
-        return (blockchainIdentityData.creationInProgress ||
-                blockchainIdentityData.creationComplete ||
-                blockchainIdentityData.creationError) &&
-                !blockchainIdentityData.creationCompleteDismissed
+        return helloCardEligible(
+            blockchainIdentityData,
+            votingDualDismissed = preferences.getBoolean(PREFS_KEY_HIDE_VOTING_DUAL_HELLO_CARD, false)
+        )
+    }
+
+    /**
+     * Persist + apply the dismissal of the VOTING-dual welcome card (the
+     * DONE card's dismissal advances the state machine instead — see
+     * [helloCardEligible]).
+     */
+    fun dismissVotingDualHelloCard() {
+        preferences.edit().putBoolean(PREFS_KEY_HIDE_VOTING_DUAL_HELLO_CARD, true).apply()
+        if (::binding.isInitialized) {
+            bindBlockchainIdentity(blockchainIdentityData)
+        }
     }
 
     private fun shouldShowJoinDashPay(canJoin: Boolean): Boolean {

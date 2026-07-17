@@ -228,16 +228,29 @@ enum class UsernameCompletionRoute {
  * the [usernameSubmitButtonState] helper pattern). A contested name goes to
  * [IdentityCreationState.VOTING] and is surfaced on the More screen's voting
  * tile, so route [UsernameCompletionRoute.MORE]; everything else returns
- * [UsernameCompletionRoute.HOME]. Both signals are OR-ed so either the
- * persisted identity state (VOTING) OR the UI-known contestability of the
- * just-submitted name is sufficient — whichever is available at the finish
- * site.
+ * [UsernameCompletionRoute.HOME]. The signals are OR-ed so whichever is
+ * available at the finish site suffices:
+ *
+ * - [creationState] == VOTING: the persisted identity state;
+ * - [usernameContestable]: the UI-known contestability of the name the
+ *   FINISHING screen submitted;
+ * - [primaryUsernameContestable]: the contestability of the flow's PRIMARY
+ *   name. Load-bearing for a DUAL creation (contested primary + instant
+ *   secondary): the flow's LAST screen is the secondary one, whose own
+ *   [usernameContestable] is false by definition (instant names are
+ *   non-contestable) and whose dismiss can precede the VOTING flip — the
+ *   primary's contestability must still route MORE (observed live: dual
+ *   completion returned Home).
  */
 fun usernameCompletionRoute(
     creationState: IdentityCreationState?,
-    usernameContestable: Boolean
+    usernameContestable: Boolean,
+    primaryUsernameContestable: Boolean = false
 ): UsernameCompletionRoute {
-    return if (creationState == IdentityCreationState.VOTING || usernameContestable) {
+    return if (creationState == IdentityCreationState.VOTING ||
+        usernameContestable ||
+        primaryUsernameContestable
+    ) {
         UsernameCompletionRoute.MORE
     } else {
         UsernameCompletionRoute.HOME

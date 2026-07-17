@@ -657,6 +657,17 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 safeNavigate(WalletFragmentDirections.homeToSearchUser())
                 // hide "Hello Card" after first click
                 viewModel.dismissUsernameCreatedCard()
+            } else if (blockchainIdentityData.creationState == IdentityCreationState.VOTING &&
+                !blockchainIdentityData.usernameSecondary.isNullOrEmpty()
+            ) {
+                // DUAL creation welcome card (instant secondary usable while
+                // the contested primary is in voting): same first-click
+                // behavior as DONE, but the dismissal persists via the
+                // header's own pref — DONE_AND_DISMISS must not be written
+                // while the state machine is at VOTING (it would kill the
+                // More screen's voting tile).
+                safeNavigate(WalletFragmentDirections.homeToSearchUser())
+                header.dismissVotingDualHelloCard()
             } else {
                 // not possible to get here?
             }

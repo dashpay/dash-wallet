@@ -34,6 +34,7 @@ import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dashj.platform.dashpay.UsernameRequestStatus
+import org.dashj.platform.sdk.platform.Names
 import java.util.Date
 
 @AndroidEntryPoint
@@ -510,9 +511,22 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
     private fun finishAfterCompletion() {
         if (completionHandled) return
         completionHandled = true
+        // The PRIMARY name of this creation: the persisted identity's
+        // username when available, else the shared ViewModel's requested
+        // name (both fragments of a dual flow share the activity-scoped
+        // ViewModel, so this holds the contested primary even when the
+        // SECONDARY screen is the one finishing).
+        val primaryName = dashPayViewModel.blockchainIdentity.value?.username
+            ?: requestUserNameViewModel.requestedUserName
+        val primaryContestable = try {
+            primaryName?.let { Names.isUsernameContestable(it) } == true
+        } catch (e: Exception) {
+            false
+        }
         val route = usernameCompletionRoute(
             creationState = dashPayViewModel.blockchainIdentity.value?.creationState,
-            usernameContestable = requestUserNameViewModel.uiState.value.usernameContestable
+            usernameContestable = requestUserNameViewModel.uiState.value.usernameContestable,
+            primaryUsernameContestable = primaryContestable
         )
         if (route == UsernameCompletionRoute.MORE) {
             startActivity(MainActivity.createIntent(requireContext(), R.id.moreFragment))
