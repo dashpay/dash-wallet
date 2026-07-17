@@ -268,17 +268,15 @@ class ShieldedTransferExecutor @Inject constructor(
 
         /**
          * Stall-watchdog threshold: no terminal result within this →
-         * [ShieldedSubmitState.Stalled]. Sized generously against the REAL
-         * cost of the spend on slow hardware — the Halo 2 proof plus the
-         * asset-lock islock verification legitimately runs well past 40s on
-         * older devices (observed: Galaxy S21), which was firing the "still
-         * working" notice on normal-but-slow shields (H3). 90s only trips on
-         * a genuinely wedged spend (live incident: a Rust FFI deadlock kept
-         * the coroutine RUNNABLE inside the JNI call for 11+ minutes —
-         * uncancellable from Kotlin). It stays a SOFT advisory: the spend
-         * continues past it; this is not a cancel/timeout.
+         * [ShieldedSubmitState.Stalled]. 40s (Brian's call): on slow
+         * hardware (Galaxy S21) the Halo 2 proof + asset-lock islock
+         * verification can legitimately run past this, but the notice now
+         * reads unambiguously as still-in-progress (spinner, "Continue in
+         * the background"), so firing early is informative, not alarming.
+         * It stays a SOFT advisory: the spend continues past it; this is
+         * not a cancel/timeout.
          */
-        internal const val STALL_TIMEOUT_MS = 90L * 1000
+        internal const val STALL_TIMEOUT_MS = 40L * 1000
     }
 
     /** Test seam: the spend blocks for a ~30s Halo 2 proof and must stay off main. */

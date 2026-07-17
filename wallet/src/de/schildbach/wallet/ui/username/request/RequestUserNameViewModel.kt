@@ -332,6 +332,14 @@ class RequestUserNameViewModel @Inject constructor(
             launch {
                 runCatching { shieldedBalanceService.ensureShieldedReady() }
                     .onFailure { log.warn("shielded bring-up failed", it) }
+                // Immediately re-evaluate the pool (incl. freshly-submitted
+                // pending wallet-shield locks): entering this screen right
+                // after a shield could catch a stale READY from before the
+                // pending lock registered, briefly enabling the button with
+                // no "Preparing shielded balance" gate (observed on S22).
+                // Same entry-kick pattern as the More screen's syncNow().
+                runCatching { shieldedBalanceService.syncNow() }
+                    .onFailure { log.warn("shielded entry sync kick failed", it) }
             }
             launch {
                 shieldedBalanceService.observeShieldedBalance()
