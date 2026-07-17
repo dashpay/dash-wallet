@@ -21,9 +21,11 @@ import com.google.gson.JsonParser
 import de.schildbach.wallet.Constants
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Context
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.crypto.BLSPublicKey
+import org.bitcoinj.crypto.BLSLazySignature
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager
+import org.bitcoinj.quorums.FinalCommitment
 import org.bitcoinj.quorums.LLMQParameters
 import org.bitcoinj.quorums.Quorum
 import org.bitcoinj.quorums.SimplifiedQuorumList
@@ -235,13 +237,13 @@ internal class SdkSourcedMasternodeListManager(
         }
         for ((hashHex, key) in keys) {
             try {
-                // Basic (non-legacy) BLS scheme — active on both mainnet
-                // and testnet; serialize(false) round-trips these 48 bytes.
-                val publicKey = BLSPublicKey(key, false)
                 val hash = Sha256Hash.wrap(hashHex)
-                list.addQuorum(Quorum(params, llmqParameters, hash, publicKey))
+                list.addQuorum(Quorum(llmqParameters, synthesizeCommitment(params, llmqParameters, hash, key)))
                 list.addQuorum(
-                    Quorum(params, llmqParameters, Sha256Hash.wrapReversed(hash.bytes), publicKey)
+                    Quorum(
+                        llmqParameters,
+                        synthesizeCommitment(params, llmqParameters, Sha256Hash.wrapReversed(hash.bytes), key)
+                    )
                 )
             } catch (e: Exception) {
                 log.warn("skipping malformed SDK quorum entry {}…: {}", hashHex.take(16), e.toString())
@@ -249,7 +251,57 @@ internal class SdkSourcedMasternodeListManager(
         }
         return list
     }
+
+    /**
+     * Build a fully-formed [FinalCommitment] for a quorum whose only known
+     * fields are its [quorumHash] and 48-byte basic-scheme threshold
+     * [publicKey] (all the SDK's `currentQuorumsInfo` carries).
+     *
+     * The 13-arg constructor is deliberate: it computes and sets the
+     * message `length`, which the 4-arg `Quorum(params, params, hash, key)`
+     * path does NOT. Without a set length,
+     * [SimplifiedQuorumList.addQuorum] → `addCommitment` →
+     * `commitment.getHash()` serializes the commitment and throws "Length
+     * field has not been set in FinalCommitment" — every entry was silently
+     * dropped and the bridge served an empty list, so every DAPI proof
+     * failed "quorum not found" post-cutover.
+     *
+     * Only [quorumHash] and [publicKey] affect proof verification: the rust
+     * provider matches on `quorumHash` and reads back the threshold key.
+     * The signer/valid-member bitsets, vvec hash, and BLS signatures are
+     * placeholders (zeroed) whose sole job is to make the commitment
+     * serialize so its length resolves. Version 3 = BASIC_BLS non-indexed,
+     * the scheme active on mainnet and testnet.
+     */
+    private fun synthesizeCommitment(
+        params: NetworkParameters,
+        llmqParameters: LLMQParameters,
+        quorumHash: Sha256Hash,
+        publicKey: ByteArray
+    ): FinalCommitment {
+        val quorumSize = llmqParameters.size
+        val bitsetBytes = ByteArray((quorumSize + 7) / 8)
+        val emptySignature = BLSLazySignature(params, ByteArray(BLS_SIGNATURE_SIZE), 0, false)
+        return FinalCommitment(
+            params,
+            FinalCommitment.BASIC_BLS_NON_INDEXED_QUORUM_VERSION,
+            llmqParameters.type.value,
+            quorumHash,
+            0,
+            quorumSize,
+            bitsetBytes,
+            quorumSize,
+            bitsetBytes,
+            publicKey,
+            Sha256Hash.ZERO_HASH,
+            emptySignature,
+            emptySignature
+        )
+    }
 }
+
+/** A BLS signature is 96 bytes in both the legacy and basic schemes. */
+private const val BLS_SIGNATURE_SIZE = 96
 
 /**
  * Injectable facade: SDK-sourced quorum threshold keys plus the
