@@ -248,6 +248,23 @@ class PlatformSynchronizationService @Inject constructor(
         syncScope.launch {
             bindJob.join()
             l1ShadowSyncService.startIfEnabled()
+            // Bring the SHIELDED runtime up at startup too (Brian): it used
+            // to start only when a shielded UI screen called
+            // ensureShieldedReady(), so until the user visited More (or a
+            // username/invite flow) every other surface read a NOT_READY
+            // pool and "falsely thought there were no shielded funds" — and
+            // cutover readiness stalled on an untouched launch. Idempotent,
+            // self-gated (returns false unless USE_KOTLIN_SDK_SHIELDED is
+            // on), and it kicks the pending-wallet-shield resume sweep;
+            // syncNow() then lands fresh notes promptly. stopSdkEngines()
+            // remains the symmetric teardown.
+            launch {
+                runCatching {
+                    if (shieldedBalanceService.ensureShieldedReady()) {
+                        shieldedBalanceService.syncNow()
+                    }
+                }.onFailure { log.warn("startup shielded bring-up failed", it) }
+            }
             // DIP-15 friend-chain backfill (docs/kotlin-sdk-migration-plan.md;
             // scratchpad/txdiff/FINDINGS.md): the app keeps DashPay contacts on
             // dashj and never drives the SDK's contact-sync path, so the bound
