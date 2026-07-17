@@ -123,6 +123,10 @@ class PlatformServiceImplementation @Inject constructor(
     override val client: DapiClient by lazy { platform.client }
     override val params: NetworkParameters = Constants.NETWORK_PARAMETERS
     private lateinit var masternodeListManager: SimplifiedMasternodeListManager
+
+    /** One-shot flag so an unwired quorum lookup logs once, not per call. */
+    @Volatile
+    private var loggedUnwiredQuorumLookup = false
     companion object {
         private val log = LoggerFactory.getLogger(PlatformServiceImplementation::class.java)
     }
@@ -133,21 +137,45 @@ class PlatformServiceImplementation @Inject constructor(
                 quorumHashBytes: ByteArray?,
                 coreChainLockedHeight: Int
             ): ByteArray? {
-                val quorumHash = Sha256Hash.wrap(quorumHashBytes)
-                var quorumPublicKey: ByteArray? = null
-                log.info("searching for quorum: $quorumType, $quorumHash, $coreChainLockedHeight")
-                Context.propagate(walletDataProvider.wallet!!.context)
-                masternodeListManager.getQuorumListAtTip(
-                    LLMQParameters.LLMQType.fromValue(
-                        quorumType
-                    )
-                ).forEachQuorum(true) {
-                    if (it.llmqType.value == quorumType && it.quorumHash == quorumHash) {
-                        quorumPublicKey = it.quorumPublicKey.serialize(false)
+                // Post-cutover (Phase 5d) the dashj engine may be held, and
+                // until BlockchainServiceImpl wires the SDK-sourced quorum
+                // manager this field is uninitialized. A thrown exception
+                // here crosses a JNI boundary into the rust DAPI client —
+                // observed live as lateinit crash spam plus banned DAPI
+                // addresses — so degrade to "not found" instead (contained,
+                // logged once).
+                if (!::masternodeListManager.isInitialized) {
+                    if (!loggedUnwiredQuorumLookup) {
+                        loggedUnwiredQuorumLookup = true
+                        log.warn(
+                            "quorum lookup before a masternode list manager is wired " +
+                                "(cutover holding dashj?) — returning not-found until " +
+                                "setMasternodeListManager runs"
+                        )
                     }
+                    return null
                 }
-                log.info("searching for quorum: result: ${quorumPublicKey?.toHex()}")
-                return quorumPublicKey
+                return try {
+                    val quorumHash = Sha256Hash.wrap(quorumHashBytes)
+                    var quorumPublicKey: ByteArray? = null
+                    log.info("searching for quorum: $quorumType, $quorumHash, $coreChainLockedHeight")
+                    walletDataProvider.wallet?.context?.let { Context.propagate(it) }
+                    masternodeListManager.getQuorumListAtTip(
+                        LLMQParameters.LLMQType.fromValue(
+                            quorumType
+                        )
+                    ).forEachQuorum(true) {
+                        if (it.llmqType.value == quorumType && it.quorumHash == quorumHash) {
+                            quorumPublicKey = it.quorumPublicKey.serialize(false)
+                        }
+                    }
+                    log.info("searching for quorum: result: ${quorumPublicKey?.toHex()}")
+                    quorumPublicKey
+                } catch (e: Exception) {
+                    // Never throw across the JNI callback boundary.
+                    log.warn("quorum lookup failed: {}", e.toString())
+                    null
+                }
             }
 
             override fun getDataContract(identifier: org.dashj.platform.sdk.Identifier?): ByteArray {

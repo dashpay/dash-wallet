@@ -249,6 +249,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Inject lateinit var platformSyncService: PlatformSyncService
     @Inject lateinit var identityRepo: IdentityRepository
     @Inject lateinit var platformRepo: PlatformRepo
+    @Inject lateinit var sdkQuorumDataSource: de.schildbach.wallet.service.platform.sdk.SdkQuorumDataSource
     @Inject lateinit var topUpRepository: TopUpRepository
 
     @Inject lateinit var  packageInfoProvider: PackageInfoProvider
@@ -1659,6 +1660,30 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 dashjEngineMayStart = runCatching { cutoverCoordinator.dashjEngineMayStart() }
                     .getOrDefault(true)
                 log.info("Phase 5d cutover gate: dashjEngineMayStart={}", dashjEngineMayStart)
+
+                if (!dashjEngineMayStart && Constants.SUPPORTS_PLATFORM) {
+                    // SDK-sourced quorums (Phase 5d follow-up): with the dashj
+                    // engine held, checkService() never runs initDashSync() /
+                    // setMasternodeListManager(), so the dashj-platform DAPI
+                    // client had no quorum source — every proof verification
+                    // failed ("quorum not found"), each DAPI address got
+                    // banned (NoAvailableAddresses; DashPay dark) and the
+                    // quorum callback spammed lateinit crashes (observed live
+                    // on the cutover rehearsal). Wire Platform's quorum
+                    // lookups to the Kotlin SDK's getCurrentQuorumsInfo-backed
+                    // source instead; the bridge manager's empty masternode
+                    // list makes DAPI addresses fall back to the network's
+                    // default HP masternode list.
+                    runCatching {
+                        platformRepo.platform.setMasternodeListManager(
+                            sdkQuorumDataSource.createMasternodeListManager()
+                        )
+                    }.onSuccess {
+                        log.info("cutover committed — Platform quorum lookups wired to the SDK-sourced quorum list")
+                    }.onFailure {
+                        log.warn("failed to wire SDK-sourced quorums for Platform", it)
+                    }
+                }
 
                 onCreateCompleted.complete(Unit)
                 log.info(".onCreate() finished")
