@@ -41,14 +41,24 @@ class RestoreIdentityOperation(val application: Application) {
      */
     val allOperationsData = workManager.getWorkInfosByTagLiveData(RestoreIdentityOperation::class.qualifiedName!!)
 
+    /**
+     * @param fromCreation true only for a FRESH creation handoff (the
+     *   shielded/Type-20 username create routes the newly created on-chain
+     *   identity here) — the completion then stops at
+     *   [IdentityCreationState.DONE] so the home welcome tile shows, matching
+     *   the L1 [de.schildbach.wallet.ui.dashpay.CreateIdentityService] path.
+     *   A genuine device restore leaves this false and advances straight to
+     *   DONE_AND_DISMISS (no welcome tile).
+     */
     @SuppressLint("EnqueueWork")
-    fun create(identity: String, retry: Boolean = false): WorkContinuation {
+    fun create(identity: String, retry: Boolean = false, fromCreation: Boolean = false): WorkContinuation {
         val password = SecurityGuard.getInstance().retrievePassword()
         val verifyIdentityWorker = OneTimeWorkRequestBuilder<RestoreIdentityWorker>()
                 .setInputData(
                     workDataOf(
                         RestoreIdentityWorker.KEY_PASSWORD to password,
-                        RestoreIdentityWorker.KEY_IDENTITY to identity
+                        RestoreIdentityWorker.KEY_IDENTITY to identity,
+                        RestoreIdentityWorker.KEY_FROM_CREATION to fromCreation
                     )
                 )
                 .addTag("identity:$identity")

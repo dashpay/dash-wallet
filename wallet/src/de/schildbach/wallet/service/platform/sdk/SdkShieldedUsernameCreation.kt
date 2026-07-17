@@ -505,7 +505,7 @@ class SdkShieldedUsernameCreation internal constructor(
         },
         displayHrp = { shieldedHrp(toSdkNetwork(Constants.NETWORK_PARAMETERS)) },
         handOffToLegacy = { identityId ->
-            RestoreIdentityOperation(walletApplication).create(identityId).enqueue()
+            RestoreIdentityOperation(walletApplication).create(identityId, fromCreation = true).enqueue()
         },
         executorScope = applicationScope
     )

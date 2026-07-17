@@ -33,6 +33,8 @@ import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedInviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
@@ -54,12 +56,61 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.wallet.AuthenticationKeyChain
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import javax.inject.Inject
+
+/**
+ * Pure enable/continue decision for the invitation-fee dialog
+ * (host-JVM unit-testable — follows the `inviteShieldedOptions` /
+ * `usernameSubmitButtonState` helper pattern). Returns
+ * (contestedSelectable, continueEnabled).
+ *
+ * - L1 invite ([shielded] == false): unchanged behavior — contested is
+ *   selectable once the L1 wallet holds [Constants.DASH_PAY_FEE_CONTESTED]
+ *   (0.25), and "Confirm and pay" enables once it holds the selected fee
+ *   (0.25 contested / 0.03 non-contested).
+ * - Private invite ([shielded] == true): the fee is funded from the
+ *   SHIELDED POOL, so gate on the pool, not L1. A mid-sync shielded balance
+ *   is a `Dash.ZERO` placeholder, NOT evidence of an empty pool — while
+ *   [shieldedReady] is false the balance is treated as UNKNOWN and contested
+ *   stays disabled (never falsely enabled off a stale-looking balance).
+ *   Once READY, contested needs [Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED]
+ *   (0.35) and continue needs the selected fund-minimum (0.35 contested /
+ *   [Constants.SHIELDED_USERNAME_FUND_MIN] 0.15 non-contested).
+ */
+internal fun inviteFeeGate(
+    shielded: Boolean,
+    l1Balance: Coin,
+    shieldedReady: Boolean,
+    shieldedBalance: Coin,
+    contestedSelected: Boolean
+): Pair<Boolean, Boolean> {
+    return if (shielded) {
+        val contestedEnabled = shieldedReady &&
+            shieldedBalance >= Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED
+        val required = if (contestedSelected) {
+            Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED
+        } else {
+            Constants.SHIELDED_USERNAME_FUND_MIN
+        }
+        val continueEnabled = shieldedReady && shieldedBalance >= required
+        contestedEnabled to continueEnabled
+    } else {
+        val contestedEnabled = l1Balance >= Constants.DASH_PAY_FEE_CONTESTED
+        val selectedFee = if (contestedSelected) {
+            Constants.DASH_PAY_FEE_CONTESTED
+        } else {
+            Constants.DASH_PAY_FEE
+        }
+        val continueEnabled = l1Balance >= selectedFee
+        contestedEnabled to continueEnabled
+    }
+}
 
 @ExperimentalCoroutinesApi
 @HiltViewModel
@@ -70,6 +121,7 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val invitationDao: InvitationsDao,
     private val identityRepository: IdentityRepository,
     private val sdkShieldedInviteCreation: SdkShieldedInviteCreation,
+    private val shieldedBalanceService: ShieldedBalanceService,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
@@ -94,6 +146,27 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     val walletData
         get() = walletApplication
+
+    /**
+     * SHIELDED-pool balance/sync accessors for the invitation-fee dialog's
+     * private-invite gate (Fix F). A private invite funds its fee from the
+     * pool, so the dialog must read the pool — not the (now-low) L1 balance —
+     * to decide whether contested is selectable. Mirrors how
+     * [InviteShieldedFundingViewModel] sources them: bring the runtime up
+     * (idempotent), then observe the balance flow and the sync status.
+     */
+    val shieldedSyncStatus: StateFlow<ShieldedSyncStatus>
+        get() = shieldedBalanceService.shieldedSyncStatus
+
+    fun observeShieldedBalance(): Flow<Dash> = shieldedBalanceService.observeShieldedBalance()
+
+    /** Bring up the shielded runtime so its balance loads / status advances. */
+    fun ensureShieldedReady() {
+        viewModelScope.launch {
+            runCatching { shieldedBalanceService.ensureShieldedReady() }
+                .onFailure { log.warn("shielded bring-up failed", it) }
+        }
+    }
 
     suspend fun sendInviteTransaction(value: Coin): String {
         // ensure that the fundingAddress hasn't been used

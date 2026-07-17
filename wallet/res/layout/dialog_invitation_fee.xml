@@ -94,6 +94,17 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/contested_name_title" />
 
+            <TextView
+                android:id="@+id/contested_name_amount"
+                style="@style/Subtitle2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="20dp"
+                android:layout_marginTop="6dp"
+                tools:text="0.25 DASH"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/contested_name_description" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -126,6 +137,17 @@
                 android:text="@string/invitation_fee_noncontested_message"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/non_contested_name_title" />
+
+            <TextView
+                android:id="@+id/non_contested_name_amount"
+                style="@style/Subtitle2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="20dp"
+                android:layout_marginTop="6dp"
+                tools:text="0.03 DASH"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/non_contested_name_description" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
 

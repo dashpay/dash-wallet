@@ -77,6 +77,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
         const val KEY_PASSWORD = "RestoreIdentityWorker.PASSWORD"
         const val KEY_IDENTITY = "RestoreIdentityWorker.IDENTITY"
         const val KEY_RETRY = "RestoreIdentityWorker.RETRY"
+        const val KEY_FROM_CREATION = "RestoreIdentityWorker.FROM_CREATION"
         const val CHANNEL_ID = "restore_identity_work_channel"
         const val NOTIFICATION_ID = 1000
     }
@@ -87,10 +88,11 @@ class RestoreIdentityWorker @AssistedInject constructor(
         val identity = inputData.getString(KEY_IDENTITY)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_IDENTITY parameter"))
         val retrying = inputData.getBoolean(KEY_RETRY, false)
+        val fromCreation = inputData.getBoolean(KEY_FROM_CREATION, false)
 
         return try {
             // restore identity and all other
-            restoreIdentity(Identifier.from(identity).toBuffer(), retrying)
+            restoreIdentity(Identifier.from(identity).toBuffer(), retrying, fromCreation)
             Result.success(
                 workDataOf(
                     KEY_IDENTITY to identity,
@@ -107,7 +109,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun restoreIdentity(identity: ByteArray, retrying: Boolean) {
+    private suspend fun restoreIdentity(identity: ByteArray, retrying: Boolean, fromCreation: Boolean = false) {
         log.info("Restoring identity and username")
         try {
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 0)
@@ -185,7 +187,21 @@ class RestoreIdentityWorker @AssistedInject constructor(
             var foundContestedNameInVotingPeriod = false
             val maybeDualUsernames = blockchainIdentity.currentUsername != null && !Names.isUsernameContestable(blockchainIdentity.currentUsername!!)
             val instantUsername = blockchainIdentity.currentUsername
-            if (blockchainIdentity.currentUsername == null || maybeDualUsernames) {
+            // dashj's recoverUsernames() keys the recovered name on its
+            // DPNS-NORMALIZED label ("c0ntested1"); for a contested name that
+            // is what lands in currentUsername/primaryUsername and, through
+            // the USERNAME pref, on the More-screen tile. When a contestable
+            // name is found directly this block was skipped, so its display
+            // label was never recovered and no UsernameRequest row was
+            // inserted for resolveRequestedUsernameDisplay to map back — the
+            // tile showed the normalized form (Fix B, observed on the shielded
+            // contested create). Enter it for contestable names too: the
+            // voting-contender recovery below reads the user's own contender
+            // document and restores the DISPLAY .label (and the request row),
+            // while the normalized form stays the lookup key everywhere else.
+            val currentIsContestable = blockchainIdentity.currentUsername
+                ?.let { Names.isUsernameContestable(it) } == true
+            if (blockchainIdentity.currentUsername == null || maybeDualUsernames || currentIsContestable) {
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
 
                 // find active voting here
@@ -506,8 +522,19 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 (blockchainIdentityData.creationState == IdentityCreationState.VOTING && blockchainIdentityData.lostVote && blockchainIdentityData.showSecondaryUsername)) {
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE)
                 identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
-                // Complete the entire process
-                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE_AND_DISMISS)
+                // A FRESH creation (the shielded/Type-20 create handing its
+                // new on-chain identity here) must STOP at DONE so the home
+                // welcome tile appears — exactly like the L1
+                // CreateIdentityService path, which leaves a completed
+                // non-voting name at DONE for the user to dismiss. Only a
+                // genuine device restore auto-advances to DONE_AND_DISMISS
+                // (no welcome tile). Fix A: the restore handoff previously
+                // over-advanced to DONE_AND_DISMISS unconditionally, marking
+                // the tile already-dismissed so it never rendered.
+                if (!fromCreation) {
+                    // Complete the entire process
+                    identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE_AND_DISMISS)
+                }
             }
             identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
 

@@ -235,12 +235,36 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 )
             }
             val isInviteContested = requestUserNameViewModel.isUsingInvite() && requestUserNameViewModel.isInviteForContestedNames()
+            // The button's enabled state + label follow the pure gate
+            // (see usernameSubmitButtonState): the shielded funding path
+            // reflects the LIVE pool status, so while it is still syncing
+            // the button is a disabled "Preparing shielded balance…" pending
+            // state that re-enables automatically at READY. Computed once
+            // here so the red insufficient-funds surface can be suppressed in
+            // lock-step with it (Fix D).
+            val buttonState = usernameSubmitButtonState(
+                usernameType = usernameType,
+                paymentSource = requestUserNameViewModel.paymentSource,
+                shieldedSyncStatus = it.shieldedSyncStatus,
+                enoughBalance = it.enoughBalance,
+                usernameExists = it.usernameExists,
+                usernameContestable = it.usernameContestable
+            )
+            // While the shielded pool is still preparing, its balance is a
+            // mid-sync placeholder — the affordability gate reads `false` and
+            // would flash the red "insufficient/unavailable funds" row for a
+            // moment before the pool settles (Fix D). Treat balance as unknown
+            // (neutral, not red) until the pool is READY; legitimate red
+            // errors resume the instant the button leaves PreparingShielded.
+            val shieldedPreparing = buttonState == UsernameSubmitButtonState.PreparingShielded
             if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess) {
                 binding.checkAvailable.setImageResource(getCheckMarkImage(!it.usernameExists))
-                binding.checkBalance.setImageResource(getCheckMarkImage(it.enoughBalance))
+                binding.checkBalance.setImageResource(
+                    getCheckMarkImage(it.enoughBalance, empty = shieldedPreparing)
+                )
                 // binding.walletBalanceContainer.isVisible = !it.enoughBalance
                 if ((!requestUserNameViewModel.isUsingInvite() || isInviteContested) && usernameType != UsernameType.Secondary) {
-                    binding.walletBalanceContainer.isVisible = !it.enoughBalance
+                    binding.walletBalanceContainer.isVisible = !it.enoughBalance && !shieldedPreparing
                     if (it.requiredAmount.isNotEmpty()) {
                         binding.balanceRequirementText.text = getString(
                             R.string.request_username_balance_requirement_amount,
@@ -305,21 +329,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                         binding.checkAvailable.setImageResource(getCheckMarkImage(true))
                     }
                 }
-                // The button's enabled state + label follow the pure gate
-                // (see usernameSubmitButtonState): the shielded funding path
-                // reflects the LIVE pool status, so while it is still syncing
-                // the button is a disabled "Preparing shielded balance…"
-                // pending state that re-enables automatically at READY —
-                // never a stale-cache enabled button that lets a submit
-                // reach the SDK and bounce (Fix B). L1 path is unaffected.
-                val buttonState = usernameSubmitButtonState(
-                    usernameType = usernameType,
-                    paymentSource = requestUserNameViewModel.paymentSource,
-                    shieldedSyncStatus = it.shieldedSyncStatus,
-                    enoughBalance = it.enoughBalance,
-                    usernameExists = it.usernameExists,
-                    usernameContestable = it.usernameContestable
-                )
+                // Apply the button gate computed above (Fix B): the shielded
+                // funding path reflects the LIVE pool status, so while it is
+                // still syncing the button is a disabled "Preparing shielded
+                // balance…" pending state that re-enables automatically at
+                // READY — never a stale-cache enabled button that lets a
+                // submit reach the SDK and bounce. L1 path is unaffected.
                 binding.requestUsernameButton.isEnabled =
                     buttonState == UsernameSubmitButtonState.Enabled
                 binding.requestUsernameButton.setText(
