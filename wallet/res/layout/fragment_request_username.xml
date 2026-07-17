@@ -115,6 +115,58 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+<!-- Failure/status rows FIRST (Brian): the floating shielded-wait bubble
+     and small screens can cover the bottom of this list, so a red
+     validation (username taken, insufficient balance) must sit at the
+     top, right under the input, where it is always visible. Both rows
+     are gone unless they have something to say. -->
+        <LinearLayout
+            android:id="@+id/username_available_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+            <ImageView
+                android:id="@+id/check_available"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_check_circle_green"
+                />
+            <TextView
+                style="@style/Overline.Medium"
+                android:id="@+id/username_available_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="Username is available"
+                />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/wallet_balance_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:layout_marginTop="8dp">
+            <ImageView
+                android:id="@+id/check_balance"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_error_circle"
+                />
+
+            <TextView
+                android:id="@+id/balance_requirement_text"
+                style="@style/Overline.Medium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/request_username_balance_requirement"
+                android:maxLines="2"
+                />
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -169,53 +221,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/request_username_character_requirement"
-                />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/wallet_balance_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            tools:visibility="visible"
-            android:layout_marginTop="8dp">
-            <ImageView
-                android:id="@+id/check_balance"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_error_circle"
-                />
-
-            <TextView
-                android:id="@+id/balance_requirement_text"
-                style="@style/Overline.Medium"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/request_username_balance_requirement"
-                android:maxLines="2"
-                />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/username_available_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp">
-
-            <ImageView
-                android:id="@+id/check_available"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_check_circle_green"
-                />
-            <TextView
-                style="@style/Overline.Medium"
-                android:id="@+id/username_available_message"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="Username is available"
                 />
         </LinearLayout>
 
