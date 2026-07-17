@@ -21,8 +21,10 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.Invitation
+import de.schildbach.wallet.service.platform.TopUpRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
 import org.dash.wallet.common.WalletDataProvider
@@ -32,6 +34,19 @@ import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Result of [SdkShieldedInviteCreation.createShieldedInvite]: the raw
+ * shielded deep link [linkData] — the source of the invite PREVIEW
+ * (user/displayName/avatar params) — plus the [shareLink] the user actually
+ * shares/copies. [shareLink] is the AppsFlyer OneLink wrapping that deep link
+ * (OG preview + install redirect, H1), or the raw deep-link string when
+ * OneLink generation was unavailable.
+ */
+data class ShieldedInvite(
+    val linkData: InvitationLinkData,
+    val shareLink: String
+)
 
 // ── Pure helpers ──────────────────────────────────────────────────────────
 
@@ -159,7 +174,15 @@ class SdkShieldedInviteCreation internal constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
     private val invitationsDao: InvitationsDao,
     /** Same fee → denomination input as [SdkShieldedUsernameCreation.feeCredits]. */
-    private val feeCredits: (contested: Boolean) -> Long
+    private val feeCredits: (contested: Boolean) -> Long,
+    /**
+     * Wraps the raw shielded deep link in an AppsFlyer OneLink (H1),
+     * returning the OneLink short URL — or `null` when generation fails or
+     * times out, so the invite falls back to sharing the raw deep link and
+     * never hangs. Injected as a function (mirroring [feeCredits]) so the
+     * SDK layer stays decoupled from [TopUpRepository] and unit-testable.
+     */
+    private val generateOneLink: suspend (InvitationLinkData) -> String? = { null }
 ) {
     @Inject
     constructor(
@@ -167,7 +190,8 @@ class SdkShieldedInviteCreation internal constructor(
         dashPayConfig: de.schildbach.wallet.ui.dashpay.utils.DashPayConfig,
         shieldedBalanceService: ShieldedBalanceService,
         walletData: WalletDataProvider,
-        invitationsDao: InvitationsDao
+        invitationsDao: InvitationsDao,
+        topUpRepository: TopUpRepository
     ) : this(
         source = DashSdkShieldedInviteSource(sdkService, walletData),
         dashPayConfig = dashPayConfig,
@@ -176,6 +200,15 @@ class SdkShieldedInviteCreation internal constructor(
         feeCredits = { contested ->
             val fee = if (contested) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
             dashToCredits(Dash(fee.value))
+        },
+        generateOneLink = { link ->
+            // Bounded so a stuck AppsFlyer callback can't hang the invite;
+            // any failure/timeout → null → raw deep-link fallback.
+            withTimeoutOrNull(ONE_LINK_TIMEOUT_MS) {
+                runCatching { topUpRepository.createShieldedAppsFlyerLink(link).shortLink }
+                    .onFailure { log.warn("shielded invite OneLink generation failed", it) }
+                    .getOrNull()
+            }
         }
     )
 
@@ -193,7 +226,7 @@ class SdkShieldedInviteCreation internal constructor(
         displayName: String,
         avatarUrl: String,
         contested: Boolean
-    ): SdkWriteResult<InvitationLinkData> {
+    ): SdkWriteResult<ShieldedInvite> {
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
 
         val fee = try {
@@ -280,25 +313,29 @@ class SdkShieldedInviteCreation internal constructor(
             fundingHeight = fundingHeight ?: 0
         )
 
+        // Wrap the raw deep link in an AppsFlyer OneLink so the shared/copied
+        // link matches an L1 invite (preview + install redirect, H1); fall
+        // back to the raw deep link if generation is unavailable.
+        val shareLink = generateOneLink(link) ?: link.link.toString()
+
         // Track it in the invite history (best-effort — the note is already
         // funded, so a persistence failure must not fail the invite). The
         // Invitation entity assumes a pre-created identity id; a shielded
         // invite has no claimer identity yet, so we key it by a synthetic
         // 32-byte id derived from the one-time address (valid + unique, so the
-        // history avatar hash renders) and stash the shielded link.
+        // history avatar hash renders) and stash the shareable OneLink.
         try {
-            persistTracking(key.address, link)
+            persistTracking(key.address, shareLink)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("shielded invite tracking persist failed — the invite is still valid", t)
         }
 
-        return SdkWriteResult.Broadcast(link)
+        return SdkWriteResult.Broadcast(ShieldedInvite(link, shareLink))
     }
 
-    private suspend fun persistTracking(oneTimeAddress43: ByteArray, link: InvitationLinkData) {
+    private suspend fun persistTracking(oneTimeAddress43: ByteArray, shareLink: String) {
         val syntheticUserId = Identifier.from(Sha256Hash.hash(oneTimeAddress43)).toString()
-        val linkString = link.link.toString()
         invitationsDao.insert(
             Invitation(
                 fundingAddress = SHIELDED_FUNDING_ADDRESS_PREFIX + Utils.HEX.encode(oneTimeAddress43),
@@ -306,8 +343,8 @@ class SdkShieldedInviteCreation internal constructor(
                 txid = null,
                 createdAt = System.currentTimeMillis(),
                 sentAt = System.currentTimeMillis(),
-                shortDynamicLink = linkString,
-                dynamicLink = linkString
+                shortDynamicLink = shareLink,
+                dynamicLink = shareLink
             )
         )
     }
@@ -326,6 +363,9 @@ class SdkShieldedInviteCreation internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkShieldedInviteCreation::class.java)
+
+        /** Cap on the AppsFlyer OneLink callback so a stuck SDK can't hang the invite (H1). */
+        private const val ONE_LINK_TIMEOUT_MS = 15_000L
 
         /**
          * Primary-key prefix marking an [Invitation] row as a SHIELDED (L2)

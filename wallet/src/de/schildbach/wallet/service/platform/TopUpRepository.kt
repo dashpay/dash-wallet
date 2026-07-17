@@ -135,6 +135,19 @@ interface TopUpRepository {
         aesKeyParameter: KeyParameter
     ): DynamicLink
 
+    /**
+     * Wrap an already-built SHIELDED (L2) invitation deep link in the same
+     * AppsFlyer OneLink as an L1 invite (H1): OG preview + install redirect,
+     * with the raw `dashpay://invite?du=…&osk=…&bh=…` deep link as the
+     * `af_dp`. The preview label/avatar are read from the shielded link's own
+     * params (the inviter profile the SDK embedded). Throws on generation
+     * failure, exactly like [createAppsFlyerLink]; callers fall back to the
+     * raw deep link.
+     */
+    suspend fun createShieldedAppsFlyerLink(
+        invitationLinkData: InvitationLinkData
+    ): DynamicLink
+
     suspend fun checkInvites(encryptionKey: KeyParameter?)
     suspend fun updateInvitations()
     fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long)
@@ -606,6 +619,36 @@ class TopUpRepositoryImpl @Inject constructor(
         val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
         val invitationLinkData = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, assetLockTx, aesKeyParameter)
 
+        return generateInviteOneLink(invitationLinkData, dashPayProfile.nameLabel, dashPayProfile.avatarUrl)
+    }
+
+    override suspend fun createShieldedAppsFlyerLink(
+        invitationLinkData: InvitationLinkData
+    ): DynamicLink {
+        log.info("creating AppsFlyer OneLink for a shielded invitation")
+        // The shielded link already carries the inviter's preview label/avatar
+        // (the SDK embedded them); there is no L1 asset-lock tx to build from.
+        return generateInviteOneLink(
+            invitationLinkData,
+            invitationLinkData.displayName,
+            invitationLinkData.avatarUrl
+        )
+    }
+
+    /**
+     * Core AppsFlyer OneLink generation shared by the L1 and shielded invite
+     * paths (H1): wraps [invitationLinkData]'s raw deep link as the OneLink's
+     * `af_dp`, and attaches the OG preview ([nameLabel] + [avatarUrl] image).
+     * Bridges the async [ResponseListener] with [suspendCoroutine] as the L1
+     * path always has; [onResponseError] surfaces as an exception the caller
+     * handles (fall back to the raw deep link).
+     */
+    private suspend fun generateInviteOneLink(
+        invitationLinkData: InvitationLinkData,
+        nameLabel: String,
+        avatarUrl: String
+    ): DynamicLink {
+        val avatarUrlEncoded = URLEncoder.encode(avatarUrl, StandardCharsets.UTF_8.displayName())
         return suspendCoroutine { continuation ->
             val linkGenerator = ShareInviteHelper.generateInviteUrl(walletApplication)
             linkGenerator.setBaseDeeplink(invitationLinkData.link.toString())
@@ -614,7 +657,6 @@ class TopUpRepositoryImpl @Inject constructor(
             linkGenerator.setCampaign("dashpay_invitation")
             linkGenerator.setBrandDomain(BuildConfig.APPSFLYER_BRAND_DOMAIN)
             val title = walletApplication.getString(R.string.invitation_preview_title)
-            val nameLabel = dashPayProfile.nameLabel
             val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.displayName())
             val imageUrl = "https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded".toUri()
             val description = walletApplication.getString(R.string.invitation_preview_message, nameLabel)

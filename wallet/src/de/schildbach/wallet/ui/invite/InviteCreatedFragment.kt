@@ -99,14 +99,20 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
 
         // Shielded (L2) invite: the link comes from the ViewModel (no
         // WorkManager status), so mark success and enable share/copy directly.
-        viewModel.shieldedInviteLink.filterNotNull().observe(viewLifecycleOwner) { link ->
-            shieldedLink = link.link.toString()
+        viewModel.shieldedInviteLink.filterNotNull().observe(viewLifecycleOwner) { _ ->
             binding.profilePictureEnvelope.isVisible = true
             binding.previewButton.isVisible = true
             binding.inviteCreationProgressTitle.text = getString(R.string.invitation_created_successfully)
             binding.progress.isGone = true
             binding.copyInvitationLink.isEnabled = true
             binding.sendButton.isEnabled = true
+        }
+
+        // The shared/copied link is the AppsFlyer OneLink (H1), published
+        // alongside the deep link; share/copy fall back to the raw deep link
+        // only if OneLink generation was unavailable.
+        viewModel.shieldedInviteShareLink.filterNotNull().observe(viewLifecycleOwner) { shareLink ->
+            shieldedLink = shareLink
         }
 
         viewModel.dashPayProfile.observe(viewLifecycleOwner) {
@@ -117,7 +123,7 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner) {
             // The shielded (L2) invite has no WorkManager status — its success
             // is driven by shieldedInviteLink above; ignore the L1 status feed.
-            if (shieldedLink != null) return@observe
+            if (viewModel.shieldedInviteLink.value != null) return@observe
             when (it.status) {
                 Status.SUCCESS -> {
                     if (it.data != null) {

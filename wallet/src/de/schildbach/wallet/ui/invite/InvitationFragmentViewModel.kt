@@ -206,26 +206,41 @@ open class InvitationFragmentViewModel @Inject constructor(
         get() = _shieldedInviteLink
 
     /**
+     * The share/copy link for a created shielded invite — the AppsFlyer
+     * OneLink wrapping the deep link (H1), or the raw deep link when OneLink
+     * generation was unavailable. The created-invite screen shares THIS, not
+     * the raw [shieldedInviteLink] deep link (which stays the preview source).
+     */
+    private val _shieldedInviteShareLink = MutableStateFlow<String?>(null)
+    val shieldedInviteShareLink: StateFlow<String?>
+        get() = _shieldedInviteShareLink
+
+    /**
      * Fund a SHIELDED (L2) invitation directly from the shielded pool — the
      * private-invitation counterpart of [sendInviteTransaction]. [contested]
      * (derived from the fee the inviter picked) selects the exit denomination.
-     * On success the funded link is published to [shieldedInviteLink]. Runs the
-     * ~30s proof off the main thread.
+     * On success the funded deep link is published to [shieldedInviteLink] and
+     * its shareable OneLink to [shieldedInviteShareLink]. Runs the ~30s proof
+     * off the main thread.
      */
     suspend fun createShieldedInvite(contested: Boolean): SdkWriteResult<InvitationLinkData> =
         withContext(Dispatchers.IO) {
             val profile = identityRepository.getLocalUserProfile()
                 ?: return@withContext SdkWriteResult.NotBroadcast("no local user profile")
-            val result = sdkShieldedInviteCreation.createShieldedInvite(
+            when (val result = sdkShieldedInviteCreation.createShieldedInvite(
                 username = profile.username,
                 displayName = profile.displayName,
                 avatarUrl = profile.avatarUrl,
                 contested = contested
-            )
-            if (result is SdkWriteResult.Broadcast) {
-                _shieldedInviteLink.value = result.value
+            )) {
+                is SdkWriteResult.Broadcast -> {
+                    _shieldedInviteLink.value = result.value.linkData
+                    _shieldedInviteShareLink.value = result.value.shareLink
+                    SdkWriteResult.Broadcast(result.value.linkData)
+                }
+                is SdkWriteResult.NotBroadcast -> result
+                is SdkWriteResult.Ambiguous -> result
             }
-            result
         }
 
     val invitationPreviewImageFile by lazy {

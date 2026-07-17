@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import android.app.Application
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -95,13 +96,15 @@ class SdkShieldedInviteCreationTest {
         source: ShieldedInviteSource = happySource(),
         flag: Boolean? = true,
         balance: ShieldedBalanceService = balanceService(),
-        invitationsDao: InvitationsDao = dao()
+        invitationsDao: InvitationsDao = dao(),
+        generateOneLink: suspend (InvitationLinkData) -> String? = { null }
     ) = SdkShieldedInviteCreation(
         source = source,
         dashPayConfig = config(flag),
         shieldedBalanceService = balance,
         invitationsDao = invitationsDao,
-        feeCredits = { contested -> if (contested) contestedFeeCredits else feeCredits }
+        feeCredits = { contested -> if (contested) contestedFeeCredits else feeCredits },
+        generateOneLink = generateOneLink
     )
 
     // ── Pure helpers ──────────────────────────────────────────────────────
@@ -164,7 +167,8 @@ class SdkShieldedInviteCreationTest {
         val result = service(source = source, invitationsDao = dao)
             .createShieldedInvite("alice", "Alice", "https://x/a.png", contested = false)
 
-        val link = (result as SdkWriteResult.Broadcast).value
+        val invite = (result as SdkWriteResult.Broadcast).value
+        val link = invite.linkData
         assertTrue(link.isShielded)
         assertEquals("alice", link.user)
         assertEquals("Alice", link.displayName)
@@ -179,7 +183,47 @@ class SdkShieldedInviteCreationTest {
             inserted.captured.fundingAddress
                 .startsWith(SdkShieldedInviteCreation.SHIELDED_FUNDING_ADDRESS_PREFIX)
         )
+        // With no OneLink generator (default), share/persist fall back to the raw deep link.
+        assertEquals(link.link.toString(), invite.shareLink)
         assertEquals(link.link.toString(), inserted.captured.dynamicLink)
+    }
+
+    @Test
+    fun broadcast_wrapsShareLinkAndPersistenceInTheOneLink() = runTest {
+        val source = happySource()
+        val dao = dao()
+        val inserted = slot<Invitation>()
+        coEvery { dao.insert(capture(inserted)) } just Runs
+        val oneLink = "https://dashpay.onelink.appsflyersdk.com/xyz?af_dp=dashpay"
+
+        val result = service(source = source, invitationsDao = dao, generateOneLink = { oneLink })
+            .createShieldedInvite("alice", "Alice", "", contested = false)
+
+        val invite = (result as SdkWriteResult.Broadcast).value
+        // Shared/copied link AND the persisted row are the OneLink, not the raw deep link (H1).
+        assertEquals(oneLink, invite.shareLink)
+        assertEquals(oneLink, inserted.captured.dynamicLink)
+        assertEquals(oneLink, inserted.captured.shortDynamicLink)
+        // The raw deep link is retained as the preview source.
+        assertTrue(invite.linkData.isShielded)
+    }
+
+    @Test
+    fun broadcast_oneLinkFailureFallsBackToRawDeepLink() = runTest {
+        val source = happySource()
+        val dao = dao()
+        val inserted = slot<Invitation>()
+        coEvery { dao.insert(capture(inserted)) } just Runs
+
+        val result = service(
+            source = source,
+            invitationsDao = dao,
+            generateOneLink = { null } // generation unavailable
+        ).createShieldedInvite("alice", "Alice", "", contested = false)
+
+        val invite = (result as SdkWriteResult.Broadcast).value
+        assertEquals(invite.linkData.link.toString(), invite.shareLink)
+        assertEquals(invite.linkData.link.toString(), inserted.captured.dynamicLink)
     }
 
     @Test
@@ -224,7 +268,7 @@ class SdkShieldedInviteCreationTest {
         coEvery { source.currentChainTipHeight() } returns null
         val result = service(source = source)
             .createShieldedInvite("alice", "Alice", "", contested = false)
-        val link = (result as SdkWriteResult.Broadcast).value
+        val link = (result as SdkWriteResult.Broadcast).value.linkData
         assertTrue(link.isShielded)
         // 0 height serializes to bh=0, which parses back as 0 (present, valid).
         assertEquals(0, link.fundingHeight)

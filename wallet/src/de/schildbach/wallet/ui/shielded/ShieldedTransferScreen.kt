@@ -1097,12 +1097,10 @@ internal fun StalledOverlay(onClose: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(
-                painter = painterResource(org.dash.wallet.common.R.drawable.ic_toast_info_warning),
-                contentDescription = null,
-                tint = Color.Unspecified,
-                modifier = Modifier.size(40.dp)
-            )
+            // A live spinner (not a static warning/success icon) so the state
+            // reads unambiguously as STILL WORKING — the watchdog notice must
+            // never look like a completed transfer (H2).
+            CircularProgressIndicator(color = MyTheme.Colors.dashBlue)
             Text(
                 text = stringResource(R.string.shielded_transfer_stalled_title),
                 style = MyTheme.Typography.TitleMediumSemibold,
@@ -1115,8 +1113,10 @@ internal fun StalledOverlay(onClose: () -> Unit) {
                 color = MyTheme.Colors.textSecondary,
                 textAlign = TextAlign.Center
             )
+            // "Continue in the background", not "Close": leaving the screen
+            // does not mean the transfer is done — it keeps finishing (H2).
             DashButton(
-                text = stringResource(R.string.shielded_close),
+                text = stringResource(R.string.shielded_transfer_stalled_continue),
                 style = Style.TintedGray,
                 size = Size.Large,
                 onClick = onClose

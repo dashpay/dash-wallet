@@ -627,8 +627,9 @@
          result): funds-honest — we do NOT know whether anything broadcast, so no
          failure wording and no retry. The transfer may still complete in the
          background; leaving the screen is safe (the spend runs on the app scope). -->
-    <string name="shielded_transfer_stalled_title">This is taking longer than expected</string>
-    <string name="shielded_transfer_stalled_message">Your transfer may still complete in the background — your balances will update if it does. It’s safe to close this screen; we will let you know when there’s an update.</string>
+    <string name="shielded_transfer_stalled_title">Still finishing your transfer</string>
+    <string name="shielded_transfer_stalled_continue">Continue in the background</string>
+    <string name="shielded_transfer_stalled_message">This is taking a little longer than usual. Your transfer is still in progress and will finish in the background — your shielded balance updates automatically when it completes. This can take a minute on some devices. Not done yet, but it’s safe to leave this screen.</string>
     <string name="shielded_error_insufficient_funds">Insufficient funds</string>
     <!-- Secondary line under the From "Dash Wallet" balance: the not-yet-ChainLocked part of the total balance, e.g. "0.25 pending" -->
     <string name="shielded_pending_funds">%s pending</string>
