@@ -18,110 +18,105 @@ package de.schildbach.wallet.ui.invite
 
 import de.schildbach.wallet.Constants
 import org.bitcoinj.core.Coin
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Pure-logic tests for the invitation-fee dialog's enable/continue gate
- * ([inviteFeeGate]) — host-JVM, no Android/native deps, following the
- * `inviteShieldedOptions` / `usernameSubmitButtonState` helper-test pattern.
- * Pins the Fix-F regression: a private (shielded) invite disabled the
- * contested tile because it read the (now-low) L1 balance instead of the
- * shielded pool.
+ * Pure-logic tests for the invitation-fee dialog's "Confirm and pay" gate
+ * ([inviteFeeGate]) and requirement resolver ([inviteFeeRequirement]) —
+ * host-JVM, no Android/native deps, following the `inviteShieldedOptions` /
+ * `usernameSubmitButtonState` helper-test pattern.
+ *
+ * Fix G2: both username-kind tiles stay selectable regardless of balance, so
+ * the gate no longer emits a tile-enabled flag — it is a single button gate
+ * for the CURRENTLY selected kind. Fix F is still pinned: a private invite
+ * gates on the shielded pool, not the (now-low) L1 balance, and a mid-sync
+ * pool balance is never trusted.
  */
 class InviteFeeGateTest {
 
-    // ---- L1 invite (args.shielded == false): unchanged behavior. ----
+    // ---- requirement per source + selected kind ----
 
     @Test
-    fun `L1 with enough for contested enables both`() {
-        val (contested, cont) = inviteFeeGate(
-            shielded = false,
-            l1Balance = Constants.DASH_PAY_FEE_CONTESTED, // 0.25
-            shieldedReady = false,
-            shieldedBalance = Coin.ZERO,
-            contestedSelected = true
-        )
-        assertTrue(contested)
-        assertTrue(cont)
+    fun `requirement is the L1 fee for a standard invite`() {
+        assertEquals(Constants.DASH_PAY_FEE, inviteFeeRequirement(shielded = false, contestedSelected = false))
+        assertEquals(Constants.DASH_PAY_FEE_CONTESTED, inviteFeeRequirement(shielded = false, contestedSelected = true))
     }
 
     @Test
-    fun `L1 with only the non-contested fee disables contested but allows non-contested continue`() {
-        // 0.03 <= balance < 0.25
-        val balance = Constants.DASH_PAY_FEE // 0.03
-        val contestedSelected = inviteFeeGate(
-            shielded = false,
-            l1Balance = balance,
-            shieldedReady = false,
-            shieldedBalance = Coin.ZERO,
-            contestedSelected = true
+    fun `requirement is the shielded-pool minimum for a private invite`() {
+        assertEquals(Constants.SHIELDED_USERNAME_FUND_MIN, inviteFeeRequirement(shielded = true, contestedSelected = false))
+        assertEquals(
+            Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED,
+            inviteFeeRequirement(shielded = true, contestedSelected = true)
         )
-        assertFalse("contested not affordable", contestedSelected.first)
-        assertFalse("continue disabled while contested is selected", contestedSelected.second)
-
-        val nonContestedSelected = inviteFeeGate(
-            shielded = false,
-            l1Balance = balance,
-            shieldedReady = false,
-            shieldedBalance = Coin.ZERO,
-            contestedSelected = false
-        )
-        assertFalse(nonContestedSelected.first)
-        assertTrue("continue enabled for the non-contested fee", nonContestedSelected.second)
     }
 
-    // ---- Private invite (args.shielded == true): gate on the pool. ----
+    // ---- L1 invite (args.shielded == false) ----
 
     @Test
-    fun `shielded not-ready keeps contested disabled even with a stale-looking balance`() {
+    fun `L1 continue enabled once the wallet holds the selected fee`() {
+        assertTrue(gate(shielded = false, l1 = Constants.DASH_PAY_FEE_CONTESTED, contestedSelected = true))
+        assertTrue(gate(shielded = false, l1 = Constants.DASH_PAY_FEE, contestedSelected = false))
+    }
+
+    @Test
+    fun `L1 with only the non-contested fee disables continue for the contested selection`() {
+        val balance = Constants.DASH_PAY_FEE // 0.03 <= balance < 0.25
+        assertFalse("contested selection unaffordable", gate(shielded = false, l1 = balance, contestedSelected = true))
+        assertTrue("non-contested selection affordable", gate(shielded = false, l1 = balance, contestedSelected = false))
+    }
+
+    // ---- Private invite (args.shielded == true): gate on the pool ----
+
+    @Test
+    fun `shielded not-ready disables continue even with a stale-looking balance`() {
         // A mid-sync balance can read high; it is NOT evidence until READY.
-        val (contested, cont) = inviteFeeGate(
-            shielded = true,
-            l1Balance = Coin.ZERO,
-            shieldedReady = false,
-            shieldedBalance = Coin.parseCoin("1.0"),
-            contestedSelected = true
+        assertFalse(
+            inviteFeeGate(
+                shielded = true,
+                l1Balance = Coin.ZERO,
+                shieldedReady = false,
+                shieldedBalance = Coin.parseCoin("1.0"),
+                contestedSelected = true
+            )
         )
-        assertFalse("contested disabled until the pool is READY", contested)
-        assertFalse("continue disabled until the pool is READY", cont)
     }
 
     @Test
-    fun `shielded ready at or above the contested minimum enables both`() {
-        val (contested, cont) = inviteFeeGate(
-            shielded = true,
-            l1Balance = Coin.ZERO,
-            shieldedReady = true,
-            shieldedBalance = Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED, // 0.35
-            contestedSelected = true
+    fun `shielded ready at or above the contested minimum enables continue`() {
+        assertTrue(
+            inviteFeeGate(
+                shielded = true,
+                l1Balance = Coin.ZERO,
+                shieldedReady = true,
+                shieldedBalance = Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED, // 0.35
+                contestedSelected = true
+            )
         )
-        assertTrue(contested)
-        assertTrue(cont)
     }
 
     @Test
-    fun `shielded ready between the two minimums allows only non-contested`() {
+    fun `shielded ready between the two minimums allows only the non-contested selection`() {
         val balance = Coin.parseCoin("0.20") // 0.15 <= balance < 0.35
-        val contestedSelected = inviteFeeGate(
-            shielded = true,
-            l1Balance = Coin.ZERO,
-            shieldedReady = true,
-            shieldedBalance = balance,
-            contestedSelected = true
+        assertFalse(
+            "contested needs 0.35",
+            inviteFeeGate(true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance, contestedSelected = true)
         )
-        assertFalse("contested needs 0.35", contestedSelected.first)
-        assertFalse("continue disabled while contested is selected", contestedSelected.second)
-
-        val nonContestedSelected = inviteFeeGate(
-            shielded = true,
-            l1Balance = Coin.ZERO,
-            shieldedReady = true,
-            shieldedBalance = balance,
-            contestedSelected = false
+        assertTrue(
+            "non-contested needs only 0.15",
+            inviteFeeGate(true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance, contestedSelected = false)
         )
-        assertFalse(nonContestedSelected.first)
-        assertTrue("non-contested needs only 0.15", nonContestedSelected.second)
     }
+
+    private fun gate(shielded: Boolean, l1: Coin, contestedSelected: Boolean): Boolean =
+        inviteFeeGate(
+            shielded = shielded,
+            l1Balance = l1,
+            shieldedReady = false,
+            shieldedBalance = Coin.ZERO,
+            contestedSelected = contestedSelected
+        )
 }

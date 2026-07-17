@@ -129,6 +129,20 @@ data class InviteShieldedFundingUIState(
     val contestedShieldedCost: Dash = Dash(Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED.value)
 
     /**
+     * The Private (shielded) amount actually WITHDRAWN — the Type-20 exit
+     * denomination that leaves the pool (0.1 non-contested / 0.3 contested),
+     * i.e. what the user "pays". The decision sheet's cost-comparison table
+     * shows this against the Standard [nonContestedFee]/[contestedFee] (Fix
+     * G1), consistent with the fee/confirm screens; distinct from the
+     * 0.15/0.35 pool minimum the wallet must HOLD ([nonContestedShieldedCost]
+     * / [contestedShieldedCost]).
+     */
+    val nonContestedPrivateWithdrawn: Dash = Dash(10_000_000L) // 0.1 DASH
+
+    /** The Private CONTESTED withdrawn amount (0.3 DASH). */
+    val contestedPrivateWithdrawn: Dash = Dash(30_000_000L) // 0.3 DASH
+
+    /**
      * The sheet to show at the invite decision point. Until the flag read
      * resolves the prompt is [InviteShieldedFundingPrompt.NONE] so an
      * undecided state never renders a sheet — the fragment waits for

@@ -48,7 +48,7 @@
         android:layout_marginHorizontal="20dp"
         android:orientation="vertical"
         app:layout_constraintTop_toBottomOf="@id/collapse_button"
-        app:layout_constraintBottom_toTopOf="@+id/bottom_buttons"
+        app:layout_constraintBottom_toTopOf="@+id/insufficient_funds_message"
         >
         <TextView
             style="@style/Headline5"
@@ -152,6 +152,25 @@
 
 
     </LinearLayout>
+
+    <!-- Insufficiency message (Fix G2): the tiles stay tappable regardless
+         of balance; when the selected kind is unaffordable this names what
+         the user needs (shielded-pool minimum for a private invite, L1 fee
+         for a standard one). Hidden while the selection is affordable. -->
+    <TextView
+        android:id="@+id/insufficient_funds_message"
+        style="@style/Caption.Medium.Red"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="4dp"
+        android:gravity="center"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="You need at least 0.35 Dash to create an invitation"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_buttons"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <LinearLayout
         android:id="@+id/bottom_buttons"

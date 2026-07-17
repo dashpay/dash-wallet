@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.invite
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -68,9 +69,16 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
             // spend (ConfirmInviteDialogFragment) — the app's standard order is
             // amount-confirm THEN authenticate. The previous PIN prompt here
             // ran before the amount was even shown and discarded its result.
+            //
+            // Pass the amount that is ACTUALLY withdrawn (Fix G3): for a
+            // private invite the Type-20 exit denomination (0.1 / 0.3), for a
+            // standard invite the L1 fee (0.03 / 0.25). The shielded spend
+            // uses createShieldedInvite(contested) with its own internal
+            // denomination, so this value is display-only there; the L1 spend
+            // funds sendInviteTransaction with exactly this amount.
             findNavController().navigate(
                 InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(
-                    selectedFee.value, args.source, args.shielded
+                    withdrawnAmount().value, args.source, args.shielded
                 )
             )
         }
@@ -129,20 +137,36 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
         applyGate()
     }
 
+    /** The amount actually withdrawn for the current selection (Fix G3). */
+    private fun withdrawnAmount(): Coin {
+        return if (args.shielded) {
+            if (contestedSelected) shieldedContestedFee else shieldedNonContestedFee
+        } else {
+            selectedFee
+        }
+    }
+
     /**
-     * Apply the pure [inviteFeeGate] decision: whether the contested tile is
-     * selectable and whether "Confirm and pay" is enabled, sourced from the
-     * L1 wallet or the shielded pool per [args].shielded.
+     * Apply the pure [inviteFeeGate] decision. BOTH tiles stay selectable
+     * regardless of balance (Fix G2); only "Confirm and pay" is gated, on the
+     * CURRENTLY selected kind, sourced from the L1 wallet or the shielded pool
+     * per [args].shielded. When the selection is unaffordable, name what the
+     * user needs (the pool minimum for a private invite, the L1 fee otherwise).
      */
     private fun applyGate() {
-        val (contestedEnabled, continueEnabled) = inviteFeeGate(
+        val continueEnabled = inviteFeeGate(
             shielded = args.shielded,
             l1Balance = l1Balance,
             shieldedReady = shieldedReady,
             shieldedBalance = shieldedBalance,
             contestedSelected = contestedSelected
         )
-        binding.contestedName.isEnabled = contestedEnabled
         binding.mixButton.isEnabled = continueEnabled
+        binding.insufficientFundsMessage.isVisible = !continueEnabled
+        if (!continueEnabled) {
+            val required = inviteFeeRequirement(args.shielded, contestedSelected)
+            binding.insufficientFundsMessage.text =
+                getString(R.string.invitation_cant_afford_message, required.toPlainString())
+        }
     }
 }

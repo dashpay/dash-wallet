@@ -65,23 +65,45 @@ import java.io.IOException
 import javax.inject.Inject
 
 /**
- * Pure enable/continue decision for the invitation-fee dialog
- * (host-JVM unit-testable — follows the `inviteShieldedOptions` /
- * `usernameSubmitButtonState` helper pattern). Returns
- * (contestedSelectable, continueEnabled).
+ * The balance the invitation-fee dialog requires the user to HOLD for the
+ * currently selected username kind, given the funding source (host-JVM
+ * unit-testable). Drives both the "Confirm and pay" gate ([inviteFeeGate])
+ * and the insufficiency message.
  *
- * - L1 invite ([shielded] == false): unchanged behavior — contested is
- *   selectable once the L1 wallet holds [Constants.DASH_PAY_FEE_CONTESTED]
- *   (0.25), and "Confirm and pay" enables once it holds the selected fee
- *   (0.25 contested / 0.03 non-contested).
- * - Private invite ([shielded] == true): the fee is funded from the
- *   SHIELDED POOL, so gate on the pool, not L1. A mid-sync shielded balance
- *   is a `Dash.ZERO` placeholder, NOT evidence of an empty pool — while
- *   [shieldedReady] is false the balance is treated as UNKNOWN and contested
- *   stays disabled (never falsely enabled off a stale-looking balance).
- *   Once READY, contested needs [Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED]
- *   (0.35) and continue needs the selected fund-minimum (0.35 contested /
- *   [Constants.SHIELDED_USERNAME_FUND_MIN] 0.15 non-contested).
+ * - Private invite ([shielded] == true): the shielded-pool fund-minimum —
+ *   [Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED] (0.35) contested /
+ *   [Constants.SHIELDED_USERNAME_FUND_MIN] (0.15) non-contested (the 0.3 /
+ *   0.1 Type-20 exit denomination padded for the shielded-spend fee).
+ * - L1 invite: the L1 fee — [Constants.DASH_PAY_FEE_CONTESTED] (0.25)
+ *   contested / [Constants.DASH_PAY_FEE] (0.03) non-contested.
+ */
+internal fun inviteFeeRequirement(shielded: Boolean, contestedSelected: Boolean): Coin {
+    return if (shielded) {
+        if (contestedSelected) {
+            Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED
+        } else {
+            Constants.SHIELDED_USERNAME_FUND_MIN
+        }
+    } else {
+        if (contestedSelected) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+    }
+}
+
+/**
+ * Pure "Confirm and pay" gate for the invitation-fee dialog (host-JVM
+ * unit-testable — follows the `inviteShieldedOptions` /
+ * `usernameSubmitButtonState` helper pattern). BOTH username-kind tiles stay
+ * selectable regardless of balance (Fix G2 — the user must be able to tap
+ * either); only this button gate reads the balance, for the CURRENTLY
+ * selected kind's [inviteFeeRequirement].
+ *
+ * - L1 invite ([shielded] == false): enabled once the L1 wallet holds the
+ *   selected fee.
+ * - Private invite ([shielded] == true): funded from the SHIELDED POOL, so
+ *   gate on the pool, not L1. A mid-sync shielded balance is a `Dash.ZERO`
+ *   placeholder, NOT evidence of an empty pool — while [shieldedReady] is
+ *   false the balance is UNKNOWN and the button stays disabled (never
+ *   enabled off a stale-looking balance).
  */
 internal fun inviteFeeGate(
     shielded: Boolean,
@@ -89,26 +111,12 @@ internal fun inviteFeeGate(
     shieldedReady: Boolean,
     shieldedBalance: Coin,
     contestedSelected: Boolean
-): Pair<Boolean, Boolean> {
+): Boolean {
+    val requirement = inviteFeeRequirement(shielded, contestedSelected)
     return if (shielded) {
-        val contestedEnabled = shieldedReady &&
-            shieldedBalance >= Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED
-        val required = if (contestedSelected) {
-            Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED
-        } else {
-            Constants.SHIELDED_USERNAME_FUND_MIN
-        }
-        val continueEnabled = shieldedReady && shieldedBalance >= required
-        contestedEnabled to continueEnabled
+        shieldedReady && shieldedBalance >= requirement
     } else {
-        val contestedEnabled = l1Balance >= Constants.DASH_PAY_FEE_CONTESTED
-        val selectedFee = if (contestedSelected) {
-            Constants.DASH_PAY_FEE_CONTESTED
-        } else {
-            Constants.DASH_PAY_FEE
-        }
-        val continueEnabled = l1Balance >= selectedFee
-        contestedEnabled to continueEnabled
+        l1Balance >= requirement
     }
 }
 

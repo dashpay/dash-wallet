@@ -60,14 +60,21 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
             lifecycleScope.launch {
                 try {
                     val inviteAmount = Coin.valueOf(args.amount)
-                    val spendableBalance = invitationFragmentViewModel.walletData.observeTotalBalance().first()
-                    if (spendableBalance < inviteAmount) {
-                        binding.confirmMessage.text = getString(
-                            R.string.invitation_cant_afford_message,
-                            inviteAmount.toFriendlyString()
-                        )
-                        binding.confirmMessage.isVisible = true
-                        return@launch
+                    // The L1 spendable-balance pre-check only applies to a
+                    // standard (asset-lock) invite — a SHIELDED invite is
+                    // funded from the pool, whose affordability was already
+                    // gated at the fee dialog, so the (now-low) L1 balance must
+                    // not falsely block it here (Fix G3).
+                    if (!args.shielded) {
+                        val spendableBalance = invitationFragmentViewModel.walletData.observeTotalBalance().first()
+                        if (spendableBalance < inviteAmount) {
+                            binding.confirmMessage.text = getString(
+                                R.string.invitation_cant_afford_message,
+                                inviteAmount.toFriendlyString()
+                            )
+                            binding.confirmMessage.isVisible = true
+                            return@launch
+                        }
                     }
                     // Authenticate right before the spend — the amount has been
                     // confirmed on this screen (standard order; the fee screen no
