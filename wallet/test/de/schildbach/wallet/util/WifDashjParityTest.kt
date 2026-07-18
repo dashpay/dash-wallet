@@ -161,4 +161,51 @@ class WifDashjParityTest {
             WifKey.decode(shortPayload)
         }
     }
+
+    @Test
+    fun wrongVersionAndWrongLength_versionCheckedBeforeLength_likeDashj() {
+        // 31-byte payload under the mainnet version byte, decoded against testnet: dashj's
+        // fromBase58(params, s) checks the version byte BEFORE the payload length, so this must
+        // be WrongNetwork on both sides, never InvalidDataLength.
+        val mainnetShort = org.bitcoinj.core.Base58.encodeChecked(204, ByteArray(31))
+        assertThrows(DashjAddressFormatException.WrongNetwork::class.java) {
+            DumpedPrivateKey.fromBase58(testParams, mainnetShort)
+        }
+        assertThrows(AddressFormatException.WrongNetwork::class.java) {
+            WifKey.decode(mainnetShort, AddressNetwork.DASH_TESTNET)
+        }
+
+        // ...and the mirror image: testnet version byte, bad length, decoded against mainnet.
+        val testnetShort = org.bitcoinj.core.Base58.encodeChecked(239, ByteArray(31))
+        assertThrows(DashjAddressFormatException.WrongNetwork::class.java) {
+            DumpedPrivateKey.fromBase58(mainParams, testnetShort)
+        }
+        assertThrows(AddressFormatException.WrongNetwork::class.java) {
+            WifKey.decode(testnetShort, AddressNetwork.DASH_MAINNET)
+        }
+    }
+
+    @Test
+    fun unknownVersionAndWrongLength_autodetect_prefixCheckedBeforeLength_likeDashj() {
+        // Unknown version byte (Bitcoin mainnet's 0x80 = 128) with a 31-byte payload via the
+        // autodetect path: dashj's fromBase58(null, s) rejects the prefix before it ever
+        // constructs the key, so both sides must throw InvalidPrefix, not InvalidDataLength.
+        val foreignShort = org.bitcoinj.core.Base58.encodeChecked(128, ByteArray(31))
+        assertThrows(DashjAddressFormatException.InvalidPrefix::class.java) {
+            DumpedPrivateKey.fromBase58(null, foreignShort)
+        }
+        assertThrows(AddressFormatException.InvalidPrefix::class.java) {
+            WifKey.decodeDash(foreignShort)
+        }
+
+        // A KNOWN Dash version byte with a bad length must still reach the length check on
+        // both sides (version match happens first, then the constructor validates length).
+        val testnetShort = org.bitcoinj.core.Base58.encodeChecked(239, ByteArray(31))
+        assertThrows(DashjAddressFormatException.InvalidDataLength::class.java) {
+            DumpedPrivateKey.fromBase58(null, testnetShort)
+        }
+        assertThrows(AddressFormatException.InvalidDataLength::class.java) {
+            WifKey.decodeDash(testnetShort)
+        }
+    }
 }

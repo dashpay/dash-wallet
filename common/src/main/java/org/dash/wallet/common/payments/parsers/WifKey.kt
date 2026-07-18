@@ -80,16 +80,21 @@ class WifKey private constructor(
          * Decodes a WIF string, requiring [network]'s private key version byte — the equivalent
          * of `DumpedPrivateKey.fromBase58(params, wif)`.
          *
+         * Like dashj, the version byte is checked before the payload length, so a wrong-network
+         * string with a malformed payload throws [AddressFormatException.WrongNetwork], not
+         * [AddressFormatException.InvalidDataLength].
+         *
          * @throws AddressFormatException.WrongNetwork when the version byte belongs to another network
          */
         @JvmStatic
         @Throws(AddressFormatException::class)
         fun decode(wif: String, network: AddressNetwork): WifKey {
-            val key = decode(wif)
-            if (key.version != network.dumpedPrivateKeyHeader) {
-                throw AddressFormatException.WrongNetwork(key.version)
+            val versionAndDataBytes = Base58.decodeChecked(wif)
+            val version = versionAndDataBytes[0].toInt() and 0xFF
+            if (version != network.dumpedPrivateKeyHeader) {
+                throw AddressFormatException.WrongNetwork(version)
             }
-            return key
+            return WifKey(version, versionAndDataBytes.copyOfRange(1, versionAndDataBytes.size))
         }
 
         /**
@@ -97,19 +102,24 @@ class WifKey private constructor(
          * `DumpedPrivateKey.fromBase58(null, wif)` over dashj's default network set
          * (testnet is tried before mainnet; devnets share testnet's version byte).
          *
+         * Like dashj, the version byte is inspected before the payload length, so an unknown
+         * version byte with a malformed payload throws [AddressFormatException.InvalidPrefix],
+         * not [AddressFormatException.InvalidDataLength].
+         *
          * @return the key and the matching network
          * @throws AddressFormatException.InvalidPrefix when no Dash network matches
          */
         @JvmStatic
         @Throws(AddressFormatException::class)
         fun decodeDash(wif: String): Pair<WifKey, AddressNetwork> {
-            val key = decode(wif)
+            val versionAndDataBytes = Base58.decodeChecked(wif)
+            val version = versionAndDataBytes[0].toInt() and 0xFF
             for (network in listOf(AddressNetwork.DASH_TESTNET, AddressNetwork.DASH_MAINNET)) {
-                if (key.version == network.dumpedPrivateKeyHeader) {
-                    return Pair(key, network)
+                if (version == network.dumpedPrivateKeyHeader) {
+                    return Pair(WifKey(version, versionAndDataBytes.copyOfRange(1, versionAndDataBytes.size)), network)
                 }
             }
-            throw AddressFormatException.InvalidPrefix("No network found for version " + key.version)
+            throw AddressFormatException.InvalidPrefix("No network found for version " + version)
         }
 
         /**

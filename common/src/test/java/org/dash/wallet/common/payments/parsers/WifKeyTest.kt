@@ -114,6 +114,29 @@ class WifKeyTest {
     }
 
     @Test
+    fun decode_wrongVersionAndBadLength_throwsWrongNetworkNotInvalidDataLength() {
+        // dashj checks the version byte before the payload length; the port must match.
+        val mainnetShort = Base58.encodeChecked(204, ByteArray(31))
+        assertThrows(AddressFormatException.WrongNetwork::class.java) {
+            WifKey.decode(mainnetShort, AddressNetwork.DASH_TESTNET)
+        }
+        // With the matching version byte the length check is reached instead.
+        assertThrows(AddressFormatException.InvalidDataLength::class.java) {
+            WifKey.decode(mainnetShort, AddressNetwork.DASH_MAINNET)
+        }
+    }
+
+    @Test
+    fun decodeDash_unknownVersionAndBadLength_throwsInvalidPrefixNotInvalidDataLength() {
+        // Unknown version byte wins over the bad payload length (dashj ordering).
+        val foreignShort = Base58.encodeChecked(128, ByteArray(31))
+        assertThrows(AddressFormatException.InvalidPrefix::class.java) { WifKey.decodeDash(foreignShort) }
+        // A known Dash version byte with a bad length still fails the length check.
+        val testnetShort = Base58.encodeChecked(239, ByteArray(31))
+        assertThrows(AddressFormatException.InvalidDataLength::class.java) { WifKey.decodeDash(testnetShort) }
+    }
+
+    @Test
     fun compressedFlag_requiresTrailing01_likeDashj() {
         // A 33-byte payload whose last byte is not 0x01 decodes, but is not "compressed"
         // (mirrors DumpedPrivateKey.isPubKeyCompressed()).
