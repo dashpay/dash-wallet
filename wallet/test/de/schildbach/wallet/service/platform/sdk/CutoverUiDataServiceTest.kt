@@ -353,7 +353,8 @@ class CutoverUiDataServiceTest {
         displayDao: TxDisplayCacheDao = mockk(relaxed = true),
         groupDao: TxGroupCacheDao = mockk(relaxed = true),
         walletUIConfig: WalletUIConfig = mockk(relaxed = true),
-        notify: (Long) -> Unit = {}
+        notify: (Long) -> Unit = {},
+        txEvents: Flow<L1TxEvent> = kotlinx.coroutines.flow.emptyFlow()
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -363,6 +364,7 @@ class CutoverUiDataServiceTest {
         walletUIConfig = walletUIConfig,
         resolveString = resolve,
         notifyCoinsReceived = notify,
+        txEvents = txEvents,
         nowMs = { now }
     )
 
@@ -467,6 +469,210 @@ class CutoverUiDataServiceTest {
         service.start()
         runCurrent()
 
+        coVerify(exactly = 0) { displayDao.insertAll(any()) }
+    }
+
+    // ── The engine-event (instant receive) feed ───────────────────────
+
+    @Test
+    fun eventRecord_mapsDetectedToPendingIncoming() {
+        val event = L1TxEvent.Detected(
+            txidHex = displayHex(7),
+            netAmountDuffs = 1_000_000L,
+            feeDuffs = null,
+            contextCode = 0,
+            directionCode = 0
+        )
+        val r = l1TxUiRecordFromEvent(event, now)
+        assertEquals(displayHex(7), r.txidHex)
+        assertEquals(1_000_000L, r.netAmountDuffs)
+        assertNull(r.feeDuffs)
+        assertEquals(L1TxUiStatus.PENDING, r.status)
+        assertEquals(L1TxUiDirection.INCOMING, r.direction)
+        // First seen IS now (second precision, like the Room column).
+        assertEquals((now / 1000) * 1000, r.timestampMs)
+    }
+
+    @Test
+    fun isLockPlan_flipsSendingToSentAndClearsProcessing() {
+        val sending = cacheEntry(
+            rowId = displayHex(3),
+            title = resolve(R.string.transaction_row_status_sending),
+            statusText = resolve(R.string.transaction_row_status_processing)
+        )
+        val updated = planL1InstantLockRowUpdate(sending, resolve)!!
+        assertEquals(resolve(R.string.transaction_row_status_sent), updated.title)
+        assertEquals("", updated.statusText)
+        // Everything else (value, time, metadata) is preserved byte-identically.
+        assertEquals(sending.valueSatoshis, updated.valueSatoshis)
+        assertEquals(sending.time, updated.time)
+        assertEquals(sending.comment, updated.comment)
+        assertEquals(sending.exchangeRateFiatCode, updated.exchangeRateFiatCode)
+    }
+
+    @Test
+    fun isLockPlan_clearsConfirmingOnIncomingRow() {
+        val receiving = cacheEntry(
+            rowId = displayHex(4),
+            title = resolve(R.string.transaction_row_status_received),
+            statusText = resolve(R.string.transaction_row_status_confirming),
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+        )
+        val updated = planL1InstantLockRowUpdate(receiving, resolve)!!
+        assertEquals(resolve(R.string.transaction_row_status_received), updated.title)
+        assertEquals("", updated.statusText)
+    }
+
+    @Test
+    fun isLockPlan_settledRowIsNoOp_andRichRowsAreNeverTouched() {
+        // Already settled: nothing to change.
+        assertNull(
+            planL1InstantLockRowUpdate(
+                cacheEntry(rowId = displayHex(5), title = resolve(R.string.transaction_row_status_sent)),
+                resolve
+            )
+        )
+        // Rows with richer semantics are untouchable even when they LOOK pending.
+        val pendingLook = { flags: Int, service: String?, errors: Boolean ->
+            cacheEntry(
+                rowId = displayHex(6),
+                title = resolve(R.string.transaction_row_status_sending),
+                statusText = resolve(R.string.transaction_row_status_processing),
+                service = service,
+                hasErrors = errors,
+                filterFlags = flags
+            )
+        }
+        assertNull(planL1InstantLockRowUpdate(pendingLook(TxDisplayCacheEntry.FLAG_SENT, "crowdnode", false), resolve))
+        assertNull(planL1InstantLockRowUpdate(pendingLook(TxDisplayCacheEntry.FLAG_SENT, null, true), resolve))
+        assertNull(
+            planL1InstantLockRowUpdate(
+                pendingLook(TxDisplayCacheEntry.FLAG_SENT or TxDisplayCacheEntry.FLAG_GIFT_CARD, null, false),
+                resolve
+            )
+        )
+        assertNull(
+            planL1InstantLockRowUpdate(
+                pendingLook(TxDisplayCacheEntry.FLAG_SENT or TxDisplayCacheEntry.FLAG_COINJOIN, null, false),
+                resolve
+            )
+        )
+    }
+
+    /** A stateful display-cache fake: inserts land in [store], reads see them. */
+    private fun statefulDisplayDao(store: MutableMap<String, TxDisplayCacheEntry>): TxDisplayCacheDao {
+        val dao = mockk<TxDisplayCacheDao>(relaxed = true)
+        coEvery { dao.getEntriesByIds(any()) } coAnswers {
+            firstArg<List<String>>().mapNotNull { store[it] }
+        }
+        coEvery { dao.insertAll(any()) } coAnswers {
+            firstArg<List<TxDisplayCacheEntry>>().forEach { store[it.rowId] = it }
+        }
+        return dao
+    }
+
+    @Test
+    fun engineEvent_mempoolReceiveRendersAndNotifiesPreBlock_thenBlockAndIsLockDedup() = runTest {
+        val txid = displayHex(7)
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val notified = mutableListOf<Long>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao,
+            notify = { notified += it }, txEvents = events
+        )
+        service.start()
+        runCurrent()
+
+        // 1) Mempool sighting: the row renders IMMEDIATELY as a pending
+        //    receive and the coins-received notification fires — no block.
+        events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
+        runCurrent()
+        val pending = store.getValue(txid)
+        assertEquals(resolve(R.string.transaction_row_status_received), pending.title)
+        assertEquals(resolve(R.string.transaction_row_status_processing), pending.statusText)
+        assertEquals(1_000_000L, pending.valueSatoshis)
+        assertEquals(listOf(1_000_000L), notified)
+
+        // 2) A duplicate detection (multi-account tx / mempool re-emit)
+        //    neither duplicates the row nor re-notifies.
+        events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
+        runCurrent()
+        assertEquals(1, store.size)
+        assertEquals(1, notified.size)
+
+        // 3) The IS lock flips the SAME row pre-block: "Processing" clears.
+        events.emit(L1TxEvent.InstantLocked(txid))
+        runCurrent()
+        assertEquals("", store.getValue(txid).statusText)
+        assertEquals(resolve(R.string.transaction_row_status_received), store.getValue(txid).title)
+
+        // 4) The block eventually lands and the Room snapshot re-emits the
+        //    tx — still one row, still one notification.
+        source.records.value = listOf(record(firstByte = 7, net = 1_000_000L, context = 2, direction = 0))
+        runCurrent()
+        assertEquals(1, store.size)
+        assertEquals(listOf(1_000_000L), notified)
+    }
+
+    @Test
+    fun engineEvent_isLockFlipsStuckSendingRow() = runTest {
+        val txid = displayHex(9)
+        val store = mutableMapOf(
+            txid to cacheEntry(rowId = txid, title = resolve(R.string.transaction_row_status_sending))
+        )
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+
+        val service = buildService(
+            source = FakeSource(records = MutableStateFlow(emptyList())),
+            dashPayConfig = configWithState("CUT_OVER"),
+            scope = backgroundScope,
+            displayDao = displayDao, groupDao = groupDao, txEvents = events
+        )
+        service.start()
+        runCurrent()
+
+        events.emit(L1TxEvent.InstantLocked(txid))
+        runCurrent()
+        assertEquals(resolve(R.string.transaction_row_status_sent), store.getValue(txid).title)
+    }
+
+    @Test
+    fun engineEvent_isLockForUnknownOrGroupedTxIsNoOp() = runTest {
+        val txid = displayHex(2)
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        // The tx lives inside a multi-tx group row: never touched.
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns listOf(
+            TxGroupCacheEntry(
+                groupId = "group-1", txId = txid,
+                wrapperType = TxGroupCacheEntry.TYPE_CROWDNODE, groupDate = "", sortOrder = 0
+            )
+        )
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+
+        val service = buildService(
+            source = FakeSource(records = MutableStateFlow(emptyList())),
+            dashPayConfig = configWithState("CUT_OVER"),
+            scope = backgroundScope,
+            displayDao = displayDao, groupDao = groupDao, txEvents = events
+        )
+        service.start()
+        runCurrent()
+
+        events.emit(L1TxEvent.InstantLocked(txid))
+        runCurrent()
+        assertTrue(store.isEmpty())
         coVerify(exactly = 0) { displayDao.insertAll(any()) }
     }
 }

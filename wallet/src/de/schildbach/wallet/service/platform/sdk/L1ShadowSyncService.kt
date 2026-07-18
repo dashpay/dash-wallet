@@ -29,12 +29,17 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -682,6 +687,115 @@ internal fun distinctTxCount(txids: List<ByteArray?>, spendingTxids: List<ByteAr
     return seen.size
 }
 
+// ── Engine wallet-event tap (the instant-receive feed) ────────────────
+
+/**
+ * Neutral projection of the Rust engine's per-transaction `WalletEvent`s,
+ * for the pre-block receive pipeline ([CutoverUiDataService]'s tx feed).
+ *
+ * ## Where these come from (the exact binding surface)
+ *
+ * The shared dash-spv engine's mempool tracker (ON by default —
+ * `enable_mempool_tracking`) calls `process_mempool_transaction`, which
+ * emits `WalletEvent::TransactionDetected` on the first off-chain
+ * sighting of a wallet-relevant tx and `WalletEvent::TransactionInstantLocked`
+ * when an IS lock lands on a previously-seen one
+ * (`key-wallet-manager/src/process_block.rs`). Every `WalletEvent` is
+ * forwarded through the FFI event-handler vtable as its Rust `Debug`
+ * string (`rs-platform-wallet-ffi/src/event_handler.rs on_wallet_event`:
+ * `format!("{:?}", event)`) → JNI trampoline →
+ * `org.dashfoundation.dashsdk.ffi.NativeWalletEventBridge.onWalletEvent(String)`
+ * → `PlatformWalletManager.syncEvents`
+ * (`SharedFlow<WalletSyncEvent>`, variant `WalletSyncEvent.Generic(debug)`).
+ * That debug-string `Generic` is the ONLY surface the pinned AAR exposes
+ * for these two events (no typed callback slot exists), so
+ * [parseL1TxEvent] extracts the display fields from it.
+ */
+sealed class L1TxEvent {
+    /**
+     * First off-chain sighting of a wallet-relevant tx: mempool
+     * ([contextCode] 0) or IS-lock-first ([contextCode] 1 — the record was
+     * born with `TransactionContext::InstantSend`).
+     *
+     * [netAmountDuffs] is the engine's own wallet-side computation —
+     * `total_received - total_sent` over resolved wallet inputs/outputs
+     * (the same Σin−Σout the iOS app computes app-side; here the engine
+     * already did it, so no raw-byte fallback is needed).
+     */
+    data class Detected(
+        /** DISPLAY-order (byte-reversed) txid hex — dashj `Sha256Hash.toString()` convention. */
+        val txidHex: String,
+        val netAmountDuffs: Long,
+        /** Fee in duffs when the engine knows it (self-authored sends), else null. */
+        val feeDuffs: Long?,
+        /** `transactions.context` code: 0=mempool, 1=instantSend, 2=inBlock, 3=chainLocked. */
+        val contextCode: Int,
+        /** `transactions.direction` code: 0=in, 1=out, 2=internal, 3=coinjoin. */
+        val directionCode: Int
+    ) : L1TxEvent()
+
+    /** An InstantSend lock was applied to a previously-seen tx. */
+    data class InstantLocked(val txidHex: String) : L1TxEvent()
+}
+
+/*
+ * Anchored field extractors for the `WalletEvent` Debug string. Anchoring
+ * matters: `txid:` also appears inside the record's `Transaction` (every
+ * input's `OutPoint { txid: .., vout: .. }`) and inside `InstantLock`
+ * (`txid: .., cyclehash: ..`), so the record's OWN txid is matched by its
+ * unique following field (`account_type` / `instant_lock`). `Txid`'s Debug
+ * is `{:#}` LowerHex — `0x` + 64 display-order hex chars (dash hashes
+ * print byte-reversed), which is exactly the app's rowId convention.
+ */
+private val TX_EVENT_RECORD_TXID = Regex("""\btxid: (?:0x)?([0-9a-fA-F]{64}), account_type:""")
+private val TX_EVENT_AMOUNTS = Regex("""\bnet_amount: (-?\d+), fee: (?:Some\((\d+)\)|None)""")
+private val TX_EVENT_DIRECTION = Regex("""\bdirection: (Incoming|Outgoing|Internal|CoinJoin)\b""")
+private val TX_EVENT_CONTEXT = Regex("""\bcontext: (Mempool|InstantSend|InBlock|InChainLockedBlock)\b""")
+private val TX_EVENT_ISLOCK_TXID = Regex("""\btxid: (?:0x)?([0-9a-fA-F]{64}), instant_lock:""")
+
+/**
+ * Parse one engine wallet-event Debug string into an [L1TxEvent], or null
+ * for every other event kind (`BlockProcessed`, `SyncHeightAdvanced`,
+ * `ChainLockProcessed`, …) and for anything that fails to parse — a
+ * malformed event must degrade to "no instant feed" (the Room snapshot
+ * pipeline still converges), never to a wrong row. Pure — host-testable.
+ */
+fun parseL1TxEvent(eventDebug: String): L1TxEvent? = when {
+    eventDebug.startsWith("TransactionDetected") -> {
+        val txid = TX_EVENT_RECORD_TXID.find(eventDebug)?.groupValues?.get(1)
+        val amounts = TX_EVENT_AMOUNTS.find(eventDebug)
+        val net = amounts?.groupValues?.get(1)?.toLongOrNull()
+        val direction = TX_EVENT_DIRECTION.find(eventDebug)?.groupValues?.get(1)
+        val context = TX_EVENT_CONTEXT.find(eventDebug)?.groupValues?.get(1)
+        if (txid == null || net == null || direction == null || context == null) {
+            null
+        } else {
+            L1TxEvent.Detected(
+                txidHex = txid.lowercase(Locale.US),
+                netAmountDuffs = net,
+                feeDuffs = amounts.groupValues[2].takeIf { it.isNotEmpty() }?.toLongOrNull(),
+                contextCode = when (context) {
+                    "Mempool" -> 0
+                    "InstantSend" -> 1
+                    "InBlock" -> 2
+                    else -> 3
+                },
+                directionCode = when (direction) {
+                    "Incoming" -> 0
+                    "Outgoing" -> 1
+                    "Internal" -> 2
+                    else -> 3
+                }
+            )
+        }
+    }
+    eventDebug.startsWith("TransactionInstantLocked") ->
+        TX_EVENT_ISLOCK_TXID.find(eventDebug)?.let {
+            L1TxEvent.InstantLocked(it.groupValues[1].lowercase(Locale.US))
+        }
+    else -> null
+}
+
 // ── Source seam ───────────────────────────────────────────────────────
 
 /**
@@ -708,6 +822,15 @@ interface L1ShadowSource {
 
     /** The manager's 1 Hz SPV progress feed (live while SPV runs). */
     fun spvProgress(): Flow<SpvSyncProgressData>
+
+    /**
+     * The manager's hot wallet-event feed as raw Rust `Debug` strings —
+     * `PlatformWalletManager.syncEvents` filtered to
+     * `WalletSyncEvent.Generic` (see [L1TxEvent] for the full delivery
+     * chain). Default empty so test fakes and the fake-source seam stay
+     * source-compatible; the production source overrides.
+     */
+    fun walletEventStrings(): Flow<String> = kotlinx.coroutines.flow.emptyFlow()
 
     /** (confirmed, unconfirmed) duffs from the SDK wallet's lock-free L1 balance. */
     suspend fun sdkBalanceDuffs(walletIdHex: String): Pair<Long, Long>
@@ -808,6 +931,14 @@ internal class DashSdkL1ShadowSource(
 
     override fun spvProgress(): Flow<SpvSyncProgressData> =
         flow { emitAll(manager().spvProgress) }
+
+    override fun walletEventStrings(): Flow<String> = flow {
+        emitAll(
+            manager().syncEvents
+                .filterIsInstance<org.dashfoundation.dashsdk.wallet.WalletSyncEvent.Generic>()
+                .map { it.debug }
+        )
+    }
 
     override suspend fun sdkBalanceDuffs(walletIdHex: String): Pair<Long, Long> {
         val wallet = checkNotNull(manager().wallets.value[walletIdHex]) { "SDK wallet not loaded" }
@@ -1068,6 +1199,23 @@ class L1ShadowSyncService internal constructor(
     private var monitorJob: Job? = null
     private var parityJob: Job? = null
     private var watchdogJob: Job? = null
+    private var eventTapJob: Job? = null
+
+    /**
+     * Parsed per-transaction engine events ([L1TxEvent]), live while the
+     * shadow runs — the INSTANT receive feed [CutoverUiDataService]'s tx
+     * pipeline consumes to insert mempool receives / flip IS-lock state
+     * without waiting for a block (or for the engine's Room persistence
+     * pass). Replay 0: consumers back-fill from the Room snapshot flow,
+     * so a pre-subscription event is never lost, only slower.
+     */
+    private val _txEvents = MutableSharedFlow<L1TxEvent>(
+        replay = 0,
+        extraBufferCapacity = TX_EVENT_BUFFER_CAPACITY
+    )
+
+    /** Hot stream of wallet-relevant engine tx events (see [_txEvents]). */
+    val txEvents: SharedFlow<L1TxEvent> = _txEvents.asSharedFlow()
 
     /**
      * Wakes [parityLoop] early on the progress feed's transition INTO
@@ -1185,6 +1333,7 @@ class L1ShadowSyncService internal constructor(
                 monitorJob = scope.launch { monitorProgress() }.logCompletion("progress monitor")
                 parityJob = scope.launch { parityLoop(walletIdHex) }.logCompletion("parity probe loop")
                 watchdogJob = scope.launch { watchdogLoop() }.logCompletion("probe watchdog")
+                eventTapJob = scope.launch { tapWalletEvents() }.logCompletion("wallet-event tap")
                 log.info(
                     "L1 shadow SPV started for SDK wallet {}… (dataDir={}, default peer discovery); " +
                         "debug-only instrumentation — two SPV engines are now running",
@@ -1213,6 +1362,8 @@ class L1ShadowSyncService internal constructor(
             parityJob = null
             watchdogJob?.cancel()
             watchdogJob = null
+            eventTapJob?.cancel()
+            eventTapJob = null
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             _progress.value = ShadowSyncProgress.IDLE
@@ -1326,6 +1477,32 @@ class L1ShadowSyncService internal constructor(
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 log.warn("L1Shadow progress monitor failed; re-collecting in ${LOOP_RETRY_DELAY_MS}ms", t)
+                delay(LOOP_RETRY_DELAY_MS)
+            }
+        }
+    }
+
+    /**
+     * Mirror the manager's wallet-event feed into [txEvents], dropping
+     * every event kind [parseL1TxEvent] does not recognize. Same
+     * never-dies-silently re-collect discipline as [monitorProgress]:
+     * losing this feed only degrades receives back to the Room-snapshot
+     * cadence, but it should not do so silently.
+     */
+    private suspend fun tapWalletEvents() {
+        while (currentCoroutineContext().isActive) {
+            try {
+                source.walletEventStrings().collect { debug ->
+                    val event = parseL1TxEvent(debug) ?: return@collect
+                    log.info("L1 engine tx event: {}", event)
+                    if (!_txEvents.tryEmit(event)) {
+                        log.warn("L1 tx-event buffer full; dropped {} (Room snapshot will reconcile)", event)
+                    }
+                }
+                return // upstream flow completed normally
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("L1 wallet-event tap failed; re-collecting in ${LOOP_RETRY_DELAY_MS}ms", t)
                 delay(LOOP_RETRY_DELAY_MS)
             }
         }
@@ -1963,6 +2140,13 @@ class L1ShadowSyncService internal constructor(
 
         /** Retry backoff for a failed progress-monitor collection. */
         internal const val LOOP_RETRY_DELAY_MS = 5_000L
+
+        /**
+         * [txEvents] buffer: absorbs a burst of per-record events (one per
+         * affected account per tx) without suspending the tap collector.
+         * A drop is logged and recovered by the Room snapshot pass.
+         */
+        internal const val TX_EVENT_BUFFER_CAPACITY = 64
 
         /**
          * How long a [noteSelfSpendBroadcast] marker suppresses the

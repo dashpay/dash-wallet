@@ -27,7 +27,9 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.dashfoundation.dashsdk.wallet.SpvSubProgress
@@ -91,6 +93,7 @@ class L1ShadowSyncServiceTest {
         var clearL1RowsCalls = 0
 
         val progressFlow = MutableStateFlow(SpvSyncProgressData.EMPTY)
+        val eventStrings = MutableSharedFlow<String>()
 
         fun interactions() = boundCalls + isRunningCalls + startCalls + stopCalls
 
@@ -115,6 +118,8 @@ class L1ShadowSyncServiceTest {
         }
 
         override fun spvProgress(): Flow<SpvSyncProgressData> = progressFlow
+
+        override fun walletEventStrings(): Flow<String> = eventStrings
 
         override suspend fun sdkBalanceDuffs(walletIdHex: String): Pair<Long, Long> {
             onProbe()
@@ -1794,5 +1799,144 @@ class L1ShadowSyncServiceTest {
         assertEquals(0, shadowSyncPercent(ShadowSyncProgress(ShadowSyncPhase.FILTERS, 0.0, 0, 0, 0, 0)))
         // Error phase reads as 0 (nothing trustworthy to show).
         assertEquals(0, shadowSyncPercent(ShadowSyncProgress(ShadowSyncPhase.ERROR, 0.0, 100, 100, 100, 100)))
+    }
+
+    // ── parseL1TxEvent (the engine wallet-event Debug-string parser) ──
+
+    /** Display-order txid of the RECORD (the one the parser must pick). */
+    private val recordTxid = "00".repeat(31) + "ab"
+
+    /** A DIFFERENT txid appearing as OutPoint noise inside the record's Transaction. */
+    private val inputTxid = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+
+    /** Realistic `WalletEvent::TransactionDetected` Debug string (mempool incoming). */
+    private fun detectedDebug(
+        context: String = "Mempool",
+        direction: String = "Incoming",
+        netAmount: Long = 1_000_000L,
+        fee: String = "None"
+    ): String =
+        "TransactionDetected { wallet_id: WalletId([205, 205, 205]), record: TransactionRecord { " +
+            "transaction: Transaction { version: 2, lock_time: 0, input: [TxIn { " +
+            "previous_output: OutPoint { txid: 0x$inputTxid, vout: 1 }, " +
+            "script_sig: Script(OP_DUP OP_HASH160), sequence: 4294967295, " +
+            "witness: Witness { content: [], witness_elements: 0, indices_start: 0 } }], " +
+            "output: [TxOut { value: 1000000, script_pubkey: Script(OP_DUP OP_HASH160) }], " +
+            "special_transaction_payload: None }, " +
+            "txid: 0x$recordTxid, " +
+            "account_type: Standard { index: 0, standard_account_type: BIP44 }, " +
+            "context: $context, transaction_type: Standard, direction: $direction, " +
+            "input_details: [], " +
+            "output_details: [OutputDetail { index: 0, role: Received, address: Some(Address..), value: 1000000 }], " +
+            "net_amount: $netAmount, fee: $fee, label: \"\" }, " +
+            "balance: WalletCoreBalance { confirmed: 0, unconfirmed: 1000000, immature: 0, locked: 0 }, " +
+            "account_balances: {}, addresses_derived: [] }"
+
+    /** Realistic `WalletEvent::TransactionInstantLocked` Debug string. */
+    private fun instantLockedDebug(): String =
+        "TransactionInstantLocked { wallet_id: WalletId([205, 205, 205]), " +
+            "txid: 0x$recordTxid, " +
+            "instant_lock: InstantLock { version: 1, " +
+            "inputs: [OutPoint { txid: 0x$inputTxid, vout: 1 }], " +
+            "txid: 0x$recordTxid, cyclehash: 0x${"11".repeat(32)}, signature: [1, 2, 3] }, " +
+            "balance: WalletCoreBalance { confirmed: 0, unconfirmed: 1000000, immature: 0, locked: 0 }, " +
+            "account_balances: {} }"
+
+    @Test
+    fun parseTxEvent_detectedMempoolIncoming() {
+        val event = parseL1TxEvent(detectedDebug())
+        assertEquals(
+            L1TxEvent.Detected(
+                txidHex = recordTxid,
+                netAmountDuffs = 1_000_000L,
+                feeDuffs = null,
+                contextCode = 0,
+                directionCode = 0
+            ),
+            event
+        )
+    }
+
+    @Test
+    fun parseTxEvent_recordTxidNotConfusedWithInputOutpointTxid() {
+        val detected = parseL1TxEvent(detectedDebug()) as L1TxEvent.Detected
+        assertEquals(recordTxid, detected.txidHex)
+        assertFalse(detected.txidHex == inputTxid)
+    }
+
+    @Test
+    fun parseTxEvent_detectedInstantSendFirstOutgoingWithFee() {
+        // A record born with an IS lock: context is InstantSend(InstantLock { … }),
+        // whose inner txids must not confuse any anchor.
+        val debug = detectedDebug(
+            context = "InstantSend(InstantLock { version: 1, inputs: [OutPoint { txid: 0x$inputTxid, " +
+                "vout: 0 }], txid: 0x$recordTxid, cyclehash: 0x${"22".repeat(32)}, signature: [9] })",
+            direction = "Outgoing",
+            netAmount = -1_000_146L,
+            fee = "Some(146)"
+        )
+        assertEquals(
+            L1TxEvent.Detected(
+                txidHex = recordTxid,
+                netAmountDuffs = -1_000_146L,
+                feeDuffs = 146L,
+                contextCode = 1,
+                directionCode = 1
+            ),
+            parseL1TxEvent(debug)
+        )
+    }
+
+    @Test
+    fun parseTxEvent_instantLocked() {
+        assertEquals(L1TxEvent.InstantLocked(recordTxid), parseL1TxEvent(instantLockedDebug()))
+    }
+
+    @Test
+    fun parseTxEvent_otherEventKindsAndGarbageAreNull() {
+        // Block/height/chainlock events flow through the same string channel
+        // and must be ignored — even though BlockProcessed CONTAINS records
+        // whose fields would match the anchors.
+        assertNull(
+            parseL1TxEvent(
+                "BlockProcessed { wallet_id: WalletId([1]), height: 1200000, chain_lock: None, " +
+                    "inserted: [TransactionRecord { txid: 0x$recordTxid, account_type: Standard { " +
+                    "index: 0 }, context: InBlock(BlockInfo { height: 1200000 }), direction: Incoming, " +
+                    "net_amount: 5, fee: None, label: \"\" }], updated: [], matured: [], " +
+                    "balance: WalletCoreBalance { confirmed: 5 }, account_balances: {}, addresses_derived: [] }"
+            )
+        )
+        assertNull(parseL1TxEvent("SyncHeightAdvanced { wallet_id: WalletId([1]), height: 1200001 }"))
+        assertNull(parseL1TxEvent("ChainLockProcessed { wallet_id: WalletId([1]) }"))
+        assertNull(parseL1TxEvent("not an event at all"))
+        // A Detected string missing a required field degrades to null, not a wrong row.
+        assertNull(parseL1TxEvent("TransactionDetected { wallet_id: WalletId([1]), record: broken }"))
+    }
+
+    // ── The wallet-event tap (start/stop lifecycle + parse-and-forward) ──
+
+    @Test
+    fun eventTap_forwardsParsedTxEventsWhileRunning_andStopsWithService() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+
+        val received = mutableListOf<L1TxEvent>()
+        val collector = scope.launch { service.txEvents.collect { received += it } }
+        try {
+            source.eventStrings.emit(detectedDebug())
+            source.eventStrings.emit("SyncHeightAdvanced { wallet_id: WalletId([1]), height: 7 }")
+            source.eventStrings.emit(instantLockedDebug())
+
+            assertEquals(2, received.size)
+            assertTrue(received[0] is L1TxEvent.Detected)
+            assertEquals(L1TxEvent.InstantLocked(recordTxid), received[1])
+
+            // stop() cancels the tap: later engine events no longer surface.
+            service.stop()
+            assertEquals(0, source.eventStrings.subscriptionCount.value)
+        } finally {
+            collector.cancel()
+        }
     }
 }
