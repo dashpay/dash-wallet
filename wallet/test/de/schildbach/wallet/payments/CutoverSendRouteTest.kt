@@ -55,9 +55,18 @@ class CutoverSendRouteTest {
     }
 
     @Test
-    fun committed_customSelectorOrSendAll_failsClosed_neverDashj() {
+    fun committed_sendAllRoutesThroughTheSdkBridge() {
+        // Step B: the SDK drain (SelectionStrategy::All) owns send-all
+        // post-cutover — no more FAIL_CLOSED for emptyWallet.
+        assertEquals(
+            CutoverSendRoute.SDK_BRIDGED,
+            cutoverSendRoute(true, hasCustomSelector = false, emptyWallet = true)
+        )
+    }
+
+    @Test
+    fun committed_customSelector_failsClosed_neverDashj() {
         assertEquals(CutoverSendRoute.FAIL_CLOSED, cutoverSendRoute(true, hasCustomSelector = true, emptyWallet = false))
-        assertEquals(CutoverSendRoute.FAIL_CLOSED, cutoverSendRoute(true, hasCustomSelector = false, emptyWallet = true))
         assertEquals(CutoverSendRoute.FAIL_CLOSED, cutoverSendRoute(true, hasCustomSelector = true, emptyWallet = true))
     }
 }
@@ -90,7 +99,7 @@ class ExtractSdkRoutablePaymentTest {
             addOutput(Coin.valueOf(94_900_000), change)
         }
         assertEquals(
-            payee to Coin.valueOf(5_000_000),
+            SdkRoutablePayment(payee, Coin.valueOf(5_000_000), sendAll = false),
             extractSdkRoutablePayment(request, params, isMine)
         )
     }
@@ -99,21 +108,55 @@ class ExtractSdkRoutablePaymentTest {
     fun noChangeOutput_stillExtractsTheSingleForeignOutput() {
         val request = request { addOutput(Coin.valueOf(5_000_000), payee) }
         assertEquals(
-            payee to Coin.valueOf(5_000_000),
+            SdkRoutablePayment(payee, Coin.valueOf(5_000_000), sendAll = false),
             extractSdkRoutablePayment(request, params, isMine)
         )
     }
 
     @Test
-    fun notRoutable_returnsNull_forEveryConservativeRefusal() {
-        // Send-all.
-        assertNull(
+    fun sendAll_isRoutable_andFlagged() {
+        // Step B: an emptyWallet request with one identifiable foreign
+        // output routes to the SDK drain — sendAll carries dashj's
+        // emptyWallet semantics into the SDK route.
+        assertEquals(
+            SdkRoutablePayment(payee, Coin.valueOf(5_000_000), sendAll = true),
             extractSdkRoutablePayment(
                 request { addOutput(Coin.valueOf(5_000_000), payee) }.apply { emptyWallet = true },
                 params,
                 isMine
             )
         )
+    }
+
+    @Test
+    fun sendAll_conservativeRefusalsStillApply() {
+        // The sendAll flag never relaxes the other refusals: a send-all
+        // with a custom selector stays unroutable.
+        assertNull(
+            extractSdkRoutablePayment(
+                request { addOutput(Coin.valueOf(5_000_000), payee) }.apply {
+                    emptyWallet = true
+                    coinSelector = org.bitcoinj.wallet.CoinSelector { _, _ -> throw UnsupportedOperationException() }
+                },
+                params,
+                isMine
+            )
+        )
+        // …and a multi-recipient send-all cannot identify THE payment.
+        assertNull(
+            extractSdkRoutablePayment(
+                request {
+                    addOutput(Coin.valueOf(5_000_000), payee)
+                    addOutput(Coin.valueOf(1_000_000), Address.fromKey(params, ECKey()))
+                }.apply { emptyWallet = true },
+                params,
+                isMine
+            )
+        )
+    }
+
+    @Test
+    fun notRoutable_returnsNull_forEveryConservativeRefusal() {
         // Custom (non-zero-conf) coin selector.
         assertNull(
             extractSdkRoutablePayment(
@@ -125,7 +168,7 @@ class ExtractSdkRoutablePaymentTest {
         )
         // The default zero-conf selector IS routable — sanity-check the inverse.
         assertEquals(
-            payee to Coin.valueOf(5_000_000),
+            SdkRoutablePayment(payee, Coin.valueOf(5_000_000), sendAll = false),
             extractSdkRoutablePayment(
                 request { addOutput(Coin.valueOf(5_000_000), payee) }
                     .apply { coinSelector = ZeroConfCoinSelector.get() },

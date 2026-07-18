@@ -95,14 +95,16 @@ import de.schildbach.wallet.util.toSha256Hash
  * - [DASHJ]: cutover not committed — today's unchanged dashj path
  *   (byte-identical for every install until a deliberate COMMIT).
  * - [SDK_BRIDGED]: cutover committed and the send is a simple
- *   pay-to-address — broadcast via the SDK, then bridge the tx into the
- *   dashj wallet so the caller still gets the live dashj [Transaction].
+ *   pay-to-address OR an empty-wallet send-all (Step B: the SDK drain,
+ *   `SelectionStrategy::All` via [SdkL1SendService]) — broadcast via the
+ *   SDK, then bridge the tx into the dashj wallet so the caller still gets
+ *   the live dashj [Transaction].
  * - [FAIL_CLOSED]: cutover committed but the send needs dashj-only
  *   machinery the SDK has no equivalent for (a custom [CoinSelector] —
- *   CrowdNode — or an empty-wallet send-all). Failing with a clear error
- *   BEATS falling through to dashj: its peergroup is held, so a dashj
- *   "send" would commit a tx that silently queues and then broadcasts on
- *   a later ROLLBACK, long after the user was told it failed.
+ *   CrowdNode). Failing with a clear error BEATS falling through to
+ *   dashj: its peergroup is held, so a dashj "send" would commit a tx
+ *   that silently queues and then broadcasts on a later ROLLBACK, long
+ *   after the user was told it failed.
  */
 enum class CutoverSendRoute { DASHJ, SDK_BRIDGED, FAIL_CLOSED }
 
@@ -113,23 +115,37 @@ fun cutoverSendRoute(
     emptyWallet: Boolean
 ): CutoverSendRoute = when {
     !cutoverCommitted -> CutoverSendRoute.DASHJ
-    hasCustomSelector || emptyWallet -> CutoverSendRoute.FAIL_CLOSED
-    else -> CutoverSendRoute.SDK_BRIDGED
+    hasCustomSelector -> CutoverSendRoute.FAIL_CLOSED
+    else -> CutoverSendRoute.SDK_BRIDGED // simple pay-to-address AND send-all
 }
 
 /**
- * Phase 5d: the (address, amount) of a completed [SendRequest]'s payment
- * when — and ONLY when — it is a simple single-recipient pay-to-address the
- * SDK send surface can take over; null means "not SDK-routable, fail
- * closed". The main send UI builds and signs its own SendRequest for the
- * fee preview and submits it straight to the [SendCoinsTaskRunner.sendCoins]
- * funnel (observed live: the first cutover send rehearsal hit the funnel
- * backstop instead of the typed overload's routing), so the funnel needs
- * this extraction to route those sends post-cutover.
+ * Phase 5d: the ONE payment a [SendRequest] carries when — and ONLY when —
+ * the SDK send surface can take it over ([extractSdkRoutablePayment]).
+ *
+ * @property sendAll the request is dashj's `emptyWallet` send-all; the SDK
+ *   route drains via `SelectionStrategy::All` and [amount] is display-typed
+ *   (the engine delivers `total − fee`).
+ */
+data class SdkRoutablePayment(val address: Address, val amount: Coin, val sendAll: Boolean)
+
+/**
+ * Phase 5d: the payment of a [SendRequest] when — and ONLY when — it is a
+ * simple single-recipient pay-to-address (plain or send-all) the SDK send
+ * surface can take over; null means "not SDK-routable, fail closed". The
+ * main send UI builds and signs its own SendRequest for the fee preview
+ * and submits it straight to the [SendCoinsTaskRunner.sendCoins] funnel
+ * (observed live: the first cutover send rehearsal hit the funnel backstop
+ * instead of the typed overload's routing), so the funnel needs this
+ * extraction to route those sends post-cutover.
+ *
+ * Empty-wallet (send-all) requests ARE routable since Step B: the single
+ * foreign output identifies the destination and the SDK drain
+ * ([SdkL1SendService] with `emptyWallet = true`) reproduces the semantics
+ * (all spendable inputs, deliverable = everything minus fee, no change).
  *
  * Deliberately conservative — anything the SDK send can't reproduce
  * faithfully returns null:
- * - empty-wallet (send-all) requests: no SDK equivalent;
  * - a custom [CoinSelector] (anything but the default zero-conf one):
  *   CrowdNode-style selection the SDK can't honor;
  * - locked-output predicates: dashj-only machinery;
@@ -143,8 +159,7 @@ fun extractSdkRoutablePayment(
     sendRequest: SendRequest,
     params: NetworkParameters,
     isMine: (Address) -> Boolean
-): Pair<Address, Coin>? {
-    if (sendRequest.emptyWallet) return null
+): SdkRoutablePayment? {
     val selector = sendRequest.coinSelector
     if (selector != null && selector !is ZeroConfCoinSelector) return null
     if (sendRequest.canUseLockedOutputPredicate != null) return null
@@ -161,7 +176,8 @@ fun extractSdkRoutablePayment(
             foreignOutputs += address to output.value
         }
     }
-    return foreignOutputs.singleOrNull()
+    val payment = foreignOutputs.singleOrNull() ?: return null
+    return SdkRoutablePayment(payment.first, payment.second, sendAll = sendRequest.emptyWallet)
 }
 
 class SendCoinsTaskRunner @Inject constructor(
@@ -209,9 +225,9 @@ class SendCoinsTaskRunner @Inject constructor(
         // below is byte-identical to today.
         when (cutoverSendRoute(sdkL1SendService.cutoverCommitted(), coinSelector != null, emptyWallet)) {
             CutoverSendRoute.DASHJ -> Unit // unchanged path below
-            CutoverSendRoute.SDK_BRIDGED -> return sendViaSdkBridged(address, amount, beforeSending)
+            CutoverSendRoute.SDK_BRIDGED -> return sendViaSdkBridged(address, amount, beforeSending, emptyWallet)
             CutoverSendRoute.FAIL_CLOSED -> throw IllegalStateException(
-                "cutover committed: this send type (custom coin selection or send-all) is not " +
+                "cutover committed: this send type (custom coin selection) is not " +
                     "SDK-routable yet and dashj cannot broadcast while held — ROLLBACK_CUTOVER restores it"
             )
         }
@@ -245,9 +261,10 @@ class SendCoinsTaskRunner @Inject constructor(
     private suspend fun sendViaSdkBridged(
         address: Address,
         amount: Coin,
-        beforeSending: Consumer<Transaction>?
+        beforeSending: Consumer<Transaction>?,
+        emptyWallet: Boolean = false
     ): Transaction {
-        val result = sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = false)
+        val result = sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = emptyWallet)
         return when (result) {
             is SdkWriteResult.Broadcast -> {
                 when (val bridged = bridgedTransactionFactory.bridge(result.value)) {
@@ -839,15 +856,18 @@ class SendCoinsTaskRunner @Inject constructor(
             if (payment != null) {
                 log.info(
                     "cutover committed: routing the SendRequest payment via the SDK bridge " +
-                        "({} duffs to {}…)",
-                    payment.second.value,
-                    payment.first.toBase58().take(8)
+                        "({} duffs to {}…{})",
+                    payment.amount.value,
+                    payment.address.toBase58().take(8),
+                    if (payment.sendAll) ", send-all" else ""
                 )
-                return@withContext sendViaSdkBridged(payment.first, payment.second, beforeSending)
+                return@withContext sendViaSdkBridged(
+                    payment.address, payment.amount, beforeSending, payment.sendAll
+                )
             }
             throw IllegalStateException(
-                "cutover committed: this send is not SDK-routable (multi-recipient, custom " +
-                    "selection, or send-all) and dashj cannot broadcast while held — " +
+                "cutover committed: this send is not SDK-routable (multi-recipient or custom " +
+                    "selection) and dashj cannot broadcast while held — " +
                     "ROLLBACK_CUTOVER restores it"
             )
         }

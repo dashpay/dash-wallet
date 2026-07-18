@@ -50,13 +50,20 @@ class SdkL1SendServiceTest {
 
     private class FakeSource(
         var boundWalletId: () -> String? = { null },
-        var onSend: (String, String, Long) -> String = { _, _, _ -> "00".repeat(32) }
+        var onSend: (String, String, Long) -> String = { _, _, _ -> "00".repeat(32) },
+        var onSpendable: () -> Long = { throw IllegalStateException("spendable not stubbed") },
+        var onSendAll: (String, String, Long) -> String = { _, _, _ ->
+            throw IllegalStateException("send-all not stubbed")
+        }
     ) : SdkL1SendSource {
         var boundCalls = 0
         var sendCalls = 0
+        var spendableCalls = 0
+        var sendAllCalls = 0
         var lastWalletId: String? = null
         var lastAddress: String? = null
         var lastAmountDuffs: Long? = null
+        val sendAllFloors = mutableListOf<Long>()
 
         override suspend fun boundWalletIdOrNull(): String? {
             boundCalls++
@@ -73,6 +80,23 @@ class SdkL1SendServiceTest {
             lastAddress = addressBase58
             lastAmountDuffs = amountDuffs
             return onSend(walletIdHex, addressBase58, amountDuffs)
+        }
+
+        override suspend fun spendableBalanceDuffs(walletIdHex: String): Long {
+            spendableCalls++
+            return onSpendable()
+        }
+
+        override suspend fun sendAllToAddress(
+            walletIdHex: String,
+            addressBase58: String,
+            floorDuffs: Long
+        ): String {
+            sendAllCalls++
+            lastWalletId = walletIdHex
+            lastAddress = addressBase58
+            sendAllFloors += floorDuffs
+            return onSendAll(walletIdHex, addressBase58, floorDuffs)
         }
     }
 
@@ -250,12 +274,13 @@ class SdkL1SendServiceTest {
     }
 
     @Test
-    fun emptyWallet_isNotBroadcast_beforeAnySdkCall() = runBlocking {
-        // The SDK send surface exposes no send-all; dashj keeps handling it.
+    fun emptyWallet_preCutover_isNotBroadcast_beforeAnySdkCall() = runBlocking {
+        // Pre-cutover (soak flag on, no committed cutover) dashj keeps
+        // owning send-all — the drain is a post-cutover route only.
         val source = readySource()
         val result = service(source).sendToAddress(validAddress, amount, emptyWallet = true)
         assertTrue(result is SdkWriteResult.NotBroadcast)
-        assertEquals(0, source.boundCalls + source.sendCalls)
+        assertEquals(0, source.boundCalls + source.sendCalls + source.sendAllCalls + source.spendableCalls)
     }
 
     @Test
@@ -577,5 +602,211 @@ class SdkL1SendServiceTest {
         // the path all the way to a broadcast.
         assertTrue(result is SdkWriteResult.Broadcast)
         assertEquals(1, source.sendCalls)
+    }
+
+    // ── Step B: send-all (drain) — the pure pieces ───────────────────────
+
+    @Test
+    fun sendAllFloor_isSpendableMinusReserve_clampedToOne() {
+        assertEquals(4_990_000L, sendAllFloorDuffs(5_000_000L))
+        assertEquals(1L, sendAllFloorDuffs(SEND_ALL_FEE_RESERVE_DUFFS))
+        assertEquals(1L, sendAllFloorDuffs(SEND_ALL_FEE_RESERVE_DUFFS - 1))
+        assertEquals(1L, sendAllFloorDuffs(0L))
+        // The JNI boundary rejects a non-positive output amount — the clamp
+        // keeps even a dust-level wallet's attempt boundary-legal (the
+        // engine then decides via its own dust/fee checks).
+        assertEquals(1L, sendAllFloorDuffs(-5L))
+        // Custom reserve.
+        assertEquals(900L, sendAllFloorDuffs(1_000L, reserveDuffs = 100L))
+    }
+
+    @Test
+    fun sendAllShortfall_matchesOnlyTheEngineInsufficientAtFeeBuildFailure() {
+        // The retryable signature: WalletOperation + FFI build prefix +
+        // key-wallet's InsufficientFunds Display text.
+        assertTrue(
+            isSendAllShortfall(
+                DashSdkError.PlatformWallet.WalletOperation(
+                    "transaction build failed: Insufficient funds: available 5000000, required 5001480"
+                )
+            )
+        )
+        assertTrue(
+            isSendAllShortfall(
+                DashSdkError.PlatformWallet.WalletOperation(
+                    "transaction build failed: Coin selection error: Insufficient funds: available 1, required 2"
+                )
+            )
+        )
+        // No-UTXOs is NOT a shortfall (retrying with a lower floor can't help).
+        assertFalse(
+            isSendAllShortfall(
+                DashSdkError.PlatformWallet.WalletOperation(
+                    "transaction build failed: Coin selection error: No UTXOs available for selection"
+                )
+            )
+        )
+        // Funding failures, other types, broadcast failures: never retryable.
+        assertFalse(
+            isSendAllShortfall(DashSdkError.PlatformWallet.WalletOperation("set_funding failed: wallet not found"))
+        )
+        assertFalse(isSendAllShortfall(DashSdkError.NetworkError("Insufficient funds")))
+        assertFalse(isSendAllShortfall(RuntimeException("transaction build failed: Insufficient funds")))
+        // Every retryable shortfall MUST classify NotBroadcast (the no-
+        // double-broadcast proof the single retry rests on).
+        val shortfall = DashSdkError.PlatformWallet.WalletOperation(
+            "transaction build failed: Insufficient funds: available 1, required 2"
+        )
+        assertTrue(classifyCoreSendFailure(shortfall) is SdkWriteResult.NotBroadcast)
+    }
+
+    // ── Step B: send-all (drain) — post-cutover orchestration ────────────
+
+    /** A drain-ready source: bound, spendable stubbed, drain succeeds. */
+    private fun drainReadySource(spendable: Long = 5_000_000L) = FakeSource(
+        boundWalletId = { walletId },
+        onSpendable = { spendable },
+        onSendAll = { _, _, _ -> txid }
+    )
+
+    @Test
+    fun sendAll_postCutover_drainsViaTheSdk_withTheFloor() = runBlocking {
+        val source = drainReadySource(spendable = 5_000_000L)
+        val result = service(source, enabled = false, cutoverState = "CUT_OVER")
+            .sendToAddress(validAddress, amount, emptyWallet = true)
+        assertEquals(SdkWriteResult.Broadcast(txid), result)
+        // The drain ran INSTEAD of the plain send, floored at
+        // spendable − reserve (the iOS-validated max pattern).
+        assertEquals(0, source.sendCalls)
+        assertEquals(1, source.sendAllCalls)
+        assertEquals(listOf(5_000_000L - SEND_ALL_FEE_RESERVE_DUFFS), source.sendAllFloors)
+        assertEquals(walletId, source.lastWalletId)
+        assertEquals(validAddress, source.lastAddress)
+        // Post-broadcast hooks fire exactly like a plain send.
+        assertEquals(1, selfSpendMarks)
+        assertEquals(listOf(txid), bridgedTxids)
+    }
+
+    @Test
+    fun sendAll_shortfall_adjustsDownOnce_engineAuthoritative() = runBlocking {
+        val source = drainReadySource(spendable = 5_000_000L)
+        source.onSendAll = { _, _, floor ->
+            if (floor > 1L) {
+                throw DashSdkError.PlatformWallet.WalletOperation(
+                    "transaction build failed: Insufficient funds: available 5000000, required 5001480"
+                )
+            }
+            txid
+        }
+        val result = service(source, enabled = false, cutoverState = "CUT_OVER")
+            .sendToAddress(validAddress, amount, emptyWallet = true)
+        assertEquals(SdkWriteResult.Broadcast(txid), result)
+        // Exactly two attempts: the floor, then the engine-authoritative
+        // retry (floor 1 → deliverable = total − fee).
+        assertEquals(listOf(5_000_000L - SEND_ALL_FEE_RESERVE_DUFFS, 1L), source.sendAllFloors)
+        assertEquals(1, selfSpendMarks)
+    }
+
+    @Test
+    fun sendAll_shortfallTwice_isNotBroadcast_neverAThirdAttempt() = runBlocking {
+        val source = drainReadySource()
+        source.onSendAll = { _, _, _ ->
+            throw DashSdkError.PlatformWallet.WalletOperation(
+                "transaction build failed: Insufficient funds: available 1000, required 2000"
+            )
+        }
+        val result = service(source, enabled = false, cutoverState = "CUT_OVER")
+            .sendToAddress(validAddress, amount, emptyWallet = true)
+        // A genuine can't-pay-the-fee wallet: classified pre-broadcast, ONE
+        // adjust-down retry, never a third attempt, no hooks.
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(2, source.sendAllCalls)
+        assertEquals(0, selfSpendMarks)
+        assertTrue(bridgedTxids.isEmpty())
+    }
+
+    @Test
+    fun sendAll_nonShortfallFailure_isClassified_withoutRetry() = runBlocking {
+        val source = drainReadySource()
+        source.onSendAll = { _, _, _ -> throw DashSdkError.NetworkError("connection reset mid-send") }
+        val result = service(source, enabled = false, cutoverState = "CUT_OVER")
+            .sendToAddress(validAddress, amount, emptyWallet = true)
+        // An unprovable failure stays Ambiguous and is NEVER retried — a
+        // drain retry after a maybe-sent drain is a potential double pay.
+        assertTrue(result is SdkWriteResult.Ambiguous)
+        assertEquals(1, source.sendAllCalls)
+        assertEquals(0, selfSpendMarks)
+    }
+
+    @Test
+    fun sendAll_spendableReadFailure_isNotBroadcast_beforeAnyAttempt() = runBlocking {
+        val source = FakeSource(
+            boundWalletId = { walletId },
+            onSpendable = { throw IllegalStateException("balance read failed") }
+        )
+        val result = service(source, enabled = false, cutoverState = "CUT_OVER")
+            .sendToAddress(validAddress, amount, emptyWallet = true)
+        // Preflight by construction: NotBroadcast, no drain attempt.
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.sendAllCalls)
+    }
+
+    @Test
+    fun sendAll_gateClosed_isNotBroadcast_beforeAnyBalanceReadOrAttempt() = runBlocking {
+        val source = drainReadySource()
+        val result = service(source, enabled = false, cutoverState = "CUT_OVER", parity = { null })
+            .sendToAddress(validAddress, amount, emptyWallet = true)
+        // The same funding-evidence gate guards the drain: the SDK spends
+        // from its own SPV view, send-all most of all.
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue((result as SdkWriteResult.NotBroadcast).reason.contains("gate closed"))
+        assertEquals(0, source.spendableCalls + source.sendAllCalls)
+    }
+
+    @Test
+    fun sendAll_beforeBroadcastThrow_propagates_andNothingIsDrained() = runBlocking {
+        val source = drainReadySource()
+        val boom = IllegalStateException("leftover balance")
+        try {
+            service(source, enabled = false, cutoverState = "CUT_OVER")
+                .sendToAddress(validAddress, amount, emptyWallet = true) { throw boom }
+            fail("expected the beforeBroadcast throw to propagate")
+        } catch (e: IllegalStateException) {
+            assertSame(boom, e)
+        }
+        assertEquals(0, source.sendAllCalls)
+        assertEquals(0, selfSpendMarks)
+    }
+
+    @Test
+    fun plainSend_neverTouchesTheDrainSurface() = runBlocking {
+        val source = readySource()
+        val result = service(source).sendToAddress(validAddress, amount, emptyWallet = false)
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(0, source.spendableCalls + source.sendAllCalls)
+    }
+
+    @Test
+    fun pinnedSdk_exposesTheDrainBindings_theJavaShimAndMutexRelyOn() {
+        // AAR-bump canary (pin-don't-track): the drain wrapper reaches the
+        // SDK's internal builder through JVM-level surface of the PINNED
+        // dash-sdk-android binary. If a future AAR renames the module
+        // (mangling suffix) or the synthetic mutex accessor, the Java shim
+        // fails to COMPILE — and THIS test fails for the reflection-only
+        // piece (DashSdkL1SendSource.coreSendMutexOf), keeping the break
+        // loud at build/test time instead of first-send time.
+        val accessor = org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet::class.java
+            .getMethod(
+                "access\$getCoreSendMutex\$p",
+                org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet::class.java
+            )
+        assertTrue(java.lang.reflect.Modifier.isStatic(accessor.modifiers))
+        assertEquals(kotlinx.coroutines.sync.Mutex::class.java, accessor.returnType)
+        // The strategy knob's Kotlin-side FFI value must stay 5 = All
+        // (CoreSelectionStrategyFFI::All in rs-platform-wallet-ffi).
+        assertEquals(
+            5,
+            org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.SelectionStrategy.ALL.ffiValue
+        )
     }
 }
