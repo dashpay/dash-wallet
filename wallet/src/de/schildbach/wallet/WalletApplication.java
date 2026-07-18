@@ -250,6 +250,8 @@ public class WalletApplication extends MultiDexApplication
     CutoverCoordinator cutoverCoordinator;
     @Inject
     CutoverEvidenceCollector cutoverEvidenceCollector;
+    @Inject
+    de.schildbach.wallet.service.platform.sdk.CutoverUiDataService cutoverUiDataService;
     private WalletBalanceObserver walletBalanceObserver;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;
@@ -1305,6 +1307,12 @@ public class WalletApplication extends MultiDexApplication
 
     @NotNull
     public Coin getWalletBalance() {
+        // Phase 5d: post-cutover the dashj wallet is held/frozen, so the SDK
+        // balance (non-null only after a committed cutover) wins.
+        final Coin sdkBalance = cutoverUiDataService != null ? cutoverUiDataService.sdkBalanceOrNull() : null;
+        if (sdkBalance != null) {
+            return sdkBalance;
+        }
         if (wallet == null || walletBalanceObserver == null) {
             return Coin.ZERO;
         }
@@ -1329,6 +1337,13 @@ public class WalletApplication extends MultiDexApplication
             return FlowKt.emptyFlow();
         }
 
+        // Phase 5d: cutover-aware. Pre-cutover the overlay's SDK side is
+        // permanently null, so this is the dashj feed unchanged; after a
+        // committed cutover the SDK's live L1 balance wins (the dashj
+        // wallet is held and its balance freezes).
+        if (cutoverUiDataService != null) {
+            return cutoverUiDataService.overlayTotalBalance(walletBalanceObserver.getTotalBalance());
+        }
         return walletBalanceObserver.getTotalBalance();
     }
 

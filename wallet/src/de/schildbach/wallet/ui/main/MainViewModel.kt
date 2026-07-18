@@ -317,19 +317,12 @@ class MainViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         // Phase 5d: the displayed balance follows whichever engine owns L1
-        // this launch. After a committed cutover ([sdkOwnsL1]) dashj is held
-        // and its balance freezes, so the balance must come from the SDK L1
-        // scan ([L1ShadowSyncService.latestParity] carries the live SDK duffs).
-        // Falls back to the dashj balance until the first SDK parity report
-        // lands, and pre-cutover (every install today) this is byte-identical
-        // to the original dashj-only feed.
-        combine(
-            walletData.observeTotalBalance(),
-            sdkOwnsL1,
-            l1ShadowSyncService.latestParity
-        ) { dashjBalance, ownL1, parity ->
-            if (ownL1 && parity != null) Coin.valueOf(parity.sdkDuffs) else dashjBalance
-        }
+        // this launch. observeTotalBalance() is cutover-aware at the
+        // WalletDataProvider facade (WalletApplication overlays the SDK's
+        // live L1 balance via CutoverUiDataService once the cutover is
+        // committed), so EVERY balance consumer switches consistently —
+        // pre-cutover this is byte-identical to the dashj-only feed.
+        walletData.observeTotalBalance()
             .onEach { _totalBalance.value = it }
             .catch { e -> log.error("total balance flow error", e) }
             .launchIn(viewModelScope)

@@ -73,7 +73,8 @@ class PlatformSyncEngineTeardownTest {
         sdkWalletBinder = mockk(relaxed = true),
         nonInteractiveWalletUnlock = mockk(relaxed = true),
         l1ShadowSyncService = l1ShadowSyncService,
-        shieldedBalanceService = shieldedBalanceService
+        shieldedBalanceService = shieldedBalanceService,
+        cutoverUiDataService = mockk(relaxed = true)
     )
 
     @Test

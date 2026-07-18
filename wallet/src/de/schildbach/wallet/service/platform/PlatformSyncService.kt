@@ -47,6 +47,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.NonInteractiveWalletUnlock
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
@@ -189,6 +190,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val nonInteractiveWalletUnlock: NonInteractiveWalletUnlock,
     private val l1ShadowSyncService: L1ShadowSyncService,
     private val shieldedBalanceService: ShieldedBalanceService,
+    private val cutoverUiDataService: CutoverUiDataService,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -248,6 +250,11 @@ class PlatformSynchronizationService @Inject constructor(
         syncScope.launch {
             bindJob.join()
             l1ShadowSyncService.startIfEnabled()
+            // Phase 5d follow-up: the post-cutover UI data source (balance
+            // header / tx list / coins-received detection served from the
+            // SDK once the cutover is committed). Idempotent once-per-process
+            // start; provably inert pre-cutover — see CutoverUiDataService.
+            cutoverUiDataService.start()
             // Bring the SHIELDED runtime up at startup too (Brian): it used
             // to start only when a shielded UI screen called
             // ensureShieldedReady(), so until the user visited More (or a

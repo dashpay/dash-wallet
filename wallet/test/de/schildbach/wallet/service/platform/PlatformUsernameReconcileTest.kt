@@ -98,7 +98,8 @@ class PlatformUsernameReconcileTest {
         sdkWalletBinder = mockk(relaxed = true),
         nonInteractiveWalletUnlock = mockk(relaxed = true),
         l1ShadowSyncService = mockk(relaxed = true),
-        shieldedBalanceService = mockk(relaxed = true)
+        shieldedBalanceService = mockk(relaxed = true),
+        cutoverUiDataService = mockk(relaxed = true)
     )
 
     @Test
