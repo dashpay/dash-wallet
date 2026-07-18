@@ -28,7 +28,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
@@ -55,7 +55,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class NonInteractiveWalletUnlock @Inject constructor(
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val platformRepo: PlatformRepo
 ) {
     /**
@@ -210,7 +210,7 @@ class SdkWalletBinder internal constructor(
     private val mnemonicProvider: PlatformMnemonicProvider,
     private val identityConfig: BlockchainIdentityConfig,
     private val dashPayConfig: DashPayConfig,
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val scope: CoroutineScope,
     private val supportsPlatform: () -> Boolean,
     // Injectable clock so the friend-chain provisioning throttle is
@@ -223,7 +223,7 @@ class SdkWalletBinder internal constructor(
         mnemonicProvider: PlatformMnemonicProvider,
         identityConfig: BlockchainIdentityConfig,
         dashPayConfig: DashPayConfig,
-        walletData: WalletDataProvider,
+        walletData: WalletData,
         scope: CoroutineScope
     ) : this(
         sdkService = sdkService,
@@ -344,7 +344,7 @@ class SdkWalletBinder internal constructor(
      * full bind (seed hand-off, orphan prune of the old SDK wallet,
      * discovery + key heal) against the new wallet.
      *
-     * Wiring note: `WalletDataProvider.observeWalletChanged()` exists and
+     * Wiring note: `WalletData.observeWalletChanged()` exists and
      * could push this eagerly, but subscribing would need an
      * always-running collector from construction — breaking the binder's
      * do-nothing-until-triggered posture — and adds no coverage:

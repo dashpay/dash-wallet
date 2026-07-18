@@ -53,7 +53,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.UsernameRequestStatus
@@ -98,7 +98,7 @@ class RequestUserNameViewModelTest {
         coEvery { set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, any()) } just Runs
     }
 
-    private val walletData = mockk<WalletDataProvider> {
+    private val walletData = mockk<WalletData> {
         every { observeBalance(any(), any()) } returns emptyFlow()
     }
 

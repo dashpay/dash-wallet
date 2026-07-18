@@ -20,15 +20,12 @@ package org.dash.wallet.common.util
 import com.google.common.io.BaseEncoding
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.params.MainNetParams
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.MoneyFormat
-import org.dash.wallet.common.money.toDash
+import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
@@ -46,11 +43,11 @@ object Constants {
 
     const val USER_BUY_SELL_DASH = 101
 
-    var MAX_MONEY: Coin = MainNetParams.get().maxMoney
+    var MAX_MONEY: Coin = Coin.valueOf(AddressNetwork.MAX_MONEY_DUFFS)
     val ECONOMIC_FEE: Coin = Coin.valueOf(1000)
 
-    /** Neutral mirror of dashj's [org.bitcoinj.core.Transaction.DEFAULT_TX_FEE] for dashj-free modules. */
-    val DEFAULT_TX_FEE: Dash = Transaction.DEFAULT_TX_FEE.toDash()
+    /** Neutral mirror of dashj's `Transaction.DEFAULT_TX_FEE`. */
+    val DEFAULT_TX_FEE: Dash = Dash.valueOf(1000)
     val SEND_PAYMENT_LOCAL_FORMAT: MonetaryFormat =
         MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2)
             .optionalDecimals()
@@ -85,8 +82,9 @@ object Constants {
         .build()
     @JvmField
     val HEX: BaseEncoding = BaseEncoding.base16().lowerCase()
+    /** The network used for `dash:` URI parsing in this module (mirrors the previous MainNetParams default). */
     @JvmField
-    val NETWORK_PARAMETERS: NetworkParameters = MainNetParams.get()
+    val NETWORK: AddressNetwork = AddressNetwork.DASH_MAINNET
     @JvmField
     val ANYPAY_SCHEME = "pay"
     @JvmField

@@ -41,7 +41,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletProtobufSerializer
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -77,7 +77,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
     private val sdkTxid = "ab".repeat(32)
     private val amount = Dash(1_000_000)
 
-    private lateinit var walletDataProvider: WalletDataProvider
+    private lateinit var walletDataProvider: WalletData
     private lateinit var sdkL1SendService: SdkL1SendService
     private lateinit var runner: SendCoinsTaskRunner
     private lateinit var wallet: Wallet
@@ -243,7 +243,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
     @Test
     fun leftoverBalanceException_fromTheHook_propagatesLikeTheDashjPath() = runTest {
         stubDashjSend()
-        val leftover = LeftoverBalanceException(Coin.COIN, "leftover")
+        val leftover = LeftoverBalanceException(org.dash.wallet.common.money.Dash.COIN, "leftover")
         coEvery { walletDataProvider.checkSendingConditions(any(), any()) } throws leftover
         coEvery {
             sdkL1SendService.sendToAddress(recipientAddress, amount, false, any())

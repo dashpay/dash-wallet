@@ -38,7 +38,7 @@ import de.schildbach.wallet.ui.dashpay.work.GetUsernameVotingResultOperation
 import de.schildbach.wallet_test.R
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dashpay.UsernameInfo
@@ -58,7 +58,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
     val walletApplication: WalletApplication,
     val analytics: AnalyticsService,
     val platformSyncService: PlatformSyncService,
-    val walletDataProvider: WalletDataProvider,
+    val walletDataProvider: WalletData,
     val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
     val identityConfig: BlockchainIdentityConfig,

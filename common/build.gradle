@@ -53,7 +53,6 @@ dependencies {
 
     // Core
     implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'com.google.protobuf:protobuf-javalite:3.17.3'
     // Needed at compile time by the BIP70 code copied from dashj (payments.bip70.X509Utils);
     // dashj only exposes bouncycastle as a runtime dependency. Version matches dashj 22.0.3.

@@ -63,7 +63,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -87,7 +87,7 @@ open class LockScreenActivity : SecureActivity() {
 
     lateinit var alertDialog: AlertDialog
     @Inject lateinit var walletApplication: WalletApplication
-    @Inject lateinit var walletData: WalletDataProvider
+    @Inject lateinit var walletData: WalletData
     @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var restartService: RestartService

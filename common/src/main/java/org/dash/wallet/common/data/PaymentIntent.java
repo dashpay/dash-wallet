@@ -22,42 +22,34 @@ import android.os.Parcelable;
 import android.text.TextUtils;
 
 import com.google.common.io.BaseEncoding;
+
 import java.util.Arrays;
 import java.util.Date;
 
 import javax.annotation.Nullable;
 
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.core.Transaction;
+import org.dash.wallet.common.money.Coin;
 import org.dash.wallet.common.payments.bip70.PaymentProtocol;
 import org.dash.wallet.common.payments.bip70.PaymentProtocolException;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.script.ScriptException;
-import org.bitcoinj.script.ScriptPattern;
-import org.bitcoinj.uri.BitcoinURI;
-import org.bitcoinj.wallet.SendRequest;
+import org.dash.wallet.common.payments.parsers.AddressFormatException;
+import org.dash.wallet.common.payments.parsers.AddressNetwork;
+import org.dash.wallet.common.payments.parsers.PaymentURI;
+import org.dash.wallet.common.payments.parsers.Scripts;
 import org.dash.wallet.common.util.Bluetooth;
 import org.dash.wallet.common.util.GenericUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.io.BaseEncoding;
 import org.dash.wallet.common.util.Constants;
-import java.util.Arrays;
-
-import javax.annotation.Nullable;
-
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 import androidx.annotation.NonNull;
 
 /**
+ * Dashj-free payment intent: amounts are the self-contained {@link Coin} port, addresses are
+ * base58 strings, output scripts are raw script bytes.
+ *
  * @author Andreas Schildbach
  */
 public final class PaymentIntent implements Parcelable {
@@ -67,22 +59,23 @@ public final class PaymentIntent implements Parcelable {
 
     public final static class Output implements Parcelable {
         public final Coin amount;
-        public final Script script;
+        public final byte[] scriptData;
 
-        public Output(final Coin amount, final Script script) {
+        public Output(final Coin amount, final byte[] scriptData) {
             this.amount = amount;
-            this.script = script;
+            this.scriptData = scriptData;
         }
 
         public static Output valueOf(final PaymentProtocol.Output output)
                 throws PaymentProtocolException.InvalidOutputs {
-            try {
-                final Script script = new Script(output.scriptData);
-                return new PaymentIntent.Output(output.amount, script);
-            } catch (final ScriptException x) {
+            // Reject structurally invalid scripts here, at BIP70 parse time, like the old
+            // `new Script(scriptData)` did — not later, post-confirmation, in the send path.
+            if (output.scriptData == null || output.scriptData.length == 0
+                    || !Scripts.isParseable(output.scriptData)) {
                 throw new PaymentProtocolException.InvalidOutputs(
-                        "unparseable script in output: " + Constants.HEX.encode(output.scriptData));
+                        "unparseable script in output: " + Constants.HEX.encode(output.scriptData == null ? new byte[0] : output.scriptData));
             }
+            return new PaymentIntent.Output(output.amount, output.scriptData);
         }
 
         public boolean hasAmount() {
@@ -92,24 +85,24 @@ public final class PaymentIntent implements Parcelable {
         @NonNull
         @Override
         public String toString() {
-            return toString(MainNetParams.get());
+            return toString(AddressNetwork.DASH_MAINNET);
         }
 
-        public String toString(NetworkParameters params) {
+        public String toString(AddressNetwork network) {
             final StringBuilder builder = new StringBuilder();
 
             builder.append(getClass().getSimpleName());
             builder.append('[');
             builder.append(hasAmount() ? amount.toPlainString() : "null");
             builder.append(',');
-            if (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script))
-                builder.append(script.getToAddress(params));
-            else if (ScriptPattern.isP2PK(script))
-                builder.append(Constants.HEX.encode(ScriptPattern.extractKeyFromP2PK(script)));
-            else if (ScriptPattern.isSentToMultisig(script))
+            if (Scripts.isP2PKH(scriptData) || Scripts.isP2SH(scriptData))
+                builder.append(Scripts.addressOf(scriptData, network));
+            else if (Scripts.isP2PK(scriptData))
+                builder.append(Constants.HEX.encode(Scripts.extractKeyFromP2PK(scriptData)));
+            else if (Scripts.isMultisig(scriptData))
                 builder.append("multisig");
-            else if (ScriptPattern.isOpReturn(script))
-                builder.append(script);
+            else if (Scripts.isOpReturn(scriptData))
+                builder.append(Constants.HEX.encode(scriptData));
             else
                 builder.append("unknown");
             builder.append(']');
@@ -126,9 +119,8 @@ public final class PaymentIntent implements Parcelable {
         public void writeToParcel(final Parcel dest, final int flags) {
             dest.writeSerializable(amount);
 
-            final byte[] program = script.getProgram();
-            dest.writeInt(program.length);
-            dest.writeByteArray(program);
+            dest.writeInt(scriptData.length);
+            dest.writeByteArray(scriptData);
         }
 
         public static final Parcelable.Creator<Output> CREATOR = new Parcelable.Creator<Output>() {
@@ -147,9 +139,8 @@ public final class PaymentIntent implements Parcelable {
             amount = (Coin) in.readSerializable();
 
             final int programLength = in.readInt();
-            final byte[] program = new byte[programLength];
-            in.readByteArray(program);
-            script = new Script(program);
+            scriptData = new byte[programLength];
+            in.readByteArray(scriptData);
         }
     }
 
@@ -222,7 +213,7 @@ public final class PaymentIntent implements Parcelable {
     }
 
 
-    private PaymentIntent(final Address address, @Nullable final String addressLabel) {
+    private PaymentIntent(final String address, @Nullable final String addressLabel) {
         this(null, null, null, buildSimplePayTo(Coin.ZERO, address), addressLabel, null, null, null,
                 null, null, null);
     }
@@ -232,23 +223,27 @@ public final class PaymentIntent implements Parcelable {
         return new PaymentIntent(null, null, null, null, null, null, null, null, null, null, null);
     }
 
-    public static PaymentIntent fromAddress(final Address address, @Nullable final String addressLabel) {
+    /** Creates a payment intent for the given base58 address (network inferred from the version byte). */
+    public static PaymentIntent fromAddress(final String address, @Nullable final String addressLabel)
+            throws AddressFormatException {
         return new PaymentIntent(address, addressLabel);
     }
 
-    public static PaymentIntent fromAddressWithIdentity(final Address address, @Nullable final String payeeUserId) {
+    public static PaymentIntent fromAddressWithIdentity(final String address, @Nullable final String payeeUserId) {
         return new PaymentIntent(null, null, null, buildSimplePayTo(Coin.ZERO, address), null, null,
                 null, null, null, payeeUserId, null);
     }
 
-    public static PaymentIntent fromAddressWithIdentity(final Address address, @Nullable final String payeeUserId, Coin amount) {
+    public static PaymentIntent fromAddressWithIdentity(final String address, @Nullable final String payeeUserId, Coin amount) {
         return new PaymentIntent(null, null, null, buildSimplePayTo(amount, address), null, null,
                 null, null, null, payeeUserId, null);
     }
 
-    public static PaymentIntent fromAddress(final String address, @Nullable final String addressLabel, NetworkParameters params)
+    /** Creates a payment intent for the given base58 address, validated against the given network. */
+    public static PaymentIntent fromAddress(final String address, @Nullable final String addressLabel, AddressNetwork network)
             throws AddressFormatException {
-        return new PaymentIntent(Address.fromString(params, address), addressLabel);
+        Scripts.outputScriptForAddress(address, network); // validation
+        return new PaymentIntent(address, addressLabel);
     }
 
     public static PaymentIntent fromUserId(final String payeeUserId) {
@@ -257,22 +252,23 @@ public final class PaymentIntent implements Parcelable {
     }
 
     public static PaymentIntent from(final String address, @Nullable final String addressLabel,
-            @Nullable final Coin amount, NetworkParameters params) throws AddressFormatException {
+            @Nullable final Coin amount, AddressNetwork network) throws AddressFormatException {
+        Scripts.outputScriptForAddress(address, network); // validation
         return new PaymentIntent(null, null, null,
-                buildSimplePayTo(amount, Address.fromString(params, address)), addressLabel, null,
+                buildSimplePayTo(amount, address), addressLabel, null,
                 null, null, null, null, null);
     }
 
-    public static PaymentIntent fromBitcoinUri(final BitcoinURI bitcoinUri) {
-        final Address address = bitcoinUri.getAddress();
-        final Output[] outputs = address != null ? buildSimplePayTo(bitcoinUri.getAmount(), address) : null;
-        final String bluetoothMac = (String) bitcoinUri.getParameterByName(Bluetooth.MAC_URI_PARAM);
-        final String paymentRequestHashStr = (String) bitcoinUri.getParameterByName("h");
+    public static PaymentIntent fromPaymentUri(final PaymentURI paymentUri) {
+        final String address = paymentUri.getAddress();
+        final Output[] outputs = address != null ? buildSimplePayTo(paymentUri.getAmount(), address) : null;
+        final String bluetoothMac = (String) paymentUri.getParameterByName(Bluetooth.MAC_URI_PARAM);
+        final String paymentRequestHashStr = (String) paymentUri.getParameterByName("h");
         final byte[] paymentRequestHash = paymentRequestHashStr != null ? base64UrlDecode(paymentRequestHashStr) : null;
-        final String dashPayUsername = bitcoinUri.getUser();
+        final String dashPayUsername = paymentUri.getUser();
 
-        return new PaymentIntent(PaymentIntent.Standard.BIP21, null, null, outputs, bitcoinUri.getLabel(),
-                bluetoothMac != null ? "bt:" + bluetoothMac : null, null, bitcoinUri.getPaymentRequestUrl(),
+        return new PaymentIntent(PaymentIntent.Standard.BIP21, null, null, outputs, paymentUri.getLabel(),
+                bluetoothMac != null ? "bt:" + bluetoothMac : null, null, paymentUri.getPaymentRequestUrl(),
                 paymentRequestHash, null, dashPayUsername);
     }
 
@@ -288,7 +284,7 @@ public final class PaymentIntent implements Parcelable {
     }
 
     public PaymentIntent mergeWithEditedValues(@Nullable final Coin editedAmount,
-                                               @Nullable final Address editedAddress) {
+                                               @Nullable final String editedAddress) {
         final Output[] outputs;
 
         if (hasOutputs()) {
@@ -296,7 +292,7 @@ public final class PaymentIntent implements Parcelable {
                 checkArgument(editedAmount != null);
 
                 // put all coins on first output, skip the others
-                outputs = new Output[]{new Output(editedAmount, this.outputs[0].script)};
+                outputs = new Output[]{new Output(editedAmount, this.outputs[0].scriptData)};
             } else {
                 // exact copy of outputs
                 outputs = this.outputs;
@@ -312,15 +308,8 @@ public final class PaymentIntent implements Parcelable {
         return new PaymentIntent(standard, payeeName, payeeVerifiedBy, outputs, memo, null, payeeData, null, null, null, null);
     }
 
-    public SendRequest toSendRequest(NetworkParameters params) {
-        final Transaction transaction = new Transaction(params);
-        for (final PaymentIntent.Output output : outputs)
-            transaction.addOutput(output.amount, output.script);
-        return SendRequest.forTx(transaction);
-    }
-
-    private static Output[] buildSimplePayTo(final Coin amount, final Address address) {
-        return new Output[]{new Output(amount, ScriptBuilder.createOutputScript(address))};
+    private static Output[] buildSimplePayTo(final Coin amount, final String address) {
+        return new Output[]{new Output(amount, Scripts.outputScriptForAddress(address))};
     }
 
     public boolean hasPayee() {
@@ -339,16 +328,17 @@ public final class PaymentIntent implements Parcelable {
         if (outputs == null || outputs.length != 1)
             return false;
 
-        final Script script = outputs[0].script;
-        return script.isSentToAddress() || script.isPayToScriptHash() || script.isSentToRawPubKey();
+        final byte[] script = outputs[0].scriptData;
+        return Scripts.isP2PKH(script) || Scripts.isP2SH(script) || Scripts.isP2PK(script);
     }
 
-    public Address getAddress(NetworkParameters params) {
+    /** The destination address (base58) on the given network. */
+    public String getAddress(AddressNetwork network) {
         if (!hasAddress())
             throw new IllegalStateException();
 
-        final Script script = outputs[0].script;
-        return script.getToAddress(params, true);
+        final byte[] script = outputs[0].scriptData;
+        return Scripts.addressOf(script, network, true);
     }
 
     public boolean mayEditAddress() {
@@ -429,13 +419,13 @@ public final class PaymentIntent implements Parcelable {
      * @param other payment intent that is checked if it extends this one
      * @return true if it extends
      */
-    public boolean isExtendedBy(final PaymentIntent other, boolean ignoreDetails, NetworkParameters params) {
+    public boolean isExtendedBy(final PaymentIntent other, boolean ignoreDetails, AddressNetwork network) {
         // shortcut via hash
         if (standard == Standard.BIP21 && other.standard == Standard.BIP70)
             if (paymentRequestHash != null && Arrays.equals(paymentRequestHash, other.paymentRequestHash))
                 return true;
 
-        return ignoreDetails || (equalsAmount(other) && equalsAddress(other, params));
+        return ignoreDetails || (equalsAmount(other) && equalsAddress(other, network));
     }
 
     public boolean equalsAmount(final PaymentIntent other) {
@@ -447,11 +437,11 @@ public final class PaymentIntent implements Parcelable {
         return true;
     }
 
-    public boolean equalsAddress(final PaymentIntent other, NetworkParameters params) {
+    public boolean equalsAddress(final PaymentIntent other, AddressNetwork network) {
         final boolean hasAddress = hasAddress();
         if (hasAddress != other.hasAddress())
             return false;
-        if (hasAddress && !getAddress(params).equals(other.getAddress(params)))
+        if (hasAddress && !getAddress(network).equals(other.getAddress(network)))
             return false;
         return true;
     }

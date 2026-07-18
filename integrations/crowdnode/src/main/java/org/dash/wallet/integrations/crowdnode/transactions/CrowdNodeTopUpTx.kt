@@ -17,22 +17,17 @@
 
 package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.TransactionBag
-import org.dash.wallet.common.money.toCoin
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class CrowdNodeTopUpTx(
-    accountAddress: Address,
-    private val bag: TransactionBag
+    accountAddress: String
 ) : CoinsToAddressTxFilter(
     accountAddress,
-    CrowdNodeConstants.REQUIRED_FOR_SIGNUP.toCoin()
+    CrowdNodeConstants.REQUIRED_FOR_SIGNUP
 ) {
-    override fun matches(tx: Transaction): Boolean {
-        return super.matches(tx) && tx.isEntirelySelf(bag)
+    override fun matches(tx: TxInfo): Boolean {
+        return super.matches(tx) && tx.isEntirelySelf
     }
 }

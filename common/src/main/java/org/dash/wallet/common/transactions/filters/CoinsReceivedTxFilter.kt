@@ -17,34 +17,26 @@
 
 package org.dash.wallet.common.transactions.filters
 
-import org.bitcoinj.core.*
-import org.bitcoinj.script.ScriptPattern
-import org.dash.wallet.common.transactions.TransactionUtils
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.transactions.TxInfo
 
 open class CoinsReceivedTxFilter(
-    private val bag: TransactionBag,
-    private val coins: Coin
-): TransactionFilter {
-    var toAddress: Address? = null
+    private val coins: Dash
+) : TransactionFilter {
+    var toAddress: String? = null
         private set
 
-    override fun matches(tx: Transaction): Boolean {
+    override fun matches(tx: TxInfo): Boolean {
         // this check prevents a CoinJoin TX from being marked as a Crowdnode TX
-        if (tx.isEntirelySelf(bag) || tx.getValue(bag).signum() < 0) {
+        if (tx.isEntirelySelf || tx.netValueDuffs < 0) {
             // Not an incoming transaction
             return false
         }
 
-        val output = tx.outputs.firstOrNull { it.isMine(bag) && it.value == coins }
+        val output = tx.outputs.firstOrNull { it.isMine && it.valueDuffs == coins.duffs }
 
         if (output != null) {
-            val script = output.scriptPubKey
-
-            if (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) {
-                toAddress = script.getToAddress(tx.params)
-            }
-
+            toAddress = output.address
             return true
         }
 

@@ -72,7 +72,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
@@ -118,7 +118,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
     @Inject lateinit var configuration: Configuration
-    @Inject lateinit var walletData: WalletDataProvider
+    @Inject lateinit var walletData: WalletData
     @Inject lateinit var walletApplication: WalletApplication
     @Inject lateinit var analytics: AnalyticsService
     @Inject lateinit var dashPayConfig: DashPayConfig

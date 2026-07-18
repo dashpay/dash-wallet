@@ -38,16 +38,17 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import de.schildbach.wallet.util.toDashjFiat
 
 @HiltViewModel
 class PaymentProtocolViewModel @Inject constructor(
-    walletData: WalletDataProvider,
+    walletData: WalletData,
     configuration: Configuration,
     exchangeRates: ExchangeRatesProvider,
     private val sendCoinsTaskRunner: SendCoinsTaskRunner,
@@ -56,7 +57,7 @@ class PaymentProtocolViewModel @Inject constructor(
 
     companion object {
         val FAKE_FEE_FOR_EXCEPTIONS: Coin =
-            org.dash.wallet.common.util.Constants.ECONOMIC_FEE.multiply(261).divide(1000)
+            Coin.valueOf(org.dash.wallet.common.util.Constants.ECONOMIC_FEE.multiply(261).divide(1000).value)
     }
 
     private val log = LoggerFactory.getLogger(PaymentProtocolFragment::class.java)
@@ -76,7 +77,7 @@ class PaymentProtocolViewModel @Inject constructor(
 
     val exchangeRate: org.bitcoinj.utils.ExchangeRate?
         get() = exchangeRateData.value?.run {
-            org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat)
+            org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat.toDashjFiat())
         }
 
     init {
@@ -129,7 +130,7 @@ class PaymentProtocolViewModel @Inject constructor(
             try {
                 val paymentIntent = sendCoinsTaskRunner.fetchPaymentRequest(basePaymentIntent)
 
-                if (basePaymentIntent.isExtendedBy(paymentIntent, true, Constants.NETWORK_PARAMETERS)) {
+                if (basePaymentIntent.isExtendedBy(paymentIntent, true, Constants.ADDRESS_NETWORK)) {
                     finalPaymentIntent = paymentIntent
                     createBaseSendRequest(paymentIntent)
                 } else {

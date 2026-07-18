@@ -17,18 +17,13 @@
 
 package org.dash.wallet.common.payments.parsers
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.script.ScriptBuilder
-import org.bitcoinj.script.ScriptPattern
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.money.toCoin
 
 // ---------------------------------------------------------------------------------------------
-// Neutral (dashj-free) construction and inspection helpers for PaymentIntent, for feature and
-// integration modules that must not import bitcoinj Script/Address types. They delegate to dashj
-// internally so the produced intents/outputs are identical to hand-built ones.
+// Construction and inspection helpers for PaymentIntent. The produced scripts are identical to
+// the ones dashj's ScriptBuilder would emit.
 // ---------------------------------------------------------------------------------------------
 
 object PaymentIntents {
@@ -39,7 +34,7 @@ object PaymentIntents {
      * ScriptBuilder.createOpReturnScript(memoData))`.
      */
     fun forOpReturnMemo(payeeName: String?, memoData: ByteArray, memo: String?): PaymentIntent {
-        val outputScript = ScriptBuilder.createOpReturnScript(memoData)
+        val outputScript = Scripts.opReturnScript(memoData)
         return PaymentIntent(
             null, payeeName, null,
             arrayOf(PaymentIntent.Output(Coin.ZERO, outputScript)),
@@ -56,7 +51,7 @@ object PaymentIntents {
 fun PaymentIntent.withOutputAdded(amount: Dash, address: String): PaymentIntent {
     val outputList = (outputs ?: emptyArray()).toMutableList()
     outputList.add(
-        PaymentIntent.Output(amount.toCoin(), ScriptBuilder.createOutputScript(Address.fromBase58(null, address)))
+        PaymentIntent.Output(Coin.valueOf(amount.duffs), Scripts.outputScriptForAddress(address))
     )
     return PaymentIntent(
         standard,
@@ -79,8 +74,8 @@ fun PaymentIntent.withOutputAdded(amount: Dash, address: String): PaymentIntent 
  * or null if the output is not an OP_RETURN carrying data.
  */
 val PaymentIntent.Output.opReturnMessage: String?
-    get() = if (ScriptPattern.isOpReturn(script) && script.chunks.size > 1) {
-        script.chunks[1].data?.let { String(it) }
+    get() = if (Scripts.isOpReturn(scriptData)) {
+        Scripts.secondChunkData(scriptData)?.let { String(it) }
     } else {
         null
     }

@@ -46,7 +46,7 @@ import org.dash.wallet.common.payments.bip70.PaymentProtocol
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletProtobufSerializer
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -62,6 +62,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.FileInputStream
 import java.net.HttpURLConnection
+import de.schildbach.wallet.util.toNeutralCoin
 
 /**
  * Unit tests for SendCoinsTaskRunner BIP70/71/72 payment protocol functionality.
@@ -78,7 +79,7 @@ class SendCoinsTaskRunnerBIP70Test {
     private lateinit var sendCoinsTaskRunner: SendCoinsTaskRunner
 
     // Mocks
-    private lateinit var walletDataProvider: WalletDataProvider
+    private lateinit var walletDataProvider: WalletData
     private lateinit var walletApplication: WalletApplication
     private lateinit var securityFunctions: SecurityFunctions
     private lateinit var packageInfoProvider: PackageInfoProvider
@@ -261,7 +262,7 @@ class SendCoinsTaskRunnerBIP70Test {
         // Then: The result should contain the correct payment details
         assertNotNull(result)
         assertTrue(result.hasAmount())
-        assertEquals(testAmount, result.amount)
+        assertEquals(testAmount.toNeutralCoin(), result.amount)
         assertEquals(testMemo, result.memo)
     }
 
@@ -415,8 +416,8 @@ class SendCoinsTaskRunnerBIP70Test {
         // Base intent with matching outputs (BIP21 with payment request URL = BIP72)
         val outputs = arrayOf(
             PaymentIntent.Output(
-                testAmount,
-                org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress)
+                testAmount.toNeutralCoin(),
+                org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress).program
             )
         )
         val basePaymentIntent = PaymentIntent(
@@ -433,14 +434,14 @@ class SendCoinsTaskRunnerBIP70Test {
 
         // Then: Should succeed with matching outputs
         assertNotNull(result)
-        assertEquals(testAmount, result.amount)
+        assertEquals(testAmount.toNeutralCoin(), result.amount)
     }
 
     @Test
     fun `fetchPaymentRequest handles null payment request URL`() = runTest {
         // Given: A payment intent without a payment request URL
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
-        val basePaymentIntent = PaymentIntent.fromAddress(testAddress, null as String?)
+        val basePaymentIntent = PaymentIntent.fromAddress(testAddress.toBase58(), null as String?)
 
         // When/Then: Should throw IllegalArgumentException
         var exceptionThrown = false
@@ -602,8 +603,8 @@ class SendCoinsTaskRunnerBIP70Test {
         // Create payment intent with payment URL
         val outputs = arrayOf(
             PaymentIntent.Output(
-                testAmount,
-                org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress)
+                testAmount.toNeutralCoin(),
+                org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress).program
             )
         )
         val paymentIntent = PaymentIntent(
@@ -656,8 +657,8 @@ class SendCoinsTaskRunnerBIP70Test {
 
         val outputs = arrayOf(
             PaymentIntent.Output(
-                testAmount,
-                org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress)
+                testAmount.toNeutralCoin(),
+                org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress).program
             )
         )
         val paymentIntent = PaymentIntent(
@@ -706,8 +707,8 @@ class SendCoinsTaskRunnerBIP70Test {
 
         val outputs = arrayOf(
             PaymentIntent.Output(
-                testAmount,
-                org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress)
+                testAmount.toNeutralCoin(),
+                org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress).program
             )
         )
         val paymentIntent = PaymentIntent(
@@ -746,8 +747,8 @@ class SendCoinsTaskRunnerBIP70Test {
 
         val outputs = arrayOf(
             PaymentIntent.Output(
-                testAmount,
-                org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress)
+                testAmount.toNeutralCoin(),
+                org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress).program
             )
         )
         val paymentIntent = PaymentIntent(
@@ -788,7 +789,7 @@ class SendCoinsTaskRunnerBIP70Test {
         // Given: A payment intent without payment URL
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
         val testAmount = Coin.parseCoin("1.0")
-        val paymentIntent = PaymentIntent.fromAddress(testAddress, null as String?)
+        val paymentIntent = PaymentIntent.fromAddress(testAddress.toBase58(), null as String?)
 
         val sendRequest = createTestSendRequest(testAddress, testAmount)
 

@@ -24,7 +24,7 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -32,7 +32,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SetPinViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
-    walletData: WalletDataProvider,
+    walletData: WalletData,
     configuration: Configuration,
     pinRetryController: PinRetryController,
     biometricHelper: BiometricHelper,

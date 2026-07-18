@@ -17,25 +17,23 @@
 
 package org.dash.wallet.common.payments.parsers
 
-import org.bitcoinj.core.NetworkParameters
-
-open class Bech32AddressParser(hrp: String, regex: String, params: NetworkParameters? = null) : AddressParser(
+open class Bech32AddressParser(hrp: String, regex: String, params: AddressNetwork? = null) : AddressParser(
     "${hrp}$regex",
     params
 ) {
     companion object {
         private const val BECH32_ALPHABET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
     }
-    constructor(hrp: String, length: Int, params: NetworkParameters?) :
+    constructor(hrp: String, length: Int, params: AddressNetwork?) :
         this(hrp, "1[$BECH32_ALPHABET]{$length}", params)
 
-    // Neutral (dashj-free) constructors for pattern-only parsing in modules that must not depend on dashj.
+    // Pattern-only constructors that skip network validation.
     constructor(hrp: String, regex: String) : this(hrp, regex, null)
     constructor(hrp: String, length: Int) : this(hrp, length, null)
-    constructor(length: Int, params: NetworkParameters) :
-        this(params.segwitAddressHrp, "1[$BECH32_ALPHABET]{$length}", params)
-    constructor(min: Int, max: Int, params: NetworkParameters) :
-        this(params.segwitAddressHrp, "1[$BECH32_ALPHABET]{$min,$max}", params)
+    constructor(length: Int, params: AddressNetwork) :
+        this(params.segwitHrp!!, "1[$BECH32_ALPHABET]{$length}", params)
+    constructor(min: Int, max: Int, params: AddressNetwork) :
+        this(params.segwitHrp!!, "1[$BECH32_ALPHABET]{$min,$max}", params)
 
     override fun verifyAddress(addressCandidate: String) {
         params?.let { SegwitAddress.fromBech32(params, addressCandidate) }

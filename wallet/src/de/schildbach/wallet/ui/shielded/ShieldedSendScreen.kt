@@ -48,7 +48,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount

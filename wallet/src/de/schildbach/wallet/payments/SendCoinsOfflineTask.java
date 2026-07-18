@@ -30,7 +30,7 @@ import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.CompletionException;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
-import org.dash.wallet.common.WalletDataProvider;
+import de.schildbach.wallet.data.WalletData;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +47,7 @@ import androidx.annotation.NonNull;
  */
 public abstract class SendCoinsOfflineTask {
     private final Wallet wallet;
-    private final WalletDataProvider walletData;
+    private final WalletData walletData;
     private final Handler backgroundHandler;
     private final Handler callbackHandler;
 
@@ -55,7 +55,7 @@ public abstract class SendCoinsOfflineTask {
 
     public SendCoinsOfflineTask(
             final Wallet wallet,
-            final WalletDataProvider walletData,
+            final WalletData walletData,
             final Handler backgroundHandler
     ) {
         this.wallet = wallet;

@@ -34,8 +34,9 @@ import org.bitcoinj.core.*
 import org.bitcoinj.core.Address
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.money.MonetaryFormat
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.util.toTxId
 import org.dash.wallet.common.data.*
 import org.dash.wallet.common.data.entity.AddressMetadata
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -44,7 +45,7 @@ import org.dash.wallet.common.data.entity.IconBitmap
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.decodeBitmap
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
@@ -54,13 +55,16 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.concurrent.Executors
 import javax.inject.Inject
+import de.schildbach.wallet.transactions.fromTransaction
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WalletTransactionMetadataProvider @Inject constructor(
     private val transactionMetadataDao: TransactionMetadataDao,
     private val addressMetadataDao: AddressMetadataDao,
     private val iconBitmapDao: IconBitmapDao,
-    private val walletData: WalletDataProvider,
+    private val walletData: de.schildbach.wallet.data.WalletData,
     private val giftCardDao: GiftCardDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
     private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
@@ -74,8 +78,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
         Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
 
-    private suspend fun insertTransactionMetadata(txId: Sha256Hash, isSyncingPlatform: Boolean): TransactionMetadata? {
-        val walletTx = walletData.wallet!!.getTransaction(txId)
+    private suspend fun insertTransactionMetadata(txId: TxId, isSyncingPlatform: Boolean): TransactionMetadata? {
+        val walletTx = walletData.wallet!!.getTransaction(txId.toSha256Hash())
         Context.propagate(walletData.wallet!!.context)
         walletTx?.run {
             val txValue = getValue(walletData.wallet!!) ?: Coin.ZERO
@@ -110,7 +114,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 // if we are pulling from platform, then update the tx object
                 exchangeRate = org.bitcoinj.utils.ExchangeRate(Fiat.parseFiat(code, rate))
             } else if (exchangeRate != null) {
-                rate = exchangeRate?.fiat?.let { MonetaryFormat.FIAT.noCode().format(it).toString() }
+                rate = exchangeRate?.fiat?.let { MonetaryFormat.FIAT.noCode().format(it.toNeutralFiat()).toString() }
                 code = exchangeRate?.fiat?.currencyCode
                 hasChanges = true
             }
@@ -124,7 +128,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             val metadata = TransactionMetadata(
                 txId,
                 updateTime,
-                txValue,
+                txValue.toNeutralCoin(),
                 TransactionCategory.fromTransaction(type, txValue, isInternal),
                 taxCategory = platformTaxCategory?.let { TaxCategory.fromValue(it) },
                 currencyCode = code,
@@ -195,7 +199,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     private suspend fun updateAndInsertIfNotExist(
-        txId: Sha256Hash,
+        txId: TxId,
         isSyncingPlatform: Boolean,
         update: suspend (TransactionMetadata) -> Unit
     ) {
@@ -210,7 +214,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun importTransactionMetadata(txId: Sha256Hash) {
+    override suspend fun importTransactionMetadata(txId: TxId) {
         updateAndInsertIfNotExist(txId, false) { }
     }
 
@@ -218,7 +222,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         transactionMetadataDao.insert(transactionMetadata)
     }
 
-    override suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, isSyncingPlatform: Boolean) {
+    override suspend fun setTransactionTaxCategory(txId: TxId, taxCategory: TaxCategory, isSyncingPlatform: Boolean) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateTaxCategory(txId, taxCategory)
             if (!isSyncingPlatform && shouldSaveToCache()) {
@@ -228,7 +232,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override suspend fun setTransactionSentTime(
-        txId: Sha256Hash,
+        txId: TxId,
         timestamp: Long,
         isSyncingPlatform: Boolean
     ) {
@@ -241,7 +245,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override suspend fun syncPlatformMetadata(
-        txId: Sha256Hash,
+        txId: TxId,
         metadata: TransactionMetadata,
         giftCard: GiftCard?,
         iconUrl: String?
@@ -277,11 +281,11 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun setTransactionType(txId: Sha256Hash, type: Int, isSyncingPlatform: Boolean) {
+    override suspend fun setTransactionType(txId: TxId, type: Int, isSyncingPlatform: Boolean) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean) {
+    override suspend fun setTransactionExchangeRate(txId: TxId, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean) {
         if (exchangeRate.rate != null) {
             updateAndInsertIfNotExist(txId, isSyncingPlatform) {
                 transactionMetadataDao.updateExchangeRate(
@@ -300,7 +304,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean) {
+    override suspend fun setTransactionMemo(txId: TxId, memo: String, isSyncingPlatform: Boolean) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateMemo(txId, memo)
             if (!isSyncingPlatform && shouldSaveToCache()) {
@@ -309,7 +313,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean) {
+    override suspend fun setTransactionService(txId: TxId, service: String, isSyncingPlatform: Boolean) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateService(txId, service)
             if (!isSyncingPlatform && shouldSaveToCache()) {
@@ -318,7 +322,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun markGiftCardTransaction(txId: Sha256Hash, service: String, iconUrl: String?) {
+    override suspend fun markGiftCardTransaction(txId: TxId, service: String, iconUrl: String?) {
         var transactionMetadata: TransactionMetadata
         updateAndInsertIfNotExist(txId, false) {
             transactionMetadata = it.copy(
@@ -389,22 +393,22 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun updateGiftCardBarcode(txId: Sha256Hash, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat) {
+    override suspend fun updateGiftCardBarcode(txId: TxId, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat) {
         giftCardDao.updateBarcode(txId.bytes, index, barcodeValue, barcodeFormat)
         if (index == 0) {
             transactionMetadataChangeCacheDao.insertBarcode(txId, barcodeValue, barcodeFormat.toString(), index)
         }
     }
 
-    override fun syncTransactionBlocking(tx: Transaction) {
+    fun syncTransactionBlocking(tx: Transaction) {
         runBlocking {
             syncTransaction(tx)
         }
     }
 
-    override suspend fun syncTransaction(tx: Transaction) {
+    suspend fun syncTransaction(tx: Transaction) {
         log.info("sync transaction metadata: ${tx.txId}")
-        val metadata = transactionMetadataDao.load(tx.txId)
+        val metadata = transactionMetadataDao.load(tx.txId.toTxId())
         if (metadata != null) {
             // it does exist.  Check what is missing in the table vs the transaction
             log.info("sync transaction metadata exists: ${tx.txId}")
@@ -423,12 +427,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 }
             } else if (metadata.rate == null && exchangeRate != null) {
                 transactionMetadataDao.updateExchangeRate(
-                    tx.txId,
+                    tx.txId.toTxId(),
                     exchangeRate.fiat.currencyCode,
                     exchangeRate.fiat.value.toString()
                 )
                 transactionMetadataChangeCacheDao.insertExchangeRate(
-                    tx.txId,
+                    tx.txId.toTxId(),
                     exchangeRate.fiat.currencyCode,
                     exchangeRate.fiat.value.toString()
                 )
@@ -438,24 +442,24 @@ class WalletTransactionMetadataProvider @Inject constructor(
             if (metadata.memo.isNotBlank() && tx.memo == null) {
                 tx.memo = metadata.memo
             } else if (metadata.memo.isBlank() && tx.memo != null) {
-                setTransactionMemo(tx.txId, tx.memo!!)
+                setTransactionMemo(tx.txId.toTxId(), tx.memo!!)
             }
 
             // sync service name
             if (metadata.service == null) {
-                val addressMetadata = getAddressMetadata(tx.txId)
+                val addressMetadata = getAddressMetadata(tx.txId.toTxId())
                 if (addressMetadata?.service != null) {
-                    setTransactionService(tx.txId, addressMetadata.service)
+                    setTransactionService(tx.txId.toTxId(), addressMetadata.service)
                 }
             }
         } else {
             // it does not exist, so import everything from the transaction
             log.info("sync transaction metadata not exists: ${tx.txId}")
-            insertTransactionMetadata(tx.txId, false)
+            insertTransactionMetadata(tx.txId.toTxId(), false)
         }
     }
 
-    override suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata? {
+    override suspend fun getTransactionMetadata(txId: TxId): TransactionMetadata? {
         var transactionMetadata = transactionMetadataDao.load(txId)
         if (transactionMetadata == null) {
             insertTransactionMetadata(txId, false)
@@ -471,13 +475,13 @@ class WalletTransactionMetadataProvider @Inject constructor(
     /**
      * obtains the default tax category for transfers
      */
-    private suspend fun getDefaultTaxCategory(txId: Sha256Hash): TaxCategory? {
+    private suspend fun getDefaultTaxCategory(txId: TxId): TaxCategory? {
         val addressMetadata = getAddressMetadata(txId)
         return addressMetadata?.taxCategory
     }
 
-    private suspend fun getAddressMetadata(txId: Sha256Hash): AddressMetadata? {
-        val tx = walletData.wallet!!.getTransaction(txId)
+    private suspend fun getAddressMetadata(txId: TxId): AddressMetadata? {
+        val tx = walletData.wallet!!.getTransaction(txId.toSha256Hash())
         tx?.run {
             // outgoing transaction, check inputs
             for (input in inputs) {
@@ -545,7 +549,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         return metadataList
     }
     
-    override fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>> {
+    override fun observePresentableMetadata(): Flow<Map<TxId, PresentableTxMetadata>> {
         return iconBitmapDao.observeBitmaps()
             .distinctUntilChanged()
             .map { rows ->
@@ -576,7 +580,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             }
     }
 
-    override suspend fun getIcon(iconId: Sha256Hash): Bitmap? {
+    override suspend fun getIcon(iconId: TxId): Bitmap? {
         iconBitmapDao.getBitmap(iconId)?.let {
             return BitmapFactory.decodeByteArray(it.imageData, 0, it.imageData.size)
         }
@@ -620,11 +624,11 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun exists(txId: Sha256Hash): Boolean {
+    override suspend fun exists(txId: TxId): Boolean {
         return transactionMetadataDao.exists(txId)
     }
 
-    override fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?> {
+    override fun observeTransactionMetadata(txId: TxId): Flow<TransactionMetadata?> {
         return transactionMetadataDao.observe(txId)
             .distinctUntilChanged()
             .map { transactionMetadata ->
@@ -636,7 +640,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             }
     }
 
-    private fun updateIcon(txId: Sha256Hash, iconUrl: String) {
+    private fun updateIcon(txId: TxId, iconUrl: String) {
         val request = Request.Builder().url(iconUrl).get().build()
         Constants.HTTP_CLIENT.newCall(request).enqueue(object: Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -649,7 +653,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                         try {
                             val originalImageData = it.bytes()
                             // Calculate hash from original image data to have it unified across platforms
-                            val imageHash = Sha256Hash.of(originalImageData)
+                            val imageHash = TxId.of(originalImageData)
 
                             val bitmap = BitmapFactory.decodeByteArray(originalImageData, 0, originalImageData.size)
                             val icon = resizeIcon(bitmap)

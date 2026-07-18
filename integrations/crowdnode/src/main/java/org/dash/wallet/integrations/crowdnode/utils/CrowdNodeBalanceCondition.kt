@@ -18,23 +18,26 @@
 package org.dash.wallet.integrations.crowdnode.utils
 
 import kotlinx.coroutines.runBlocking
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.dash.wallet.common.money.toCoin
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.DashAddressValidator
 import org.dash.wallet.common.services.LeftoverBalanceException
 import kotlin.jvm.Throws
 
 class CrowdNodeBalanceCondition {
     @Throws(LeftoverBalanceException::class)
     fun check(
-        walletBalance: Coin,
-        address: Address?,
-        amount: Coin,
+        walletBalance: Dash,
+        address: String?,
+        amount: Dash,
         crowdNodeConfig: CrowdNodeConfig
     ) {
         runBlocking { // TODO: remove runBlocking when this class is used from Kotlin code only
             val crowdNodeBalance = crowdNodeConfig.get(CrowdNodeConfig.LAST_BALANCE) ?: 0
-            val crowdNodeAddress = address?.let { CrowdNodeConstants.getCrowdNodeAddress(address.parameters) }
+            val crowdNodeAddress = address?.let {
+                DashAddressValidator.networkIdOrNull(it)?.let { networkId ->
+                    CrowdNodeConstants.getCrowdNodeAddress(networkId)
+                }
+            }
 
             if (crowdNodeBalance <= 0 && (address == null || address != crowdNodeAddress)) {
                 // If we're sending somewhere else and CrowdNode balance is 0,
@@ -43,7 +46,7 @@ class CrowdNodeBalanceCondition {
             }
 
             val leftoverBalance = walletBalance.subtract(amount)
-            val minimumLeftoverBalance = CrowdNodeConstants.MINIMUM_LEFTOVER_BALANCE.toCoin()
+            val minimumLeftoverBalance = CrowdNodeConstants.MINIMUM_LEFTOVER_BALANCE
 
             if (leftoverBalance.isLessThan(minimumLeftoverBalance)) {
                 throw LeftoverBalanceException(

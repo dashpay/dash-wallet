@@ -15,166 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-@file:OptIn(FlowPreview::class)
-
 package org.dash.wallet.common.transactions
 
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.sample
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.TransactionBag
-import org.bitcoinj.script.ScriptException
-import java.util.concurrent.ConcurrentHashMap
-import org.bitcoinj.script.ScriptPattern
-
 object TransactionUtils {
-    fun getWalletAddressOfReceived(tx: Transaction, bag: TransactionBag): Address? {
-        for (output in tx.outputs) {
-            try {
-                if (output.isMine(bag)) {
-                    return output.scriptPubKey.getToAddress(tx.params, true)
-                }
-            } catch (x: ScriptException) {
-                // swallow
-            }
-        }
-        return null
+    /**
+     * The wallet address the transaction was received to: the destination of the first
+     * output that pays the wallet AND has a resolvable address (base58), or null. Mine
+     * outputs whose address can't be resolved are skipped, like the old dashj code did.
+     *
+     * Delta vs the dashj original: P2PK outputs resolve to a null address in the neutral
+     * model (full P2PK address derivation was intentionally not ported), so they are
+     * skipped here where the old code could derive an address from the pubkey.
+     */
+    fun getWalletAddressOfReceived(tx: TxInfo): String? {
+        return tx.outputs.firstOrNull { it.isMine && it.address != null }?.address
     }
-
-    fun getFromAddressOfSent(tx: Transaction): List<Address> {
-        val result = mutableListOf<Address>()
-
-        for (input in tx.inputs) {
-            try {
-                val connectedTransaction = input.connectedTransaction
-                if (connectedTransaction != null) {
-                    val output = connectedTransaction.getOutput(input.outpoint.index)
-                    result.add(output.scriptPubKey.getToAddress(tx.params, true))
-                }
-            } catch (x: ScriptException) {
-                // swallow
-            }
-        }
-
-        return result
-    }
-
-    fun getToAddressOfReceived(tx: Transaction, bag: TransactionBag): List<Address> {
-        val result = mutableListOf<Address>()
-
-        for (output in tx.outputs) {
-            try {
-                if (output.isMine(bag)) {
-                    result.add(output.scriptPubKey.getToAddress(tx.params, true))
-                }
-            } catch (x: ScriptException) {
-                // swallow
-            }
-        }
-
-        return result
-    }
-
-    fun getToAddressOfSent(tx: Transaction, bag: TransactionBag): List<Address> {
-        val result = mutableListOf<Address>()
-
-        for (output in tx.outputs) {
-            try {
-                if (!output.isMine(bag)) {
-                    result.add(output.scriptPubKey.getToAddress(tx.params, true))
-                }
-            } catch (x: ScriptException) {
-                // swallow
-            }
-        }
-
-        return result
-    }
-
-    /** get OP_RETURNS of sent tx's */
-    fun getOpReturnsOfSent(
-        tx: Transaction,
-        bag: TransactionBag
-    ): List<String> {
-        val result = mutableListOf<String>()
-        if (!tx.isCoinBase) {
-            for (output in tx.outputs) {
-                try {
-                    if (!output.isMine(bag) && ScriptPattern.isOpReturn(output.scriptPubKey)) {
-                        result.add("OP RETURN")
-                    }
-                } catch (x: ScriptException) {
-                    // swallow
-                }
-            }
-        }
-
-        return result
-    }
-
-    fun Transaction.isEntirelySelf(bag: TransactionBag): Boolean {
-        // A transaction that spends nothing of ours cannot be a self-transfer.
-        // Without this guard, an input-less transaction — e.g. a Platform
-        // credit-withdrawal (asset-unlock) payout, which is funded from the
-        // credit pool and quorum-signed in its payload — whose outputs all pay
-        // our own addresses satisfies both loops below vacuously and renders
-        // as an internal transfer instead of a receive.
-        if (inputs.isEmpty()) {
-            return false
-        }
-
-        for (input in inputs) {
-            val connectedOutput = input.connectedOutput
-
-            if (connectedOutput == null || !connectedOutput.isMine(bag)) {
-                return false
-            }
-        }
-
-        for (output in outputs) {
-            if (!output.isMine(bag)) {
-                return false
-            }
-        }
-
-        return true
-    }
-
-    val Transaction.allOutputAddresses: List<Address>
-        get() {
-            val result = mutableListOf<Address>()
-
-            outputs.forEach {
-                try {
-                    val script = it.scriptPubKey
-                    result.add(script.getToAddress(this.params, true))
-                } catch (x: ScriptException) {
-                    // swallow
-                }
-            }
-            return result
-        }
-}
-
-fun Flow<Transaction>.batchAndFilterUpdates(timeInterval: Long = 500): Flow<List<Transaction>> {
-    val latestTransactions = ConcurrentHashMap<Sha256Hash, Transaction>()
-
-    return this
-        .onEach { transaction ->
-            // Update the latest transaction for the hash
-            latestTransactions[transaction.txId] = transaction
-        }
-        .sample(timeInterval) // Emit events every [timeInterval]
-        .map {
-            latestTransactions.values.toList().also {
-                latestTransactions.clear()
-            }
-        }
-        .filter { it.isNotEmpty() }
 }

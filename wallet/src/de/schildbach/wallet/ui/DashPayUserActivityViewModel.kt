@@ -49,7 +49,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
@@ -64,7 +64,7 @@ class DashPayUserActivityViewModel @Inject constructor(
     val platformRepo: PlatformRepo,
     val identityRepository: IdentityRepository,
     private val dashSystemService: DashSystemService,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletData
 ) : ViewModel() {
 
     companion object {

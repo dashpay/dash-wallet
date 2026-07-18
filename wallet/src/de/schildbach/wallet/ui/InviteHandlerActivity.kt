@@ -29,7 +29,7 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet_test.databinding.ActivityTransparentBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -50,7 +50,7 @@ class InviteHandlerActivity : AppCompatActivity() {
     @Inject
     lateinit var analytics: AnalyticsService
     @Inject
-    lateinit var walletDataProvider: WalletDataProvider
+    lateinit var walletDataProvider: WalletData
     @Inject
     lateinit var configuration: Configuration
 

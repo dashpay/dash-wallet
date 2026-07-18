@@ -41,7 +41,7 @@ import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentNotificationsBinding
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -75,7 +75,7 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
     private var lastSeenNotificationTime = 0L
     private var isBlockchainSynced = true
     private var userAlertItem: NotificationItemUserAlert? = null
-    @Inject lateinit var walletDataProvider: WalletDataProvider
+    @Inject lateinit var walletDataProvider: WalletData
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

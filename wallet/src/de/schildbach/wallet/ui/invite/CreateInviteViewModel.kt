@@ -34,14 +34,14 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 @HiltViewModel
 class CreateInviteViewModel @Inject constructor(
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val analytics: AnalyticsService,
     blockchainStateDao: BlockchainStateDao,
     invitationsDao: InvitationsDao,

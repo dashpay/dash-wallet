@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.wallet.OneTimeOrchardKey
 import org.dashj.platform.dpp.identifier.Identifier
@@ -111,7 +111,7 @@ interface ShieldedInviteSource {
 /** Production [ShieldedInviteSource]. */
 internal class DashSdkShieldedInviteSource(
     private val service: DashSdkService,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletData
 ) : ShieldedInviteSource {
 
     private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
@@ -189,7 +189,7 @@ class SdkShieldedInviteCreation internal constructor(
         sdkService: DashSdkService,
         dashPayConfig: de.schildbach.wallet.ui.dashpay.utils.DashPayConfig,
         shieldedBalanceService: ShieldedBalanceService,
-        walletData: WalletDataProvider,
+        walletData: WalletData,
         invitationsDao: InvitationsDao,
         topUpRepository: TopUpRepository
     ) : this(

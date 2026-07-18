@@ -53,7 +53,7 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.UTXO;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.BIP38PrivateKey;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.money.MonetaryFormat;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
@@ -530,7 +530,8 @@ public class SweepWalletFragment extends Fragment {
             introductionGroup.setVisibility(View.GONE);
             balanceGroup.setVisibility(View.VISIBLE);
             balanceView.setFormat(btcFormat.noCode());
-            balanceView.setAmount(walletToSweep.getBalance(BalanceType.ESTIMATED));
+            balanceView.setAmount(org.dash.wallet.common.money.Coin.valueOf(
+                    walletToSweep.getBalance(BalanceType.ESTIMATED).getValue()));
         } else {
             introductionGroup.setVisibility(View.VISIBLE);
             balanceGroup.setVisibility(View.GONE);
@@ -611,7 +612,10 @@ public class SweepWalletFragment extends Fragment {
 
         if (viewModel.getCurrentExchangeRate() != null) {
             sendRequest.exchangeRate = new org.bitcoinj.utils.ExchangeRate(
-                    Coin.COIN, viewModel.getCurrentExchangeRate().getFiat());
+                    Coin.COIN,
+                    org.bitcoinj.utils.Fiat.valueOf(
+                            viewModel.getCurrentExchangeRate().getFiat().currencyCode,
+                            viewModel.getCurrentExchangeRate().getFiat().value));
             log.info("Using exchange rate: " + sendRequest.exchangeRate.coinToFiat(Coin.COIN).toFriendlyString());
         }
 

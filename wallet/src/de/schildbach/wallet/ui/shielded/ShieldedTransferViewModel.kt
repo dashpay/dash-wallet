@@ -41,8 +41,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.money.Fiat
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.money.Dash
@@ -53,6 +53,15 @@ import org.dash.wallet.common.util.toFiat
 import org.slf4j.LoggerFactory
 import java.util.Locale
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 /**
  * The blocked-ToShielded toast's LIVE verification status, derived from
@@ -326,7 +335,7 @@ data class ShieldedTransferUIState(
 @HiltViewModel
 class ShieldedTransferViewModel @Inject constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
-    walletDataProvider: WalletDataProvider,
+    walletDataProvider: WalletData,
     private val dashPayConfig: DashPayConfig,
     blockchainStateProvider: BlockchainStateProvider,
     walletUIConfig: WalletUIConfig,

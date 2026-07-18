@@ -47,7 +47,7 @@ import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dpp.toHex
 import org.dashj.platform.sdk.platform.Names
@@ -167,7 +167,7 @@ interface TopUpRepository {
 
 class TopUpRepositoryImpl @Inject constructor(
     private val walletApplication: WalletApplication,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
     private val topUpsDao: TopUpsDao,

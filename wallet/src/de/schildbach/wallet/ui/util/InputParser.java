@@ -39,9 +39,10 @@ import org.dash.wallet.common.payments.bip70.PaymentProtocol;
 import org.dash.wallet.common.payments.bip70.PaymentProtocol.PkiVerificationData;
 import org.dash.wallet.common.payments.bip70.PaymentProtocolException;
 import org.dash.wallet.common.payments.bip70.PaymentSession;
-import org.bitcoinj.uri.BitcoinURI;
-import org.bitcoinj.uri.BitcoinURIParseException;
 import org.dash.wallet.common.data.PaymentIntent;
+import org.dash.wallet.common.payments.parsers.AddressNetwork;
+import org.dash.wallet.common.payments.parsers.AddressUtils;
+import org.dash.wallet.common.payments.parsers.PaymentURI;
 import org.dash.wallet.common.util.AddressUtil;
 import org.dash.wallet.common.util.Base43;
 import org.dash.wallet.common.util.Io;
@@ -114,13 +115,14 @@ public abstract class InputParser {
                 }
             } else if (input.startsWith(DASH_SCHEME + ":")) {
                 try {
-                    final BitcoinURI bitcoinUri = new BitcoinURI(null, input);
-                    final Address address = AddressUtil.getCorrectAddress(bitcoinUri, Constants.NETWORK_PARAMETERS);
-                    if (address != null && !Constants.NETWORK_PARAMETERS.equals(address.getParameters()))
-                        throw new BitcoinURIParseException("mismatched network");
+                    final PaymentURI bitcoinUri = new PaymentURI(null, input);
+                    final String address = AddressUtil.getCorrectAddress(bitcoinUri, Constants.ADDRESS_NETWORK);
+                    if (address != null
+                            && !Constants.ADDRESS_NETWORK.acceptsVersion(AddressUtils.decode(address).getVersion()))
+                        throw new PaymentURI.ParseException("mismatched network");
 
-                    handlePaymentIntent(PaymentIntent.fromBitcoinUri(bitcoinUri));
-                } catch (final BitcoinURIParseException x) {
+                    handlePaymentIntent(PaymentIntent.fromPaymentUri(bitcoinUri));
+                } catch (final PaymentURI.ParseException x) {
                     if (!tryFindAnyMatch(input)) {
                         log.info("got invalid bitcoin uri: '" + input + "'", x);
                         error(x, R.string.input_parser_invalid_bitcoin_uri, input);
@@ -130,7 +132,7 @@ public abstract class InputParser {
                 try {
                     final Address address = Address.fromString(Constants.NETWORK_PARAMETERS, input);
 
-                    handlePaymentIntent(PaymentIntent.fromAddress(address, null));
+                    handlePaymentIntent(PaymentIntent.fromAddress(address.toBase58(), null));
                 } catch (final AddressFormatException x) {
                     log.info("got invalid address", x);
 
@@ -195,7 +197,7 @@ public abstract class InputParser {
                     String addressStr = matcher.group(0);
                     assert addressStr != null;
                     final Address address = Address.fromString(Constants.NETWORK_PARAMETERS, addressStr);
-                    PaymentIntent intent = PaymentIntent.fromAddress(address, null);
+                    PaymentIntent intent = PaymentIntent.fromAddress(address.toBase58(), null);
                     intent.shouldConfirmAddress = true;
 
                     handlePaymentIntent(intent);
@@ -214,7 +216,7 @@ public abstract class InputParser {
             final Address address = Address.fromKey(Constants.NETWORK_PARAMETERS,
                     ((DumpedPrivateKey) key).getKey());
 
-            handlePaymentIntent(PaymentIntent.fromAddress(address, null));
+            handlePaymentIntent(PaymentIntent.fromAddress(address.toBase58(), null));
         }
     }
 
@@ -329,7 +331,7 @@ public abstract class InputParser {
             WalletUri walletUri;
             try {
                 walletUri = WalletUri.parse(input);
-            } catch (BitcoinURIParseException x) {
+            } catch (PaymentURI.ParseException x) {
                 log.info("got invalid dashwallet uri: '" + input + "'", x);
 
                 error(x, R.string.input_parser_invalid_bitcoin_uri, input);
@@ -337,11 +339,11 @@ public abstract class InputParser {
             }
 
             if (walletUri.isPaymentUri()) {
-                BitcoinURI bitcoinUri;
+                PaymentURI bitcoinUri;
                 try {
                     bitcoinUri = walletUri.toBitcoinUri();
-                    handlePaymentIntent(PaymentIntent.fromBitcoinUri(bitcoinUri), walletUri.forceInstantSend());
-                } catch (BitcoinURIParseException x) {
+                    handlePaymentIntent(PaymentIntent.fromPaymentUri(bitcoinUri), walletUri.forceInstantSend());
+                } catch (PaymentURI.ParseException x) {
                     log.info("got invalid dashwallet uri: '" + input + "'", x);
 
                     error(x, R.string.input_parser_invalid_bitcoin_uri, input);
@@ -407,7 +409,7 @@ public abstract class InputParser {
                 throw new PaymentProtocolException.Expired("payment details expired: current time " + new Date()
                         + " after expiry time " + paymentSession.getExpires());
 
-            if (!paymentSession.getNetworkParameters().equals(Constants.NETWORK_PARAMETERS))
+            if (!isSameNetwork(paymentSession.getNetworkParameters(), Constants.NETWORK_PARAMETERS))
                 throw new PaymentProtocolException.InvalidNetwork(
                         "cannot handle payment request network: " + paymentSession.getNetworkParameters());
 
@@ -441,6 +443,16 @@ public abstract class InputParser {
         } catch (final KeyStoreException x) {
             throw new RuntimeException(x);
         }
+    }
+
+    /**
+     * Whether the neutral BIP70 session network denotes the same network as the wallet's dashj
+     * parameters. Compared via {@link AddressNetwork#fromId(String)} (which maps devnet ids
+     * {@code org.dash.dev.*} to the devnet descriptor) — a direct {@code equals} between the two
+     * types would always be false.
+     */
+    public static boolean isSameNetwork(final AddressNetwork sessionNetwork, final NetworkParameters walletParams) {
+        return sessionNetwork.equals(AddressNetwork.fromId(walletParams.getId()));
     }
 
     protected abstract void handlePaymentIntent(PaymentIntent paymentIntent);

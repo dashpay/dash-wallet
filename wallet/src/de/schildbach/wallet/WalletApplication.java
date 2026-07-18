@@ -78,14 +78,14 @@ import org.conscrypt.Conscrypt;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
-import org.dash.wallet.common.WalletDataProvider;
+import de.schildbach.wallet.data.WalletData;
 import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.transactions.TransactionWrapperFactory;
-import org.dash.wallet.common.transactions.filters.TransactionFilter;
+import de.schildbach.wallet.transactions.WalletTransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
@@ -111,7 +111,7 @@ import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integrations.uphold.api.UpholdClient;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
+import de.schildbach.wallet.payments.BalanceConditionBridge;
 import org.dash.wallet.integrations.uphold.utils.UpholdConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -178,7 +178,7 @@ import kotlinx.coroutines.flow.StateFlowKt;
  */
 @HiltAndroidApp
 public class WalletApplication extends MultiDexApplication
-        implements androidx.work.Configuration.Provider, AutoLogoutTimerHandler, WalletDataProvider {
+        implements androidx.work.Configuration.Provider, AutoLogoutTimerHandler, WalletData {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -1365,7 +1365,7 @@ public class WalletApplication extends MultiDexApplication
     @Override
     public Flow<Transaction> observeTransactions(
         boolean withConfidence,
-        @NonNull TransactionFilter... filters
+        @NonNull WalletTransactionFilter... filters
     ) {
         if (wallet == null) {
             return FlowKt.emptyFlow();
@@ -1415,7 +1415,7 @@ public class WalletApplication extends MultiDexApplication
 
     @NonNull
     @Override
-    public Collection<Transaction> getTransactions(@NonNull TransactionFilter... filters) {
+    public Collection<Transaction> getTransactions(@NonNull WalletTransactionFilter... filters) {
         if (wallet == null) {
             return Lists.newArrayList();
         }
@@ -1428,7 +1428,7 @@ public class WalletApplication extends MultiDexApplication
         ArrayList<Transaction> filteredTransactions = new ArrayList<>();
 
         for (Transaction tx : transactions) {
-            for (TransactionFilter filter : filters) {
+            for (WalletTransactionFilter filter : filters) {
                 if (filter.matches(tx)) {
                     filteredTransactions.add(tx);
                     break;
@@ -1445,6 +1445,8 @@ public class WalletApplication extends MultiDexApplication
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
         return TransactionWrapperHelper.INSTANCE.wrapTransactions(
                 wallet.getTransactions(true),
+                wallet,
+                Constants.NETWORK_PARAMETERS,
                 wrapperFactories
         );
     }
@@ -1484,7 +1486,7 @@ public class WalletApplication extends MultiDexApplication
             @Nullable Address address,
             @NonNull Coin amount
     ) throws LeftoverBalanceException {
-        new CrowdNodeBalanceCondition().check(
+        BalanceConditionBridge.check(
                 getWalletBalance(),
                 address,
                 amount,

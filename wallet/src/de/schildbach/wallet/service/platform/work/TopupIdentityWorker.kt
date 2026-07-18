@@ -34,7 +34,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
@@ -45,7 +45,7 @@ class TopupIdentityWorker @AssistedInject constructor(
     private val analytics: AnalyticsService,
     private val platformBroadcastService: PlatformBroadcastService,
     private val topUpRepository: TopUpRepository,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val platformRepo: PlatformRepo,
     private val identityRepo: IdentityRepository,
     private val topUpsDao: TopUpsDao

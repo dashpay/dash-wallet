@@ -17,8 +17,8 @@
 
 package org.dash.wallet.common.ui.enter_amount
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.ExchangeRate
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.money.toFiat
 

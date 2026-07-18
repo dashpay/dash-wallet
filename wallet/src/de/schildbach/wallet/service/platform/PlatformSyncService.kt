@@ -74,14 +74,14 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.EvolutionContact
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.TransactionCategory
-import org.dash.wallet.common.transactions.filters.TransactionFilter
+import de.schildbach.wallet.transactions.WalletTransactionFilter
 import org.dash.wallet.common.util.TickerFlow
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dashj.platform.contracts.wallet.TxMetadataDocument
@@ -108,6 +108,15 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 interface PlatformSyncService {
     fun init()
@@ -182,7 +191,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val identityConfig: BlockchainIdentityConfig,
     private val topUpRepository: TopUpRepository,
     private val identityRepository: IdentityRepository,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val sdkProfileQueries: SdkProfileQueries,
     private val sdkUsernameQueries: SdkUsernameQueries,
     private val sdkIdentityVerifyQueries: SdkIdentityVerifyQueries,
@@ -1092,7 +1101,7 @@ class PlatformSynchronizationService @Inject constructor(
                     if (metadata.isNotEmpty()) {
                         val txIdAsHash = Sha256Hash.wrapReversed(metadata.txId)
                         val cachedItems = transactionMetadataChangeCacheDao.findAfter(
-                            txIdAsHash, // tx hash is stored in LE
+                            txIdAsHash.toTxId(), // tx hash is stored in LE
                             timestamp
                         )
                         log.info(
@@ -1108,11 +1117,11 @@ class PlatformSynchronizationService @Inject constructor(
                         val metadataDocumentRecord = TransactionMetadataDocument(
                             doc.id,
                             doc.updatedAt!!,
-                            txIdAsHash
+                            txIdAsHash.toTxId()
                         )
-                        val updatedMetadata = TransactionMetadata(txIdAsHash, 0, Coin.ZERO, TransactionCategory.Invalid)
+                        val updatedMetadata = TransactionMetadata(txIdAsHash.toTxId(), 0, org.dash.wallet.common.money.Coin.ZERO, TransactionCategory.Invalid)
                         var iconUrl: String? = null
-                        val giftCard = GiftCard(txIdAsHash)
+                        val giftCard = GiftCard(txIdAsHash.toTxId())
 
                         metadata.timestamp?.let { timestamp ->
                             metadataDocumentRecord.sentTimestamp = timestamp
@@ -1335,7 +1344,7 @@ class PlatformSynchronizationService @Inject constructor(
                         }
 
                         log.info("syncing metadata with platform updates: $updatedMetadata")
-                        transactionMetadataProvider.syncPlatformMetadata(txIdAsHash, updatedMetadata, giftCard, iconUrl)
+                        transactionMetadataProvider.syncPlatformMetadata(txIdAsHash.toTxId(), updatedMetadata, giftCard, iconUrl)
                         log.info("adding TxMetadataItem: {}", metadata)
                         transactionMetadataDocumentDao.insert(metadataDocumentRecord)
                     } else {
@@ -1364,7 +1373,7 @@ class PlatformSynchronizationService @Inject constructor(
         log.info(PUBLISH, txMetadataItems.joinToString("\n") { it.toString() })
         val metadataList = txMetadataItems.map {
             TxMetadataItem(
-                it.txId.reversedBytes, // tx hash is stored in LE
+                it.txId.bytes.reversedArray(), // tx hash is stored in LE
                 it.sentTimestamp,
                 it.memo,
                 it.rate?.toDouble(),
@@ -1404,7 +1413,7 @@ class PlatformSynchronizationService @Inject constructor(
     private fun mergeTransactionMetadataDocuments(txId: Sha256Hash, docs: List<TransactionMetadataDocument>): TransactionMetadataCacheItem {
         return TransactionMetadataCacheItem(
             cacheTimestamp = docs.lastOrNull()?.timestamp ?: 0,
-            txId = txId,
+            txId = txId.toTxId(),
             sentTimestamp = docs.lastOrNull { it.sentTimestamp != null }?.sentTimestamp,
             taxCategory = docs.lastOrNull { it.taxCategory != null }?.taxCategory,
             currencyCode = docs.lastOrNull { it.currencyCode != null }?.currencyCode,
@@ -1435,7 +1444,7 @@ class PlatformSynchronizationService @Inject constructor(
         val start = dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE) ?: 0L
         val end = System.currentTimeMillis()
 
-        val notCoinJoinFilter = object : TransactionFilter {
+        val notCoinJoinFilter = object : WalletTransactionFilter {
             override fun matches(tx: Transaction): Boolean {
                 val type = CoinJoinTransactionType.fromTx(tx, walletDataProvider.wallet)
                 return type == CoinJoinTransactionType.None || type == CoinJoinTransactionType.Send
@@ -1445,7 +1454,7 @@ class PlatformSynchronizationService @Inject constructor(
         var firstUnsavedTxDate = 0L
         walletDataProvider.getTransactions(notCoinJoinFilter).forEach { tx ->
             if (tx.updateTime.time in start .. end) {
-                if (!transactionMetadataProvider.exists(tx.txId)) {
+                if (!transactionMetadataProvider.exists(tx.txId.toTxId())) {
                     listOfUnsaved.add(tx)
                     firstUnsavedTxDate = if (firstUnsavedTxDate != 0L) {
                         min(firstUnsavedTxDate, tx.updateTime.time)
@@ -1453,9 +1462,9 @@ class PlatformSynchronizationService @Inject constructor(
                         tx.updateTime.time
                     }
                 } else {
-                    val previouslySavedItems = transactionMetadataDocumentDao.getTransactionMetadata(tx.txId)
+                    val previouslySavedItems = transactionMetadataDocumentDao.getTransactionMetadata(tx.txId.toTxId())
                     val previouslySaved = mergeTransactionMetadataDocuments(tx.txId, previouslySavedItems)
-                    val currentItem = transactionMetadataProvider.getTransactionMetadata(tx.txId)!!
+                    val currentItem = transactionMetadataProvider.getTransactionMetadata(tx.txId.toTxId())!!
                     val giftCard = giftCardDao.getCardForTransaction(tx.txId.bytes)
 
                     if (!previouslySaved.compare(currentItem, giftCard.firstOrNull())) {
@@ -1481,12 +1490,12 @@ class PlatformSynchronizationService @Inject constructor(
         var itemsToSave = 0
         txes?.forEachIndexed { i, tx ->
             if (tx.updateTime.time >= alreadySaved) {
-                transactionMetadataProvider.getTransactionMetadata(tx.txId)?.let { metadata ->
+                transactionMetadataProvider.getTransactionMetadata(tx.txId.toTxId())?.let { metadata ->
                     val giftCard = giftCardDao.getCardForTransaction(tx.txId.bytes)
 
                     // make sure it is not already saved?
 
-                    val previouslySaved = transactionMetadataDocumentDao.getTransactionMetadata(tx.txId)
+                    val previouslySaved = transactionMetadataDocumentDao.getTransactionMetadata(tx.txId.toTxId())
                     log.info("publish: previously saved: {}", previouslySaved)
 
                     val saved = mergeTransactionMetadataDocuments(tx.txId, previouslySaved)
@@ -1519,7 +1528,7 @@ class PlatformSynchronizationService @Inject constructor(
             return TxMetadataSaveInfo.NONE
         }
         log.info("publishing updates to tx metadata items before $before")
-        val itemsToPublish = hashMapOf<Sha256Hash, TransactionMetadataCacheItem>()
+        val itemsToPublish = hashMapOf<org.dash.wallet.common.data.TxId, TransactionMetadataCacheItem>()
         val changedItems = transactionMetadataChangeCacheDao.getCachedItemsBefore(before)
 
         if (changedItems.isEmpty()) {

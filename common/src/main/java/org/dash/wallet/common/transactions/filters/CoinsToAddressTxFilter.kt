@@ -17,34 +17,24 @@
 
 package org.dash.wallet.common.transactions.filters
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.script.ScriptPattern
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.transactions.TxInfo
 
 open class CoinsToAddressTxFilter(
-    val toAddress: Address,
-    val coins: Coin,
+    val toAddress: String,
+    val coins: Dash,
     val includeFee: Boolean = false
-): TransactionFilter {
-    var fromAddresses = listOf<Address>()
+) : TransactionFilter {
+    var fromAddresses = listOf<String>()
         private set
 
-    override fun matches(tx: Transaction): Boolean {
-        val actualValue = if (includeFee && tx.fee != null) coins - tx.fee else coins
-        val networkParameters = toAddress.parameters
+    override fun matches(tx: TxInfo): Boolean {
+        val fee = tx.feeDuffs
+        val actualValue = if (includeFee && fee != null) coins.duffs - fee else coins.duffs
 
         for (output in tx.outputs) {
-            val script = output.scriptPubKey
-
-            if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                script.getToAddress(networkParameters) == toAddress &&
-                output.value == actualValue
-            ) {
-                fromAddresses = tx.inputs.mapNotNull {
-                    it.outpoint.connectedOutput?.scriptPubKey?.getToAddress(networkParameters)
-                }.distinct()
-
+            if (output.address != null && output.address == toAddress && output.valueDuffs == actualValue) {
+                fromAddresses = tx.inputs.mapNotNull { it.connectedAddress }.distinct()
                 return true
             }
         }

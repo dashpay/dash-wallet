@@ -17,14 +17,11 @@
 
 package org.dash.wallet.common.money
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate as DashJExchangeRate
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.entity.ExchangeRate
 
 // ---------------------------------------------------------------------------------------------
-// Adapters between the neutral money types and dashj. For use by the wallet module (and common
-// internals) only — feature/integration modules must not import dashj and have no need for these.
+// Adapters between the value-class money types ([Dash]/[FiatValue]) and the self-contained
+// money core ([Coin]/[Fiat]).
 // ---------------------------------------------------------------------------------------------
 
 fun Dash.toCoin(): Coin = Coin.valueOf(duffs)
@@ -34,29 +31,30 @@ fun FiatValue.toFiat(): Fiat = Fiat.valueOf(currencyCode, value)
 fun Fiat.toFiatValue(): FiatValue = FiatValue(currencyCode, value)
 
 // ---------------------------------------------------------------------------------------------
-// Neutral conversion API on the app's ExchangeRate entity, replacing direct use of
-// ExchangeRate.fiat + org.bitcoinj.utils.ExchangeRate in feature/integration modules.
-// Delegates to dashj's ExchangeRate so rounding matches the wallet exactly.
+// Neutral conversion API on the app's ExchangeRate entity. Delegates to the ExchangeRate port
+// so rounding matches dashj exactly.
 // ---------------------------------------------------------------------------------------------
 
 val ExchangeRate.fiatValue: FiatValue?
     get() = rate?.let { fiat.toFiatValue() }
 
-/** Converts a Dash amount to fiat at this rate. Mirrors [org.bitcoinj.utils.ExchangeRate.coinToFiat]. */
+/** Converts a Dash amount to fiat at this rate. Mirrors `ExchangeRate.coinToFiat`. */
 fun ExchangeRate.dashToFiat(amount: Dash): FiatValue {
-    return DashJExchangeRate(Coin.COIN, fiat).coinToFiat(amount.toCoin()).toFiatValue()
+    return ExchangeRateCalc(Coin.COIN, fiat).coinToFiat(amount.toCoin()).toFiatValue()
 }
 
-/** Converts a fiat amount to Dash at this rate. Mirrors [org.bitcoinj.utils.ExchangeRate.fiatToCoin]. */
+/** Converts a fiat amount to Dash at this rate. Mirrors `ExchangeRate.fiatToCoin`. */
 fun ExchangeRate.fiatToDash(amount: FiatValue): Dash {
-    return DashJExchangeRate(Coin.COIN, fiat).fiatToCoin(amount.toFiat()).toDash()
+    return ExchangeRateCalc(Coin.COIN, fiat).fiatToCoin(amount.toFiat()).toDash()
 }
 
 /**
  * Treats this fiat amount as the price of one Dash and converts [amount] to fiat.
- * Mirrors `org.bitcoinj.utils.ExchangeRate(fiat).coinToFiat(coin)` for rates that aren't
+ * Mirrors `ExchangeRate(fiat).coinToFiat(coin)` for rates that aren't
  * backed by the app's ExchangeRate entity (e.g. rates restored from transaction metadata).
  */
 fun FiatValue.dashToFiat(amount: Dash): FiatValue {
-    return DashJExchangeRate(Coin.COIN, toFiat()).coinToFiat(amount.toCoin()).toFiatValue()
+    return ExchangeRateCalc(Coin.COIN, toFiat()).coinToFiat(amount.toCoin()).toFiatValue()
 }
+
+private typealias ExchangeRateCalc = org.dash.wallet.common.money.ExchangeRate

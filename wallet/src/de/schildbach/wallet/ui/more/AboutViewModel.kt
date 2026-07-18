@@ -39,7 +39,7 @@ import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.dash.wallet.features.exploredash.utils.ExploreDatabasePrefs
-import org.dash.wallet.common.util.isMainNet
+import org.dash.wallet.common.util.isMainNetId
 import javax.inject.Inject
 
 /**
@@ -67,7 +67,7 @@ class AboutViewModel @Inject constructor(
 ): ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        AboutViewState(isMainNet = Constants.NETWORK_PARAMETERS.isMainNet())
+        AboutViewState(isMainNet = Constants.NETWORK_PARAMETERS.id.isMainNetId())
     )
     val uiState: StateFlow<AboutViewState> = _uiState.asStateFlow()
 

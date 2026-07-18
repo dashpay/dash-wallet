@@ -65,10 +65,10 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.TestNet3Params
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SyncStage
 import org.dash.wallet.common.data.WalletUIConfig
@@ -166,7 +166,7 @@ class MainViewModelTest {
         every { logError(any(), any()) } returns Unit
     }
 
-    private val walletDataMock = mockk<WalletDataProvider> {
+    private val walletDataMock = mockk<WalletData> {
         every { wallet } returns null
         every { observeWalletReset() } returns MutableStateFlow(Unit)
     }

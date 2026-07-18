@@ -41,7 +41,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.NotificationService
 import org.slf4j.LoggerFactory
@@ -255,7 +255,7 @@ internal fun shieldedMaxFeeAdjustment(
 @Singleton
 class ShieldedTransferExecutor @Inject constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val notificationService: NotificationService,
     @ApplicationContext private val appContext: Context,
     private val applicationScope: CoroutineScope

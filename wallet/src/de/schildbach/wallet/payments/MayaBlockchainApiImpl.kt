@@ -25,10 +25,12 @@ import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.script.ScriptBuilder
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.wallet.SendRequest
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.InsufficientFundsException
+import de.schildbach.wallet.payments.WalletSendPaymentService
 import org.dash.wallet.common.services.SendPaymentService
+import de.schildbach.wallet.util.toDashjCoin
 import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaException
@@ -47,9 +49,9 @@ import javax.inject.Inject
  * with dashj and broadcasts it. Lives here so integrations/maya stays dashj-free.
  */
 class MayaBlockchainApiImpl @Inject constructor(
-    private val sendPaymentService: SendPaymentService,
+    private val sendPaymentService: WalletSendPaymentService,
     private val mayaWebApi: MayaWebApi,
-    private val walletProviderData: WalletDataProvider
+    private val walletProviderData: WalletData
 ) : MayaBlockchainApi {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(MayaBlockchainApiImpl::class.java)
@@ -86,7 +88,7 @@ class MayaBlockchainApiImpl @Inject constructor(
                         (resultSwapTrade.value.amount.dash + resultSwapTrade.value.feeAmount.dash)
                     } else {
                         resultSwapTrade.value.amount.dash
-                    }.setScale(8, RoundingMode.HALF_UP).toCoin()
+                    }.setScale(8, RoundingMode.HALF_UP).toCoin().toDashjCoin()
                     tx.addOutput(
                         dashAmountWithFees,
                         Address.fromBase58(params, resultSwapTrade.value.vaultAddress)
@@ -139,7 +141,7 @@ class MayaBlockchainApiImpl @Inject constructor(
                     )
                     // account for the size and possibly larger signatures when re-signed
                     val size = sendRequest.tx.bitcoinSerialize().size + sendRequest.tx.inputs.size
-                    sendRequest.tx.outputs[0].value = swapTradeUIModel.amount.dash.toCoin() -
+                    sendRequest.tx.outputs[0].value = swapTradeUIModel.amount.dash.toCoin().toDashjCoin() -
                         Coin.valueOf(size * Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.value / 1000)
                 } else {
                     // Pass all change back to the VIN0 address in VOUT2

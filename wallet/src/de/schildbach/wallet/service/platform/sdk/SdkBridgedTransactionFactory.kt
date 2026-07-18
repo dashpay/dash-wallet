@@ -31,7 +31,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -149,7 +149,7 @@ class SdkBridgedTransactionFactory internal constructor(
     @Inject
     constructor(
         sdkService: DashSdkService,
-        walletData: WalletDataProvider,
+        walletData: WalletData,
         walletApplication: WalletApplication,
         l1ShadowSyncService: L1ShadowSyncService,
         identityConfig: BlockchainIdentityConfig,

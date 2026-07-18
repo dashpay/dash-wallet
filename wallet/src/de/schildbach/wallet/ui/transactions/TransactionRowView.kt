@@ -29,7 +29,9 @@ import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.dashjTx
+import de.schildbach.wallet.util.toCoin
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
@@ -64,13 +66,13 @@ data class TransactionRowView(
             metadata: PresentableTxMetadata? = null,
             chainLockBlockHeight: Int
         ): TransactionRowView {
-            val firstTx = txWrapper.transactions.values.first()
+            val firstTx = txWrapper.transactions.values.first().dashjTx
 
             return when (txWrapper) {
                 is FullCrowdNodeSignUpTxSet -> TransactionRowView(
                         ResourceString(R.string.crowdnode_account),
                         txWrapper.id,
-                        txWrapper.getValue(bag),
+                        txWrapper.getValue().toCoin(),
                         firstTx.exchangeRate,
                         null,
                         R.drawable.ic_crowdnode_logo,
@@ -89,7 +91,7 @@ data class TransactionRowView(
                 is CoinJoinMixingTxSet -> TransactionRowView(
                     ResourceString(R.string.coinjoin_mixing_transactions),
                     txWrapper.id,
-                    txWrapper.getValue(bag),
+                    txWrapper.getValue().toCoin(),
                     firstTx.exchangeRate,
                     null,
                     R.drawable.ic_coinjoin_mixing_group,

@@ -48,7 +48,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.CoinSelector
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.money.Dash
@@ -88,7 +88,7 @@ class ShieldedTransferViewModelTest {
         every { observeShieldedBalance() } returns flowOf(Dash.parse("15.5"))
         every { shieldedSyncStatus } returns poolSyncStatus
     }
-    private val walletData = mockk<WalletDataProvider> {
+    private val walletData = mockk<WalletData> {
         // total balance only feeds the "pending" explainer; the
         // transferable balance comes from the chainlocked-only selection
         every { observeTotalBalance() } returns flowOf(Coin.parseCoin("3.00"))

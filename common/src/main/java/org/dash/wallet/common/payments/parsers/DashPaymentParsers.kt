@@ -17,10 +17,9 @@
 
 package org.dash.wallet.common.payments.parsers
 
-import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.util.Constants
 
-class DashPaymentParsers(val params: NetworkParameters) : PaymentParsers() {
+class DashPaymentParsers(val params: AddressNetwork) : PaymentParsers() {
     init {
         add(
             Constants.DASH_CURRENCY,

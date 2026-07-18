@@ -24,13 +24,23 @@ import de.schildbach.wallet_test.databinding.DialogChangeTaxCategoryExplainerBin
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionCategory
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.transactions.fromTransaction
 
 @AndroidEntryPoint
 class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment(R.layout.dialog_change_tax_category_explainer) {
@@ -39,7 +49,7 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment(R.layout.d
     private val exampleTxId by lazy { arguments?.get(TX_ID) as? Sha256Hash }
 
     @Inject
-    lateinit var walletData: WalletDataProvider
+    lateinit var walletData: WalletData
     @Inject
     lateinit var config: Configuration
 
@@ -79,9 +89,9 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment(R.layout.d
                     transactionResultViewBinder.bind(this, null)
                     transactionResultViewBinder.setTransactionMetadata(
                         TransactionMetadata(
-                            tx.txId,
+                            tx.txId.toTxId(),
                             tx.updateTime.time,
-                            tx.getValue(wallet),
+                            tx.getValue(wallet).toNeutralCoin(),
                             TransactionCategory.fromTransaction(
                                 tx.type,
                                 tx.getValue(wallet),

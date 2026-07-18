@@ -33,7 +33,7 @@ import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.util.Util
 import com.google.common.base.Stopwatch
 import com.google.common.io.BaseEncoding
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.math.BigInteger
@@ -59,12 +59,12 @@ class ProfilePictureHelper {
                     .into(object : CustomTarget<File>() {
 
                         override fun onResourceReady(resource: File, transition: Transition<in File>?) {
-                            val serverAvatarHash = Sha256Hash.of(resource)
+                            val serverAvatarHash = TxId.of(resource)
                             watch.stop()
                             val encoding = BaseEncoding.base64().omitPadding()
                             log.debug("server avatarHash: '{}', took {}", encoding.encode(serverAvatarHash.bytes), watch)
                             if (profileAvatarHash != null && !(profileAvatarHash contentEquals serverAvatarHash.bytes)) {
-                                val profileAvatarHashBase64 = encoding.encode(Sha256Hash.wrap(profileAvatarHash).bytes)
+                                val profileAvatarHashBase64 = encoding.encode(TxId.wrap(profileAvatarHash).bytes)
                                 log.info("server avatarHash ({}) doesn't match the profile avatarHash ({})", encoding.encode(serverAvatarHash.bytes), profileAvatarHashBase64)
                             }
                             val avatarFingerprint = CocoaImageDHash.of(BitmapFactory.decodeFile(resource.path))
@@ -214,6 +214,6 @@ class ProfilePictureHelper {
     }
 
     interface OnResourceReadyListener {
-        fun onResourceReady(avatarHash: Sha256Hash?, avatarFingerprint: BigInteger?)
+        fun onResourceReady(avatarHash: TxId?, avatarFingerprint: BigInteger?)
     }
 }

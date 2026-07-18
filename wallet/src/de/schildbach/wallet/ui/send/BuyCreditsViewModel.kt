@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
@@ -25,7 +25,7 @@ class BuyCreditsViewModel @Inject constructor(
     val walletApplication: WalletApplication,
     val platformRepo: PlatformRepo,
     val identity: BlockchainIdentityConfig,
-    val walletDataProvider: WalletDataProvider,
+    val walletDataProvider: WalletData,
     val analytics: AnalyticsService,
     val dashPayConfig: DashPayConfig
 ) : ViewModel() {

@@ -18,7 +18,7 @@
 package org.dash.wallet.common.util
 
 import android.os.LocaleList
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.money.MoneyFormat
 import java.math.BigDecimal
 import java.math.RoundingMode

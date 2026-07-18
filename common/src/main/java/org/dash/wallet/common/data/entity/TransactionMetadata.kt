@@ -19,14 +19,14 @@ package org.dash.wallet.common.data.entity
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
 
 @Entity(tableName = "transaction_metadata")
 data class TransactionMetadata(
-    @PrimaryKey var txId: Sha256Hash,
+    @PrimaryKey var txId: TxId,
     var timestamp: Long,
     var value: Coin,
     var type: TransactionCategory,
@@ -35,7 +35,7 @@ data class TransactionMetadata(
     var rate: String? = null,
     var memo: String = "",
     var service: String? = null,
-    var customIconId: Sha256Hash? = null
+    var customIconId: TxId? = null
 ) {
     @Ignore
     val canToggle = type.canToggle
@@ -46,7 +46,7 @@ data class TransactionMetadata(
     @Ignore
     val defaultTaxCategory = TaxCategory.getDefault(value.isPositive, isTransfer)
 
-    /** [customIconId] as a hex string ([Sha256Hash.toString]); dashj-free accessor. */
+    /** [customIconId] as a hex string; dashj-free accessor. */
     val customIconIdHex: String? get() = customIconId?.toString()
 
     fun isNotEmpty(): Boolean {

@@ -19,8 +19,7 @@ package org.dash.wallet.common.services
 import android.graphics.Bitmap
 import com.google.zxing.BarcodeFormat
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -29,44 +28,35 @@ import org.dash.wallet.common.data.entity.TransactionMetadata
 
 interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
-    suspend fun importTransactionMetadata(txId: Sha256Hash)
+    suspend fun importTransactionMetadata(txId: TxId)
 
-    suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, isSyncingPlatform: Boolean = false)
-    suspend fun setTransactionType(txId: Sha256Hash, type: Int, isSyncingPlatform: Boolean = false)
-    suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean = false)
-    suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean = false)
-    suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean = false)
-    suspend fun setTransactionSentTime(txId: Sha256Hash, timestamp: Long, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionTaxCategory(txId: TxId, taxCategory: TaxCategory, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionType(txId: TxId, type: Int, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionExchangeRate(txId: TxId, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionMemo(txId: TxId, memo: String, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionService(txId: TxId, service: String, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionSentTime(txId: TxId, timestamp: Long, isSyncingPlatform: Boolean = false)
     suspend fun syncPlatformMetadata(
-        txId: Sha256Hash,
+        txId: TxId,
         metadata: TransactionMetadata,
         giftCard: GiftCard?,
         iconUrl: String?
     )
 
-    /**
-     * Checks for missing data in the metadata cache vs the Transaction and ensures that both
-     * are the same.
-     *
-     * @param tx The transaction to sync with the transaction metadata cache
-     */
-    suspend fun syncTransaction(tx: Transaction)
-    fun syncTransactionBlocking(tx: Transaction)
-
-    suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata?
-    fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>
+    suspend fun getTransactionMetadata(txId: TxId): TransactionMetadata?
+    fun observeTransactionMetadata(txId: TxId): Flow<TransactionMetadata?>
 
     /**
      * Mark a transaction as DashSpend gift card expense with an icon
      */
-    suspend fun markGiftCardTransaction(txId: Sha256Hash, service: String, iconUrl: String?)
+    suspend fun markGiftCardTransaction(txId: TxId, service: String, iconUrl: String?)
     suspend fun updateGiftCardMetadata(giftCard: GiftCard)
-    suspend fun updateGiftCardBarcode(txId: Sha256Hash, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat)
+    suspend fun updateGiftCardBarcode(txId: TxId, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat)
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 
-    fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
-    suspend fun getIcon(iconId: Sha256Hash): Bitmap?
+    fun observePresentableMetadata(): Flow<Map<TxId, PresentableTxMetadata>>
+    suspend fun getIcon(iconId: TxId): Bitmap?
 
     // Address methods
     /**
@@ -121,7 +111,7 @@ interface TransactionMetadataProvider {
     /**
      * check if the tx metadata table has metadata for the given tx.
      */
-    suspend fun exists(txId: Sha256Hash): Boolean
+    suspend fun exists(txId: TxId): Boolean
 
     // Reset methods
     suspend fun clear()

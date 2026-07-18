@@ -22,7 +22,7 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -60,7 +60,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class SecurityGuardMnemonicProvider @Inject constructor(
-    private val walletData: WalletDataProvider
+    private val walletData: WalletData
 ) : PlatformMnemonicProvider {
 
     override suspend fun getMnemonicWords(

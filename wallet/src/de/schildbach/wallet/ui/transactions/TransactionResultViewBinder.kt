@@ -39,16 +39,25 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
-import org.dash.wallet.common.transactions.TransactionUtils
-import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils
+import de.schildbach.wallet.transactions.TransactionUtils.allOutputAddresses
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.util.currencySymbol
 import org.dash.wallet.common.util.makeLinks
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 /**
  * @author Samuel Barbosa
@@ -195,7 +204,7 @@ class TransactionResultViewBinder(
                 tx.getValue(wallet),
                 exchangeRate,
                 Constants.LOCAL_FORMAT,
-                exchangeRate.fiat?.currencySymbol
+                exchangeRate.fiat?.toNeutralFiat()?.currencySymbol
             )
         } else {
             binding.fiatValue.isVisible = false

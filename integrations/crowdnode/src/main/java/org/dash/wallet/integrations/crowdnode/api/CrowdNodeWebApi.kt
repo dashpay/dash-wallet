@@ -20,13 +20,14 @@ package org.dash.wallet.integrations.crowdnode.api
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.AddressFormatException
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.payments.parsers.AddressFormatException
+import org.dash.wallet.common.payments.parsers.AddressNetwork
+import org.dash.wallet.common.payments.parsers.AddressUtils
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.util.ensureSuccessful
 import org.dash.wallet.integrations.crowdnode.model.*
 import org.slf4j.LoggerFactory
@@ -115,13 +116,13 @@ open class CrowdNodeWebApi @Inject constructor(
         private const val MAX_PER_24H_KEY = "AmountApiWithdrawal24hMax"
     }
 
-    suspend fun registerEmail(address: Address, email: String): MessageStatus {
+    suspend fun registerEmail(address: String, email: String): MessageStatus {
         val signature = securityFunctions.signMessage(address, email)
         val encodedSignature = withContext(Dispatchers.IO) {
             URLEncoder.encode(signature, "utf-8")
         }
         val response = endpoint.sendSignedMessage(
-            address.toBase58(),
+            address,
             email,
             encodedSignature,
             CrowdNodeMessageType.RegisterEmail
@@ -131,14 +132,14 @@ open class CrowdNodeWebApi @Inject constructor(
         return response.body() ?: throw HttpException(response)
     }
 
-    suspend fun requestWithdrawal(address: Address, amount: Coin): MessageStatus {
-        val amountStr = amount.value.toString()
+    suspend fun requestWithdrawal(address: String, amount: Dash): MessageStatus {
+        val amountStr = amount.duffs.toString()
         val signature = securityFunctions.signMessage(address, amountStr)
         val encodedSignature = withContext(Dispatchers.IO) {
             URLEncoder.encode(signature, "utf-8")
         }
         val response = endpoint.sendSignedMessage(
-            address.toBase58(),
+            address,
             amountStr,
             encodedSignature,
             CrowdNodeMessageType.Withdrawal
@@ -157,7 +158,7 @@ open class CrowdNodeWebApi @Inject constructor(
     }
     // end TODO
 
-    suspend fun fromCrowdNode(address: Address, tx: Transaction): Boolean? {
+    suspend fun fromCrowdNode(address: String, tx: TxInfo): Boolean? {
         var fromCrowdNode: Boolean? = false
 
         for (i in 0..3) {
@@ -166,10 +167,10 @@ open class CrowdNodeWebApi @Inject constructor(
             }
 
             try {
-                val response = endpoint.getTransactions(address.toBase58())
+                val response = endpoint.getTransactions(address)
 
                 if (response.isSuccessful && response.body() != null) {
-                    if (response.body()!!.all { it.txId != tx.txId.toString() }) {
+                    if (response.body()!!.all { it.txId != tx.txId }) {
                         fromCrowdNode = false
                         continue
                     } else {
@@ -192,10 +193,10 @@ open class CrowdNodeWebApi @Inject constructor(
         return fromCrowdNode
     }
 
-    open suspend fun resolveBalance(address: Address?): Resource<Coin> {
+    open suspend fun resolveBalance(address: String?): Resource<Dash> {
         return if (address != null) {
             try {
-                val balance = Coin.parseCoin(fetchBalance(address.toBase58()))
+                val balance = Dash.parse(fetchBalance(address))
                 Resource.success(balance)
             } catch (ex: IOException) {
                 Resource.error(ex)
@@ -205,7 +206,7 @@ open class CrowdNodeWebApi @Inject constructor(
                 Resource.error(ex)
             }
         } else {
-            Resource.success(Coin.ZERO)
+            Resource.success(Dash.ZERO)
         }
     }
 
@@ -216,9 +217,9 @@ open class CrowdNodeWebApi @Inject constructor(
         return balance.setScale(8, RoundingMode.HALF_UP).toString()
     }
 
-    suspend fun addressStatus(address: Address): String? {
+    suspend fun addressStatus(address: String): String? {
         return try {
-            val response = endpoint.addressStatus(address.toBase58())
+            val response = endpoint.addressStatus(address)
             response.body()?.status
         } catch (ex: Exception) {
             log.error("Error in resolveAddressStatus: $ex")
@@ -231,9 +232,9 @@ open class CrowdNodeWebApi @Inject constructor(
         }
     }
 
-    suspend fun isDefaultEmail(address: Address): Boolean {
+    suspend fun isDefaultEmail(address: String): Boolean {
         return try {
-            val response = endpoint.hasDefaultEmail(address.toBase58())
+            val response = endpoint.hasDefaultEmail(address)
             response.isSuccessful && response.body()?.isDefault != false
         } catch (ex: Exception) {
             log.error("Error in resolveIsDefaultEmail: $ex")
@@ -246,16 +247,16 @@ open class CrowdNodeWebApi @Inject constructor(
         }
     }
 
-    open suspend fun getWithdrawalLimits(address: Address?): Map<WithdrawalLimitPeriod, Coin> {
+    open suspend fun getWithdrawalLimits(address: String?): Map<WithdrawalLimitPeriod, Dash> {
         return try {
-            val response = endpoint.getWithdrawalLimits(address?.toBase58() ?: "")
+            val response = endpoint.getWithdrawalLimits(address ?: "")
 
             return if (response.isSuccessful && response.body()?.isNotEmpty() == true) {
                 response.body()!!.mapNotNull {
                     when (it.key.lowercase()) {
-                        MAX_PER_TX_KEY.lowercase() -> WithdrawalLimitPeriod.PerTransaction to Coin.parseCoin(it.value)
-                        MAX_PER_1H_KEY.lowercase() -> WithdrawalLimitPeriod.PerHour to Coin.parseCoin(it.value)
-                        MAX_PER_24H_KEY.lowercase() -> WithdrawalLimitPeriod.PerDay to Coin.parseCoin(it.value)
+                        MAX_PER_TX_KEY.lowercase() -> WithdrawalLimitPeriod.PerTransaction to Dash.parse(it.value)
+                        MAX_PER_1H_KEY.lowercase() -> WithdrawalLimitPeriod.PerHour to Dash.parse(it.value)
+                        MAX_PER_24H_KEY.lowercase() -> WithdrawalLimitPeriod.PerDay to Dash.parse(it.value)
                         else -> null
                     }
                 }.toMap()
@@ -274,9 +275,9 @@ open class CrowdNodeWebApi @Inject constructor(
         }
     }
 
-    open suspend fun getFees(address: Address?): List<FeeInfo> {
+    open suspend fun getFees(address: String?): List<FeeInfo> {
         return try {
-            val response = endpoint.getFees(address?.toBase58() ?: "")
+            val response = endpoint.getFees(address ?: "")
 
             return if (response.isSuccessful) {
                 response.body()!!
@@ -294,18 +295,20 @@ open class CrowdNodeWebApi @Inject constructor(
         }
     }
 
-    open suspend fun isApiAddressInUse(address: Address): Pair<Boolean, Address?> {
+    open suspend fun isApiAddressInUse(address: String): Pair<Boolean, String?> {
         return try {
-            val result = endpoint.isAddressInUse(address.toBase58())
+            val result = endpoint.isAddressInUse(address)
             val isSuccess = result.isSuccessful && result.body()?.isInUse == true
-            var primaryAddress: Address? = null
+            var primaryAddress: String? = null
 
             if (isSuccess) {
                 val primary = result.body()!!.primaryAddress
                 requireNotNull(primary) { "isAddressInUse returns true but missing primary address" }
 
                 primaryAddress = try {
-                    Address.fromBase58(address.parameters, primary)
+                    // The primary address must be on the same network as the api address
+                    AddressUtils.verify(AddressNetwork.fromDashAddress(address), primary)
+                    primary
                 } catch (ex: AddressFormatException) {
                     analyticsService.logError(ex, primary)
                     null

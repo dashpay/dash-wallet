@@ -37,6 +37,7 @@ import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.FrequentContactsAdapter
 import de.schildbach.wallet.ui.dashpay.OnContactItemClickListener
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
+import org.dash.wallet.common.payments.parsers.AddressNetwork
 import de.schildbach.wallet.Constants
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -159,7 +160,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     private fun handleString(input: String) {
         lifecycleScope.launch {
             try {
-                val paymentIntent = DashPaymentIntentParser(Constants.NETWORK_PARAMETERS).parse(input, true)
+                val paymentIntent = DashPaymentIntentParser(AddressNetwork.fromId(Constants.NETWORK_PARAMETERS.id)).parse(input, true)
                 paymentIntent.source = arguments?.getString(ARG_SOURCE) ?: ""
                 SendCoinsActivity.start(requireContext(), paymentIntent)
             } catch (ex: PaymentIntentParserException) {

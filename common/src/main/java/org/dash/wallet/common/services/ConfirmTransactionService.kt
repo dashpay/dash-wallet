@@ -17,8 +17,8 @@
 package org.dash.wallet.common.services
 
 import androidx.fragment.app.FragmentActivity
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.ExchangeRate
 import org.dash.wallet.common.data.entity.ExchangeRate as ExchangeRateEntity
 
 interface ConfirmTransactionService {

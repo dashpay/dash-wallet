@@ -50,11 +50,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.NotificationService
+import de.schildbach.wallet.payments.WalletSendPaymentService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
@@ -109,7 +110,7 @@ abstract class AppModule {
 
         @Provides
         fun provideSendPaymentService(
-            walletData: WalletDataProvider,
+            walletData: de.schildbach.wallet.data.WalletData,
             walletApplication: WalletApplication,
             securityFunctions: SecurityFunctions,
             packageInfoProvider: PackageInfoProvider,
@@ -122,7 +123,7 @@ abstract class AppModule {
             l1ShadowSyncService: L1ShadowSyncService,
             l1SendProbeService: L1SendProbeService,
             bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
-        ): SendPaymentService {
+        ): WalletSendPaymentService {
             val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider, sdkL1SendService, l1ShadowSyncService, l1SendProbeService, bridgedTransactionFactory)
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
@@ -131,6 +132,9 @@ abstract class AppModule {
                 FakeDashSpendService(realService, walletData)
             }
         }
+
+        @Provides
+        fun provideNeutralSendPaymentService(service: WalletSendPaymentService): SendPaymentService = service
 
         @Provides
         @Singleton

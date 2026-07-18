@@ -20,12 +20,12 @@ package org.dash.wallet.common.data.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 
 @Entity(tableName = "icon_bitmaps")
 class IconBitmap(
     @PrimaryKey
-    var id: Sha256Hash,
+    var id: TxId,
     @ColumnInfo(typeAffinity = ColumnInfo.BLOB)
     val imageData: ByteArray,
     val originalUrl: String,

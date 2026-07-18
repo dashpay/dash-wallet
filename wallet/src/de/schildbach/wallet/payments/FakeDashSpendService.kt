@@ -24,17 +24,20 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.transactions.toTxInfo
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.SpendSelection
+import org.dash.wallet.common.transactions.TxInfo
 import java.util.function.Consumer
 import java.util.function.Predicate
 import javax.inject.Inject
 
 class FakeDashSpendService @Inject constructor(
-    private val realService: SendPaymentService,
-    private val walletDataProvider: WalletDataProvider
-) : SendPaymentService {
+    private val realService: WalletSendPaymentService,
+    private val walletDataProvider: WalletData
+) : WalletSendPaymentService {
     internal companion object {
         const val DASH_SPEND_SCHEMA = "dashspend://"
     }
@@ -72,7 +75,7 @@ class FakeDashSpendService @Inject constructor(
         address: Address,
         amount: Coin,
         emptyWallet: Boolean
-    ): SendPaymentService.TransactionDetails {
+    ): WalletSendPaymentService.TransactionDetails {
         return realService.estimateNetworkFee(address, amount, emptyWallet)
     }
 
@@ -84,7 +87,7 @@ class FakeDashSpendService @Inject constructor(
         return realService.estimateNetworkFee(address, amount, emptyWallet)
     }
 
-    override suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction {
+    override suspend fun payWithDashUrlTx(dashUri: String, serviceName: String?): Transaction {
         return if (dashUri.startsWith(DASH_SPEND_SCHEMA)) {
             val uri = Uri.parse(dashUri)
             val amount = Coin.valueOf(uri.getQueryParameter("amount")?.toLong() ?: 0)
@@ -93,8 +96,27 @@ class FakeDashSpendService @Inject constructor(
                 amount
             )
         } else {
-            realService.payWithDashUrl(dashUri, serviceName)
+            realService.payWithDashUrlTx(dashUri, serviceName)
         }
+    }
+
+    override suspend fun payWithDashUrl(dashUri: String, serviceName: String?): TxInfo {
+        return payWithDashUrlTx(dashUri, serviceName)
+            .toTxInfo(walletDataProvider.transactionBag, walletDataProvider.networkParameters)
+    }
+
+    override suspend fun sendCoinsSelected(
+        address: String,
+        amount: Dash,
+        selection: SpendSelection,
+        emptyWallet: Boolean,
+        checkBalanceConditions: Boolean,
+        lockSentOutputsTo: String?,
+        canSpendLockedOutputsTo: String?
+    ): TxInfo {
+        return realService.sendCoinsSelected(
+            address, amount, selection, emptyWallet, checkBalanceConditions, lockSentOutputsTo, canSpendLockedOutputsTo
+        )
     }
 
     override suspend fun completeTransaction(sendRequest: SendRequest) {

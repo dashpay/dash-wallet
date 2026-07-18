@@ -25,6 +25,15 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 @HiltViewModel
 class PrivateMemoViewModel @Inject constructor(
@@ -52,7 +61,7 @@ class PrivateMemoViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            metadataProvider.getTransactionMetadata(txId)?.let {
+            metadataProvider.getTransactionMetadata(txId.toTxId())?.let {
                 initialMemo = it.memo
                 memo.value = initialMemo
             }
@@ -65,7 +74,7 @@ class PrivateMemoViewModel @Inject constructor(
             val memo = memo.value
 
             if (txId != null && memo != null && memo.length <= MAX_MEMO_CHARS) {
-                metadataProvider.setTransactionMemo(txId, memo)
+                metadataProvider.setTransactionMemo(txId.toTxId(), memo)
             }
         }
     }

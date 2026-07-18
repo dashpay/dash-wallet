@@ -52,10 +52,14 @@ import org.dash.wallet.common.payments.bip70.PaymentProtocol
 import org.dash.wallet.common.payments.bip70.PaymentProtocolException.InvalidPaymentRequestURL
 import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.*
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.transactions.ExactOutputsSelector
+import de.schildbach.wallet.transactions.toTxInfo
+import de.schildbach.wallet.util.toCoin
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toDash
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.money.toCoin
-import org.dash.wallet.common.money.toDash
 import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.LeftoverBalanceException
@@ -64,14 +68,25 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
-import org.dash.wallet.common.transactions.ByAddressCoinSelector
+import de.schildbach.wallet.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.call
 import org.dash.wallet.common.util.ensureSuccessful
 import org.slf4j.LoggerFactory
+import org.dash.wallet.common.transactions.TxInfo
+import org.dash.wallet.common.services.SpendSelection
+import org.bitcoinj.script.ScriptPattern
+import org.bitcoinj.core.Sha256Hash
 import java.util.function.Consumer
 import java.util.function.Predicate
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toSha256Hash
 
 /**
  * Phase 5d: where a dashj-typed send routes once the cutover state is
@@ -150,7 +165,7 @@ fun extractSdkRoutablePayment(
 }
 
 class SendCoinsTaskRunner @Inject constructor(
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val walletApplication: WalletApplication,
     private val securityFunctions: SecurityFunctions,
     private val packageInfoProvider: PackageInfoProvider,
@@ -163,12 +178,12 @@ class SendCoinsTaskRunner @Inject constructor(
     private val l1ShadowSyncService: L1ShadowSyncService,
     private val l1SendProbeService: L1SendProbeService,
     private val bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
-) : SendPaymentService {
+) : WalletSendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
         private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
     }
-    private val paymentIntentParser = DashPaymentIntentParser(NETWORK_PARAMETERS)
+    private val paymentIntentParser = DashPaymentIntentParser(org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(NETWORK_PARAMETERS.id))
 
     @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
@@ -390,7 +405,7 @@ class SendCoinsTaskRunner @Inject constructor(
         address: Address,
         amount: Coin,
         emptyWallet: Boolean
-    ): SendPaymentService.TransactionDetails {
+    ): WalletSendPaymentService.TransactionDetails {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
         var sendRequest = createSendRequest(address, amount, null, emptyWallet, false)
@@ -419,14 +434,68 @@ class SendCoinsTaskRunner @Inject constructor(
             amount.add(txFee).toPlainString()
         }
 
-        return SendPaymentService.TransactionDetails(txFee?.toPlainString() ?: "", amountToSend, totalAmount)
+        return WalletSendPaymentService.TransactionDetails(txFee?.toPlainString() ?: "", amountToSend, totalAmount)
     }
 
-    override suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction =
+    override suspend fun payWithDashUrlTx(dashUri: String, serviceName: String?): Transaction =
         withContext(Dispatchers.IO) {
             val paymentIntent = paymentIntentParser.parse(dashUri, false)
             createPaymentRequest(paymentIntent, serviceName)
         }
+
+    override suspend fun payWithDashUrl(dashUri: String, serviceName: String?): TxInfo =
+        payWithDashUrlTx(dashUri, serviceName)
+            .toTxInfo(walletData.transactionBag, walletData.networkParameters)
+
+    @Throws(LeftoverBalanceException::class)
+    override suspend fun sendCoinsSelected(
+        address: String,
+        amount: Dash,
+        selection: SpendSelection,
+        emptyWallet: Boolean,
+        checkBalanceConditions: Boolean,
+        lockSentOutputsTo: String?,
+        canSpendLockedOutputsTo: String?
+    ): TxInfo {
+        val params = walletData.networkParameters
+        val dashjAddress = Address.fromBase58(params, address)
+        val selector = when (selection) {
+            is SpendSelection.Any -> null
+            is SpendSelection.ByAddress -> ByAddressCoinSelector(Address.fromBase58(params, selection.address))
+            is SpendSelection.ExactOutput -> {
+                val tx = walletData.getTransaction(Sha256Hash.wrap(selection.txId))
+                    ?: throw IllegalArgumentException("unknown transaction: " + selection.txId)
+                ExactOutputsSelector(listOf(tx.getOutput(selection.outputIndex.toLong())))
+            }
+        }
+        val lockAddress = lockSentOutputsTo?.let { Address.fromBase58(params, it) }
+        val canSpendAddress = canSpendLockedOutputsTo?.let { Address.fromBase58(params, it) }
+        val tx = sendCoins(
+            dashjAddress,
+            amount.toCoin(),
+            selector,
+            emptyWallet,
+            checkBalanceConditions,
+            beforeSending = lockAddress?.let { la ->
+                Consumer<Transaction> { t -> lockOutputsPayingTo(t, la) }
+            },
+            canSendLockedOutput = canSpendAddress?.let { ca ->
+                Predicate<TransactionOutput> { it.scriptPubKey.getToAddress(params) == ca }
+            }
+        )
+        return tx.toTxInfo(walletData.transactionBag, params)
+    }
+
+    /** Locks the P2PKH outputs of [tx] paying [address] (the CrowdNode account-output locking). */
+    private fun lockOutputsPayingTo(tx: Transaction, address: Address) {
+        val params = walletData.networkParameters
+        tx.outputs.filter { output ->
+            ScriptPattern.isP2PKH(output.scriptPubKey) &&
+                Address.fromPubKeyHash(params, ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)) == address
+        }.forEach { output ->
+            walletData.lockOutput(output.outPointFor)
+        }
+    }
 
     override suspend fun completeTransaction(sendRequest: SendRequest) {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
@@ -483,7 +552,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
         val paymentIntent = paymentIntentParser.parse(byteStream, contentType)
 
-        if (!basePaymentIntent.isExtendedBy(paymentIntent, true, NETWORK_PARAMETERS)) {
+        if (!basePaymentIntent.isExtendedBy(paymentIntent, true, de.schildbach.wallet.Constants.ADDRESS_NETWORK)) {
             log.info("BIP72 trust check failed")
             throw IllegalStateException("BIP72 trust check failed: $requestUrl")
         }
@@ -586,13 +655,16 @@ class SendCoinsTaskRunner @Inject constructor(
         wallet.completeTx(sendRequest)
         log.info("completed sendRequest transaction")
         serviceName?.let {
-            metadataProvider.setTransactionService(sendRequest.tx.txId, serviceName)
+            metadataProvider.setTransactionService(sendRequest.tx.txId.toTxId(), serviceName)
         }
         val refundAddress = wallet.freshAddress(KeyChain.KeyPurpose.REFUND)
+        // The old common PaymentProtocol.createPaymentMessage verified each tx before
+        // serializing; the neutral version can't (no dashj), so verify here.
+        sendRequest.tx.verify()
         val payment = PaymentProtocol.createPaymentMessage(
-            listOf(sendRequest.tx),
+            listOf(sendRequest.tx.unsafeBitcoinSerialize()),
             finalPaymentIntent.amount,
-            refundAddress,
+            refundAddress.toBase58(),
             null,
             finalPaymentIntent.payeeData
         )
@@ -678,11 +750,11 @@ class SendCoinsTaskRunner @Inject constructor(
         val sendRequest = paymentIntent.toSendRequest(NETWORK_PARAMETERS)
         sendRequest.coinSelector = getCoinSelector()
         sendRequest.useInstantSend = false
-        sendRequest.feePerKb = Constants.ECONOMIC_FEE
+        sendRequest.feePerKb = Constants.ECONOMIC_FEE.toDashjCoin()
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
         val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
-        sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
+        sendRequest.emptyWallet = mayEditAmount && walletBalance.value == paymentIntent.amount?.value
 
         return sendRequest
     }
@@ -696,14 +768,14 @@ class SendCoinsTaskRunner @Inject constructor(
     ): SendRequest {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
-        val sendRequest = SendRequest.assetLock(wallet.params, topUpKey, paymentIntent.amount)
+        val sendRequest = SendRequest.assetLock(wallet.params, topUpKey, paymentIntent.amount.toDashjCoin())
         sendRequest.coinSelector = getCoinSelector()
         sendRequest.useInstantSend = false
-        sendRequest.feePerKb = Constants.ECONOMIC_FEE
+        sendRequest.feePerKb = Constants.ECONOMIC_FEE.toDashjCoin()
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
         val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
-        sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
+        sendRequest.emptyWallet = mayEditAmount && walletBalance.value == paymentIntent.amount?.value
 
         return sendRequest
     }
@@ -718,7 +790,7 @@ class SendCoinsTaskRunner @Inject constructor(
         canSendLockedOutput: Predicate<TransactionOutput>? = null
     ): SendRequest {
         return SendRequest.to(address, amount).apply {
-            this.feePerKb = Constants.ECONOMIC_FEE
+            this.feePerKb = Constants.ECONOMIC_FEE.toDashjCoin()
             this.ensureMinRequiredFee = forceMinFee
             this.emptyWallet = emptyWallet
 
@@ -818,7 +890,7 @@ class SendCoinsTaskRunner @Inject constructor(
             val transaction = sendRequest.tx
             beforeSending?.accept(transaction)
             serviceName?.let {
-                metadataProvider.setTransactionService(sendRequest.tx.txId, serviceName)
+                metadataProvider.setTransactionService(sendRequest.tx.txId.toTxId(), serviceName)
             }
             log.info("send successful, transaction committed in {}: {} ", watch, transaction.txId.toString())
             log.info("  transaction: {}", transaction.toStringHex())

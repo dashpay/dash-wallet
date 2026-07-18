@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.WalletUIConfig
@@ -40,6 +40,9 @@ import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.GenericUtils
 import javax.inject.Inject
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
 
 
 data class ConfirmUserNameUIState(
@@ -140,14 +143,14 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
 
     private fun updateFees(exchangeRateData: ExchangeRate) {
         val cost = this.cost
-        val amountStr = MonetaryFormat.BTC.noCode().format(cost.amount).toString()
+        val amountStr = MonetaryFormat.BTC.noCode().format(cost.amount.toNeutralCoin()).toString()
 
         val exchangeRate = exchangeRateData.run {
-            org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat)
+            org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat.toDashjFiat())
         }
         val fiatAmount = exchangeRate.coinToFiat(cost.amount)
 
-        val fiatAmountStr = if (fiatAmount != null) Constants.LOCAL_FORMAT.format(fiatAmount).toString() else ""
+        val fiatAmountStr = if (fiatAmount != null) Constants.LOCAL_FORMAT.format(fiatAmount.toNeutralFiat()).toString() else ""
         val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
         _uiState.update {
             it.copy(

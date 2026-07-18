@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -387,7 +387,7 @@ internal class DashSdkTxRowSource(
 /** Production [L1SendProbeSource]: the live SDK Room DB + dashj wallet. */
 internal class DashSdkL1SendProbeSource(
     private val service: DashSdkService,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletData
 ) : L1SendProbeSource {
 
     private val rowSource = DashSdkTxRowSource(service)
@@ -497,7 +497,7 @@ class L1SendProbeService internal constructor(
     @Inject
     constructor(
         sdkService: DashSdkService,
-        walletData: WalletDataProvider,
+        walletData: WalletData,
         scope: CoroutineScope
     ) : this(
         source = DashSdkL1SendProbeSource(sdkService, walletData),

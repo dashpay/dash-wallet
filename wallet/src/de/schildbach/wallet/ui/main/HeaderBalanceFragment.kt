@@ -32,6 +32,8 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.setAmount
 
 class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
     private val viewModel by activityViewModels<MainViewModel>()
@@ -77,7 +79,7 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         viewModel.exchangeRate.value?.let { exchangeRate ->
             val rate = org.bitcoinj.utils.ExchangeRate(
                 Coin.COIN,
-                exchangeRate.fiat
+                exchangeRate.fiat.toDashjFiat()
             )
 
             val localValue = rate.coinToFiat(balance)

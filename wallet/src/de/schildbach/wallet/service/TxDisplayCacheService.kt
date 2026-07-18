@@ -69,14 +69,17 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.WalletEx
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.dashjTx
+import de.schildbach.wallet.transactions.toTxInfo
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.transactions.TransactionWrapper
-import org.dash.wallet.common.transactions.batchAndFilterUpdates
+import de.schildbach.wallet.transactions.batchAndFilterUpdates
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
@@ -89,7 +92,7 @@ import javax.inject.Singleton
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class TxDisplayCacheService @Inject constructor(
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val walletApplication: WalletApplication,
     private val txDisplayCacheDao: TxDisplayCacheDao,
     private val txGroupCacheDao: TxGroupCacheDao,
@@ -134,7 +137,7 @@ class TxDisplayCacheService @Inject constructor(
     // Internal filter driven by setFilter() calls from the ViewModel
     private val _currentFilter = MutableStateFlow(TxFilterType.ALL)
 
-    @Volatile private var metadata: Map<Sha256Hash, PresentableTxMetadata> = mapOf()
+    @Volatile private var metadata: Map<TxId, PresentableTxMetadata> = mapOf()
     @Volatile private var contacts: Map<String, DashPayProfile> = mapOf()
     @Volatile private var contactsByTxId: Map<String, DashPayProfile> = mapOf()
     @Volatile private var minContactCreatedDate: LocalDate = LocalDate.MIN
@@ -256,9 +259,9 @@ class TxDisplayCacheService @Inject constructor(
                 val oldMetadata = this.metadata
                 this.metadata = newMetadata
 
-                val changedIds = buildSet<Sha256Hash> {
-                    newMetadata.forEach { (id, meta) -> if (meta != oldMetadata[id]) add(id) }
-                    oldMetadata.forEach { (id, _) -> if (id !in newMetadata) add(id) }
+                val changedIds = buildSet<String> {
+                    newMetadata.forEach { (id, meta) -> if (meta != oldMetadata[id]) add(id.toString()) }
+                    oldMetadata.forEach { (id, _) -> if (id !in newMetadata) add(id.toString()) }
                 }
 
                 if (changedIds.isEmpty()) return@onEach
@@ -267,7 +270,7 @@ class TxDisplayCacheService @Inject constructor(
                     wrapper.transactions.keys.any { it in changedIds }
                 }
                 val inMemoryTxIds = inMemoryWrappers.flatMap { it.transactions.keys }.toSet()
-                val missingTxIds = changedIds.filter { it !in inMemoryTxIds }.map { it.toString() }
+                val missingTxIds = changedIds.filter { it !in inMemoryTxIds }
                 val lazyWrappers = if (missingTxIds.isNotEmpty()) {
                     val cacheEntries = txGroupCacheDao.getGroupsForTxIds(missingTxIds)
                     val loadedById = HashMap<String, TransactionWrapper>()
@@ -286,8 +289,8 @@ class TxDisplayCacheService @Inject constructor(
                             wrapper,
                             walletData.transactionBag,
                             Constants.CONTEXT,
-                            contact = contactsByTxId[txId.toString()],
-                            metadata = newMetadata[txId],
+                            contact = contactsByTxId[txId],
+                            metadata = newMetadata[TxId.wrap(txId)],
                             chainLockBlockHeight = chainLockBlockHeight
                         )
                         TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
@@ -338,7 +341,7 @@ class TxDisplayCacheService @Inject constructor(
                 txGroupCacheDao.deleteAll()
                 walletData.wallet?.let { wallet ->
                     coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-                    crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+                    crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
                 }
                 _currentPagingSource.value?.invalidate()
             }
@@ -487,7 +490,7 @@ class TxDisplayCacheService @Inject constructor(
             walletData.wallet?.let { wallet ->
                 val t0 = System.currentTimeMillis()
                 coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-                crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+                crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
 
                 val rawCount = wallet.getTransactions(true).size
                 val t1 = System.currentTimeMillis()
@@ -530,8 +533,8 @@ class TxDisplayCacheService @Inject constructor(
                 wrapper,
                 walletData.transactionBag,
                 Constants.CONTEXT,
-                contact = contactsByTxId[txId.toString()],
-                metadata = metadata[txId],
+                contact = contactsByTxId[txId],
+                metadata = metadata[TxId.wrap(txId)],
                 chainLockBlockHeight = chainLockBlockHeight
             )
             return TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
@@ -555,11 +558,11 @@ class TxDisplayCacheService @Inject constructor(
                 else                       -> TxGroupCacheEntry.TYPE_SINGLE
             }
             wrapper.transactions.values
-                .sortedBy { it.updateTime }
+                .sortedBy { it.updateTimeMillis }
                 .mapIndexed { index, tx ->
                     TxGroupCacheEntry(
                         groupId     = wrapper.id,
-                        txId        = tx.txId.toString(),
+                        txId        = tx.txId,
                         wrapperType = type,
                         groupDate   = wrapper.groupDate.toString(),
                         sortOrder   = index
@@ -573,7 +576,7 @@ class TxDisplayCacheService @Inject constructor(
         val wallet = walletData.wallet ?: return
         val t0 = System.currentTimeMillis()
         val cjFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-        val cnFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+        val cnFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
         coinJoinWrapperFactory = cjFactory
         crowdNodeWrapperFactory = cnFactory
 
@@ -596,11 +599,11 @@ class TxDisplayCacheService @Inject constructor(
 
             val wrapper = when (wrapperType) {
                 TxGroupCacheEntry.TYPE_COINJOIN -> {
-                    txs.forEach { cjFactory.tryInclude(it) }
+                    txs.forEach { cjFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                     cjFactory.wrappers.find { it.id == groupId }
                 }
                 TxGroupCacheEntry.TYPE_CROWDNODE -> {
-                    txs.forEach { cnFactory.tryInclude(it) }
+                    txs.forEach { cnFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                     cnFactory.wrappers.find { it.id == groupId }
                 }
                 else -> null
@@ -619,7 +622,7 @@ class TxDisplayCacheService @Inject constructor(
         // before rebuildWrappedList / initializeFactoriesFromCache has run).
         if (coinJoinWrapperFactory == null) {
             coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-            crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+            crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
         }
         val cjFactory = coinJoinWrapperFactory ?: return null
         val cnFactory = crowdNodeWrapperFactory ?: return null
@@ -637,11 +640,11 @@ class TxDisplayCacheService @Inject constructor(
 
         val wrapper = when (wrapperType) {
             TxGroupCacheEntry.TYPE_COINJOIN -> {
-                txs.forEach { cjFactory.tryInclude(it) }
+                txs.forEach { cjFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                 cjFactory.wrappers.find { it.id == groupId }
             }
             TxGroupCacheEntry.TYPE_CROWDNODE -> {
-                txs.forEach { cnFactory.tryInclude(it) }
+                txs.forEach { cnFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                 cnFactory.wrappers.find { it.id == groupId }
             }
             else -> txs.firstOrNull()?.let { createSingleTxWrapper(it) }
@@ -655,10 +658,12 @@ class TxDisplayCacheService @Inject constructor(
     }
 
     private suspend fun updateWrappedListForTransactions(txs: List<Transaction>) {
+        val bag = walletData.transactionBag
+        val params = walletData.networkParameters
         val txIdToWrapper = HashMap<String, TransactionWrapper>(wrappedTransactionList.size * 4)
         wrappedTransactionList.forEach { wrapper ->
             wrapper.transactions.keys.forEach { txId ->
-                txIdToWrapper[txId.toString()] = wrapper
+                txIdToWrapper[txId] = wrapper
             }
         }
 
@@ -669,7 +674,7 @@ class TxDisplayCacheService @Inject constructor(
         for (tx in txs) {
             val existing = txIdToWrapper[tx.txId.toString()]
             if (existing != null) {
-                existing.transactions[tx.txId] = tx
+                existing.transactions[tx.txId.toString()] = tx.toTxInfo(bag, params)
                 affectedWrappers.add(existing)
             } else {
                 unknownTxs.add(tx)
@@ -690,7 +695,7 @@ class TxDisplayCacheService @Inject constructor(
                         ?: loadWrapperOnDemand(cacheEntry.groupId, cacheEntry.wrapperType)
                             ?.also { loadedById[it.id] = it }
                     if (wrapper != null) {
-                        wrapper.transactions[tx.txId] = tx
+                        wrapper.transactions[tx.txId.toString()] = tx.toTxInfo(bag, params)
                         affectedWrappers.add(wrapper)
                         if (mutableList.none { it.id == wrapper.id }) {
                             mutableList.add(wrapper)
@@ -701,7 +706,8 @@ class TxDisplayCacheService @Inject constructor(
 
                 var added = false
 
-                val (cjIncluded, cjWrapper) = coinJoinWrapperFactory?.tryInclude(tx) ?: (false to null)
+                val txInfo = tx.toTxInfo(bag, params)
+                val (cjIncluded, cjWrapper) = coinJoinWrapperFactory?.tryInclude(txInfo) ?: (false to null)
                 if (cjIncluded && cjWrapper != null) {
                     if (mutableList.none { it.id == cjWrapper.id }) {
                         mutableList.add(cjWrapper)
@@ -711,7 +717,7 @@ class TxDisplayCacheService @Inject constructor(
                 }
 
                 if (!added) {
-                    val (cnIncluded, cnWrapper) = crowdNodeWrapperFactory?.tryInclude(tx) ?: (false to null)
+                    val (cnIncluded, cnWrapper) = crowdNodeWrapperFactory?.tryInclude(txInfo) ?: (false to null)
                     if (cnIncluded && cnWrapper != null) {
                         if (mutableList.none { it.id == cnWrapper.id }) {
                             mutableList.add(cnWrapper)
@@ -740,8 +746,8 @@ class TxDisplayCacheService @Inject constructor(
             val txId = wrapper.transactions.keys.first()
             val row = TransactionRowView.fromTransactionWrapper(
                 wrapper, walletData.transactionBag, Constants.CONTEXT,
-                contact = contactsByTxId[txId.toString()],
-                metadata = metadata[txId],
+                contact = contactsByTxId[txId],
+                metadata = metadata[TxId.wrap(txId)],
                 chainLockBlockHeight = chainLockBlockHeight
             )
             TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
@@ -765,11 +771,11 @@ class TxDisplayCacheService @Inject constructor(
                 else                       -> TxGroupCacheEntry.TYPE_SINGLE
             }
             wrapper.transactions.values
-                .sortedBy { it.updateTime }
+                .sortedBy { it.updateTimeMillis }
                 .mapIndexed { index, tx ->
                     TxGroupCacheEntry(
                         groupId     = wrapper.id,
-                        txId        = tx.txId.toString(),
+                        txId        = tx.txId,
                         wrapperType = type,
                         groupDate   = wrapper.groupDate.toString(),
                         sortOrder   = index
@@ -790,9 +796,9 @@ class TxDisplayCacheService @Inject constructor(
         val txsToResolve = wrappedTransactionList
             .map { it.transactions.values.first() }
             .filter { tx ->
-                !tx.isEntirelySelf(walletData.transactionBag) &&
-                    tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() >= minContactCreatedDate &&
-                    contactsByTxId[tx.txId.toString()] == null
+                !tx.isEntirelySelf &&
+                    tx.groupDate >= minContactCreatedDate &&
+                    contactsByTxId[tx.txId] == null
             }
 
         if (txsToResolve.isEmpty()) return
@@ -805,8 +811,8 @@ class TxDisplayCacheService @Inject constructor(
                 .map { tx ->
                     async(Dispatchers.IO) {
                         try {
-                            identityRepo.blockchainIdentity?.getContactForTransaction(tx)?.let { id ->
-                                contactsSnapshot[id]?.let { profile -> tx.txId.toString() to profile }
+                            identityRepo.blockchainIdentity?.getContactForTransaction(tx.dashjTx)?.let { id ->
+                                contactsSnapshot[id]?.let { profile -> tx.txId to profile }
                             }
                         } catch (e: Exception) {
                             log.warn("failed to resolve contact for tx {}: {}", tx.txId, e.message)
@@ -832,8 +838,8 @@ class TxDisplayCacheService @Inject constructor(
                         wrapper,
                         walletData.transactionBag,
                         Constants.CONTEXT,
-                        contact = contactsByTxId[txId.toString()],
-                        metadata = metadata[txId],
+                        contact = contactsByTxId[txId],
+                        metadata = metadata[TxId.wrap(txId)],
                         chainLockBlockHeight = chainLockBlockHeight
                     )
                     TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
@@ -903,8 +909,8 @@ class TxDisplayCacheService @Inject constructor(
                     wrapper,
                     walletData.transactionBag,
                     Constants.CONTEXT,
-                    contact = contactsByTxId[txId.toString()],
-                    metadata = metadata[txId],
+                    contact = contactsByTxId[txId],
+                    metadata = metadata[TxId.wrap(txId)],
                     chainLockBlockHeight = chainLockBlockHeight
                 )
                 TxDisplayCacheEntry.fromTransactionRowView(
@@ -919,11 +925,12 @@ class TxDisplayCacheService @Inject constructor(
     }
 
     private fun createSingleTxWrapper(tx: Transaction): TransactionWrapper = object : TransactionWrapper {
+        private val txInfo = tx.toTxInfo(walletData.transactionBag, walletData.networkParameters)
         override val id           = tx.txId.toString()
-        override val transactions = hashMapOf(tx.txId to tx)
-        override val groupDate    = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-        override fun tryInclude(t: Transaction) = t.txId == tx.txId
-        override fun getValue(bag: org.bitcoinj.core.TransactionBag) = tx.getValue(bag)
+        override val transactions = hashMapOf(txInfo.txId to txInfo)
+        override val groupDate    = txInfo.groupDate
+        override fun tryInclude(tx: org.dash.wallet.common.transactions.TxInfo) = tx.txId == txInfo.txId
+        override fun getValue() = org.dash.wallet.common.money.Dash(txInfo.netValueDuffs)
     }
 
     private fun computeFilterFlags(wrapper: TransactionWrapper): Int {
@@ -932,14 +939,14 @@ class TxDisplayCacheService @Inject constructor(
         if (wrapper is CoinJoinMixingTxSet) {
             flags = TxDisplayCacheEntry.FLAG_COINJOIN
         } else {
-            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.SENT, bag).matches(it) }) {
+            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.SENT, bag).matches(it.dashjTx) }) {
                 flags = flags or TxDisplayCacheEntry.FLAG_SENT
             }
-            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.RECEIVED, bag).matches(it) }) {
+            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.RECEIVED, bag).matches(it.dashjTx) }) {
                 flags = flags or TxDisplayCacheEntry.FLAG_RECEIVED
             }
             val firstTxId = wrapper.transactions.keys.first()
-            if (ServiceName.isDashSpend(metadata[firstTxId]?.service)) {
+            if (ServiceName.isDashSpend(metadata[TxId.wrap(firstTxId)]?.service)) {
                 flags = flags or TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
             }
         }

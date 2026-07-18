@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
@@ -73,6 +73,15 @@ import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
 import org.dash.wallet.common.util.toFormattedString
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 private const val DASH_CODE = "DASH"
 

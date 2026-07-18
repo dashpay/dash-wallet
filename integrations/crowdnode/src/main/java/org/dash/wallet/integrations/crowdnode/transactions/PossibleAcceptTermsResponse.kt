@@ -17,22 +17,18 @@
 
 package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.TransactionBag
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.transactions.filters.CoinsReceivedTxFilter
 
 class PossibleAcceptTermsResponse(
-    bag: TransactionBag,
-    private val accountAddress: Address?
+    private val accountAddress: String?
 ) : CoinsReceivedTxFilter(
-    bag,
     CrowdNodeAcceptTermsResponse.ACCEPT_TERMS_RESPONSE_CODE
 ) {
-    var transaction: Transaction? = null
+    var transaction: TxInfo? = null
         private set
 
-    override fun matches(tx: Transaction): Boolean {
+    override fun matches(tx: TxInfo): Boolean {
         val matches = super.matches(tx) && (accountAddress == null || super.toAddress == accountAddress)
 
         if (matches) {

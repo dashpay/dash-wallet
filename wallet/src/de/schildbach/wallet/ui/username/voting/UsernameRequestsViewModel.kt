@@ -63,7 +63,7 @@ import org.bitcoinj.evolution.SimplifiedMasternodeListManager
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
@@ -120,7 +120,7 @@ class UsernameRequestsViewModel @Inject constructor(
     private val usernameVoteDao: UsernameVoteDao,
     private val importedMasternodeKeyDao: ImportedMasternodeKeyDao,
     private val platformSyncService: PlatformSyncService,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val walletApplication: WalletApplication,
     private val dashSystemService: DashSystemService,
     private val analytics: AnalyticsService

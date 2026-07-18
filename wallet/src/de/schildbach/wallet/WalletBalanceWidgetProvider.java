@@ -33,7 +33,7 @@ import android.widget.RemoteViews;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.money.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.WalletUIConfig;
@@ -130,8 +130,10 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
         final MonetaryFormat btcFormat = config.getFormat();
 
-        final Spannable balanceStr = new MonetarySpannable(btcFormat.noCode(), balance).applyMarkup(null,
-                MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
+        final Spannable balanceStr = new MonetarySpannable(
+                btcFormat.noCode(),
+                org.dash.wallet.common.money.Coin.valueOf(balance.getValue())
+        ).applyMarkup(null, MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
 
         new AsyncTask<Context, Void, ExchangeRate>() {
             private final ExchangeRatesDao exchangeRatesDao =
@@ -151,9 +153,10 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
 
                 final Spannable localBalanceStr;
                 if (exchangeRate != null) {
-                    org.bitcoinj.utils.ExchangeRate rate = new org.bitcoinj.utils.ExchangeRate(Coin.COIN,
-                            exchangeRate.getFiat());
-                    final Fiat localBalance = rate.coinToFiat(balance);
+                    org.dash.wallet.common.money.ExchangeRate rate = new org.dash.wallet.common.money.ExchangeRate(
+                            org.dash.wallet.common.money.Coin.COIN, exchangeRate.getFiat());
+                    final org.dash.wallet.common.money.Fiat localBalance =
+                            rate.coinToFiat(org.dash.wallet.common.money.Coin.valueOf(balance.getValue()));
                     final MonetaryFormat localFormat = Constants.LOCAL_FORMAT.code(0,
                             PREFIX_ALMOST_EQUAL_TO + GenericUtils.INSTANCE.currencySymbol(exchangeRate.getCurrencyCode()));
                     final Object[] prefixSpans = new Object[]{MonetarySpannable.SMALLER_SPAN,

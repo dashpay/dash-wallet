@@ -22,9 +22,10 @@
 
 package org.dash.wallet.common.payments.bip70;
 
-import org.bitcoinj.core.*;
+import org.dash.wallet.common.money.Coin;
 import org.dash.wallet.common.payments.bip70.X509Utils;
-import org.bitcoinj.script.ScriptBuilder;
+import org.dash.wallet.common.payments.parsers.AddressNetwork;
+import org.dash.wallet.common.payments.parsers.Scripts;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -32,9 +33,6 @@ import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.dash.wallet.common.payments.bip70.Protos;
-import org.bitcoinj.core.*;
-import org.dash.wallet.common.payments.bip70.X509Utils;
-import org.bitcoinj.script.ScriptBuilder;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
@@ -74,8 +72,8 @@ public class PaymentProtocol {
      * @param merchantData arbitrary merchant data, or null if none
      * @return created payment request, in its builder form
      */
-    public static Protos.PaymentRequest.Builder createPaymentRequest(NetworkParameters params,
-            @Nullable Coin amount, Address toAddress, @Nullable String memo, @Nullable String paymentUrl,
+    public static Protos.PaymentRequest.Builder createPaymentRequest(AddressNetwork params,
+            @Nullable Coin amount, String toAddress, @Nullable String memo, @Nullable String paymentUrl,
             @Nullable byte[] merchantData) {
         return createPaymentRequest(params, ImmutableList.of(createPayToAddressOutput(amount, toAddress)), memo,
                 paymentUrl, merchantData);
@@ -92,7 +90,7 @@ public class PaymentProtocol {
      * @param merchantData arbitrary merchant data, or null if none
      * @return created payment request, in its builder form
      */
-    public static Protos.PaymentRequest.Builder createPaymentRequest(NetworkParameters params,
+    public static Protos.PaymentRequest.Builder createPaymentRequest(AddressNetwork params,
             List<Protos.Output> outputs, @Nullable String memo, @Nullable String paymentUrl,
             @Nullable byte[] merchantData) {
         final Protos.PaymentDetails.Builder paymentDetails = Protos.PaymentDetails.newBuilder();
@@ -105,7 +103,7 @@ public class PaymentProtocol {
             paymentDetails.setPaymentUrl(paymentUrl);
         if (merchantData != null)
             paymentDetails.setMerchantData(ByteString.copyFrom(merchantData));
-        paymentDetails.setTime(Utils.currentTimeSeconds());
+        paymentDetails.setTime(System.currentTimeMillis() / 1000);
 
         final Protos.PaymentRequest.Builder paymentRequest = Protos.PaymentRequest.newBuilder();
         paymentRequest.setSerializedPaymentDetails(paymentDetails.build().toByteString());
@@ -300,8 +298,8 @@ public class PaymentProtocol {
      * @param merchantData arbitrary merchant data, or null if none
      * @return created payment message
      */
-    public static Protos.Payment createPaymentMessage(List<Transaction> transactions,
-            @Nullable Coin refundAmount, @Nullable Address refundAddress, @Nullable String memo,
+    public static Protos.Payment createPaymentMessage(List<byte[]> transactions,
+            @Nullable Coin refundAmount, @Nullable String refundAddress, @Nullable String memo,
             @Nullable byte[] merchantData) {
         if (refundAddress != null) {
             if (refundAmount == null)
@@ -322,12 +320,11 @@ public class PaymentProtocol {
      * @param merchantData arbitrary merchant data, or null if none
      * @return created payment message
      */
-    public static Protos.Payment createPaymentMessage(List<Transaction> transactions,
+    public static Protos.Payment createPaymentMessage(List<byte[]> transactions,
             @Nullable List<Protos.Output> refundOutputs, @Nullable String memo, @Nullable byte[] merchantData) {
         Protos.Payment.Builder builder = Protos.Payment.newBuilder();
-        for (Transaction transaction : transactions) {
-            transaction.verify();
-            builder.addTransactions(ByteString.copyFrom(transaction.unsafeBitcoinSerialize()));
+        for (byte[] transaction : transactions) {
+            builder.addTransactions(ByteString.copyFrom(transaction));
         }
         if (refundOutputs != null) {
             for (Protos.Output output : refundOutputs)
@@ -341,17 +338,15 @@ public class PaymentProtocol {
     }
 
     /**
-     * Parse transactions from payment message.
-     * 
-     * @param params network parameters (needed for transaction deserialization)
+     * Parse serialized transactions from payment message.
+     *
      * @param paymentMessage payment message to parse
-     * @return list of transactions
+     * @return list of serialized transactions
      */
-    public static List<Transaction> parseTransactionsFromPaymentMessage(NetworkParameters params,
-            Protos.Payment paymentMessage) {
-        final List<Transaction> transactions = new ArrayList<>(paymentMessage.getTransactionsCount());
+    public static List<byte[]> parseTransactionsFromPaymentMessage(Protos.Payment paymentMessage) {
+        final List<byte[]> transactions = new ArrayList<>(paymentMessage.getTransactionsCount());
         for (final ByteString transaction : paymentMessage.getTransactionsList())
-            transactions.add(params.getDefaultSerializer().makeTransaction(transaction.toByteArray()));
+            transactions.add(transaction.toByteArray());
         return transactions;
     }
 
@@ -406,17 +401,16 @@ public class PaymentProtocol {
      * @param address address to pay to
      * @return output
      */
-    public static Protos.Output createPayToAddressOutput(@Nullable Coin amount, Address address) {
+    public static Protos.Output createPayToAddressOutput(@Nullable Coin amount, String address) {
         Protos.Output.Builder output = Protos.Output.newBuilder();
         if (amount != null) {
-            final NetworkParameters params = address.getParameters();
-            if (params.hasMaxMoney() && amount.compareTo(params.getMaxMoney()) > 0)
+            if (amount.compareTo(Coin.valueOf(AddressNetwork.MAX_MONEY_DUFFS)) > 0)
                 throw new IllegalArgumentException("Amount too big: " + amount);
             output.setAmount(amount.value);
         } else {
             output.setAmount(0);
         }
-        output.setScript(ByteString.copyFrom(ScriptBuilder.createOutputScript(address).getProgram()));
+        output.setScript(ByteString.copyFrom(Scripts.outputScriptForAddress(address)));
         return output.build();
     }
 

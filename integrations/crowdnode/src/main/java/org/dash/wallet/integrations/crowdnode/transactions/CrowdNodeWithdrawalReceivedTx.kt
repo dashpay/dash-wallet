@@ -17,36 +17,26 @@
 
 package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.script.ScriptPattern
-import org.dash.wallet.common.money.toCoin
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class CrowdNodeWithdrawalReceivedTx(
-    private val networkParams: NetworkParameters
+    private val networkId: String
 ) : TransactionFilter {
     private val joinedFilters = mutableListOf<TransactionFilter>()
 
-    override fun matches(tx: Transaction): Boolean {
+    override fun matches(tx: TxInfo): Boolean {
         if (joinedFilters.any { !it.matches(tx) }) {
             return false
         }
 
-        val fromAddress = CrowdNodeConstants.getCrowdNodeAddress(networkParams)
+        val fromAddress = CrowdNodeConstants.getCrowdNodeAddress(networkId)
 
         for (input in tx.inputs) {
-            input.outpoint.connectedOutput?.let { connectedOutput ->
-                val script = connectedOutput.scriptPubKey
-
-                if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                    script.getToAddress(networkParams) == fromAddress
-                ) {
-                    return !tx.outputs.any { isApiResponse(it.value) }
-                }
+            if (input.connectedAddress != null && input.connectedAddress == fromAddress) {
+                return !tx.outputs.any { isApiResponse(it.valueDuffs) }
             }
         }
 
@@ -58,10 +48,10 @@ class CrowdNodeWithdrawalReceivedTx(
         return this
     }
 
-    private fun isApiResponse(coin: Coin): Boolean {
-        val toCheck = (coin - CrowdNodeConstants.API_OFFSET.toCoin()).value
+    private fun isApiResponse(valueDuffs: Long): Boolean {
+        val toCheck = valueDuffs - CrowdNodeConstants.API_OFFSET.duffs
 
-        return toCheck in 1..1024 || (toCheck <= ApiCode.MaxCode.code && isPowerOfTwo(coin.value))
+        return toCheck in 1..1024 || (toCheck <= ApiCode.MaxCode.code && isPowerOfTwo(valueDuffs))
     }
 
     private fun isPowerOfTwo(number: Long): Boolean {

@@ -18,12 +18,21 @@
 package de.schildbach.wallet.ui.shielded
 
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Fiat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.util.toFormattedString
 import java.math.BigDecimal
 import java.text.NumberFormat
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 /**
  * Shared UI model for the shielded-balances screens (Figma canvas 231:200
@@ -153,12 +162,12 @@ fun parseDecimalOrNull(text: String): BigDecimal? = try {
 
 /** Dash → fiat at [rate] (fiat value of 1 DASH); null when no rate. */
 fun Dash.toFiatAt(rate: Fiat?): Fiat? = rate?.let {
-    org.bitcoinj.utils.ExchangeRate(Coin.COIN, it).coinToFiat(Coin.valueOf(duffs))
+    org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.toDashjFiat()).coinToFiat(Coin.valueOf(duffs)).toNeutralFiat()
 }
 
 /** Fiat → Dash at [rate] (fiat value of 1 DASH); null when no rate. */
 fun Fiat.toDashAt(rate: Fiat?): Dash? = rate?.let {
-    Dash(org.bitcoinj.utils.ExchangeRate(Coin.COIN, it).fiatToCoin(this).value)
+    Dash(org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.toDashjFiat()).fiatToCoin(this.toDashjFiat()).value)
 }
 
 /** "$50.00"-style formatted fiat string. */

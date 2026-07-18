@@ -28,6 +28,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.payments.parsers.AddressNetwork
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.integration.android.BitcoinIntegration
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
@@ -83,7 +84,7 @@ open class SendCoinsActivity : LockScreenActivity() {
                 PaymentIntent.Standard.BIP21,
                 "topup",
                 null,
-                listOf(PaymentIntent.Output(Coin.ZERO, ScriptBuilder.createOpReturnScript(ByteArray(20)))).toTypedArray(),
+                listOf(PaymentIntent.Output(org.dash.wallet.common.money.Coin.ZERO, ScriptBuilder.createOpReturnScript(ByteArray(20)).program)).toTypedArray(),
                 null, null, null, null, null,
                 null, null, null
             )
@@ -170,7 +171,7 @@ open class SendCoinsActivity : LockScreenActivity() {
         return if ((action == Intent.ACTION_VIEW || action == NfcAdapter.ACTION_NDEF_DISCOVERED) &&
             intentUri?.hasValidScheme() == true
         ) {
-            DashPaymentIntentParser(Constants.NETWORK_PARAMETERS).parse(intentUri.toString(), true)
+            DashPaymentIntentParser(AddressNetwork.fromId(Constants.NETWORK_PARAMETERS.id)).parse(intentUri.toString(), true)
         } else if (action == NfcAdapter.ACTION_NDEF_DISCOVERED && mimeType == PaymentProtocol.MIMETYPE_PAYMENTREQUEST) {
             val ndefMessage = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)?.get(0) as? NdefMessage
             val ndefMessagePayload = ndefMessage?.let {

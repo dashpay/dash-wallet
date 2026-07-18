@@ -26,7 +26,7 @@ import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsService
 
 @HiltWorker
@@ -35,7 +35,7 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
     @Assisted parameters: WorkerParameters,
     val analytics: AnalyticsService,
     val platformBroadcastService: PlatformBroadcastService,
-    val walletDataProvider: WalletDataProvider
+    val walletDataProvider: WalletData
 ) : BaseWorker(context, parameters) {
 
     companion object {

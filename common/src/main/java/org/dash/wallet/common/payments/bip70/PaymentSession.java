@@ -19,17 +19,16 @@
 
 package org.dash.wallet.common.payments.bip70;
 
-import org.bitcoinj.core.*;
+import org.dash.wallet.common.money.Coin;
 import org.dash.wallet.common.payments.bip70.TrustStoreLoader;
-import org.bitcoinj.params.MainNetParams;
 import org.dash.wallet.common.payments.bip70.PaymentProtocol.PkiVerificationData;
-import org.bitcoinj.uri.BitcoinURI;
-import org.bitcoinj.utils.Threading;
-import org.bitcoinj.wallet.SendRequest;
+import org.dash.wallet.common.payments.parsers.AddressNetwork;
+import org.dash.wallet.common.payments.parsers.PaymentURI;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.dash.wallet.common.payments.bip70.Protos;
@@ -43,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
 
 /**
  * <p>Provides a standard implementation of the Payment Protocol (BIP 0070)</p>
@@ -50,7 +50,7 @@ import java.util.concurrent.Callable;
  * <p>A PaymentSession can be initialized from one of the following:</p>
  *
  * <ul>
- * <li>A {@link BitcoinURI} object that conforms to BIP 0072</li>
+ * <li>A {@link PaymentURI} object that conforms to BIP 0072</li>
  * <li>A url where the {@link Protos.PaymentRequest} can be fetched</li>
  * <li>Directly with a {@link Protos.PaymentRequest} object</li>
  * </ul>
@@ -72,8 +72,9 @@ import java.util.concurrent.Callable;
  * @see <a href="https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki">BIP 0070</a>
  */
 public class PaymentSession {
-    private static ListeningExecutorService executor = Threading.THREAD_POOL;
-    private NetworkParameters params;
+    private static ListeningExecutorService executor =
+            MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+    private AddressNetwork params;
     private Protos.PaymentRequest paymentRequest;
     private Protos.PaymentDetails paymentDetails;
     private Coin totalValue = Coin.ZERO;
@@ -93,7 +94,7 @@ public class PaymentSession {
      * the signature provided by the payment request. An exception is thrown by the future if the signature cannot
      * be verified.</p>
      */
-    public static ListenableFuture<PaymentSession> createFromBitcoinUri(final BitcoinURI uri) throws PaymentProtocolException {
+    public static ListenableFuture<PaymentSession> createFromBitcoinUri(final PaymentURI uri) throws PaymentProtocolException {
         return createFromBitcoinUri(uri, true, null);
     }
 
@@ -105,7 +106,7 @@ public class PaymentSession {
      * be used to verify the signature provided by the payment request. An exception is thrown by the future if the
      * signature cannot be verified.
      */
-    public static ListenableFuture<PaymentSession> createFromBitcoinUri(final BitcoinURI uri, final boolean verifyPki)
+    public static ListenableFuture<PaymentSession> createFromBitcoinUri(final PaymentURI uri, final boolean verifyPki)
             throws PaymentProtocolException {
         return createFromBitcoinUri(uri, verifyPki, null);
     }
@@ -119,7 +120,7 @@ public class PaymentSession {
      * signature cannot be verified.
      * If trustStoreLoader is null, the system default trust store is used.
      */
-    public static ListenableFuture<PaymentSession> createFromBitcoinUri(final BitcoinURI uri, final boolean verifyPki, @Nullable final TrustStoreLoader trustStoreLoader)
+    public static ListenableFuture<PaymentSession> createFromBitcoinUri(final PaymentURI uri, final boolean verifyPki, @Nullable final TrustStoreLoader trustStoreLoader)
             throws PaymentProtocolException {
         String url = uri.getPaymentRequestUrl();
         if (url == null)
@@ -273,7 +274,7 @@ public class PaymentSession {
      * This should always be called before attempting to call sendPayment.
      */
     public boolean isExpired() {
-        return paymentDetails.hasExpires() && Utils.currentTimeSeconds() > paymentDetails.getExpires();
+        return paymentDetails.hasExpires() && (System.currentTimeMillis() / 1000) > paymentDetails.getExpires();
     }
 
     /**
@@ -298,21 +299,6 @@ public class PaymentSession {
     }
 
     /**
-     * Returns a {@link SendRequest} suitable for broadcasting to the network.
-     */
-    public SendRequest getSendRequest() {
-        Transaction tx = new Transaction(params);
-        for (Protos.Output output : paymentDetails.getOutputsList())
-            tx.addOutput(new TransactionOutput(params, tx, Coin.valueOf(output.getAmount()), output.getScript().toByteArray()));
-        // Inlined from dashj's SendRequest.fromPaymentDetails(), which expects dashj's own
-        // generated Protos type rather than this copied one. It only copies the memo.
-        SendRequest sendRequest = SendRequest.forTx(tx);
-        if (paymentDetails.hasMemo())
-            sendRequest.memo = paymentDetails.getMemo();
-        return sendRequest;
-    }
-
-    /**
      * Generates a Payment message and sends the payment to the merchant who sent the PaymentRequest.
      * Provide transactions built by the wallet.
      * NOTE: This does not broadcast the transactions to the bitcoin network, it merely sends a Payment message to the
@@ -324,8 +310,8 @@ public class PaymentSession {
      * @param memo is a message to include in the payment message sent to the merchant.
      */
     @Nullable
-    public ListenableFuture<PaymentProtocol.Ack> sendPayment(List<Transaction> txns, @Nullable Address refundAddr, @Nullable String memo)
-            throws PaymentProtocolException, VerificationException, IOException {
+    public ListenableFuture<PaymentProtocol.Ack> sendPayment(List<byte[]> txns, @Nullable String refundAddr, @Nullable String memo)
+            throws PaymentProtocolException, IOException {
         Protos.Payment payment = getPayment(txns, refundAddr, memo);
         if (payment == null)
             return null;
@@ -349,12 +335,9 @@ public class PaymentSession {
      * @param memo is a message to include in the payment message sent to the merchant.
      */
     @Nullable
-    public Protos.Payment getPayment(List<Transaction> txns, @Nullable Address refundAddr, @Nullable String memo)
+    public Protos.Payment getPayment(List<byte[]> txns, @Nullable String refundAddr, @Nullable String memo)
             throws IOException, PaymentProtocolException.InvalidNetwork {
         if (paymentDetails.hasPaymentUrl()) {
-            for (Transaction tx : txns)
-                if (!tx.getParams().equals(params))
-                    throw new PaymentProtocolException.InvalidNetwork(params.getPaymentProtocolId());
             return PaymentProtocol.createPaymentMessage(txns, totalValue, refundAddr, memo, getMerchantData());
         } else {
             return null;
@@ -401,9 +384,9 @@ public class PaymentSession {
             if (paymentDetails == null)
                 throw new PaymentProtocolException("Invalid PaymentDetails");
             if (!paymentDetails.hasNetwork())
-                params = MainNetParams.get();
+                params = AddressNetwork.DASH_MAINNET;
             else
-                params = NetworkParameters.fromPmtProtocolID(paymentDetails.getNetwork());
+                params = AddressNetwork.fromPaymentProtocolId(paymentDetails.getNetwork());
             if (params == null)
                 throw new PaymentProtocolException.InvalidNetwork("Invalid network " + paymentDetails.getNetwork());
             if (paymentDetails.getOutputsCount() < 1)
@@ -414,7 +397,7 @@ public class PaymentSession {
             }
             // This won't ever happen in practice. It would only happen if the user provided outputs
             // that are obviously invalid. Still, we don't want to silently overflow.
-            if (params.hasMaxMoney() && totalValue.compareTo(params.getMaxMoney()) > 0)
+            if (totalValue.compareTo(Coin.valueOf(params.getMaxMoney())) > 0)
                 throw new PaymentProtocolException.InvalidOutputs("The outputs are way too big.");
         } catch (InvalidProtocolBufferException e) {
             throw new PaymentProtocolException(e);
@@ -426,8 +409,8 @@ public class PaymentSession {
         return pkiVerificationData;
     }
 
-    /** Gets the params as read from the PaymentRequest.network field: main is the default if missing. */
-    public NetworkParameters getNetworkParameters() {
+    /** Gets the network as read from the PaymentRequest.network field: main is the default if missing. */
+    public AddressNetwork getNetworkParameters() {
         return params;
     }
 

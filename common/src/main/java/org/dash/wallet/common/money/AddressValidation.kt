@@ -17,22 +17,21 @@
 
 package org.dash.wallet.common.money
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.AddressFormatException
-import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.common.payments.parsers.AddressFormatException
+import org.dash.wallet.common.payments.parsers.AddressNetwork
 
 /**
  * Network identifiers, decoupled from dashj's NetworkParameters constants
  * (the values are the same strings dashj uses).
  */
 object DashNetworks {
-    const val MAINNET = NetworkParameters.ID_MAINNET
-    const val TESTNET = NetworkParameters.ID_TESTNET
+    const val MAINNET = AddressNetwork.ID_MAINNET
+    const val TESTNET = AddressNetwork.ID_TESTNET
 }
 
 /**
  * Base58 Dash address validation for modules that must not depend on dashj.
- * Delegates to dashj internally so accepted addresses are exactly those the wallet accepts.
+ * Accepted addresses are exactly those dashj's `Address.getParametersFromAddress` accepts.
  */
 object DashAddressValidator {
 
@@ -45,7 +44,7 @@ object DashAddressValidator {
     /** The network id of [address] (see [DashNetworks]), or null if it is not a valid address. */
     fun networkIdOrNull(address: String): String? {
         return try {
-            Address.getParametersFromAddress(address).id
+            AddressNetwork.fromDashAddress(address).id
         } catch (e: AddressFormatException) {
             null
         }

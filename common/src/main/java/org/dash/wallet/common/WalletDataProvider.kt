@@ -18,43 +18,34 @@
 package org.dash.wallet.common
 
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.TransactionBag
-import org.bitcoinj.core.TransactionOutPoint
-import org.bitcoinj.wallet.CoinSelector
-import org.bitcoinj.wallet.Wallet
-import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
-import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperFactory
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 
+/**
+ * Neutral (dashj-free) facade over the wallet for feature/integration modules.
+ *
+ * Amounts are neutral [Dash] values, addresses are base58 strings, transaction ids are hex
+ * strings and transactions are [TxInfo] snapshots. The wallet module implements this interface
+ * (converting to/from its dashj types internally) and additionally exposes the dashj-typed
+ * surface through its own `WalletData` interface for wallet-internal consumers.
+ */
 interface WalletDataProvider {
-    @Deprecated("The wallet is in here temporary and will be moved to a separate holder, limited to the the wallet module. In feature modules, use transactionBag instead.")
-    val wallet: Wallet?
 
-    fun observeWallet(): Flow<Wallet?>
-
-    val transactionBag: TransactionBag
-
-    val networkParameters: NetworkParameters
-    val authenticationGroupExtension: AuthenticationGroupExtension?
-    fun freshReceiveAddress(): Address
-    fun currentReceiveAddress(): Address
-
-    // Neutral (dashj-free) accessors for feature/integration modules.
-    // Default implementations delegate to the dashj-typed methods above.
+    /** Network id string, e.g. [org.dash.wallet.common.payments.parsers.AddressNetwork.ID_MAINNET]. */
     val networkId: String
-        get() = networkParameters.id
-    fun freshReceiveAddressString(): String = freshReceiveAddress().toBase58()
-    fun currentReceiveAddressString(): String = currentReceiveAddress().toBase58()
 
-    fun getWalletBalance(): Coin
+    /** True while a wallet is loaded. Balance accessors return zero (not null) when it is false. */
+    val walletLoaded: Boolean
+
+    fun freshReceiveAddressString(): String
+    fun currentReceiveAddressString(): String
+
+    /** Estimated wallet balance. */
+    fun getWalletBalance(): Dash
 
     /**
      * Number of spendable unspent outputs coin selection can draw on —
@@ -62,28 +53,24 @@ interface WalletDataProvider {
      * `getBalance(ESTIMATED)` sums (all keychains) — or 0 while no wallet
      * is loaded.
      */
-    @Suppress("DEPRECATION")
-    fun spendableUtxoCount(): Int = wallet?.calculateAllSpendCandidates(false, false)?.size ?: 0
+    fun spendableUtxoCount(): Int
 
     fun observeWalletChanged(): Flow<Unit>
 
     fun observeWalletReset(): Flow<Unit>
 
-    fun observeBalance(
-        balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED,
-        coinSelector: CoinSelector? = null
-    ): Flow<Coin>
+    /** Estimated balance stream (mirrors observing `Wallet.getBalance(ESTIMATED)`). */
+    fun observeEstimatedBalance(): Flow<Dash>
 
     fun canAffordIdentityCreation(): Boolean
 
     // Treat @withConfidence with care - it may produce a lot of events and affect performance.
-    fun observeTransactions(withConfidence: Boolean = false, vararg filters: TransactionFilter): Flow<Transaction>
+    fun observeTransactions(withConfidence: Boolean = false, vararg filters: TransactionFilter): Flow<TxInfo>
 
-    fun observeAuthenticationKeyUsage(): Flow<List<AuthenticationKeyUsage>>
+    /** The wallet transaction with hex id [txId], or null if the wallet doesn't know it. */
+    fun getTransaction(txId: String): TxInfo?
 
-    fun getTransaction(hash: Sha256Hash): Transaction?
-
-    fun getTransactions(vararg filters: TransactionFilter): Collection<Transaction>
+    fun getTransactions(vararg filters: TransactionFilter): Collection<TxInfo>
 
     fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 
@@ -91,12 +78,21 @@ interface WalletDataProvider {
 
     fun detachOnWalletWipedListener(listener: suspend () -> Unit)
 
-    fun processDirectTransaction(tx: Transaction)
-
     @Throws(LeftoverBalanceException::class)
-    fun checkSendingConditions(address: Address?, amount: Coin)
+    fun checkSendingConditions(address: String?, amount: Dash)
 
-    fun observeMostRecentTransaction(): Flow<Transaction>
-    fun observeTotalBalance(): Flow<Coin>
-    fun lockOutput(outPoint: TransactionOutPoint): Boolean
+    fun observeTotalBalance(): Flow<Dash>
+
+    /**
+     * Locks the outputs of the wallet transaction [txId] that pay the base58 [address]
+     * (P2PKH outputs only, mirroring the original CrowdNode account-output locking).
+     */
+    fun lockOutputsPayingTo(txId: String, address: String)
+
+    /**
+     * Suspends until the wallet transaction [txId] is locked (IS-lock, mined, or seen by
+     * more than one broadcast peer) — the same condition as the `LockedTransaction` filter.
+     * Returns immediately when the transaction already satisfies it.
+     */
+    suspend fun waitUntilLocked(txId: String)
 }

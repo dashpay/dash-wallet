@@ -26,7 +26,7 @@ import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager
 import org.bitcoinj.quorums.LLMQParameters
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dashj.platform.dapiclient.DapiClient
 import org.dashj.platform.dashpay.ContactRequests
 import org.dashj.platform.dashpay.Profiles
@@ -101,7 +101,7 @@ fun <T> platformLazy(initializer: () -> T): Lazy<T?> {
 private object UNINITIALIZED
 
 class PlatformServiceImplementation @Inject constructor(
-    val walletDataProvider: WalletDataProvider
+    val walletDataProvider: WalletData
 ) : PlatformService {
     // none of the following should be initialized if platform is not supported
     private val _platform by platformLazy { Platform(Constants.NETWORK_PARAMETERS) }

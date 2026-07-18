@@ -26,7 +26,7 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Before
@@ -65,7 +65,7 @@ class SecurityGuardMnemonicProviderTest {
         Wallet.fromSeed(params, newSeed(), Script.ScriptType.P2PKH)
 
     private fun providerFor(wallet: Wallet?): SecurityGuardMnemonicProvider {
-        val walletData = mockk<WalletDataProvider>()
+        val walletData = mockk<WalletData>()
         every { walletData.wallet } returns wallet
         return SecurityGuardMnemonicProvider(walletData)
     }

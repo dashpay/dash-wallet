@@ -76,6 +76,15 @@ import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetails
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardOrderDetailsDialog
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardViewModel
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
@@ -143,7 +152,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                     }
                                 } else {
                                     viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                                    TransactionDetailsDialogFragment.newInstance(txWrapper.transactions.keys.first())
+                                    TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(txWrapper.transactions.keys.first()))
                                 }
                             }
 

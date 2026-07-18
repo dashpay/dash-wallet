@@ -17,13 +17,12 @@
 
 package org.dash.wallet.common.money
 
-import org.bitcoinj.utils.Fiat
 import java.math.BigDecimal
 
 /**
- * A fiat monetary amount ([value] is in 1/10,000ths — the same smallest unit as
- * [org.bitcoinj.utils.Fiat], to which this type delegates internally so parsing and
- * formatting behavior is identical). Feature/integration modules use this instead of Fiat.
+ * A fiat monetary amount ([value] is in the same smallest unit as dashj's `Fiat` — 1E-8 —
+ * and delegates to the self-contained [Fiat] port internally, so parsing and formatting
+ * behavior is identical). Feature/integration modules use this instead of Fiat.
  */
 data class FiatValue(val currencyCode: String, val value: Long) : Comparable<FiatValue> {
 

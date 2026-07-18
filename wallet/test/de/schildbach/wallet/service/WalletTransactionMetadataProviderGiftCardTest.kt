@@ -28,7 +28,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.junit.Assert.assertEquals
@@ -49,8 +49,8 @@ class WalletTransactionMetadataProviderGiftCardTest {
     private lateinit var cacheDao: TransactionMetadataChangeCacheDao
     private lateinit var provider: WalletTransactionMetadataProvider
 
-    private val txId: Sha256Hash =
-        Sha256Hash.wrap("0000000000000000000000000000000000000000000000000000000000000001")
+    private val txId: org.dash.wallet.common.data.TxId =
+        org.dash.wallet.common.data.TxId.wrap("0000000000000000000000000000000000000000000000000000000000000001")
 
     @Before
     fun setUp() {
@@ -60,7 +60,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             transactionMetadataDao = mockk(relaxed = true),
             addressMetadataDao = mockk<AddressMetadataDao>(relaxed = true),
             iconBitmapDao = mockk<IconBitmapDao>(relaxed = true),
-            walletData = mockk<WalletDataProvider>(relaxed = true),
+            walletData = mockk<WalletData>(relaxed = true),
             giftCardDao = giftCardDao,
             transactionMetadataChangeCacheDao = cacheDao,
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),

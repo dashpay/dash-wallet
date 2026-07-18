@@ -31,6 +31,15 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.money.Dash
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 /**
  * Which sheet the create-invitation flow shows before the fee/confirm step —
@@ -251,7 +260,7 @@ class InviteShieldedFundingViewModel @Inject constructor(
                 walletData.observeTotalBalance()
                     .catch { log.warn("wallet balance flow failed", it) }
                     .collect { balance ->
-                        _uiState.update { it.copy(walletBalance = Dash(balance.value)) }
+                        _uiState.update { it.copy(walletBalance = balance) }
                     }
             }
         }

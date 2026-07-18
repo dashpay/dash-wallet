@@ -19,7 +19,7 @@ package de.schildbach.wallet.database.dao
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
@@ -39,41 +39,41 @@ interface TransactionMetadataDao {
     suspend fun load(): List<TransactionMetadata>
 
     @Query("SELECT COUNT(1) FROM transaction_metadata WHERE txid = :txId;")
-    suspend fun exists(txId: Sha256Hash): Boolean
+    suspend fun exists(txId: TxId): Boolean
 
     @Query("SELECT * FROM transaction_metadata WHERE txid = :txId")
-    suspend fun load(txId: Sha256Hash): TransactionMetadata?
+    suspend fun load(txId: TxId): TransactionMetadata?
 
     @Query("SELECT * FROM transaction_metadata WHERE txid = :txId")
-    fun observe(txId: Sha256Hash): Flow<TransactionMetadata?>
+    fun observe(txId: TxId): Flow<TransactionMetadata?>
 
     @MapInfo(keyColumn = "txId")
     @Query(
         """SELECT txId, memo, service, customIconId FROM transaction_metadata 
         WHERE memo != '' OR service IS NOT NULL OR customIconId IS NOT NULL"""
     )
-    fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
+    fun observePresentableMetadata(): Flow<Map<TxId, PresentableTxMetadata>>
 
     @Query("SELECT * FROM transaction_metadata WHERE timestamp <= :end and timestamp >= :start")
     fun observeByTimestampRange(start: Long, end: Long): Flow<List<TransactionMetadata>>
 
     @Query("UPDATE transaction_metadata SET taxCategory = :taxCategory WHERE txid = :txId")
-    suspend fun updateTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory)
+    suspend fun updateTaxCategory(txId: TxId, taxCategory: TaxCategory)
 
     @Query("UPDATE transaction_metadata SET timestamp = :timestamp WHERE txid = :txId")
-    suspend fun updateSentTime(txId: Sha256Hash, timestamp: Long)
+    suspend fun updateSentTime(txId: TxId, timestamp: Long)
 
     @Query("UPDATE transaction_metadata SET memo = :memo WHERE txid = :txId")
-    suspend fun updateMemo(txId: Sha256Hash, memo: String)
+    suspend fun updateMemo(txId: TxId, memo: String)
 
     @Query("UPDATE transaction_metadata SET currencyCode = :currencyCode, rate = :rate WHERE txId = :txId")
-    suspend fun updateExchangeRate(txId: Sha256Hash, currencyCode: String, rate: String)
+    suspend fun updateExchangeRate(txId: TxId, currencyCode: String, rate: String)
 
     @Query("UPDATE transaction_metadata SET service = :service WHERE txid = :txId")
-    suspend fun updateService(txId: Sha256Hash, service: String)
+    suspend fun updateService(txId: TxId, service: String)
 
     @Query("UPDATE transaction_metadata SET customIconId = :iconId WHERE txId = :txId")
-    suspend fun updateIconId(txId: Sha256Hash, iconId: Sha256Hash)
+    suspend fun updateIconId(txId: TxId, iconId: TxId)
 
     @Query("DELETE FROM transaction_metadata")
     suspend fun clear()

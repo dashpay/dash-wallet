@@ -31,9 +31,18 @@ import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ItemServiceListBinding
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.toFormattedString
+import de.schildbach.wallet.util.toFormattedString
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 class BuyAndSellDashServicesAdapter(
     val balanceFormat: MonetaryFormat,

@@ -19,7 +19,7 @@ package de.schildbach.wallet.database.dao
 
 import androidx.room.*
 import de.schildbach.wallet.database.entity.TransactionMetadataDocument
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.ExchangeRate
 
 /**
@@ -44,7 +44,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getSentTimestamp(txId: Sha256Hash): Long?
+    suspend fun getSentTimestamp(txId: TxId): Long?
 
     @Query("""
         SELECT memo 
@@ -54,7 +54,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getTransactionMemo(txId: Sha256Hash): String?
+    suspend fun getTransactionMemo(txId: TxId): String?
 
     @Query("""
         SELECT service 
@@ -64,7 +64,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getTransactionService(txId: Sha256Hash): String?
+    suspend fun getTransactionService(txId: TxId): String?
 
     @Query("""
         SELECT taxCategory 
@@ -74,7 +74,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getTransactionTaxCategory(txId: Sha256Hash): String?
+    suspend fun getTransactionTaxCategory(txId: TxId): String?
 
     @Query("""
         SELECT rate, currencyCode
@@ -84,7 +84,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getTransactionExchangeRate(txId: Sha256Hash): ExchangeRate?
+    suspend fun getTransactionExchangeRate(txId: TxId): ExchangeRate?
 
     @Query("""
         SELECT customIconUrl 
@@ -94,7 +94,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getTransactionIconUrl(txId: Sha256Hash): String?
+    suspend fun getTransactionIconUrl(txId: TxId): String?
 
     @Query("""
         SELECT giftCardNumber 
@@ -104,7 +104,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getGiftCardNumber(txId: Sha256Hash): String?
+    suspend fun getGiftCardNumber(txId: TxId): String?
 
     @Query("""
         SELECT giftCardPin 
@@ -114,7 +114,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getGiftCardPin(txId: Sha256Hash): String?
+    suspend fun getGiftCardPin(txId: TxId): String?
 
     @Query("""
         SELECT merchantName 
@@ -124,7 +124,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getMerchantName(txId: Sha256Hash): String?
+    suspend fun getMerchantName(txId: TxId): String?
 
     @Query("""
         SELECT originalPrice 
@@ -134,7 +134,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getOriginalPrice(txId: Sha256Hash): Double?
+    suspend fun getOriginalPrice(txId: TxId): Double?
 
     @Query("""
         SELECT barcodeValue 
@@ -144,7 +144,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getBarcodeValue(txId: Sha256Hash): String?
+    suspend fun getBarcodeValue(txId: TxId): String?
 
     @Query("""
         SELECT barcodeFormat 
@@ -154,7 +154,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getBarcodeFormat(txId: Sha256Hash): String?
+    suspend fun getBarcodeFormat(txId: TxId): String?
 
     @Query("""
         SELECT merchantUrl 
@@ -164,7 +164,7 @@ interface TransactionMetadataDocumentDao {
         ORDER BY timestamp DESC
         LIMIT 1
     """)
-    suspend fun getMerchantUrl(txId: Sha256Hash): String?
+    suspend fun getMerchantUrl(txId: TxId): String?
 
     @Query("SELECT MAX(timestamp) FROM transaction_metadata_platform")
     suspend fun getLastTimestamp() : Long
@@ -176,5 +176,5 @@ interface TransactionMetadataDocumentDao {
     suspend fun clear()
 
     @Query("SELECT * FROM transaction_metadata_platform WHERE txId = :txId")
-    suspend fun getTransactionMetadata(txId: Sha256Hash): List<TransactionMetadataDocument>
+    suspend fun getTransactionMetadata(txId: TxId): List<TransactionMetadataDocument>
 }

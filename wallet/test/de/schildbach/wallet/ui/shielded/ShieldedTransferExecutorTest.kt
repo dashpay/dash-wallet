@@ -35,7 +35,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.NotificationService
 import org.junit.Assert.assertEquals
@@ -70,7 +70,7 @@ class ShieldedTransferExecutorTest {
     private val dispatcher = UnconfinedTestDispatcher()
 
     private val shieldedService = mockk<ShieldedBalanceService>()
-    private val walletData = mockk<WalletDataProvider> {
+    private val walletData = mockk<WalletData> {
         every { freshReceiveAddressString() } returns "yTestAddressBase58"
     }
     private val notificationService = mockk<NotificationService>(relaxUnitFun = true)

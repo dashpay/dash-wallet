@@ -130,7 +130,7 @@ class UpdateProfileWorker @AssistedInject constructor(
                 org.dash.wallet.common.ui.avatar.ProfilePictureHelper.avatarHashAndFingerprint(
                     applicationContext, uri, null,
                     object : org.dash.wallet.common.ui.avatar.ProfilePictureHelper.OnResourceReadyListener {
-                        override fun onResourceReady(avatarHash: org.bitcoinj.core.Sha256Hash?, avatarFingerprint: BigInteger?) {
+                        override fun onResourceReady(avatarHash: org.dash.wallet.common.data.TxId?, avatarFingerprint: BigInteger?) {
                             computedHash = avatarHash?.bytes
                             computedFingerprint = avatarFingerprint
                             countDownLatch.countDown()

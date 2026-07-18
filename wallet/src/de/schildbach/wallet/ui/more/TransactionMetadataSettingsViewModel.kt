@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -65,6 +65,16 @@ import java.util.Currency
 import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.util.toFormattedString
 
 enum class TxMetadataSaveFrequency {
     afterTenTransactions,
@@ -186,7 +196,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
                                     item -> TransactionMetadata(
                                         item.txId,
                                     item.sentTimestamp ?: 0,
-                                        Coin.ZERO,
+                                        org.dash.wallet.common.money.Coin.ZERO,
                                         TransactionCategory.Sent
                                     )
                                 }
@@ -232,7 +242,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
 
     fun getBalanceInLocalFormat(): String {
         selectedExchangeRate.value?.fiat?.let {
-            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it)
+            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.toDashjFiat())
             val fiatValue = exchangeRate.coinToFiat(CURRENT_DATA_COST)
             val minValue = try {
                 val fractionDigits = Currency.getInstance(selectedCurrency).defaultFractionDigits

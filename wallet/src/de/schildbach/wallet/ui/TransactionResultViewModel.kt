@@ -31,10 +31,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
@@ -44,12 +44,21 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 @HiltViewModel
 class TransactionResultViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
-    val walletData: WalletDataProvider,
+    val walletData: WalletData,
     val configuration: Configuration,
     private val dashPayProfileDao: DashPayProfileDao,
     private val topUpsDao: TopUpsDao,
@@ -109,8 +118,8 @@ class TransactionResultViewModel @Inject constructor(
     private fun monitorTransactionMetadata(txId: Sha256Hash) {
         // this might take some time, so let it run asynchronously
         viewModelScope.launch(Dispatchers.IO) {
-            transactionMetadataProvider.importTransactionMetadata(txId)
-            transactionMetadataProvider.observeTransactionMetadata(txId).collect {
+            transactionMetadataProvider.importTransactionMetadata(txId.toTxId())
+            transactionMetadataProvider.observeTransactionMetadata(txId.toTxId()).collect {
                 _transactionMetadata.value = it
             }
         }
@@ -133,7 +142,7 @@ class TransactionResultViewModel @Inject constructor(
             val newTaxCategory = currentTaxCategory.toggle()
             viewModelScope.launch(Dispatchers.IO) {
                 transactionMetadataProvider.setTransactionTaxCategory(
-                    tx.txId,
+                    tx.txId.toTxId(),
                     newTaxCategory
                 )
             }

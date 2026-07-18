@@ -20,11 +20,11 @@ package de.schildbach.wallet.service;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.money.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
-import org.dash.wallet.common.WalletDataProvider;
+import de.schildbach.wallet.data.WalletData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +72,7 @@ public class BootstrapReceiver extends BroadcastReceiver {
     @Inject
     protected Configuration config;
     @Inject
-    protected WalletDataProvider walletDataProvider;
+    protected WalletData walletDataProvider;
     @Inject
     protected WalletApplication application;
     @Inject
@@ -181,7 +181,7 @@ public class BootstrapReceiver extends BroadcastReceiver {
         final MonetaryFormat btcFormat = config.getFormat();
         final String title = application.getString(R.string.notification_inactivity_title);
         final StringBuilder text = new StringBuilder(application.getString(R.string.notification_inactivity_message,
-                btcFormat.format(estimatedBalance)));
+                btcFormat.format(org.dash.wallet.common.money.Coin.valueOf(estimatedBalance.getValue()))));
 
         final NotificationCompat.Builder notification = new NotificationCompat.Builder(application,
                 Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS);

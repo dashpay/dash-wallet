@@ -41,7 +41,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.wallet.Wallet.BalanceType
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dashfoundation.dashsdk.wallet.SpvSyncProgressData
 import org.dashfoundation.dashsdk.wallet.SpvSyncState
 import org.slf4j.LoggerFactory
@@ -772,10 +772,10 @@ interface L1ShadowSource {
     suspend fun clearSdkL1Rows(walletIdHex: String)
 }
 
-/** Production [L1ShadowSource]: boots the SDK on demand; reads dashj via [WalletDataProvider]. */
+/** Production [L1ShadowSource]: boots the SDK on demand; reads dashj via [WalletData]. */
 internal class DashSdkL1ShadowSource(
     private val service: DashSdkService,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletData
 ) : L1ShadowSource {
 
     private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
@@ -1027,7 +1027,7 @@ class L1ShadowSyncService internal constructor(
     constructor(
         @ApplicationContext context: Context,
         sdkService: DashSdkService,
-        walletData: WalletDataProvider,
+        walletData: WalletData,
         dashPayConfig: DashPayConfig,
         scope: CoroutineScope,
         sdkWalletBinder: SdkWalletBinder,

@@ -20,26 +20,26 @@ package org.dash.wallet.common.services
 import android.graphics.Bitmap
 import com.google.zxing.BarcodeFormat
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.TransactionMetadata
 
 // ---------------------------------------------------------------------------------------------
 // Neutral (dashj-free) adapters over TransactionMetadataProvider taking hex tx ids
-// (Sha256Hash.toString()), for feature/integration modules that must not depend on dashj.
+// , for feature/integration modules that must not depend on dashj.
 // They delegate to the Sha256Hash-typed interface methods, so behavior is identical.
 // ---------------------------------------------------------------------------------------------
 
 /** Neutral counterpart of [TransactionMetadataProvider.getTransactionMetadata]. */
 suspend fun TransactionMetadataProvider.getTransactionMetadata(txId: String): TransactionMetadata? =
-    getTransactionMetadata(Sha256Hash.wrap(txId))
+    getTransactionMetadata(TxId.wrap(txId))
 
 /** Neutral counterpart of [TransactionMetadataProvider.observeTransactionMetadata]. */
 fun TransactionMetadataProvider.observeTransactionMetadata(txId: String): Flow<TransactionMetadata?> =
-    observeTransactionMetadata(Sha256Hash.wrap(txId))
+    observeTransactionMetadata(TxId.wrap(txId))
 
 /** Neutral counterpart of [TransactionMetadataProvider.markGiftCardTransaction]. */
 suspend fun TransactionMetadataProvider.markGiftCardTransaction(txId: String, service: String, iconUrl: String?) =
-    markGiftCardTransaction(Sha256Hash.wrap(txId), service, iconUrl)
+    markGiftCardTransaction(TxId.wrap(txId), service, iconUrl)
 
 /** Neutral counterpart of [TransactionMetadataProvider.updateGiftCardBarcode]. */
 suspend fun TransactionMetadataProvider.updateGiftCardBarcode(
@@ -47,7 +47,7 @@ suspend fun TransactionMetadataProvider.updateGiftCardBarcode(
     index: Int,
     barcodeValue: String,
     barcodeFormat: BarcodeFormat
-) = updateGiftCardBarcode(Sha256Hash.wrap(txId), index, barcodeValue, barcodeFormat)
+) = updateGiftCardBarcode(TxId.wrap(txId), index, barcodeValue, barcodeFormat)
 
 /** Neutral counterpart of [TransactionMetadataProvider.getIcon] taking the icon id as a hex string. */
-suspend fun TransactionMetadataProvider.getIcon(iconId: String): Bitmap? = getIcon(Sha256Hash.wrap(iconId))
+suspend fun TransactionMetadataProvider.getIcon(iconId: String): Bitmap? = getIcon(TxId.wrap(iconId))

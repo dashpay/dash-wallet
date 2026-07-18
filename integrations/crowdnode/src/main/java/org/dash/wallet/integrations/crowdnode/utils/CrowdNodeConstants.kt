@@ -17,9 +17,6 @@
 
 package org.dash.wallet.integrations.crowdnode.utils
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.DashAddressValidator
 import org.dash.wallet.common.money.DashNetworks
@@ -53,22 +50,16 @@ object CrowdNodeConstants {
         val DEFAULT_LIMIT_PER_DAY: Dash = Dash.COIN.multiply(60)
     }
 
-    fun getCrowdNodeAddress(params: NetworkParameters): Address {
-        return Address.fromBase58(
-            params,
-            if (params == MainNetParams.get()) {
-                CROWDNODE_MAINNET_ADDRESS
-            } else {
-                CROWDNODE_TESTNET_ADDRESS
-            }
-        )
+    /** The CrowdNode base58 address for the network identified by [networkId] (see [DashNetworks]). */
+    fun getCrowdNodeAddress(networkId: String): String {
+        return if (networkId == DashNetworks.MAINNET) {
+            CROWDNODE_MAINNET_ADDRESS
+        } else {
+            CROWDNODE_TESTNET_ADDRESS
+        }
     }
 
-    fun getCrowdNodeBaseUrl(params: NetworkParameters): String {
-        return getCrowdNodeBaseUrl(params.id)
-    }
-
-    /** Neutral (dashj-free) variant of [getCrowdNodeBaseUrl]; [networkId] as in [DashNetworks]. */
+    /** [networkId] as in [DashNetworks]. */
     fun getCrowdNodeBaseUrl(networkId: String): String {
         return if (networkId == DashNetworks.MAINNET) {
             MAINNET_BASE_URL

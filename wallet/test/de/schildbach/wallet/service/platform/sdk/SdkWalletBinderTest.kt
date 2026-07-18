@@ -30,7 +30,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dashfoundation.dashsdk.Sdk
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
 import org.dashj.platform.dpp.identifier.Identifier
@@ -198,7 +198,7 @@ class SdkWalletBinderTest {
         }
     }
 
-    private fun walletData(): WalletDataProvider = mockk { every { wallet } returns null }
+    private fun walletData(): WalletData = mockk { every { wallet } returns null }
 
     /**
      * A dashj wallet whose watching key hashes to a fingerprint derived
@@ -218,7 +218,7 @@ class SdkWalletBinderTest {
         identity: BlockchainIdentityConfig = identityConfig(identityBase()),
         config: DashPayConfig = dashPayConfig(readsFlag = true),
         supportsPlatform: Boolean = true,
-        walletData: WalletDataProvider = walletData(),
+        walletData: WalletData = walletData(),
         now: () -> Long = { System.currentTimeMillis() },
         scope: CoroutineScope
     ) = SdkWalletBinder(
@@ -505,7 +505,7 @@ class SdkWalletBinderTest {
         sdk.onDiscover = { _, _ -> listOf(Identifier.from(userId).toBuffer()) }
         val mnemonic = FakeMnemonicProvider { words }
         var currentWallet: Wallet? = walletWithFingerprint(1)
-        val walletData: WalletDataProvider = mockk { every { wallet } answers { currentWallet } }
+        val walletData: WalletData = mockk { every { wallet } answers { currentWallet } }
         val binder = binder(sdk, mnemonic, walletData = walletData, scope = this)
 
         binder.bindIfEnabled(unlock)
@@ -536,7 +536,7 @@ class SdkWalletBinderTest {
         val sdk = readySdk()
         val mnemonic = FakeMnemonicProvider { words }
         var currentWallet: Wallet? = walletWithFingerprint(1)
-        val walletData: WalletDataProvider = mockk { every { wallet } answers { currentWallet } }
+        val walletData: WalletData = mockk { every { wallet } answers { currentWallet } }
         val binder = binder(sdk, mnemonic, walletData = walletData, scope = this)
 
         binder.bindIfEnabled(unlock)
@@ -554,7 +554,7 @@ class SdkWalletBinderTest {
         // survives and the next trigger (wallet back) re-checks.
         val sdk = readySdk()
         var currentWallet: Wallet? = walletWithFingerprint(1)
-        val walletData: WalletDataProvider = mockk { every { wallet } answers { currentWallet } }
+        val walletData: WalletData = mockk { every { wallet } answers { currentWallet } }
         val binder = binder(sdk, walletData = walletData, scope = this)
 
         binder.bindIfEnabled(unlock)

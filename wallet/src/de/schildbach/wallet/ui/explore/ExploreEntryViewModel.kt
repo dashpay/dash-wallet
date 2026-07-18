@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.NetworkParameters
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -31,7 +31,7 @@ class ExploreEntryViewModel @Inject constructor(
     private val crowdNodeApi: CrowdNodeApi,
     private val analytics: AnalyticsService,
     private val blockchainStateProvider: BlockchainStateProvider,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletData
 ): ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(ExploreEntryViewModel::class.java)

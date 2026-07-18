@@ -20,11 +20,11 @@ package org.dash.wallet.common.data.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.google.zxing.BarcodeFormat
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 
 @Entity(tableName = "gift_cards", primaryKeys = ["txId", "index"])
 data class GiftCard(
-    var txId: Sha256Hash,
+    var txId: TxId,
     var merchantName: String = "",
     var price: Double = 0.0,
     var number: String? = null,
@@ -38,8 +38,7 @@ data class GiftCard(
 ) {
     companion object {
         /**
-         * Neutral (dashj-free) factory: builds a GiftCard from a hex transaction id
-         * ([Sha256Hash.toString] format), for modules that must not depend on dashj.
+         * Builds a GiftCard from a hex transaction id.
          */
         fun fromHex(
             txId: String,
@@ -54,12 +53,12 @@ data class GiftCard(
             index: Int = 0,
             redeemUrlChallenge: String? = null
         ) = GiftCard(
-            Sha256Hash.wrap(txId), merchantName, price, number, pin, barcodeValue,
+            TxId.wrap(txId), merchantName, price, number, pin, barcodeValue,
             barcodeFormat, merchantUrl, note, index, redeemUrlChallenge
         )
     }
 
-    /** The transaction id as a hex string ([Sha256Hash.toString]); dashj-free accessor. */
+    /** The transaction id as a hex string; dashj-free accessor. */
     val txIdHex: String get() = txId.toString()
 
     /**

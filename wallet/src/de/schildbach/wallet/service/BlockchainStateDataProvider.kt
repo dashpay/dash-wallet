@@ -41,7 +41,7 @@ import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.StoredBlock
 import org.bitcoinj.store.BlockStoreException
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.SyncStage
@@ -71,7 +71,7 @@ class BlockchainStateDataProvider @Inject constructor(
     private val context: Context,
     private val dashSystemService: DashSystemService,
     private val blockchainStateDao: BlockchainStateDao,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val configuration: Configuration
 ) : BlockchainStateProvider {
     companion object {

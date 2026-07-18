@@ -38,7 +38,7 @@ import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -152,7 +152,7 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityConfig
     @Inject lateinit var securityFunctions: SecurityFunctions
     @Inject lateinit var usernameRequestDao: UsernameRequestDao
-    @Inject lateinit var walletDataProvider: WalletDataProvider
+    @Inject lateinit var walletDataProvider: WalletData
     @Inject lateinit var identityCreationStatus: IdentityCreationStatusHolder
     @Inject lateinit var sdkShieldedUsernameCreation: SdkShieldedUsernameCreation
     @Inject lateinit var dashPayConfig: DashPayConfig

@@ -33,7 +33,7 @@ import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.money.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 
 import java.io.File;
@@ -49,6 +49,9 @@ public final class Constants {
 
     /** Network this wallet is on (e.g. testnet or mainnet). */
     public static final NetworkParameters NETWORK_PARAMETERS;
+
+    /** Neutral network descriptor matching {@link #NETWORK_PARAMETERS}, for the dashj-free common APIs. */
+    public static final org.dash.wallet.common.payments.parsers.AddressNetwork ADDRESS_NETWORK;
 
     private static String FILENAME_NETWORK_SUFFIX;
     private static String FEE_NETWORK_SUFFIX;
@@ -151,7 +154,9 @@ public final class Constants {
                 throw new IllegalStateException("Unsupported flavor " + BuildConfig.FLAVOR);
             }
         }
-        org.dash.wallet.common.util.Constants.INSTANCE.setMAX_MONEY(NETWORK_PARAMETERS.getMaxMoney());
+        ADDRESS_NETWORK = org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(NETWORK_PARAMETERS.getId());
+        org.dash.wallet.common.util.Constants.INSTANCE.setMAX_MONEY(
+                org.dash.wallet.common.money.Coin.valueOf(NETWORK_PARAMETERS.getMaxMoney().getValue()));
         org.dash.wallet.common.util.Constants.INSTANCE.setBUILD_FLAVOR(BuildConfig.FLAVOR);
     }
 

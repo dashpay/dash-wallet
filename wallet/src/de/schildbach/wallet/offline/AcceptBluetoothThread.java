@@ -119,8 +119,10 @@ public abstract class AcceptBluetoothThread extends Thread {
 
                     log.debug("got payment message");
 
-                    for (final Transaction tx : PaymentProtocol
-                            .parseTransactionsFromPaymentMessage(Constants.NETWORK_PARAMETERS, payment)) {
+                    for (final byte[] serializedTx : PaymentProtocol
+                            .parseTransactionsFromPaymentMessage(payment)) {
+                        final Transaction tx = Constants.NETWORK_PARAMETERS.getDefaultSerializer()
+                                .makeTransaction(serializedTx);
                         if (!handleTx(tx))
                             ack = false;
                     }

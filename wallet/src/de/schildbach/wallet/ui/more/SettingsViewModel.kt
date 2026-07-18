@@ -46,7 +46,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.money.Dash
@@ -117,7 +117,7 @@ internal fun soakRouteLabel(sdkFlagOn: Boolean?, gateOpenAtAttempt: Boolean): St
 class SettingsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val walletUIConfig: WalletUIConfig,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val analytics: AnalyticsService,
     private val configuration: Configuration,
     private val dashPayConfig: DashPayConfig,

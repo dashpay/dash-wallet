@@ -40,7 +40,7 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
@@ -71,7 +71,7 @@ enum class ReportGenerationStatus {
 class ContactSupportViewModel @Inject constructor(
     private val configuration: Configuration,
     private val application: WalletApplication,
-    walletDataProvider: WalletDataProvider,
+    walletDataProvider: WalletData,
     private val packageInfoProvider: PackageInfoProvider,
     private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
 ) : ViewModel() {

@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -60,7 +60,7 @@ class DashPayUserActivity : LockScreenActivity() {
     private val viewModel: DashPayUserActivityViewModel by viewModels()
     private val dashPayViewModel: DashPayViewModel by viewModels()
     private lateinit var binding: ActivityDashpayUserBinding
-    @Inject lateinit var walletDataProvider: WalletDataProvider
+    @Inject lateinit var walletDataProvider: WalletData
 
     // This screen can both SEND an outgoing contact request and ACCEPT an
     // incoming one (both funnel through sendContactRequest()), so remember which

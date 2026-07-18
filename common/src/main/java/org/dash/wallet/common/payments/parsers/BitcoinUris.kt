@@ -17,12 +17,9 @@
 
 package org.dash.wallet.common.payments.parsers
 
-import org.bitcoinj.uri.BitcoinURI
-import org.bitcoinj.uri.BitcoinURIParseException
-
 /**
- * Neutral (dashj-free) parsing of `bitcoin:` payment URIs for modules that must not import
- * bitcoinj. Delegates to [BitcoinURI] internally so accepted URIs are identical.
+ * Parsing of `bitcoin:` payment URIs. Same accepted URIs as dashj's `BitcoinURI` with
+ * mainnet Bitcoin parameters.
  */
 object BitcoinUris {
 
@@ -33,18 +30,12 @@ object BitcoinUris {
      * or the address is not a mainnet Bitcoin address.
      */
     fun parseAddress(uri: String): String {
-        val params = BitcoinMainNetParams()
+        val params = AddressNetwork.BITCOIN_MAINNET
         try {
-            val bitcoinUri = BitcoinURI(params, uri)
-            val address = bitcoinUri.address
+            val bitcoinUri = PaymentURI(params, uri)
+            return bitcoinUri.address
                 ?: throw IllegalArgumentException("no address in bitcoin uri")
-
-            if (params != address.parameters) {
-                throw IllegalArgumentException("mismatched network")
-            }
-
-            return address.toString()
-        } catch (ex: BitcoinURIParseException) {
+        } catch (ex: PaymentURI.ParseException) {
             throw IllegalArgumentException(ex.message, ex)
         }
     }

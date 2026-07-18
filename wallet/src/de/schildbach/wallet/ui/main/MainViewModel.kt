@@ -77,11 +77,11 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.CurrencyInfo
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.SyncStage
@@ -110,7 +110,7 @@ class MainViewModel @Inject constructor(
     private val config: Configuration,
     private val walletUIConfig: WalletUIConfig,
     exchangeRatesProvider: ExchangeRatesProvider,
-    val walletData: WalletDataProvider,
+    val walletData: WalletData,
     private val walletApplication: WalletApplication,
     private val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
@@ -318,7 +318,7 @@ class MainViewModel @Inject constructor(
 
         // Phase 5d: the displayed balance follows whichever engine owns L1
         // this launch. observeTotalBalance() is cutover-aware at the
-        // WalletDataProvider facade (WalletApplication overlays the SDK's
+        // WalletData facade (WalletApplication overlays the SDK's
         // live L1 balance via CutoverUiDataService once the cutover is
         // committed), so EVERY balance consumer switches consistently —
         // pre-cutover this is byte-identical to the dashj-only feed.

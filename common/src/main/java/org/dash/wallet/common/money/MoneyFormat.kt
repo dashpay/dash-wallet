@@ -17,17 +17,14 @@
 
 package org.dash.wallet.common.money
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import java.math.RoundingMode
 import java.util.Locale
 
 /**
  * Immutable monetary formatter for [Dash] and [FiatValue] amounts. Mirrors the fluent API of
- * [org.bitcoinj.utils.MonetaryFormat] (and delegates to it internally, so output is identical),
- * without exposing dashj types to feature/integration modules.
+ * dashj's `MonetaryFormat` (and delegates to the self-contained [MonetaryFormat] port internally,
+ * so output is identical), without exposing dashj types to feature/integration modules.
  */
 class MoneyFormat internal constructor(internal val delegate: MonetaryFormat) {
 

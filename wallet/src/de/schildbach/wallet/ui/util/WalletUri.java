@@ -20,10 +20,8 @@ package de.schildbach.wallet.ui.util;
 import android.content.Intent;
 import android.net.Uri;
 
-import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.uri.BitcoinURI;
-import org.bitcoinj.uri.BitcoinURIParseException;
+import org.dash.wallet.common.payments.parsers.PaymentURI;
 import org.dash.wallet.common.util.AddressUtil;
 
 import de.schildbach.wallet.Constants;
@@ -57,33 +55,34 @@ public class WalletUri {
         this.sourceUri = sourceUri;
     }
 
-    public static WalletUri parse(Uri input) throws BitcoinURIParseException {
+    public static WalletUri parse(Uri input) throws PaymentURI.ParseException {
         input = normalizeUri(input);
         String missingParameterFormat = "Missing %s parameter";
         if (!SCHEME.equals(input.getScheme())) {
-            throw new BitcoinURIParseException("Incorrect scheme " + input.getScheme());
+            throw new PaymentURI.ParseException("Incorrect scheme " + input.getScheme());
         }
         if (input.getQueryParameter(FIELD_PAY) != null) {
             if (input.getQueryParameter(FIELD_AMOUNT) == null) {
-                throw new BitcoinURIParseException(String.format(missingParameterFormat, FIELD_AMOUNT));
+                throw new PaymentURI.ParseException(String.format(missingParameterFormat, FIELD_AMOUNT));
             }
             String rawAddress = input.getQueryParameter(FIELD_PAY);
-            Address address;
+            String address;
             try {
-                address = AddressUtil.fromString(null, rawAddress, Constants.NETWORK_PARAMETERS);
+                address = AddressUtil.fromString(null, rawAddress, Constants.ADDRESS_NETWORK);
             } catch (Exception e) {
-                throw new BitcoinURIParseException(e.getMessage());
+                throw new PaymentURI.ParseException(e.getMessage());
             }
-            if (!Constants.NETWORK_PARAMETERS.equals(address.getParameters())) {
-                throw new BitcoinURIParseException("Mismatched network");
+            if (!Constants.ADDRESS_NETWORK.acceptsVersion(
+                    org.dash.wallet.common.payments.parsers.AddressUtils.decode(address).getVersion())) {
+                throw new PaymentURI.ParseException("Mismatched network");
             }
         } else {
             String request = input.getQueryParameter(FIELD_REQUEST);
             if (!REQUEST_MASTER_PUBLIC_KEY.equals(request) && !REQUEST_ADDRESS.equals(request)) {
-                throw new BitcoinURIParseException("Unsupported request " + request);
+                throw new PaymentURI.ParseException("Unsupported request " + request);
             }
             if (input.getQueryParameter(FIELD_SENDER) == null) {
-                throw new BitcoinURIParseException(String.format(missingParameterFormat, FIELD_SENDER));
+                throw new PaymentURI.ParseException(String.format(missingParameterFormat, FIELD_SENDER));
             }
         }
         return new WalletUri(input);
@@ -118,9 +117,9 @@ public class WalletUri {
         return REQUEST_ADDRESS.equals(getRequest());
     }
 
-    public Address getPayAddress() {
+    public String getPayAddress() {
         String pay = sourceUri.getQueryParameter(FIELD_PAY);
-        return (pay != null) ? AddressUtil.fromString(null, pay, Constants.NETWORK_PARAMETERS) : null;
+        return (pay != null) ? AddressUtil.fromString(null, pay, Constants.ADDRESS_NETWORK) : null;
     }
 
     public Coin getAmount() {
@@ -145,15 +144,18 @@ public class WalletUri {
         return sourceUri.getQueryParameter(FIELD_REQUEST);
     }
 
-    public BitcoinURI toBitcoinUri() throws BitcoinURIParseException {
+    public PaymentURI toBitcoinUri() throws PaymentURI.ParseException {
         if (!isPaymentUri()) {
             throw new IllegalStateException("Only payment Uri can be converted into BitcoinURI");
         }
-        final Address address = getPayAddress();
+        final String address = getPayAddress();
         Coin amount = getAmount();
         String sender = getSender();
-        String bitcoinUri = BitcoinURI.convertToBitcoinURI(address, amount, sender, null);
-        return new BitcoinURI(bitcoinUri);
+        String bitcoinUri = PaymentURI.convertToPaymentURI(
+                Constants.ADDRESS_NETWORK, address,
+                amount != null ? org.dash.wallet.common.money.Coin.valueOf(amount.value) : null,
+                sender, null);
+        return new PaymentURI(bitcoinUri);
     }
 
     public static Intent createPaymentResult(Uri inputUri, String hash) {
@@ -164,12 +166,12 @@ public class WalletUri {
                     .authority("")
                     .scheme(walletUri.getSender())
                     .appendQueryParameter(FIELD_CALLBACK, CALLBACK_PAYACK)
-                    .appendQueryParameter(FIELD_ADDRESS, walletUri.getPayAddress().toString())
+                    .appendQueryParameter(FIELD_ADDRESS, walletUri.getPayAddress())
                     .appendQueryParameter(FIELD_TXID, hash)
                     .build();
             resultIntent.setData(data);
             return resultIntent;
-        } catch (BitcoinURIParseException e) {
+        } catch (PaymentURI.ParseException e) {
             return null;
         }
     }
@@ -189,7 +191,7 @@ public class WalletUri {
                     .build();
             resultIntent.setData(data);
             return resultIntent;
-        } catch (BitcoinURIParseException e) {
+        } catch (PaymentURI.ParseException e) {
             return null;
         }
     }
@@ -207,7 +209,7 @@ public class WalletUri {
                     .build();
             resultIntent.setData(data);
             return resultIntent;
-        } catch (BitcoinURIParseException e) {
+        } catch (PaymentURI.ParseException e) {
             return null;
         }
     }

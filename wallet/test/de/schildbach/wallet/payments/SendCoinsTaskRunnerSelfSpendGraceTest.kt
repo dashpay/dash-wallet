@@ -42,7 +42,7 @@ import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
@@ -82,7 +82,7 @@ class SendCoinsTaskRunnerSelfSpendGraceTest {
         wallet = mockk(relaxed = true)
         every { wallet.context } returns bitcoinjContext
 
-        val walletDataProvider = mockk<WalletDataProvider>(relaxed = true)
+        val walletDataProvider = mockk<WalletData>(relaxed = true)
         every { walletDataProvider.wallet } returns wallet
 
         // Non-interactive signing, same stubbing as the BIP70 tests.

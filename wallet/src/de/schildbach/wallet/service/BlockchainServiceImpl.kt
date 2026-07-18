@@ -147,8 +147,8 @@ import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.transactions.TransactionUtils.getWalletAddressOfReceived
-import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter
+import de.schildbach.wallet.transactions.TransactionUtils.getWalletAddressOfReceived
+import de.schildbach.wallet.transactions.NotFromAddressTxFilter
 import org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.toBigDecimal
@@ -179,6 +179,16 @@ import javax.inject.Inject
 import kotlin.math.max
 import org.bitcoinj.core.listeners.NewBestBlockListener
 import java.util.concurrent.ConcurrentHashMap
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.transactions.toTxInfo
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 /**
  * @author Andreas Schildbach
@@ -245,6 +255,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Inject lateinit var  exchangeRatesDao: ExchangeRatesDao
 
     @Inject lateinit var transactionMetadataProvider: TransactionMetadataProvider
+    @Inject lateinit var walletTransactionMetadataProvider: WalletTransactionMetadataProvider
 
     @Inject lateinit var platformSyncService: PlatformSyncService
     @Inject lateinit var identityRepo: IdentityRepository
@@ -324,15 +335,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var riskAnalyzer: AllowLockTimeRiskAnalysis.Analyzer? = null
     private var defaultRiskAnalyzer = DefaultRiskAnalysis.FACTORY
     private val crowdnodeFilters = listOf(
-        NotFromAddressTxFilter(getCrowdNodeAddress(Constants.NETWORK_PARAMETERS)),
-        CrowdNodeWithdrawalReceivedTx(Constants.NETWORK_PARAMETERS)
+        NotFromAddressTxFilter(
+            Address.fromBase58(Constants.NETWORK_PARAMETERS, getCrowdNodeAddress(Constants.NETWORK_PARAMETERS.id))
+        )
+    )
+    private val crowdnodeNeutralFilters = listOf(
+        CrowdNodeWithdrawalReceivedTx(Constants.NETWORK_PARAMETERS.id)
     )
     private val depositReceivedResponse =
-        CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS)
+        CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS.id)
     private var apiConfirmationHandler: CrowdNodeAPIConfirmationHandler? = null
     private fun handleMetadata(tx: Transaction) {
         serviceScope.launch {
-            transactionMetadataProvider.syncTransaction(tx)
+            walletTransactionMetadataProvider.syncTransaction(tx)
         }
     }
     private val currentBlock = MutableStateFlow<StoredBlock?>(null)
@@ -379,7 +394,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         )
                         if (exchangeRate != null) {
                             log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate + " tx: " + tx.txId.toString())
-                            tx.exchangeRate = ExchangeRate(Coin.COIN, exchangeRate.fiat)
+                            tx.exchangeRate = ExchangeRate(Coin.COIN, exchangeRate.fiat.toDashjFiat())
                             application.saveWallet()
                         }
                     } catch (e: Exception) {
@@ -395,7 +410,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     val isReplayedTx =
                         confidenceType == TransactionConfidence.ConfidenceType.BUILDING && (replaying || isRestoringBackup)
                     if (!isReplayedTx) {
-                        if (depositReceivedResponse.matches(tx)) {
+                        if (depositReceivedResponse.matches(tx.toTxInfo(wallet, Constants.NETWORK_PARAMETERS))) {
                             notificationService.showNotification(
                                 "deposit_received",
                                 getString(R.string.crowdnode_deposit_received),
@@ -404,11 +419,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                 Intent(this@BlockchainServiceImpl, StakingActivity::class.java),
                                 null
                             )
-                        } else if (apiConfirmationHandler != null && apiConfirmationHandler!!.matches(
-                                tx
-                            )
+                        } else if (
+                            apiConfirmationHandler != null &&
+                            apiConfirmationHandler!!.matches(tx.toTxInfo(wallet, Constants.NETWORK_PARAMETERS))
                         ) {
-                            apiConfirmationHandler!!.handle(tx)
+                            apiConfirmationHandler!!.handle(tx.toTxInfo(wallet, Constants.NETWORK_PARAMETERS))
                         } else if (passFilters(tx, wallet)) {
                             notifyCoinsReceived(address, amount, tx.exchangeRate)
                         }
@@ -446,12 +461,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (!isReceived) {
                     return false
                 }
-                var passFilters = false
-                for (filter in crowdnodeFilters) {
-                    if (filter.matches(tx)) {
-                        passFilters = true
-                        break
-                    }
+                var passFilters = crowdnodeFilters.any { it.matches(tx) }
+                if (!passFilters) {
+                    val txInfo = tx.toTxInfo(wallet, Constants.NETWORK_PARAMETERS)
+                    passFilters = crowdnodeNeutralFilters.any { it.matches(txInfo) }
                 }
                 return passFilters
             }

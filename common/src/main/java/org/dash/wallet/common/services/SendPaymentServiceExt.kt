@@ -17,45 +17,56 @@
 
 package org.dash.wallet.common.services
 
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.wallet.Wallet
-
 /**
- * Neutral (dashj-free) counterpart of dashj's [InsufficientMoneyException] for feature/integration
+ * Neutral counterpart of dashj's `InsufficientMoneyException` for feature/integration
  * modules: thrown by [payAndGetTxId] when the wallet balance can't cover the payment.
  */
-class InsufficientFundsException(message: String?, cause: Throwable? = null) : Exception(message, cause)
+open class InsufficientFundsException(message: String?, cause: Throwable? = null) : Exception(message, cause)
 
 // ---------------------------------------------------------------------------------------------
 // Neutral classifiers for send failures. Feature/integration modules can't reference the dashj
-// exception types thrown by SendPaymentService, so these helpers classify them instead
-// (mirroring `catch (e: <dashj type>)` blocks exactly).
+// exception types that wallet-side code may throw, so these helpers classify them by class name
+// (mirroring `catch (e: <dashj type>)` blocks exactly) in addition to the neutral types.
 // ---------------------------------------------------------------------------------------------
 
-/** True when this is dashj's [InsufficientMoneyException] (wallet balance can't cover the payment). */
-val Throwable.isInsufficientMoney: Boolean
-    get() = this is InsufficientMoneyException
+private fun Throwable.hasAncestorNamed(vararg fqcn: String): Boolean {
+    var c: Class<*>? = javaClass
+    while (c != null) {
+        if (fqcn.contains(c.name)) return true
+        c = c.superclass
+    }
+    return false
+}
 
-/** True when this is dashj's [Wallet.DustySendRequested] or [Wallet.CouldNotAdjustDownwards] (dusty send). */
+/** True when the wallet balance can't cover the payment (dashj's `InsufficientMoneyException` or the neutral equivalent). */
+val Throwable.isInsufficientMoney: Boolean
+    get() = this is InsufficientFundsException || hasAncestorNamed("org.bitcoinj.core.InsufficientMoneyException")
+
+/** True when this is dashj's `Wallet.DustySendRequested` or `Wallet.CouldNotAdjustDownwards` (dusty send). */
 val Throwable.isDustySend: Boolean
-    get() = this is Wallet.DustySendRequested || this is Wallet.CouldNotAdjustDownwards
+    get() = hasAncestorNamed(
+        "org.bitcoinj.wallet.Wallet\$DustySendRequested",
+        "org.bitcoinj.wallet.Wallet\$CouldNotAdjustDownwards"
+    )
 
 /** True when this is the [LeftoverBalanceException] thrown by the leftover-balance check. */
 val Throwable.isLeftoverBalanceWarning: Boolean
     get() = this is LeftoverBalanceException
 
 /**
- * Neutral counterpart of [SendPaymentService.payWithDashUrl] for modules that must not depend
- * on dashj: pays the given payment URI and returns the created transaction's txId as a hex string.
+ * Pays the given payment URI and returns the created transaction's txId as a hex string.
  *
- * dashj's [InsufficientMoneyException] (including [LeftoverBalanceException]) is rethrown as the
- * neutral [InsufficientFundsException]; all other exceptions propagate unchanged.
+ * Dashj-side insufficient-funds failures (including [LeftoverBalanceException]) are rethrown as
+ * the neutral [InsufficientFundsException]; all other exceptions propagate unchanged.
  */
 suspend fun SendPaymentService.payAndGetTxId(dashUri: String, serviceName: String?): String {
     val transaction = try {
         payWithDashUrl(dashUri, serviceName)
-    } catch (e: InsufficientMoneyException) {
-        throw InsufficientFundsException(e.message, e)
+    } catch (e: Exception) {
+        if (e.isInsufficientMoney && e !is InsufficientFundsException) {
+            throw InsufficientFundsException(e.message, e)
+        }
+        throw e
     }
-    return transaction.txId.toString()
+    return transaction.txId
 }

@@ -31,7 +31,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -87,7 +87,7 @@ class IdentityNoResurrectionGuardTest {
             walletApplication = mockk<WalletApplication>(relaxed = true),
             appDatabase = mockk<AppDatabase>(relaxed = true),
             blockchainIdentityDataStorage = storage,
-            walletDataProvider = mockk<WalletDataProvider>(relaxed = true),
+            walletDataProvider = mockk<WalletData>(relaxed = true),
             platformRepo = mockk<PlatformRepo>(relaxed = true),
             dashPayConfig = mockk<DashPayConfig>(relaxed = true),
             dashSystemService = mockk<DashSystemService>(relaxed = true),

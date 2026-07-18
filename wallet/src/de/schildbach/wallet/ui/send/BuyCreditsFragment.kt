@@ -16,12 +16,21 @@ import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.slf4j.LoggerFactory
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 class BuyCreditsFragment : SendCoinsFragment() {
     companion object {
@@ -33,7 +42,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.paymentHeader.setTitle(getString(R.string.credit_balance_button_buy))
-        enterAmountViewModel.setMinAmount(Coin.valueOf(50_000))
+        enterAmountViewModel.setMinAmount(org.dash.wallet.common.money.Coin.valueOf(50_000))
         binding.paymentHeader.setPreposition("")
         viewModel.isAssetLock = true
     }
@@ -55,7 +64,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
 
         // if there is no value (null) or it is zero, then display the message in the
         // enter amount fragment using 0.01 DASH
-        val amount = enterAmountViewModel.amount.value ?: Coin.CENT
+        val amount = enterAmountViewModel.amount.value?.toDashjCoin() ?: Coin.CENT
         val operations = if (amount.isZero) {
             Coin.CENT.value
         } else {
@@ -81,16 +90,18 @@ class BuyCreditsFragment : SendCoinsFragment() {
         val total: String?
 
         if (dryRunRequest.emptyWallet) {
-            amount = enterAmountViewModel.amount.value?.minus(txFee)
+            amount = enterAmountViewModel.amount.value?.toDashjCoin()?.minus(txFee)
             total = enterAmountViewModel.amount.value?.toPlainString()
         } else {
-            amount = enterAmountViewModel.amount.value
+            amount = enterAmountViewModel.amount.value?.toDashjCoin()
             total = amount?.add(txFee ?: Coin.ZERO)?.toPlainString()
         }
 
         val rate = enterAmountViewModel.selectedExchangeRate.value
-        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
-        val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
+        val exchangeRate = rate?.let {
+            org.dash.wallet.common.money.ExchangeRate(org.dash.wallet.common.money.Coin.COIN, rate.fiat)
+        }
+        val amountStr = amount?.let { MonetaryFormat.BTC.noCode().format(it).toString() } ?: ""
         val fee = txFee?.toPlainString() ?: ""
 
         //var dashPayProfile: DashPayProfile? = null
@@ -125,7 +136,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
         val rate = enterAmountViewModel.selectedExchangeRate.value
 
         if (editedAmount != null) {
-            val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it) }
+            val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it.toDashjFiat()) }
 
             try {
                 // TODO: there are no events for Topups
@@ -137,7 +148,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
                 }
                 // buy do an asset lock transaction or we do this in the worker?
                 val topUpKey = viewModel.getNextKey()
-                val tx = viewModel.signAndSendAssetLock(editedAmount, exchangeRate, checkBalance, topUpKey, maxSelected)
+                val tx = viewModel.signAndSendAssetLock(editedAmount.toDashjCoin(), exchangeRate, checkBalance, topUpKey, maxSelected)
                 buyCreditsViewModel.topUpTransaction = tx
 
                 onSignAndSendPaymentSuccess(tx)

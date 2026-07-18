@@ -19,7 +19,7 @@ package de.schildbach.wallet.transactions
 
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
-import org.dash.wallet.common.transactions.filters.TransactionFilter
+import de.schildbach.wallet.transactions.WalletTransactionFilter
 
 enum class TxFilterType {
     RECEIVED, SENT, ALL, GIFT_CARD
@@ -28,7 +28,7 @@ enum class TxFilterType {
 class TxDirectionFilter(
     val direction: TxFilterType,
     private val bag: TransactionBag
-): TransactionFilter {
+): WalletTransactionFilter {
     override fun matches(tx: Transaction): Boolean {
         if (direction == TxFilterType.ALL) {
             return true

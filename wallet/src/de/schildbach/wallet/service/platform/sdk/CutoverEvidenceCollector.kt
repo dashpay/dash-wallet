@@ -25,7 +25,7 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import org.bitcoinj.core.TransactionConfidence
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,7 +43,7 @@ class CutoverEvidenceCollector @Inject constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
     private val dashPayConfig: DashPayConfig,
     private val identityConfig: BlockchainIdentityConfig,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val walletApplication: WalletApplication
 ) {
     suspend fun collect(): CutoverEvidence {

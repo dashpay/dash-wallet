@@ -57,19 +57,28 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import kotlin.math.min
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 class SendException(message: String) : Exception(message)
 
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
-    walletDataProvider: WalletDataProvider,
+    walletDataProvider: WalletData,
     walletApplication: WalletApplication,
     blockchainStateDao: BlockchainStateDao,
     val biometricHelper: BiometricHelper,
@@ -222,7 +231,7 @@ class SendCoinsViewModel @Inject constructor(
         if (isAssetLock) {
             error("isAssetLock must be false, but is true")
         }
-        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
+        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
 
         val transaction = try {
             val finalSendRequest = sendCoinsTaskRunner.createSendRequest(
@@ -255,7 +264,7 @@ class SendCoinsViewModel @Inject constructor(
         if (!isAssetLock) {
             error("isAssetLock must be true, but is false")
         }
-        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
+        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
 
         val transaction = try {
             var finalSendRequest = sendCoinsTaskRunner.createAssetLockSendRequest(
@@ -426,7 +435,7 @@ class SendCoinsViewModel @Inject constructor(
             }
         }
         val dummyAddress = wallet.currentReceiveAddress() // won't be used, tx is never committed
-        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(amount, dummyAddress)
+        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(amount.toNeutralCoin(), dummyAddress.toBase58())
 
         try {
             Context.propagate(wallet.context)
@@ -533,7 +542,7 @@ class SendCoinsViewModel @Inject constructor(
         )
         return if (address != null) {
             PaymentIntent.fromAddressWithIdentity(
-                Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
+                address.toBase58(),
                 dashPayProfile.userId,
                 paymentIntent.amount
             )

@@ -45,7 +45,7 @@ import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
@@ -59,6 +59,16 @@ import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.util.toFormattedString
 
 @AndroidEntryPoint
 open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
@@ -101,7 +111,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 Toast.makeText(requireContext(), R.string.error_loading_identity, Toast.LENGTH_LONG).show()
             }
             // currentAmount requires viewModel.initPaymentIntent be executed first
-            enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.setAmount(it) }
+            enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.setAmount(it.toDashjCoin()) }
         }
 
         if (savedInstanceState == null) {
@@ -139,7 +149,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         viewModel.dryRunSuccessful.observe(viewLifecycleOwner) { isSuccess ->
             if (!isSuccess && viewModel.shouldAdjustAmount()) {
                 val newAmount = viewModel.getAdjustedAmount()
-                enterAmountFragment?.setAmount(newAmount)
+                enterAmountFragment?.setAmount(newAmount.toNeutralCoin())
             } else {
                 updateView()
             }
@@ -151,7 +161,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             }
         }
         viewModel.maxOutputAmount.observe(viewLifecycleOwner) { balance ->
-            enterAmountViewModel.setMaxAmount(balance)
+            enterAmountViewModel.setMaxAmount(balance.toNeutralCoin())
             updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
         }
 
@@ -240,7 +250,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val rate = enterAmountViewModel.selectedExchangeRate.value
 
         if (editedAmount != null) {
-            val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it) }
+            val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it.toDashjFiat()) }
 
             try {
                 viewModel.logSend()
@@ -249,7 +259,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                     viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
                 }
 
-                val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate, checkBalance)
+                val tx = viewModel.signAndSendPayment(editedAmount.toDashjCoin(), exchangeRate, checkBalance)
                 onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
             } catch (ex: LeftoverBalanceException) {
                 if (!isAdded) {
@@ -277,23 +287,25 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
     protected open suspend fun showPaymentConfirmation() {
         val dryRunRequest = viewModel.dryrunSendRequest ?: return
-        val address = viewModel.basePaymentIntent.getAddress(Constants.NETWORK_PARAMETERS)?.toBase58() ?: return
+        val address = viewModel.basePaymentIntent.getAddress(Constants.ADDRESS_NETWORK) ?: return
 
         val txFee = dryRunRequest.tx.fee
         val amount: Coin?
         val total: String?
 
         if (dryRunRequest.emptyWallet) {
-            amount = enterAmountViewModel.amount.value?.minus(txFee)
+            amount = enterAmountViewModel.amount.value?.toDashjCoin()?.minus(txFee)
             total = enterAmountViewModel.amount.value?.toPlainString()
         } else {
-            amount = enterAmountViewModel.amount.value
+            amount = enterAmountViewModel.amount.value?.toDashjCoin()
             total = amount?.add(txFee ?: Coin.ZERO)?.toPlainString()
         }
 
         val rate = enterAmountViewModel.selectedExchangeRate.value
-        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
-        val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
+        val exchangeRate = rate?.let {
+            org.dash.wallet.common.money.ExchangeRate(org.dash.wallet.common.money.Coin.COIN, rate.fiat)
+        }
+        val amountStr = amount?.let { MonetaryFormat.BTC.noCode().format(it).toString() } ?: ""
         val fee = txFee?.toPlainString() ?: ""
 
         var dashPayProfile: DashPayProfile? = null
@@ -391,7 +403,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
-        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat) }
+        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat.toDashjFiat()) }
         var balanceText = viewModel.dashFormat.format(balance).toString()
         exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance).toFormattedString()}" }
         binding.paymentHeader.setBalanceValue(balanceText)

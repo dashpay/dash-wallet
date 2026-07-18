@@ -68,7 +68,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.UsernameRequestStatus
@@ -262,7 +262,7 @@ fun usernameCompletionRoute(
 class RequestUserNameViewModel @Inject constructor(
     val walletApplication: WalletApplication,
     private val identityConfig: BlockchainIdentityConfig,
-    val walletData: WalletDataProvider,
+    val walletData: WalletData,
     val platformRepo: PlatformRepo,
     val usernameRequestDao: UsernameRequestDao,
     val analytics: AnalyticsService,

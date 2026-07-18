@@ -111,10 +111,12 @@ class TransactionWrapperHelperTest {
         every { bagMock.getTransactionPool(WalletTransaction.Pool.PENDING)} returns mapOf()
         every { bagMock.getTransactionPool(WalletTransaction.Pool.SPENT)} returns allTransactions.associateBy({it.txId}, {it})
 
-        val crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(networkParams, bagMock)
+        val crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(networkParams.id)
         val crowdNodeWrapper = crowdNodeWrapperFactory.wrappers.first()!!
         val wrappedTransactions = TransactionWrapperHelper.wrapTransactions(
             allTransactions,
+            bagMock,
+            networkParams,
             crowdNodeWrapperFactory
         )
 

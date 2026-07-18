@@ -17,21 +17,23 @@
 
 package org.dash.wallet.common.money
 
-import org.bitcoinj.core.Sha256Hash
-
 /**
- * Conversions for transaction ids represented as hex strings ([org.bitcoinj.core.Sha256Hash.toString]),
- * for feature/integration modules that must not depend on dashj. Delegates to dashj internally so
- * encodings are exactly the ones the wallet uses.
+ * Conversions for transaction ids represented as hex strings (`Sha256Hash.toString()`),
+ * for feature/integration modules that must not depend on dashj. Encodings are exactly
+ * the ones the wallet uses.
  */
 object TxIds {
 
-    /** Hex representation of the all-zero tx id (mirrors [Sha256Hash.ZERO_HASH]`.toString()`). */
-    val ZERO_HASH_HEX: String = Sha256Hash.ZERO_HASH.toString()
+    /** Hex representation of the all-zero tx id (mirrors `Sha256Hash.ZERO_HASH.toString()`). */
+    const val ZERO_HASH_HEX: String = "0000000000000000000000000000000000000000000000000000000000000000"
 
-    /** Converts a hex tx id to its raw bytes (mirrors [Sha256Hash.wrap]`(hex).bytes`) — e.g. for Room BLOB queries. */
-    fun toBytes(txIdHex: String): ByteArray = Sha256Hash.wrap(txIdHex).bytes
+    /** Converts a hex tx id to its raw bytes (mirrors `Sha256Hash.wrap(hex).bytes`) — e.g. for Room BLOB queries. */
+    fun toBytes(txIdHex: String): ByteArray {
+        require(txIdHex.length == 64) { "not a 32-byte hex string: " + txIdHex }
+        return ByteArray(32) { i -> txIdHex.substring(i * 2, i * 2 + 2).toInt(16).toByte() }
+    }
 
-    /** Converts a hex tx id to its base58 representation (mirrors [Sha256Hash]`.toStringBase58()`). */
-    fun toBase58(txIdHex: String): String = Sha256Hash.wrap(txIdHex).toStringBase58()
+    /** Converts a hex tx id to its base58 representation (mirrors `Sha256Hash.toStringBase58()`). */
+    fun toBase58(txIdHex: String): String =
+        org.dash.wallet.common.payments.parsers.Base58.encode(toBytes(txIdHex))
 }

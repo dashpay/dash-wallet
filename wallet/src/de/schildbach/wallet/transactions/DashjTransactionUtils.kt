@@ -1,0 +1,243 @@
+/*
+ * Copyright 2022 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+@file:OptIn(FlowPreview::class)
+
+package de.schildbach.wallet.transactions
+
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.suspendCancellableCoroutine
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionBag
+import org.bitcoinj.core.TransactionConfidence
+import org.bitcoinj.script.ScriptException
+import org.bitcoinj.script.ScriptPattern
+import org.bitcoinj.utils.Threading
+import org.dash.wallet.common.transactions.TransactionCategory
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.resume
+
+/**
+ * Dashj-typed transaction helpers for wallet-module internals — the former
+ * `org.dash.wallet.common.transactions.TransactionUtils`, moved here unchanged when the
+ * common module was neutralized.
+ */
+object TransactionUtils {
+    fun getWalletAddressOfReceived(tx: Transaction, bag: TransactionBag): Address? {
+        for (output in tx.outputs) {
+            try {
+                if (output.isMine(bag)) {
+                    return output.scriptPubKey.getToAddress(tx.params, true)
+                }
+            } catch (x: ScriptException) {
+                // swallow
+            }
+        }
+        return null
+    }
+
+    fun getFromAddressOfSent(tx: Transaction): List<Address> {
+        val result = mutableListOf<Address>()
+
+        for (input in tx.inputs) {
+            try {
+                val connectedTransaction = input.connectedTransaction
+                if (connectedTransaction != null) {
+                    val output = connectedTransaction.getOutput(input.outpoint.index)
+                    result.add(output.scriptPubKey.getToAddress(tx.params, true))
+                }
+            } catch (x: ScriptException) {
+                // swallow
+            }
+        }
+
+        return result
+    }
+
+    fun getToAddressOfReceived(tx: Transaction, bag: TransactionBag): List<Address> {
+        val result = mutableListOf<Address>()
+
+        for (output in tx.outputs) {
+            try {
+                if (output.isMine(bag)) {
+                    result.add(output.scriptPubKey.getToAddress(tx.params, true))
+                }
+            } catch (x: ScriptException) {
+                // swallow
+            }
+        }
+
+        return result
+    }
+
+    fun getToAddressOfSent(tx: Transaction, bag: TransactionBag): List<Address> {
+        val result = mutableListOf<Address>()
+
+        for (output in tx.outputs) {
+            try {
+                if (!output.isMine(bag)) {
+                    result.add(output.scriptPubKey.getToAddress(tx.params, true))
+                }
+            } catch (x: ScriptException) {
+                // swallow
+            }
+        }
+
+        return result
+    }
+
+    /** get OP_RETURNS of sent tx's */
+    fun getOpReturnsOfSent(
+        tx: Transaction,
+        bag: TransactionBag
+    ): List<String> {
+        val result = mutableListOf<String>()
+        if (!tx.isCoinBase) {
+            for (output in tx.outputs) {
+                try {
+                    if (!output.isMine(bag) && ScriptPattern.isOpReturn(output.scriptPubKey)) {
+                        result.add("OP RETURN")
+                    }
+                } catch (x: ScriptException) {
+                    // swallow
+                }
+            }
+        }
+
+        return result
+    }
+
+    fun Transaction.isEntirelySelf(bag: TransactionBag): Boolean {
+        // A transaction that spends nothing of ours cannot be a self-transfer.
+        // Without this guard, an input-less transaction — e.g. a Platform
+        // credit-withdrawal (asset-unlock) payout, which is funded from the
+        // credit pool and quorum-signed in its payload — whose outputs all pay
+        // our own addresses satisfies both loops below vacuously and renders
+        // as an internal transfer instead of a receive.
+        if (inputs.isEmpty()) {
+            return false
+        }
+
+        for (input in inputs) {
+            val connectedOutput = input.connectedOutput
+
+            if (connectedOutput == null || !connectedOutput.isMine(bag)) {
+                return false
+            }
+        }
+
+        for (output in outputs) {
+            if (!output.isMine(bag)) {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    val Transaction.allOutputAddresses: List<Address>
+        get() {
+            val result = mutableListOf<Address>()
+
+            outputs.forEach {
+                try {
+                    val script = it.scriptPubKey
+                    result.add(script.getToAddress(this.params, true))
+                } catch (x: ScriptException) {
+                    // swallow
+                }
+            }
+            return result
+        }
+}
+
+fun Flow<Transaction>.batchAndFilterUpdates(timeInterval: Long = 500): Flow<List<Transaction>> {
+    val latestTransactions = ConcurrentHashMap<Sha256Hash, Transaction>()
+
+    return this
+        .onEach { transaction ->
+            // Update the latest transaction for the hash
+            latestTransactions[transaction.txId] = transaction
+        }
+        .sample(timeInterval) // Emit events every [timeInterval]
+        .map {
+            latestTransactions.values.toList().also {
+                latestTransactions.clear()
+            }
+        }
+        .filter { it.isNotEmpty() }
+}
+
+/** The former dashj-typed `TransactionCategory.fromTransaction`, as a companion extension. */
+fun TransactionCategory.Companion.fromTransaction(
+    type: Transaction.Type,
+    value: Coin,
+    isInternal: Boolean
+): TransactionCategory {
+    return when (type) {
+        Transaction.Type.TRANSACTION_COINBASE -> TransactionCategory.MiningReward
+        Transaction.Type.TRANSACTION_PROVIDER_REGISTER -> TransactionCategory.MasternodeRegister
+        Transaction.Type.TRANSACTION_PROVIDER_UPDATE_REGISTRAR -> TransactionCategory.MasternodeUpdateRegistrar
+        Transaction.Type.TRANSACTION_PROVIDER_UPDATE_SERVICE -> TransactionCategory.MasternodeUpdateService
+        Transaction.Type.TRANSACTION_PROVIDER_UPDATE_REVOKE -> TransactionCategory.MasternodeUpdateRevoke
+        else -> {
+            when {
+                value.isPositive -> TransactionCategory.Received
+                isInternal -> TransactionCategory.Internal
+                else -> TransactionCategory.Sent
+            }
+        }
+    }
+}
+
+/** The former `org.dash.wallet.common.transactions.waitToMatchFilters`, on dashj filters. */
+suspend fun Transaction.waitToMatchFilters(vararg filters: WalletTransactionFilter) {
+    return suspendCancellableCoroutine { continuation ->
+        var transactionConfidenceListener: TransactionConfidence.Listener? = null
+        transactionConfidenceListener = TransactionConfidence.Listener { _, _ ->
+            if (filters.isEmpty() || filters.any { it.matches(this) }) {
+                confidence.removeEventListener(transactionConfidenceListener)
+
+                if (continuation.isActive) {
+                    continuation.resume(Unit)
+                }
+            }
+        }
+
+        // Check if already matches
+        if (filters.isEmpty() || filters.any { it.matches(this) }) {
+            if (continuation.isActive) {
+                continuation.resume(Unit)
+            }
+            return@suspendCancellableCoroutine
+        }
+
+        this.confidence.addEventListener(Threading.USER_THREAD, transactionConfidenceListener)
+
+        continuation.invokeOnCancellation {
+            confidence.removeEventListener(transactionConfidenceListener)
+        }
+    }
+}

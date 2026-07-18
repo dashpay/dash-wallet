@@ -36,7 +36,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.payments.bip70.PaymentProtocolException
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
@@ -45,6 +45,16 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.util.toFormattedString
 
 @AndroidEntryPoint
 class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
@@ -94,7 +104,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         } else {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
             val amount = viewModel.finalPaymentIntent!!.amount
-            authManager.authenticate(requireActivity(), !amount.isLessThan(thresholdAmount)) { pin ->
+            authManager.authenticate(requireActivity(), !amount.toDashjCoin().isLessThan(thresholdAmount)) { pin ->
                 pin?.let { confirmWhenAuthorizedAndNoException() }
             }
         }
@@ -247,14 +257,14 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         val amount = paymentIntent.amount
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
 
-        val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount)
+        val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount.toDashjCoin())
         val fiatAmountStr = fiatAmount?.toFormattedString() ?: getString(R.string.transaction_row_rate_not_available)
         val txFee = if (sendRequest != null) sendRequest.tx.fee else PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
 
         binding.paymentRequest.amount.inputValue.text = amountStr
         binding.paymentRequest.amount.fiatValue.text = fiatAmountStr
         binding.paymentRequest.transactionFee.text = txFee.toPlainString()
-        binding.paymentRequest.totalAmount.text = amount.add(txFee).toPlainString()
+        binding.paymentRequest.totalAmount.text = amount.toDashjCoin().add(txFee).toPlainString()
 
         binding.paymentRequest.memo.text = paymentIntent.memo
         if (paymentIntent.payeeVerifiedBy != null) {

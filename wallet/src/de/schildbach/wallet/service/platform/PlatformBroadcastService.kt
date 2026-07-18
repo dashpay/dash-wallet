@@ -34,7 +34,7 @@ import org.bitcoinj.core.KeyId
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.evolution.EvolutionContact
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -71,7 +71,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
     val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
-    val walletDataProvider: WalletDataProvider,
+    val walletDataProvider: WalletData,
     val platformSyncService: PlatformSyncService,
     val sdkDashPayWrites: SdkDashPayWrites,
     val sdkIdentityVerifyWrites: SdkIdentityVerifyWrites,

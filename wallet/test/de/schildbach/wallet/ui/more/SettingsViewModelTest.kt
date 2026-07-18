@@ -49,7 +49,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.CompletableDeferred
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.money.Dash
@@ -98,7 +98,7 @@ class SettingsViewModelTest {
         every { observeBase() } returns emptyFlow()
     }
     private val dashPayProfileDao = mockk<DashPayProfileDao>()
-    private val walletDataProvider = mockk<WalletDataProvider> {
+    private val walletDataProvider = mockk<WalletData> {
         every { freshReceiveAddressString() } returns "yOwnFreshAddress"
     }
     private val sendPaymentService = mockk<SendPaymentService>()

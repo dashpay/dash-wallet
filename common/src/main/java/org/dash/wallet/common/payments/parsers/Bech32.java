@@ -20,7 +20,6 @@ import javax.annotation.Nullable;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import org.bitcoinj.core.AddressFormatException;
 
 import java.util.Arrays;
 import java.util.Locale;

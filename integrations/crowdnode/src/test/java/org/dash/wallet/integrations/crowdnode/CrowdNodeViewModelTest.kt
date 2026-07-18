@@ -25,11 +25,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
-import org.bitcoinj.core.Coin
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.money.toDash
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
@@ -65,16 +63,16 @@ class CrowdNodeViewModelTest {
     @get:Rule
     val coroutineRule = MainCoroutineRule()
 
-    private val balanceCoin = Coin.COIN.multiply(4)
-    private val balance = balanceCoin.toDash()
+    private val fullBalance = Dash.COIN.multiply(4)
+    private val balance = fullBalance
 
     private val api = mock<CrowdNodeApi> {
         // Note: matchers like any() can't be used for Dash parameters (inline value class),
         // so the deposit stubs use the concrete amounts the tests pass.
-        // (balanceCoin, not balance: inside this lambda `balance` resolves to the mock's property.)
-        onBlocking { deposit(balanceCoin.toDash(), emptyWallet = true, checkBalanceConditions = false) } doReturn true
+        // (fullBalance, not balance: inside this lambda `balance` resolves to the mock's property.)
+        onBlocking { deposit(fullBalance, emptyWallet = true, checkBalanceConditions = false) } doReturn true
         onBlocking {
-            deposit(balanceCoin.toDash().div(6), emptyWallet = false, checkBalanceConditions = false)
+            deposit(fullBalance.div(6), emptyWallet = false, checkBalanceConditions = false)
         } doReturn true
         on { signUpStatus } doReturn MutableStateFlow(SignUpStatus.Finished)
         on { onlineAccountStatus } doReturn MutableStateFlow(OnlineAccountStatus.None)
@@ -84,7 +82,7 @@ class CrowdNodeViewModelTest {
     }
 
     private val walletData = mock<WalletDataProvider> {
-        on { observeTotalBalance() } doReturn MutableStateFlow(balanceCoin)
+        on { observeTotalBalance() } doReturn MutableStateFlow(fullBalance)
         on { freshReceiveAddressString() } doReturn "ydW78zVxRgNhANX2qtG4saSCC5ejNQjw2U"
     }
 

@@ -32,7 +32,7 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.ZeroConfCoinSelector
-import org.dash.wallet.common.transactions.ByAddressCoinSelector
+import de.schildbach.wallet.transactions.ByAddressCoinSelector
 import org.junit.Test
 
 @ExperimentalCoroutinesApi

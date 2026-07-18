@@ -17,24 +17,19 @@
 
 package org.dash.wallet.common.payments.parsers
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.uri.BitcoinURI
-import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.money.toCoin
-import org.dash.wallet.common.money.toDash
 import org.dash.wallet.common.util.Constants
 
 /**
- * Thrown by [DashUri.parse] on invalid input. Wraps dashj's [BitcoinURIParseException]
- * (same message) so modules that must not depend on dashj can catch parse failures.
+ * Thrown by [DashUri.parse] on invalid input. Wraps [PaymentURI.ParseException]
+ * (same message) so callers can catch parse failures without knowing the parser type.
  */
 class DashUriParseException(message: String?, cause: Throwable) : Exception(message, cause)
 
 /**
- * Minimal dashj-free representation of a `dash:` payment URI, for feature/integration modules.
- * Parsing delegates to dashj's [BitcoinURI] against the wallet's network, so accepted URIs
- * are exactly those the wallet accepts.
+ * Minimal representation of a `dash:` payment URI, for feature/integration modules.
+ * Parsing uses the self-contained [PaymentURI] against the wallet's network, so accepted
+ * URIs are exactly those the wallet accepts.
  */
 data class DashUri(val address: String?, val amount: Dash?, val message: String?) {
     companion object {
@@ -42,22 +37,24 @@ data class DashUri(val address: String?, val amount: Dash?, val message: String?
         @Throws(DashUriParseException::class)
         fun parse(uri: String): DashUri {
             val parsed = try {
-                BitcoinURI(Constants.NETWORK_PARAMETERS, uri)
-            } catch (e: BitcoinURIParseException) {
+                PaymentURI(Constants.NETWORK, uri)
+            } catch (e: PaymentURI.ParseException) {
                 throw DashUriParseException(e.message, e)
             }
-            return DashUri(parsed.address?.toBase58(), parsed.amount?.toDash(), parsed.message)
+            return DashUri(parsed.address, parsed.amount?.let { Dash(it.value) }, parsed.message)
         }
 
         /**
          * Builds a `dash:` payment-request URI for [address] (base58, wallet's network) with an
-         * optional [amount]. Mirrors [BitcoinURI.convertToBitcoinURI]; null and empty [label]/[message]
+         * optional [amount]. Mirrors `BitcoinURI.convertToBitcoinURI`; null and empty [label]/[message]
          * are both omitted, exactly like the dashj original.
          */
         fun toUri(address: String, amount: Dash? = null, label: String? = null, message: String? = null): String {
-            return BitcoinURI.convertToBitcoinURI(
-                Address.fromString(Constants.NETWORK_PARAMETERS, address),
-                amount?.toCoin(),
+            AddressUtils.verify(Constants.NETWORK, address)
+            return PaymentURI.convertToPaymentURI(
+                Constants.NETWORK,
+                address,
+                amount?.let { org.dash.wallet.common.money.Coin.valueOf(it.duffs) },
                 label,
                 message
             )
@@ -66,9 +63,8 @@ data class DashUri(val address: String?, val amount: Dash?, val message: String?
 }
 
 /**
- * True when this throwable is a payment-URI parse failure (dashj's [BitcoinURIParseException]
- * or the neutral [DashUriParseException]). Neutral replacement for `is BitcoinURIParseException`
- * checks in modules that must not depend on dashj.
+ * True when this throwable is a payment-URI parse failure ([PaymentURI.ParseException]
+ * or the wrapping [DashUriParseException]).
  */
 val Throwable.isPaymentUriParseError: Boolean
-    get() = this is BitcoinURIParseException || this is DashUriParseException
+    get() = this is PaymentURI.ParseException || this is DashUriParseException

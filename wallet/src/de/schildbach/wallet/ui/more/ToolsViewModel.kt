@@ -42,7 +42,7 @@ import kotlinx.coroutines.withContext
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.launchIn
 import org.bitcoinj.crypto.DeterministicKey
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -60,7 +60,7 @@ data class ToolsUIState(
 
 @HiltViewModel
 class ToolsViewModel @Inject constructor(
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val clipboardManager: ClipboardManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
     blockchainStateDao: BlockchainStateDao,

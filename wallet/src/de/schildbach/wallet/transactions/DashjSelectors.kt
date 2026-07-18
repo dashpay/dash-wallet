@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.transactions
+package de.schildbach.wallet.transactions
 
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -26,6 +26,7 @@ import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.slf4j.LoggerFactory
 
+/** The former `org.dash.wallet.common.transactions.ByAddressCoinSelector`, moved here unchanged. */
 class ByAddressCoinSelector(val address: Address) : CoinSelector {
     companion object {
         private val log = LoggerFactory.getLogger(ByAddressCoinSelector::class.java)
@@ -40,11 +41,24 @@ class ByAddressCoinSelector(val address: Address) : CoinSelector {
         val filtered = candidates.filter { output ->
             val script = output.scriptPubKey
             (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                    script.getToAddress(address.parameters) == address
+                script.getToAddress(address.parameters) == address
         }
 
-        log.info("selected ${filtered.size} outputs with value ${filtered.sumOf { it.value.value }} " +
-                "from ${candidates.size} candidates with value ${filtered.sumOf { it.value.value }}")
+        log.info(
+            "selected ${filtered.size} outputs with value ${filtered.sumOf { it.value.value }} " +
+                "from ${candidates.size} candidates with value ${filtered.sumOf { it.value.value }}"
+        )
         return selector.select(target, filtered)
+    }
+}
+
+/** The former `org.dash.wallet.common.transactions.ExactOutputsSelector`, moved here unchanged. */
+class ExactOutputsSelector(private val outputs: List<TransactionOutput>) : CoinSelector {
+    override fun select(
+        target: Coin,
+        candidates: MutableList<TransactionOutput>
+    ): CoinSelection {
+        val value = Coin.valueOf(outputs.sumOf { it.value.value })
+        return CoinSelection(value, outputs)
     }
 }
