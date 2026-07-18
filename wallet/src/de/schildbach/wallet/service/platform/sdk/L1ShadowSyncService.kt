@@ -95,7 +95,15 @@ data class ShadowSyncProgress(
     val headerHeight: Long,
     val headerTarget: Long,
     val filterHeight: Long,
-    val filterTarget: Long
+    val filterTarget: Long,
+    /**
+     * Masternode-list sync height (the masternodes sub-progress's current
+     * height), 0 when the snapshot carries none. Feeds the post-cutover
+     * `BlockchainState.mnlistHeight` derivation (kill-list Step B —
+     * [SdkBlockchainStateService]); defaulted so the pre-existing
+     * positional constructions stay valid.
+     */
+    val mnListHeight: Long = 0
 ) {
     /** The shadow chain is fully synced — parity mismatches count as real from here. */
     val synced: Boolean get() = phase == ShadowSyncPhase.SYNCED
@@ -209,7 +217,8 @@ internal fun toShadowSyncProgress(data: SpvSyncProgressData): ShadowSyncProgress
         headerHeight = data.headers?.currentHeight ?: 0,
         headerTarget = data.headers?.targetHeight ?: 0,
         filterHeight = data.filters?.currentHeight ?: 0,
-        filterTarget = data.filters?.targetHeight ?: 0
+        filterTarget = data.filters?.targetHeight ?: 0,
+        mnListHeight = data.masternodes?.currentHeight ?: 0
     )
 }
 
