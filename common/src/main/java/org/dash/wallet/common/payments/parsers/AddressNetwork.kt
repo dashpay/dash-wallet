@@ -37,7 +37,13 @@ class AddressNetwork(
     /** Largest representable monetary amount, in smallest units (`NetworkParameters.getMaxMoney()`). */
     val maxMoney: Long = MAX_MONEY_DUFFS,
     /** BIP70 network id, exactly as `NetworkParameters.getPaymentProtocolId()` returns it. */
-    val paymentProtocolId: String = PAYMENT_PROTOCOL_ID_MAINNET
+    val paymentProtocolId: String = PAYMENT_PROTOCOL_ID_MAINNET,
+    /**
+     * First byte of a base58check-encoded WIF private key, exactly as
+     * `NetworkParameters.getDumpedPrivateKeyHeader()` returns it (dashj 22.0.3:
+     * `MainNetParams` = 204/0xcc, `TestNet3Params`/`DevNetParams` = 239/0xef, Bitcoin = 128/0x80).
+     */
+    val dumpedPrivateKeyHeader: Int = 128
 ) {
     companion object {
         /** `Coin.COIN.multiply(22_000_000)` — dashj's `NetworkParameters.MAX_MONEY`. */
@@ -55,23 +61,25 @@ class AddressNetwork(
         const val PAYMENT_PROTOCOL_ID_DEVNET = "dev"
 
         @JvmField
-        val DASH_MAINNET = AddressNetwork(ID_MAINNET, DASH_SCHEME, 76, 16)
+        val DASH_MAINNET = AddressNetwork(ID_MAINNET, DASH_SCHEME, 76, 16, dumpedPrivateKeyHeader = 204)
 
         @JvmField
         val DASH_TESTNET = AddressNetwork(
             ID_TESTNET, DASH_SCHEME, 140, 19,
-            paymentProtocolId = PAYMENT_PROTOCOL_ID_TESTNET
+            paymentProtocolId = PAYMENT_PROTOCOL_ID_TESTNET,
+            dumpedPrivateKeyHeader = 239
         )
 
         /** Devnets share testnet's address space. */
         @JvmField
         val DASH_DEVNET = AddressNetwork(
             ID_DEVNET, DASH_SCHEME, 140, 19,
-            paymentProtocolId = PAYMENT_PROTOCOL_ID_DEVNET
+            paymentProtocolId = PAYMENT_PROTOCOL_ID_DEVNET,
+            dumpedPrivateKeyHeader = 239
         )
 
         @JvmField
-        val BITCOIN_MAINNET = AddressNetwork(ID_MAINNET_BITCOIN, BITCOIN_SCHEME, 0, 5, "bc")
+        val BITCOIN_MAINNET = AddressNetwork(ID_MAINNET_BITCOIN, BITCOIN_SCHEME, 0, 5, "bc", dumpedPrivateKeyHeader = 128)
 
         /** Mirrors `NetworkParameters.fromPmtProtocolID` for the networks the app supports; null when unknown. */
         @JvmStatic
