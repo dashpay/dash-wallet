@@ -29,6 +29,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +44,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
@@ -242,8 +244,11 @@ internal const val L1_NOTIFY_RECENCY_WINDOW_MS = 24L * 60 * 60 * 1000
  *   blind to post-cutover, and only when the row is a plain send/receive
  *   (no service, no gift card, no error, not CoinJoin):
  *   - title "Sending" → "Sent" once the SDK saw any lock/confirmation;
- *   - secondary "Processing"/"Confirming" cleared once INSTANT_LOCKED or
- *     CHAINLOCKED (dashj's own clearing edges).
+ *   - secondary "Processing" cleared once the tx is locked OR in a block
+ *     (dashj never shows "Processing" for a BUILDING tx — see
+ *     [de.schildbach.wallet.ui.transactions.TxResourceMapper]);
+ *   - secondary "Confirming" cleared only once INSTANT_LOCKED or
+ *     CHAINLOCKED (dashj keeps it while building unlocked <6 confs).
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -309,9 +314,17 @@ internal fun planL1DisplaySync(
         }
         val locked = record.status == L1TxUiStatus.INSTANT_LOCKED ||
             record.status == L1TxUiStatus.CHAINLOCKED
-        if (locked && updated.statusText.isNotEmpty() &&
-            (updated.statusText == resolve(R.string.transaction_row_status_processing) ||
-                updated.statusText == resolve(R.string.transaction_row_status_confirming))
+        // "Processing" also clears on a plain block confirmation: dashj's
+        // TxResourceMapper only shows "Processing" while confidence is
+        // PENDING — a BUILDING (in-block) tx shows "Confirming" or nothing.
+        // Without this, a dropped islock event leaves an incoming row
+        // "Processing" until a CHAINLOCK context lands (~1 extra block,
+        // unbounded if chainlocks stall). "Confirming" still clears only on
+        // a lock, matching dashj (BUILDING <6 confs unlocked keeps it).
+        val confirmed = locked || record.status == L1TxUiStatus.IN_BLOCK
+        if (updated.statusText.isNotEmpty() &&
+            ((confirmed && updated.statusText == resolve(R.string.transaction_row_status_processing)) ||
+                (locked && updated.statusText == resolve(R.string.transaction_row_status_confirming)))
         ) {
             updated = updated.copy(statusText = "")
         }
@@ -541,9 +554,20 @@ class CutoverUiDataService internal constructor(
      * (tests that only exercise the snapshot path need no events).
      */
     private val txEvents: Flow<L1TxEvent> = emptyFlow(),
+    /**
+     * Whether the engine's wallet-event tap behind [txEvents] is live
+     * ([L1ShadowSyncService.isTapActive]) — observability only: when the
+     * cutover is committed but the tap never started (the tap is gated on
+     * USE_KOTLIN_SDK_L1_SHADOW while this service gates on CUTOVER_STATE),
+     * instant receives silently degrade to the Room-snapshot cadence, and
+     * [runPipelines] logs the mismatch once per process. Default true so
+     * the fake-fed test constructor never warns.
+     */
+    private val isTxFeedTapActive: () -> Boolean = { true },
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val refreshIntervalMs: Long = REFRESH_INTERVAL_MS,
-    private val walletBindRetryMs: Long = WALLET_BIND_RETRY_MS
+    private val walletBindRetryMs: Long = WALLET_BIND_RETRY_MS,
+    private val txFeedRetryMs: Long = TX_FEED_RETRY_MS
 ) {
     @Inject
     constructor(
@@ -565,6 +589,7 @@ class CutoverUiDataService internal constructor(
         txGroupCacheDao = txGroupCacheDao,
         walletUIConfig = walletUIConfig,
         txEvents = l1ShadowSyncService.txEvents,
+        isTxFeedTapActive = { l1ShadowSyncService.isTapActive },
         resolveString = { resId -> context.getString(resId) },
         notifyCoinsReceived = { duffs ->
             notificationService.showNotification(
@@ -591,6 +616,42 @@ class CutoverUiDataService internal constructor(
      * txid. Only ever touched from [txPipeline]'s sequential collector.
      */
     private val notifiedTxIds = mutableSetOf<String>()
+
+    /**
+     * Directions seen per txid across engine [L1TxEvent.Detected] events —
+     * the multi-account SELF-SPEND guard. The engine emits one Detected
+     * per affected account (per-account net_amount/direction), so a tx
+     * spending account A → paying account B of the SAME wallet produces
+     * two same-txid events; without this, the Incoming sibling would fire
+     * a "coins received" notification for an internal transfer. When an
+     * Incoming event finds an Outgoing sibling already recorded here, its
+     * notification is suppressed (the row itself is already structurally
+     * deduped by txid — the Outgoing-born row wins and keeps its
+     * "Sending"/"Sent" title).
+     *
+     * KNOWN LIMITATION (Incoming-FIRST ordering): if the engine emits the
+     * Incoming sibling first, the row titles "Received" and the
+     * notification fires before the Outgoing sibling is seen — with the
+     * single sequential collector there is no sibling signal to wait on
+     * without delaying every genuine receive, so the first-order case is
+     * accepted. Reachability today is nil: the app binds a single BIP44
+     * account, so no tx can touch two accounts of the same SDK wallet.
+     * When CoinJoin/identity-funding accounts land, the worst case is one
+     * spurious notification and a mis-titled row that the direction-aware
+     * Room record does not rewrite (status-only updates) — cosmetic, never
+     * a balance error. Insertion-ordered and capped ([SEEN_TX_DIRECTIONS_MAX],
+     * eldest evicted) so a long-lived process cannot grow it unboundedly.
+     * Only ever touched from [txPipeline]'s sequential collector.
+     */
+    private val seenEventDirections =
+        object : LinkedHashMap<String, MutableSet<L1TxUiDirection>>() {
+            override fun removeEldestEntry(
+                eldest: MutableMap.MutableEntry<String, MutableSet<L1TxUiDirection>>
+            ): Boolean = size > SEEN_TX_DIRECTIONS_MAX
+        }
+
+    /** Once-per-process latch for the [runPipelines] tap-mismatch WARN (FIX: silent gate mismatch). */
+    private val tapGapWarned = AtomicBoolean(false)
 
     private val _sdkTotalBalance = MutableStateFlow<Coin?>(null)
 
@@ -659,6 +720,19 @@ class CutoverUiDataService internal constructor(
 
     private suspend fun runPipelines() = coroutineScope {
         val walletIdHex = awaitBoundWallet()
+        // Observability: the instant-receive tap is gated on
+        // USE_KOTLIN_SDK_L1_SHADOW ([L1ShadowSyncService.startIfEnabled])
+        // while THIS service gates on CUTOVER_STATE. A committed cutover
+        // with the shadow flag off (or the shadow not yet started — a
+        // startup race makes this a best-effort hint, not a hard error)
+        // silently degrades receives to block cadence; say so once.
+        if (!isTxFeedTapActive() && tapGapWarned.compareAndSet(false, true)) {
+            log.warn(
+                "cutover UI active but the engine wallet-event tap is not running " +
+                    "(USE_KOTLIN_SDK_L1_SHADOW off, or L1ShadowSyncService not started) — " +
+                    "instant receives degrade to the Room-snapshot/block cadence"
+            )
+        }
         launch { balancePipeline(walletIdHex) }
         launch { txPipeline(walletIdHex) }
     }
@@ -707,19 +781,32 @@ class CutoverUiDataService internal constructor(
         // - the engine's instant tx events — the FAST feed: a mempool
         //   receive renders (and notifies) the moment the engine sees the
         //   tx, and an IS lock flips the row before any block confirms it.
-        merge(
-            combine(source.observeWalletTxRecords(walletIdHex), ticker()) { records, _ ->
-                TxFeedAction.Snapshot(records) as TxFeedAction
-            },
-            txEvents.map { TxFeedAction.EngineEvent(it) }
-        )
-            .catch { e -> log.error("SDK tx feed failed; tx list stays dashj-fed", e) }
-            .collect { action ->
-                when (action) {
-                    is TxFeedAction.Snapshot -> syncDisplayCache(action.records)
-                    is TxFeedAction.EngineEvent -> handleTxEvent(action.event)
+        //
+        // Never dies silently: one upstream exception terminates the WHOLE
+        // merged flow, so a single .catch would leave the tx list frozen
+        // until the cutover state flaps — instead the collection is
+        // re-entered after a backoff, the same never-dies discipline as
+        // the tap ([L1ShadowSyncService.tapWalletEvents]).
+        while (currentCoroutineContext().isActive) {
+            try {
+                merge(
+                    combine(source.observeWalletTxRecords(walletIdHex), ticker()) { records, _ ->
+                        TxFeedAction.Snapshot(records) as TxFeedAction
+                    },
+                    txEvents.map { TxFeedAction.EngineEvent(it) }
+                ).collect { action ->
+                    when (action) {
+                        is TxFeedAction.Snapshot -> syncDisplayCache(action.records)
+                        is TxFeedAction.EngineEvent -> handleTxEvent(action.event)
+                    }
                 }
+                return // both upstream feeds completed normally
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.error("SDK tx feed failed; re-collecting in {}ms", txFeedRetryMs, t)
+                delay(txFeedRetryMs)
             }
+        }
     }
 
     /**
@@ -729,6 +816,10 @@ class CutoverUiDataService internal constructor(
      *   coins-received notification for a fresh incoming tx); row present
      *   (Room got there first, or a re-emit) → at most a surgical status
      *   update — never a duplicate row, never a second notification.
+     *   Multi-account self-spend guard: an Incoming event whose txid
+     *   already saw an Outgoing sibling event never notifies (see
+     *   [seenEventDirections] for the design and the Incoming-first
+     *   limitation).
      * - [L1TxEvent.InstantLocked] → [planL1InstantLockRowUpdate] on the
      *   existing row (grouped dashj-era rows excluded, mirroring the
      *   planner). Row absent → no-op; the Room snapshot reconciles later
@@ -741,7 +832,27 @@ class CutoverUiDataService internal constructor(
                     "engine detected tx {} pre-block (context={}, net={} duffs) — syncing display row now",
                     event.txidHex, event.contextCode, event.netAmountDuffs
                 )
-                syncDisplayCache(listOf(l1TxUiRecordFromEvent(event, nowMs())))
+                val record = l1TxUiRecordFromEvent(event, nowMs())
+                val siblings = seenEventDirections.getOrPut(record.txidHex) { mutableSetOf() }
+                if (record.direction == L1TxUiDirection.INCOMING &&
+                    L1TxUiDirection.OUTGOING in siblings
+                ) {
+                    // Same-wallet self-spend: the Outgoing sibling event for
+                    // this txid already arrived, so this "receive" is an
+                    // internal transfer — pre-claim the notification slot so
+                    // neither this pass nor a later snapshot pass announces
+                    // it (seeding notifiedTxIds is exactly its semantics:
+                    // "this txid must never notify again this process").
+                    if (notifiedTxIds.add(record.txidHex)) {
+                        log.info(
+                            "tx {} has an outgoing sibling event (same-wallet self-spend) — " +
+                                "suppressing the coins-received notification",
+                            record.txidHex
+                        )
+                    }
+                }
+                siblings += record.direction
+                syncDisplayCache(listOf(record))
             }
             is L1TxEvent.InstantLocked -> applyInstantLock(event.txidHex)
         }
@@ -806,6 +917,10 @@ class CutoverUiDataService internal constructor(
     companion object {
         internal const val REFRESH_INTERVAL_MS = 60_000L
         internal const val WALLET_BIND_RETRY_MS = 5_000L
+        /** Backoff before re-collecting the merged tx feed after an exception. */
+        internal const val TX_FEED_RETRY_MS = 5_000L
+        /** [seenEventDirections] cap — eldest-evicted; ~64 chars/txid keeps this a few KB. */
+        internal const val SEEN_TX_DIRECTIONS_MAX = 1_000
         private val log = LoggerFactory.getLogger(CutoverUiDataService::class.java)
     }
 }

@@ -1218,6 +1218,16 @@ class L1ShadowSyncService internal constructor(
     val txEvents: SharedFlow<L1TxEvent> = _txEvents.asSharedFlow()
 
     /**
+     * Whether the wallet-event tap coroutine feeding [txEvents] is live.
+     * Observability seam for [CutoverUiDataService]: the tap is gated on
+     * USE_KOTLIN_SDK_L1_SHADOW ([startIfEnabled]) while the cutover UI
+     * gates on CUTOVER_STATE, so a committed cutover with the shadow flag
+     * off would silently degrade instant receives to block cadence — the
+     * consumer checks this once and WARNs on the mismatch.
+     */
+    val isTapActive: Boolean get() = eventTapJob?.isActive == true
+
+    /**
      * Wakes [parityLoop] early on the progress feed's transition INTO
      * SYNCED. The funding gate needs a FRESH parity report
      * (ShieldedBalanceServiceImpl's evaluateWalletFundingGate), and after
