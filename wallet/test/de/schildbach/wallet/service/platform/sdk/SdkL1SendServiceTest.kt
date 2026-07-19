@@ -60,6 +60,9 @@ class SdkL1SendServiceTest {
         var sendCalls = 0
         var spendableCalls = 0
         var sendAllCalls = 0
+        var lockAcquisitions = 0
+        var insideLock = false
+        var sendAllCallsInsideLock = 0
         var lastWalletId: String? = null
         var lastAddress: String? = null
         var lastAmountDuffs: Long? = null
@@ -68,6 +71,17 @@ class SdkL1SendServiceTest {
         override suspend fun boundWalletIdOrNull(): String? {
             boundCalls++
             return boundWalletId()
+        }
+
+        override suspend fun <T> withCoreSendLock(walletIdHex: String, block: suspend () -> T): T {
+            check(!insideLock) { "core-send lock is NOT reentrant — nested acquisition would deadlock" }
+            lockAcquisitions++
+            insideLock = true
+            try {
+                return block()
+            } finally {
+                insideLock = false
+            }
         }
 
         override suspend fun sendToAddress(
@@ -93,6 +107,7 @@ class SdkL1SendServiceTest {
             floorDuffs: Long
         ): String {
             sendAllCalls++
+            if (insideLock) sendAllCallsInsideLock++
             lastWalletId = walletIdHex
             lastAddress = addressBase58
             sendAllFloors += floorDuffs
@@ -135,12 +150,17 @@ class SdkL1SendServiceTest {
         cutoverState: String? = null,
         parity: () -> ParityReport? = { matchingParity() },
         addressValid: (String) -> Boolean = { it == validAddress },
-        bridgeAfterBroadcast: (String) -> Unit = { bridgedTxids += it }
+        bridgeAfterBroadcast: (String) -> Unit = { bridgedTxids += it },
+        // Tests default to NO app-locked outputs so the drain paths are
+        // exercisable; the production wiring (and the constructor default)
+        // is fail-closed — covered by dedicated tests below.
+        hasAppLockedOutputs: () -> Boolean = { false }
     ) = SdkL1SendService(
         source = source,
         dashPayConfig = config(enabled, cutoverState),
         isValidAddress = addressValid,
         l1Parity = parity,
+        hasAppLockedSpendableOutputs = hasAppLockedOutputs,
         onSelfSpendBroadcast = { selfSpendMarks++ },
         bridgeAfterBroadcast = bridgeAfterBroadcast,
         nowMs = { now }
@@ -682,9 +702,89 @@ class SdkL1SendServiceTest {
         assertEquals(listOf(5_000_000L - SEND_ALL_FEE_RESERVE_DUFFS), source.sendAllFloors)
         assertEquals(walletId, source.lastWalletId)
         assertEquals(validAddress, source.lastAddress)
+        // The attempt ran under the core-send lock.
+        assertEquals(1, source.lockAcquisitions)
+        assertEquals(1, source.sendAllCallsInsideLock)
         // Post-broadcast hooks fire exactly like a plain send.
         assertEquals(1, selfSpendMarks)
         assertEquals(listOf(txid), bridgedTxids)
+    }
+
+    // ── Step B fix round: the app-locked-output drain guard ──────────────
+
+    @Test
+    fun sendAll_withAppLockedOutputs_isBlocked_beforeAnyBuildOrBalanceRead() = runBlocking {
+        // FUNDS-CRITICAL: the SDK drain selects EVERY spendable UTXO and the
+        // FFI has no exclusion API, so app-locked outputs (CrowdNode's
+        // account-address locks, still tracked by the held dashj wallet)
+        // WOULD be spent. The guard must refuse pre-build: no drain attempt,
+        // no balance read, nothing broadcast.
+        val source = drainReadySource()
+        val result = service(
+            source,
+            enabled = false,
+            cutoverState = "CUT_OVER",
+            hasAppLockedOutputs = { true }
+        ).sendToAddress(validAddress, amount, emptyWallet = true)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(
+            "reason must name the lock guard",
+            (result as SdkWriteResult.NotBroadcast).reason.contains("app-locked outputs")
+        )
+        assertEquals(0, source.sendAllCalls)
+        assertEquals(0, source.spendableCalls)
+        assertEquals(0, source.lockAcquisitions)
+        assertEquals(0, selfSpendMarks)
+        assertTrue(bridgedTxids.isEmpty())
+    }
+
+    @Test
+    fun sendAll_lockedOutputCheckFailure_blocksTheDrain_failClosed() = runBlocking {
+        // A check that cannot PROVE the absence of locks blocks the drain.
+        val source = drainReadySource()
+        val result = service(
+            source,
+            enabled = false,
+            cutoverState = "CUT_OVER",
+            hasAppLockedOutputs = { throw IllegalStateException("wallet unavailable") }
+        ).sendToAddress(validAddress, amount, emptyWallet = true)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.sendAllCalls + source.spendableCalls)
+    }
+
+    @Test
+    fun sendAll_constructorDefault_isFailClosed_untilTheCheckIsWired() = runBlocking {
+        // A construction that does NOT provide the locked-output check must
+        // assume locks exist — the drain stays blocked (fail closed), while
+        // the plain send path is unaffected.
+        val source = drainReadySource()
+        val svc = SdkL1SendService(
+            source = source,
+            dashPayConfig = config(false, "CUT_OVER"),
+            isValidAddress = { it == validAddress },
+            l1Parity = { matchingParity() },
+            nowMs = { now }
+        )
+        val drained = svc.sendToAddress(validAddress, amount, emptyWallet = true)
+        assertTrue(drained is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.sendAllCalls)
+        val plain = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+        assertTrue(plain is SdkWriteResult.Broadcast)
+    }
+
+    @Test
+    fun plainSend_neverConsultsTheLockedOutputGuard() = runBlocking {
+        var lockedChecks = 0
+        val source = readySource()
+        val result = service(
+            source,
+            hasAppLockedOutputs = { lockedChecks++; true }
+        ).sendToAddress(validAddress, amount, emptyWallet = false)
+        // A plain send is untouched by the drain guard — the SDK's own coin
+        // selection handles it (the residual locked-output exposure of PLAIN
+        // sends is pre-existing and tracked separately).
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(0, lockedChecks)
     }
 
     @Test
@@ -705,6 +805,11 @@ class SdkL1SendServiceTest {
         // retry (floor 1 → deliverable = total − fee).
         assertEquals(listOf(5_000_000L - SEND_ALL_FEE_RESERVE_DUFFS, 1L), source.sendAllFloors)
         assertEquals(1, selfSpendMarks)
+        // BOTH attempts ran under ONE core-send-lock acquisition, so a
+        // concurrent plain send cannot interleave between them and change
+        // the drained balance.
+        assertEquals(1, source.lockAcquisitions)
+        assertEquals(2, source.sendAllCallsInsideLock)
     }
 
     @Test
@@ -718,9 +823,11 @@ class SdkL1SendServiceTest {
         val result = service(source, enabled = false, cutoverState = "CUT_OVER")
             .sendToAddress(validAddress, amount, emptyWallet = true)
         // A genuine can't-pay-the-fee wallet: classified pre-broadcast, ONE
-        // adjust-down retry, never a third attempt, no hooks.
+        // adjust-down retry, never a third attempt, no hooks — and still a
+        // single lock acquisition around both attempts.
         assertTrue(result is SdkWriteResult.NotBroadcast)
         assertEquals(2, source.sendAllCalls)
+        assertEquals(1, source.lockAcquisitions)
         assertEquals(0, selfSpendMarks)
         assertTrue(bridgedTxids.isEmpty())
     }
@@ -784,6 +891,10 @@ class SdkL1SendServiceTest {
         val result = service(source).sendToAddress(validAddress, amount, emptyWallet = false)
         assertTrue(result is SdkWriteResult.Broadcast)
         assertEquals(0, source.spendableCalls + source.sendAllCalls)
+        // …including the drain's explicit lock wrapper: a plain send takes
+        // the mutex inside the SDK's own sendToAddresses, never via
+        // withCoreSendLock — so the two can never nest (no deadlock).
+        assertEquals(0, source.lockAcquisitions)
     }
 
     @Test

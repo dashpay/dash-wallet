@@ -38,36 +38,67 @@ import org.junit.Test
  */
 class CutoverSendRouteTest {
 
+    private fun route(
+        cutoverCommitted: Boolean,
+        hasCustomSelector: Boolean = false,
+        hasLockedOutputPredicate: Boolean = false,
+        emptyWallet: Boolean = false
+    ) = cutoverSendRoute(cutoverCommitted, hasCustomSelector, hasLockedOutputPredicate, emptyWallet)
+
     @Test
     fun preCutover_everySendIsTheUnchangedDashjPath() {
-        assertEquals(CutoverSendRoute.DASHJ, cutoverSendRoute(false, hasCustomSelector = false, emptyWallet = false))
-        assertEquals(CutoverSendRoute.DASHJ, cutoverSendRoute(false, hasCustomSelector = true, emptyWallet = false))
-        assertEquals(CutoverSendRoute.DASHJ, cutoverSendRoute(false, hasCustomSelector = false, emptyWallet = true))
-        assertEquals(CutoverSendRoute.DASHJ, cutoverSendRoute(false, hasCustomSelector = true, emptyWallet = true))
+        for (selector in listOf(false, true)) {
+            for (lockedPredicate in listOf(false, true)) {
+                for (emptyWallet in listOf(false, true)) {
+                    assertEquals(
+                        CutoverSendRoute.DASHJ,
+                        route(
+                            false,
+                            hasCustomSelector = selector,
+                            hasLockedOutputPredicate = lockedPredicate,
+                            emptyWallet = emptyWallet
+                        )
+                    )
+                }
+            }
+        }
     }
 
     @Test
     fun committed_simplePayToAddressRoutesThroughTheSdkBridge() {
-        assertEquals(
-            CutoverSendRoute.SDK_BRIDGED,
-            cutoverSendRoute(true, hasCustomSelector = false, emptyWallet = false)
-        )
+        assertEquals(CutoverSendRoute.SDK_BRIDGED, route(true))
     }
 
     @Test
-    fun committed_sendAllRoutesThroughTheSdkBridge() {
-        // Step B: the SDK drain (SelectionStrategy::All) owns send-all
-        // post-cutover — no more FAIL_CLOSED for emptyWallet.
-        assertEquals(
-            CutoverSendRoute.SDK_BRIDGED,
-            cutoverSendRoute(true, hasCustomSelector = false, emptyWallet = true)
-        )
+    fun committed_typedSendAll_failsClosed_neverTheDrain() {
+        // FUNDS-CRITICAL (deposit-all atomicity): the typed overloads'
+        // emptyWallet must FAIL CLOSED, never SDK_BRIDGED — CrowdNode's
+        // deposit-all is topUp(no selector, emptyWallet) then
+        // deposit(ByAddress selector → always FAIL_CLOSED); draining step 1
+        // and failing step 2 would wedge the full balance at the account
+        // address. Only the main-UI funnel (extractSdkRoutablePayment,
+        // sendAll = true) may route a send-all to the SDK drain.
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, emptyWallet = true))
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, hasCustomSelector = true, emptyWallet = true))
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, hasLockedOutputPredicate = true, emptyWallet = true))
     }
 
     @Test
     fun committed_customSelector_failsClosed_neverDashj() {
-        assertEquals(CutoverSendRoute.FAIL_CLOSED, cutoverSendRoute(true, hasCustomSelector = true, emptyWallet = false))
-        assertEquals(CutoverSendRoute.FAIL_CLOSED, cutoverSendRoute(true, hasCustomSelector = true, emptyWallet = true))
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, hasCustomSelector = true))
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, hasCustomSelector = true, emptyWallet = true))
+    }
+
+    @Test
+    fun committed_lockedOutputPredicate_failsClosed_evenWithNoSelector() {
+        // The predicate is dashj-only machinery an SDK route would silently
+        // DROP (spending outputs the caller thought were protected) — it
+        // must fail closed on its own, selector or not.
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, hasLockedOutputPredicate = true))
+        assertEquals(
+            CutoverSendRoute.FAIL_CLOSED,
+            route(true, hasCustomSelector = true, hasLockedOutputPredicate = true)
+        )
     }
 }
 

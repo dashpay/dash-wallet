@@ -70,10 +70,23 @@ import org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet;
  * </ul>
  *
  * <p>CONCURRENCY CONTRACT: callers MUST hold the wallet's
- * {@code coreSendMutex} across this whole call (the Kotlin wrapper does,
- * via {@link SdkL1SendService}'s source) — the builder's setFunding and
- * buildSigned are two separate FFI calls, and two concurrent same-account
- * builds could otherwise select and sign the same UTXOs.
+ * {@code coreSendMutex} across this whole call (the Kotlin side does, via
+ * {@code SdkL1SendSource.withCoreSendLock} — ONE acquisition spanning the
+ * drain attempt AND its adjust-down retry, so a concurrent plain send
+ * cannot change the drained balance between attempts) — the builder's
+ * setFunding and buildSigned are two separate FFI calls, and two
+ * concurrent same-account builds could otherwise select and sign the same
+ * UTXOs.
+ *
+ * <p>SELECTION CAVEAT (why {@link SdkL1SendService} guards the drain):
+ * {@code SelectionStrategy::All} selects EVERY spendable UTXO and the FFI
+ * exposes NO lock/exclusion API (key-wallet {@code Utxo.is_locked} is
+ * false on every creation path; {@code set_funding} seeds ALL account
+ * UTXOs) — app-side dashj locks ({@code Wallet.lockOutput}, the CrowdNode
+ * account outputs) are invisible here, so the Kotlin caller must refuse
+ * the drain while any exist. Upstream fix: an SDK UTXO lock/exclusion API
+ * (iOS's {@code add_inputs_from_outpoints} binding is the porting
+ * candidate).
  *
  * <p>Failure classification: every native failure surfaces as the same
  * {@code DashSDKException} the normal send path produces; the Kotlin caller
@@ -126,6 +139,13 @@ final class CoreSendAllNative {
                     0,
                     coreSignerHandle
             );
+            // KNOWN LOW (accepted): a failure BETWEEN the successful
+            // buildSigned above and the broadcast below (coreWallet() handle
+            // failure, cancellation, process death) leaks the UTXO
+            // reservation buildSigned took until its engine-side TTL expires
+            // — no funds move (nothing broadcast, classified NotBroadcast),
+            // but those inputs are unavailable to new SDK builds for the TTL
+            // window. See the classifyCoreSendFailure KDoc.
             try (ManagedCoreWallet core = wallet.coreWallet()) {
                 // The signed tx carries its funding account, so a failed
                 // broadcast releases the UTXO reservation buildSigned took.
