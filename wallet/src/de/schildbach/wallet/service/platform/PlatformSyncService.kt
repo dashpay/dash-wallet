@@ -47,6 +47,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
 import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
 import de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateService
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
@@ -202,6 +203,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
     private val cutoverUiDataService: CutoverUiDataService,
     private val sdkBlockchainStateService: SdkBlockchainStateService,
+    private val cutoverTxSeamService: CutoverTxSeamService,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -272,6 +274,10 @@ class PlatformSynchronizationService @Inject constructor(
             // equality-gated, provably inert pre-cutover — see
             // SdkBlockchainStateService.
             sdkBlockchainStateService.start()
+            // Step B7: the post-cutover wallet-data seam (WalletDataProvider
+            // tx reads served from the SDK store). Same lifecycle and the
+            // same provably-inert-pre-cutover contract as above.
+            cutoverTxSeamService.start()
             // Bring the SHIELDED runtime up at startup too (Brian): it used
             // to start only when a shielded UI screen called
             // ensureShieldedReady(), so until the user visited More (or a

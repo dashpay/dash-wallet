@@ -75,7 +75,8 @@ class PlatformSyncEngineTeardownTest {
         l1ShadowSyncService = l1ShadowSyncService,
         shieldedBalanceService = shieldedBalanceService,
         cutoverUiDataService = mockk(relaxed = true),
-        sdkBlockchainStateService = mockk(relaxed = true)
+        sdkBlockchainStateService = mockk(relaxed = true),
+        cutoverTxSeamService = mockk(relaxed = true)
     )
 
     @Test

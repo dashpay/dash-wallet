@@ -48,7 +48,6 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -205,7 +204,8 @@ class SettingsFragment : Fragment() {
         lifecycleScope.launch {
             walletUIConfig.set(WalletUIConfig.SELECTED_CURRENCY, code)
             val walletApplication = requireActivity().application as WalletApplication
-            val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED)
+            // Through the seam (not wallet.getBalance directly): cutover-aware.
+            val balance = walletApplication.getWalletBalance()
             WalletBalanceWidgetProvider.updateWidgets(requireContext(), balance)
         }
     }

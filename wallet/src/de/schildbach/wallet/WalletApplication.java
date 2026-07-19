@@ -1316,7 +1316,19 @@ public class WalletApplication extends MultiDexApplication
         if (wallet == null || walletBalanceObserver == null) {
             return Coin.ZERO;
         }
+        if (!walletBalanceObserver.isSeeded()) {
+            // Cold start: the observer's async DataStore seed hasn't landed yet and its
+            // StateFlow still holds the Coin.ZERO construction value — a widget render
+            // through this redirect would show zero. Read the wallet directly instead
+            // (pre-cutover only; post-cutover the SDK overlay above already served).
+            org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+            return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+        }
 
+        // Accepted residual staleness: the observer refreshes through a ~500ms-throttled
+        // wallet-change listener, so this cached value can trail a just-landed tx by up
+        // to the throttle window; the event-driven widget pushes re-render right after,
+        // so it self-corrects.
         return  walletBalanceObserver.getTotalBalance().getValue();
     }
 
@@ -1355,6 +1367,20 @@ public class WalletApplication extends MultiDexApplication
     ) {
         if (wallet == null || walletBalanceObserver == null) {
             return FlowKt.emptyFlow();
+        }
+
+        // Phase 5d/B7: cutover-aware for the plain ESTIMATED stream (what the neutral
+        // facade's observeEstimatedBalance() serves): post-cutover dashj's ESTIMATED
+        // balance freezes, so the SDK's live total (which sums the same unspent-output
+        // set) wins via the same overlay observeTotalBalance() uses — pre-cutover the
+        // SDK side is permanently null and dashj values pass through unchanged.
+        // Selector-based and non-ESTIMATED streams stay dashj-fed: they serve send-path
+        // coin selection, which another track owns.
+        if (cutoverUiDataService != null
+                && balanceType == Wallet.BalanceType.ESTIMATED
+                && coinSelector == null) {
+            return cutoverUiDataService.overlayTotalBalance(
+                    walletBalanceObserver.observe(balanceType, null));
         }
 
         return walletBalanceObserver.observe(balanceType, coinSelector);

@@ -53,6 +53,18 @@ class WalletBalanceObserver(
     val totalBalance: StateFlow<Coin>
         get() = _totalBalance
 
+    /**
+     * False until [totalBalance] has been seeded with a real value — either the
+     * persisted last balance ([emitLastBalances], an async DataStore read) or a
+     * live wallet read ([emitBalances]). While false, [totalBalance] still holds
+     * its `Coin.ZERO` construction seed, and synchronous readers (the widget's
+     * `WalletApplication.getWalletBalance` redirect) should fall back to a direct
+     * `wallet.getBalance(ESTIMATED)` read instead of rendering a false zero.
+     */
+    @Volatile
+    var isSeeded: Boolean = false
+        private set
+
     private val walletChangeListener = object : ThrottlingWalletChangeListener() {
         override fun onThrottledWalletChanged() {
             emitBalances()
@@ -85,6 +97,7 @@ class WalletBalanceObserver(
     private fun emitLastBalances() {
         emitterScope.launch {
             _totalBalance.value = Coin.valueOf(walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) ?: 0L)
+            isSeeded = true
         }
     }
 
@@ -95,6 +108,7 @@ class WalletBalanceObserver(
             val totalBalance = wallet.getBalance(BalanceType.ESTIMATED)
             walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, totalBalance.value)
             _totalBalance.emit(totalBalance)
+            isSeeded = true
         }
     }
 

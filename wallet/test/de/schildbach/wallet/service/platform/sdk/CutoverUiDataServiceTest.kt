@@ -366,6 +366,9 @@ class CutoverUiDataServiceTest {
             recordSubscriptions++
             return records.map { it }
         }
+
+        override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> =
+            records.map { SdkSeamTxSnapshot(it, emptyMap(), emptySet(), emptyMap()) }
     }
 
     private fun configWithState(state: String?): DashPayConfig = mockk {

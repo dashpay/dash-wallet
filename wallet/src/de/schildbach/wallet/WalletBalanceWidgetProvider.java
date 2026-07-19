@@ -34,7 +34,6 @@ import android.widget.RemoteViews;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
 import org.dash.wallet.common.money.MonetaryFormat;
-import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.data.entity.ExchangeRate;
@@ -72,7 +71,8 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
 
     private Coin getBalance(Context context) {
         final WalletApplication application = (WalletApplication) context.getApplicationContext();
-        return application.getWallet().getBalance(BalanceType.ESTIMATED);
+        // Through the seam (not wallet.getBalance directly): cutover-aware.
+        return application.getWalletBalance();
     }
 
     @Override
