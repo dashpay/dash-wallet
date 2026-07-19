@@ -32,6 +32,7 @@ import coil.load
 import coil.transform.RoundedCornersTransformation
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
@@ -79,6 +80,7 @@ class TransactionResultViewBinder(
     private var onRescanTriggered: (() -> Unit)? = null
 
     private lateinit var transaction: Transaction
+    private var sdkDetail: SdkTxDetail? = null
     private var isError = false
     private var iconBitmap: Bitmap? = null
     @DrawableRes
@@ -211,6 +213,102 @@ class TransactionResultViewBinder(
         }
     }
 
+    /**
+     * Step B1: bind an SDK-only transaction (not present in the dashj
+     * wallet — post-cutover receives/sends served from the SDK store via
+     * the `transaction_decode` binding). Renders only honestly-derivable
+     * fields: direction/title, net amount, fee (when the SDK recorded it
+     * or Σin−Σout was computable), date, addresses and OP_RETURN
+     * presence. dashj-only affordances (confidence/peer state, error
+     * states, exchange-rate fiat value) stay absent — no fabrication.
+     */
+    fun bindSdkDetail(detail: SdkTxDetail) {
+        this.sdkDetail = detail
+        val isSent = detail.isSent
+
+        if (isSent) {
+            binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
+            binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_sent)
+            binding.transactionAmountSignal.text = "-"
+        } else {
+            binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.system_green))
+            binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_received)
+            binding.transactionAmountSignal.text = "+"
+        }
+        binding.transactionAmountSignal.isVisible = true
+        updateIcon()
+
+        binding.dashAmount.setFormat(dashFormat)
+        binding.dashAmount.setAmount(Coin.valueOf(kotlin.math.abs(detail.netAmountDuffs)))
+        // No exchange rate is recorded for SDK-only transactions.
+        binding.fiatValue.isVisible = false
+
+        val fee = detail.feeDuffs?.let { Coin.valueOf(it) }
+        binding.feeContainer.isVisible = isFeeAvailable(fee)
+        if (isFeeAvailable(fee)) {
+            binding.transactionFee.setFormat(dashFormat)
+            binding.transactionFee.setAmount(fee)
+        }
+
+        binding.dateContainer.isVisible = detail.timestampMs > 0
+        if (detail.timestampMs > 0) {
+            binding.transactionDateAndTime.text = DateUtils.formatDateTime(
+                context,
+                detail.timestampMs,
+                DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME
+            )
+        }
+
+        val inflater = LayoutInflater.from(context)
+        when {
+            detail.isInternal -> {
+                binding.inputAddressesLabel.setText(R.string.transaction_details_moved_from)
+                binding.outputAddressesLabel.setText(R.string.transaction_details_moved_internally_to)
+            }
+            isSent -> binding.outputAddressesLabel.setText(R.string.transaction_details_sent_to)
+            else -> binding.outputAddressesLabel.setText(R.string.transaction_details_received_at)
+        }
+        setStringInputs(detail.inputAddresses, inflater)
+        setStringOutputs(detail.outputAddresses, detail.hasOpReturn, inflater)
+    }
+
+    private fun setStringInputs(addresses: List<String>, inflater: LayoutInflater) {
+        binding.inputsContainer.isVisible = addresses.isNotEmpty()
+        addresses.forEach {
+            val addressView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                binding.transactionInputAddressesContainer,
+                false
+            ) as TextView
+            addressView.text = it
+            binding.transactionInputAddressesContainer.addView(addressView)
+        }
+    }
+
+    private fun setStringOutputs(addresses: List<String>, hasOpReturn: Boolean, inflater: LayoutInflater) {
+        binding.outputsContainer.isVisible = addresses.isNotEmpty() || hasOpReturn
+        binding.transactionOutputAddressesContainer.isVisible = addresses.isNotEmpty()
+        addresses.forEach {
+            val addressView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                binding.transactionOutputAddressesContainer,
+                false
+            ) as TextView
+            addressView.text = it
+            binding.transactionOutputAddressesContainer.addView(addressView)
+        }
+        binding.transactionOutputOpReturnsContainer.isVisible = hasOpReturn
+        if (hasOpReturn) {
+            val opReturnView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                binding.transactionOutputOpReturnsContainer,
+                false
+            ) as TextView
+            opReturnView.text = "OP RETURN"
+            binding.transactionOutputOpReturnsContainer.addView(opReturnView)
+        }
+    }
+
     override fun onConfidenceChanged(
         confidence: TransactionConfidence?,
         reason: TransactionConfidence.Listener.ChangeReason?
@@ -274,7 +372,8 @@ class TransactionResultViewBinder(
     }
 
     private fun updateIcon() {
-        if (!::transaction.isInitialized) {
+        val sdkDetail = this.sdkDetail
+        if (!::transaction.isInitialized && sdkDetail == null) {
             return
         }
 
@@ -282,6 +381,12 @@ class TransactionResultViewBinder(
             R.drawable.ic_transaction_failed
         } else if (iconRes != null) {
             iconRes!!
+        } else if (sdkDetail != null) {
+            when {
+                !sdkDetail.isSent -> R.drawable.ic_transaction_received
+                sdkDetail.isInternal -> R.drawable.ic_internal
+                else -> R.drawable.ic_transaction_sent
+            }
         } else if (transaction.getValue(wallet).signum() >= 0) {
             R.drawable.ic_transaction_received
         } else if (transaction.isEntirelySelf(wallet)) {

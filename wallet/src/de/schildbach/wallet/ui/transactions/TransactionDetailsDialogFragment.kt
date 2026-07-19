@@ -127,6 +127,36 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
         transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
 
+        // Step B1 fallback: the transaction is NOT in the dashj wallet
+        // (post-cutover SDK-only tx) — bind the neutral SDK-sourced detail
+        // instead of leaving the sheet blank. Metadata (tax category,
+        // private memo, gift-card icon) is txid-keyed and works unchanged.
+        viewModel.sdkTxDetail.filterNotNull().observe(viewLifecycleOwner) { detail ->
+            transactionResultViewBinder.bindSdkDetail(detail)
+
+            viewModel.transactionIcon.observe(this) {
+                transactionResultViewBinder.setTransactionIcon(it)
+            }
+            viewModel.merchantName.observe(this) {
+                transactionResultViewBinder.setCustomTitle(getString(R.string.gift_card_tx_title, it))
+            }
+            viewModel.transactionMetadata.observe(this) { metadata ->
+                if (metadata != null && metadata.txId.toString().equals(detail.txIdDisplayHex, ignoreCase = true)) {
+                    transactionResultViewBinder.setTransactionMetadata(metadata)
+                }
+            }
+
+            contentBinding.openExplorerCard.setOnClickListener { viewOnBlockExplorer() }
+            contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
+            contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
+            contentBinding.addPrivateMemoBtn.setOnClickListener {
+                PrivateMemoDialog().apply {
+                    arguments = bundleOf(PrivateMemoDialog.TX_ID_ARG to txId)
+                }.show(requireActivity().supportFragmentManager, "private_memo")
+            }
+            dialog?.window!!.callback = UserInteractionAwareCallback(dialog?.window!!.callback, requireActivity())
+        }
+
         viewModel.topUpWork(txId).observe(this) { workData ->
             log.info("topup work data: {}", workData)
             try {
@@ -207,11 +237,11 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
     private fun viewOnBlockExplorer() {
         imitateUserInteraction()
-        val tx = viewModel.transaction.value
-        if (tx != null) {
+        // The txid argument serves both sources (dashj tx or SDK-only detail).
+        if (viewModel.transaction.value != null || viewModel.sdkTxDetail.value != null) {
             ComposeBottomSheet(R.style.PrimaryBackground) { dialog ->
                 BlockExplorerSelectionView(viewModel.analytics) { explorer ->
-                    requireActivity().viewOnBlockExplorer(explorer, "tx/${tx.txId}")
+                    requireActivity().viewOnBlockExplorer(explorer, "tx/$txId")
                     dialog.dismiss()
                 }
             }.show(requireActivity())
