@@ -60,12 +60,20 @@ import javax.inject.Singleton
  *   height), and composes the derived stall NETWORK impediment with the
  *   service-maintained connectivity impediments.
  *
- * ## Pre-cutover: provably inert
+ * ## Pre-cutover: inert (one benign nuance)
  *
  * The gate is false for every install until a deliberate cutover commit,
  * so no SDK flow is collected and no row is ever written — dashj's
- * BlockchainState pipeline stays byte-identical. A rollback
- * (CUT_OVER → DUAL_RUNNING) cancels the derivation via [collectLatest].
+ * BlockchainState pipeline is untouched. One deliberate pre-cutover
+ * nuance remains: [ShadowSyncProgress] equality now includes
+ * [ShadowSyncProgress.mnListHeight], so the shadow progress flow emits on
+ * masternode-height-only changes it previously conflated — verified
+ * benign (every pre-cutover collector dedups downstream).
+ *
+ * A rollback (CUT_OVER → DUAL_RUNNING) cancels the derivation via
+ * [collectLatest] AND clears the SDK-derived state
+ * ([BlockchainStateDataProvider.clearSdkDerivedState]) so a latched stall
+ * NETWORK impediment or SDK-written sync stage cannot outlive it.
  */
 @Singleton
 class SdkBlockchainStateService internal constructor(
@@ -74,6 +82,7 @@ class SdkBlockchainStateService internal constructor(
     private val progress: Flow<ShadowSyncProgress>,
     private val tipUnixSeconds: Flow<Long>,
     private val applyUpdate: (SdkBlockchainStateUpdate) -> Unit,
+    private val clearDerivedState: () -> Unit = {},
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val stallThresholdMs: Long = SPV_STALL_THRESHOLD_MS,
     private val tickIntervalMs: Long = TICK_INTERVAL_MS
@@ -98,7 +107,8 @@ class SdkBlockchainStateService internal constructor(
             }
             emitAll(manager.spvTipUnixSecondsFlow)
         },
-        applyUpdate = blockchainStateDataProvider::updateSdkBlockchainState
+        applyUpdate = blockchainStateDataProvider::updateSdkBlockchainState,
+        clearDerivedState = blockchainStateDataProvider::clearSdkDerivedState
     )
 
     private val started = AtomicBoolean(false)
@@ -122,10 +132,25 @@ class SdkBlockchainStateService internal constructor(
     fun start() {
         if (!started.compareAndSet(false, true)) return
         scope.launch {
+            // Rollback bookkeeping: only a true → false transition clears —
+            // the initial (pre-cutover) false must stay side-effect free.
+            var wasActive = false
             cutoverStateFeedActive()
                 .distinctUntilChanged()
                 .collectLatest { active ->
-                    if (!active) return@collectLatest
+                    if (!active) {
+                        if (wasActive) {
+                            wasActive = false
+                            // The derivation above was just cancelled by
+                            // collectLatest; also reset what it wrote so a
+                            // stall NETWORK impediment / SDK sync stage
+                            // raised before the rollback cannot latch.
+                            log.info("cutover rolled back — clearing SDK-derived BlockchainState")
+                            clearDerivedState()
+                        }
+                        return@collectLatest
+                    }
+                    wasActive = true
                     log.info("cutover committed — deriving BlockchainState from the SDK SPV feed")
                     try {
                         runDerivation()

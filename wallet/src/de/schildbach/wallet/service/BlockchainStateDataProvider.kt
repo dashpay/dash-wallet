@@ -157,15 +157,51 @@ class BlockchainStateDataProvider @Inject constructor(
         coroutineScope.launch {
             sdkStallNetworkImpediment = update.networkStalled
             val blockchainState = blockchainStateDao.getState() ?: BlockchainState()
-            update.bestChainHeight?.let { blockchainState.bestChainHeight = it }
+            update.bestChainHeight?.let {
+                blockchainState.bestChainHeight = it
+                // The ongoing-sync notification only dismisses when the row's
+                // height reaches config.bestChainHeightEver (BlockchainServiceImpl),
+                // and only dashj paths ever advanced that pref — frozen at
+                // cutover. Mirror WalletApplication's maybe-increment write so
+                // the SDK tip keeps it moving post-cutover.
+                configuration.maybeIncrementBestChainHeightEver(it)
+            }
             update.bestChainDateMs?.let { blockchainState.bestChainDate = java.util.Date(it) }
             update.mnListHeight?.let { blockchainState.mnlistHeight = it }
-            blockchainState.percentageSync = update.percentageSync
+            // Null percent (transient SDK ERROR) preserves the row's value —
+            // a peer hiccup must not flap isSynced() consumers 100 → 0 → 100.
+            update.percentageSync?.let { blockchainState.percentageSync = it }
             // The SDK has no replay concept — its re-scan reads as percent < 100.
             blockchainState.replaying = false
             blockchainState.impediments = composeImpediments()
             blockchainStateDao.saveState(blockchainState)
             syncStageFlow.value = update.syncStage
+        }
+    }
+
+    /**
+     * Kill-list Step B: the cutover-ROLLBACK hook, invoked by
+     * [de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateService]
+     * when the cutover gate transitions true → false. The derivation
+     * coroutine is already cancelled at that point, but state it wrote
+     * would otherwise latch: a raised [sdkStallNetworkImpediment] would keep
+     * composing [org.dash.wallet.common.data.entity.BlockchainState.Impediment.NETWORK]
+     * into every later write (syncFailed() forever), and the SDK-written
+     * [syncStageFlow] value would mask dashj's until its next update. Resets
+     * both — recomposing the persisted row's impediments so an
+     * already-persisted NETWORK bit clears too — and lets the resumed dashj
+     * pipeline re-drive everything else. Serialized on [coroutineScope].
+     */
+    internal fun clearSdkDerivedState() {
+        coroutineScope.launch {
+            sdkStallNetworkImpediment = false
+            syncStageFlow.value = null
+            val blockchainState = blockchainStateDao.getState()
+            if (blockchainState != null) {
+                blockchainState.impediments.clear()
+                blockchainState.impediments.addAll(composeImpediments())
+                blockchainStateDao.saveState(blockchainState)
+            }
         }
     }
 

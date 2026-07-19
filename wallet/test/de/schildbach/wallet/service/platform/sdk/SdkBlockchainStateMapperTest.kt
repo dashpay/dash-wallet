@@ -110,15 +110,74 @@ class SdkBlockchainStateMapperTest {
             shadowSyncPercent(progress(mnListHeight = 1_513_000)),
             update.percentageSync
         )
-        // No tip timestamp → estimated from the 660-block header gap.
-        assertEquals(now - 660 * SDK_BLOCK_TARGET_SPACING_MS, update.bestChainDateMs)
+        // No tip timestamp → tip estimated from the 660-block header gap,
+        // then held back by the 114,660-block remaining FILTER scan
+        // (mid-scan the date tracks the scan position, not the tip).
+        assertEquals(
+            now - 660 * SDK_BLOCK_TARGET_SPACING_MS - 114_660 * SDK_BLOCK_TARGET_SPACING_MS,
+            update.bestChainDateMs
+        )
     }
 
     @Test
     fun derive_tipTimestampWinsOverEstimate() {
+        // The real tip feed replaces the header-gap ESTIMATE as the base of
+        // the date derivation; mid-scan the filter-gap offset still applies.
         val tipSec = 1_752_999_000L
         val update = deriveBlockchainStateUpdate(snapshot(tip = tipSec), now)
-        assertEquals(tipSec * 1000, update.bestChainDateMs)
+        assertEquals(
+            tipSec * 1000 - 114_660 * SDK_BLOCK_TARGET_SPACING_MS,
+            update.bestChainDateMs
+        )
+    }
+
+    @Test
+    fun derive_midFilterScanDateIsStale_wouldBlockShieldedGate() {
+        // FIX-pin: SDK headers finish long before the wallet-relevant FILTER
+        // scan, and consumers read date-freshness as sync-COMPLETENESS
+        // (ShieldedTransferViewModel.isChainSyncedForTransfer's
+        // `now − bestChainDate < 1 h` gate; BlockchainServiceImpl's
+        // `bestChainDate < now − 1 h` = "syncing" verdict). A mid-scan
+        // snapshot must therefore yield a STALE date even with headers at
+        // the tip and a fresh tip timestamp.
+        val p = progress(
+            headerHeight = 1_514_660, headerTarget = 1_514_660, // headers DONE
+            filterHeight = 1_400_000, filterTarget = 1_514_660  // scan mid-way
+        )
+        val update = deriveBlockchainStateUpdate(snapshot(p, tip = now / 1000), now)
+        val date = requireNotNull(update.bestChainDateMs)
+        assertTrue(
+            "mid-filter-scan bestChainDate must be older than the 1 h freshness gate",
+            now - date > 60 * 60 * 1000L
+        )
+        // Exactly the scan position's estimated timestamp.
+        assertEquals(now - 114_660 * SDK_BLOCK_TARGET_SPACING_MS, date)
+    }
+
+    @Test
+    fun derive_filterScanCaughtUpClampsToTipTime() {
+        // Filter scan momentarily at target while still in FILTERS phase:
+        // the offset is zero and the date clamps to the tip time.
+        val p = progress(
+            headerHeight = 100, headerTarget = 100,
+            filterHeight = 100, filterTarget = 100
+        )
+        assertEquals(now, deriveBlockchainStateUpdate(snapshot(p), now).bestChainDateMs)
+    }
+
+    @Test
+    fun derive_scanPositionUnknownPreservesDate() {
+        // Mid-sync with header knowledge but no filter target yet: the scan
+        // position is unknowable, so the date is preserved (null) rather
+        // than reported possibly-fresh from the header tip.
+        val p = progress(
+            phase = ShadowSyncPhase.HEADERS,
+            headerHeight = 50, headerTarget = 100,
+            filterHeight = 0, filterTarget = 0
+        )
+        val update = deriveBlockchainStateUpdate(snapshot(p), now)
+        assertEquals(50, update.bestChainHeight)
+        assertNull(update.bestChainDateMs)
     }
 
     @Test
@@ -150,14 +209,32 @@ class SdkBlockchainStateMapperTest {
     }
 
     @Test
-    fun derive_headerAtTargetEstimatesDateAsNow() {
-        val p = progress(headerHeight = 100, headerTarget = 100)
+    fun derive_syncedHeaderAtTargetEstimatesDateAsNow() {
+        // SYNCED with no tip feed: the header-gap estimator reads "now" —
+        // fresh, which is correct because the scan is COMPLETE.
+        val p = progress(
+            phase = ShadowSyncPhase.SYNCED,
+            headerHeight = 100, headerTarget = 100,
+            filterHeight = 100, filterTarget = 100
+        )
         assertEquals(now, deriveBlockchainStateUpdate(snapshot(p), now).bestChainDateMs)
     }
 
     @Test
     fun derive_stallPassesThrough() {
         assertTrue(deriveBlockchainStateUpdate(snapshot(stalled = true), now).networkStalled)
+    }
+
+    @Test
+    fun derive_errorPreservesPercentage() {
+        // FIX-pin: a transient ERROR snapshot must not regress the percent
+        // (null = preserve the row's value); the error is carried by the
+        // stall impediment and the OFFLINE stage instead.
+        val err = progress(phase = ShadowSyncPhase.ERROR)
+        val update = deriveBlockchainStateUpdate(snapshot(err, stalled = true), now)
+        assertNull(update.percentageSync)
+        assertTrue(update.networkStalled)
+        assertEquals(SyncStage.OFFLINE, update.syncStage)
     }
 
     // ── mnListHeight through the SDK snapshot mapping ─────────────────

@@ -60,10 +60,20 @@ internal data class SdkChainSnapshot(
 internal data class SdkBlockchainStateUpdate(
     /** SDK header-chain tip height, or null (no header knowledge yet — preserve). */
     val bestChainHeight: Int?,
-    /** Epoch-millis of the chain tip, or null (unknown — preserve). */
+    /**
+     * Epoch-millis of the chain "date" freshness signal, or null (unknown —
+     * preserve). NOT simply the header-tip time: while the scan is
+     * incomplete this is the estimated timestamp of the FILTER-scan
+     * position, so date-freshness keeps implying sync-completeness (see
+     * [deriveBlockchainStateUpdate]).
+     */
     val bestChainDateMs: Long?,
-    /** Combined headers+filters percent — same math as [shadowSyncPercent]. */
-    val percentageSync: Int,
+    /**
+     * Combined headers+filters percent — same math as [shadowSyncPercent] —
+     * or null (preserve) on a transient ERROR snapshot, so a peer hiccup
+     * never regresses a previously-reported percent (dashj never did).
+     */
+    val percentageSync: Int?,
     /** Masternode-list sync height, or null (unknown — preserve). */
     val mnListHeight: Int?,
     /** Neutral sync stage for [org.dash.wallet.common.services.BlockchainStateProvider.observeSyncStage]. */
@@ -135,13 +145,28 @@ internal fun sdkSyncStage(phase: ShadowSyncPhase): SyncStage = when (phase) {
  * The full field derivation — one snapshot to one row update. Field notes:
  * - bestChainHeight: the SDK header tip ([ShadowSyncProgress.headerHeight]),
  *   dashj's `chainHead.height` analogue; preserved while 0 (no knowledge).
- * - bestChainDate: the SPV tip timestamp when the SDK reports one, else
- *   ESTIMATED as `now − blocksBehind × 2.625 min` from the header gap
- *   (documented approximation — good to one block target, which is also
- *   the freshness granularity dashj offered), else preserved.
+ * - bestChainDate: FRESHNESS MUST IMPLY COMPLETENESS. Under dashj the
+ *   chain-head date only became fresh at the END of the block download, and
+ *   consumers rely on that: `ShieldedTransferViewModel.isChainSyncedForTransfer`
+ *   gates transfers on `now − bestChainDate < 1 h`, and
+ *   `BlockchainServiceImpl` reads `bestChainDate < now − 1 h` as "still
+ *   syncing". The SDK's header chain finishes long before the
+ *   wallet-relevant compact-FILTER scan, so the header-tip time must NOT be
+ *   reported mid-scan. Instead:
+ *   - phase SYNCED → the real tip timestamp (or the header-gap estimate
+ *     `now − headerGap × 2.625 min` while the tip feed lags) — fresh;
+ *   - any other phase → the estimated timestamp of the current FILTER-scan
+ *     position, `tipTime − (filterTarget − filterHeight) × 2.625 min`
+ *     clamped ≤ tip time — honestly stale until the scan catches up;
+ *   - no tip knowledge, or mid-scan with no filter target yet → null
+ *     (preserve — the frozen row value must not be overwritten with a
+ *     possibly-fresh guess).
  * - percentageSync: [shadowSyncPercent] — the combined headers+filters
  *   metric the home header already uses (the SDK's own `overallPercentage`
- *   under-reports during the filter scan).
+ *   under-reports during the filter scan). On a transient ERROR snapshot it
+ *   is null (preserve): dashj never regressed the percent on a peer error,
+ *   and an unconditional 0 would flap every `isSynced()` consumer
+ *   100 → 0 → 100 (the impediment/stage carries the error instead).
  * - replaying: always false — the SDK has no replay concept; its full
  *   re-scan simply reads as percentageSync < 100 (the writer clears the
  *   row's flag).
@@ -154,16 +179,28 @@ internal fun deriveBlockchainStateUpdate(
 ): SdkBlockchainStateUpdate {
     val p = snapshot.progress
     val bestChainHeight = p.headerHeight.takeIf { it > 0 }?.toInt()
-    val bestChainDateMs = when {
+    // The network tip's timestamp: the SDK feed when present, else the
+    // header-gap estimate (good to one block target).
+    val tipTimeMs = when {
         snapshot.tipUnixSeconds > 0 -> snapshot.tipUnixSeconds * 1000
         p.headerHeight > 0 && p.headerTarget > 0 ->
             nowMs - (p.headerTarget - p.headerHeight).coerceAtLeast(0) * SDK_BLOCK_TARGET_SPACING_MS
         else -> null
     }
+    val bestChainDateMs = when {
+        tipTimeMs == null -> null
+        p.phase == ShadowSyncPhase.SYNCED -> tipTimeMs
+        // Mid-scan: report the FILTER-scan position's timestamp so the date
+        // stays stale until the wallet-relevant scan completes (see KDoc).
+        p.filterTarget > 0 ->
+            (tipTimeMs - (p.filterTarget - p.filterHeight).coerceAtLeast(0) * SDK_BLOCK_TARGET_SPACING_MS)
+                .coerceAtMost(tipTimeMs)
+        else -> null
+    }
     return SdkBlockchainStateUpdate(
         bestChainHeight = bestChainHeight,
         bestChainDateMs = bestChainDateMs,
-        percentageSync = shadowSyncPercent(p),
+        percentageSync = if (p.phase == ShadowSyncPhase.ERROR) null else shadowSyncPercent(p),
         mnListHeight = p.mnListHeight.takeIf { it > 0 }?.toInt(),
         syncStage = sdkSyncStage(p.phase),
         networkStalled = snapshot.stalled

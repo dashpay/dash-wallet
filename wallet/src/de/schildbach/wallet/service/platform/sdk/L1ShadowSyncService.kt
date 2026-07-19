@@ -101,7 +101,10 @@ data class ShadowSyncProgress(
      * height), 0 when the snapshot carries none. Feeds the post-cutover
      * `BlockchainState.mnlistHeight` derivation (kill-list Step B —
      * [SdkBlockchainStateService]); defaulted so the pre-existing
-     * positional constructions stay valid.
+     * positional constructions stay valid. NOTE: being part of the data
+     * class, this field is in [equals] — the progress flow now emits on
+     * masternode-height-only changes it previously conflated, pre-cutover
+     * too (verified benign: every collector dedups downstream).
      */
     val mnListHeight: Long = 0
 ) {
