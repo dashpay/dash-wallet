@@ -26,6 +26,8 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
+import de.schildbach.wallet.service.platform.sdk.SdkTxDetailProvider
 import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -64,9 +66,14 @@ class TransactionResultViewModel @Inject constructor(
     private val topUpsDao: TopUpsDao,
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
+    private val sdkTxDetailProvider: SdkTxDetailProvider,
     val analytics: AnalyticsService,
     val walletApplication: WalletApplication
 ) : ViewModel() {
+    companion object {
+        private val log = org.slf4j.LoggerFactory.getLogger(TransactionResultViewModel::class.java)
+    }
+
     val dashFormat: MonetaryFormat = configuration.format.noCode()
 
     val wallet: Wallet?
@@ -75,6 +82,16 @@ class TransactionResultViewModel @Inject constructor(
     private val _transaction = MutableStateFlow<Transaction?>(null)
     val transaction: StateFlow<Transaction?>
         get() = _transaction
+
+    /**
+     * Step B1 fallback: the neutral SDK-sourced detail for a transaction
+     * the dashj wallet does NOT hold (post-cutover SDK-only txs — the
+     * blank-detail-sheet gap). Non-null only when [transaction] stayed
+     * null and the SDK store had the row.
+     */
+    private val _sdkTxDetail = MutableStateFlow<SdkTxDetail?>(null)
+    val sdkTxDetail: StateFlow<SdkTxDetail?>
+        get() = _sdkTxDetail
 
     private val _transactionMetadata: MutableStateFlow<TransactionMetadata?> = MutableStateFlow(null)
     val transactionMetadata
@@ -106,10 +123,27 @@ class TransactionResultViewModel @Inject constructor(
             // should this be viewModelScope.launch(Dispatchers.IO) and not use withContext
             viewModelScope.launch {
                 val tx = withContext(Dispatchers.IO) { walletData.wallet!!.getTransaction(txId) }
-                tx?.let {
+                if (tx != null) {
                     _transaction.value = tx
-                    monitorTransactionMetadata(it.txId)
-                    findContact(it)
+                    monitorTransactionMetadata(tx.txId)
+                    findContact(tx)
+                } else {
+                    // Not in the dashj wallet — post-cutover this is an
+                    // SDK-only transaction (a receive the held dashj wallet
+                    // never saw). Serve the detail from the SDK store via
+                    // the transaction_decode binding instead of a blank sheet.
+                    val detail = withContext(Dispatchers.IO) {
+                        try {
+                            sdkTxDetailProvider.load(txId.toString())
+                        } catch (e: Exception) {
+                            log.error("SDK tx-detail lookup failed for {}", txId, e)
+                            null
+                        }
+                    }
+                    if (detail != null) {
+                        _sdkTxDetail.value = detail
+                        monitorTransactionMetadata(txId)
+                    }
                 }
             }
         }
@@ -126,13 +160,20 @@ class TransactionResultViewModel @Inject constructor(
     }
 
     fun toggleTaxCategory() {
-        transaction.value?.let { tx ->
+        // (txId, isOutgoing) from whichever source served the sheet —
+        // the dashj transaction or the SDK-only detail fallback.
+        val txIdAndOutgoing = transaction.value?.let {
+            it.txId to (it.getValue(walletData.transactionBag).signum() < 0)
+        } ?: sdkTxDetail.value?.let {
+            Sha256Hash.wrap(it.txIdDisplayHex) to it.isSent
+        }
+
+        txIdAndOutgoing?.let { (txId, isOutgoing) ->
             val metadata = _transactionMetadata.value // can be null if there is no metadata in the table
 
             var currentTaxCategory = metadata?.taxCategory // can be null if user never specified a value
 
             if (currentTaxCategory == null) {
-                val isOutgoing = tx.getValue(walletData.transactionBag).signum() < 0
                 currentTaxCategory = TaxCategory.getDefault(
                     metadata?.value?.isPositive ?: !isOutgoing,
                     metadata?.isTransfer ?: false
@@ -142,7 +183,7 @@ class TransactionResultViewModel @Inject constructor(
             val newTaxCategory = currentTaxCategory.toggle()
             viewModelScope.launch(Dispatchers.IO) {
                 transactionMetadataProvider.setTransactionTaxCategory(
-                    tx.txId.toTxId(),
+                    txId.toTxId(),
                     newTaxCategory
                 )
             }
