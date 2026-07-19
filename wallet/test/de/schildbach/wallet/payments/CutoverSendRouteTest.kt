@@ -38,27 +38,67 @@ import org.junit.Test
  */
 class CutoverSendRouteTest {
 
+    private fun route(
+        cutoverCommitted: Boolean,
+        hasCustomSelector: Boolean = false,
+        hasLockedOutputPredicate: Boolean = false,
+        emptyWallet: Boolean = false
+    ) = cutoverSendRoute(cutoverCommitted, hasCustomSelector, hasLockedOutputPredicate, emptyWallet)
+
     @Test
     fun preCutover_everySendIsTheUnchangedDashjPath() {
-        assertEquals(CutoverSendRoute.DASHJ, cutoverSendRoute(false, hasCustomSelector = false, emptyWallet = false))
-        assertEquals(CutoverSendRoute.DASHJ, cutoverSendRoute(false, hasCustomSelector = true, emptyWallet = false))
-        assertEquals(CutoverSendRoute.DASHJ, cutoverSendRoute(false, hasCustomSelector = false, emptyWallet = true))
-        assertEquals(CutoverSendRoute.DASHJ, cutoverSendRoute(false, hasCustomSelector = true, emptyWallet = true))
+        for (selector in listOf(false, true)) {
+            for (lockedPredicate in listOf(false, true)) {
+                for (emptyWallet in listOf(false, true)) {
+                    assertEquals(
+                        CutoverSendRoute.DASHJ,
+                        route(
+                            false,
+                            hasCustomSelector = selector,
+                            hasLockedOutputPredicate = lockedPredicate,
+                            emptyWallet = emptyWallet
+                        )
+                    )
+                }
+            }
+        }
     }
 
     @Test
     fun committed_simplePayToAddressRoutesThroughTheSdkBridge() {
-        assertEquals(
-            CutoverSendRoute.SDK_BRIDGED,
-            cutoverSendRoute(true, hasCustomSelector = false, emptyWallet = false)
-        )
+        assertEquals(CutoverSendRoute.SDK_BRIDGED, route(true))
     }
 
     @Test
-    fun committed_customSelectorOrSendAll_failsClosed_neverDashj() {
-        assertEquals(CutoverSendRoute.FAIL_CLOSED, cutoverSendRoute(true, hasCustomSelector = true, emptyWallet = false))
-        assertEquals(CutoverSendRoute.FAIL_CLOSED, cutoverSendRoute(true, hasCustomSelector = false, emptyWallet = true))
-        assertEquals(CutoverSendRoute.FAIL_CLOSED, cutoverSendRoute(true, hasCustomSelector = true, emptyWallet = true))
+    fun committed_typedSendAll_failsClosed_neverTheDrain() {
+        // FUNDS-CRITICAL (deposit-all atomicity): the typed overloads'
+        // emptyWallet must FAIL CLOSED, never SDK_BRIDGED — CrowdNode's
+        // deposit-all is topUp(no selector, emptyWallet) then
+        // deposit(ByAddress selector → always FAIL_CLOSED); draining step 1
+        // and failing step 2 would wedge the full balance at the account
+        // address. Only the main-UI funnel (extractSdkRoutablePayment,
+        // sendAll = true) may route a send-all to the SDK drain.
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, emptyWallet = true))
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, hasCustomSelector = true, emptyWallet = true))
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, hasLockedOutputPredicate = true, emptyWallet = true))
+    }
+
+    @Test
+    fun committed_customSelector_failsClosed_neverDashj() {
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, hasCustomSelector = true))
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, hasCustomSelector = true, emptyWallet = true))
+    }
+
+    @Test
+    fun committed_lockedOutputPredicate_failsClosed_evenWithNoSelector() {
+        // The predicate is dashj-only machinery an SDK route would silently
+        // DROP (spending outputs the caller thought were protected) — it
+        // must fail closed on its own, selector or not.
+        assertEquals(CutoverSendRoute.FAIL_CLOSED, route(true, hasLockedOutputPredicate = true))
+        assertEquals(
+            CutoverSendRoute.FAIL_CLOSED,
+            route(true, hasCustomSelector = true, hasLockedOutputPredicate = true)
+        )
     }
 }
 
@@ -90,7 +130,7 @@ class ExtractSdkRoutablePaymentTest {
             addOutput(Coin.valueOf(94_900_000), change)
         }
         assertEquals(
-            payee to Coin.valueOf(5_000_000),
+            SdkRoutablePayment(payee, Coin.valueOf(5_000_000), sendAll = false),
             extractSdkRoutablePayment(request, params, isMine)
         )
     }
@@ -99,21 +139,55 @@ class ExtractSdkRoutablePaymentTest {
     fun noChangeOutput_stillExtractsTheSingleForeignOutput() {
         val request = request { addOutput(Coin.valueOf(5_000_000), payee) }
         assertEquals(
-            payee to Coin.valueOf(5_000_000),
+            SdkRoutablePayment(payee, Coin.valueOf(5_000_000), sendAll = false),
             extractSdkRoutablePayment(request, params, isMine)
         )
     }
 
     @Test
-    fun notRoutable_returnsNull_forEveryConservativeRefusal() {
-        // Send-all.
-        assertNull(
+    fun sendAll_isRoutable_andFlagged() {
+        // Step B: an emptyWallet request with one identifiable foreign
+        // output routes to the SDK drain — sendAll carries dashj's
+        // emptyWallet semantics into the SDK route.
+        assertEquals(
+            SdkRoutablePayment(payee, Coin.valueOf(5_000_000), sendAll = true),
             extractSdkRoutablePayment(
                 request { addOutput(Coin.valueOf(5_000_000), payee) }.apply { emptyWallet = true },
                 params,
                 isMine
             )
         )
+    }
+
+    @Test
+    fun sendAll_conservativeRefusalsStillApply() {
+        // The sendAll flag never relaxes the other refusals: a send-all
+        // with a custom selector stays unroutable.
+        assertNull(
+            extractSdkRoutablePayment(
+                request { addOutput(Coin.valueOf(5_000_000), payee) }.apply {
+                    emptyWallet = true
+                    coinSelector = org.bitcoinj.wallet.CoinSelector { _, _ -> throw UnsupportedOperationException() }
+                },
+                params,
+                isMine
+            )
+        )
+        // …and a multi-recipient send-all cannot identify THE payment.
+        assertNull(
+            extractSdkRoutablePayment(
+                request {
+                    addOutput(Coin.valueOf(5_000_000), payee)
+                    addOutput(Coin.valueOf(1_000_000), Address.fromKey(params, ECKey()))
+                }.apply { emptyWallet = true },
+                params,
+                isMine
+            )
+        )
+    }
+
+    @Test
+    fun notRoutable_returnsNull_forEveryConservativeRefusal() {
         // Custom (non-zero-conf) coin selector.
         assertNull(
             extractSdkRoutablePayment(
@@ -125,7 +199,7 @@ class ExtractSdkRoutablePaymentTest {
         )
         // The default zero-conf selector IS routable — sanity-check the inverse.
         assertEquals(
-            payee to Coin.valueOf(5_000_000),
+            SdkRoutablePayment(payee, Coin.valueOf(5_000_000), sendAll = false),
             extractSdkRoutablePayment(
                 request { addOutput(Coin.valueOf(5_000_000), payee) }
                     .apply { coinSelector = ZeroConfCoinSelector.get() },

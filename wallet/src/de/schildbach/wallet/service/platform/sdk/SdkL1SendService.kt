@@ -21,9 +21,15 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
+import org.dashfoundation.dashsdk.errors.mapNativeErrors
+import org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -86,6 +92,15 @@ internal const val PWFFI_ERROR_UNKNOWN = 99
  * outcome would be a potential DOUBLE PAY, not just a double broadcast:
  * dashj's coin selection may pick different UTXOs than the SDK tx, so both
  * transactions could confirm.
+ *
+ * KNOWN LOW (accepted, documented): a failure classified NotBroadcast here
+ * can still have happened AFTER a successful `buildSigned` but BEFORE the
+ * broadcast call (e.g. a `coreWallet()` handle failure in
+ * [CoreSendAllNative]) — in that window the build's engine-side UTXO
+ * reservation is NOT released and leaks until its TTL expires. No funds
+ * move and nothing was broadcast (the classification is correct); the cost
+ * is that the reserved inputs are unavailable to new SDK builds for the
+ * TTL window.
  */
 internal fun classifyCoreSendFailure(t: Throwable): SdkWriteResult<Nothing> = when {
     t is DashSdkError.PlatformWallet.WalletOperation &&
@@ -103,6 +118,46 @@ internal fun classifyCoreSendFailure(t: Throwable): SdkWriteResult<Nothing> = wh
         )
     else -> classifyBroadcastFailure(t)
 }
+
+// ── Send-all (drain) — pure pieces of the iOS-validated max pattern ───
+
+/**
+ * Fee reserve backing the send-all floor, in duffs. The drain's fee at the
+ * builder's default rate (1000 duffs/kB, `FeeRate::normal()`) is
+ * `~44 + 148·n_inputs` duffs, so 10 000 covers a drain of ~67 inputs —
+ * far beyond a typical wallet. When a wallet DOES exceed it, the floor
+ * attempt fails pre-broadcast with the engine's "Insufficient funds" and
+ * [SdkL1SendService] retries once engine-authoritatively (floor 1) — the
+ * adjust-down half of the pattern.
+ */
+internal const val SEND_ALL_FEE_RESERVE_DUFFS = 10_000L
+
+/**
+ * The deliver-at-least floor for a send-all: `spendable − reserve`,
+ * clamped to 1 (the JNI boundary rejects a non-positive output amount).
+ * iOS-validated pattern: this is also the max amount a UI should show for
+ * "send max" — the engine then delivers `total − fee ≥ floor`, or reports
+ * insufficient-at-fee and the caller adjusts down.
+ */
+internal fun sendAllFloorDuffs(
+    spendableDuffs: Long,
+    reserveDuffs: Long = SEND_ALL_FEE_RESERVE_DUFFS
+): Long = (spendableDuffs - reserveDuffs).coerceAtLeast(1L)
+
+/**
+ * True iff [t] is the engine's insufficient-at-fee build failure — the ONE
+ * failure the send-all path may retry with a lower floor. By construction
+ * a subset of [classifyCoreSendFailure]'s NotBroadcast arm (WalletOperation
+ * with the `transaction build failed` FFI prefix), so nothing was
+ * broadcast and a single retry cannot double-pay. The "Insufficient funds"
+ * text is `BuilderError::InsufficientFunds` / `SelectionError::InsufficientFunds`
+ * Display (key-wallet `transaction_builder.rs` / `coin_selection.rs`),
+ * stable in the pinned engine.
+ */
+internal fun isSendAllShortfall(t: Throwable): Boolean =
+    t is DashSdkError.PlatformWallet.WalletOperation &&
+        t.message?.startsWith("transaction build failed") == true &&
+        t.message?.contains("Insufficient funds") == true
 
 // ── Source seam ───────────────────────────────────────────────────────
 
@@ -125,6 +180,56 @@ interface SdkL1SendSource {
      * throw proves).
      */
     suspend fun sendToAddress(walletIdHex: String, addressBase58: String, amountDuffs: Long): String
+
+    /**
+     * The SDK wallet's spendable balance in duffs — `confirmed +
+     * unconfirmed` from the lock-free native snapshot (immature excluded,
+     * like dashj's ESTIMATED). NOTE: the Rust side's "locked" balance
+     * bucket is the ENGINE's own state (its reservation/lock bookkeeping;
+     * key-wallet `Utxo.is_locked` is false on every creation path) — it is
+     * NOT dashj's app-side `Wallet.lockOutput` set (the CrowdNode account
+     * locks). App-locked outputs are therefore INCLUDED in this figure and
+     * selectable by the SDK's coin selection; that mismatch is exactly why
+     * [SdkL1SendService] refuses the drain while any app-locked spendable
+     * output exists. Feeds [sendAllFloorDuffs]. Default throws: only the
+     * production source (and fakes that exercise send-all) need it.
+     */
+    suspend fun spendableBalanceDuffs(walletIdHex: String): Long =
+        throw UnsupportedOperationException("send-all not supported by this source")
+
+    /**
+     * Run [block] while holding the SDK wallet's per-wallet core-send
+     * lock — the same mutex `ManagedPlatformWallet.sendToAddresses`
+     * serializes its builds under. [SdkL1SendService] wraps the send-all
+     * attempt AND its single adjust-down retry in ONE acquisition, so a
+     * concurrent plain send cannot interleave between the two attempts and
+     * change the drained balance. The mutex is NOT reentrant: [block] must
+     * not call [sendToAddress] (which re-acquires it inside the SDK) or
+     * nest another [withCoreSendLock] — the only permitted call inside is
+     * [sendAllToAddress], which is lock-free by contract. Default: runs
+     * [block] directly (sources without a native mutex).
+     */
+    suspend fun <T> withCoreSendLock(walletIdHex: String, block: suspend () -> T): T = block()
+
+    /**
+     * Build, sign and broadcast a SEND-ALL (drain) of BIP44 account 0 to
+     * [addressBase58]: every spendable input, one output worth
+     * `total − fee` (engine-computed), no change —
+     * `SelectionStrategy::All` via the bound
+     * `coreTxBuilderSetSelectionStrategy` knob ([CoreSendAllNative]).
+     * [floorDuffs] is the deliver-at-least floor; an engine-reported
+     * shortfall against it throws the pre-broadcast "Insufficient funds"
+     * build failure ([isSendAllShortfall]). Returns the broadcast txid as
+     * lowercase hex; throws classify via [classifyCoreSendFailure] exactly
+     * like [sendToAddress].
+     *
+     * CONCURRENCY CONTRACT: the caller MUST hold the wallet's core-send
+     * lock via [withCoreSendLock] across this call (and any retry) — this
+     * method itself is deliberately lock-free because the mutex is not
+     * reentrant. Default throws: see [spendableBalanceDuffs].
+     */
+    suspend fun sendAllToAddress(walletIdHex: String, addressBase58: String, floorDuffs: Long): String =
+        throw UnsupportedOperationException("send-all not supported by this source")
 }
 
 /** Production [SdkL1SendSource]: boots the SDK on demand. */
@@ -158,6 +263,73 @@ internal class DashSdkL1SendSource(
             recipients = listOf(addressBase58 to amountDuffs),
             network = toSdkNetwork(Constants.NETWORK_PARAMETERS),
             coreSignerHandle = manager.mnemonicResolverHandle
+        )
+    }
+
+    override suspend fun spendableBalanceDuffs(walletIdHex: String): Long {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        val balance = wallet.balance()
+        return balance.confirmed + balance.unconfirmed
+    }
+
+    override suspend fun <T> withCoreSendLock(walletIdHex: String, block: suspend () -> T): T {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        // The same per-wallet mutex ManagedPlatformWallet.sendToAddresses
+        // serializes its builds under — the whole reason the split builder
+        // API is `internal`. Resolved BEFORE any native call, so a lookup
+        // failure is provably pre-broadcast. Held ONCE across the whole
+        // [block] (drain attempt + adjust-down retry) so a concurrent plain
+        // send cannot interleave between the attempts. No deadlock: the
+        // mutex is non-reentrant but nothing inside [block] re-acquires it —
+        // sendAllToAddress below is lock-free by contract, and the plain
+        // send path (sendToAddresses) is never invoked inside the block, so
+        // every acquisition of this mutex is strictly sequential.
+        val coreSendMutex = coreSendMutexOf(wallet)
+        return withContext(Dispatchers.IO) {
+            coreSendMutex.withLock { block() }
+        }
+    }
+
+    override suspend fun sendAllToAddress(
+        walletIdHex: String,
+        addressBase58: String,
+        floorDuffs: Long
+    ): String {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        // Deliberately lock-free: the caller holds the wallet's
+        // coreSendMutex via withCoreSendLock across this call and any retry
+        // (see the interface contract) — acquiring the non-reentrant mutex
+        // here again would deadlock.
+        return withContext(Dispatchers.IO) {
+            mapNativeErrors {
+                CoreSendAllNative.buildSignBroadcastSendAll(
+                    wallet,
+                    toSdkNetwork(Constants.NETWORK_PARAMETERS),
+                    addressBase58,
+                    floorDuffs,
+                    manager.mnemonicResolverHandle
+                )
+            }
+        }
+    }
+
+    /**
+     * The wallet's `coreSendMutex` via its public-static synthetic JVM
+     * accessor (`access$getCoreSendMutex$p` — javac/kotlinc can't reference
+     * synthetic members in source, reflection can; stable in the pinned
+     * AAR). Failure throws [DashSdkError.InvalidState] so
+     * [classifyCoreSendFailure] proves it pre-broadcast.
+     */
+    private fun coreSendMutexOf(wallet: ManagedPlatformWallet): Mutex = try {
+        val accessor = ManagedPlatformWallet::class.java
+            .getMethod("access\$getCoreSendMutex\$p", ManagedPlatformWallet::class.java)
+        accessor.invoke(null, wallet) as Mutex
+    } catch (t: Throwable) {
+        throw DashSdkError.InvalidState(
+            "send-all preflight: coreSendMutex unavailable via the pinned SDK binary", t
         )
     }
 }
@@ -252,6 +424,24 @@ class SdkL1SendService internal constructor(
      * gate CLOSED (funds-safe) for constructions that don't provide it.
      */
     private val l1Parity: () -> ParityReport? = { null },
+    /**
+     * Send-all guard (funds-critical): does the HELD dashj wallet still
+     * track ANY app-locked output ([org.bitcoinj.wallet.Wallet.lockOutput] —
+     * CrowdNode locks the outputs paying its account address) among its
+     * spendable candidates? The SDK drain selects EVERY spendable UTXO
+     * (`SelectionStrategy::All`) and the pinned FFI exposes NO lock or
+     * exclusion API, so a drain while such an output exists would SPEND
+     * app-protected funds — dashj's own `completeTx` excludes
+     * `lockedOutputs` even on its emptyWallet branch, the SDK cannot.
+     * Consulted only on the send-all path, never on a plain send. The
+     * default is `true` (assume locked → drain blocked) so constructions
+     * that don't provide the check FAIL CLOSED.
+     *
+     * The real fix is an upstream SDK UTXO lock/exclusion API — iOS's
+     * `add_inputs_from_outpoints` binding is the porting candidate; until
+     * it lands, this app-side refusal is the only fail-closed option.
+     */
+    private val hasAppLockedSpendableOutputs: () -> Boolean = { true },
     /** Post-broadcast hook: [L1ShadowSyncService.noteSelfSpendBroadcast]. */
     private val onSelfSpendBroadcast: () -> Unit = {},
     /**
@@ -270,7 +460,8 @@ class SdkL1SendService internal constructor(
         sdkService: DashSdkService,
         dashPayConfig: DashPayConfig,
         l1ShadowSyncService: L1ShadowSyncService,
-        bridgedTransactionFactory: SdkBridgedTransactionFactory
+        bridgedTransactionFactory: SdkBridgedTransactionFactory,
+        walletData: de.schildbach.wallet.data.WalletData
     ) : this(
         source = DashSdkL1SendSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -284,6 +475,22 @@ class SdkL1SendService internal constructor(
             }
         },
         l1Parity = { l1ShadowSyncService.latestParity.value },
+        hasAppLockedSpendableOutputs = {
+            // The held dashj wallet stays the AUTHORITY on app-side locks
+            // post-cutover (CrowdNode locks via WalletDataAdapter →
+            // Wallet.lockOutput). calculateAllSpendCandidates does NOT
+            // filter lockedOutputs (verified against dashj-core 22.0.4
+            // bytecode; only maturity/signability), so intersecting it with
+            // isLockedOutput detects exactly the outputs a drain would
+            // wrongly spend. (true, true) mirrors completeTx's default
+            // candidate set. A missing wallet cannot PROVE the absence of
+            // locks → treated as locked (fail closed).
+            @Suppress("DEPRECATION")
+            val wallet = walletData.wallet
+            wallet == null || wallet.calculateAllSpendCandidates(true, true).any {
+                wallet.isLockedOutput(it.outPointFor)
+            }
+        },
         onSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
         bridgeAfterBroadcast = { txidHex ->
             // 5c.2 soak consumer: DEBUG-only until the 5c.4 cutover.
@@ -314,12 +521,22 @@ class SdkL1SendService internal constructor(
      * [classifyCoreSendFailure]; every preflight failure is
      * [SdkWriteResult.NotBroadcast] by construction.
      *
-     * @param emptyWallet dashj's send-all mode. NOT SUPPORTED on the SDK
-     *   path for now: `ManagedPlatformWallet.sendToAddresses` never
-     *   exposes the builder's drain-the-account selection strategy
-     *   (`CoreTransactionBuilder.SelectionStrategy.ALL` exists but the
-     *   whole split builder API is `internal` to the SDK), so
-     *   `emptyWallet = true` returns NotBroadcast and dashj handles it.
+     * @param emptyWallet dashj's send-all mode. PRE-CUTOVER it stays on
+     *   dashj (NotBroadcast — today's behavior, byte-identical).
+     *   POST-CUTOVER it routes through the SDK drain
+     *   ([SdkL1SendSource.sendAllToAddress] / [CoreSendAllNative]:
+     *   `SelectionStrategy::All` — all spendable inputs, one output worth
+     *   `total − fee`, no change), with the iOS-validated max pattern: the
+     *   first attempt floors the deliverable at
+     *   [sendAllFloorDuffs]`(spendable)`; an engine-reported
+     *   insufficient-at-fee ([isSendAllShortfall], provably pre-broadcast)
+     *   is retried ONCE engine-authoritatively (floor 1, deliverable
+     *   `total − fee`), with BOTH attempts under a single
+     *   [SdkL1SendSource.withCoreSendLock] acquisition. The drain is
+     *   REFUSED (NotBroadcast) while the held dashj wallet tracks any
+     *   app-locked spendable output — see [hasAppLockedSpendableOutputs].
+     *   [amount] is display-typed for a send-all — the
+     *   engine decides the deliverable — but must still be positive.
      * @param beforeBroadcast invoked after ALL preflights pass and
      *   immediately before the single broadcast attempt — the call site's
      *   dashj-equivalent pre-send conditions (leftover-balance check,
@@ -333,10 +550,13 @@ class SdkL1SendService internal constructor(
         emptyWallet: Boolean,
         beforeBroadcast: suspend () -> Unit = {}
     ): SdkWriteResult<String> {
-        val operation = "l1Send"
+        val operation = if (emptyWallet) "l1SendAll" else "l1Send"
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
-        if (emptyWallet) {
-            return notBroadcast(operation, "empty-wallet (send-all) not exposed by the SDK send surface", null)
+        if (emptyWallet && !cutoverCommitted()) {
+            // Pre-cutover the dashj emptyWallet path is live and stays the
+            // owner of send-all (unchanged soak behavior). Post-cutover the
+            // drain below takes over — dashj cannot broadcast while held.
+            return notBroadcast(operation, "empty-wallet (send-all) stays on dashj pre-cutover", null)
         }
         if (!amount.isPositive) {
             return notBroadcast(operation, "non-positive amount", null)
@@ -363,14 +583,83 @@ class SdkL1SendService internal constructor(
             return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
         }
 
+        // Send-all floor (iOS-validated max pattern): spendable − reserve,
+        // read in PREFLIGHT so a balance-read failure is NotBroadcast by
+        // construction, never Ambiguous.
+        val sendAllFloor = if (emptyWallet) {
+            // FAIL-CLOSED GUARD (funds-critical): the drain selects EVERY
+            // spendable UTXO and the FFI has no exclusion API (see the
+            // [hasAppLockedSpendableOutputs] KDoc) — with any app-locked
+            // output present (CrowdNode) it would spend protected funds.
+            // Checked BEFORE any build/balance call; a check failure also
+            // blocks. Real fix: an upstream SDK UTXO lock/exclusion API
+            // (iOS's add_inputs_from_outpoints binding is the porting
+            // candidate).
+            val hasLockedOutputs = try {
+                hasAppLockedSpendableOutputs()
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("SDK {}: app-locked-output preflight failed; blocking the drain (fail closed)", operation, t)
+                true
+            }
+            if (hasLockedOutputs) {
+                log.warn(
+                    "SDK {}: wallet has app-locked outputs (CrowdNode); send-all via the SDK would " +
+                        "spend them — blocked until the SDK exposes UTXO exclusion",
+                    operation
+                )
+                return notBroadcast(
+                    operation,
+                    "wallet has app-locked outputs (CrowdNode); send-all via the SDK would spend " +
+                        "them — blocked until the SDK exposes UTXO exclusion",
+                    null
+                )
+            }
+            try {
+                sendAllFloorDuffs(source.spendableBalanceDuffs(walletIdHex))
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                return notBroadcast(operation, "SDK spendable-balance read failed", t)
+            }
+        } else {
+            null
+        }
+
         // Call-site pre-send conditions (may throw, e.g. LeftoverBalanceException) —
         // deliberately outside the classification try: nothing broadcast yet and
         // the dashj path surfaces the same throw the same way.
         beforeBroadcast()
 
-        // The single broadcast attempt.
+        // The single broadcast attempt. (The send-all shortfall retry is not
+        // a second broadcast: an [isSendAllShortfall] throw is a provably
+        // pre-broadcast build failure — see the predicate's KDoc.)
         return try {
-            val txidHex = source.sendToAddress(walletIdHex, address, amount.duffs)
+            val txidHex = if (sendAllFloor != null) {
+                // ONE core-send-lock acquisition across BOTH drain attempts:
+                // a concurrent plain send serializes on the same mutex, so
+                // it can no longer slip between the floor attempt and the
+                // adjust-down retry and change the drained balance.
+                // Deadlock-free: sendAllToAddress is lock-free by contract
+                // and the plain-send path (which re-acquires the mutex
+                // SDK-side) is never invoked inside this block.
+                source.withCoreSendLock(walletIdHex) {
+                    try {
+                        source.sendAllToAddress(walletIdHex, address, sendAllFloor)
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) throw t
+                        if (!isSendAllShortfall(t)) throw t
+                        // Adjust down: fee exceeded the reserve. Retry ONCE with
+                        // the engine fully authoritative (deliverable = total − fee).
+                        log.info(
+                            "SDK {}: floor {} duffs not deliverable at fee; retrying engine-authoritatively",
+                            operation, sendAllFloor, t
+                        )
+                        source.sendAllToAddress(walletIdHex, address, 1L)
+                    }
+                }
+            } else {
+                source.sendToAddress(walletIdHex, address, amount.duffs)
+            }
             log.info("SDK {}: broadcast {} duffs to {}…, txid {}", operation, amount.duffs, address.take(8), txidHex)
             // Parity-decider guard, never affects the send result.
             runCatching { onSelfSpendBroadcast() }
