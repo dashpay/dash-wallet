@@ -44,16 +44,13 @@ import javax.inject.Singleton
  * therefore not a behavior delta — a restart drops the locks on both sides,
  * and the CrowdNode flow re-locks on resume exactly as it always has.
  *
- * ## TODO (integration branch): send-all drain guard
+ * ## Send-all drain guard (wired)
  *
- * The integration branch's send-all drain guard
- * (`SdkL1SendService.hasAppLockedSpendableOutputs` — NOT present on this
- * branch's base) currently consults only dashj's `Wallet.lockedOutputs`.
- * When this seam work lands there, that guard MUST union its dashj check
- * with [hasAnyLocks]/[isLocked] so an SDK-side send-all cannot drain
- * outputs locked through this registry. The read API below exists for
- * exactly that wiring; it is deliberately not wired here because the base
- * of this branch has no drain guard to extend.
+ * [SdkL1SendService]'s send-all drain guard unions its dashj check
+ * (`hasAppLockedSpendableOutputs` — dashj's `Wallet.lockedOutputs` over
+ * the spend candidates) with [hasAnyLocks] from this registry, so an
+ * SDK-side send-all can never drain outputs locked here (fail closed:
+ * a registry read failure also blocks the drain).
  */
 @Singleton
 class SeamOutputLockRegistry @Inject constructor() {

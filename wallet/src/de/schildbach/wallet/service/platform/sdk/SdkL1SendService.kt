@@ -440,8 +440,23 @@ class SdkL1SendService internal constructor(
      * The real fix is an upstream SDK UTXO lock/exclusion API — iOS's
      * `add_inputs_from_outpoints` binding is the porting candidate; until
      * it lands, this app-side refusal is the only fail-closed option.
+     *
+     * NOTE this check only covers locks the dashj wallet can SEE. The
+     * drain guard additionally unions [seamOutputLockRegistry] — locks on
+     * SDK-only transactions (e.g. CrowdNode API-response outputs) that the
+     * held dashj wallet never learns of.
      */
     private val hasAppLockedSpendableOutputs: () -> Boolean = { true },
+    /**
+     * Send-all guard, seam side (B7 union): locks registered through
+     * [SeamOutputLockRegistry] cover outputs of SDK-only transactions
+     * (post-cutover CrowdNode API-response txs locked via
+     * [de.schildbach.wallet.data.WalletDataAdapter]) that
+     * [hasAppLockedSpendableOutputs]' dashj check cannot see — there is no
+     * dashj `Transaction` to lock. The drain is refused when EITHER side
+     * reports a lock; a registry read failure also blocks (fail closed).
+     */
+    private val seamOutputLockRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
     /** Post-broadcast hook: [L1ShadowSyncService.noteSelfSpendBroadcast]. */
     private val onSelfSpendBroadcast: () -> Unit = {},
     /**
@@ -461,7 +476,8 @@ class SdkL1SendService internal constructor(
         dashPayConfig: DashPayConfig,
         l1ShadowSyncService: L1ShadowSyncService,
         bridgedTransactionFactory: SdkBridgedTransactionFactory,
-        walletData: de.schildbach.wallet.data.WalletData
+        walletData: de.schildbach.wallet.data.WalletData,
+        seamOutputLockRegistry: SeamOutputLockRegistry
     ) : this(
         source = DashSdkL1SendSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -491,6 +507,7 @@ class SdkL1SendService internal constructor(
                 wallet.isLockedOutput(it.outPointFor)
             }
         },
+        seamOutputLockRegistry = seamOutputLockRegistry,
         onSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
         bridgeAfterBroadcast = { txidHex ->
             // 5c.2 soak consumer: DEBUG-only until the 5c.4 cutover.
@@ -534,7 +551,8 @@ class SdkL1SendService internal constructor(
      *   `total − fee`), with BOTH attempts under a single
      *   [SdkL1SendSource.withCoreSendLock] acquisition. The drain is
      *   REFUSED (NotBroadcast) while the held dashj wallet tracks any
-     *   app-locked spendable output — see [hasAppLockedSpendableOutputs].
+     *   app-locked spendable output OR the seam registry holds any lock —
+     *   see [hasAppLockedSpendableOutputs] and [SeamOutputLockRegistry].
      *   [amount] is display-typed for a send-all — the
      *   engine decides the deliverable — but must still be positive.
      * @param beforeBroadcast invoked after ALL preflights pass and
@@ -602,7 +620,19 @@ class SdkL1SendService internal constructor(
                 log.warn("SDK {}: app-locked-output preflight failed; blocking the drain (fail closed)", operation, t)
                 true
             }
-            if (hasLockedOutputs) {
+            // B7 union: seam-registered locks (SDK-only txs — CrowdNode
+            // API-response outputs locked via WalletDataAdapter →
+            // [SeamOutputLockRegistry]) are invisible to the dashj wallet
+            // check above; OR them in so the drain cannot spend them
+            // either. Fail closed: a registry read failure also blocks.
+            val hasSeamLockedOutputs = try {
+                seamOutputLockRegistry.hasAnyLocks()
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("SDK {}: seam output-lock registry read failed; blocking the drain (fail closed)", operation, t)
+                true
+            }
+            if (hasLockedOutputs || hasSeamLockedOutputs) {
                 log.warn(
                     "SDK {}: wallet has app-locked outputs (CrowdNode); send-all via the SDK would " +
                         "spend them — blocked until the SDK exposes UTXO exclusion",

@@ -19,6 +19,7 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.money.Dash
@@ -154,13 +155,17 @@ class SdkL1SendServiceTest {
         // Tests default to NO app-locked outputs so the drain paths are
         // exercisable; the production wiring (and the constructor default)
         // is fail-closed — covered by dedicated tests below.
-        hasAppLockedOutputs: () -> Boolean = { false }
+        hasAppLockedOutputs: () -> Boolean = { false },
+        // Fresh empty registry by default: no seam locks, drain paths
+        // exercisable. Seam-lock refusal is covered by dedicated tests.
+        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry()
     ) = SdkL1SendService(
         source = source,
         dashPayConfig = config(enabled, cutoverState),
         isValidAddress = addressValid,
         l1Parity = parity,
         hasAppLockedSpendableOutputs = hasAppLockedOutputs,
+        seamOutputLockRegistry = seamRegistry,
         onSelfSpendBroadcast = { selfSpendMarks++ },
         bridgeAfterBroadcast = bridgeAfterBroadcast,
         nowMs = { now }
@@ -770,6 +775,54 @@ class SdkL1SendServiceTest {
         assertEquals(0, source.sendAllCalls)
         val plain = svc.sendToAddress(validAddress, amount, emptyWallet = false)
         assertTrue(plain is SdkWriteResult.Broadcast)
+    }
+
+    @Test
+    fun sendAll_withSeamRegisteredLocks_isBlocked_evenWhenDashjSeesNone() = runBlocking {
+        // B7 union (FUNDS-CRITICAL): post-cutover CrowdNode's API-response
+        // txs exist only in the SDK store, so their account-address locks
+        // live in the SeamOutputLockRegistry — the dashj wallet check
+        // reports NO locks for them. The drain guard must OR the registry
+        // in: seam locks alone refuse the drain, pre-build, pre-balance.
+        val source = drainReadySource()
+        val registry = SeamOutputLockRegistry()
+        registry.lockOutput("ab".repeat(32), 0)
+        val result = service(
+            source,
+            enabled = false,
+            cutoverState = "CUT_OVER",
+            hasAppLockedOutputs = { false },
+            seamRegistry = registry
+        ).sendToAddress(validAddress, amount, emptyWallet = true)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(
+            "reason must name the lock guard",
+            (result as SdkWriteResult.NotBroadcast).reason.contains("app-locked outputs")
+        )
+        assertEquals(0, source.sendAllCalls)
+        assertEquals(0, source.spendableCalls)
+        assertEquals(0, source.lockAcquisitions)
+        assertEquals(0, selfSpendMarks)
+        assertTrue(bridgedTxids.isEmpty())
+    }
+
+    @Test
+    fun sendAll_seamRegistryReadFailure_blocksTheDrain_failClosed() = runBlocking {
+        // A registry that cannot PROVE the absence of seam locks blocks the
+        // drain, mirroring the dashj-side check's fail-closed contract.
+        val source = drainReadySource()
+        val registry = mockk<SeamOutputLockRegistry> {
+            every { hasAnyLocks() } throws IllegalStateException("registry unavailable")
+        }
+        val result = service(
+            source,
+            enabled = false,
+            cutoverState = "CUT_OVER",
+            hasAppLockedOutputs = { false },
+            seamRegistry = registry
+        ).sendToAddress(validAddress, amount, emptyWallet = true)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.sendAllCalls + source.spendableCalls)
     }
 
     @Test
