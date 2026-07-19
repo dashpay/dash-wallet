@@ -135,8 +135,14 @@ class TransactionResultViewModel @Inject constructor(
                     val detail = withContext(Dispatchers.IO) {
                         try {
                             sdkTxDetailProvider.load(txId.toString())
-                        } catch (e: Exception) {
-                            log.error("SDK tx-detail lookup failed for {}", txId, e)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (t: Throwable) {
+                            // Throwable, not Exception: the SDK's native-lib
+                            // load can throw UnsatisfiedLinkError /
+                            // ExceptionInInitializerError on unsupported
+                            // ABIs — degrade to the plain sheet, don't crash.
+                            log.error("SDK tx-detail lookup failed for {}", txId, t)
                             null
                         }
                     }

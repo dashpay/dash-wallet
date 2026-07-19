@@ -17,6 +17,13 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import java.util.Date
+import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -29,9 +36,14 @@ import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.script.ScriptBuilder
 import org.dashfoundation.dashsdk.keywallet.DecodedTransaction
+import org.dashfoundation.dashsdk.keywallet.TransactionDecoder
+import org.dashfoundation.dashsdk.persistence.DashDatabase
+import org.dashfoundation.dashsdk.persistence.dao.TransactionDao
+import org.dashfoundation.dashsdk.persistence.entities.TransactionEntity
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -318,5 +330,59 @@ class SdkTxDetailTest {
 
         val bigVout = txoOutpoint(wire, 0x0102_0304)
         assertArrayEquals(byteArrayOf(4, 3, 2, 1), bigVout.copyOfRange(32, 36))
+    }
+
+    // ── Native-lib failure hardening ──────────────────────────────────
+
+    @Test
+    fun `native decode UnsatisfiedLinkError degrades to row-only detail without crashing`() {
+        // The AAR ships only arm64-v8a + x86_64; on any other ABI the JNI
+        // load throws UnsatisfiedLinkError (an Error, not an Exception).
+        // The provider must catch it and serve the same row-only detail
+        // as a decode failure — never let it escape and crash the sheet.
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns -70_247L
+            every { fee } returns 247L
+            every { context } returns 1 // instantSend
+            every { direction } returns 1 // outgoing
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        val txDao = mockk<TransactionDao> {
+            coEvery { getByTxid(any()) } returns entity
+        }
+        val db = mockk<DashDatabase> {
+            every { transactionDao() } returns txDao
+            every { txoDao() } returns mockk()
+        }
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+        }
+
+        mockkObject(TransactionDecoder)
+        try {
+            every {
+                TransactionDecoder.decode(any(), any())
+            } throws UnsatisfiedLinkError("dlopen failed: library not found for this ABI")
+
+            val detail = runBlocking {
+                SdkTxDetailProvider(sdkService).load(decoded.txidDisplayHex)
+            }
+
+            assertNotNull("row-only detail, not a crash or null", detail)
+            assertTrue(detail!!.decodeFailed)
+            assertEquals(decoded.txidDisplayHex, detail.txIdDisplayHex)
+            assertEquals(-70_247L, detail.netAmountDuffs)
+            assertEquals(247L, detail.feeDuffs) // row-recorded fee still shown
+            assertEquals(L1TxUiStatus.INSTANT_LOCKED, detail.status)
+            assertTrue(detail.outputAddresses.isEmpty())
+            assertTrue(detail.inputAddresses.isEmpty())
+            assertFalse(detail.hasOpReturn)
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
     }
 }

@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.Constants
+import kotlinx.coroutines.CancellationException
 import org.dashfoundation.dashsdk.keywallet.DecodedTransaction
 import org.dashfoundation.dashsdk.keywallet.TransactionDecoder
 import org.slf4j.LoggerFactory
@@ -191,6 +192,15 @@ internal fun txoOutpoint(wireTxid: ByteArray, vout: Int): ByteArray =
  *
  * Read-only over the SDK database (same convention as
  * [DashSdkCutoverUiSource]); never constructs dashj types.
+ *
+ * Executable coverage for the `transaction_decode` binding itself lives in
+ * the SDK's JNI crate: its 7 host-run cargo tests exercise the vendored
+ * key-wallet-ffi decode path via the workspace `[patch]` (the runtime code
+ * path this provider calls), plus the SDK's Kotlin `TransactionDecoderTest`
+ * pinning the cross-language blob format. The vendored key-wallet-ffi tree
+ * is excluded from the cargo workspace, so its own 13 unit tests do NOT
+ * execute in the SDK build — do not count them as coverage. The wallet-side
+ * mapping is covered here by [SdkTxDetailTest].
  */
 @Singleton
 class SdkTxDetailProvider @Inject constructor(
@@ -206,8 +216,15 @@ class SdkTxDetailProvider @Inject constructor(
         val db = try {
             sdkService.ensureStarted()
             sdkService.databaseOrNull() ?: return null
-        } catch (e: Exception) {
-            log.warn("SDK unavailable for tx-detail lookup of {}", txIdDisplayHex, e)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            // Throwable, not Exception: Sdk.initialize() loads the native
+            // library, which throws UnsatisfiedLinkError (or
+            // ExceptionInInitializerError) on ABIs the AAR does not ship
+            // (only arm64-v8a + x86_64). Degrade to "no SDK detail"
+            // instead of crashing the sheet.
+            log.warn("SDK unavailable for tx-detail lookup of {}", txIdDisplayHex, t)
             return null
         }
 
@@ -227,9 +244,15 @@ class SdkTxDetailProvider @Inject constructor(
                 entity.transactionData,
                 toSdkNetwork(Constants.NETWORK_PARAMETERS)
             )
-        } catch (e: Exception) {
-            // Unexpected for SDK-persisted bytes — degrade to row-only detail.
-            log.error("consensus decode failed for SDK tx {}", txIdDisplayHex, e)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            // Throwable, not Exception: an Exception here is unexpected for
+            // SDK-persisted bytes, while a LinkageError (UnsatisfiedLinkError /
+            // ExceptionInInitializerError) means the JNI library cannot load
+            // on this device's ABI. Either way, degrade to the row-only
+            // detail (same presentation as a decode failure) — never crash.
+            log.error("consensus decode failed for SDK tx {}", txIdDisplayHex, t)
             null
         }
 
