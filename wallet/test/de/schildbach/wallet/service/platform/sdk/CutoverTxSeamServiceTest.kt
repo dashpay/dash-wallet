@@ -22,6 +22,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
@@ -72,7 +73,9 @@ class CutoverTxSeamServiceTest {
         var boundWalletId: String? = "cd".repeat(32),
         val snapshots: MutableStateFlow<SdkSeamTxSnapshot> = MutableStateFlow(
             SdkSeamTxSnapshot(emptyList(), emptyMap(), emptySet(), emptyMap())
-        )
+        ),
+        /** When set, served instead of [snapshots] — lets a test gate the priming emission. */
+        val snapshotsOverride: Flow<SdkSeamTxSnapshot>? = null
     ) : CutoverUiSource {
         var boundCalls = 0
         var seamSubscriptions = 0
@@ -88,7 +91,7 @@ class CutoverTxSeamServiceTest {
 
         override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> {
             seamSubscriptions++
-            return snapshots.map { it }
+            return snapshotsOverride ?: snapshots.map { it }
         }
     }
 
@@ -103,13 +106,15 @@ class CutoverTxSeamServiceTest {
         source: FakeSource,
         dashPayConfig: DashPayConfig,
         scope: kotlinx.coroutines.CoroutineScope,
-        dashjLookup: (org.bitcoinj.core.Sha256Hash) -> Transaction? = { null }
+        dashjLookup: (org.bitcoinj.core.Sha256Hash) -> Transaction? = { null },
+        clockMs: () -> Long = { System.currentTimeMillis() }
     ) = CutoverTxSeamService(
         source = source,
         dashPayConfig = dashPayConfig,
         scope = scope,
         networkParameters = params,
-        dashjTxLookup = dashjLookup
+        dashjTxLookup = dashjLookup,
+        clockMs = clockMs
     )
 
     @Test
@@ -224,6 +229,144 @@ class CutoverTxSeamServiceTest {
 
         assertFalse(service.activeState.value)
         assertNull(service.sdkTxInfosOrNull())
+    }
+
+    // ── Priming-window semantics (activation flip + bounded replay) ───
+
+    @Test
+    fun activation_flipsOnlyAfterThePrimingSnapshot() = runTest {
+        val gated = MutableSharedFlow<SdkSeamTxSnapshot>()
+        val source = FakeSource(snapshotsOverride = gated)
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        // Cutover committed but the pipeline hasn't primed: consumers must
+        // stay routed to the (valid, stale-but-real) dashj flow.
+        assertEquals(1, source.seamSubscriptions)
+        assertFalse(service.activeState.value)
+        assertNull(service.sdkTxInfosOrNull())
+
+        gated.emit(snapshot(record(context = 1)))
+        runCurrent()
+
+        assertTrue(service.activeState.value)
+        assertEquals(setOf(txidHex), service.sdkTxInfosOrNull()?.keys)
+    }
+
+    @Test
+    fun primingWindowTx_replaysToSubscribersSwitchingAtTheFlip() = runTest {
+        // Activation instant == the tx's firstSeen: the tx LANDED during the
+        // priming window, so no consumer flow could have carried it.
+        val gated = MutableSharedFlow<SdkSeamTxSnapshot>()
+        val source = FakeSource(snapshotsOverride = gated)
+        val service = buildService(
+            source,
+            configWithState("CUT_OVER"),
+            backgroundScope,
+            clockMs = { 1_753_000_000_000L }
+        )
+        service.start()
+        runCurrent()
+        assertFalse(service.activeState.value)
+
+        gated.emit(snapshot(record(context = 0)))
+        runCurrent()
+        assertTrue(service.activeState.value)
+
+        // A consumer switching to the seam flow at the flip (activeState-driven,
+        // like WalletDataAdapter's flatMapLatest) still receives the tx event.
+        val observed = mutableListOf<TxInfo>()
+        backgroundScope.launch {
+            service.observeSdkTransactions(false, emptyArray()).collect { observed += it }
+        }
+        runCurrent()
+        assertEquals(listOf(txidHex), observed.map { it.txId })
+
+        // The replay retires on the next snapshot: later subscribers get
+        // dashj listener-attach parity (no replay).
+        gated.emit(snapshot(record(context = 1)))
+        runCurrent()
+        val late = mutableListOf<TxInfo>()
+        backgroundScope.launch {
+            service.observeSdkTransactions(false, emptyArray()).collect { late += it }
+        }
+        runCurrent()
+        assertTrue(late.isEmpty())
+    }
+
+    @Test
+    fun preActivationRow_neverReplaysAtTheFlip() = runTest {
+        // Activation instant strictly after the row's firstSeen: history row,
+        // dashj listener-attach parity — prime silently.
+        val gated = MutableSharedFlow<SdkSeamTxSnapshot>()
+        val source = FakeSource(snapshotsOverride = gated)
+        val service = buildService(
+            source,
+            configWithState("CUT_OVER"),
+            backgroundScope,
+            clockMs = { 1_753_000_000_001L }
+        )
+        service.start()
+        runCurrent()
+        gated.emit(snapshot(record(context = 0)))
+        runCurrent()
+        assertTrue(service.activeState.value)
+
+        val observed = mutableListOf<TxInfo>()
+        backgroundScope.launch {
+            service.observeSdkTransactions(true, emptyArray()).collect { observed += it }
+        }
+        runCurrent()
+        assertTrue(observed.isEmpty())
+    }
+
+    @Test
+    fun rollbackRecommitFlap_reprimesAndReplaysCorrectly() = runTest {
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(snapshots = MutableStateFlow(snapshot(record(context = 0))))
+        val service = buildService(
+            source,
+            configWithStateFlow(state),
+            backgroundScope,
+            clockMs = { 1_753_000_000_000L }
+        )
+        service.start()
+        runCurrent()
+        assertTrue(service.activeState.value)
+
+        // Rollback: gate false, snapshot nulled.
+        state.value = "DUAL_RUNNING"
+        runCurrent()
+        assertFalse(service.activeState.value)
+        assertNull(service.sdkTxInfosOrNull())
+
+        // Recommit: a fresh pipeline primes again and the gate flips again —
+        // only after the (re-)priming snapshot.
+        state.value = "CUT_OVER"
+        runCurrent()
+        assertEquals(2, source.seamSubscriptions)
+        assertTrue(service.activeState.value)
+        assertEquals(setOf(txidHex), service.sdkTxInfosOrNull()?.keys)
+
+        // The re-primed priming-window replay serves flip-switching
+        // subscribers of THIS activation too.
+        val observed = mutableListOf<TxInfo>()
+        backgroundScope.launch {
+            service.observeSdkTransactions(false, emptyArray()).collect { observed += it }
+        }
+        runCurrent()
+        assertEquals(listOf(txidHex), observed.map { it.txId })
+
+        // And live events still flow after the recommit.
+        val confidence = mutableListOf<TxInfo>()
+        backgroundScope.launch {
+            service.observeSdkTransactions(true, emptyArray()).collect { confidence += it }
+        }
+        runCurrent()
+        source.snapshots.value = snapshot(record(context = 1))
+        runCurrent()
+        assertTrue(confidence.any { it.isLocked })
     }
 
     @Test

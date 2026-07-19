@@ -21,6 +21,7 @@ import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
 import de.schildbach.wallet.service.platform.sdk.CutoverUiSource
 import de.schildbach.wallet.service.platform.sdk.L1TxUiRecord
 import de.schildbach.wallet.service.platform.sdk.SdkSeamTxSnapshot
+import de.schildbach.wallet.service.platform.sdk.SeamOutputLockRegistry
 import de.schildbach.wallet.service.platform.sdk.l1TxUiRecord
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.every
@@ -45,6 +46,7 @@ import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.common.transactions.TxInfo
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -145,7 +147,7 @@ class WalletDataAdapterSeamRoutingTest {
         runCurrent()
 
         val walletData = mockWalletData(listOf(dashjOnlyTx))
-        val adapter = WalletDataAdapter(walletData) { service }
+        val adapter = WalletDataAdapter(walletData, { service }, SeamOutputLockRegistry())
 
         val txs = adapter.getTransactions()
         assertEquals(listOf(dashjOnlyTx.txId.toString()), txs.map { it.txId })
@@ -170,7 +172,7 @@ class WalletDataAdapterSeamRoutingTest {
         runCurrent()
 
         val walletData = mockWalletData(listOf(sdkTx, dashjOnlyTx))
-        val adapter = WalletDataAdapter(walletData) { service }
+        val adapter = WalletDataAdapter(walletData, { service }, SeamOutputLockRegistry())
 
         // getTransactions: SDK set wins for txs the SDK knows; held-dashj
         // history the SDK never saw is unioned in (dedup'd by txid).
@@ -208,7 +210,7 @@ class WalletDataAdapterSeamRoutingTest {
         runCurrent()
 
         val walletData = mockWalletData(listOf(dashjOnlyTx))
-        val adapter = WalletDataAdapter(walletData) { service }
+        val adapter = WalletDataAdapter(walletData, { service }, SeamOutputLockRegistry())
 
         backgroundScope.launch { adapter.observeTransactions(false).collect {} }
         runCurrent()
@@ -220,5 +222,115 @@ class WalletDataAdapterSeamRoutingTest {
         runCurrent()
         verify(exactly = 1) { walletData.observeTransactions(false, *anyVararg()) }
         assertEquals(listOf(dashjOnlyTx.txId.toString()), adapter.getTransactions().map { it.txId })
+    }
+
+    // ── Seam output locks (post-cutover CrowdNode signup lock step) ───
+
+    @Test
+    fun postCutover_lockOutputsOfSdkOnlyTxRegistersAtTheSeamWithoutThrowing() = runTest {
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(MutableStateFlow(snapshot(record(context = 0))))
+        val service = seamService(source, state, backgroundScope)
+        service.start()
+        runCurrent()
+
+        // The held dashj wallet never saw the incoming SDK-fed tx.
+        val walletData = mockWalletData(listOf(dashjOnlyTx))
+        val registry = SeamOutputLockRegistry()
+        val adapter = WalletDataAdapter(walletData, { service }, registry)
+
+        // Output 0 pays 0.023 to yLW8Vfeb…; output 1 pays elsewhere.
+        adapter.lockOutputsPayingTo(sdkTx.txId.toString(), "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi")
+
+        assertTrue(registry.hasAnyLocks())
+        assertTrue(registry.isLocked(sdkTx.txId.toString(), 0))
+        assertFalse(registry.isLocked(sdkTx.txId.toString(), 1))
+        verify(exactly = 0) { walletData.lockOutput(any()) }
+    }
+
+    @Test
+    fun lockOutputsOfHeldWalletTxStillUsesTheDashjLock() = runTest {
+        val state = MutableStateFlow<String?>("DUAL_RUNNING")
+        val service = seamService(FakeSource(), state, backgroundScope)
+        service.start()
+        runCurrent()
+
+        val walletData = mockWalletData(listOf(sdkTx))
+        val registry = SeamOutputLockRegistry()
+        val adapter = WalletDataAdapter(walletData, { service }, registry)
+
+        adapter.lockOutputsPayingTo(sdkTx.txId.toString(), "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi")
+
+        // Pre-cutover / self-authored behavior byte-identical: the dashj wallet
+        // lock is taken (one matching P2PKH output) and the registry stays empty.
+        verify(exactly = 1) { walletData.lockOutput(any()) }
+        assertFalse(registry.hasAnyLocks())
+    }
+
+    @Test
+    fun preCutover_lockAndWaitStillFailClosedOnAWalletMiss() = runTest {
+        val state = MutableStateFlow<String?>("DUAL_RUNNING")
+        val service = seamService(FakeSource(), state, backgroundScope)
+        service.start()
+        runCurrent()
+
+        val registry = SeamOutputLockRegistry()
+        val adapter = WalletDataAdapter(mockWalletData(emptyList()), { service }, registry)
+
+        var lockThrew = false
+        try {
+            adapter.lockOutputsPayingTo(sdkTx.txId.toString(), "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi")
+        } catch (e: IllegalStateException) {
+            lockThrew = true
+        }
+        assertTrue("lockOutputsPayingTo must fail closed pre-cutover", lockThrew)
+        assertFalse(registry.hasAnyLocks())
+
+        var waitThrew = false
+        try {
+            adapter.waitUntilLocked(sdkTx.txId.toString())
+        } catch (e: IllegalStateException) {
+            waitThrew = true
+        }
+        assertTrue("waitUntilLocked must fail closed pre-cutover", waitThrew)
+    }
+
+    @Test
+    fun postCutover_waitUntilLockedResolvesOnASeamIslockEvent() = runTest {
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(MutableStateFlow(snapshot(record(context = 0))))
+        val service = seamService(source, state, backgroundScope)
+        service.start()
+        runCurrent()
+
+        val adapter = WalletDataAdapter(mockWalletData(emptyList()), { service }, SeamOutputLockRegistry())
+
+        var completed = false
+        val wait = backgroundScope.launch {
+            adapter.waitUntilLocked(sdkTx.txId.toString())
+            completed = true
+        }
+        runCurrent()
+        assertFalse("must still be waiting while the tx is unlocked", completed)
+
+        // The SDK records the islock — the seam confidence event resolves the wait.
+        source.snapshots.value = snapshot(record(context = 1))
+        runCurrent()
+        assertTrue(completed)
+        wait.join()
+    }
+
+    @Test
+    fun postCutover_waitUntilLockedReturnsImmediatelyForAnAlreadyLockedSeamTx() = runTest {
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(MutableStateFlow(snapshot(record(context = 1))))
+        val service = seamService(source, state, backgroundScope)
+        service.start()
+        runCurrent()
+
+        val adapter = WalletDataAdapter(mockWalletData(emptyList()), { service }, SeamOutputLockRegistry())
+
+        // Current-state replay: no further snapshot/event is needed.
+        adapter.waitUntilLocked(sdkTx.txId.toString())
     }
 }

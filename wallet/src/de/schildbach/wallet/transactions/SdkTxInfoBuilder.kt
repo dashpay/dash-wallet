@@ -39,9 +39,25 @@ import org.slf4j.LoggerFactory
  *   the SDK `transactions` row ([L1TxUiRecord]).
  * - `isLocked`: SDK context != mempool (islock / in-block / chainlocked).
  *   This is the same rule everywhere except dashj's "PENDING but seen by
- *   more than one broadcast peer" arm, which has no SDK column — an SDK-fed
- *   pending tx counts as locked only once the SDK records an actual lock.
- * - `isPending`: SDK context == mempool.
+ *   more than one broadcast peer" arm ([TxInfoConverter]'s
+ *   `numBroadcastPeers() > 1` clause), which has no SDK column — the SDK
+ *   records no peer-broadcast data, so an SDK-fed pending tx counts as
+ *   locked only once the SDK records a REAL islock or block. This is the
+ *   stricter/safe direction: a `LockedTransaction` wait (Maya's
+ *   `observeTransactionLocked` after a swap send, CrowdNode's
+ *   `topUpAddress` via `waitUntilLocked`) holds until the actual
+ *   islock/block instead of unlocking as soon as 2 peers echoed the
+ *   broadcast. With typical islock latency of ~1-2s the difference is
+ *   negligible; the worst case (a tx that never islocks) waits one block
+ *   time. Accepted, not a gap to "fix" — never claim a lock the SDK
+ *   didn't record.
+ * - `isPending`: "not yet mined" — SDK context in {mempool,
+ *   islock-without-block} — mirroring dashj's PENDING confidence type,
+ *   which STAYS pending when an islock arrives. Pending and locked are
+ *   therefore NOT mutually exclusive: an islocked-but-unmined tx is
+ *   pending AND locked, exactly like the dashj-fed [TxInfoConverter]
+ *   pair (Coinbase's transfer success check reads isPending right after
+ *   a send and must not see false on a fast islock).
  * - `isEntirelySelf`: SDK direction is internal/coinjoin (the SDK's own
  *   all-inputs-and-outputs-mine classification).
  * - `inputs`/`outputs`: lazily parsed from the row's raw transaction bytes
@@ -133,7 +149,10 @@ object SdkTxInfoBuilder {
                 txId = txidHex,
                 updateTimeMillis = record.timestampMs,
                 isLocked = record.status != L1TxUiStatus.PENDING,
-                isPending = record.status == L1TxUiStatus.PENDING,
+                // dashj parity: PENDING confidence means "not yet mined", so an
+                // islocked-but-unmined tx is pending AND locked (see class docs).
+                isPending = record.status == L1TxUiStatus.PENDING ||
+                    record.status == L1TxUiStatus.INSTANT_LOCKED,
                 netValueDuffs = { record.netAmountDuffs },
                 feeDuffs = { record.feeDuffs },
                 isEntirelySelf = {

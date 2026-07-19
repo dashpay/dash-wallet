@@ -18,6 +18,7 @@
 package de.schildbach.wallet.data
 
 import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
+import de.schildbach.wallet.service.platform.sdk.SeamOutputLockRegistry
 import de.schildbach.wallet.transactions.LockedTransaction
 import de.schildbach.wallet.transactions.NeutralFilterAdapter
 import de.schildbach.wallet.transactions.WalletTransactionFilter
@@ -27,6 +28,7 @@ import de.schildbach.wallet.util.toCoin
 import de.schildbach.wallet.util.toDash
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.Address
@@ -37,6 +39,7 @@ import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperFactory
 import org.dash.wallet.common.transactions.TxInfo
+import org.dash.wallet.common.transactions.filters.LockedTransaction as NeutralLockedTransaction
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -62,7 +65,8 @@ class WalletDataAdapter @Inject constructor(
     // dagger.Lazy breaks the DI cycle DashPayConfig → WalletDataProvider →
     // WalletDataAdapter → CutoverTxSeamService → DashPayConfig; the seam
     // service is only dereferenced at call time, never at construction.
-    private val txSeamServiceLazy: dagger.Lazy<CutoverTxSeamService>
+    private val txSeamServiceLazy: dagger.Lazy<CutoverTxSeamService>,
+    private val seamLockRegistry: SeamOutputLockRegistry
 ) : WalletDataProvider {
 
     private val txSeamService: CutoverTxSeamService
@@ -161,24 +165,58 @@ class WalletDataAdapter @Inject constructor(
     override fun observeTotalBalance(): Flow<Dash> = walletData.observeTotalBalance().map { it.toDash() }
 
     override fun lockOutputsPayingTo(txId: String, address: String) {
-        // Fail closed: callers just sent this tx from this wallet, so a miss is an invariant
-        // violation — silently skipping would leave CrowdNode signup funds unlocked.
+        // Held-wallet path first: self-authored txs live in the dashj wallet even
+        // post-cutover, and pre-cutover this is the only path (byte-identical to before).
         val tx = walletData.getTransaction(Sha256Hash.wrap(txId))
-            ?: throw IllegalStateException("transaction $txId not found in wallet")
-        val params = walletData.networkParameters
-        val target = Address.fromBase58(params, address)
-        tx.outputs.filter { output ->
-            ScriptPattern.isP2PKH(output.scriptPubKey) &&
-                Address.fromPubKeyHash(params, ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)) == target
-        }.forEach { output ->
-            walletData.lockOutput(output.outPointFor)
+        if (tx != null) {
+            val params = walletData.networkParameters
+            val target = Address.fromBase58(params, address)
+            tx.outputs.filter { output ->
+                ScriptPattern.isP2PKH(output.scriptPubKey) &&
+                    Address.fromPubKeyHash(params, ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)) == target
+            }.forEach { output ->
+                walletData.lockOutput(output.outPointFor)
+            }
+            return
         }
+        // Post-cutover: an INCOMING SDK-fed tx (e.g. the CrowdNode signup response the
+        // caller just observed through the seam) never reaches the held dashj wallet —
+        // register its matching outputs in the seam lock registry instead. Address
+        // matching is by standard-address string equality, which for a P2PKH target is
+        // exactly the old ScriptPattern.isP2PKH + pubkey-hash-address check (a P2SH
+        // output's base58 can never equal a P2PKH target's).
+        val seamTx = txSeamService.sdkTxInfosOrNull()?.get(txId.lowercase())
+        if (seamTx != null) {
+            seamTx.outputs
+                .filter { !it.isOpReturn && it.address == address }
+                .forEach { output -> seamLockRegistry.lockOutput(seamTx.txId, output.index) }
+            return
+        }
+        // Fail closed only when BOTH sources miss: callers just sent/received this tx,
+        // so a total miss is an invariant violation — silently skipping would leave
+        // CrowdNode signup funds unlocked.
+        throw IllegalStateException("transaction $txId not found in wallet")
     }
 
     override suspend fun waitUntilLocked(txId: String) {
-        // Fail closed rather than pretending the tx is locked (see lockOutputsPayingTo).
+        // Held-wallet path first (self-authored txs; the only path pre-cutover) —
+        // dashj confidence semantics, byte-identical to before.
         val tx = walletData.getTransaction(Sha256Hash.wrap(txId))
-            ?: throw IllegalStateException("transaction $txId not found in wallet")
-        tx.waitToMatchFilters(LockedTransaction())
+        if (tx != null) {
+            tx.waitToMatchFilters(LockedTransaction())
+            return
+        }
+        // Post-cutover: an SDK-fed tx has no held-wallet confidence to wait on — wait
+        // for the seam feed instead (its TxInfo isLocked flips on islock/block context
+        // events). The current-state replay closes the check-then-subscribe race.
+        if (txSeamService.sdkTxInfosOrNull()?.get(txId.lowercase()) != null) {
+            txSeamService
+                .observeSdkTransactionsWithCurrentState(arrayOf(NeutralLockedTransaction(txId)))
+                .first()
+            return
+        }
+        // Fail closed rather than pretending the tx is locked (see lockOutputsPayingTo):
+        // the tx exists nowhere.
+        throw IllegalStateException("transaction $txId not found in wallet")
     }
 }

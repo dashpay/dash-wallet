@@ -187,6 +187,43 @@ class SdkTxInfoBuilderTest {
         )) {
             assertEquals(filter.matches(transaction.toTxInfo(emptyBag(), params)), filter.matches(sdkFed))
         }
+
+        // State parity, not just address-filter verdicts: for each SDK context
+        // and its dashj confidence equivalent, isPending / isLocked /
+        // isEntirelySelf must agree — including the islocked-but-unmined
+        // state, where the tx is pending AND locked on BOTH sides.
+        val stateTx = tx(toAddressTxData)
+        fun sdkStateFed(context: Int): TxInfo =
+            build(snapshotOf(listOf(tx(toAddressTxData) to recordFor(stateTx, context = context))))
+                .getValue(stateTx.txId.toString())
+        fun assertStateParity(dashjFedState: TxInfo, sdkFedState: TxInfo) {
+            assertEquals("isPending must agree", dashjFedState.isPending, sdkFedState.isPending)
+            assertEquals("isLocked must agree", dashjFedState.isLocked, sdkFedState.isLocked)
+            assertEquals("isEntirelySelf must agree", dashjFedState.isEntirelySelf, sdkFedState.isEntirelySelf)
+        }
+
+        val confidence = stateTx.confidence
+        // mempool ↔ dashj PENDING (0 broadcast peers): pending, not locked.
+        confidence.confidenceType = org.bitcoinj.core.TransactionConfidence.ConfidenceType.PENDING
+        val dashjMempool = stateTx.toTxInfo(emptyBag(), params)
+        assertTrue(dashjMempool.isPending)
+        assertFalse(dashjMempool.isLocked)
+        assertStateParity(dashjMempool, sdkStateFed(0))
+
+        // islock without a block ↔ dashj PENDING + IX_LOCKED: pending AND locked.
+        confidence.ixType = org.bitcoinj.core.TransactionConfidence.IXType.IX_LOCKED
+        val dashjIslocked = stateTx.toTxInfo(emptyBag(), params)
+        assertTrue(dashjIslocked.isPending)
+        assertTrue(dashjIslocked.isLocked)
+        assertStateParity(dashjIslocked, sdkStateFed(1))
+
+        // mined ↔ dashj BUILDING: locked, no longer pending.
+        confidence.appearedAtChainHeight = 100_000
+        val dashjMined = stateTx.toTxInfo(emptyBag(), params)
+        assertFalse(dashjMined.isPending)
+        assertTrue(dashjMined.isLocked)
+        assertStateParity(dashjMined, sdkStateFed(2))
+        assertStateParity(dashjMined, sdkStateFed(3))
     }
 
     // ── SDK-truth field mappings ──────────────────────────────────────
@@ -198,11 +235,19 @@ class SdkTxInfoBuilderTest {
             build(snapshotOf(listOf(transaction to recordFor(transaction, context = context))))
                 .getValue(transaction.txId.toString())
 
+        // mempool: pending, not locked.
         assertFalse(info(0).isLocked)
         assertTrue(info(0).isPending)
-        for (context in 1..3) {
+        // islocked-but-unmined: locked AND STILL pending — dashj's PENDING
+        // confidence type means "not yet mined" and survives an islock, so
+        // pending and locked are not mutually exclusive (Coinbase's transfer
+        // success check reads isPending right after a fast islock).
+        assertTrue(info(1).isLocked)
+        assertTrue(info(1).isPending)
+        // mined (in-block / chainlocked): locked, no longer pending.
+        for (context in 2..3) {
             assertTrue("context $context must count as locked", info(context).isLocked)
-            assertFalse(info(context).isPending)
+            assertFalse("context $context must not count as pending", info(context).isPending)
         }
     }
 

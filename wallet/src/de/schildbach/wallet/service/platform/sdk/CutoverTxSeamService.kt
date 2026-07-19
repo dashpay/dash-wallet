@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
@@ -87,7 +88,8 @@ class CutoverTxSeamService internal constructor(
     private val scope: CoroutineScope,
     private val networkParameters: NetworkParameters,
     private val dashjTxLookup: (Sha256Hash) -> Transaction?,
-    private val walletBindRetryMs: Long = CutoverUiDataService.WALLET_BIND_RETRY_MS
+    private val walletBindRetryMs: Long = CutoverUiDataService.WALLET_BIND_RETRY_MS,
+    private val clockMs: () -> Long = { System.currentTimeMillis() }
 ) {
     @Inject
     constructor(
@@ -112,9 +114,13 @@ class CutoverTxSeamService internal constructor(
 
     /**
      * Reactive routing gate for [de.schildbach.wallet.data.WalletDataAdapter]:
-     * false until a committed cutover has been observed (initial value is
-     * synchronously false, so pre-cutover subscriptions attach the dashj
-     * path immediately); flips back to false on rollback.
+     * false until a committed cutover has been observed AND the first SDK
+     * snapshot has primed (initial value is synchronously false, so
+     * pre-cutover subscriptions attach the dashj path immediately). Flipping
+     * only after priming means consumers keep the dashj flow — valid, merely
+     * stale-but-real data — during the bind/prime window instead of switching
+     * to an event stream whose baseline hasn't loaded; flips back to false on
+     * rollback or pipeline failure.
      */
     val activeState: StateFlow<Boolean> = _active.asStateFlow()
 
@@ -137,14 +143,55 @@ class CutoverTxSeamService internal constructor(
     private val events = MutableSharedFlow<TxSeamEvent>(extraBufferCapacity = 256)
 
     /**
+     * Priming-window replay (bounded, per activation): rows of the priming
+     * snapshot whose firstSeen timestamp is at/after the activation instant —
+     * transactions that LANDED while the pipeline was still binding/priming,
+     * which no consumer could have seen (they were on the dashj flow, and the
+     * held dashj wallet never learns of SDK-side receives). Delivered to each
+     * subscriber via [onSubscription] rather than a hot tryEmit at prime time,
+     * because [activeState] consumers resubscribe asynchronously after the
+     * flip — a hot emit fired before they reattach would be lost, which is the
+     * exact event-loss bug this replay fixes. Old (pre-activation) rows are
+     * never replayed, preserving dashj listener-attach parity; the list is
+     * cleared on the next snapshot after priming (by then every flip-driven
+     * resubscription has long attached, and later status changes emit normal
+     * confidence events anyway) and on deactivation.
+     */
+    @Volatile
+    private var primingReplay: List<TxInfo> = emptyList()
+
+    /**
      * SDK-fed twin of `WalletObserver.observeTransactions`: new
      * wallet-relevant txs always emit; lock/confirmation changes emit only
      * when [withConfidence]. The neutral [filters] apply directly over the
-     * SDK-fed [TxInfo] (any-match, like the dashj observer).
+     * SDK-fed [TxInfo] (any-match, like the dashj observer). Subscribers
+     * additionally receive the bounded [primingReplay] (see there) as
+     * new-tx-style events.
      */
     fun observeSdkTransactions(withConfidence: Boolean, filters: Array<out TransactionFilter>): Flow<TxInfo> =
         events
+            .onSubscription {
+                primingReplay.forEach { emit(TxSeamEvent(it, isConfidenceUpdate = false)) }
+            }
             .filter { event -> withConfidence || !event.isConfidenceUpdate }
+            .map { it.tx }
+            .filter { tx -> filters.isEmpty() || filters.any { it.matches(tx) } }
+
+    /**
+     * [observeSdkTransactions] (confidence events included) with the CURRENT
+     * snapshot state of every known tx replayed to the subscriber first.
+     * Race-free by construction: [onSubscription] runs only after the event
+     * subscription is live, so a lock/context change landing between a
+     * caller's snapshot check and its subscription can never be missed.
+     * Exists for the seam's `waitUntilLocked` ONLY — general observation must
+     * use [observeSdkTransactions], whose no-history-replay semantics mirror
+     * attaching dashj wallet listeners.
+     */
+    fun observeSdkTransactionsWithCurrentState(filters: Array<out TransactionFilter>): Flow<TxInfo> =
+        events
+            .onSubscription {
+                _sdkTxInfos?.values?.forEach { emit(TxSeamEvent(it, isConfidenceUpdate = true)) }
+            }
             .map { it.tx }
             .filter { tx -> filters.isEmpty() || filters.any { it.matches(tx) } }
 
@@ -168,18 +215,27 @@ class CutoverTxSeamService internal constructor(
             cutoverActive()
                 .distinctUntilChanged()
                 .collectLatest { active ->
-                    _active.value = active
                     if (!active) {
+                        _active.value = false
                         _sdkTxInfos = null
+                        primingReplay = emptyList()
                         return@collectLatest
                     }
-                    log.info("cutover committed — serving seam tx reads from the SDK")
+                    // NOTE: activeState does NOT flip here — it flips inside
+                    // runPipeline once the first snapshot has primed, so
+                    // consumers stay on the (valid, stale-but-real) dashj
+                    // flow through the bind/prime window instead of a seam
+                    // flow with no baseline. This repeats on every
+                    // rollback→recommit flap.
+                    log.info("cutover committed — priming the SDK seam tx feed")
                     try {
-                        runPipeline()
+                        runPipeline(activatedAtMs = clockMs())
                     } catch (t: Throwable) {
                         if (t is CancellationException) throw t
                         log.error("cutover tx seam pipeline failed; seam reads fall back to dashj", t)
+                        _active.value = false
                         _sdkTxInfos = null
+                        primingReplay = emptyList()
                     }
                 }
         }
@@ -200,13 +256,15 @@ class CutoverTxSeamService internal constructor(
         }
     }
 
-    private suspend fun runPipeline() {
+    private suspend fun runPipeline(activatedAtMs: Long) {
         val walletIdHex = awaitBoundWallet()
         var baselineStatuses: Map<String, L1TxUiStatus>? = null
         source.observeSeamTxSnapshots(walletIdHex)
             .catch { e ->
                 log.error("SDK seam tx flow failed; seam reads fall back to dashj", e)
+                _active.value = false
                 _sdkTxInfos = null
+                primingReplay = emptyList()
             }
             .collect { snapshot ->
                 val infos = try {
@@ -222,17 +280,37 @@ class CutoverTxSeamService internal constructor(
                 baselineStatuses = statuses
 
                 if (previous == null) {
-                    // Priming snapshot: baseline only, no history replay
-                    // (matches attaching dashj wallet listeners).
-                    log.info("seam tx feed primed with {} wallet transactions", infos.size)
+                    // Priming snapshot: baseline only — no history replay for
+                    // pre-activation rows (matches attaching dashj wallet
+                    // listeners). Rows that LANDED during the priming window
+                    // (firstSeen at/after activation) become the bounded
+                    // per-subscriber replay, since no consumer flow could
+                    // have carried them. Only then does the routing gate
+                    // flip, so switching consumers find the replay in place.
+                    primingReplay = snapshot.walletRecords
+                        .filter { it.timestampMs >= activatedAtMs }
+                        .mapNotNull { infos[it.txidHex] }
+                    log.info(
+                        "seam tx feed primed with {} wallet transactions ({} in the priming window); serving seam tx reads from the SDK",
+                        infos.size,
+                        primingReplay.size
+                    )
+                    _active.value = true
                     return@collect
                 }
+                // First post-prime snapshot: every flip-driven resubscription
+                // has attached; retire the priming replay (see its docs).
+                primingReplay = emptyList()
                 for (record in snapshot.walletRecords) {
                     val tx = infos[record.txidHex] ?: continue
-                    when {
+                    val emitted = when {
                         record.txidHex !in previous -> events.tryEmit(TxSeamEvent(tx, isConfidenceUpdate = false))
                         previous[record.txidHex] != record.status ->
                             events.tryEmit(TxSeamEvent(tx, isConfidenceUpdate = true))
+                        else -> true
+                    }
+                    if (!emitted) {
+                        log.warn("seam event buffer overflow — dropped event for {}", record.txidHex)
                     }
                 }
             }
