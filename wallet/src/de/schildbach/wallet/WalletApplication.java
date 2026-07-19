@@ -1357,6 +1357,20 @@ public class WalletApplication extends MultiDexApplication
             return FlowKt.emptyFlow();
         }
 
+        // Phase 5d/B7: cutover-aware for the plain ESTIMATED stream (what the neutral
+        // facade's observeEstimatedBalance() serves): post-cutover dashj's ESTIMATED
+        // balance freezes, so the SDK's live total (which sums the same unspent-output
+        // set) wins via the same overlay observeTotalBalance() uses — pre-cutover the
+        // SDK side is permanently null and dashj values pass through unchanged.
+        // Selector-based and non-ESTIMATED streams stay dashj-fed: they serve send-path
+        // coin selection, which another track owns.
+        if (cutoverUiDataService != null
+                && balanceType == Wallet.BalanceType.ESTIMATED
+                && coinSelector == null) {
+            return cutoverUiDataService.overlayTotalBalance(
+                    walletBalanceObserver.observe(balanceType, null));
+        }
+
         return walletBalanceObserver.observe(balanceType, coinSelector);
     }
 

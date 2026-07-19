@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.data
 
+import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
 import de.schildbach.wallet.transactions.LockedTransaction
 import de.schildbach.wallet.transactions.NeutralFilterAdapter
 import de.schildbach.wallet.transactions.WalletTransactionFilter
@@ -24,7 +25,9 @@ import de.schildbach.wallet.transactions.toTxInfo
 import de.schildbach.wallet.transactions.waitToMatchFilters
 import de.schildbach.wallet.util.toCoin
 import de.schildbach.wallet.util.toDash
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Sha256Hash
@@ -42,11 +45,28 @@ import javax.inject.Singleton
  * Implements the neutral [WalletDataProvider] facade for feature/integration modules on top of
  * the wallet module's dashj-typed [WalletData]. All dashj/neutral conversions are concentrated
  * here; behavior mirrors the previous dashj-typed facade exactly.
+ *
+ * ## Post-cutover transaction reads
+ *
+ * Once the cutover is committed the dashj wallet is held/frozen — externally-received
+ * transactions never reach it — so [observeTransactions], [getTransaction] and
+ * [getTransactions] switch to the SDK-fed [CutoverTxSeamService]. The switch lives HERE, at
+ * the seam: every feature/integration consumer (CrowdNode's signup/deposit state machine
+ * first among them) inherits live data with zero feature-code changes. Routing is per-call/
+ * reactive: pre-cutover (and after a rollback, and whenever the SDK feed is unavailable)
+ * everything takes the unchanged dashj path.
  */
 @Singleton
 class WalletDataAdapter @Inject constructor(
-    private val walletData: WalletData
+    private val walletData: WalletData,
+    // dagger.Lazy breaks the DI cycle DashPayConfig → WalletDataProvider →
+    // WalletDataAdapter → CutoverTxSeamService → DashPayConfig; the seam
+    // service is only dereferenced at call time, never at construction.
+    private val txSeamServiceLazy: dagger.Lazy<CutoverTxSeamService>
 ) : WalletDataProvider {
+
+    private val txSeamService: CutoverTxSeamService
+        get() = txSeamServiceLazy.get()
 
     override val networkId: String
         get() = walletData.networkParameters.id
@@ -71,7 +91,21 @@ class WalletDataAdapter @Inject constructor(
 
     override fun canAffordIdentityCreation(): Boolean = walletData.canAffordIdentityCreation()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeTransactions(withConfidence: Boolean, vararg filters: TransactionFilter): Flow<TxInfo> {
+        // Reactive cutover routing: activeState is synchronously false pre-cutover (the dashj
+        // observer attaches immediately, byte-identical to before) and flips per DataStore
+        // emission, so a rollback mid-observation switches live subscriptions back to dashj.
+        return txSeamService.activeState.flatMapLatest { sdkFed ->
+            if (sdkFed) {
+                txSeamService.observeSdkTransactions(withConfidence, filters)
+            } else {
+                observeDashjTransactions(withConfidence, filters)
+            }
+        }
+    }
+
+    private fun observeDashjTransactions(withConfidence: Boolean, filters: Array<out TransactionFilter>): Flow<TxInfo> {
         // The filters must go INTO the observer (not be applied post-hoc): there they gate both
         // emission and confidence-listener registration, exactly like the old dashj-typed path.
         val dashjFilters = filters.map {
@@ -82,14 +116,29 @@ class WalletDataAdapter @Inject constructor(
     }
 
     override fun getTransaction(txId: String): TxInfo? {
+        // Post-cutover the SDK snapshot wins (live lock state; the held dashj wallet's is
+        // frozen); the dashj lookup remains as the fallback for anything the SDK store does
+        // not have — stale-but-real, never fabricated.
+        txSeamService.sdkTxInfosOrNull()?.get(txId.lowercase())?.let { return it }
         return walletData.getTransaction(Sha256Hash.wrap(txId))
             ?.toTxInfo(walletData.transactionBag, walletData.networkParameters)
     }
 
     override fun getTransactions(vararg filters: TransactionFilter): Collection<TxInfo> {
-        return walletData.getTransactions()
-            .map { it.toTxInfo(walletData.transactionBag, walletData.networkParameters) }
-            .filter { tx -> filters.isEmpty() || filters.any { it.matches(tx) } }
+        val sdkTxs = txSeamService.sdkTxInfosOrNull()
+        val all: Collection<TxInfo> = if (sdkTxs != null) {
+            // Post-cutover: the SDK-fed set, plus (dedup'd by txid) any held-dashj-wallet
+            // transactions the SDK store never learned — history must never shrink across
+            // the cutover.
+            val dashjOnly = walletData.getTransactions()
+                .filter { it.txId.toString() !in sdkTxs }
+                .map { it.toTxInfo(walletData.transactionBag, walletData.networkParameters) }
+            sdkTxs.values + dashjOnly
+        } else {
+            walletData.getTransactions()
+                .map { it.toTxInfo(walletData.transactionBag, walletData.networkParameters) }
+        }
+        return all.filter { tx -> filters.isEmpty() || filters.any { it.matches(tx) } }
     }
 
     override fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper> {

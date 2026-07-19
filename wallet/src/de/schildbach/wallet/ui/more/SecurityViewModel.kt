@@ -34,7 +34,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.WalletUIConfig
@@ -67,7 +66,8 @@ class SecurityViewModel @Inject constructor(
         get() = configuration.remindBackupSeed
 
     val balance: Coin
-        get() = walletData.wallet?.getBalance(Wallet.BalanceType.ESTIMATED) ?: Coin.ZERO
+        // Through the seam (not wallet.getBalance directly): cutover-aware.
+        get() = walletData.getWalletBalance()
 
     val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE).asLiveData()
 

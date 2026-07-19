@@ -318,6 +318,32 @@ internal fun planL1DisplaySync(
     return L1DisplaySyncPlan(inserts, updates, notify)
 }
 
+// ── Seam tx snapshot (post-cutover WalletDataProvider reads) ──────────
+
+/**
+ * Everything the wallet-data seam ([de.schildbach.wallet.data.WalletDataAdapter])
+ * needs to serve neutral `TxInfo` reads from the SDK's L1 store post-cutover.
+ * Neutral/primitive-only, like [L1TxUiRecord]; the dashj-typed conversion
+ * happens at the seam ([de.schildbach.wallet.transactions.SdkTxInfoBuilder]).
+ *
+ * @param walletRecords wallet-relevant transactions (TXO-joined), same set
+ *        as [CutoverUiSource.observeWalletTxRecords].
+ * @param payloadByTxid raw serialized transaction bytes for EVERY SDK-known
+ *        transaction (not just wallet-relevant ones), keyed by DISPLAY-order
+ *        txid hex — the lookup that resolves an input's connected output.
+ * @param mineOutpoints wallet-owned outputs as "txidHex:vout" keys (the SDK
+ *        TXO set — the same output universe dashj's `isMine` covers,
+ *        parity-proven by the shadow harness).
+ * @param spenderByOutpoint "txidHex:vout" → display txid hex of the tx
+ *        spending that output, from the TXO rows' `spendingTxid`.
+ */
+class SdkSeamTxSnapshot(
+    val walletRecords: List<L1TxUiRecord>,
+    val payloadByTxid: Map<String, ByteArray>,
+    val mineOutpoints: Set<String>,
+    val spenderByOutpoint: Map<String, String>
+)
+
 // ── Source seam ───────────────────────────────────────────────────────
 
 /**
@@ -339,6 +365,12 @@ interface CutoverUiSource {
 
     /** Live wallet-relevant transaction records, neutral shape. */
     fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>>
+
+    /**
+     * Live [SdkSeamTxSnapshot]s for the post-cutover seam reads
+     * ([de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService]).
+     */
+    fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot>
 }
 
 /** Production [CutoverUiSource]: the live SDK Room DB, reactive. */
@@ -403,7 +435,56 @@ internal class DashSdkCutoverUiSource(
         )
     }
 
+    override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> = flow {
+        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+        val db = database()
+        emitAll(
+            combine(
+                db.txoDao().observeByWallet(walletId),
+                db.transactionDao().observeAll()
+            ) { txos, txs ->
+                // Wallet membership via the TXO join, exactly like
+                // observeWalletTxRecords (single-wallet app convention).
+                val walletTxids = HashSet<String>()
+                val mineOutpoints = HashSet<String>()
+                val spenderByOutpoint = HashMap<String, String>()
+                for (row in txos) {
+                    val txidHex = row.txid?.let { displayHex(it) } ?: continue
+                    walletTxids += txidHex
+                    val outpointKey = "$txidHex:${row.vout}"
+                    mineOutpoints += outpointKey
+                    row.spendingTxid?.let { spender ->
+                        val spenderHex = displayHex(spender)
+                        walletTxids += spenderHex
+                        spenderByOutpoint[outpointKey] = spenderHex
+                    }
+                }
+                val payloadByTxid = HashMap<String, ByteArray>(txs.size)
+                val records = ArrayList<L1TxUiRecord>()
+                for (tx in txs) {
+                    val txidHex = displayHex(tx.txid)
+                    payloadByTxid[txidHex] = tx.transactionData
+                    if (txidHex in walletTxids) {
+                        records += l1TxUiRecord(
+                            txidWireBytes = tx.txid,
+                            netAmountDuffs = tx.netAmount,
+                            feeDuffs = tx.fee,
+                            contextCode = tx.context,
+                            directionCode = tx.direction,
+                            firstSeenSec = tx.firstSeen,
+                            blockTimestampSec = tx.blockTimestamp
+                        )
+                    }
+                }
+                SdkSeamTxSnapshot(records, payloadByTxid, mineOutpoints, spenderByOutpoint)
+            }
+        )
+    }
+
     private fun wireHex(bytes: ByteArray): String = bytes.joinToString("") { "%02x".format(it) }
+
+    private fun displayHex(bytes: ByteArray): String =
+        bytes.reversedArray().joinToString("") { "%02x".format(it) }
 }
 
 // ── The service ───────────────────────────────────────────────────────

@@ -95,7 +95,7 @@ object TxInfoConverter {
         )
     }
 
-    private fun standardAddressOf(script: Script, params: NetworkParameters): String? {
+    internal fun standardAddressOf(script: Script, params: NetworkParameters): String? {
         return try {
             if (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) {
                 script.getToAddress(params).toBase58()
