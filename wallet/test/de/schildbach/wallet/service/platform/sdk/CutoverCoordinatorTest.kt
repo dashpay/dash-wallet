@@ -25,6 +25,8 @@ import io.mockk.coVerify
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -178,5 +180,56 @@ class CutoverCoordinatorTest {
         val status = coordinator.autoAdvanceToCutover()
         assertEquals(CutoverState.CUT_OVER, status.state)
         assertEquals(CutoverState.CUT_OVER.name, stored())
+    }
+
+    // ── Engine-start gate hardening (FIX 3) ───────────────────────────
+
+    @Test
+    fun dashjEngineMayStart_true_whileDualRunning() = runBlocking {
+        val (coordinator, _) = coordinator(stored = null, flag = true)
+        assertTrue(coordinator.dashjEngineMayStart())
+    }
+
+    @Test
+    fun dashjEngineMayStart_false_whenCommittedAndSdkL1EngineEnabled() = runBlocking {
+        val (coordinator, _) = coordinator(stored = CutoverState.CUT_OVER.name, flag = true)
+        assertFalse(coordinator.dashjEngineMayStart())
+    }
+
+    @Test
+    fun dashjEngineMayStart_true_whenCommittedButSdkL1EngineDisabled() = runBlocking {
+        // The latent brick: committed state persisted, but the shadow flag was
+        // toggled off on a later launch → the SDK will not own L1, so dashj MUST
+        // still be allowed to start (otherwise the wallet has no L1 engine).
+        val (coordinator, _) = coordinator(stored = CutoverState.CUT_OVER.name, flag = false)
+        assertTrue(coordinator.dashjEngineMayStart())
+    }
+
+    @Test
+    fun dashjEngineMayStart_true_whenSettledButSdkL1EngineDisabled() = runBlocking {
+        val (coordinator, _) = coordinator(stored = CutoverState.SETTLED.name, flag = false)
+        assertTrue(coordinator.dashjEngineMayStart())
+    }
+
+    // ── Fire-and-forget fresh-wallet commit (FIX 1, non-blocking) ─────
+
+    @Test
+    fun commitForFreshWalletSetupAsync_commitsOnTheInjectedScope() = runBlocking {
+        var current: String? = null
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
+            current = secondArg()
+            Unit
+        }
+        val collector = mockk<CutoverEvidenceCollector>()
+        // Unconfined runs the launched commit inline, so the effect is observable
+        // synchronously here — the production seam is fire-and-forget (non-blocking).
+        val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined))
+
+        coordinator.commitForFreshWalletSetupAsync()
+
+        assertEquals(CutoverState.CUT_OVER.name, current)
     }
 }

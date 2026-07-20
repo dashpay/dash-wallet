@@ -19,6 +19,10 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
@@ -48,15 +52,44 @@ data class CutoverStatus(
 @Singleton
 class CutoverCoordinator @Inject constructor(
     private val dashPayConfig: DashPayConfig,
-    private val evidenceCollector: CutoverEvidenceCollector
+    private val evidenceCollector: CutoverEvidenceCollector,
+    // The default keeps host tests (which construct with two args) working;
+    // Dagger injects the application scope in production.
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 ) {
     private val mutex = Mutex()
 
     suspend fun currentState(): CutoverState =
         CutoverState.fromStored(runCatching { dashPayConfig.get(DashPayConfig.CUTOVER_STATE) }.getOrNull())
 
-    /** Whether the dashj L1 engine may start this launch (engine-start sites consult this). */
-    suspend fun dashjEngineMayStart(): Boolean = dashjEngineMayStart(currentState())
+    /**
+     * Whether the dashj L1 engine may start this launch (engine-start sites
+     * consult this). True in every non-committed state, AND — the hardening
+     * guard — also true when the state IS committed (CUT_OVER/SETTLED) but the
+     * SDK L1 engine is disabled ([DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] off).
+     *
+     * WHY: the stored cutover state is per-install-persisted while the shadow
+     * flag can be toggled off on a LATER launch. Without this guard a committed
+     * install whose flag was turned off would hold dashj (state committed) AND
+     * never start the SDK shadow (start gated on the flag) — leaving the wallet
+     * with NO L1 engine at all. The immediate/auto commits both self-gate on the
+     * flag so this cannot arise same-launch, but the flag is external state; this
+     * makes the engine-start decision robust to a later toggle-off. Never hold
+     * dashj unless the SDK will actually own L1.
+     */
+    suspend fun dashjEngineMayStart(): Boolean {
+        val state = currentState()
+        if (dashjEngineMayStart(state)) return true
+        if (!sdkL1EngineEnabled()) {
+            log.warn(
+                "cutover state is {} but USE_KOTLIN_SDK_L1_SHADOW is off — the SDK L1 engine will " +
+                    "not start, so allowing dashj to run (never hold dashj without an SDK L1 owner)",
+                state
+            )
+            return true
+        }
+        return false
+    }
 
     /**
      * Recompute readiness and apply the ADVISORY edge
@@ -116,6 +149,20 @@ class CutoverCoordinator @Inject constructor(
      * on dashj. Only advances a pre-commit state; never clobbers
      * CUT_OVER/SETTLED. Never throws.
      */
+    /**
+     * Fire-and-forget [commitForFreshWalletSetup] for the Java `setWallet`
+     * seam. `setWallet` is called on the MAIN thread by the restore-from-FILE
+     * path (`RestoreWalletFromFileViewModel.restoreWallet`), so it must NEVER
+     * block on DataStore I/O (first-access init can take hundreds of ms). The
+     * home screen reads the cutover state reactively, so a brief
+     * dual→committed transition on a fresh restore is harmless, and the
+     * engine-start gate ([dashjEngineMayStart]) fails safe (dashj runs) if the
+     * commit has not landed by the time the blockchain service starts.
+     */
+    fun commitForFreshWalletSetupAsync() {
+        scope.launch { commitForFreshWalletSetup() }
+    }
+
     suspend fun commitForFreshWalletSetup(): CutoverStatus = mutex.withLock {
         val current = currentState()
         if (current == CutoverState.CUT_OVER || current == CutoverState.SETTLED) {
