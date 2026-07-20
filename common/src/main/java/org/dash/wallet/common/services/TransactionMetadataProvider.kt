@@ -30,10 +30,26 @@ interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
     suspend fun importTransactionMetadata(txId: TxId)
 
-    suspend fun setTransactionTaxCategory(txId: TxId, taxCategory: TaxCategory, isSyncingPlatform: Boolean = false)
+    /**
+     * @param fallbackMetadata a minimal row to create when the tx has no existing metadata
+     *   AND no dashj wallet Transaction to derive one from (an SDK-only tx). Ignored when a
+     *   row already exists or the dashj wallet holds the tx. Lets user edits persist for
+     *   transactions the dashj wallet does not hold.
+     */
+    suspend fun setTransactionTaxCategory(
+        txId: TxId,
+        taxCategory: TaxCategory,
+        isSyncingPlatform: Boolean = false,
+        fallbackMetadata: TransactionMetadata? = null
+    )
     suspend fun setTransactionType(txId: TxId, type: Int, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionExchangeRate(txId: TxId, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean = false)
-    suspend fun setTransactionMemo(txId: TxId, memo: String, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionMemo(
+        txId: TxId,
+        memo: String,
+        isSyncingPlatform: Boolean = false,
+        fallbackMetadata: TransactionMetadata? = null
+    )
     suspend fun setTransactionService(txId: TxId, service: String, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionSentTime(txId: TxId, timestamp: Long, isSyncingPlatform: Boolean = false)
     suspend fun syncPlatformMetadata(

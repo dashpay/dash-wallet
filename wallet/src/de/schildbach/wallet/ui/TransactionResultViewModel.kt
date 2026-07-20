@@ -28,6 +28,7 @@ import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetailProvider
+import de.schildbach.wallet.service.platform.sdk.toDefaultMetadata
 import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -159,11 +160,29 @@ class TransactionResultViewModel @Inject constructor(
         // this might take some time, so let it run asynchronously
         viewModelScope.launch(Dispatchers.IO) {
             transactionMetadataProvider.importTransactionMetadata(txId.toTxId())
-            transactionMetadataProvider.observeTransactionMetadata(txId.toTxId()).collect {
-                _transactionMetadata.value = it
+            transactionMetadataProvider.observeTransactionMetadata(txId.toTxId()).collect { metadata ->
+                // For an SDK-only transaction (one the dashj wallet does not
+                // hold) the provider has no wallet tx to import from, so it can
+                // neither insert nor observe a row and this stream stays null
+                // forever — leaving the tax-category field stuck on "Loading".
+                // Fall back to a default-bearing metadata built from the SDK
+                // detail so the sheet shows the default label promptly. dashj
+                // txs always have a row, so this fallback is never hit for them.
+                _transactionMetadata.value = metadata ?: defaultSdkTxMetadata()
             }
         }
     }
+
+    /**
+     * A default (no user-set category) [TransactionMetadata] for the current
+     * SDK-only transaction, derived from [sdkTxDetail]. Used both to seed the
+     * sheet's display promptly and as the row to persist a user's edit against
+     * (the dashj wallet has no Transaction to create one from). Its null
+     * taxCategory makes the binder show the default label — Income for a
+     * receive, Expense for a send — matching dashj txs. Null when there is no
+     * SDK detail (a dashj tx).
+     */
+    private fun defaultSdkTxMetadata(): TransactionMetadata? = _sdkTxDetail.value?.toDefaultMetadata()
 
     fun toggleTaxCategory() {
         // (txId, isOutgoing) from whichever source served the sheet —
@@ -187,10 +206,16 @@ class TransactionResultViewModel @Inject constructor(
             }
             // toggle the tax category and save
             val newTaxCategory = currentTaxCategory.toggle()
+            // For an SDK-only tx (no dashj Transaction) the provider has no
+            // wallet tx to create the row from, so hand it a fallback row built
+            // from the SDK detail — otherwise the toggle would be dropped and
+            // the category would not survive reopening the sheet.
+            val fallback = if (transaction.value == null) defaultSdkTxMetadata() else null
             viewModelScope.launch(Dispatchers.IO) {
                 transactionMetadataProvider.setTransactionTaxCategory(
                     txId.toTxId(),
-                    newTaxCategory
+                    newTaxCategory,
+                    fallbackMetadata = fallback
                 )
             }
         }
