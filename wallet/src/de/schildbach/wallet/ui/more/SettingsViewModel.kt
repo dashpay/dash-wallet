@@ -87,8 +87,9 @@ data class SettingsUIState(
 /**
  * The debug "SDK engine" status line: send-gate verdict → user-visible
  * text. Pure for host tests. The closed-state line carries the gate's own
- * reason (e.g. "SDK shadow SPV not synced yet") because that is exactly
- * what a soak tester needs to see. Debug-only strings — never shipped,
+ * reason (e.g. "SDK L1 filter scan has not caught up to the chain tip
+ * yet") because that is exactly what a soak tester needs to see.
+ * Debug-only strings — never shipped,
  * never translated (same rationale as the SettingsScreen debug block).
  */
 internal fun sdkEngineStatusLine(gate: WalletFundingGate): String = if (gate.allowed) {

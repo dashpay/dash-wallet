@@ -128,18 +128,20 @@ class SdkL1SendServiceTest {
         }
     }
 
-    private val now = 1_000_000_000L
-
-    /** A fresh, synced, fully matching parity report — the open-gate evidence. */
-    private fun matchingParity(timestampMs: Long = now) = buildParityReport(
-        sdkConfirmedDuffs = 5_000_000,
-        sdkUnconfirmedDuffs = 0,
-        dashjEstimatedDuffs = 5_000_000,
-        dashjAvailableDuffs = 5_000_000,
-        sdkTxCount = 10,
-        dashjTxCount = 12,
-        sdkSynced = true,
-        timestampMs = timestampMs
+    /**
+     * The open-gate evidence: the SDK filter scan has caught up to the
+     * chain tip. Phase is deliberately NOT SYNCED — the device's
+     * stuck-but-fundable state (a live shadow chasing the tip never latches
+     * SYNCED), proving the gate opens on caught-up alone, without
+     * phase==SYNCED and without any dashj parity.
+     */
+    private fun caughtUpProgress() = ShadowSyncProgress(
+        phase = ShadowSyncPhase.FILTERS,
+        overallPercent = 1.0, // the SDK under-reports the percent; the gate ignores it
+        headerHeight = 1_500_000,
+        headerTarget = 1_500_000,
+        filterHeight = 1_500_000,
+        filterTarget = 1_500_000
     )
 
     private var selfSpendMarks = 0
@@ -149,7 +151,7 @@ class SdkL1SendServiceTest {
         source: FakeSource,
         enabled: Boolean? = true,
         cutoverState: String? = null,
-        parity: () -> ParityReport? = { matchingParity() },
+        progress: () -> ShadowSyncProgress = { caughtUpProgress() },
         addressValid: (String) -> Boolean = { it == validAddress },
         bridgeAfterBroadcast: (String) -> Unit = { bridgedTxids += it },
         // Tests default to NO app-locked outputs so the drain paths are
@@ -163,12 +165,11 @@ class SdkL1SendServiceTest {
         source = source,
         dashPayConfig = config(enabled, cutoverState),
         isValidAddress = addressValid,
-        l1Parity = parity,
+        l1Progress = progress,
         hasAppLockedSpendableOutputs = hasAppLockedOutputs,
         seamOutputLockRegistry = seamRegistry,
         onSelfSpendBroadcast = { selfSpendMarks++ },
-        bridgeAfterBroadcast = bridgeAfterBroadcast,
-        nowMs = { now }
+        bridgeAfterBroadcast = bridgeAfterBroadcast
     )
 
     /** A source in the fully-ready state: wallet bound, send succeeds. */
@@ -357,9 +358,11 @@ class SdkL1SendServiceTest {
     // ── The evidence gate (reuses evaluateWalletFundingGate) ─────────────
 
     @Test
-    fun gateClosed_noParityMeasurement_isNotBroadcast() = runBlocking {
+    fun gateClosed_engineNotRunning_isNotBroadcast() = runBlocking {
+        // IDLE progress = the engine is not running (the feed resets to
+        // IDLE on stop) — the gate must fail closed with no send attempt.
         val source = readySource()
-        val result = service(source, parity = { null })
+        val result = service(source, progress = { ShadowSyncProgress.IDLE })
             .sendToAddress(validAddress, amount, emptyWallet = false)
         assertTrue(result is SdkWriteResult.NotBroadcast)
         assertTrue((result as SdkWriteResult.NotBroadcast).reason.contains("gate closed"))
@@ -367,46 +370,49 @@ class SdkL1SendServiceTest {
     }
 
     @Test
-    fun gateClosed_staleParity_isNotBroadcast() = runBlocking {
+    fun gateClosed_engineError_isNotBroadcast() = runBlocking {
         val source = readySource()
-        val stale = matchingParity(
-            timestampMs = now - ShieldedBalanceServiceImpl.PARITY_MAX_AGE_MS - 1
+        val errored = caughtUpProgress().copy(phase = ShadowSyncPhase.ERROR)
+        val result = service(source, progress = { errored })
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.sendCalls)
+    }
+
+    @Test
+    fun gateClosed_scanNotCaughtUp_isNotBroadcast() = runBlocking {
+        val source = readySource()
+        // Every genuinely-not-caught-up shape closes the gate: headers still
+        // climbing, a filter scan far behind the header tip, and an all-zero
+        // snapshot (the post-reset watermark signature, even if it claimed
+        // SYNCED). Note the gate does NOT key on the phase label — it opens
+        // on caught-up alone — so these fixtures are behind on the HEIGHTS.
+        val closedProgressions = listOf(
+            caughtUpProgress().copy(phase = ShadowSyncPhase.HEADERS, headerHeight = 1_400_000, filterHeight = 0),
+            caughtUpProgress().copy(filterHeight = 1_400_000),
+            caughtUpProgress().copy(
+                phase = ShadowSyncPhase.SYNCED,
+                headerHeight = 0, headerTarget = 0, filterHeight = 0, filterTarget = 0
+            )
         )
-        val result = service(source, parity = { stale })
-            .sendToAddress(validAddress, amount, emptyWallet = false)
-        assertTrue(result is SdkWriteResult.NotBroadcast)
-        assertEquals(0, source.sendCalls)
-    }
-
-    @Test
-    fun gateClosed_notSynced_isNotBroadcast() = runBlocking {
-        val source = readySource()
-        val presync = matchingParity().copy(sdkSynced = false)
-        val result = service(source, parity = { presync })
-            .sendToAddress(validAddress, amount, emptyWallet = false)
-        assertTrue(result is SdkWriteResult.NotBroadcast)
-        assertEquals(0, source.sendCalls)
-    }
-
-    @Test
-    fun gateClosed_balanceMismatch_onEitherVariant_isNotBroadcast() = runBlocking {
-        val source = readySource()
-        val estimatedMismatch = matchingParity().copy(balancesMatch = false)
-        val confirmedMismatch = matchingParity().copy(confirmedBalancesMatch = false)
-        for (report in listOf(estimatedMismatch, confirmedMismatch)) {
-            val result = service(source, parity = { report })
+        for (progress in closedProgressions) {
+            val result = service(source, progress = { progress })
                 .sendToAddress(validAddress, amount, emptyWallet = false)
-            assertTrue(result is SdkWriteResult.NotBroadcast)
+            assertTrue("$progress must close the gate", result is SdkWriteResult.NotBroadcast)
         }
         assertEquals(0, source.sendCalls)
     }
 
     @Test
-    fun gateOpen_txCountDelta_doesNotBlock() = runBlocking {
-        // Same rule as shieldFromWallet: tx-count parity is a diagnostic,
-        // not a funds gate (matchingParity() has sdkTx=10 vs dashjTx=12).
+    fun gateOpen_noDashjParityRequired() = runBlocking {
+        // Regression guard for the bricked-sends bug: the gate must NOT
+        // consult any dashj comparison — a caught-up engine broadcasts,
+        // full stop, and WITHOUT phase==SYNCED (the default fixture is
+        // FILTERS). Post-migration the held dashj wallet diverges
+        // permanently, so any parity requirement would close the gate
+        // forever after the first external receive.
         val source = readySource()
-        assertFalse(matchingParity().txCountsMatch)
+        assertFalse(caughtUpProgress().synced)
         val result = service(source).sendToAddress(validAddress, amount, emptyWallet = false)
         assertTrue(result is SdkWriteResult.Broadcast)
     }
@@ -417,29 +423,27 @@ class SdkL1SendServiceTest {
         // the send predicate itself, and read-only.
         val source = readySource()
         assertTrue(service(source).probeSendGate().allowed)
-        assertFalse(service(source, parity = { null }).probeSendGate().allowed)
+        assertFalse(service(source, progress = { ShadowSyncProgress.IDLE }).probeSendGate().allowed)
         assertFalse(
-            service(source, parity = { matchingParity().copy(sdkSynced = false) })
+            service(source, progress = { caughtUpProgress().copy(phase = ShadowSyncPhase.ERROR) })
                 .probeSendGate().allowed
         )
         assertFalse(
-            service(
-                source,
-                parity = { matchingParity(timestampMs = now - ShieldedBalanceServiceImpl.PARITY_MAX_AGE_MS - 1) }
-            ).probeSendGate().allowed
+            service(source, progress = { caughtUpProgress().copy(filterHeight = 1_400_000) })
+                .probeSendGate().allowed
         )
-        // Contained like a real send's gate read: a parity throw = closed.
+        // Contained like a real send's gate read: a progress throw = closed.
         assertFalse(
-            service(source, parity = { throw IllegalStateException("shadow broke") })
+            service(source, progress = { throw IllegalStateException("shadow broke") })
                 .probeSendGate().allowed
         )
         assertEquals(0, source.boundCalls + source.sendCalls)
     }
 
     @Test
-    fun parityReadFailure_keepsGateClosed() = runBlocking {
+    fun progressReadFailure_keepsGateClosed() = runBlocking {
         val source = readySource()
-        val result = service(source, parity = { throw IllegalStateException("shadow broke") })
+        val result = service(source, progress = { throw IllegalStateException("shadow broke") })
             .sendToAddress(validAddress, amount, emptyWallet = false)
         assertTrue(result is SdkWriteResult.NotBroadcast)
         assertEquals(0, source.sendCalls)
@@ -545,9 +549,8 @@ class SdkL1SendServiceTest {
             source = source,
             dashPayConfig = config(true),
             isValidAddress = { true },
-            l1Parity = { matchingParity() },
-            onSelfSpendBroadcast = { throw IllegalStateException("shadow not running") },
-            nowMs = { now }
+            l1Progress = { caughtUpProgress() },
+            onSelfSpendBroadcast = { throw IllegalStateException("shadow not running") }
         )
         val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
         assertEquals(SdkWriteResult.Broadcast(txid), result)
@@ -559,7 +562,7 @@ class SdkL1SendServiceTest {
     fun beforeBroadcast_runsOnlyAfterAllPreflightsPass() = runBlocking {
         var invoked = 0
         // Gate closed → the hook must NOT run.
-        val closed = service(readySource(), parity = { null })
+        val closed = service(readySource(), progress = { ShadowSyncProgress.IDLE })
         closed.sendToAddress(validAddress, amount, emptyWallet = false) { invoked++ }
         assertEquals(0, invoked)
         // Flag off → the hook must NOT run.
@@ -767,8 +770,7 @@ class SdkL1SendServiceTest {
             source = source,
             dashPayConfig = config(false, "CUT_OVER"),
             isValidAddress = { it == validAddress },
-            l1Parity = { matchingParity() },
-            nowMs = { now }
+            l1Progress = { caughtUpProgress() }
         )
         val drained = svc.sendToAddress(validAddress, amount, emptyWallet = true)
         assertTrue(drained is SdkWriteResult.NotBroadcast)
@@ -914,7 +916,7 @@ class SdkL1SendServiceTest {
     @Test
     fun sendAll_gateClosed_isNotBroadcast_beforeAnyBalanceReadOrAttempt() = runBlocking {
         val source = drainReadySource()
-        val result = service(source, enabled = false, cutoverState = "CUT_OVER", parity = { null })
+        val result = service(source, enabled = false, cutoverState = "CUT_OVER", progress = { ShadowSyncProgress.IDLE })
             .sendToAddress(validAddress, amount, emptyWallet = true)
         // The same funding-evidence gate guards the drain: the SDK spends
         // from its own SPV view, send-all most of all.

@@ -21,13 +21,13 @@ import android.os.PowerManager
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.service.platform.sdk.ParityReport
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendSource
 import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataDecryptProbe
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import de.schildbach.wallet.service.platform.sdk.TxMetadataDecryptProbeSource
 import de.schildbach.wallet.service.platform.sdk.WalletFundingGate
-import de.schildbach.wallet.service.platform.sdk.buildParityReport
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -103,24 +103,24 @@ class SettingsViewModelTest {
     }
     private val sendPaymentService = mockk<SendPaymentService>()
 
-    private val now = 1_000_000_000L
+    /** Latest SDK sync progress the gate probe sees; IDLE = gate closed. */
+    @Volatile private var latestProgress: ShadowSyncProgress = ShadowSyncProgress.IDLE
 
-    /** Latest shadow-parity report the gate probe sees; null = gate closed. */
-    @Volatile private var latestParity: ParityReport? = null
+    /** Counts gate-probe progress reads — the poll-lifecycle instrument. */
+    @Volatile private var progressReads = 0
 
-    /** Counts gate-probe parity reads — the poll-lifecycle instrument. */
-    @Volatile private var parityReads = 0
-
-    /** A fresh, synced, fully matching parity report — the open-gate evidence. */
-    private fun openGateParity() = buildParityReport(
-        sdkConfirmedDuffs = 5_000_000,
-        sdkUnconfirmedDuffs = 0,
-        dashjEstimatedDuffs = 5_000_000,
-        dashjAvailableDuffs = 5_000_000,
-        sdkTxCount = 10,
-        dashjTxCount = 10,
-        sdkSynced = true,
-        timestampMs = now
+    /**
+     * The open-gate evidence: the SDK filter scan caught up to the chain
+     * tip. Phase is deliberately NOT SYNCED (a live shadow chasing the tip
+     * never latches SYNCED) — the gate opens on caught-up alone.
+     */
+    private fun openGateProgress() = ShadowSyncProgress(
+        phase = ShadowSyncPhase.FILTERS,
+        overallPercent = 1.0,
+        headerHeight = 1_500_000,
+        headerTarget = 1_500_000,
+        filterHeight = 1_500_000,
+        filterTarget = 1_500_000
     )
 
     /**
@@ -139,11 +139,10 @@ class SettingsViewModelTest {
         },
         dashPayConfig = dashPayConfig,
         isValidAddress = { true },
-        l1Parity = {
-            parityReads++
-            latestParity
-        },
-        nowMs = { now }
+        l1Progress = {
+            progressReads++
+            latestProgress
+        }
     )
 
     /** The decrypt-proof source: fetch result swappable per test. */
@@ -271,7 +270,7 @@ class SettingsViewModelTest {
     @Test
     fun soakSend_flagOnGateOpen_reportsTheSdkEngineRoute() = runTest(dispatcher) {
         l1SendFlag.value = true
-        latestParity = openGateParity()
+        latestProgress = openGateProgress()
         coEvery {
             sendPaymentService.sendCoins("yOwnFreshAddress", Dash.parse("0.05"), false, true)
         } returns soakTxid
@@ -289,10 +288,11 @@ class SettingsViewModelTest {
 
     @Test
     fun soakSend_flagOnGateClosed_reportsTheDashjFallbackRoute() = runTest(dispatcher) {
-        // The live-soak trap this label exists for: flag ON but the shadow
-        // SPV not synced yet, so SdkL1SendService declines and dashj sends.
+        // The live-soak trap this label exists for: flag ON but the SDK
+        // filter scan not caught up yet, so SdkL1SendService declines and
+        // dashj sends.
         l1SendFlag.value = true
-        latestParity = openGateParity().copy(sdkSynced = false)
+        latestProgress = openGateProgress().copy(filterHeight = 1_400_000)
         coEvery {
             sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         } returns soakTxid
@@ -382,11 +382,14 @@ class SettingsViewModelTest {
     fun sdkEngineStatusLine_mapsBothGateStates() {
         assertEquals(
             "SDK engine: READY",
-            sdkEngineStatusLine(WalletFundingGate(true, "balance parity MATCH"))
+            sdkEngineStatusLine(WalletFundingGate(true, "SDK L1 filter scan caught up to the chain tip"))
         )
         assertEquals(
-            "SDK engine: syncing — sends will fall back to dashj (SDK shadow SPV not synced yet)",
-            sdkEngineStatusLine(WalletFundingGate(false, "SDK shadow SPV not synced yet"))
+            "SDK engine: syncing — sends will fall back to dashj " +
+                "(SDK L1 filter scan has not caught up to the chain tip yet)",
+            sdkEngineStatusLine(
+                WalletFundingGate(false, "SDK L1 filter scan has not caught up to the chain tip yet")
+            )
         )
     }
 
@@ -403,7 +406,7 @@ class SettingsViewModelTest {
 
     @Test
     fun gateStatus_reflectsBothStates_andUpdatesLiveWhilePolling() = runTest(dispatcher) {
-        latestParity = null // gate closed: no parity measurement yet
+        latestProgress = ShadowSyncProgress.IDLE // gate closed: engine not running yet
         val viewModel = viewModel()
 
         val screen = launch { viewModel.uiState.collect { } }
@@ -413,18 +416,19 @@ class SettingsViewModelTest {
                 .startsWith("SDK engine: syncing — sends will fall back to dashj")
         )
 
-        // The shadow SPV reaches parity → the next poll flips to READY.
-        latestParity = openGateParity()
+        // The SDK filter scan catches up to the tip → the next poll flips to READY.
+        latestProgress = openGateProgress()
         advanceTimeBy(2_100)
         runCurrent()
         assertEquals("SDK engine: READY", viewModel.uiState.value.sdkSendGateStatus)
 
-        // …and back (a new block dips the shadow out of SYNCED).
-        latestParity = openGateParity().copy(sdkSynced = false)
+        // …and back (the filter scan falls behind the tip again).
+        latestProgress = openGateProgress().copy(filterHeight = 1_400_000)
         advanceTimeBy(2_100)
         runCurrent()
         assertEquals(
-            "SDK engine: syncing — sends will fall back to dashj (SDK shadow SPV not synced yet)",
+            "SDK engine: syncing — sends will fall back to dashj " +
+                "(SDK L1 filter scan has not caught up to the chain tip yet)",
             viewModel.uiState.value.sdkSendGateStatus
         )
 
@@ -433,28 +437,28 @@ class SettingsViewModelTest {
 
     @Test
     fun gatePolling_runsOnlyWhileTheUiStateIsCollected() = runTest(dispatcher) {
-        latestParity = null
+        latestProgress = ShadowSyncProgress.IDLE
         val viewModel = viewModel()
 
         // Screen not visible (no uiState collector) → no probes at all.
         advanceTimeBy(10_000)
         runCurrent()
-        assertEquals(0, parityReads)
+        assertEquals(0, progressReads)
 
         // Screen visible → an immediate probe, then one per ~2s tick.
         val screen = launch { viewModel.uiState.collect { } }
         runCurrent()
-        assertTrue(parityReads >= 1)
+        assertTrue(progressReads >= 1)
         advanceTimeBy(4_100)
         runCurrent()
-        assertTrue(parityReads >= 3)
+        assertTrue(progressReads >= 3)
 
         // Screen gone → the poll stops (WhileSubscribed via subscriptionCount).
         screen.cancel()
         runCurrent()
-        val readsAfterLeaving = parityReads
+        val readsAfterLeaving = progressReads
         advanceTimeBy(60_000)
         runCurrent()
-        assertEquals(readsAfterLeaving, parityReads)
+        assertEquals(readsAfterLeaving, progressReads)
     }
 }

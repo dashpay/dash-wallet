@@ -369,10 +369,14 @@ internal class DashSdkL1SendSource(
  *
  * The SDK spends from its OWN SPV view of the shared seed's UTXOs, so a
  * send is only allowed when [evaluateWalletFundingGate] passes on the
- * latest [L1ShadowSyncService] parity probe: shadow SPV SYNCED and a
- * fresh (≤ [ShieldedBalanceServiceImpl.PARITY_MAX_AGE_MS]) report with
- * BOTH balance variants matching dashj. The helper is reused, not
- * duplicated. Spendable-balance semantics deliberately match dashj: there
+ * engine's live sync progress ([L1ShadowSyncService.progress]): engine
+ * running and its filter scan caught up to the chain tip. The old
+ * dashj-parity requirement is retired — the held dashj wallet is frozen
+ * post-cutover and can never learn of external receives, so parity would
+ * close this gate forever after the first inbound payment (and the SDK's
+ * SYNCED flag is unreachable for a live shadow — see
+ * [evaluateWalletFundingGate]). The helper is reused, not duplicated.
+ * Spendable-balance semantics deliberately match dashj: there
  * is NO chainlocked-only cap and no app-side balance precheck — the SDK's
  * own coin selection rejects a shortfall pre-broadcast
  * (`transaction build failed` → NotBroadcast) and dashj then raises its
@@ -419,11 +423,12 @@ class SdkL1SendService internal constructor(
      */
     private val isValidAddress: (String) -> Boolean,
     /**
-     * Latest L1 shadow-sync parity probe — the funding-gate evidence,
-     * same wiring as [ShieldedBalanceServiceImpl]. The default keeps the
-     * gate CLOSED (funds-safe) for constructions that don't provide it.
+     * The SDK engine's live sync-progress snapshot — the funding-gate
+     * evidence, same wiring as [ShieldedBalanceServiceImpl]. The default
+     * ([ShadowSyncProgress.IDLE]) keeps the gate CLOSED (funds-safe) for
+     * constructions that don't provide it.
      */
-    private val l1Parity: () -> ParityReport? = { null },
+    private val l1Progress: () -> ShadowSyncProgress = { ShadowSyncProgress.IDLE },
     /**
      * Send-all guard (funds-critical): does the HELD dashj wallet still
      * track ANY app-locked output ([org.bitcoinj.wallet.Wallet.lockOutput] —
@@ -467,8 +472,7 @@ class SdkL1SendService internal constructor(
      * until the 5c.4 cutover. Contained — a throw here never affects the
      * already-decided [SdkWriteResult.Broadcast].
      */
-    private val bridgeAfterBroadcast: (String) -> Unit = {},
-    private val nowMs: () -> Long = System::currentTimeMillis
+    private val bridgeAfterBroadcast: (String) -> Unit = {}
 ) {
     @Inject
     constructor(
@@ -490,7 +494,7 @@ class SdkL1SendService internal constructor(
                 false
             }
         },
-        l1Parity = { l1ShadowSyncService.latestParity.value },
+        l1Progress = { l1ShadowSyncService.progress.value },
         hasAppLockedSpendableOutputs = {
             // The held dashj wallet stays the AUTHORITY on app-side locks
             // post-cutover (CrowdNode locks via WalletDataAdapter →
@@ -520,18 +524,16 @@ class SdkL1SendService internal constructor(
     /**
      * Read-only probe of the L1 send evidence gate — THE SAME predicate
      * [sendToAddress] evaluates before broadcasting ([evaluateWalletFundingGate]
-     * over the latest parity report: shadow SPV SYNCED + fresh parity on
-     * BOTH balance variants). Extracted so the debug settings screen can
-     * show the live gate state without approximating the rule. Never
-     * mutates anything and never throws — a parity-read failure reads as
-     * a closed gate, exactly as it would on a real send ([safeParity]).
+     * over the engine's live progress: engine running + filter scan caught
+     * up to the chain tip). Extracted so the debug settings screen can show
+     * the live gate state without approximating the rule. Never mutates
+     * anything and never throws — a progress-read failure reads as a closed
+     * gate, exactly as it would on a real send ([safeProgress]).
      * NOTE: a real send has additional preflights (flag, address, wallet
      * binding), so an open gate means "the SDK engine WOULD be used if
      * those pass", not a guarantee.
      */
-    internal fun probeSendGate(): WalletFundingGate = evaluateWalletFundingGate(
-        safeParity(), nowMs(), ShieldedBalanceServiceImpl.PARITY_MAX_AGE_MS
-    )
+    internal fun probeSendGate(): WalletFundingGate = evaluateWalletFundingGate(safeProgress())
 
     /**
      * Attempt the SDK L1 send. One broadcast attempt, classified by
@@ -594,7 +596,8 @@ class SdkL1SendService internal constructor(
         }
 
         // Evidence gate — the same rule as shieldFromWallet, via the SAME
-        // helper: shadow SYNCED + fresh parity on BOTH balance variants.
+        // helper: engine running + filter scan caught up to the chain tip
+        // (SDK-only preconditions — see evaluateWalletFundingGate).
         // Shared with the debug settings status line via probeSendGate.
         val gate = probeSendGate()
         if (!gate.allowed) {
@@ -725,11 +728,11 @@ class SdkL1SendService internal constructor(
         false
     }
 
-    private fun safeParity(): ParityReport? = try {
-        l1Parity()
+    private fun safeProgress(): ShadowSyncProgress = try {
+        l1Progress()
     } catch (e: Exception) {
-        log.warn("failed to read the L1 parity report; send gate stays closed", e)
-        null
+        log.warn("failed to read the SDK L1 sync progress; send gate stays closed", e)
+        ShadowSyncProgress.IDLE
     }
 
     private fun notBroadcast(operation: String, reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {

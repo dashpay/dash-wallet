@@ -130,6 +130,46 @@ data class ShadowSyncProgress(
             filterTarget > 0 && filterHeight >= filterTarget
 
     /**
+     * The wallet-relevant compact-filter scan has caught up to the header
+     * chain tip — the L1 funding-gate ([evaluateWalletFundingGate])
+     * readiness signal for a LIVE shadow SPV.
+     *
+     * WHY THIS EXISTS (never-SYNCED root cause): the SDK only reports
+     * [ShadowSyncPhase.SYNCED] when its OWN overall-state latches SYNCED,
+     * but a live shadow that co-exists with the dashj engine is perpetually
+     * chasing the moving chain tip — a new block arrives roughly every
+     * 2.5 min, bumps the filter/header targets, and the overall state falls
+     * back to SYNCING before it ever latches. On a real post-cutover wallet
+     * this means [synced] reads `false` forever even though headers are at
+     * the tip and the filter scan has processed the whole chain (observed
+     * on device: `L1Parity … synced=false` throughout the session). A gate
+     * that required [synced]/[scanLooksComplete] would therefore stay
+     * closed permanently — the "Verifying your balance…" toast that blocks
+     * the wallet→shielded transfer.
+     *
+     * So readiness is defined on CAUGHT-UP, not on the SDK's SYNCED flag:
+     * the header chain is at a known tip ([headerTarget] > 0 and
+     * [headerHeight] there) AND the filter scan has reached within
+     * [SCAN_TIP_TOLERANCE_BLOCKS] of that tip (a non-zero [filterTarget]
+     * proves the filter sub-progress is real, not an all-zero snapshot).
+     *
+     * The tolerance absorbs the live chase: the header target can lead the
+     * filter scan by a block or two for a few seconds after each new block,
+     * so exact equality ([scanLooksComplete]) is a fleeting instant a
+     * one-shot preflight rarely catches. It is funds-safe because
+     * `shieldFromWallet` and the SDK send spend from ChainLocked / confirmed
+     * UTXOs that are many blocks deep — a filter scan that trails the tip by
+     * ≤ [SCAN_TIP_TOLERANCE_BLOCKS] has already covered them. A GENUINE
+     * mid-scan (filters thousands of blocks behind, or the engine
+     * IDLE/ERROR/still on headers) trails far outside the tolerance and
+     * keeps the gate closed (fail-closed).
+     */
+    val scanCaughtUpToTip: Boolean get() =
+        headerTarget > 0 && headerHeight >= headerTarget &&
+            filterTarget > 0 &&
+            headerTarget - filterHeight <= SCAN_TIP_TOLERANCE_BLOCKS
+
+    /**
      * The shadow SPV's best knowledge of the NETWORK chain tip, 0 when the
      * snapshot carries no header heights: the reference height the
      * dashj-caught-up gate ([isDashjChainCaughtUp]) compares dashj's chain
@@ -140,6 +180,18 @@ data class ShadowSyncProgress(
 
     companion object {
         val IDLE = ShadowSyncProgress(ShadowSyncPhase.IDLE, 0.0, 0, 0, 0, 0)
+
+        /**
+         * How far the wallet-relevant filter scan may trail the header tip
+         * and still count as caught up ([scanCaughtUpToTip]). Sized to
+         * absorb the live-shadow chase (the header target leading the
+         * filter scan by a block or two for a few seconds after each new
+         * block); far below any genuine mid-scan gap. Funds-safe: shielding
+         * and SDK sends spend ChainLocked/confirmed UTXOs many blocks deep,
+         * so the last couple of tip blocks are irrelevant to the spendable
+         * set even if not yet filter-scanned.
+         */
+        const val SCAN_TIP_TOLERANCE_BLOCKS = 2L
     }
 }
 
