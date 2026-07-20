@@ -2207,8 +2207,27 @@ class L1ShadowSyncService internal constructor(
     companion object {
         private val log = LoggerFactory.getLogger(L1ShadowSyncService::class.java)
 
-        /** Parity probe cadence while the shadow runs (including after SYNCED). */
-        internal const val PARITY_INTERVAL_MS = 60_000L
+        /**
+         * Parity probe cadence while the shadow runs (including after SYNCED).
+         *
+         * Kept short so the cutover-readiness streak fills promptly: the probe
+         * feeds [parityStreakRecorder], and the upgrade auto-commit needs
+         * [CutoverPolicy.MIN_PARITY_STREAK] consecutive caught-up parity-MATCH
+         * samples — at this 10s cadence that is ~20s of sustained parity, so a
+         * genuinely caught-up SDK flips within ~20-30s (was minutes at 60s).
+         * The probe is a cheap in-memory SDK-vs-dashj balance/txcount compare
+         * (no network I/O — see [probeParity]), so a 10s cadence is fine on the
+         * debug/QA builds this shadow harness runs on.
+         *
+         * SIDE EFFECT (checked): this cadence also clocks [ShadowResetDecider]'s
+         * consecutive-probe counting, so a hard reset now fires after ~30s of a
+         * sustained synced mismatch instead of ~3 min. That is safe — the
+         * decider's benign-transient guards are cadence-INDEPENDENT (the 15-min
+         * wall-clock [SELF_SPEND_GRACE_MS] and the dashj-caught-up block
+         * tolerance), so faster probing only speeds recovery from a genuine,
+         * guarded, sustained divergence; it never resets a healthy view sooner.
+         */
+        internal const val PARITY_INTERVAL_MS = 10_000L
 
         /** Progress one-liner throttle (the SDK feed itself ticks at 1 Hz). */
         internal const val PROGRESS_LOG_INTERVAL_MS = 30_000L
@@ -2218,8 +2237,8 @@ class L1ShadowSyncService internal constructor(
 
         /**
          * A probe-loop heartbeat older than this while the service claims
-         * to be running means the loop died/hung: 5 minutes = five missed
-         * 60s probes.
+         * to be running means the loop died/hung: 5 minutes = thirty missed
+         * 10s probes.
          */
         internal const val PROBE_STALL_THRESHOLD_MS = 5 * 60_000L
 

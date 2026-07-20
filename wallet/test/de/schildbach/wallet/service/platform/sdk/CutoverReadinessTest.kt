@@ -30,19 +30,25 @@ import org.junit.Test
  */
 class CutoverReadinessTest {
 
-    private val tenMinutes = CutoverPolicy.MIN_PARITY_WINDOW_MILLIS
+    private val window = CutoverPolicy.MIN_PARITY_WINDOW_MILLIS
 
-    /** A streak satisfying all three parity rules, ending at [end]. */
-    private fun healthyStreak(end: Long = tenMinutes + 60_000L): List<ParityObservation> =
-        listOf(
-            ParityObservation(caughtUp = true, match = true, atElapsedMillis = end - tenMinutes - 30_000L),
-            ParityObservation(caughtUp = true, match = true, atElapsedMillis = end - tenMinutes / 2),
-            ParityObservation(caughtUp = true, match = true, atElapsedMillis = end)
-        )
+    /** The production parity probe cadence the streak accumulates at (~10s). */
+    private val probeIntervalMs = L1ShadowSyncService.PARITY_INTERVAL_MS
+
+    /**
+     * A streak satisfying all three parity rules, ending at [end]:
+     * [CutoverPolicy.MIN_PARITY_STREAK] consecutive caught-up MATCH probes
+     * spaced one probe interval apart, so the run spans well over the short
+     * [CutoverPolicy.MIN_PARITY_WINDOW_MILLIS] floor.
+     */
+    private fun healthyStreak(end: Long = CutoverPolicy.MIN_PARITY_STREAK * probeIntervalMs): List<ParityObservation> =
+        (CutoverPolicy.MIN_PARITY_STREAK - 1 downTo 0).map { back ->
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = end - back * probeIntervalMs)
+        }
 
     private fun readyEvidence(
         parity: List<ParityObservation> = healthyStreak(),
-        now: Long = (parity.lastOrNull()?.atElapsedMillis ?: 0L) + 60_000L
+        now: Long = (parity.lastOrNull()?.atElapsedMillis ?: 0L) + probeIntervalMs
     ) = CutoverEvidence(
         parityObservations = parity,
         unconfirmedSelfAuthoredTxs = 0,
@@ -70,42 +76,63 @@ class CutoverReadinessTest {
     }
 
     @Test
-    fun mismatchInTheTail_resetsTheStreak() {
-        // Three matches, then a diverging probe, then two matches: the
-        // newest-tail streak is 2 — one lucky run before a divergence is
-        // not evidence.
-        val end = tenMinutes * 3
-        val parity = healthyStreak(end = tenMinutes + 60_000L) +
-            ParityObservation(caughtUp = true, match = false, atElapsedMillis = tenMinutes * 2) +
-            listOf(
-                ParityObservation(caughtUp = true, match = true, atElapsedMillis = end - 30_000L),
-                ParityObservation(caughtUp = true, match = true, atElapsedMillis = end)
+    fun singleMatch_neverConfirms_butNConsecutiveDo() {
+        // The anti-blip contract: one (or two) caught-up MATCH probes are
+        // never enough — only MIN_PARITY_STREAK consecutive confirm the flip.
+        for (n in 1 until CutoverPolicy.MIN_PARITY_STREAK) {
+            val verdict = evaluateCutoverReadiness(readyEvidence(parity = healthyStreak().takeLast(n)))
+            assertTrue(
+                "streak of $n must not confirm",
+                verdict.blockers.contains(CutoverBlocker.PARITY_STREAK_TOO_SHORT)
             )
-        val verdict = evaluateCutoverReadiness(readyEvidence(parity = parity, now = end + 1))
+        }
+        // Exactly MIN_PARITY_STREAK consecutive caught-up matches → Ready.
+        assertTrue(evaluateCutoverReadiness(readyEvidence()).ready)
+    }
+
+    @Test
+    fun mismatchInTheTail_resetsTheStreak() {
+        // A full run, then a diverging probe, then a fresh partial run: the
+        // newest-tail streak is only 2 — one lucky run before a divergence
+        // is not evidence, and the mismatch resets the confirmation.
+        val parity = listOf(
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = 0L),
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = 60_000L),
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = 120_000L),
+            ParityObservation(caughtUp = true, match = false, atElapsedMillis = 180_000L), // divergence resets
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = 240_000L),
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = 300_000L)
+        )
+        val verdict = evaluateCutoverReadiness(readyEvidence(parity = parity, now = 360_000L))
         assertTrue(verdict.blockers.contains(CutoverBlocker.PARITY_STREAK_TOO_SHORT))
     }
 
     @Test
-    fun notCaughtUpProbesDoNotCount() {
-        val end = tenMinutes + 60_000L
+    fun notCaughtUpProbeMidRun_resetsTheConfirmation() {
+        // A mid-run not-caught-up probe (mid-scan dip) resets the streak the
+        // same way a mismatch does: the tail after it is too short to confirm.
         val parity = listOf(
-            ParityObservation(caughtUp = false, match = true, atElapsedMillis = 0L),
-            ParityObservation(caughtUp = false, match = true, atElapsedMillis = end - tenMinutes / 2),
-            ParityObservation(caughtUp = true, match = true, atElapsedMillis = end)
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = 0L),
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = 60_000L),
+            ParityObservation(caughtUp = false, match = true, atElapsedMillis = 120_000L), // not-caught-up resets
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = 180_000L),
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = 240_000L)
         )
-        val verdict = evaluateCutoverReadiness(readyEvidence(parity = parity, now = end + 1))
+        val verdict = evaluateCutoverReadiness(readyEvidence(parity = parity, now = 300_000L))
         assertTrue(verdict.blockers.contains(CutoverBlocker.PARITY_STREAK_TOO_SHORT))
     }
 
     @Test
     fun narrowWindow_blocks_evenWithEnoughProbes() {
-        // Three matches within one minute: streak length passes, span fails.
+        // MIN_PARITY_STREAK matches clustered within a sub-window interval:
+        // streak length passes, but the wall-clock floor fails — a coincidental
+        // burst is not real sustained parity.
         val parity = listOf(
             ParityObservation(true, true, atElapsedMillis = 0L),
-            ParityObservation(true, true, atElapsedMillis = 30_000L),
-            ParityObservation(true, true, atElapsedMillis = 60_000L)
+            ParityObservation(true, true, atElapsedMillis = window / 3),
+            ParityObservation(true, true, atElapsedMillis = window - 1)
         )
-        val verdict = evaluateCutoverReadiness(readyEvidence(parity = parity, now = 61_000L))
+        val verdict = evaluateCutoverReadiness(readyEvidence(parity = parity, now = window))
         assertTrue(verdict.blockers.contains(CutoverBlocker.PARITY_WINDOW_TOO_NARROW))
         assertFalse(verdict.blockers.contains(CutoverBlocker.PARITY_STREAK_TOO_SHORT))
     }

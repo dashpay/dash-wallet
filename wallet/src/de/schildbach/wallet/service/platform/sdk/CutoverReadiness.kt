@@ -117,11 +117,32 @@ data class CutoverVerdict(val blockers: Set<CutoverBlocker>) {
  * tuning inputs, not correctness inputs — the BLOCKER SET is the contract.
  */
 object CutoverPolicy {
-    /** Consecutive synced+match probes required (newest-tail run). */
+    /**
+     * Consecutive caught-up+MATCH probes required in the newest-tail run —
+     * the ANTI-BLIP CONFIRMATION and the load-bearing sustained-parity gate.
+     *
+     * This is the deterministic "N consecutive matches" formulation (rather
+     * than a long wall-clock window): a single fleeting mid-scan parity blip
+     * can never trigger the cutover, because THREE consecutive probes must
+     * all be caught-up AND agree on estimated+confirmed+txCount, and any one
+     * not-caught-up/mismatch probe resets the run to zero (see
+     * [evaluateCutoverReadiness]). At the ~10s parity probe cadence
+     * ([L1ShadowSyncService.PARITY_INTERVAL_MS]) three consecutive probes
+     * span ~20s, so the cutover flips within ~20-30s of the SDK genuinely
+     * reaching caught-up parity — not the former ~10 minutes.
+     */
     const val MIN_PARITY_STREAK = 3
 
-    /** The matching streak must span at least this long (millis). */
-    const val MIN_PARITY_WINDOW_MILLIS = 10 * 60 * 1000L
+    /**
+     * A short wall-clock FLOOR under the streak, so the confirmation cannot
+     * be satisfied by a burst of samples packed into a sub-second interval
+     * (defence-in-depth if the probe cadence is ever lowered further). The
+     * primary anti-blip gate is [MIN_PARITY_STREAK]; at the ~10s probe cadence
+     * a 3-probe streak already spans ~20s, so this floor is never the binding
+     * constraint in practice — it just guarantees the streak represents real
+     * elapsed time, not a coincidental cluster.
+     */
+    const val MIN_PARITY_WINDOW_MILLIS = 15 * 1000L
 
     /** The newest observation must be at most this old (millis). */
     const val MAX_PARITY_AGE_MILLIS = 5 * 60 * 1000L
