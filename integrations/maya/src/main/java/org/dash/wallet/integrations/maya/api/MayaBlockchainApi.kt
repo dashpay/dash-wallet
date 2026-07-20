@@ -27,8 +27,21 @@ import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
  * which owns the dashj transaction machinery; this module stays dashj-free.
  */
 interface MayaBlockchainApi {
+    /**
+     * Re-fetches a fresh quote via Maya, then builds + signs + broadcasts the DASH transaction.
+     * Used by the direct Maya backend.
+     */
     suspend fun commitSwapTransaction(
         tradeId: String,
+        swapTradeUIModel: SwapTradeUIModel
+    ): ResponseResource<SwapTradeUIModel>
+
+    /**
+     * Builds + signs + broadcasts the DASH transaction for an already-resolved trade
+     * (vault address + memo + fee already populated). The SwapKit backend uses this
+     * directly after refreshing the route via SwapKit's own API.
+     */
+    suspend fun buildAndSendSwapTx(
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel>
 }

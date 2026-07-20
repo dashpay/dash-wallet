@@ -413,6 +413,8 @@
     <string name="reason">دلیل</string>
     <string name="link_account">به حساب‌تان متصل کنید</string>
     <string name="buy_no_account_needed">دش بخرید - بدون نیاز به حساب</string>
+    <string name="convert_no_account_needed">دش سواپ - نیاز به حساب کاربری نیست</string>
+
     <string name="recipient_address">نشانی دریافت‌کننده</string>
     <string name="not_dash_address">نشانی دش و یا نشانی وب درخواستی معتبر نیست</string>
     <string name="send_to_address">ارسال به نشانی</string>
@@ -445,4 +447,5 @@
     <string name="upgrade_pin_title">باید پین‌تان را به‌روزرسانی کنید. </string>
     <string name="upgrade_pin_description">تعریف پین کد جدید</string>
     <string name="upgrade_pin_continue">ادامه</string>
-</resources>
+
+    </resources>

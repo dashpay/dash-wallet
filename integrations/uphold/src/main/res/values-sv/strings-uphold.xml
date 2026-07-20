@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_buy_dash_button">Köp Dash</string>
+    <string name="uphold_logout">Logga ut</string>
+    <string name="uphold_go_to_website">Gå till Hemsida</string>
+    <string name="uphold_general_error_title">Fel</string>
+    </resources>

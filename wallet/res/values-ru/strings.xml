@@ -441,4 +441,9 @@
     <string name="upgrade_pin_title">Вам необходимо обновить пин-код</string>
     <string name="upgrade_pin_description">Задайте новый PIN-код</string>
     <string name="upgrade_pin_continue">Продолжить</string>
+
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">У вас есть баланс на CrowdNode</string>
+    <string name="crowdnode_withdrawal_reminder_message">Эти средства необходимо вывести с CrowdNode. Вы можете перевести их на этот кошелёк или через свой онлайн-аккаунт на другом устройстве.</string>
+    <string name="crowdnode_withdraw_funds">Вывести средства</string>
 </resources>

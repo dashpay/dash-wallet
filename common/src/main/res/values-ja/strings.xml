@@ -124,6 +124,7 @@
     <string name="address_input_title">Dashの送金</string>
     <string name="show_clipboard">クリップボードのコンテンツを表示する</string>
     <string name="tap_to_paste">クリップボードからアドレスをタップしてペーストする</string>
+    <string name="not_valid_address">%sのアドレスやURLのリクエストが無効です</string>
     <string name="recipient_address">受取人のアドレス</string>
 
     <!-- input parser -->
@@ -134,6 +135,7 @@
     <string name="input_parser_unverifyable_paymentrequest">支払いリクエストの検証が出来ません:\n%s</string>
     <string name="input_parser_invalid_paymentrequest">無効な支払のリクエスト:\n%s</string>
     <string name="input_parser_invalid_transaction">無効なトランザクション:\n%s</string>
+    <string name="address_input_paste_from">%sからペーストする</string>
     <string name="input_connect">接続する</string>
 
     <!-- others -->
@@ -142,7 +144,8 @@
     <string name="yes_cancel">はい、キャンセルします</string>
     <string name="no_keep_it">いいえ、続けます</string>
     <string name="insufficient_money_title">充分なコインがありません</string>
+    <string name="insufficient_money_msg">ウォレット内のコインの残高がこの取引を行うには不足しています。</string>
     <string name="send_coins_error_msg">送金に問題が発生しました！</string>
     <string name="from_dash_wallet_on_this_device">この端末のDashウォレットから</string>
     <string name="preposition_at">で</string>
-</resources>
+    </resources>

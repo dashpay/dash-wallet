@@ -305,6 +305,13 @@
     <string name="about_version_name">Portafoglio DashPay %s</string>
     <string name="about_last_explore_device_sync">Verifica l\'ultima sincronizzazione del dispositivo</string>
     <string name="about_last_explore_server_update">Verifica l\'ultimo aggiornamento del server</string>
+    <string name="about_app_version_label">Versione dell\'app</string>
+    <string name="about_platform_label">Platform</string>
+    <string name="about_explore_section">Esplora Dash</string>
+    <string name="about_explore_update">Aggiornamento</string>
+    <string name="about_last_device_sync">Ultima sincronizzazione del dispositivo</string>
+    <string name="about_last_server_update">Ultimo aggiornamento del server</string>
+    <string name="about_value_not_available">Non disponibile</string>
     <string name="about_firebase_installation_id">ID di installazione di Firebase</string>
     <string name="about_fcm_token">Token di messaggistica cloud Firebase</string>
     <string name="about_last_explore_dash_update_error">non può recuperare</string>

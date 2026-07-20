@@ -56,11 +56,11 @@ import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import coil.compose.AsyncImage
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.money.Dash
@@ -83,6 +83,7 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
+import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
 import org.dash.wallet.features.exploredash.utils.SavingsFormatting
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
@@ -101,7 +102,8 @@ data class PurchaseConfirmUIState(
     val youPayText: String = "",
     val breakdownText: String? = null,
     val isLoading: Boolean = false,
-    val useExpandedLayout: Boolean = false
+    val useExpandedLayout: Boolean = false,
+    val isNetworkAvailable: Boolean = true
 )
 
 @AndroidEntryPoint
@@ -239,8 +241,15 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             youPayText = youPayText,
             breakdownText = breakdown,
             isLoading = false,
-            useExpandedLayout = needsExpand
+            useExpandedLayout = needsExpand,
+            isNetworkAvailable = true
         )
+
+        viewModel.isNetworkAvailable.observe(viewLifecycleOwner) { isNetworkAvailable ->
+            _uiState.update {
+                it.copy(isNetworkAvailable = isNetworkAvailable)
+            }
+        }
     }
 
     private fun onConfirmButtonClicked() {
@@ -681,12 +690,11 @@ internal fun PurchaseGiftCardConfirmView(
                     label = stringResource(R.string.purchase_gift_card_to),
                     isCaption = true
                 ) {
-                    AsyncImage(
-                        model = uiState.merchantLogoUrl,
-                        contentDescription = null,
-                        placeholder = painterResource(R.drawable.ic_image_placeholder),
-                        error = painterResource(R.drawable.ic_image_placeholder),
-                        modifier = Modifier.size(18.dp)
+                    MerchantLogo(
+                        merchantName = uiState.merchantName,
+                        logoUrl = uiState.merchantLogoUrl,
+                        size = 18.dp,
+                        shape = RoundedCornerShape(4.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     ConfirmValueText(
@@ -744,6 +752,7 @@ internal fun PurchaseGiftCardConfirmView(
                 size = Size.Large,
                 isLoading = uiState.isLoading,
                 onClick = onConfirm,
+                isEnabled = uiState.isNetworkAvailable,
                 modifier = Modifier.weight(1f)
             )
         }

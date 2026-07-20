@@ -412,6 +412,8 @@
     <string name="reason">Reden</string>
     <string name="link_account">Koppel je rekening</string>
     <string name="buy_no_account_needed">Koop Dash · Geen rekening nodig</string>
+    <string name="convert_no_account_needed">Dash wisselen · Geen account nodig</string>
+
     <string name="recipient_address">Adres van ontvanger</string>
     <string name="not_dash_address">Geen geldig Dash adres of URL verzoek</string>
     <string name="send_to_address">Versturen naar adres</string>
@@ -439,4 +441,5 @@
     <string name="upgrade_pin_title">Je moet je pincode upgraden</string>
     <string name="upgrade_pin_description">Stel een nieuwe pin in</string>
     <string name="upgrade_pin_continue">Doorgaan</string>
-</resources>
+
+    </resources>

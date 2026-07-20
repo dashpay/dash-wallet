@@ -412,6 +412,8 @@
     <string name="reason">Причина</string>
     <string name="link_account">Прив\'язати ваш акаунт</string>
     <string name="buy_no_account_needed">Купити Dash · Обліковий запис не потрібен</string>
+    <string name="convert_no_account_needed">Swap Dash · No account needed</string>
+
     <string name="recipient_address">Адреса отримувача</string>
     <string name="not_dash_address">Некоректна адреса Dash або URL запит</string>
     <string name="send_to_address">Відправити на адресу</string>
@@ -439,4 +441,5 @@
     <string name="upgrade_pin_title">Вам потрібно оновити свій PIN-код</string>
     <string name="upgrade_pin_description">Задайте новий PIN-код</string>
     <string name="upgrade_pin_continue">Продовжити</string>
-</resources>
+
+    </resources>

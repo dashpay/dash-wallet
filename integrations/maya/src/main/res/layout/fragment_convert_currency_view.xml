@@ -119,14 +119,28 @@
                 android:layout_marginBottom="@dimen/enter_amount_keyboard_spacing"
                 app:nk_decSeparatorEnabled="true" />
 
-            <Button
-                android:id="@+id/continue_btn"
-                style="@style/Button.Primary.Large.Blue"
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="15dp"
-                android:layout_marginBottom="25dp"
-                android:text="@string/button_continue" />
+                android:layout_marginBottom="25dp">
+
+                <Button
+                    android:id="@+id/continue_btn"
+                    style="@style/Button.Primary.Large.Blue"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/button_continue" />
+
+                <ProgressBar
+                    android:id="@+id/continue_progress"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:indeterminate="true"
+                    android:indeterminateTint="@color/dash_white"
+                    android:visibility="gone" />
+            </FrameLayout>
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 

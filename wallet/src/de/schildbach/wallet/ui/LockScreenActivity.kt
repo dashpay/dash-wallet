@@ -16,11 +16,11 @@
 
 package de.schildbach.wallet.ui
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.Parcel
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.telephony.TelephonyManager
 import android.view.KeyCharacterMap
@@ -67,6 +67,7 @@ import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.LockScreenAware
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
@@ -82,6 +83,9 @@ open class LockScreenActivity : SecureActivity() {
     companion object {
         const val INTENT_EXTRA_KEEP_UNLOCKED = "LockScreenActivity.keep_unlocked"
         const val INTENT_EXTRA_NO_BLOCKCHAIN_SERVICE = "LockScreenActivity.no_blockchain_service"
+        // Binder transactions fail near 500KB (1MB buffer shared by the whole process),
+        // so keep the saved state well below that
+        private const val MAX_SAVED_STATE_SIZE = 200 * 1024
         private val log = LoggerFactory.getLogger(LockScreenActivity::class.java)
     }
 
@@ -95,6 +99,7 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var biometricHelper: BiometricHelper
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
     @Inject lateinit var authenticationManager: AuthenticationManager
+    @Inject lateinit var analyticsService: AnalyticsService
 
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
     private val checkPinViewModel by viewModels<CheckPinViewModel>()
@@ -617,20 +622,55 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
-    @SuppressLint("MissingSuperCall")
     override fun onSaveInstanceState(outState: Bundle) {
-        // Prevent TransactionTooLargeException by limiting saved state size
-        try {
-            super.onSaveInstanceState(outState)
-        } catch (e: RuntimeException) {
-            if (e.cause is android.os.TransactionTooLargeException) {
-                // Clear the bundle to prevent the crash and call super with empty bundle
-                outState.clear()
-                log.warn("Cleared saved state to prevent TransactionTooLargeException", e)
-                super.onSaveInstanceState(outState)
-            } else {
-                throw e
+        super.onSaveInstanceState(outState)
+
+        // TransactionTooLargeException is thrown when ActivityThread sends the saved state
+        // over binder after onStop(), not here — so it cannot be caught. Instead, measure
+        // the bundle before the system parcels it and drop oversized entries. Losing saved
+        // state means the activity restarts fresh, which is better than crashing.
+        val totalSize = parcelledSizeOf(outState)
+
+        if (totalSize > MAX_SAVED_STATE_SIZE) {
+            val sizesByKey = outState.keySet().joinToString { key ->
+                @Suppress("DEPRECATION")
+                "$key=${parcelledSizeOf(outState.get(key))}"
             }
+            log.warn(
+                "saved state too large ({} bytes), stripping to avoid TransactionTooLargeException in {}: {}",
+                totalSize,
+                javaClass.simpleName,
+                sizesByKey
+            )
+            analyticsService.logError(
+                IllegalStateException("Saved state too large: $totalSize bytes in ${javaClass.simpleName}"),
+                sizesByKey
+            )
+
+            // Remove the largest entries until the bundle fits
+            outState.keySet().sortedByDescending {
+                @Suppress("DEPRECATION")
+                parcelledSizeOf(outState.get(it))
+            }.forEach { key ->
+                if (parcelledSizeOf(outState) <= MAX_SAVED_STATE_SIZE) {
+                    return@forEach
+                }
+                outState.remove(key)
+            }
+        }
+    }
+
+    private fun parcelledSizeOf(value: Any?): Int {
+        val parcel = Parcel.obtain()
+
+        return try {
+            parcel.writeValue(value)
+            parcel.dataSize()
+        } catch (e: Exception) {
+            log.warn("could not measure saved state entry", e)
+            0
+        } finally {
+            parcel.recycle()
         }
     }
 

@@ -441,4 +441,9 @@
     <string name="upgrade_pin_title">Musisz zaktualizować swój PIN</string>
     <string name="upgrade_pin_description">Ustaw nowy PIN</string>
     <string name="upgrade_pin_continue">Dalej</string>
+
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">Posiadasz środki na CrowdNode</string>
+    <string name="crowdnode_withdrawal_reminder_message">Fundusze te powinny zostać wypłacone z CrowdNode. Możesz przelać te środki na ten portfel lub za pośrednictwem swojego konta online na innym urządzeniu.</string>
+    <string name="crowdnode_withdraw_funds">Wypłać środki</string>
 </resources>

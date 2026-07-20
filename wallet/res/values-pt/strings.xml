@@ -412,6 +412,8 @@
     <string name="reason">Razão</string>
     <string name="link_account">Conectar sua conta</string>
     <string name="buy_no_account_needed">Compre Dash · Não é necessário ter uma conta</string>
+    <string name="convert_no_account_needed">Troque Dash · Sem necessidade de conta</string>
+
     <string name="recipient_address">Endereço do Destinatário</string>
     <string name="not_dash_address">Endereço Dash inválido ou solicitação de URL inválida</string>
     <string name="send_to_address">Enviar para Endereço</string>
@@ -439,4 +441,9 @@
     <string name="upgrade_pin_title">Você precisa atualizar seu PIN</string>
     <string name="upgrade_pin_description">Definir um novo PIN</string>
     <string name="upgrade_pin_continue">Continuar</string>
+
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">Você tem um saldo no CrowdNode</string>
+    <string name="crowdnode_withdrawal_reminder_message">Esses fundos devem ser retirados do CrowdNode. Você pode transferi-los para esta carteira ou realizar a transferência pela sua conta online em outro dispositivo.</string>
+    <string name="crowdnode_withdraw_funds">Retirar fundos</string>
 </resources>

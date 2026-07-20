@@ -81,7 +81,9 @@ data class SwapTradeUIModel(
     var memo: String? = null,
     /** hex tx id of the swap transaction; [TxIds.ZERO_HASH_HEX] until sent */
     var txid: String = TxIds.ZERO_HASH_HEX,
-    var expectedOutputAmount: BigDecimal = BigDecimal.ZERO
+    var expectedOutputAmount: BigDecimal = BigDecimal.ZERO,
+    val routeName: String? = "",
+    val availableRoutes: List<String> = listOf()
 ) : Parcelable {
     @IgnoredOnParcel
     val inputCurrency = amount.dashCode

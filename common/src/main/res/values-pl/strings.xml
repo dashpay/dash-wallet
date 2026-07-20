@@ -148,4 +148,5 @@
     <string name="send_coins_error_msg">Problem z wysłaniem monet!</string>
     <string name="from_dash_wallet_on_this_device">Z portfela Dash na tym urządzeniu</string>
     <string name="preposition_at">przy</string>
+    <string name="info">informacje</string>
 </resources>

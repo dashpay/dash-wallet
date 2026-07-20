@@ -441,4 +441,9 @@
     <string name="upgrade_pin_title">Debe actualizar su PIN</string>
     <string name="upgrade_pin_description">Configura un nuevo PIN</string>
     <string name="upgrade_pin_continue">Continuar</string>
+
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">Tienes saldo en CrowdNode</string>
+    <string name="crowdnode_withdrawal_reminder_message">Estos fondos deben retirarse de CrowdNode. Puede transferirlos a esta billetera o a través de su cuenta en línea en otro dispositivo.</string>
+    <string name="crowdnode_withdraw_funds">Retirar fondos</string>
 </resources>

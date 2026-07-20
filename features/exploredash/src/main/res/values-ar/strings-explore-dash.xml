@@ -122,6 +122,7 @@
     <string-array name="sort_by_options_names">
         <item>اسم</item>
         <item>مسافة</item>
+        <item>خصم</item>
     </string-array>
 
     <plurals name="radius_miles">

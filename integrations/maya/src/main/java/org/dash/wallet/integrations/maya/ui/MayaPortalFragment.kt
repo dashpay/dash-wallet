@@ -30,6 +30,8 @@ import org.dash.wallet.common.util.safeNavigate
 @AndroidEntryPoint
 class MayaPortalFragment : Fragment() {
 
+    private val mayaViewModel by mayaViewModels<MayaViewModel>()
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -38,6 +40,7 @@ class MayaPortalFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 MayaPortalScreen(
+                    activeBackend = mayaViewModel.activeSwapBackend,
                     onBackClick = {
                         findNavController().popBackStack()
                     },

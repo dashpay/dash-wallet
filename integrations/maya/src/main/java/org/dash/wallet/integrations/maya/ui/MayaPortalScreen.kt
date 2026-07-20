@@ -45,15 +45,32 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.integrations.maya.R
+import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.dash.wallet.common.R as CommonR
 
 private val MayaLogoBackground = Color(0xFF151D3F)
+private val SwapKitLogoBackground = Color(0xFFF5F5F5)
 
 @Composable
 fun MayaPortalScreen(
+    activeBackend: SwapBackend = SwapBackend.MAYA,
     onBackClick: () -> Unit = {},
     onConvertClick: () -> Unit = {}
 ) {
+    val providerName = stringResource(
+        when (activeBackend) {
+            SwapBackend.MAYA -> R.string.maya_service_name
+            SwapBackend.SWAPKIT -> R.string.swapkit_service_name
+        }
+    )
+    val providerLogoRes = when (activeBackend) {
+        SwapBackend.MAYA -> R.drawable.ic_maya_logo
+        SwapBackend.SWAPKIT -> R.drawable.ic_swapkit_logo
+    }
+    val providerLogoBackground = when (activeBackend) {
+        SwapBackend.MAYA -> MayaLogoBackground
+        SwapBackend.SWAPKIT -> SwapKitLogoBackground
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -75,18 +92,18 @@ fun MayaPortalScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             TopIntro(
-                heading = stringResource(R.string.maya_service_name),
+                heading = providerName,
                 text = stringResource(R.string.maya_portal_subtitle)
             ) {
                 Box(
                     modifier = Modifier
                         .size(width = 79.dp, height = 80.dp)
-                        .background(MayaLogoBackground, RoundedCornerShape(20.dp)),
+                        .background(providerLogoBackground, RoundedCornerShape(20.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.ic_maya_logo),
-                        contentDescription = null,
+                        painter = painterResource(providerLogoRes),
+                        contentDescription = providerName,
                         modifier = Modifier.size(44.dp)
                     )
                 }
@@ -107,6 +124,12 @@ fun MayaPortalScreen(
 
 @Composable
 @Preview
-private fun MayaPortalScreenPreview() {
-    MayaPortalScreen()
+private fun MayaPortalScreenMayaPreview() {
+    MayaPortalScreen(activeBackend = SwapBackend.MAYA)
+}
+
+@Composable
+@Preview
+private fun MayaPortalScreenSwapKitPreview() {
+    MayaPortalScreen(activeBackend = SwapBackend.SWAPKIT)
 }

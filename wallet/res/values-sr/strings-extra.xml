@@ -1,16 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
+    <string name="onboarding_recover_wallet">Vrati novčanik u prethodno stanje</string>
     <string name="dialog_confirm_confirm">Potvrdi</string>
     <string name="dialog_confirm_fee">Mrežna provizija</string>
     <string name="dialog_confirm_total">Ukupno</string>
-
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Skeniraj</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Pošalji</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Uvezi privatni ključ</string>
+
     <!-- Lock Screen: Text above the PIN Entry area -->
     <string name="lock_enter_pin">Unesite PIN</string>
     <string name="pay_title">Pošalji</string>
@@ -73,7 +72,7 @@
         <item quantity="other">sati</item>
     </plurals>
 
-	<string name="encrypt_new_key_chain_upgrade_button">Nadogradnja</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Nadogradnja</string>
     <string name="encrypt_new_key_chain_dialog_title">Nadogradite vaš novčanik</string>
     <string name="encrypt_new_key_chain_dialog_message">Vaš novčnik će biti nadogradjen kako bi podržavao uvoz i eksportovanje iz više aplikacija.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Morate uneti vaš PIN da bi se proces nadogranje završio.</string>
@@ -92,13 +91,22 @@
     <string name="transaction_result_tax_category_loading">Učitavanje...</string>
     <string name="menu_settings_title">Podešavanja</string>
     <string name="menu_local_currency">Lokalna valuta</string>
+    <string name="menu_rescan_blockchain">Skeniraj opet blockchain</string>
+    <string name="tools_address_book">Adresar</string>
     <string name="tools_import_private_key">Uvezi privatni ključ</string>
-    <string name="tools_show_xpub">Prošireni Javni Ključ</string>
-
+    <string name="tools_network_monitor">Mrežni nadzor</string>
     <string name="confirm">Potvrdi</string>
+
+    <string-array name="history_filter">
+        <item>Primljeno</item>
+        <item>Poslato</item>
+    </string-array>
 
     <string name="received_transactions">Primljeno</string>
     <string name="sent_transactions">Poslato</string>
+    <string name="reset_wallet_button">Resetuj novčanik</string>
+
+
     <string name="masternode_key_address">Adresa</string>
     <string name="masternode_key_ip_address_unknown">Nepoznato</string>
     </resources>

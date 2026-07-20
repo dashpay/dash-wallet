@@ -124,6 +124,7 @@
     <string name="address_input_title">ارسال دش</string>
     <string name="show_clipboard">نشان دادن اطلاعات در کلیپ‌برد</string>
     <string name="tap_to_paste">روی نشانی موجود در کلیپ‌برد لمس کنید تا چسبانده شود</string>
+    <string name="not_valid_address">نشانی دش یا نشانی وب %sمعتیر نیست</string>
     <string name="recipient_address">نشانی دریافت‌کننده</string>
 
     <!-- input parser -->
@@ -134,6 +135,7 @@
     <string name="input_parser_unverifyable_paymentrequest">درخواست پرداخت قابل تایید نیست:\n%s</string>
     <string name="input_parser_invalid_paymentrequest">درخواست نامعتبر پرداخت:n\%s</string>
     <string name="input_parser_invalid_transaction">تراکنش نامعتبر:n\%s</string>
+    <string name="address_input_paste_from">چسباندن از %s</string>
     <string name="input_connect">اتصال</string>
 
     <!-- others -->
@@ -142,7 +144,8 @@
     <string name="yes_cancel">بله! لغو شود</string>
     <string name="no_keep_it">نه!لغو نشود</string>
     <string name="insufficient_money_title">موجودی کافی نیست</string>
+    <string name="insufficient_money_msg">مقدار سکه‌ا در کیف پول‌تان بسیار کم است و برای تراکنش کافی نیست.</string>
     <string name="send_coins_error_msg">مشکل در ارسال مبلغ مورد نظر!</string>
     <string name="from_dash_wallet_on_this_device">از دش والت روی این دستگاه</string>
     <string name="preposition_at">در</string>
-</resources>
+    </resources>

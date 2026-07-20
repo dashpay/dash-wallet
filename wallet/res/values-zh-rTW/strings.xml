@@ -412,6 +412,8 @@
     <string name="reason">理由</string>
     <string name="link_account">連結您的帳戶</string>
     <string name="buy_no_account_needed">購買達世幣 · 無需賬戶</string>
+    <string name="convert_no_account_needed">兌換 達世幣 · 無需帳戶</string>
+
     <string name="recipient_address">收款者位址</string>
     <string name="not_dash_address">不是有效的達世幣位址或 URL 請求</string>
     <string name="send_to_address">發送到位址</string>
@@ -439,4 +441,5 @@
     <string name="upgrade_pin_title">您需要升級 PIN 碼</string>
     <string name="upgrade_pin_description">設置一個新的密碼</string>
     <string name="upgrade_pin_continue">繼續</string>
-</resources>
+
+    </resources>

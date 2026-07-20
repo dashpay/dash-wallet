@@ -114,6 +114,7 @@
     <string-array name="sort_by_options_names">
         <item>Jméno</item>
         <item>Vzdálenost</item>
+        <item>Sleva</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -160,6 +161,7 @@
     <string name="insufficient_money_title">Nemáte dostatečný zůstatek</string>
     <string name="insufficient_money_msg">Nedostatečný zůstatek</string>
     <string name="send_coins_error_msg">Problém při zasílání!</string>
+    <string name="purchase_gift_card_reset">Resetovat</string>
     <string name="password">Heslo</string>
     <string name="retry">Opakovat</string>
     <string name="try_again">Zkusit znovu</string>

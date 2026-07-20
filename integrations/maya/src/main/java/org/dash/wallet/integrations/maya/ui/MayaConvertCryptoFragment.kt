@@ -49,8 +49,10 @@ import org.dash.wallet.integrations.maya.databinding.FragmentMayaConvertCryptoBi
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
+import org.dash.wallet.integrations.maya.model.MayaErrorType
 import org.dash.wallet.integrations.maya.model.getCoinBaseExchangeRateConversion
 import org.dash.wallet.integrations.maya.model.getMayaErrorString
+import org.dash.wallet.integrations.maya.model.getMayaErrorType
 import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewFragment
 import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.ServiceWallet
@@ -124,6 +126,12 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             proceedWithSwap(request)
         }
 
+        // While the quote is being fetched, block all amount input on the enter-amount
+        // screen so a late key press can't alter the value carried to the preview.
+        viewModel.showLoading.observe(viewLifecycleOwner) { loading ->
+            fragment.setProcessing(loading == true)
+        }
+
         binding.authLimitBanner.warningLimitInfo.setOnClickListener {
             AdaptiveDialog.custom(R.layout.dialog_withdrawal_limit_info).show(requireActivity())
         }
@@ -132,7 +140,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             lifecycleScope.launch {
                 val dashInbound = try {
                     mayaViewModel.refreshInboundAddresses()
-                    mayaViewModel.inboundAddresses.value.find { it.chain == "DASH" }
+                    mayaViewModel.isTradingActive()
                 } catch (e: Exception) {
                     AdaptiveDialog.create(
                         R.drawable.ic_error,
@@ -143,7 +151,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                     return@launch
                 }
 
-                if (dashInbound == null || dashInbound.halted) {
+                if (!dashInbound) {
                     AdaptiveDialog.create(
                         R.drawable.ic_error,
                         getString(R.string.error),
@@ -156,7 +164,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                 val paymentIntent = try {
                     viewModel.getUpdatedPaymentIntent(
                         convertViewModel.enteredConvertDashAmount.value!!,
-                        dashInbound.address
+                        swapTrade.vaultAddress
                     )
                 } catch (e: Exception) {
                     AdaptiveDialog.create(
@@ -180,6 +188,14 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
+            // SwapKit's `noRoutesFound` (and Maya's "amount too low") shouldn't pop a modal —
+            // surface them in the same red banner the local min-amount check uses, so the
+            // user can simply raise the amount and retry without dismissing a dialog.
+            if (!it.isNullOrBlank() && getMayaErrorType(it) == MayaErrorType.AMOUNT_TOO_LOW) {
+                showAmountTooLowBanner()
+                return@observe
+            }
+
             val message: String = if (it.isNullOrBlank()) {
                 requireContext().getString(R.string.something_wrong_title)
             } else {
@@ -241,6 +257,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             val hasAmount = !amount.isZero
             binding.youWillReceiveLabel.isVisible = hasAmount
             binding.youWillReceiveValue.isVisible = hasAmount
+            updateReceiveNetwork(hasAmount)
             binding.convertView.dashInput = amount
         }
 
@@ -248,12 +265,14 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             val hasAmount = !amount.isZero
             binding.youWillReceiveLabel.isVisible = hasAmount
             binding.youWillReceiveValue.isVisible = hasAmount
+            updateReceiveNetwork(hasAmount)
             binding.convertView.fiatInput = amount
         }
 
         convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { amount ->
             binding.youWillReceiveLabel.isVisible = amount.second.isNotEmpty()
             binding.youWillReceiveValue.isVisible = amount.second.isNotEmpty()
+            updateReceiveNetwork(amount.second.isNotEmpty())
 
             if (binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = getString(
@@ -279,6 +298,21 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         convertViewModel.setSelectedAsset(args.asset)
     }
 
+    /**
+     * Shows the route-provider line ("using <Maya/NEAR> network") under the receive amount.
+     * Hidden when there's no amount, or when the selected asset's route isn't a single known
+     * provider (mirrors the currency picker's route label).
+     */
+    private fun updateReceiveNetwork(visible: Boolean) {
+        val routeResId = mayaViewModel.getRouteLabelResId(args.asset)
+        if (visible && routeResId != null) {
+            binding.usingNetwork.text = getString(R.string.maya_receive_using_network, getString(routeResId))
+            binding.usingNetwork.isVisible = true
+        } else {
+            binding.usingNetwork.isVisible = false
+        }
+    }
+
     private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {
         if (request.cryptoAmount == null && request.amount != null) {
             showSwapValueErrorView(SwapValueErrorType.ExchangeRateMissing)
@@ -286,7 +320,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         }
 
         val swapValueErrorType = convertViewModel.checkEnteredAmountValue(checkSendingConditions)
-
         lifecycleScope.launch {
             if (swapValueErrorType == SwapValueErrorType.NOError) {
                 if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
@@ -382,12 +415,19 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         binding.limitDesc.text = getString(R.string.exchange_rate_not_found)
     }
 
+    private fun showAmountTooLowBanner() {
+        binding.authLimitBanner.root.isGone = true
+        binding.limitDesc.isVisible = true
+        binding.limitDesc.setText(R.string.maya_error_below_allowed_minimum)
+        setGuidelinePercent(false)
+    }
+
     private fun setConvertViewInput() {
         convertViewModel.selectedCryptoCurrencyAccount.value?.let { it ->
             val accountData = it.coinbaseAccount
             val currency = accountData.currency.lowercase()
             val iconUrl = if (accountData.currency.isNotEmpty()) {
-                GenericUtils.getCoinIcon(currency)
+                GenericUtils.getCoinIcon(currency, accountData.asset)
             } else {
                 null
             }

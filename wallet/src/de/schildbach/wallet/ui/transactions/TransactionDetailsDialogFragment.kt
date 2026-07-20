@@ -111,6 +111,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
             viewModel.merchantName.observe(this) {
                 transactionResultViewBinder.setCustomTitle(getString(R.string.gift_card_tx_title, it))
+                transactionResultViewBinder.setMerchantName(it)
             }
 
             viewModel.transactionMetadata.observe(this) { metadata ->

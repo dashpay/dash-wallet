@@ -23,13 +23,11 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.MayaResultType
 import javax.inject.Inject
 
 @HiltViewModel
 class MayaConvertResultViewModel @Inject constructor(
-    private val mayaWebApi: MayaWebApi,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
 

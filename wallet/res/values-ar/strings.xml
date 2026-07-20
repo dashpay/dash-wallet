@@ -366,4 +366,5 @@
 
     <string name="upgrade_pin_description">قم بإعداد رقم سري جديد</string>
     <string name="upgrade_pin_continue">استمر</string>
-</resources>
+
+    </resources>

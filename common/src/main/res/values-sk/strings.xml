@@ -124,6 +124,7 @@
     <string name="address_input_title">Poslať Dash</string>
     <string name="show_clipboard">Zobraziť obsah v schránke</string>
     <string name="tap_to_paste">Klepnutím na adresu zo schránky ju použijete</string>
+    <string name="not_valid_address">Neplatná adresa %s alebo požiadavka na URL</string>
     <string name="recipient_address">Adresa príjemcu</string>
 
     <!-- input parser -->
@@ -134,6 +135,7 @@
     <string name="input_parser_unverifyable_paymentrequest">Požiadavka na platbu sa nedá overiť:\n%s</string>
     <string name="input_parser_invalid_paymentrequest">Neplatná žiadosť o platbu:\n%s</string>
     <string name="input_parser_invalid_transaction">Neplatná transakcia:\n%s</string>
+    <string name="address_input_paste_from">Vložiť z %s</string>
     <string name="input_connect">Pripojiť</string>
 
     <!-- others -->
@@ -142,7 +144,8 @@
     <string name="yes_cancel">Áno, zrušiť</string>
     <string name="no_keep_it">Nie, zachovať</string>
     <string name="insufficient_money_title">Nedostatok mincí</string>
+    <string name="insufficient_money_msg">Množstvo mincí v peňaženke je pre túto transakciu príliš malé.</string>
     <string name="send_coins_error_msg">Problém pri odosielaní!</string>
     <string name="from_dash_wallet_on_this_device">Z peňaženky Dash na tomto zariadení</string>
     <string name="preposition_at">v</string>
-</resources>
+    </resources>

@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service
 
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.annotation.VisibleForTesting
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -70,8 +71,10 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.WalletEx
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet_test.R
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.ui.components.merchantNameBitmap
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
@@ -86,6 +89,7 @@ import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -175,7 +179,10 @@ class TxDisplayCacheService @Inject constructor(
                     ).flow.map { pagingData ->
                         pagingData
                             .map { entry ->
-                                entry.toTransactionRowView(contactsByTxId[entry.rowId]) as HistoryRowView
+                                entry.toTransactionRowView(
+                                    contactsByTxId[entry.rowId],
+                                    iconBitmapForEntry(entry)
+                                ) as HistoryRowView
                             }
                             .insertSeparators { before: HistoryRowView?, after: HistoryRowView? ->
                                 val afterDate = (after as? TransactionRowView)?.let {
@@ -207,7 +214,10 @@ class TxDisplayCacheService @Inject constructor(
                 val historyRows = ArrayList<HistoryRowView>(cachedRows.size + 32)
                 var prevDate: LocalDate? = null
                 for (entry in cachedRows) {
-                    val txRow = entry.toTransactionRowView(contacts[entry.rowId])
+                    val txRow = entry.toTransactionRowView(
+                        contacts[entry.rowId],
+                        iconBitmapForEntryCold(entry)
+                    )
                     val date = Instant.ofEpochMilli(txRow.time)
                         .atZone(ZoneId.systemDefault()).toLocalDate()
                     if (date != prevDate) {
@@ -264,7 +274,15 @@ class TxDisplayCacheService @Inject constructor(
                     oldMetadata.forEach { (id, _) -> if (id !in newMetadata) add(id.toString()) }
                 }
 
-                if (changedIds.isEmpty()) return@onEach
+                if (changedIds.isEmpty()) {
+                    // PresentableTxMetadata.equals ignores the decoded icon bitmap, so a
+                    // metadata emission that only adds/changes a merchant logo (a later
+                    // observeBitmaps emission) produces no changedIds. Re-map the live pager
+                    // so cached gift card rows pick up the now-available bitmap from the
+                    // refreshed in-memory metadata, without rewriting any rows.
+                    _currentPagingSource.value?.invalidate()
+                    return@onEach
+                }
 
                 val inMemoryWrappers = wrappedTransactionList.filter { wrapper ->
                     wrapper.transactions.keys.any { it in changedIds }
@@ -293,7 +311,12 @@ class TxDisplayCacheService @Inject constructor(
                             metadata = newMetadata[TxId.wrap(txId)],
                             chainLockBlockHeight = chainLockBlockHeight
                         )
-                        TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
+                        TxDisplayCacheEntry.fromTransactionRowView(
+                            row,
+                            walletApplication,
+                            computeFilterFlags(wrapper),
+                            newMetadata[TxId.wrap(txId)]?.customIconId?.toString()
+                        )
                     }
                     val rowIds = newEntries.map { it.rowId }
                     val existingByRowId = txDisplayCacheDao.getEntriesByIds(rowIds).associateBy { it.rowId }
@@ -301,9 +324,10 @@ class TxDisplayCacheService @Inject constructor(
                         val existing = existingByRowId[entry.rowId]
                         if (existing != null && existing.service != null && entry.service == null) {
                             entry.copy(
-                                service    = existing.service,
-                                iconType   = existing.iconType,
-                                iconBgType = existing.iconBgType
+                                service      = existing.service,
+                                iconType     = existing.iconType,
+                                iconBgType   = existing.iconBgType,
+                                customIconId = entry.customIconId ?: existing.customIconId
                             )
                         } else {
                             entry
@@ -537,7 +561,12 @@ class TxDisplayCacheService @Inject constructor(
                 metadata = metadata[TxId.wrap(txId)],
                 chainLockBlockHeight = chainLockBlockHeight
             )
-            return TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
+            return TxDisplayCacheEntry.fromTransactionRowView(
+                row,
+                walletApplication,
+                computeFilterFlags(wrapper),
+                metadata[TxId.wrap(txId)]?.customIconId?.toString()
+            )
         }
 
         val allEntries = wrappers.map { renderEntry(it) }
@@ -750,7 +779,12 @@ class TxDisplayCacheService @Inject constructor(
                 metadata = metadata[TxId.wrap(txId)],
                 chainLockBlockHeight = chainLockBlockHeight
             )
-            TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
+            TxDisplayCacheEntry.fromTransactionRowView(
+                row,
+                walletApplication,
+                computeFilterFlags(wrapper),
+                metadata[TxId.wrap(txId)]?.customIconId?.toString()
+            )
         }
         if (displayEntries.isNotEmpty()) {
             val beforeCount = txDisplayCacheDao.getCount()
@@ -842,7 +876,12 @@ class TxDisplayCacheService @Inject constructor(
                         metadata = metadata[TxId.wrap(txId)],
                         chainLockBlockHeight = chainLockBlockHeight
                     )
-                    TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
+                    TxDisplayCacheEntry.fromTransactionRowView(
+                        row,
+                        walletApplication,
+                        computeFilterFlags(wrapper),
+                        metadata[TxId.wrap(txId)]?.customIconId?.toString()
+                    )
                 }
             if (updatedEntries.isNotEmpty()) {
                 txDisplayCacheDao.insertAll(updatedEntries)
@@ -916,7 +955,8 @@ class TxDisplayCacheService @Inject constructor(
                 TxDisplayCacheEntry.fromTransactionRowView(
                     row,
                     walletApplication,
-                    computeFilterFlags(wrapper)
+                    computeFilterFlags(wrapper),
+                    metadata[TxId.wrap(txId)]?.customIconId?.toString()
                 )
             }
         if (updatedEntries.isNotEmpty()) {
@@ -931,6 +971,64 @@ class TxDisplayCacheService @Inject constructor(
         override val groupDate    = txInfo.groupDate
         override fun tryInclude(tx: org.dash.wallet.common.transactions.TxInfo) = tx.txId == txInfo.txId
         override fun getValue() = org.dash.wallet.common.money.Dash(txInfo.netValueDuffs)
+    }
+
+    /**
+     * Non-blocking lookup of the merchant/service icon bitmap for a cached row, using the
+     * in-memory [metadata] map (already-decoded bitmaps). Returns null for rows without a
+     * custom icon — the common case — so the static [iconType] drawable is used instead.
+     * Safe to call from the Paging `map` lambda (no suspension, no disk I/O).
+     *
+     * Deliberately does NOT gate on [TxDisplayCacheEntry.customIconId]: rows cached by a
+     * prior app version (or before the 19→20 migration) have a null column, but the bitmap
+     * is still available here from the live metadata map, so existing gift card rows show
+     * their merchant logo immediately on the live path without waiting for a rewrite or
+     * rebuild. `metadata.icon` is only non-null for gift cards, so grouped/plain rows stay
+     * unaffected; group rows whose rowId is not a tx hash simply fail the wrap and return null.
+     */
+    private fun iconBitmapForEntry(entry: TxDisplayCacheEntry): Bitmap? {
+        val txId = try {
+            TxId.wrap(entry.rowId)
+        } catch (e: IllegalArgumentException) {
+            return null
+        }
+        val meta = metadata[txId] ?: return null
+        // Real merchant logo, when present.
+        meta.icon?.let { return it }
+        // DashSpend gift card with no merchant logo → generate a full-name icon from the
+        // merchant name (meta.title) instead of falling back to the static gift card icon.
+        if (ServiceName.isDashSpend(meta.service) && !meta.title.isNullOrBlank()) {
+            return generatedMerchantIcon(meta.title!!)
+        }
+        return null
+    }
+
+    /** Cache of generated full-name merchant icons, keyed by merchant name. */
+    private val generatedMerchantIcons = ConcurrentHashMap<String, Bitmap>()
+
+    /**
+     * Returns a generated full-name icon for [merchantName], created once and cached.
+     * Used for gift card transactions whose merchant has no logo.
+     */
+    private fun generatedMerchantIcon(merchantName: String): Bitmap =
+        generatedMerchantIcons.computeIfAbsent(merchantName) {
+            val sizePx = walletApplication.resources.getDimensionPixelSize(R.dimen.transaction_icon_size)
+            merchantNameBitmap(walletApplication, it, sizePx)
+        }
+
+    /**
+     * Cold-start variant: prefers the in-memory bitmap, then falls back to reading the
+     * `icon_bitmaps` table directly (the metadata flow may not have populated [metadata]
+     * yet when the fast-startup cache is first rendered).
+     */
+    private suspend fun iconBitmapForEntryCold(entry: TxDisplayCacheEntry): Bitmap? {
+        val iconId = entry.customIconId ?: return null
+        iconBitmapForEntry(entry)?.let { return it }
+        return try {
+            metadataProvider.getIcon(TxId.wrap(iconId))
+        } catch (e: IllegalArgumentException) {
+            null
+        }
     }
 
     private fun computeFilterFlags(wrapper: TransactionWrapper): Int {

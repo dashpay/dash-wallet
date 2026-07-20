@@ -19,8 +19,7 @@
     <fragment
         android:id="@+id/mayaCurrencyPickerFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaCryptoCurrencyPickerFragment"
-        android:label="mayaPortalFragment"
-        tools:layout="@layout/fragment_currency_picker" >
+        android:label="mayaPortalFragment" >
         <action android:id="@+id/mayaCurrencyPicker_to_addressInput"
             app:destination="@id/mayaAddressInputFragment"
             app:enterAnim="@anim/slide_in_right"
