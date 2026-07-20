@@ -32,8 +32,20 @@ package de.schildbach.wallet.service.platform.sdk
 
 /** One point-in-time L1 parity observation (from `L1Parity` probe reports). */
 data class ParityObservation(
-    /** Both engines fully synced when the probe ran. */
-    val synced: Boolean,
+    /**
+     * The SDK's wallet-relevant compact-filter scan had CAUGHT UP TO THE
+     * CHAIN TIP when the probe ran ([ShadowSyncProgress.scanCaughtUpToTip]) —
+     * deliberately NOT the SDK's own SYNCED flag ([ShadowSyncProgress.synced]).
+     * A live shadow perpetually chases the moving tip, so its overall state
+     * never latches SYNCED (a new block every ~2.5 min bumps the target and
+     * drops it back to SYNCING before it can latch — see
+     * [ShadowSyncProgress.scanCaughtUpToTip]). Gating the cutover streak on
+     * SYNCED would therefore keep it empty FOREVER on a real post-cutover
+     * wallet, so no auto- or debug commit could ever fire. Caught-up is the
+     * reliable, fund-safe readiness signal a live shadow can actually reach
+     * (the same one the shielded funding gate switched to).
+     */
+    val caughtUp: Boolean,
     /** estimated, confirmed AND tx-count all equal between dashj and the SDK. */
     val match: Boolean,
     /** Elapsed-realtime millis of the observation (monotonic, not wall clock). */
@@ -69,7 +81,7 @@ data class CutoverEvidence(
 
 /** Why the cutover is blocked — names match the plan doc's at-risk inventory. */
 enum class CutoverBlocker {
-    /** Fewer than [CutoverPolicy.MIN_PARITY_STREAK] consecutive synced MATCH probes. */
+    /** Fewer than [CutoverPolicy.MIN_PARITY_STREAK] consecutive caught-up MATCH probes. */
     PARITY_STREAK_TOO_SHORT,
 
     /** The streak spans less than [CutoverPolicy.MIN_PARITY_WINDOW_MILLIS]. */
@@ -123,16 +135,19 @@ object CutoverPolicy {
  * count toward a cutover). Thread-safe; pure Kotlin (host-testable).
  *
  * An observation is a MATCH only when ALL THREE parity dimensions agree
- * (estimated, confirmed, tx count) — the same bar the funding gate uses.
+ * (estimated, confirmed, tx count) — the same bar the funding gate uses —
+ * and counts toward the cutover streak only when the scan is also CAUGHT
+ * UP TO TIP ([caughtUp], from [ShadowSyncProgress.scanCaughtUpToTip], NOT
+ * the never-latching SYNCED flag — see [ParityObservation.caughtUp]).
  */
 class ParityStreakRecorder(private val maxObservations: Int = 64) {
     private val window = ArrayDeque<ParityObservation>()
 
     @Synchronized
-    fun record(report: ParityReport, atElapsedMillis: Long) {
+    fun record(report: ParityReport, caughtUp: Boolean, atElapsedMillis: Long) {
         window.addLast(
             ParityObservation(
-                synced = report.sdkSynced,
+                caughtUp = caughtUp,
                 match = report.balancesMatch && report.confirmedBalancesMatch && report.txCountsMatch,
                 atElapsedMillis = atElapsedMillis
             )
@@ -184,15 +199,15 @@ fun auditMetadataOrphans(
  *
  * Parity rules look at the NEWEST-TAIL streak: the run of consecutive
  * observations at the end of [CutoverEvidence.parityObservations] that
- * are both `synced` and `match`. A single non-matching probe anywhere in
- * the tail resets the streak — one lucky MATCH is not evidence, and a
- * mismatch after matches means the engines diverged NOW.
+ * are both `caughtUp` and `match`. A single non-matching or not-caught-up
+ * probe anywhere in the tail resets the streak — one lucky MATCH is not
+ * evidence, and a mismatch after matches means the engines diverged NOW.
  */
 fun evaluateCutoverReadiness(evidence: CutoverEvidence): CutoverVerdict {
     val blockers = mutableSetOf<CutoverBlocker>()
 
     // ── Parity streak (rules 1–3) ─────────────────────────────────────
-    val tailStreak = evidence.parityObservations.takeLastWhile { it.synced && it.match }
+    val tailStreak = evidence.parityObservations.takeLastWhile { it.caughtUp && it.match }
     if (tailStreak.size < CutoverPolicy.MIN_PARITY_STREAK) {
         blockers += CutoverBlocker.PARITY_STREAK_TOO_SHORT
     } else {

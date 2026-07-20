@@ -113,10 +113,17 @@ fun nextCutoverState(
  * SPV engines live for one user). Kept trivial + pure so the start sites
  * stay obviously correct.
  *
- * NOTE: the actual disabling of the dashj engine at the start sites is the
- * live-cutover-rehearsal step (deliberately not wired yet — it needs the
- * SDK send/balance paths to be the real source of truth first). This
- * predicate exists so those sites can adopt it in one place when they do.
+ * NOTE: this gate is now LIVE-WIRED — a committed cutover actually holds the
+ * dashj engine and routes L1 to the SDK. The engine-start site
+ * ([de.schildbach.wallet.service.BlockchainServiceImpl] resolves
+ * `dashjEngineMayStart` before starting the peergroup and skips it when
+ * false), and the SDK send/balance/UI paths ([SdkL1SendService],
+ * [SdkBlockchainStateService], [CutoverUiDataService], [CutoverTxSeamService],
+ * `MainViewModel`) all consult this same predicate on the CUTOVER_STATE flow.
+ * So a CUT_OVER install genuinely runs SDK-primary — this is no longer inert
+ * instrumentation. The coordinator's suspend `dashjEngineMayStart()` adds a
+ * fail-safe on top: it also allows dashj when committed but the SDK L1 engine
+ * is disabled, so the wallet is never left with no L1 engine.
  */
 fun dashjEngineMayStart(state: CutoverState): Boolean =
     state == CutoverState.DUAL_RUNNING || state == CutoverState.READY_OBSERVED

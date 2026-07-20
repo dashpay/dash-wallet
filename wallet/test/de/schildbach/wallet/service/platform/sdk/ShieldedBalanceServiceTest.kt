@@ -269,22 +269,29 @@ class ShieldedBalanceServiceTest {
         boundWalletId = { walletIdHex }
     )
 
-    private val now = 1_000_000_000L
-
-    /** A fresh full-MATCH parity report — the open L1 funding gate. */
-    private fun matchParity(ageMs: Long = 0L) = buildParityReport(
-        sdkConfirmedDuffs = 100, sdkUnconfirmedDuffs = 0,
-        dashjEstimatedDuffs = 100, dashjAvailableDuffs = 100,
-        sdkTxCount = 3, dashjTxCount = 3,
-        sdkSynced = true, timestampMs = now - ageMs
+    /**
+     * The open L1 funding gate: the SDK filter scan has caught up to the
+     * chain tip. Phase is deliberately NOT SYNCED — this is the device's
+     * stuck-but-fundable state (a live shadow perpetually chasing the tip
+     * never latches SYNCED, see the never-SYNCED root cause), proving the
+     * gate opens on caught-up alone, without phase==SYNCED and without any
+     * dashj parity.
+     */
+    private fun caughtUpProgress() = ShadowSyncProgress(
+        phase = ShadowSyncPhase.FILTERS,
+        overallPercent = 1.0, // the SDK under-reports the percent; the gate ignores it
+        headerHeight = 1_500_000,
+        headerTarget = 1_500_000,
+        filterHeight = 1_500_000,
+        filterTarget = 1_500_000
     )
 
     private fun service(
         source: FakeSource,
         enabled: Boolean? = true,
         l1ShadowEnabled: Boolean = true,
-        parity: () -> ParityReport? = { null },
-        parityFlow: Flow<ParityReport?> = flowOf(parity()),
+        progress: () -> ShadowSyncProgress = { ShadowSyncProgress.IDLE },
+        progressFlow: Flow<ShadowSyncProgress> = flowOf(progress()),
         ensureL1SpvRunning: suspend () -> Boolean = { true },
         noteSelfSpendBroadcast: () -> Unit = {}
     ) = ShieldedBalanceServiceImpl(
@@ -292,11 +299,10 @@ class ShieldedBalanceServiceTest {
         dashPayConfig = config(enabled, l1ShadowEnabled),
         shieldedDbPath = { dbPath },
         displayHrp = { hrp },
-        l1Parity = parity,
-        l1ParityFlow = { parityFlow },
+        l1Progress = progress,
+        l1ProgressFlow = { progressFlow },
         ensureL1SpvRunning = ensureL1SpvRunning,
-        noteSelfSpendBroadcast = noteSelfSpendBroadcast,
-        nowMs = { now }
+        noteSelfSpendBroadcast = noteSelfSpendBroadcast
     )
 
     // ── Inertness: flag off means NOTHING touches the SDK ─────────────────
@@ -873,42 +879,62 @@ class ShieldedBalanceServiceTest {
 
     @Test
     fun fundingGate_pure_decisionTable() {
-        val fresh = matchParity()
-        assertTrue(evaluateWalletFundingGate(fresh, now, 300_000).allowed)
+        // The fix: the gate OPENS on caught-up alone — phase is FILTERS,
+        // NOT SYNCED (the never-SYNCED root cause: a live shadow chasing
+        // the tip never latches SYNCED), and NO dashj parity is consulted.
+        val caughtUp = caughtUpProgress()
+        assertFalse(caughtUp.synced) // proves we are not relying on SYNCED
+        assertTrue(evaluateWalletFundingGate(caughtUp).allowed)
 
-        // No report — shadow not running.
-        assertFalse(evaluateWalletFundingGate(null, now, 300_000).allowed)
-        // Stale report — probe loop stopped.
-        assertFalse(evaluateWalletFundingGate(matchParity(ageMs = 300_001), now, 300_000).allowed)
-        // Not synced — MISMATCH-PRESYNC is not evidence.
-        assertFalse(
-            evaluateWalletFundingGate(fresh.copy(sdkSynced = false), now, 300_000).allowed
-        )
-        // Either balance-variant mismatch closes the gate.
-        assertFalse(
-            evaluateWalletFundingGate(fresh.copy(balancesMatch = false), now, 300_000).allowed
-        )
-        assertFalse(
-            evaluateWalletFundingGate(fresh.copy(confirmedBalancesMatch = false), now, 300_000).allowed
-        )
-        // Balance match + tx-count mismatch stays ALLOWED: the two stacks
-        // count on different semantics (SDK: distinct txids over TXO rows;
-        // dashj: all wallet txs incl. zero-net mixing rounds), so count
-        // parity can be permanently unreachable on a healthy wallet. The
-        // funds evidence is the balances; the count delta is diagnostic.
+        // Backward-compatible: a genuine SYNCED-with-complete-scan also opens.
         assertTrue(
-            evaluateWalletFundingGate(fresh.copy(sdkTxCount = 4), now, 300_000).allowed
+            evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.SYNCED)).allowed
         )
+
+        // Engine not running (the progress feed resets to IDLE on stop).
+        assertFalse(evaluateWalletFundingGate(ShadowSyncProgress.IDLE).allowed)
+        // Engine errored — closed even with a complete scan snapshot.
+        assertFalse(evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.ERROR)).allowed)
+
+        // Genuinely mid-scan: headers at the tip but the filter scan far
+        // behind (the real "still scanning" state) stays closed.
+        assertFalse(evaluateWalletFundingGate(caughtUp.copy(filterHeight = 1_400_000)).allowed)
+        // All-zero snapshot (no real sub-progress — the post-reset watermark
+        // signature) cannot prove caught-up: closed even if phase were SYNCED.
+        assertFalse(
+            evaluateWalletFundingGate(
+                caughtUp.copy(
+                    phase = ShadowSyncPhase.SYNCED,
+                    headerHeight = 0, headerTarget = 0, filterHeight = 0, filterTarget = 0
+                )
+            ).allowed
+        )
+        // Headers not yet at the tip → closed even if filters look full.
+        assertFalse(evaluateWalletFundingGate(caughtUp.copy(headerHeight = 1_499_000)).allowed)
+
+        // Tolerance boundary: within SCAN_TIP_TOLERANCE_BLOCKS of the tip is
+        // caught up; one block further is not.
         assertTrue(
-            evaluateWalletFundingGate(fresh.copy(dashjTxCount = 436, sdkTxCount = 370), now, 300_000).allowed
+            evaluateWalletFundingGate(
+                caughtUp.copy(
+                    filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS
+                )
+            ).allowed
+        )
+        assertFalse(
+            evaluateWalletFundingGate(
+                caughtUp.copy(
+                    filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS - 1
+                )
+            ).allowed
         )
     }
 
     @Test
     fun shieldFromWallet_gateClosed_isNotBroadcast_beforeAnySpend() = runBlocking {
         val source = readySource()
-        // No parity report at all — the funds-safe default.
-        val service = service(source, parity = { null })
+        // Engine not running (IDLE progress) — the funds-safe default.
+        val service = service(source, progress = { ShadowSyncProgress.IDLE })
 
         val result = service.shieldFromWallet(Dash.COIN)
 
@@ -918,9 +944,20 @@ class ShieldedBalanceServiceTest {
     }
 
     @Test
+    fun shieldFromWallet_scanNotCaughtUp_isNotBroadcast() = runBlocking {
+        val source = readySource()
+        // Headers at the tip but the filter scan far behind (mid-scan).
+        val service = service(source, progress = { caughtUpProgress().copy(filterHeight = 1_400_000) })
+
+        assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.fundCalls)
+        assertFalse(service.isWalletShieldingAvailable())
+    }
+
+    @Test
     fun shieldFromWallet_l1FlagOff_isNotBroadcast() = runBlocking {
         val source = readySource()
-        val service = service(source, l1ShadowEnabled = false, parity = { matchParity() })
+        val service = service(source, l1ShadowEnabled = false, progress = { caughtUpProgress() })
 
         assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
         assertEquals(0, source.fundCalls)
@@ -930,7 +967,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun shieldFromWallet_belowPoolFee_isNotBroadcast() = runBlocking {
         val source = readySource()
-        val service = service(source, parity = { matchParity() })
+        val service = service(source, progress = { caughtUpProgress() })
 
         // Fee floor: 10k duffs shielded fee + 50k duffs asset-lock base cost.
         assertTrue(service.shieldFromWallet(Dash(60_000)) is SdkWriteResult.NotBroadcast)
@@ -944,7 +981,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun shieldFromWallet_happyPath_fundsWithDuffsAndOwnAddress() = runBlocking {
         val source = readySource()
-        val service = service(source, parity = { matchParity() })
+        val service = service(source, progress = { caughtUpProgress() })
 
         val result = service.shieldFromWallet(Dash.COIN)
 
@@ -960,22 +997,17 @@ class ShieldedBalanceServiceTest {
     }
 
     /**
-     * The live-wallet regression: balances MATCH exactly on both variants
-     * but the tx counts differ (known counting-semantics delta — SDK
-     * counts distinct txids over TXO rows, dashj counts all wallet txs).
-     * The gate must stay OPEN: the count delta is diagnostic, not funds
-     * evidence.
+     * Regression guard for the bricked-shields bug: the gate must NOT
+     * consult ANY dashj comparison. A caught-up engine shields regardless
+     * of how far the frozen held dashj wallet has diverged post-migration
+     * (parity would otherwise close the gate forever after the first
+     * external receive). The fixture is not even SYNCED — caught-up alone
+     * funds the shield.
      */
     @Test
-    fun shieldFromWallet_balanceMatchWithTxCountMismatch_isAllowed() = runBlocking {
+    fun shieldFromWallet_noDashjParityRequired() = runBlocking {
         val source = readySource()
-        val countMismatch = buildParityReport(
-            sdkConfirmedDuffs = 154_427_919, sdkUnconfirmedDuffs = 0,
-            dashjEstimatedDuffs = 154_427_919, dashjAvailableDuffs = 154_427_919,
-            sdkTxCount = 370, dashjTxCount = 436,
-            sdkSynced = true, timestampMs = now
-        )
-        val service = service(source, parity = { countMismatch })
+        val service = service(source, progress = { caughtUpProgress() })
 
         assertTrue(service.isWalletShieldingAvailable())
         assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.Broadcast)
@@ -990,7 +1022,7 @@ class ShieldedBalanceServiceTest {
         // The gate passes (fresh MATCH) but the SDK's SPV — the L1 asset-lock
         // broadcaster — cannot be brought up: refuse to spend, cleanly and
         // retryably, before fundFromAssetLock is ever reached.
-        val service = service(source, parity = { matchParity() }, ensureL1SpvRunning = { false })
+        val service = service(source, progress = { caughtUpProgress() }, ensureL1SpvRunning = { false })
 
         val result = service.shieldFromWallet(Dash.COIN)
 
@@ -1006,7 +1038,7 @@ class ShieldedBalanceServiceTest {
         source.onFund = { order += "fund" }
         val service = service(
             source,
-            parity = { matchParity() },
+            progress = { caughtUpProgress() },
             ensureL1SpvRunning = { order += "ensureSpv"; true }
         )
 
@@ -1026,7 +1058,7 @@ class ShieldedBalanceServiceTest {
         source.onFund = { order += "fund" }
         val service = service(
             source,
-            parity = { matchParity() },
+            progress = { caughtUpProgress() },
             noteSelfSpendBroadcast = { order += "grace" }
         )
 
@@ -1042,7 +1074,7 @@ class ShieldedBalanceServiceTest {
     fun shieldFromWallet_gateClosed_doesNotArmTheGrace() = runBlocking {
         val source = readySource()
         var armed = false
-        val service = service(source, parity = { null }, noteSelfSpendBroadcast = { armed = true })
+        val service = service(source, progress = { ShadowSyncProgress.IDLE }, noteSelfSpendBroadcast = { armed = true })
 
         assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
         assertFalse(armed)
@@ -1051,13 +1083,13 @@ class ShieldedBalanceServiceTest {
     // ── observeWalletShieldingAvailable: the LIVE funding gate ────────────
 
     @Test
-    fun observeWalletShieldingAvailable_reDerivesGate_perParityEmission() = runBlocking {
+    fun observeWalletShieldingAvailable_reDerivesGate_perProgressEmission() = runBlocking {
         val source = readySource()
-        // A parity feed that starts closed (null → no measurement), then
-        // emits a fresh full MATCH — the shadow harness reaching parity
-        // while a screen is already open.
-        val parityFeed = MutableStateFlow<ParityReport?>(null)
-        val service = service(source, parity = { parityFeed.value }, parityFlow = parityFeed)
+        // A progress feed that starts closed (IDLE → engine not running),
+        // then emits a caught-up scan — the SDK filter scan reaching the
+        // tip while a screen is already open.
+        val progressFeed = MutableStateFlow(ShadowSyncProgress.IDLE)
+        val service = service(source, progress = { progressFeed.value }, progressFlow = progressFeed)
 
         // Subscribe first (UNDISPATCHED runs the collector to its first
         // suspension, so it has already emitted the initial closed state
@@ -1067,11 +1099,11 @@ class ShieldedBalanceServiceTest {
             service.observeWalletShieldingAvailable().take(2).collect { seen.add(it) }
         }
 
-        // The shadow harness reaches a fresh full MATCH while collection is live.
-        parityFeed.value = matchParity()
+        // The SDK filter scan catches up to the tip while collection is live.
+        progressFeed.value = caughtUpProgress()
         job.join()
 
-        // Closed first (funds-safe default), open once the MATCH lands —
+        // Closed first (funds-safe default), open once caught-up lands —
         // proving the gate is observed per emission, not snapshotted once.
         assertEquals(listOf(false, true), seen)
     }
@@ -1080,9 +1112,9 @@ class ShieldedBalanceServiceTest {
     fun observeWalletShieldingAvailable_flagOff_staysClosed() = runBlocking {
         val source = readySource()
         val service = service(
-            source, enabled = false, parityFlow = flowOf(matchParity())
+            source, enabled = false, progressFlow = flowOf(caughtUpProgress())
         )
-        // Even with a full-MATCH report, the shielded flag being off keeps
+        // Even with a caught-up scan, the shielded flag being off keeps
         // the observed gate closed (inert).
         assertFalse(service.observeWalletShieldingAvailable().first())
     }
@@ -1092,7 +1124,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun shieldFromWallet_failureWithNewTrackedLock_isLockPendingRetry() = runBlocking {
         val source = readySource()
-        val service = service(source, parity = { matchParity() })
+        val service = service(source, progress = { caughtUpProgress() })
 
         // Before the attempt: no locks. After: the lock the failed attempt
         // broadcast (the Rust side tracks it before broadcasting).
@@ -1113,7 +1145,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun shieldFromWallet_definitiveRejection_noNewLock_isNotBroadcast() = runBlocking {
         val source = readySource()
-        val service = service(source, parity = { matchParity() })
+        val service = service(source, progress = { caughtUpProgress() })
         source.onFund = { throw DashSdkError.InvalidParameter("insufficient funds") }
 
         assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
@@ -1122,7 +1154,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun shieldFromWallet_unknownFailure_noNewLock_isAmbiguous() = runBlocking {
         val source = readySource()
-        val service = service(source, parity = { matchParity() })
+        val service = service(source, progress = { caughtUpProgress() })
         source.onFund = { throw RuntimeException("connection reset") }
 
         // The persistence bridge is async: no row is NOT proof of no
@@ -1133,7 +1165,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun shieldFromWallet_preexistingLock_doesNotMaskDefinitiveRejection() = runBlocking {
         val source = readySource()
-        val service = service(source, parity = { matchParity() })
+        val service = service(source, progress = { caughtUpProgress() })
 
         // A lock from an EARLIER interrupted attempt exists before this
         // call — it must not be misread as this call's evidence.
@@ -1146,7 +1178,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun shieldFromWallet_unreadableLockStateBefore_refusesToSpend() = runBlocking {
         val source = readySource()
-        val service = service(source, parity = { matchParity() })
+        val service = service(source, progress = { caughtUpProgress() })
         source.shieldLocks = { throw RuntimeException("db closed") }
 
         assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
@@ -1158,7 +1190,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun resumeSweep_resumesOnlyUnconsumedLocks_withReversedTxid() = runBlocking {
         val source = readySource()
-        val service = service(source, parity = { matchParity() })
+        val service = service(source, progress = { caughtUpProgress() })
 
         val txidDisplayHex = (1..32).joinToString("") { "%02x".format(it) }
         source.shieldLocks = {
@@ -1181,7 +1213,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun resumeSweep_isolatesPerLockFailures() = runBlocking {
         val source = readySource()
-        val service = service(source, parity = { matchParity() })
+        val service = service(source, progress = { caughtUpProgress() })
         source.shieldLocks = {
             listOf(
                 PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 1),
@@ -1200,7 +1232,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun resumeSweep_capsAttemptsPerOutpointPerProcess() = runBlocking {
         val source = readySource()
-        val service = service(source, parity = { matchParity() })
+        val service = service(source, progress = { caughtUpProgress() })
         source.shieldLocks = { listOf(PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 1)) }
         source.onResume = { _, _ -> throw RuntimeException("permanently stuck") }
 
@@ -1213,7 +1245,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun resumeSweep_nothingPending_isCheap() = runBlocking {
         val source = readySource()
-        val service = service(source, parity = { matchParity() })
+        val service = service(source, progress = { caughtUpProgress() })
 
         assertEquals(0, service.resumePendingWalletShields())
         assertEquals(1, source.lockQueries)

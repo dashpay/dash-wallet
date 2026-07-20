@@ -19,6 +19,10 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
@@ -48,15 +52,44 @@ data class CutoverStatus(
 @Singleton
 class CutoverCoordinator @Inject constructor(
     private val dashPayConfig: DashPayConfig,
-    private val evidenceCollector: CutoverEvidenceCollector
+    private val evidenceCollector: CutoverEvidenceCollector,
+    // The default keeps host tests (which construct with two args) working;
+    // Dagger injects the application scope in production.
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 ) {
     private val mutex = Mutex()
 
     suspend fun currentState(): CutoverState =
         CutoverState.fromStored(runCatching { dashPayConfig.get(DashPayConfig.CUTOVER_STATE) }.getOrNull())
 
-    /** Whether the dashj L1 engine may start this launch (engine-start sites consult this). */
-    suspend fun dashjEngineMayStart(): Boolean = dashjEngineMayStart(currentState())
+    /**
+     * Whether the dashj L1 engine may start this launch (engine-start sites
+     * consult this). True in every non-committed state, AND — the hardening
+     * guard — also true when the state IS committed (CUT_OVER/SETTLED) but the
+     * SDK L1 engine is disabled ([DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] off).
+     *
+     * WHY: the stored cutover state is per-install-persisted while the shadow
+     * flag can be toggled off on a LATER launch. Without this guard a committed
+     * install whose flag was turned off would hold dashj (state committed) AND
+     * never start the SDK shadow (start gated on the flag) — leaving the wallet
+     * with NO L1 engine at all. The immediate/auto commits both self-gate on the
+     * flag so this cannot arise same-launch, but the flag is external state; this
+     * makes the engine-start decision robust to a later toggle-off. Never hold
+     * dashj unless the SDK will actually own L1.
+     */
+    suspend fun dashjEngineMayStart(): Boolean {
+        val state = currentState()
+        if (dashjEngineMayStart(state)) return true
+        if (!sdkL1EngineEnabled()) {
+            log.warn(
+                "cutover state is {} but USE_KOTLIN_SDK_L1_SHADOW is off — the SDK L1 engine will " +
+                    "not start, so allowing dashj to run (never hold dashj without an SDK L1 owner)",
+                state
+            )
+            return true
+        }
+        return false
+    }
 
     /**
      * Recompute readiness and apply the ADVISORY edge
@@ -78,6 +111,120 @@ class CutoverCoordinator @Inject constructor(
     /** Undo a flip while still legal (CUT_OVER → DUAL_RUNNING). */
     suspend fun rollback(): CutoverStatus =
         transition(CutoverAction.ROLLBACK)
+
+    /**
+     * Drive the full advisory→commit path in one call — the AUTOMATIC
+     * cutover trigger ([CutoverAutoCommitObserver]) does exactly what a
+     * manual CHECK_CUTOVER + COMMIT_CUTOVER would: recompute the advisory
+     * readiness edge (DUAL_RUNNING → READY_OBSERVED if Ready), then commit
+     * (READY_OBSERVED → CUT_OVER if STILL Ready under the lock). Both legs
+     * re-check readiness, so this is fail-safe by construction: if any
+     * blocker holds, the state never leaves DUAL_RUNNING/READY_OBSERVED and
+     * [dashjEngineMayStart] stays true — no timeout, no forced commit.
+     * Idempotent: a no-op once already CUT_OVER/SETTLED.
+     */
+    suspend fun autoAdvanceToCutover(): CutoverStatus {
+        val advisory = observeReadiness()
+        // Only READY_OBSERVED can legally commit; anything else (still
+        // DUAL_RUNNING because a blocker holds, or already past the flip)
+        // is returned unchanged without attempting the commit leg.
+        if (advisory.state != CutoverState.READY_OBSERVED) return advisory
+        return commitCutover()
+    }
+
+    /**
+     * Restore/new-wallet path: make the SDK the L1 source of truth
+     * IMMEDIATELY at wallet-setup time, bypassing the dual-run readiness
+     * gate. A freshly created or restored wallet has NO already-synced
+     * dashj balance to protect, so there is nothing to be "ready" about —
+     * letting dashj run its full (multi-day for large CoinJoin wallets)
+     * block sync first would only add a pointless wait. Committing here
+     * holds dashj from the start and lets the SDK do the fast initial sync
+     * (a post-restore "syncing" wait is the expected, correct UX).
+     *
+     * Self-gated on [DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW]: holding dashj
+     * while the SDK L1 engine is OFF (release/prod, or the flag toggled
+     * off) would leave the wallet with NO L1 engine at all — so when the
+     * SDK path is inactive this is a deliberate no-op and the wallet stays
+     * on dashj. Only advances a pre-commit state; never clobbers
+     * CUT_OVER/SETTLED. Never throws.
+     */
+    /**
+     * Fire-and-forget [commitForFreshWalletSetup] for the Java `setWallet`
+     * seam. `setWallet` is called on the MAIN thread by the restore-from-FILE
+     * path (`RestoreWalletFromFileViewModel.restoreWallet`), so it must NEVER
+     * block on DataStore I/O (first-access init can take hundreds of ms). The
+     * home screen reads the cutover state reactively, so a brief
+     * dual→committed transition on a fresh restore is harmless, and the
+     * engine-start gate ([dashjEngineMayStart]) fails safe (dashj runs) if the
+     * commit has not landed by the time the blockchain service starts.
+     */
+    fun commitForFreshWalletSetupAsync() {
+        scope.launch { commitForFreshWalletSetup() }
+    }
+
+    suspend fun commitForFreshWalletSetup(): CutoverStatus = mutex.withLock {
+        val current = currentState()
+        if (current == CutoverState.CUT_OVER || current == CutoverState.SETTLED) {
+            return@withLock CutoverStatus(current, READY_VERDICT)
+        }
+        if (!sdkL1EngineEnabled()) {
+            log.info(
+                "fresh-wallet cutover skipped: USE_KOTLIN_SDK_L1_SHADOW is off — the SDK L1 " +
+                    "engine is inactive, so dashj must keep owning L1 (staying {})",
+                current
+            )
+            return@withLock CutoverStatus(current, READY_VERDICT)
+        }
+        writeState(current, CutoverState.CUT_OVER, "fresh-wallet setup (restore/new)")
+    }
+
+    /**
+     * Per-wallet reset: on a wallet WIPE, put the cutover state back to
+     * DUAL_RUNNING so a newly restored/created wallet re-runs the flow from
+     * scratch (immediate-commit for a fresh restore, or dual-run →
+     * caught-up → auto-commit for whatever comes next) instead of
+     * inheriting the WIPED wallet's committed state. Critical for
+     * correctness: without this, a Reset-then-restore would start already
+     * CUT_OVER and hold dashj while the SDK has not yet synced the new
+     * wallet. Unconditional write (independent of the SDK flag — a stored
+     * CUT_OVER must be cleared even if the flag is momentarily off). Never
+     * throws.
+     */
+    suspend fun resetForWalletWipe(): CutoverStatus = mutex.withLock {
+        val current = currentState()
+        if (current == CutoverState.DUAL_RUNNING) {
+            return@withLock CutoverStatus(current, READY_VERDICT)
+        }
+        writeState(current, CutoverState.DUAL_RUNNING, "wallet wipe")
+    }
+
+    /** Whether the SDK L1 engine (shadow) is enabled — the fresh-commit gate. */
+    private suspend fun sdkL1EngineEnabled(): Boolean =
+        runCatching { dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true }
+            .getOrDefault(false)
+
+    /**
+     * The atomic config write shared by the direct (non-readiness) state
+     * moves ([commitForFreshWalletSetup]/[resetForWalletWipe]). A failed
+     * persist keeps the old state (reported unchanged), never a phantom
+     * flip. Must be called under [mutex].
+     */
+    private suspend fun writeState(from: CutoverState, to: CutoverState, reason: String): CutoverStatus {
+        if (from == to) return CutoverStatus(from, READY_VERDICT)
+        return runCatching { dashPayConfig.set(DashPayConfig.CUTOVER_STATE, to.name) }
+            .fold(
+                onSuccess = {
+                    log.info("cutover state {} -> {} ({})", from, to, reason)
+                    CutoverStatus(to, READY_VERDICT)
+                },
+                onFailure = {
+                    if (it is CancellationException) throw it
+                    log.warn("cutover state persist failed ({} -> {}, {}); keeping {}", from, to, reason, from, it)
+                    CutoverStatus(from, READY_VERDICT)
+                }
+            )
+    }
 
     private suspend fun transition(action: CutoverAction): CutoverStatus = mutex.withLock {
         val current = currentState()
@@ -105,5 +252,13 @@ class CutoverCoordinator @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(CutoverCoordinator::class.java)
+
+        /**
+         * The verdict reported by the DIRECT (non-readiness) state moves
+         * ([commitForFreshWalletSetup]/[resetForWalletWipe]): those bypass
+         * the evaluator by design, so there are no blockers to report; the
+         * meaningful result is the resulting [CutoverStatus.state].
+         */
+        private val READY_VERDICT = CutoverVerdict(emptySet())
     }
 }

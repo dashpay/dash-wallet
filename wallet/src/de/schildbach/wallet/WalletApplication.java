@@ -250,6 +250,8 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     CutoverCoordinator cutoverCoordinator;
     @Inject
+    de.schildbach.wallet.service.platform.sdk.CutoverAutoCommitObserver cutoverAutoCommitObserver;
+    @Inject
     CutoverEvidenceCollector cutoverEvidenceCollector;
     @Inject
     de.schildbach.wallet.service.platform.sdk.CutoverUiDataService cutoverUiDataService;
@@ -536,6 +538,20 @@ public class WalletApplication extends MultiDexApplication
             // recognized and spendable through the regular send flow.
             walletEx.initializeCoinJoin(null, 0);
         }
+
+        // Phase 5d restore/new-wallet cutover: setWallet is called ONLY by
+        // onboarding after CREATING or RESTORING a wallet (a normal launch
+        // and an app upgrade both load via loadWalletFromProtobuf, not here),
+        // so this is exactly the "fresh wallet setup happening now" seam. A
+        // freshly created/restored wallet has no already-synced dashj balance
+        // to protect, so make the SDK L1-primary from the start (dashj held,
+        // SDK does the fast initial sync). Fire-and-forget on the app IO scope:
+        // the restore-from-FILE caller invokes setWallet on the MAIN thread, so
+        // this must NOT block on DataStore I/O. The commit self-gates on the SDK
+        // L1 flag and is a no-op if already committed; the home screen reads
+        // cutover state reactively. Upgrade installs skip this and flip later via
+        // CutoverAutoCommitObserver.
+        cutoverCoordinator.commitForFreshWalletSetupAsync();
     }
 
     public void saveWalletAndFinalizeInitialization() {

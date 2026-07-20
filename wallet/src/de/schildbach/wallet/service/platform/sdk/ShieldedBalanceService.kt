@@ -251,10 +251,11 @@ interface ShieldedBalanceService {
      * wallet's OWN Core UTXOs and broadcasts it over the SDK's OWN SPV
      * peers. A dashj-built lock cannot be handed over. This op therefore
      * runs entirely on the SDK stack and is hard-gated on runtime
-     * evidence that the SDK's L1 view matches dashj's:
-     * [DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] on, the shadow SPV
-     * SYNCED, and the latest [L1ShadowSyncService] parity probe a fresh
-     * full MATCH. Any gate failure returns
+     * evidence that the SDK's OWN L1 view is complete and current:
+     * [DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] on and the SDK engine's
+     * filter scan caught up to the chain tip
+     * ([L1ShadowSyncService.progress] → [evaluateWalletFundingGate]; the
+     * old dashj-parity requirement is retired). Any gate failure returns
      * [SdkWriteResult.NotBroadcast] BEFORE anything is spent.
      *
      * ## Funds safety / the staged contract
@@ -281,14 +282,13 @@ interface ShieldedBalanceService {
 
     /**
      * Whether [shieldFromWallet]'s L1 funding gate would currently pass
-     * (flag on + shadow SPV parity MATCH). Cheap local read for UI
-     * gating; the write path re-checks. Never throws.
+     * (flag on + the SDK engine's filter scan caught up to the chain tip).
+     * Cheap local read for UI gating; the write path re-checks. Never throws.
      *
      * One-shot snapshot — use it only for the pre-broadcast preflight. UI
-     * that stays open while the gate can flip (the shadow harness reaching
-     * SYNCED with a fresh parity MATCH) MUST observe
-     * [observeWalletShieldingAvailable] instead, or the blocked-state UI
-     * never re-renders when the gate opens.
+     * that stays open while the gate can flip (the SDK filter scan catching
+     * up to the tip) MUST observe [observeWalletShieldingAvailable] instead,
+     * or the blocked-state UI never re-renders when the gate opens.
      */
     suspend fun isWalletShieldingAvailable(): Boolean
 
@@ -296,12 +296,12 @@ interface ShieldedBalanceService {
      * Live version of [isWalletShieldingAvailable] for open screens: emits
      * whether the L1 funding gate is currently open, re-deriving it from
      * the same [evaluateWalletFundingGate] logic on every
-     * [L1ShadowSyncService.latestParity] emission (the probe re-emits a
-     * fresh report every ~60s while the shadow runs, so a gate that opens
-     * after the harness reaches SYNCED propagates without a screen
-     * re-entry). [kotlinx.coroutines.flow.distinctUntilChanged]; conservative
-     * `false` while the flag is off (inert — the parity flow stays null) or
-     * before the first probe. Never throws.
+     * [L1ShadowSyncService.progress] emission (the engine re-emits its
+     * sync progress ~1 Hz, so a gate that opens once the filter scan
+     * catches up to the tip propagates without a screen re-entry).
+     * [kotlinx.coroutines.flow.distinctUntilChanged]; conservative `false`
+     * while the flag is off (inert — the progress flow stays IDLE) or
+     * before the scan catches up. Never throws.
      */
     fun observeWalletShieldingAvailable(): Flow<Boolean>
 

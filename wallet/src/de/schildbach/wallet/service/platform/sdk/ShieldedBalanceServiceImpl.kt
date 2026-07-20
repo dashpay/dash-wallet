@@ -191,42 +191,61 @@ internal fun ceilCreditsToDuffs(credits: Long): Long {
 }
 
 /**
- * Decision of the [ShieldedBalanceService.shieldFromWallet] L1 funding
- * gate. [allowed] only when runtime evidence shows the SDK's Core wallet
- * sees exactly the funds dashj sees.
+ * Decision of the L1 funding gate shared by
+ * [ShieldedBalanceService.shieldFromWallet] and [SdkL1SendService].
+ * [allowed] only when runtime evidence shows the SDK's OWN Core wallet has
+ * a complete, current view of the chain to spend from.
  */
 internal data class WalletFundingGate(val allowed: Boolean, val reason: String)
 
 /**
- * Evaluate the L1 funding gate from the latest shadow-sync parity probe —
- * pure, host-testable. The SDK builds the asset lock from its OWN SPV
- * wallet, so spending is only allowed when the shadow SPV is SYNCED and
- * the most recent [ParityReport] is fresh (≤ [maxAgeMs]) with BOTH
- * balance comparisons matching dashj's ([ParityReport.balancesMatch]
- * estimated AND [ParityReport.confirmedBalancesMatch] confirmed).
+ * Evaluate the L1 funding gate from the SDK engine's OWN live sync
+ * progress — pure, host-testable.
  *
- * Tx-count equality ([ParityReport.txCountsMatch]) is deliberately NOT
- * required: the two stacks count on different semantics (the SDK counts
- * distinct txids over its TXO rows; dashj counts every wallet tx,
- * including zero-net entries such as old mixing rounds — see
- * [distinctTxCount]), so a synced wallet with exactly matching balances
- * can legitimately never reach count parity. Funds safety is the
- * balance/UTXO evidence; the count delta stays a logged diagnostic.
+ * The SDK builds and broadcasts the L1 asset lock / send from its OWN SPV
+ * wallet, so spending is only allowed once that SPV has a complete,
+ * current view of the chain. The old design required SDK-vs-dashj balance
+ * PARITY (estimated AND confirmed both matching dashj). That requirement
+ * is RETIRED here for two independent reasons, both confirmed on device:
+ *
+ * 1. Parity is unsatisfiable post-cutover. The held dashj wallet is frozen
+ *    at its migration state and can never learn of a new external receive,
+ *    so the SDK (live) and dashj (frozen) balances diverge permanently —
+ *    the persistent `MISMATCH-PRESYNC … sdk > dashj`. Requiring parity
+ *    closed the gate FOREVER (the bricked wallet→shielded transfer).
+ *
+ * 2. The SYNCED flag is unreachable for a live shadow. See
+ *    [ShadowSyncProgress.scanCaughtUpToTip]: the SDK's overall SYNCED state
+ *    never latches while the shadow perpetually chases the moving tip, so
+ *    `synced=false` reads forever even with headers at the tip.
+ *
+ * The replacement preconditions still FAIL CLOSED on every real problem,
+ * using SDK-internal signals only ([progress] is [L1ShadowSyncService]'s
+ * live 1 Hz feed, which resets to [ShadowSyncProgress.IDLE] the moment the
+ * engine stops — so IDLE IS the "stale/not running" state, no clock
+ * needed):
+ * - engine running: phase is not [ShadowSyncPhase.IDLE];
+ * - no sync error: phase is not [ShadowSyncPhase.ERROR];
+ * - chain view current: [ShadowSyncProgress.scanCaughtUpToTip] — the header
+ *   chain is at a known tip AND the wallet-relevant filter scan has caught
+ *   up to it. Deliberately NOT phase==SYNCED (a live shadow may never
+ *   report it) and NOT dashj parity (retired above); an all-zero snapshot
+ *   or a filter scan short of the tip still keeps the gate closed.
+ *
+ * Wallet binding is NOT re-checked here: every caller already preflights
+ * the bound wallet, and an unbound wallet cannot produce a non-IDLE
+ * progress feed anyway.
  */
 internal fun evaluateWalletFundingGate(
-    report: ParityReport?,
-    nowMs: Long,
-    maxAgeMs: Long
+    progress: ShadowSyncProgress
 ): WalletFundingGate = when {
-    report == null ->
-        WalletFundingGate(false, "no L1 parity measurement (shadow sync not running?)")
-    nowMs - report.timestampMs > maxAgeMs ->
-        WalletFundingGate(false, "L1 parity measurement is stale")
-    !report.sdkSynced ->
-        WalletFundingGate(false, "SDK shadow SPV not synced yet")
-    !report.balancesMatch || !report.confirmedBalancesMatch ->
-        WalletFundingGate(false, "SDK/dashj L1 balance mismatch")
-    else -> WalletFundingGate(true, "balance parity MATCH")
+    progress.phase == ShadowSyncPhase.IDLE ->
+        WalletFundingGate(false, "SDK L1 engine not running")
+    progress.phase == ShadowSyncPhase.ERROR ->
+        WalletFundingGate(false, "SDK L1 engine reported a sync error")
+    !progress.scanCaughtUpToTip ->
+        WalletFundingGate(false, "SDK L1 filter scan has not caught up to the chain tip yet")
+    else -> WalletFundingGate(true, "SDK L1 filter scan caught up to the chain tip")
 }
 
 /**
@@ -570,10 +589,12 @@ internal class DashSdkShieldedSource(
  *   the unified JNI the Kotlin SDK uses.
  *
  * So [shieldFromWallet] runs the SDK's own pipeline and is hard-gated on
- * the L1 shadow-sync parity harness ([L1ShadowSyncService]): the SDK SPV
- * wallet must be SYNCED with a fresh balance-parity report (estimated AND
- * confirmed both matching dashj — see [evaluateWalletFundingGate] for why
- * tx-count parity is NOT required) before the SDK is allowed to spend the
+ * the SDK engine's live sync progress ([L1ShadowSyncService.progress]):
+ * the SDK SPV must have its filter scan caught up to the chain tip (see
+ * [evaluateWalletFundingGate] — the gate runs on SDK-only preconditions;
+ * the old dashj-parity requirement is retired because the frozen held
+ * wallet makes parity permanently unsatisfiable and the SDK's SYNCED flag
+ * is unreachable for a live shadow) before the SDK is allowed to spend the
  * (shared-seed) L1 funds. The lock pays to
  * the SDK's own `AssetLockShieldedAddressTopUp` DIP-9 family and is
  * claimed by the same Rust wallet that derived it, so no dashj↔SDK
@@ -590,20 +611,22 @@ class ShieldedBalanceServiceImpl internal constructor(
     private val shieldedDbPath: () -> String,
     private val displayHrp: () -> String,
     /**
-     * Latest L1 shadow-sync parity probe, or null when the shadow is not
-     * running — the [shieldFromWallet] funding-gate evidence. Prod wires
-     * [L1ShadowSyncService.latestParity]; the default keeps the gate
-     * CLOSED (funds-safe) for constructions that don't provide it.
+     * The SDK engine's live sync-progress snapshot — the [shieldFromWallet]
+     * funding-gate evidence (see [evaluateWalletFundingGate]: the gate runs
+     * on SDK-only preconditions, not dashj parity). Prod wires
+     * [L1ShadowSyncService.progress]; the default ([ShadowSyncProgress.IDLE])
+     * keeps the gate CLOSED (funds-safe) for constructions that don't
+     * provide it.
      */
-    private val l1Parity: () -> ParityReport? = { null },
+    private val l1Progress: () -> ShadowSyncProgress = { ShadowSyncProgress.IDLE },
     /**
-     * Live L1 shadow-sync parity feed, for [observeWalletShieldingAvailable].
-     * Prod wires [L1ShadowSyncService.latestParity]; the default keeps the
+     * Live SDK sync-progress feed, for [observeWalletShieldingAvailable].
+     * Prod wires [L1ShadowSyncService.progress]; the default keeps the
      * observed gate CLOSED (funds-safe) for constructions that don't
-     * provide it. Distinct from [l1Parity] (the one-shot snapshot the write
-     * preflight reads) — the UI needs to re-derive the gate on each probe.
+     * provide it. Distinct from [l1Progress] (the one-shot snapshot the
+     * write preflight reads) — the UI re-derives the gate on each emission.
      */
-    private val l1ParityFlow: () -> Flow<ParityReport?> = { flowOf(null) },
+    private val l1ProgressFlow: () -> Flow<ShadowSyncProgress> = { flowOf(ShadowSyncProgress.IDLE) },
     /**
      * Ensure the SDK's SPV is running before a [shieldFromWallet]
      * broadcast. In this interim architecture the SDK builds and
@@ -640,8 +663,7 @@ class ShieldedBalanceServiceImpl internal constructor(
      * ([resumePendingWalletShields]); null (tests' default) disables the
      * automatic trigger — the method itself stays callable.
      */
-    private val sweepScope: CoroutineScope? = null,
-    private val nowMs: () -> Long = System::currentTimeMillis
+    private val sweepScope: CoroutineScope? = null
 ) : ShieldedBalanceService {
 
     @Inject
@@ -662,8 +684,8 @@ class ShieldedBalanceServiceImpl internal constructor(
             File(context.filesDir, "shielded_tree_${network.networkName}.sqlite").absolutePath
         },
         displayHrp = { shieldedHrp(toSdkNetwork(Constants.NETWORK_PARAMETERS)) },
-        l1Parity = { l1ShadowSyncService.latestParity.value },
-        l1ParityFlow = { l1ShadowSyncService.latestParity },
+        l1Progress = { l1ShadowSyncService.progress.value },
+        l1ProgressFlow = { l1ShadowSyncService.progress },
         ensureL1SpvRunning = { l1ShadowSyncService.ensureSpvRunning() },
         noteSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
         sweepScope = applicationScope
@@ -876,18 +898,19 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     override suspend fun isWalletShieldingAvailable(): Boolean =
         isEnabled() && isL1FundingFlagOn() &&
-            evaluateWalletFundingGate(safeParity(), nowMs(), PARITY_MAX_AGE_MS).allowed
+            evaluateWalletFundingGate(safeProgress()).allowed
 
     override fun observeWalletShieldingAvailable(): Flow<Boolean> =
-        l1ParityFlow()
-            .map { report ->
+        l1ProgressFlow()
+            .map { progress ->
                 // Same gate as isWalletShieldingAvailable(), re-derived per
-                // probe emission so an open screen unblocks the instant the
-                // shadow harness reaches a fresh parity MATCH. Flags-off
-                // inert: both reads short-circuit to false and the parity
-                // flow itself stays null while the shadow is not running.
+                // progress emission so an open screen unblocks the instant
+                // the SDK engine's filter scan catches up to the chain tip.
+                // Flags-off inert: both reads short-circuit to false and the
+                // progress flow itself stays IDLE while the shadow is not
+                // running.
                 isEnabled() && isL1FundingFlagOn() &&
-                    evaluateWalletFundingGate(report, nowMs(), PARITY_MAX_AGE_MS).allowed
+                    evaluateWalletFundingGate(progress).allowed
             }
             .distinctUntilChanged()
 
@@ -909,8 +932,9 @@ class ShieldedBalanceServiceImpl internal constructor(
             ?: return notBroadcast(operation, "shielded runtime not ready", null)
 
         // Funding gate: the SDK builds the lock from its OWN SPV wallet,
-        // so require fresh evidence that its L1 view matches dashj's.
-        val gate = evaluateWalletFundingGate(safeParity(), nowMs(), PARITY_MAX_AGE_MS)
+        // so require live evidence that its scan is caught up to the chain
+        // tip (SDK-only preconditions — see evaluateWalletFundingGate).
+        val gate = evaluateWalletFundingGate(safeProgress())
         if (!gate.allowed) {
             return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
         }
@@ -1102,11 +1126,11 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
-    private fun safeParity(): ParityReport? = try {
-        l1Parity()
+    private fun safeProgress(): ShadowSyncProgress = try {
+        l1Progress()
     } catch (e: Exception) {
-        log.warn("failed to read the L1 parity report; funding gate stays closed", e)
-        null
+        log.warn("failed to read the SDK L1 sync progress; funding gate stays closed", e)
+        ShadowSyncProgress.IDLE
     }
 
     private suspend fun isL1FundingFlagOn(): Boolean = try {
@@ -1287,14 +1311,6 @@ class ShieldedBalanceServiceImpl internal constructor(
          * its example apps use.
          */
         internal const val WITHDRAW_CORE_FEE_PER_BYTE = 1
-
-        /**
-         * Max age of the L1 parity report the [shieldFromWallet] gate
-         * accepts. The probe ticks every 60s
-         * ([L1ShadowSyncService.PARITY_INTERVAL_MS]) while the shadow
-         * runs, so a report older than this means the harness stopped.
-         */
-        internal const val PARITY_MAX_AGE_MS = 5 * 60_000L
 
         /**
          * The protocol's asset-lock base cost in duffs

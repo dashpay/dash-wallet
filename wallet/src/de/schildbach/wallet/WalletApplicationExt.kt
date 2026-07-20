@@ -96,6 +96,18 @@ object WalletApplicationExt {
                 .onFailure { rethrowCancellation(it); log.warn("SDK wallet clear failed during wipe", it) }
             runCatching { transactionMetadataProvider.clear() }
                 .onFailure { rethrowCancellation(it); log.warn("tx-metadata clear failed during wipe", it) }
+            // Phase 5d PER-WALLET cutover reset: the cutover state is
+            // per-install-persisted, so a Reset-then-restore would otherwise
+            // start already CUT_OVER and hold dashj while the SDK has not yet
+            // synced the new wallet. Put it back to DUAL_RUNNING so the next
+            // (restored/created) wallet re-runs the flow — immediate-commit for
+            // a fresh restore, or dual-run → caught-up → auto-commit — and
+            // re-arm the auto-commit observer so its in-memory streak/committed
+            // latch does not carry over from the wiped wallet.
+            runCatching { cutoverCoordinator.resetForWalletWipe() }
+                .onFailure { rethrowCancellation(it); log.warn("cutover state reset failed during wipe", it) }
+            runCatching { cutoverAutoCommitObserver.rearmForNewWallet() }
+                .onFailure { rethrowCancellation(it); log.warn("cutover auto-commit re-arm failed during wipe", it) }
         }
         runCatching { identityRepository.clearDatabase(isWalletWipe) }
             .onFailure { rethrowCancellation(it); log.warn("identity/DashPay clear failed during reset", it) }
