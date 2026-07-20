@@ -32,6 +32,7 @@ import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.util.viewOnBlockExplorer
+import de.schildbach.wallet.util.toTxId
 import org.dash.wallet.common.UserInteractionAwareCallback
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionDetailsDialogBinding
@@ -114,7 +115,13 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
             }
 
             viewModel.transactionMetadata.observe(this) { metadata ->
-                if (metadata != null && tx.txId == metadata.txId) {
+                // Compare via the neutral TxId. Step A changed
+                // TransactionMetadata.txId from dashj Sha256Hash to the neutral
+                // TxId, so the old `tx.txId == metadata.txId` compares two
+                // unrelated types and is ALWAYS false — which silently stopped
+                // setTransactionMetadata from ever running (tax category stuck
+                // on "Loading"). toTxId() puts both sides in the same type.
+                if (metadata != null && tx.txId.toTxId() == metadata.txId) {
                     transactionResultViewBinder.setTransactionMetadata(metadata)
                 }
             }

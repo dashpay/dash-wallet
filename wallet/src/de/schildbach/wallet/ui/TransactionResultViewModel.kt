@@ -159,10 +159,39 @@ class TransactionResultViewModel @Inject constructor(
         // this might take some time, so let it run asynchronously
         viewModelScope.launch(Dispatchers.IO) {
             transactionMetadataProvider.importTransactionMetadata(txId.toTxId())
-            transactionMetadataProvider.observeTransactionMetadata(txId.toTxId()).collect {
-                _transactionMetadata.value = it
+            transactionMetadataProvider.observeTransactionMetadata(txId.toTxId()).collect { metadata ->
+                // For an SDK-only transaction (one the dashj wallet does not
+                // hold) the provider has no wallet tx to import from, so it can
+                // neither insert nor observe a row and this stream stays null
+                // forever — leaving the tax-category field stuck on "Loading".
+                // Fall back to a default-bearing metadata built from the SDK
+                // detail so the sheet shows the default label promptly. dashj
+                // txs always have a row, so this fallback is never hit for them.
+                _transactionMetadata.value = metadata ?: defaultSdkTxMetadata(txId)
             }
         }
+    }
+
+    /**
+     * A default (no user-set category) [TransactionMetadata] for an SDK-only
+     * transaction, derived from [sdkTxDetail]. Its null [TransactionMetadata.taxCategory]
+     * makes the binder show [TransactionMetadata.defaultTaxCategory], which is
+     * resolved from the signed [value] — Income for a receive, Expense for a
+     * send — matching what dashj txs display. Returns null when there is no SDK
+     * detail (i.e. a dashj tx that legitimately had no row).
+     */
+    private fun defaultSdkTxMetadata(txId: Sha256Hash): TransactionMetadata? {
+        val detail = _sdkTxDetail.value ?: return null
+        return TransactionMetadata(
+            txId.toTxId(),
+            detail.timestampMs,
+            org.dash.wallet.common.money.Coin.valueOf(detail.netAmountDuffs),
+            if (detail.isSent) {
+                org.dash.wallet.common.transactions.TransactionCategory.Sent
+            } else {
+                org.dash.wallet.common.transactions.TransactionCategory.Received
+            }
+        )
     }
 
     fun toggleTaxCategory() {
