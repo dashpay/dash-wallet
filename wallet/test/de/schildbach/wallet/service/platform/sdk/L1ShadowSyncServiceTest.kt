@@ -217,8 +217,7 @@ class L1ShadowSyncServiceTest {
         parityIntervalMs: Long = L1ShadowSyncService.PARITY_INTERVAL_MS,
         watchdogIntervalMs: Long = L1ShadowSyncService.WATCHDOG_INTERVAL_MS,
         probeStallThresholdMs: Long = L1ShadowSyncService.PROBE_STALL_THRESHOLD_MS,
-        recreator: ShadowWalletRecreator? = null,
-        alwaysRecreateOnEmptyDeficit: Boolean? = false
+        recreator: ShadowWalletRecreator? = null
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites),
@@ -228,8 +227,7 @@ class L1ShadowSyncServiceTest {
         parityIntervalMs = parityIntervalMs,
         watchdogIntervalMs = watchdogIntervalMs,
         probeStallThresholdMs = probeStallThresholdMs,
-        recreator = recreator,
-        alwaysRecreateOnEmptyDeficitOverride = alwaysRecreateOnEmptyDeficit
+        recreator = recreator
     )
 
     // ── Lifecycle / inertness ─────────────────────────────────────────
@@ -600,7 +598,8 @@ class L1ShadowSyncServiceTest {
         val decider = ShadowResetDecider()
         assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated()))
         assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated()))
-        assertEquals(ShadowResetDecider.Decision.RESET, decider.onProbe(inflated()))
+        // The inflated ledger discrepancy triggers a ONE-TIME full SDK-wallet rebuild self-heal.
+        assertEquals(ShadowResetDecider.Decision.REBUILD_WALLET, decider.onProbe(inflated()))
     }
 
     @Test
@@ -611,7 +610,7 @@ class L1ShadowSyncServiceTest {
         assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(matching())) // streak reset
         decider.onProbe(inflated())
         assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated()))
-        assertEquals(ShadowResetDecider.Decision.RESET, decider.onProbe(inflated()))
+        assertEquals(ShadowResetDecider.Decision.REBUILD_WALLET, decider.onProbe(inflated()))
     }
 
     @Test
@@ -619,7 +618,7 @@ class L1ShadowSyncServiceTest {
         // A Phase 5b SDK self-spend legitimately inflates the SDK view until
         // the tx is mined and filter-scanned (dashj drops its balance at
         // mempool time, the compact-filter scan only at the next block) —
-        // marked probes must never feed the reset streak.
+        // marked probes must never feed the rebuild streak.
         val decider = ShadowResetDecider()
         repeat(5) {
             assertEquals(
@@ -635,8 +634,8 @@ class L1ShadowSyncServiceTest {
             decider.onProbe(inflated(), recentSelfSpendMarker = true)
         )
         repeat(2) { assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated())) }
-        // …and a genuine post-grace inflation still resets after three.
-        assertEquals(ShadowResetDecider.Decision.RESET, decider.onProbe(inflated()))
+        // …and a genuine post-grace inflation self-heals (REBUILD) after three.
+        assertEquals(ShadowResetDecider.Decision.REBUILD_WALLET, decider.onProbe(inflated()))
     }
 
     @Test
@@ -681,15 +680,15 @@ class L1ShadowSyncServiceTest {
             decider.onProbe(inflated(), dashjChainCaughtUp = false)
         )
         repeat(2) { assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated())) }
-        // A genuinely inflated view with BOTH engines synced still resets.
-        assertEquals(ShadowResetDecider.Decision.RESET, decider.onProbe(inflated()))
+        // A genuinely inflated view with BOTH engines synced self-heals (REBUILD).
+        assertEquals(ShadowResetDecider.Decision.REBUILD_WALLET, decider.onProbe(inflated()))
     }
 
     @Test
     fun resetDecider_dashjNotCaughtUp_doesNotDisturbTheDeficitRows() {
-        // The deficit direction is deliberately ungated (it never resets
-        // organically, and its empty-deficit signature is SDK-side): the
-        // caught-up bit must not change deficit handling either way.
+        // The deficit direction is deliberately ungated (its empty-deficit
+        // signature is SDK-side): the caught-up bit must not change deficit
+        // handling either way.
         val decider = ShadowResetDecider()
         repeat(3) {
             assertEquals(
@@ -701,16 +700,15 @@ class L1ShadowSyncServiceTest {
             assertEquals(
                 ShadowResetDecider.Decision.NONE,
                 decider.onProbe(
-                    emptyDeficit(), scanLooksComplete = true, recentResetMarker = true,
-                    dashjChainCaughtUp = false
+                    emptyDeficit(), scanLooksComplete = true, dashjChainCaughtUp = false
                 )
             )
         }
+        // A persistent empty deficit self-heals with the one-time full rebuild too.
         assertEquals(
-            ShadowResetDecider.Decision.RECREATE_WALLET,
+            ShadowResetDecider.Decision.REBUILD_WALLET,
             decider.onProbe(
-                emptyDeficit(), scanLooksComplete = true, recentResetMarker = true,
-                dashjChainCaughtUp = false
+                emptyDeficit(), scanLooksComplete = true, dashjChainCaughtUp = false
             )
         )
     }
@@ -731,27 +729,51 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun resetDecider_resetsOncePerProcess_thenReportsCorruptOnce_thenStandsDown() {
+    fun resetDecider_rebuildsOncePerProcess_thenStandsDownOnce_thenSilent() {
         val decider = ShadowResetDecider()
         repeat(2) { decider.onProbe(inflated()) }
-        assertEquals(ShadowResetDecider.Decision.RESET, decider.onProbe(inflated()))
+        assertEquals(ShadowResetDecider.Decision.REBUILD_WALLET, decider.onProbe(inflated()))
 
-        // Post-reset rescan: un-synced probes zero the streak.
+        // The rebuild stops the probe loop and re-scans: un-synced probes
+        // zero the streak.
         assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated(synced = false)))
 
-        // A FULL post-reset resync still inflated → corrupt, exactly once.
+        // A FULL post-rebuild resync still inflated → deterministic SDK bug:
+        // STAND_DOWN exactly once, then silence (no churn — never rebuilds twice).
         repeat(2) {
             assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated()))
         }
-        assertEquals(ShadowResetDecider.Decision.CORRUPT_AFTER_RESET, decider.onProbe(inflated()))
+        assertEquals(ShadowResetDecider.Decision.STAND_DOWN, decider.onProbe(inflated()))
         repeat(4) {
             assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated()))
         }
     }
 
-    // ── Reset-aftermath deficit recovery (pure decision table) ────────
+    @Test
+    fun resetDecider_rebuildLatchIsSharedAcrossDirections() {
+        // One full wallet rebuild fixes the ledger regardless of direction;
+        // a mismatch that flips direction after the rebuild must NOT rebuild
+        // again (no churn) — it stands down.
+        val decider = ShadowResetDecider()
+        repeat(2) { decider.onProbe(inflated()) }
+        assertEquals(ShadowResetDecider.Decision.REBUILD_WALLET, decider.onProbe(inflated()))
+        // Post-rebuild resync now shows the OTHER direction (empty deficit):
+        // the shared latch means stand down, not a second rebuild.
+        repeat(2) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(emptyDeficit(), scanLooksComplete = true)
+            )
+        }
+        assertEquals(
+            ShadowResetDecider.Decision.STAND_DOWN,
+            decider.onProbe(emptyDeficit(), scanLooksComplete = true)
+        )
+    }
 
-    /** The live incident's signature: sdk=0 duffs AND 0 txs vs a real dashj balance. */
+    // ── Empty-deficit stand-down (pure decision table) ────────────────
+
+    /** The stranded-scan signature: sdk=0 duffs AND 0 txs vs a real dashj balance. */
     private fun emptyDeficit() = buildParityReport(
         sdkConfirmedDuffs = 0, sdkUnconfirmedDuffs = 0,
         dashjEstimatedDuffs = 154_427_919, dashjAvailableDuffs = 154_427_919,
@@ -759,132 +781,75 @@ class L1ShadowSyncServiceTest {
     )
 
     @Test
-    fun resetDecider_resetAftermathDeficit_escalatesToRecreateWalletOnce_thenStandsDownOnce() {
+    fun resetDecider_emptyDeficit_rebuildsOnce_thenStandsDownOnce_thenSilent() {
         val decider = ShadowResetDecider()
         // Three consecutive qualifying probes required, like the inflated
-        // path — the live device state (deficit + marker present) must
-        // trigger on the THIRD synced probe after install.
+        // path — the stranded-scan state self-heals on the THIRD synced probe.
         repeat(2) {
             assertEquals(
                 ShadowResetDecider.Decision.NONE,
-                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+                decider.onProbe(emptyDeficit(), scanLooksComplete = true)
             )
         }
         assertEquals(
-            ShadowResetDecider.Decision.RECREATE_WALLET,
-            decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+            ShadowResetDecider.Decision.REBUILD_WALLET,
+            decider.onProbe(emptyDeficit(), scanLooksComplete = true)
         )
-        // The wallet re-creation is once-per-process: if the re-created
-        // wallet's rescan STILL comes back empty, stand down with the
-        // ERROR (once), then silence.
+        // The rebuild is once-per-process: if the rebuilt wallet's rescan
+        // STILL comes back empty, stand down (once), then silence.
         repeat(2) {
             assertEquals(
                 ShadowResetDecider.Decision.NONE,
-                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+                decider.onProbe(emptyDeficit(), scanLooksComplete = true)
             )
         }
         assertEquals(
-            ShadowResetDecider.Decision.DEFICIT_STAND_DOWN,
-            decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+            ShadowResetDecider.Decision.STAND_DOWN,
+            decider.onProbe(emptyDeficit(), scanLooksComplete = true)
         )
         repeat(4) {
             assertEquals(
                 ShadowResetDecider.Decision.NONE,
-                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+                decider.onProbe(emptyDeficit(), scanLooksComplete = true)
             )
         }
     }
 
     @Test
-    fun resetDecider_organicEmptyDeficit_standsDownWithError_neverResets() {
-        val decider = ShadowResetDecider()
-        // Same empty-deficit signature but NO recent reset marker: this is
-        // an organic scan failure — surface it, never erase it.
-        repeat(2) {
-            assertEquals(
-                ShadowResetDecider.Decision.NONE,
-                decider.onProbe(
-                    emptyDeficit(), scanLooksComplete = true, recentResetMarker = false,
-                    alwaysRecreateOnEmptyDeficit = false
-                )
-            )
-        }
-        assertEquals(
-            ShadowResetDecider.Decision.DEFICIT_STAND_DOWN,
-            decider.onProbe(
-                emptyDeficit(), scanLooksComplete = true, recentResetMarker = false,
-                alwaysRecreateOnEmptyDeficit = false
-            )
-        )
-        repeat(4) {
-            assertEquals(
-                ShadowResetDecider.Decision.NONE,
-                decider.onProbe(
-                    emptyDeficit(), scanLooksComplete = true, recentResetMarker = false,
-                    alwaysRecreateOnEmptyDeficit = false
-                )
-            )
-        }
-    }
-
-    @Test
-    fun resetDecider_debugDefault_recreatesOnOrganicEmptyDeficit() {
-        val decider = ShadowResetDecider()
-        // Debug builds treat any persistent empty deficit as recoverable by
-        // re-creation, marker or not (remote testers have no adb lever).
-        repeat(2) {
-            assertEquals(
-                ShadowResetDecider.Decision.NONE,
-                decider.onProbe(
-                    emptyDeficit(), scanLooksComplete = true, recentResetMarker = false,
-                    alwaysRecreateOnEmptyDeficit = true
-                )
-            )
-        }
-        assertEquals(
-            ShadowResetDecider.Decision.RECREATE_WALLET,
-            decider.onProbe(
-                emptyDeficit(), scanLooksComplete = true, recentResetMarker = false,
-                alwaysRecreateOnEmptyDeficit = true
-            )
-        )
-    }
-
-    @Test
-    fun resetDecider_deficitWithTxsOrOpenScan_neverQualifiesForAftermath() {
+    fun resetDecider_deficitWithTxsOrOpenScan_neverQualifiesForRebuild() {
         val decider = ShadowResetDecider()
         repeat(5) {
             // A deficit with SDK transactions present is a partial scan gap
             // (the CoinJoin-derivation bug class) — MISMATCH log only.
             assertEquals(
                 ShadowResetDecider.Decision.NONE,
-                decider.onProbe(deficit(), scanLooksComplete = true, recentResetMarker = true)
+                decider.onProbe(deficit(), scanLooksComplete = true)
             )
             // And an empty deficit while the filter scan is still open is
             // just a scan in progress.
             assertEquals(
                 ShadowResetDecider.Decision.NONE,
-                decider.onProbe(emptyDeficit(), scanLooksComplete = false, recentResetMarker = true)
+                decider.onProbe(emptyDeficit(), scanLooksComplete = false)
             )
         }
     }
 
     @Test
-    fun resetDecider_aftermathStreakIsBrokenByAnyOtherProbe() {
+    fun resetDecider_emptyDeficitStreakIsBrokenByAnyOtherProbe() {
         val decider = ShadowResetDecider()
         repeat(2) {
-            decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+            decider.onProbe(emptyDeficit(), scanLooksComplete = true)
         }
         assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(matching())) // streak reset
         repeat(2) {
             assertEquals(
                 ShadowResetDecider.Decision.NONE,
-                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+                decider.onProbe(emptyDeficit(), scanLooksComplete = true)
             )
         }
         assertEquals(
-            ShadowResetDecider.Decision.RECREATE_WALLET,
-            decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+            ShadowResetDecider.Decision.REBUILD_WALLET,
+            decider.onProbe(emptyDeficit(), scanLooksComplete = true)
         )
     }
 
@@ -917,23 +882,34 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun probeParity_autoResetsAfterThreeConsecutiveInflatedSyncedProbes() = runBlocking {
+    fun probeParity_inflatedMismatch_selfHealsWithOneFullWalletRebuild() = runBlocking {
+        // Self-heal: a persistent inflated mismatch triggers a ONE-TIME full
+        // SDK-wallet REBUILD (the SPV-only reset is gone — device evidence
+        // showed the +0.01 inflation survives it, so it lives in the wallet
+        // ledger, not the scan data). The rebuild runs the removeWallet
+        // cascade + rebind — NOT the legacy L1-row purge or SDK clear.
         val source = inflatedSource()
-        val service = service(source)
+        val recreator = FakeRecreator()
+        val markerWrites = mutableListOf<Long>()
+        val service = service(source, markerWrites = markerWrites, recreator = recreator)
         assertTrue(service.startIfEnabled())
-        source.emitWithoutEdgeProbe(syncedComplete) // this test counts the streak manually
+        source.emitWithoutEdgeProbe(syncedComplete) // count the streak manually
 
         repeat(2) { service.probeParity(walletIdHex) }
-        assertEquals(0, source.clearL1RowsCalls) // below the threshold
+        assertTrue(recreator.events.isEmpty()) // below the threshold
 
-        service.probeParity(walletIdHex) // third consecutive → HARD reset
-        assertEquals(1, source.stopCalls)
-        assertEquals(1, source.clearL1RowsCalls)
-        assertEquals(0, source.clearSpvStorageCalls) // fs-level delete, not the broken SDK call
-        assertEquals(2, source.startCalls) // initial + post-reset restart
-
-        // The reset marks the progress un-synced until the rescan reports in.
-        assertEquals(ShadowSyncPhase.IDLE, service.progress.value.phase)
+        service.probeParity(walletIdHex) // third consecutive → ONE full rebuild
+        assertEquals(
+            listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
+            recreator.events
+        )
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        // The rebuild uses the removeWallet cascade — NOT the legacy SPV-only
+        // row purge or the broken SDK clearSpvStorage call.
+        assertEquals(0, source.clearL1RowsCalls)
+        assertEquals(0, source.clearSpvStorageCalls)
+        assertEquals(2, source.startCalls) // initial + fresh post-rebind restart
+        assertEquals(listOf(1_000_000L), markerWrites) // recovery stamped the marker
     }
 
     @Test
@@ -973,32 +949,34 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun probeParity_neverResetsTwicePerProcess_evenIfTheMismatchSurvivesResync() = runBlocking {
+    fun probeParity_inflationSurvivingTheRebuild_standsDownAsFailed_neverRebuildsTwice() = runBlocking {
         val source = inflatedSource()
-        val service = service(source)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
         assertTrue(service.startIfEnabled())
         source.progressFlow.value = syncedComplete
-        repeat(3) { service.probeParity(walletIdHex) } // → the one reset
+        repeat(3) { service.probeParity(walletIdHex) } // → the one rebuild
+        assertEquals(1, recreator.removedWalletIds.size)
 
-        // Simulate the post-reset resync completing (flow change re-emits).
+        // The rebuilt wallet's rescan completes but the inflation SURVIVES:
+        // a deterministic SDK ledger bug → stand down FAILED, no 2nd rebuild.
         source.progressFlow.value = SpvSyncProgressData.EMPTY
         source.progressFlow.value = syncedComplete
-
-        // Mismatch persists through a full resync: ERROR + stand down, no 2nd reset.
         repeat(6) { service.probeParity(walletIdHex) }
-        assertEquals(1, source.clearL1RowsCalls)
-        assertEquals(0, source.clearSpvStorageCalls)
-        assertEquals(2, source.startCalls)
+        assertEquals(1, recreator.removedWalletIds.size) // never rebuilds twice — no churn
+        assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
     }
 
     @Test
-    fun probeParity_recentSelfSpendBroadcast_suppressesTheInflatedAutoReset() = runBlocking {
+    fun probeParity_recentSelfSpendBroadcast_deferstheRebuildUntilPastTheGraceWindow() = runBlocking {
         // Phase 5b wiring: SdkL1SendService calls noteSelfSpendBroadcast()
-        // after a successful SDK L1 send; the legitimate inflation window
-        // (mempool → mined → filter-scanned) must never trigger a reset.
+        // after a successful SDK L1 send. The legitimate inflation window
+        // (mempool → mined → filter-scanned) must NOT trigger the rebuild;
+        // only a genuine post-grace inflation self-heals.
         var now = 1_000_000L
         val source = inflatedSource()
-        val service = service(source, nowMs = { now })
+        val recreator = FakeRecreator()
+        val service = service(source, nowMs = { now }, recreator = recreator)
         assertTrue(service.startIfEnabled())
         source.progressFlow.value = syncedComplete
 
@@ -1007,12 +985,12 @@ class L1ShadowSyncServiceTest {
             now += 60_000 // probe cadence, still inside the grace window
             service.probeParity(walletIdHex)
         }
-        assertEquals(0, source.clearL1RowsCalls)
+        assertTrue(recreator.events.isEmpty()) // suppressed — no rebuild during the grace window
 
-        // Past the grace window the mismatch counts as real again.
+        // Past the grace window the inflation is real → one full rebuild.
         now += L1ShadowSyncService.SELF_SPEND_GRACE_MS + 1
         repeat(3) { service.probeParity(walletIdHex) }
-        assertEquals(1, source.clearL1RowsCalls)
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
     }
 
     @Test
@@ -1135,15 +1113,14 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun probeParity_escalatesAResetAftermathDeficit_toOneWalletRecreation() = runBlocking {
+    fun probeParity_emptyDeficit_selfHealsWithOneFullWalletRebuild_thenStandsDown() = runBlocking {
         val source = emptyDeficitSource()
         val recreator = FakeRecreator()
         val markerWrites = mutableListOf<Long>()
-        // A reset ran recently (this or the previous process): marker set.
-        // This is the live device state — deficit + marker — which must
-        // trigger the re-creation on the THIRD synced probe after install.
+        // The stranded-scan state (empty deficit + complete scan) self-heals
+        // with the SAME one-time full SDK-wallet rebuild as the inflated path.
         val service = service(
-            source, lastResetMs = 900_000L, markerWrites = markerWrites, recreator = recreator
+            source, markerWrites = markerWrites, recreator = recreator
         )
         assertTrue(service.startIfEnabled())
         source.emitWithoutEdgeProbe(syncedComplete) // this test counts the streak manually
@@ -1151,66 +1128,31 @@ class L1ShadowSyncServiceTest {
         repeat(2) { service.probeParity(walletIdHex) }
         assertTrue(recreator.events.isEmpty()) // below the threshold
 
-        service.probeParity(walletIdHex) // third consecutive → ONE re-creation
-        assertEquals(1, source.stopCalls) // shadow SPV stopped
+        service.probeParity(walletIdHex) // third consecutive → ONE full rebuild
         assertEquals(
             listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
             recreator.events
         )
         assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
-        // removeWallet's cascade replaces row deletion — the recovery must
-        // NOT run the old row purge (nothing left to purge) nor the broken
-        // SDK clearSpvStorage call.
+        // removeWallet's cascade replaces row deletion — no legacy row purge,
+        // no broken SDK clearSpvStorage call.
         assertEquals(0, source.clearL1RowsCalls)
         assertEquals(0, source.clearSpvStorageCalls)
-        // The bind job completed immediately → the shadow restarted fresh.
-        assertEquals(2, source.startCalls)
+        assertEquals(2, source.startCalls) // initial + fresh post-rebind restart
         assertEquals(listOf(1_000_000L), markerWrites) // recovery stamped the marker
 
-        // The re-created wallet's rescan completes but the SDK view is
-        // STILL empty: stand down with the ERROR — no second re-creation
-        // this process.
+        // The rebuilt wallet's rescan STILL comes back empty: stand down
+        // FAILED — no second rebuild this process.
         source.progressFlow.value = SpvSyncProgressData.EMPTY
         source.progressFlow.value = syncedComplete
         repeat(6) { service.probeParity(walletIdHex) }
         assertEquals(1, recreator.removedWalletIds.size)
         assertEquals(2, source.startCalls)
+        assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
     }
 
     @Test
-    fun probeParity_organicEmptyDeficit_neverResetsNorRecreates() = runBlocking {
-        val source = emptyDeficitSource()
-        val recreator = FakeRecreator()
-        // No reset marker at all: the same stuck shape is an organic scan
-        // failure — surface it (ERROR), never reset, never recreate.
-        val service = service(source, lastResetMs = null, recreator = recreator)
-        assertTrue(service.startIfEnabled())
-        source.progressFlow.value = syncedComplete
-        repeat(6) { service.probeParity(walletIdHex) }
-        assertEquals(0, source.clearL1RowsCalls)
-        assertEquals(0, source.clearSpvStorageCalls)
-        assertEquals(1, source.startCalls)
-        assertTrue(recreator.events.isEmpty())
-    }
-
-    @Test
-    fun probeParity_staleResetMarker_countsAsOrganic() = runBlocking {
-        val source = emptyDeficitSource()
-        // Marker exists but is far older than the recency window (>24h).
-        val service = service(
-            source,
-            nowMs = { 200_000_000L },
-            lastResetMs = 100_000_000L
-        )
-        assertTrue(service.startIfEnabled())
-        source.progressFlow.value = syncedComplete
-        repeat(6) { service.probeParity(walletIdHex) }
-        assertEquals(0, source.clearL1RowsCalls)
-        assertEquals(1, source.startCalls)
-    }
-
-    @Test
-    fun probeParity_incompleteScanDeficit_isNotTreatedAsAftermath() = runBlocking {
+    fun probeParity_incompleteScanDeficit_isNotTreatedAsStrandedScan() = runBlocking {
         val source = emptyDeficitSource()
         val recreator = FakeRecreator()
         val service = service(source, lastResetMs = 900_000L, recreator = recreator)
@@ -1263,14 +1205,16 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun verificationStatus_deficitStandDown_isTerminalFailure() = runBlocking {
+    fun verificationStatus_mismatchSurvivingTheRebuild_isTerminalFailure() = runBlocking {
         val source = emptyDeficitSource()
-        // No reset marker, no debug always-recreate: the third synced
-        // empty-deficit probe stands down → FAILED.
-        val service = service(source, lastResetMs = null)
+        // First a rebuild (probe 3), then — the mismatch surviving it — a
+        // stand-down (probe 6) → FAILED. (No recreator wired: the rebuild
+        // self-heal is a no-op here, but the decider latch still advances to
+        // the stand-down, which is the terminal-FAILED path under test.)
+        val service = service(source)
         assertTrue(service.startIfEnabled())
         source.progressFlow.value = syncedComplete
-        repeat(3) { service.probeParity(walletIdHex) }
+        repeat(6) { service.probeParity(walletIdHex) }
         assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
 
         // Terminal per process: even a later fully-matching probe (or a
@@ -1283,23 +1227,7 @@ class L1ShadowSyncServiceTest {
         assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
     }
 
-    @Test
-    fun verificationStatus_corruptAfterReset_isTerminalFailure() = runBlocking {
-        val source = inflatedSource()
-        val service = service(source)
-        assertTrue(service.startIfEnabled())
-        source.progressFlow.value = syncedComplete
-        repeat(3) { service.probeParity(walletIdHex) } // → the one reset (recoverable)
-        assertEquals(L1VerificationStatus.PROBING, service.verificationStatus.value)
-
-        // The mismatch survives a full post-reset resync → CORRUPT_AFTER_RESET.
-        source.progressFlow.value = SpvSyncProgressData.EMPTY
-        source.progressFlow.value = syncedComplete
-        repeat(3) { service.probeParity(walletIdHex) }
-        assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
-    }
-
-    // ── Wallet re-creation recovery (orchestration) ───────────────────
+    // ── Wallet re-creation recovery (orchestration; also debug-trigger) ─
 
     @Test
     fun recoverByRecreatingWallet_runsTheFullSequenceInOrder() = runBlocking {

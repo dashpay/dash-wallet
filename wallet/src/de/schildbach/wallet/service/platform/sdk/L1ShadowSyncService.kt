@@ -21,7 +21,6 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -80,11 +79,16 @@ enum class ShadowSyncPhase { IDLE, CONNECTING, HEADERS, FILTER_HEADERS, MASTERNO
  *   the same evidence [evaluateWalletFundingGate] requires, so the funding
  *   gate opens on the next check. A later mismatching probe moves back to
  *   [PROBING] (the gate closes again).
- * - [FAILED]: the harness stood down — CORRUPT_AFTER_RESET, a
- *   DEFICIT_STAND_DOWN (including recreation exhausted), or a stalled
- *   probe loop past its one watchdog restart. Terminal for the process:
- *   verification will not recover without an app restart, so the UI tells
- *   the tester to flag it (Report an Issue).
+ * - [FAILED]: the harness stood down — a persistent parity mismatch that
+ *   SURVIVED the one-time full SDK-wallet rebuild self-heal
+ *   ([ShadowResetDecider.Decision.STAND_DOWN] — a deterministic SDK ledger
+ *   bug needing an upstream fix), or a stalled probe loop past its one
+ *   watchdog restart. Terminal for the process: verification will not
+ *   recover without an app restart, so the UI tells the tester to flag it
+ *   (Report an Issue). NOTE: the FIRST persistent mismatch does NOT land
+ *   here — it triggers [ShadowResetDecider.Decision.REBUILD_WALLET] (the
+ *   probe stays [PROBING] through the rebuild + resync); only a mismatch
+ *   that outlives the rebuild reaches FAILED.
  */
 enum class L1VerificationStatus { UNKNOWN, SCANNING, PROBING, VERIFIED, FAILED }
 
@@ -537,47 +541,65 @@ internal fun isDashjChainCaughtUp(
 internal const val DASHJ_TIP_TOLERANCE_BLOCKS = 2
 
 /**
- * Decides when a persistent parity mismatch warrants an automatic
- * [L1ShadowSyncService.resetShadowState], from the probe stream plus two
- * context bits ([scanLooksComplete][ShadowSyncProgress.scanLooksComplete]
- * and the recent-reset DataStore marker).
+ * Decides when a persistent parity mismatch warrants a ONE-TIME automatic
+ * SELF-HEAL — a full SDK-wallet REBUILD
+ * ([L1ShadowSyncService.recoverByRecreatingWallet]) — from the probe
+ * stream plus one context bit
+ * ([scanLooksComplete][ShadowSyncProgress.scanLooksComplete]).
  *
- * ## Why `sdk > dashj` always resets and `sdk < dashj` (almost) never does
+ * ## Why the rebuild, not the SPV-only reset (the device evidence)
  *
- * During the migration transition dashj is the source of truth for L1 —
- * it is the engine users spend from, and its view survives every release
- * to date. An SDK view showing MORE funds than dashj is therefore never
- * legitimate: the extra duffs can only be stale/duplicated shadow state
- * (e.g. unreconciled TXO rows after an SPV re-scan following an unclean
- * shutdown). A DEFICIT (`sdk < dashj`), by contrast, can be a real SDK
- * scan gap (e.g. a derivation path the SDK misses) — exactly the bug
- * class the harness must SURFACE, not erase — so it stands down instead
- * of resetting, with ONE exception:
+ * The predecessor of this rule hard-reset the shadow SPV on an inflated
+ * mismatch (stop SPV, delete the dataDir, clear the L1 rows, rescan from
+ * birth). On device that reset RAN and the +0.01 DASH inflation SURVIVED
+ * it ("shadow state corrupt after reset — SDK bug"). That is the decisive
+ * clue: the bad balance does NOT live in the SPV scan data (headers /
+ * filters / TXO rows) the reset wipes — it lives in the SDK's WALLET
+ * LEDGER (the Rust key-wallet / persisted `WalletMetadata` state), which
+ * the SPV-only reset leaves untouched (its own log even said "the
+ * in-memory Rust wallet state is only fully rebuilt on the next app
+ * start"). The corrective action therefore has to rebuild the WALLET, not
+ * just the scan:
  *
- * ## The reset-aftermath exception (the broken-reset recovery path)
+ * ## The self-heal: one full SDK-wallet rebuild, then stand down
  *
- * A live incident showed a reset itself can MANUFACTURE a deficit: the
- * pre-hard-reset flow deleted the Room TXO/tx rows but the SDK's
- * `clearSpvStorage` no-oped (it only clears a RUNNING client's storage —
- * see [L1ShadowSource.clearSpvStorage]), so on restart the SPV resumed
- * from the surviving header store + scan watermark, reported a "complete"
- * scan within seconds, and never repopulated the rows: `sdk=0` vs a real
- * dashj balance, stuck forever. That state has an unmistakable signature —
- * deficit AND `sdkTxCount == 0` AND headers+filters report complete AND a
- * reset ran recently (this or the previous process, per the persisted
- * marker). The first-generation recovery (one filesystem-level hard
- * reset) proved INSUFFICIENT live: even after the dataDir was provably
- * deleted and a full header/filter re-download completed, the wallet
- * re-discovered nothing — the per-wallet scan watermark survives in the
- * WALLET's own persisted state (see
- * [L1ShadowSyncService.recoverByRecreatingWallet] for the SDK-source
- * trace), which no combination of dataDir + row deletion can clear. The
- * escalation is therefore full SDK-wallet RE-CREATION
- * ([Decision.RECREATE_WALLET]): destroy the SDK wallet (removeWallet
- * cascade), re-bind it from the app seed, and re-scan into genuinely
- * fresh wallet state. The same signature WITHOUT a recent reset marker is
- * an organic total scan failure: stand down with an ERROR
- * ([Decision.DEFICIT_STAND_DOWN]), never reset.
+ * On a persistent mismatch (either direction) the decider fires
+ * [Decision.REBUILD_WALLET] exactly ONCE per process. The service runs
+ * [L1ShadowSyncService.recoverByRecreatingWallet]: unbind the SDK wallet
+ * and clear ALL SDK-side persistence for it (the full `removeAppWallet`
+ * cascade — Room wallet/identity/TXO/address/shielded rows INCLUDING the
+ * `syncedHeight` watermark, the Keystore-backed `WalletStorage` COPY of
+ * the seed, and the native wallet handle), delete the SPV dataDir, then
+ * RE-BIND from the RETAINED wallet seed ([SdkWalletBinder.bindInBackground]
+ * with the same non-interactive unlock as startup) — `createWallet`
+ * re-derives the SAME deterministic wallet id from the same seed and
+ * re-scans from birth into genuinely fresh ledger state. This runs on the
+ * ordinary parity-probe loop, so a user who simply INSTALLS the updated
+ * build self-heals automatically — no manual reset / restore / debug
+ * broadcast needed.
+ *
+ * NON-DESTRUCTIVE to user data: every step touches SDK-owned state ONLY.
+ * The dashj wallet (the L1 source of truth holding the user's funds), the
+ * user's seed, and their keys are never reached by any collaborator on
+ * this path ([recoverByRecreatingWallet]'s KDoc has the full safety
+ * proof) — the canonical seed lives encrypted in the dashj wallet and the
+ * rebind re-stores the SDK's copy from freshly-decrypted words.
+ *
+ * If the inflation/deficit SURVIVES the rebuild too (a fresh
+ * post-rebuild resync still mismatches for [requiredConsecutiveProbes]
+ * probes), the decider fires [Decision.STAND_DOWN] once: this is a
+ * DETERMINISTIC SDK ledger bug that no APK-side self-heal can fix — the
+ * service logs LOUDLY (upstream rust dash-spv / key-wallet ticket), marks
+ * verification FAILED, and does NOT rebuild again (dashj stays primary;
+ * the parity gate already blocks the cutover — the correct safety). No
+ * churn.
+ *
+ * The rebuild latch is SHARED across both mismatch directions: one full
+ * wallet rebuild fixes the ledger regardless of which way it was wrong,
+ * and a second rebuild would only churn. A plain DEFICIT (`sdk < dashj`
+ * with `sdkTxCount > 0` or an incomplete scan) is the classic SDK
+ * scan-gap bug class the harness must SURFACE, not act on — it only logs
+ * the MISMATCH (Decision.NONE), unchanged.
  *
  * ## Decision table (evaluated per probe; `empty deficit` = synced
  * mismatch with sdk < dashj AND sdkTxCount == 0 AND scanLooksComplete)
@@ -587,49 +609,45 @@ internal const val DASHJ_TIP_TOLERANCE_BLOCKS = 2
  * | not synced                      | streaks → 0 | —                          | NONE |
  * | synced, balances match          | streaks → 0 | —                          | NONE |
  * | sdk > dashj, dashj NOT caught up| streaks → 0 | —                          | NONE (dashj mid-sync/replay — see [isDashjChainCaughtUp]) |
+ * | sdk > dashj, recent self-spend  | streaks → 0 | —                          | NONE (legitimate self-spend inflation) |
  * | inflated (sdk > dashj)          | < threshold | —                          | NONE |
- * | inflated                        | ≥ threshold | no reset yet               | RESET (once) |
- * | inflated                        | ≥ threshold | reset already ran          | CORRUPT_AFTER_RESET (once), then NONE |
+ * | inflated                        | ≥ threshold | no rebuild yet             | REBUILD_WALLET (once) |
+ * | inflated                        | ≥ threshold | rebuild ran               | STAND_DOWN (once), then NONE |
  * | deficit, sdkTx > 0 or scan open | streaks → 0 | —                          | NONE (MISMATCH log only) |
  * | empty deficit                   | < threshold | —                          | NONE |
- * | empty deficit + recent reset    | ≥ threshold | no re-creation yet         | RECREATE_WALLET (once) |
- * | empty deficit + recent reset    | ≥ threshold | re-creation ran            | DEFICIT_STAND_DOWN (once), then NONE |
- * | empty deficit, NO recent reset  | ≥ threshold | —                          | DEFICIT_STAND_DOWN (once), then NONE |
+ * | empty deficit                   | ≥ threshold | no rebuild yet             | REBUILD_WALLET (once) |
+ * | empty deficit                   | ≥ threshold | rebuild ran               | STAND_DOWN (once), then NONE |
  *
- * Each acting decision fires at most once per process (per decider
- * instance): one inflated RESET, one wallet RE-CREATION, one
- * CORRUPT_AFTER_RESET report, one DEFICIT_STAND_DOWN report. After any
- * reset/re-creation the shadow chain re-scans, so `synced=false` probes
- * zero both streaks; only a FULL post-recovery resync that still shows
- * the mismatch for [requiredConsecutiveProbes] probes reaches the
+ * Each acting verdict fires at most once per process (per decider
+ * instance): one REBUILD_WALLET (shared across directions), one
+ * STAND_DOWN. After the rebuild the shadow re-scans, so `synced=false`
+ * probes zero both streaks; only a FULL post-rebuild resync that still
+ * shows the mismatch for [requiredConsecutiveProbes] probes reaches the
  * stand-down rows.
  */
 internal class ShadowResetDecider(
     private val requiredConsecutiveProbes: Int = RESET_CONSECUTIVE_PROBES
 ) {
-    enum class Decision { NONE, RESET, CORRUPT_AFTER_RESET, RECREATE_WALLET, DEFICIT_STAND_DOWN }
+    enum class Decision { NONE, REBUILD_WALLET, STAND_DOWN }
 
     private var consecutiveInflated = 0
     private var consecutiveEmptyDeficit = 0
-    private var resetIssued = false
-    private var corruptReported = false
-    private var recreateIssued = false
-    private var deficitStandDownReported = false
+    private var rebuildIssued = false
+    private var standDownReported = false
 
     fun onProbe(
         report: ParityReport,
         scanLooksComplete: Boolean = false,
-        recentResetMarker: Boolean = false,
         // A flag-gated SDK L1 send (Phase 5b, SdkL1SendService) was broadcast recently.
         // A self-spend legitimately INFLATES the SDK view for minutes: the SDK's
         // compact-filter SPV only applies the spend once it is MINED and filter-scanned,
         // while dashj's bloom filters see the mempool tx within seconds and drop its
         // ESTIMATED balance immediately — so sdk > dashj until the next block lands.
-        // Resetting healthy shadow state on that evidence would be wrong, so inflated
+        // Rebuilding healthy shadow state on that evidence would be wrong, so inflated
         // streaks are zeroed while the marker is fresh. The DEFICIT direction needs no
-        // guard: a plain deficit never resets, and the empty-deficit signature requires
-        // sdkTxCount == 0, which is impossible right after a send from a wallet whose
-        // parity-gated (non-zero, TXO-backed) balance just funded the spend.
+        // guard: the empty-deficit signature requires sdkTxCount == 0, which is impossible
+        // right after a send from a wallet whose parity-gated (non-zero, TXO-backed)
+        // balance just funded the spend.
         recentSelfSpendMarker: Boolean = false,
         // dashj's initial sync is GENUINELY complete (chain head at the network tip — see
         // isDashjChainCaughtUp). The INFLATED direction is meaningless while dashj is still
@@ -638,15 +656,9 @@ internal class ShadowResetDecider(
         // CORRECT SDK state mid-replay). Not-caught-up probes zero the inflated streak, which
         // also enforces stability across the consecutive-probe window. Defaults to true so
         // callers with no dashj sync signal keep the pre-gate semantics (a genuinely inflated
-        // view with both engines synced must still reset). The DEFICIT direction is NOT gated:
-        // it never auto-resets organically, and its empty-deficit signature is about SDK-side
-        // scan state, not dashj's.
-        dashjChainCaughtUp: Boolean = true,
-        // Debug builds always treat a persistent empty deficit as recoverable by wallet
-        // re-creation: this harness only runs on debug builds, an empty-and-scanned SDK view
-        // is never a legitimate steady state for a funded wallet, and remote testers have no
-        // adb to trigger recovery manually when the reset marker has aged out.
-        alwaysRecreateOnEmptyDeficit: Boolean = BuildConfig.DEBUG
+        // view with both engines synced must still self-heal). The DEFICIT direction is NOT
+        // gated: its empty-deficit signature is about SDK-side scan state, not dashj's.
+        dashjChainCaughtUp: Boolean = true
     ): Decision {
         val mismatch = report.sdkSynced && !report.balancesMatch
         val inflated = mismatch && report.sdkDuffs > report.dashjDuffs &&
@@ -660,36 +672,36 @@ internal class ShadowResetDecider(
         if (inflated) {
             consecutiveInflated++
             if (consecutiveInflated < requiredConsecutiveProbes) return Decision.NONE
-            return when {
-                !resetIssued -> {
-                    resetIssued = true
-                    consecutiveInflated = 0
-                    Decision.RESET
-                }
-                !corruptReported -> {
-                    corruptReported = true
-                    Decision.CORRUPT_AFTER_RESET
-                }
-                else -> Decision.NONE
-            }
+            return rebuildOrStandDown()
         }
         if (emptyDeficit) {
             consecutiveEmptyDeficit++
             if (consecutiveEmptyDeficit < requiredConsecutiveProbes) return Decision.NONE
-            return when {
-                (recentResetMarker || alwaysRecreateOnEmptyDeficit) && !recreateIssued -> {
-                    recreateIssued = true
-                    consecutiveEmptyDeficit = 0
-                    Decision.RECREATE_WALLET
-                }
-                !deficitStandDownReported -> {
-                    deficitStandDownReported = true
-                    Decision.DEFICIT_STAND_DOWN
-                }
-                else -> Decision.NONE
-            }
+            return rebuildOrStandDown()
         }
         return Decision.NONE
+    }
+
+    /**
+     * One full SDK-wallet REBUILD self-heal per process, then STAND DOWN if
+     * the mismatch survives it — the shared once-per-process latch for both
+     * mismatch directions.
+     */
+    private fun rebuildOrStandDown(): Decision = when {
+        !rebuildIssued -> {
+            rebuildIssued = true
+            // The rebuild stops this probe loop and re-scans from birth, so
+            // both streaks must restart clean — a fresh post-rebuild resync
+            // is what earns the STAND_DOWN verdict.
+            consecutiveInflated = 0
+            consecutiveEmptyDeficit = 0
+            Decision.REBUILD_WALLET
+        }
+        !standDownReported -> {
+            standDownReported = true
+            Decision.STAND_DOWN
+        }
+        else -> Decision.NONE
     }
 
     companion object {
@@ -1211,12 +1223,7 @@ class L1ShadowSyncService internal constructor(
     private val watchdogIntervalMs: Long = WATCHDOG_INTERVAL_MS,
     private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS,
     /** Wallet-recreation collaborators; null (tests' default) disables [recoverByRecreatingWallet]. */
-    private val recreator: ShadowWalletRecreator? = null,
-    /**
-     * Test override for the debug-build always-recreate-on-empty-deficit
-     * behavior; null (production) resolves to [BuildConfig.DEBUG].
-     */
-    internal val alwaysRecreateOnEmptyDeficitOverride: Boolean? = null
+    private val recreator: ShadowWalletRecreator? = null
 ) {
     @Inject
     constructor(
@@ -1736,84 +1743,57 @@ class L1ShadowSyncService internal constructor(
             report.sdkDuffs > report.dashjDuffs && !dashjCaughtUp
         ) {
             log.info(
-                "L1Parity inflated-mismatch auto-reset suppressed: dashj chain head {} vs SDK " +
+                "L1Parity inflated-mismatch self-heal suppressed: dashj chain head {} vs SDK " +
                     "tip {} (must be within {} blocks) — dashj is still mid-initial-sync/replay, " +
                     "so sdk > dashj is expected until it catches up; not counted toward the " +
-                    "reset streak",
+                    "rebuild streak",
                 dashjChainHead, progressSnapshot.bestKnownTipHeight, DASHJ_TIP_TOLERANCE_BLOCKS
             )
         }
         val decision = resetDecider.onProbe(
             report,
             scanLooksComplete = progressSnapshot.scanLooksComplete,
-            recentResetMarker = hasRecentResetMarker(),
             recentSelfSpendMarker =
                 lastSelfSpendMs != 0L && nowMs() - lastSelfSpendMs <= SELF_SPEND_GRACE_MS,
-            dashjChainCaughtUp = dashjCaughtUp,
-            alwaysRecreateOnEmptyDeficit = alwaysRecreateOnEmptyDeficitOverride ?: BuildConfig.DEBUG
+            dashjChainCaughtUp = dashjCaughtUp
         )
         when (decision) {
-            ShadowResetDecider.Decision.RESET -> {
+            ShadowResetDecider.Decision.REBUILD_WALLET -> {
+                // The SPV-only hard reset this used to run left the +0.01
+                // inflation intact on device (it lives in the SDK WALLET
+                // ledger, not the SPV scan data). Self-heal with a ONE-TIME
+                // full SDK-wallet REBUILD instead — unbind + clear ALL
+                // SDK-side persistence, then re-bind from the RETAINED seed
+                // and re-scan. Fire-and-forget: recovery stops this probe
+                // loop. SDK-side ONLY — dashj/seed/keys are untouched.
+                val direction = if (report.sdkDuffs > report.dashjDuffs) "INFLATED" else "DEFICIT"
                 log.warn(
-                    "L1Parity inflated MISMATCH persisted for {} consecutive synced probes " +
-                        "(sdk={} > dashj={} duffs) — an inflated SDK view is never legitimate " +
-                        "(dashj is the L1 source of truth); hard-resetting the shadow state",
-                    ShadowResetDecider.RESET_CONSECUTIVE_PROBES, report.sdkDuffs, report.dashjDuffs
-                )
-                resetShadowState(hard = true)
-            }
-            ShadowResetDecider.Decision.CORRUPT_AFTER_RESET -> {
-                _verificationStatus.value = L1VerificationStatus.FAILED
-                log.error(
-                    "shadow state corrupt after reset — SDK bug: the inflated L1 mismatch " +
-                        "(sdk={} > dashj={} duffs) survived a full post-reset resync; standing " +
-                        "down (no further automatic resets this process; the in-memory Rust " +
-                        "wallet state is only fully rebuilt on the next app start)",
-                    report.sdkDuffs, report.dashjDuffs
-                )
-            }
-            ShadowResetDecider.Decision.RECREATE_WALLET -> {
-                log.warn(
-                    "L1Parity reset-aftermath deficit: sdk=0 txs / {} duffs vs dashj={} duffs " +
-                        "with a complete header+filter scan and a recent shadow reset — the " +
-                        "per-wallet scan watermark (WalletEntity.syncedHeight, rehydrated into " +
-                        "the Rust wallet) survives every dataDir/row deletion and suppresses " +
-                        "re-matching; escalating to ONE full SDK-wallet re-creation " +
-                        "(fire-and-forget — it stops this probe loop)",
-                    report.sdkDuffs, report.dashjDuffs
+                    "L1Parity {} MISMATCH persisted for {} consecutive synced probes " +
+                        "(sdk={} vs dashj={} duffs, delta={}) — the SDK L1 WALLET LEDGER " +
+                        "disagrees with dashj (an SPV-only reset already proved it does NOT " +
+                        "live in the scan data); self-healing with ONE full SDK-wallet rebuild " +
+                        "(unbind + clear SDK persistence, re-bind from the retained seed, " +
+                        "re-scan). SDK-side only — dashj, seed and keys are untouched",
+                    direction, ShadowResetDecider.RESET_CONSECUTIVE_PROBES,
+                    report.sdkDuffs, report.dashjDuffs, report.sdkDuffs - report.dashjDuffs
                 )
                 recreateWalletInBackground()
             }
-            ShadowResetDecider.Decision.DEFICIT_STAND_DOWN -> {
+            ShadowResetDecider.Decision.STAND_DOWN -> {
                 _verificationStatus.value = L1VerificationStatus.FAILED
                 log.error(
-                    "L1Parity DEFICIT stand-down: sdk={} < dashj={} duffs with sdkTx=0 and a " +
-                        "complete scan but no recent-reset explanation (marker absent/stale, or " +
-                        "the one wallet re-creation already ran) — a deficit is the bug class " +
-                        "this harness must surface, not erase; no automatic reset",
-                    report.sdkDuffs, report.dashjDuffs
+                    "L1Parity MISMATCH SURVIVED the full SDK-wallet rebuild (sdk={} vs " +
+                        "dashj={} duffs, delta={}) — this is a DETERMINISTIC SDK ledger bug that " +
+                        "no APK-side self-heal can fix; it must be fixed upstream (rust dash-spv " +
+                        "/ key-wallet). Standing down: NO further automatic rebuilds this process, " +
+                        "dashj stays primary and the parity gate keeps the cutover blocked " +
+                        "(the correct safety). Verification marked FAILED",
+                    report.sdkDuffs, report.dashjDuffs, report.sdkDuffs - report.dashjDuffs
                 )
             }
             ShadowResetDecider.Decision.NONE -> Unit
         }
         return report
-    }
-
-    /**
-     * Whether a shadow reset ran recently — this process or (via the
-     * persisted [DashPayConfig.L1_SHADOW_LAST_RESET] marker) a previous
-     * one, within [RESET_MARKER_MAX_AGE_MS]. This is the bit that
-     * distinguishes a reset-aftermath deficit (recoverable — the reset
-     * itself manufactured it) from an organic one (must stand down).
-     * Read failures count as "no marker" so a broken DataStore can never
-     * cause an unwarranted reset.
-     */
-    private suspend fun hasRecentResetMarker(): Boolean = try {
-        val lastResetMs = dashPayConfig.get(DashPayConfig.L1_SHADOW_LAST_RESET)
-        lastResetMs != null && nowMs() - lastResetMs <= RESET_MARKER_MAX_AGE_MS
-    } catch (e: Exception) {
-        log.warn("failed to read the L1 shadow reset marker; treating as absent", e)
-        false
     }
 
     /**
@@ -1866,13 +1846,11 @@ class L1ShadowSyncService internal constructor(
      *    process death ([ShadowResetDecider]);
      * 5. restart SPV.
      *
-     * Called automatically by the probe (inflated mismatch — see
-     * [ShadowResetDecider] for the decision table and the
-     * once-per-process guarantees; the reset-aftermath deficit escalates
-     * past this to [recoverByRecreatingWallet] instead, because the
-     * per-wallet scan watermark survives everything this reset deletes),
-     * by the debug broadcast ([L1ShadowDebugReset]), and callable
-     * directly for a future debug screen. NOTE: the live Rust wallet's
+     * NOTE: this is NO LONGER called automatically by the parity probe —
+     * an inflated mismatch now only detects and blocks (see the
+     * [ShadowResetDecider] KDoc), never wipes. It remains a MANUAL debug
+     * tool, reachable via the debug broadcast ([L1ShadowDebugReset]) and
+     * callable directly for a debug screen. NOTE: the live Rust wallet's
      * in-memory TXO view is NOT rebuilt by this call (the SDK offers no
      * in-process reload short of `removeWallet`'s destructive cascade —
      * which is exactly what [recoverByRecreatingWallet] runs); the
@@ -2016,12 +1994,15 @@ class L1ShadowSyncService internal constructor(
      * acceptable (0 on the incident device), and the shielded runtime's
      * next `ensureShieldedReady` pass rebuilds from the network.
      *
-     * Once-per-process automation is the DECIDER's job
-     * ([ShadowResetDecider.Decision.RECREATE_WALLET]); this method itself
-     * is re-runnable (debug trigger). Returns whether the destructive
-     * phase completed and the rebind was launched (false when no wallet
-     * is bound, the recreator isn't wired, or a step failed — failures
-     * are logged, never thrown).
+     * Once-per-process automation is the DECIDER's job: it fires
+     * [ShadowResetDecider.Decision.REBUILD_WALLET] on a persistent parity
+     * mismatch (either direction) so a user who simply installs the updated
+     * build self-heals automatically (see the [ShadowResetDecider] KDoc).
+     * Also reachable as a MANUAL debug tool via the [L1ShadowDebugReset]
+     * broadcast (`--ez recreate true`); this method itself is re-runnable.
+     * Returns whether the destructive phase completed and the rebind was
+     * launched (false when no wallet is bound, the recreator isn't wired,
+     * or a step failed — failures are logged, never thrown).
      */
     suspend fun recoverByRecreatingWallet(): Boolean {
         val recreator = this.recreator ?: run {
@@ -2262,14 +2243,5 @@ class L1ShadowSyncService internal constructor(
          * this masks at most ~15 mismatch probes.
          */
         internal const val SELF_SPEND_GRACE_MS = 15 * 60_000L
-
-        /**
-         * How long the persisted reset marker counts as "recent" for the
-         * reset-aftermath deficit recovery ([ShadowResetDecider]) — long
-         * enough to span "this or the last process" across a typical
-         * debug/QA day, short enough that an ancient marker cannot
-         * legitimize resetting an organic deficit weeks later.
-         */
-        internal const val RESET_MARKER_MAX_AGE_MS = 24 * 60 * 60_000L
     }
 }
