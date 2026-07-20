@@ -22,12 +22,18 @@ import io.mockk.CapturingSlot
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -209,6 +215,68 @@ class CutoverCoordinatorTest {
     fun dashjEngineMayStart_true_whenSettledButSdkL1EngineDisabled() = runBlocking {
         val (coordinator, _) = coordinator(stored = CutoverState.SETTLED.name, flag = false)
         assertTrue(coordinator.dashjEngineMayStart())
+    }
+
+    // ── Reactive ownership flow (About-screen L1-engine row) ──────────
+
+    /**
+     * A [CutoverCoordinator] wired to observable CUTOVER_STATE and SDK-L1-flag
+     * DataStore keys, returned with live handles so a test can flip either key
+     * and watch [CutoverCoordinator.sdkOwnsL1Flow] re-emit.
+     */
+    private fun observableCoordinator(
+        stored: String? = null,
+        flag: Boolean? = true
+    ): Triple<CutoverCoordinator, MutableStateFlow<String?>, MutableStateFlow<Boolean?>> {
+        val stateFlow = MutableStateFlow(stored)
+        val shadowFlow = MutableStateFlow(flag)
+        val config = mockk<DashPayConfig>()
+        every { config.observe(DashPayConfig.CUTOVER_STATE) } returns stateFlow
+        every { config.observe(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns shadowFlow
+        val collector = mockk<CutoverEvidenceCollector>()
+        return Triple(CutoverCoordinator(config, collector), stateFlow, shadowFlow)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun sdkOwnsL1Flow_flipsToTrue_whenTheCutoverCommitsMidObservation() = runTest {
+        val (coordinator, stateFlow, _) = observableCoordinator(stored = null, flag = true)
+        val emissions = mutableListOf<Boolean>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            coordinator.sdkOwnsL1Flow().collect { emissions.add(it) }
+        }
+
+        // Pre-cutover (DUAL_RUNNING) → dashj owns L1 → false.
+        assertEquals(listOf(false), emissions)
+
+        // The auto-commit flips the persisted state mid-launch → SDK owns → true.
+        stateFlow.value = CutoverState.CUT_OVER.name
+        assertEquals(listOf(false, true), emissions)
+
+        job.cancel()
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun sdkOwnsL1Flow_staysFalse_whenCommittedButSdkL1EngineDisabled() = runTest {
+        // Committed state but the SDK L1 flag is off → dashj still owns L1, so
+        // the About row must NOT claim the SDK owns L1 (mirrors the suspend gate).
+        val (coordinator, _, shadowFlow) = observableCoordinator(
+            stored = CutoverState.CUT_OVER.name,
+            flag = false
+        )
+        val emissions = mutableListOf<Boolean>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            coordinator.sdkOwnsL1Flow().collect { emissions.add(it) }
+        }
+
+        assertEquals(listOf(false), emissions)
+
+        // Enabling the SDK L1 engine now makes it the true L1 owner → flips true.
+        shadowFlow.value = true
+        assertEquals(listOf(false, true), emissions)
+
+        job.cancel()
     }
 
     // ── Fire-and-forget fresh-wallet commit (FIX 1, non-blocking) ─────

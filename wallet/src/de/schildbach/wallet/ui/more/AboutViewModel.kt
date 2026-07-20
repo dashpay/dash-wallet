@@ -24,9 +24,11 @@ import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -40,6 +42,7 @@ import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.dash.wallet.features.exploredash.utils.ExploreDatabasePrefs
 import org.dash.wallet.common.util.isMainNetId
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 /**
@@ -53,6 +56,15 @@ data class AboutViewState(
     val firebaseInstallationId: String = "",
     val firebaseCloudMessagingToken: String = "",
     val isMainNet: Boolean = true,
+    /**
+     * Whether the Dash Kotlin SDK owns the L1 engine right now (the cutover is
+     * committed AND the SDK L1 engine is enabled — see
+     * [CutoverCoordinator.sdkOwnsL1Flow]). When true the About screen labels
+     * the L1-engine row "Dash Kotlin SDK" and shows its version; when false
+     * dashj still owns L1 and the row stays "DashJ". Observed reactively, so
+     * the row flips live if the cutover commits while the screen is open.
+     */
+    val sdkOwnsL1: Boolean = false,
     val databasePrefs: ExploreDatabasePrefs = ExploreDatabasePrefs()
 )
 
@@ -63,8 +75,13 @@ class AboutViewModel @Inject constructor(
     exploreConfig: ExploreConfig,
     dataSyncStatus: DataSyncStatusService,
     val walletApplication: WalletApplication,
-    private val systemActionsService: SystemActionsService
+    private val systemActionsService: SystemActionsService,
+    private val cutoverCoordinator: CutoverCoordinator
 ): ViewModel() {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(AboutViewModel::class.java)
+    }
 
     private val _uiState = MutableStateFlow(
         AboutViewState(isMainNet = Constants.NETWORK_PARAMETERS.id.isMainNetId())
@@ -73,6 +90,21 @@ class AboutViewModel @Inject constructor(
 
     init {
         loadFirebaseIds()
+
+        // Observe which L1 engine owns the wallet, REACTIVELY: sdkOwnsL1Flow()
+        // emits true once the cutover is committed (CUT_OVER/SETTLED with the SDK
+        // L1 engine enabled) and false while dashj still owns L1 (pre-cutover /
+        // upgrade dual-run). The new SDK-primary auto-commit flips the cutover
+        // mid-launch (~15-30s into an upgrade, immediately on a restore), so if
+        // the About screen is open when that happens the L1-engine row flips
+        // DashJ → Dash Kotlin SDK live. Failures fall back to "dashj owns L1".
+        cutoverCoordinator.sdkOwnsL1Flow()
+            .catch { e ->
+                log.warn("failed to observe cutover ownership; showing dashj as the L1 owner", e)
+                emit(false)
+            }
+            .onEach { sdkOwnsL1 -> _uiState.update { it.copy(sdkOwnsL1 = sdkOwnsL1) } }
+            .launchIn(viewModelScope)
 
         viewModelScope.launch {
             val timestamp = exploreRepository.getRemoteTimestamp()

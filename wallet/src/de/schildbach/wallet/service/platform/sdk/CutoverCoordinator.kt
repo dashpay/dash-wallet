@@ -22,6 +22,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -90,6 +93,31 @@ class CutoverCoordinator @Inject constructor(
         }
         return false
     }
+
+    /**
+     * REACTIVE mirror of the suspend [dashjEngineMayStart] ownership decision:
+     * emits whether the Dash Kotlin SDK owns L1 right now, and RE-EMITS when
+     * the cutover commits (or the SDK L1 flag flips) mid-launch — so UI that
+     * observes it (the About screen's L1-engine row) updates live when the
+     * new SDK-primary auto-commit takes over ~15-30s after launch without a
+     * relaunch, or immediately after a restore.
+     *
+     * SDK owns L1 exactly when the state is committed (CUT_OVER/SETTLED, i.e.
+     * the pure [dashjEngineMayStart] gate says dashj must NOT start) AND the
+     * SDK L1 engine is actually enabled ([DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW])
+     * — the identical condition the suspend [dashjEngineMayStart] fail-safe
+     * encodes, kept in lockstep by reusing the same pure predicate rather than
+     * duplicating the gate. Observes the CUTOVER_STATE and shadow-flag
+     * DataStore keys, so any persisted transition flows through.
+     */
+    fun sdkOwnsL1Flow(): Flow<Boolean> =
+        combine(
+            dashPayConfig.observe(DashPayConfig.CUTOVER_STATE),
+            dashPayConfig.observe(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW)
+        ) { storedState, shadowEnabled ->
+            val state = CutoverState.fromStored(storedState)
+            !dashjEngineMayStart(state) && shadowEnabled == true
+        }.distinctUntilChanged()
 
     /**
      * Recompute readiness and apply the ADVISORY edge

@@ -87,7 +87,7 @@ dependencies {
     // binding (TransactionDecoder). Published from platform branch
     // claude/b1-txdetail-jni; NEVER repoint at 0.1.0-SNAPSHOT without also
     // dropping the TransactionDecoder usage below.
-    implementation "org.dashj:dash-sdk-android:0.1.0-b1-SNAPSHOT"
+    implementation "org.dashj:dash-sdk-android:$dashSdkVersion"
     // dashj-platform SDK is declared per-flavor in a dependencies block after the
     // android {} block, since the flavor-scoped configurations (e.g. prodImplementation)
     // only exist once productFlavors have been registered.
@@ -313,6 +313,7 @@ android {
             buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv("SUPPORT_EMAIL")}\"")
         }
         buildConfigField("String", "DASHJ_VERSION", "\"$dashjVersion\"")
+        buildConfigField("String", "DASH_SDK_VERSION", "\"$dashSdkVersion\"")
         buildConfigField("int", "COMMIT_YEAR", "$commitYear")
         buildConfigField("String", "GIT_COMMIT", "\"$gitCommit\"")
     }
