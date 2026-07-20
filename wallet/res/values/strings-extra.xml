@@ -309,6 +309,7 @@
     <string name="about_last_explore_server_update">Last Explore server update</string>
     <string name="about_app_version_label">App version</string>
     <string name="about_dashj_label" translatable="false">DashJ</string>
+    <string name="about_kotlin_sdk_label" translatable="false">Dash Kotlin SDK</string>
     <string name="about_platform_label">Platform</string>
     <string name="about_explore_section">Explore Dash</string>
     <string name="about_explore_update">Update</string>

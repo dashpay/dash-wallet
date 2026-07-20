@@ -4,6 +4,11 @@ buildscript {
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.12.0'
         dashjVersion = '22.0.4'
+        // Dash Platform Kotlin SDK (org.dashj:dash-sdk-android). Single source of
+        // truth for both the dependency coordinate (wallet/build.gradle) and the
+        // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
+        // cutover hands L1 ownership to the SDK.
+        dashSdkVersion = '0.1.0-b1-SNAPSHOT'
         dppVersion = "4.0.0"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'

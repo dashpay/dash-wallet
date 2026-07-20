@@ -64,7 +64,14 @@ import org.dash.wallet.common.ui.components.Style
  */
 data class AboutUIState(
     val versionName: String = "",
-    val dashjVersion: String = "",
+    /**
+     * Label for the L1-engine row — which engine owns the wallet's L1 right
+     * now: "DashJ" while dashj owns L1 (pre-cutover / dual-run), or "Dash
+     * Kotlin SDK" once the cutover has handed L1 to the SDK.
+     */
+    val l1EngineLabel: String = "",
+    /** Version string of the L1 engine named by [l1EngineLabel]. */
+    val l1EngineVersion: String = "",
     val platformVersion: String = "",
     val deviceSyncStatus: String = "",
     val serverUpdateStatus: String? = null,
@@ -119,8 +126,8 @@ fun AboutScreen(
                     value = uiState.versionName
                 )
                 ListItem1(
-                    label = stringResource(R.string.about_dashj_label),
-                    value = uiState.dashjVersion
+                    label = uiState.l1EngineLabel,
+                    value = uiState.l1EngineVersion
                 )
                 ListItem1(
                     label = stringResource(R.string.about_platform_label),
@@ -291,7 +298,8 @@ private fun AboutScreenPreview() {
     AboutScreen(
         uiState = AboutUIState(
             versionName = "11.8.2 (10)",
-            dashjVersion = "22.0.3",
+            l1EngineLabel = "DashJ",
+            l1EngineVersion = "22.0.3",
             platformVersion = "4.0.0",
             deviceSyncStatus = "01 Jan 2026 at 20:00",
             serverUpdateStatus = "01 Jan 2026",
@@ -310,7 +318,8 @@ private fun AboutScreenTestNetPreview() {
     AboutScreen(
         uiState = AboutUIState(
             versionName = "11.8.2 (10)",
-            dashjVersion = "22.0.3",
+            l1EngineLabel = "DashJ",
+            l1EngineVersion = "22.0.3",
             platformVersion = "4.0.0",
             deviceSyncStatus = "01 Jan 2026 at 20:00",
             serverUpdateStatus = "01 Jan 2026",
@@ -329,7 +338,8 @@ private fun AboutScreenLoadingPreview() {
     AboutScreen(
         uiState = AboutUIState(
             versionName = "7.4.7 (10)",
-            dashjVersion = "22.0.3",
+            l1EngineLabel = "DashJ",
+            l1EngineVersion = "22.0.3",
             platformVersion = "4.0.0",
             deviceSyncStatus = "Syncing…",
             serverUpdateStatus = null,
