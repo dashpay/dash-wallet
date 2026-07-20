@@ -24,10 +24,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -167,13 +170,19 @@ fun EnterAmount(
         }
 
         if (showCurrencyPicker && currencyCodes.size >= 2) {
+            // Wrap the picker to its content instead of letting its options' fillMaxWidth grab the
+            // whole row: width = widest option label, height = the stacked options' natural height
+            // (so it sits compact on the right rather than stretching across the amount area).
             SegmentedPicker(
                 options = currencyCodes.map { SegmentedOption(it) },
                 selectedIndex = primaryIndex,
                 style = SegmentedPickerStyle(
                     displayMode = PickerDisplayMode.Vertical,
                 ),
-                onOptionSelected = onCurrencyPickerSelect
+                onOptionSelected = onCurrencyPickerSelect,
+                modifier = Modifier
+                    .width(IntrinsicSize.Max)
+                    .height(IntrinsicSize.Min)
             )
         }
     }

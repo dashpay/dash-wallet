@@ -18,20 +18,15 @@
 package org.dash.wallet.integrations.maya.utils
 
 /**
- * Which backend powers the cross-chain swap surface. Selected once at app startup
- * via the Hilt provider in
- * [org.dash.wallet.integrations.maya.di.MayaModule.provideSwapProvider]; changes
- * take effect on the next launch.
+ * The cross-chain swap operation the user picked on the DashDEX portal.
+ *
+ * - [SELL]: Dash Wallet -> any crypto. Supported by both Maya and SwapKit.
+ * - [BUY]: any crypto -> Dash Wallet. Only reachable on the SwapKit backend
+ *   (see [SwapBackend.supportsBuy]); Maya cannot buy Dash. Assets routable from DASH
+ *   exclusively via MAYACHAIN (`PoolInfo.mayaOnly`) have no buy route and are hidden
+ *   from the coin picker when buying.
  */
-enum class SwapBackend {
-    MAYA,
-    SWAPKIT;
-
-    /**
-     * Whether this backend can buy Dash (from any crypto into the Dash Wallet).
-     * Maya only supports selling Dash (Dash Wallet -> any crypto); SwapKit supports
-     * both directions.
-     */
-    val supportsBuy: Boolean
-        get() = this == SWAPKIT
+enum class SwapDirection {
+    BUY,
+    SELL
 }

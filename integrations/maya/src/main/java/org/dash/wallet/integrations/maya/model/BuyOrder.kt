@@ -15,23 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.maya.utils
+package org.dash.wallet.integrations.maya.model
+
+import java.math.BigDecimal
 
 /**
- * Which backend powers the cross-chain swap surface. Selected once at app startup
- * via the Hilt provider in
- * [org.dash.wallet.integrations.maya.di.MayaModule.provideSwapProvider]; changes
- * take effect on the next launch.
+ * Result of creating a BUY order (crypto -> DASH) via
+ * [org.dash.wallet.integrations.maya.api.SwapProvider.createBuyOrder].
+ *
+ * [depositAddress] is the SwapKit inbound address the user must send [sellAmount] of
+ * [sellAsset] to. [memo] is an optional chain memo/tag that some chains require alongside the
+ * deposit (null for most UTXO chains). [expectedDashAmount] is the DASH the swap is expected to
+ * deliver, as a human-unit decimal.
  */
-enum class SwapBackend {
-    MAYA,
-    SWAPKIT;
-
-    /**
-     * Whether this backend can buy Dash (from any crypto into the Dash Wallet).
-     * Maya only supports selling Dash (Dash Wallet -> any crypto); SwapKit supports
-     * both directions.
-     */
-    val supportsBuy: Boolean
-        get() = this == SWAPKIT
-}
+data class BuyOrder(
+    val depositAddress: String,
+    val memo: String?,
+    val expectedDashAmount: BigDecimal,
+    val sellAsset: String,
+    val sellAmount: String
+)

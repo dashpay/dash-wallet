@@ -38,6 +38,8 @@ class AddressParserTest {
         assertFalse(parser.exactMatch("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6"))
         // Contains a non-Base58 character ('0').
         assertFalse(parser.exactMatch("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjL0jt"))
+        // Single-character typo (last char t -> u): shape-valid but the Base58Check checksum fails.
+        assertFalse(parser.exactMatch("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6u"))
         assertFalse(parser.exactMatch(""))
 
         assertEquals(
@@ -69,6 +71,15 @@ class AddressParserTest {
         assertFalse(parser.exactMatch("EQDrjaLahLkMB-hMCmkzOyBuHJ139ZUYmPHu6RRBKnbdLIY"))
         // Standard Base64 chars ('+', '=') are not valid Base64URL.
         assertFalse(parser.exactMatch("EQDrjaLahLkMB+hMCmkzOyBuHJ139ZUYmPHu6RRBKnbdLI="))
+        // Single-character typo (last char I -> J): shape-valid but the CRC16 checksum fails.
+        assertFalse(parser.exactMatch("EQDrjaLahLkMB-hMCmkzOyBuHJ139ZUYmPHu6RRBKnbdLIYJ"))
+        // Testnet-flagged (tag 0x91) variant of the same account with a *valid* CRC — rejected
+        // by the mainnet tag check, not the checksum.
+        assertFalse(parser.exactMatch("kQDrjaLahLkMB-hMCmkzOyBuHJ139ZUYmPHu6RRBKnbdLD2C"))
+        // Raw form with an unknown workchain.
+        assertFalse(
+            parser.exactMatch("5:fcb91a3a3816d0f7b8c2c76108b8a9bc5568b7060c1e2bd75d8aaf0e3d1c7c00")
+        )
         // Raw form with truncated hex.
         assertFalse(parser.exactMatch("0:fcb91a3a3816d0f7"))
         assertFalse(parser.exactMatch(""))
@@ -88,14 +99,26 @@ class AddressParserTest {
     fun cardanoAddressTest() {
         val parser = CardanoAddressParser()
 
-        // Shelley Bech32 (addr1...) and legacy Byron Base58 (Ae2.../DdzFF...).
+        // Shelley Bech32 (addr1..., CIP-19 mainnet test vector) and legacy Byron Base58
+        // (Ae2.../DdzFF...).
         assertTrue(
             parser.exactMatch(
-                "addr1q9c8e2wjwj4uxsmrk2lqkkpqalwzvxgyx7uxjkfeg7xc3xa07c6qzwrcfh2x4f4z4uyez5lpd07v3jkh3ttn0xc2x7qspewtaa"
+                "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer" +
+                    "3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
             )
         )
         assertTrue(parser.exactMatch("Ae2tdPwUPEZ4YjgvykNpoFeYUxoyhNj2kg8KfKWN2FizsSpLUPv68MpTVDo"))
 
+        // Shape-valid Shelley string with an invalid bech32 checksum (the fabricated address
+        // this codebase previously used as the ADA example).
+        assertFalse(
+            parser.exactMatch(
+                "addr1q9c8e2wjwj4uxsmrk2lqkkpqalwzvxgyx7uxjkfeg7xc3x" +
+                    "a07c6qzwrcfh2x4f4z4uyez5lpd07v3jkh3ttn0xc2x7qspewtaa"
+            )
+        )
+        // Single-character typo in the Byron form (last o -> p): the CBOR CRC32 fails.
+        assertFalse(parser.exactMatch("Ae2tdPwUPEZ4YjgvykNpoFeYUxoyhNj2kg8KfKWN2FizsSpLUPv68MpTVDp"))
         // Non-Bech32 character.
         assertFalse(parser.exactMatch("addr1bad+char"))
         assertFalse(parser.exactMatch(""))
@@ -104,7 +127,7 @@ class AddressParserTest {
             2,
             parser.findAll(
                 """
-                first addr1q9c8e2wjwj4uxsmrk2lqkkpqalwzvxgyx7uxjkfeg7xc3xa07c6qzwrcfh2x4f4z4uyez5lpd07v3jkh3ttn0xc2x7qspewtaa
+                first addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x
                 second Ae2tdPwUPEZ4YjgvykNpoFeYUxoyhNj2kg8KfKWN2FizsSpLUPv68MpTVDo
                 """
             ).size
@@ -125,6 +148,16 @@ class AddressParserTest {
         assertFalse(parser.exactMatch("Alice.NEAR"))
         assertFalse(parser.exactMatch("alice"))
         assertFalse(parser.exactMatch(""))
+
+        // Labels can contain single -/_ separators but can't start or end with one,
+        // and the whole account id is capped at 64 characters.
+        assertTrue(parser.exactMatch("sub-account.alice.near"))
+        assertTrue(parser.exactMatch("sub_account.alice.near"))
+        assertFalse(parser.exactMatch("-alice.near"))
+        assertFalse(parser.exactMatch("alice-.near"))
+        assertFalse(parser.exactMatch("alice.near-"))
+        assertFalse(parser.exactMatch("al--ice.near"))
+        assertFalse(parser.exactMatch("a".repeat(60) + ".near"))
 
         assertEquals(
             2,
@@ -165,19 +198,27 @@ class AddressParserTest {
     fun starknetAddressTest() {
         val parser = StarknetAddressParser()
 
-        // 0x + 1..64 hex chars (252-bit felt).
+        // 0x + 50..64 hex chars (a 252-bit felt, with or without leading-zero padding).
         assertTrue(
             parser.exactMatch("0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d")
         )
-        assertTrue(parser.exactMatch("0xdeadbeef"))
+        // Leading zeros stripped (63 chars) — the same felt in its short form.
+        assertTrue(
+            parser.exactMatch("0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d")
+        )
 
+        // Truncated felts are legal on-chain but never real accounts — sending burns funds.
+        assertFalse(parser.exactMatch("0xdeadbeef"))
+        assertFalse(parser.exactMatch("0x0"))
+        // The zero felt, even at full length.
+        assertFalse(parser.exactMatch("0x" + "0".repeat(64)))
         // Missing 0x prefix and more than 64 hex chars.
         assertFalse(parser.exactMatch("04718f5a"))
         assertFalse(parser.exactMatch("0x" + "a".repeat(65)))
         assertFalse(parser.exactMatch(""))
 
         assertEquals(
-            2,
+            1,
             parser.findAll(
                 """
                 first 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
@@ -224,6 +265,8 @@ class AddressParserTest {
         // Wrong prefix and a non-Base58 character ('0').
         assertFalse(parser.exactMatch("XEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh"))
         assertFalse(parser.exactMatch("r0Eb8TK3gBgk5auZkwc6sHnwrGVJH8"))
+        // Single-character typo (last char h -> i): shape-valid but the Base58Check checksum fails.
+        assertFalse(parser.exactMatch("rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLi"))
         assertFalse(parser.exactMatch(""))
 
         assertEquals(

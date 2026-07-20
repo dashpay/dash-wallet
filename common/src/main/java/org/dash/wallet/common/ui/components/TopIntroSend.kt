@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -109,7 +108,7 @@ fun TopIntroSend(
         // Heading
         Text(
             text = heading,
-            style = MyTheme.H5Bold,
+            style = MyTheme.Typography.HeadlineMediumBold,
             color = MyTheme.Colors.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
@@ -162,7 +161,8 @@ fun TopIntroSend(
             // Address variant: "to [address]" — preposition secondary, address primary
             Text(
                 text = buildAnnotatedString {
-                    withStyle(MyTheme.Body2Regular.toSpanStyle().copy(color = MyTheme.Colors.textSecondary)) {
+                    // Per Figma node 4251:16531 the whole "to {address}" line is text/primary.
+                    withStyle(MyTheme.Body2Regular.toSpanStyle().copy(color = MyTheme.Colors.textPrimary)) {
                         append(preposition)
                         append(" ")
                     }
@@ -176,8 +176,8 @@ fun TopIntroSend(
             )
         }
 
-        // Per Figma: 2dp gap between merchant/address row and balance row.
-        Spacer(modifier = Modifier.height(2.dp))
+        // Per Figma: 4dp (spacing/4, the root column gap) between the heading block and balance row.
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Balance availability row
         BalanceRow(
@@ -224,30 +224,31 @@ private fun BalanceRow(
 
         // Toggleable content: icon + amounts, or placeholder
         if (isVisible) {
+            // Per Figma node 4251:16531: amount, then Dash logo, then "~ fiat" —
+            // the whole balance row is text/secondary.
             Row(
                 modifier = Modifier.weight(1f, fill = false),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                Text(
+                    text = dashBalance,
+                    style = MyTheme.Typography.BodyMedium,
+                    color = MyTheme.Colors.textSecondary
+                )
                 Image(
                     painter = painterResource(R.drawable.ic_dash_d_gray),
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 )
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(MyTheme.Typography.BodyMedium.toSpanStyle().copy(color = MyTheme.Colors.textPrimary)) {
-                            append(dashBalance)
-                        }
-                        if (fiatBalance != null) {
-                            withStyle(MyTheme.Typography.BodyMedium.toSpanStyle().copy(color = MyTheme.Colors.textSecondary)) {
-                                append(" · ")
-                                append(fiatBalance)
-                            }
-                        }
-                    }
-                )
+                if (fiatBalance != null) {
+                    Text(
+                        text = "~ $fiatBalance",
+                        style = MyTheme.Typography.BodyMedium,
+                        color = MyTheme.Colors.textSecondary
+                    )
+                }
             }
         } else {
             Text(
@@ -258,33 +259,32 @@ private fun BalanceRow(
             )
         }
 
-        Spacer(modifier = Modifier.width(6.dp))
+        // Per Figma: spacing/8 between the balance text and the eye chip.
+        Spacer(modifier = Modifier.width(8.dp))
 
         // Eye toggle as a btn-xs chip — rounded-12 with subtle dark tint, per Figma.
         val interactionSource = remember { MutableInteractionSource() }
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0x0D0A0B0D))
+                .background(MyTheme.Colors.primary5)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
                     onClick = onToggleClick
                 )
-                .padding(horizontal = 6.dp, vertical = 4.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(
                     if (isVisible) R.drawable.ic_show else R.drawable.ic_hide
                 ),
-                contentDescription = if (isVisible) {
-                    "Hide balance"
-                } else {
-                    "Show balance"
-                },
+                contentDescription = stringResource(
+                    if (isVisible) R.string.hide_balance else R.string.show_balance
+                ),
                 tint = MyTheme.Colors.textSecondary,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(14.dp)
             )
         }
     }

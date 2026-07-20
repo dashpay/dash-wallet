@@ -22,6 +22,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
+import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -50,10 +52,7 @@ import org.dash.wallet.integrations.maya.databinding.FragmentMayaConvertCryptoBi
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
-import org.dash.wallet.integrations.maya.model.MayaErrorType
 import org.dash.wallet.integrations.maya.model.getCoinBaseExchangeRateConversion
-import org.dash.wallet.integrations.maya.model.getMayaErrorString
-import org.dash.wallet.integrations.maya.model.getMayaErrorType
 import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewFragment
 import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.ServiceWallet
@@ -189,36 +188,31 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
-            // SwapKit's `noRoutesFound` (and Maya's "amount too low") shouldn't pop a modal —
-            // surface them in the same red banner the local min-amount check uses, so the
-            // user can simply raise the amount and retry without dismissing a dialog.
-            if (!it.isNullOrBlank() && getMayaErrorType(it) == MayaErrorType.AMOUNT_TOO_LOW) {
-                showAmountTooLowBanner()
+            // An amount-too-low error (SwapKit's `noRoutesFound`, Maya's "amount too low")
+            // shouldn't pop a modal — surface it in the same red banner the local min-amount check
+            // uses, so the user can simply raise the amount and retry without dismissing a dialog.
+            // The active backend's aggregator classifies and localizes the error (see SwapProvider):
+            // Maya's amount-too-low keeps its "below the allowed minimum" copy, while SwapKit's
+            // noRoutesFound — which can also mean the route is briefly unavailable — gets the same
+            // neutral no-route message the DEX buy screens show.
+            if (!it.isNullOrBlank() && viewModel.isAmountTooLowError(it)) {
+                showAmountTooLowBanner(viewModel.errorMessageRes(it))
                 return@observe
-            }
-
-            val message: String = if (it.isNullOrBlank()) {
-                requireContext().getString(R.string.something_wrong_title)
-            } else {
-                // get localized error
-                getMayaErrorString(it)?.let { id -> getString(id, args.currency) } ?: it
             }
 
             AdaptiveDialog.create(
                 R.drawable.ic_error,
                 getString(R.string.error),
-                message,
+                getString(viewModel.errorMessageRes(it), args.currency),
                 getString(R.string.button_close)
             ).show(requireActivity())
         }
 
         convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.dont_have_any_dash),
-                "",
-                getString(R.string.button_close)
-            ).show(requireActivity())
+            // No DASH to convert: surface it as a toast (not a blocking dialog) and keep Continue
+            // disabled so the user can't proceed regardless of what they type.
+            Toast.makeText(requireContext(), R.string.dont_have_any_dash, Toast.LENGTH_LONG).show()
+            fragment.setInputEnabled(false)
         }
 
         convertViewModel.setSelectedCryptoCurrency(
@@ -418,10 +412,10 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         binding.limitDesc.text = getString(R.string.exchange_rate_not_found)
     }
 
-    private fun showAmountTooLowBanner() {
+    private fun showAmountTooLowBanner(@StringRes messageRes: Int) {
         binding.authLimitBanner.root.isGone = true
         binding.limitDesc.isVisible = true
-        binding.limitDesc.setText(R.string.maya_error_below_allowed_minimum)
+        binding.limitDesc.setText(messageRes)
         setGuidelinePercent(false)
     }
 

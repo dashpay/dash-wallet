@@ -28,15 +28,11 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.address_input.AddressInputFragment
 import org.dash.wallet.common.ui.address_input.AddressSource
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.recyclerview.IconifiedListAdapter
 import org.dash.wallet.common.util.DeepLinkDestination
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
-import org.dash.wallet.integrations.maya.model.MayaErrorType
-import org.dash.wallet.integrations.maya.model.getMayaErrorString
-import org.dash.wallet.integrations.maya.model.getMayaErrorType
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 
 class MayaAddressInputFragment : AddressInputFragment() {
@@ -95,26 +91,14 @@ class MayaAddressInputFragment : AddressInputFragment() {
                 // TODO: add event monitoring here
                 // viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
             } else {
-                if (getMayaErrorType(quote?.error ?: "") == MayaErrorType.INVALID_DESTINATION_ADDRESS) {
-                    // show error
-                    binding.inputWrapper.isErrorEnabled = true
-                    binding.errorText.isVisible = true
-                } else {
-                    val message: String = if (quote?.error.isNullOrBlank()) {
-                        requireContext().getString(R.string.something_wrong_title)
-                    } else {
-                        // get localized error
-                        getMayaErrorString(quote?.error ?: "")?.let { id -> getString(id, viewModel.currency) }
-                            ?: requireContext().getString(R.string.something_wrong_title)
-                    }
-
-                    AdaptiveDialog.create(
-                        R.drawable.ic_error,
-                        getString(org.dash.wallet.integrations.maya.R.string.error),
-                        message,
-                        getString(org.dash.wallet.integrations.maya.R.string.button_close)
-                    ).show(requireActivity())
-                }
+                // Surface every quote error inline under the address input rather than a blocking
+                // dialog, so the user can fix the address and retry without dismissing anything.
+                // The message is resolved by the active backend's aggregator (Maya or SwapKit), so
+                // this screen doesn't need to know which error vocabulary produced it.
+                binding.errorText.text =
+                    getString(mayaAddressInputViewModel.errorMessageRes(quote?.error), viewModel.currency)
+                binding.inputWrapper.isErrorEnabled = true
+                binding.errorText.isVisible = true
             }
         }
     }

@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.api
 
+import kotlinx.coroutines.CancellationException
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -63,6 +64,7 @@ class MayaBlockchainApiImpl @Inject constructor(
 ) : MayaBlockchainApi {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(MayaBlockchainApiImpl::class.java)
+
         // Maximum bytes the DASH OP_RETURN can hold (enforced by
         // ScriptBuilder.createOpReturnScript). A Maya swap memo longer than this would
         // otherwise crash with an IllegalArgumentException inside the builder.
@@ -248,6 +250,12 @@ class MayaBlockchainApiImpl @Inject constructor(
             return ResponseResource.Success(swapTradeUIModel)
         } catch (e: InsufficientMoneyException) {
             return ResponseResource.Failure(e, false, 0, e.message)
+        } catch (e: CancellationException) {
+            // Never convert cancellation into Failure: if the coroutine is cancelled after
+            // sendTransaction() has broadcast the swap tx, a Failure would tell the caller the
+            // swap failed and invite a retry — a double swap. Propagate so the caller's scope
+            // handles it as a cancellation, not a result.
+            throw e
         } catch (e: Exception) {
             log.error("failed to build/send maya swap transaction", e)
             return ResponseResource.Failure(e, false, 0, e.message)

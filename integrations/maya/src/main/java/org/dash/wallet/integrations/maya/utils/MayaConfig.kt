@@ -48,12 +48,22 @@ open class MayaConfig @Inject constructor(
         val SWAP_BACKEND = stringPreferencesKey("swap_backend")
 
         /**
-         * Cached SwapKit coin-list snapshot (JSON): the last published pool list +
-         * Maya/NEAR classification + preferred-route map + timestamps. Hydrated on cold
-         * start so the currency picker renders instantly (stale-while-revalidate); the
-         * aggregator refreshes in the background and overwrites it. See
+         * Cached SwapKit coin-list snapshot (JSON) for the SELL flow (DASH -> crypto): the last
+         * published pool list + Maya/NEAR classification + preferred-route map + timestamps.
+         * Hydrated on cold start so the currency picker renders instantly (stale-while-revalidate);
+         * the aggregator refreshes in the background and overwrites it. The BUY flow caches its
+         * (Maya-only-excluded, NEAR-routed) list separately in [SWAPKIT_POOL_SNAPSHOT_BUY] so the
+         * two directions don't overwrite each other's cached metadata. See
          * [org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator].
          */
         val SWAPKIT_POOL_SNAPSHOT = stringPreferencesKey("swapkit_pool_snapshot")
+
+        /**
+         * Cached SwapKit coin-list snapshot (JSON) for the BUY flow (crypto -> DASH). Mirror of
+         * [SWAPKIT_POOL_SNAPSHOT] but for the BUY direction, which excludes Maya-only assets and
+         * routes everything via NEAR (no resolved preferred routes / Maya halt status). Kept under
+         * a separate key so a BUY refresh never clobbers the richer SELL snapshot, and vice versa.
+         */
+        val SWAPKIT_POOL_SNAPSHOT_BUY = stringPreferencesKey("swapkit_pool_snapshot_buy")
     }
 }
