@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.money.Coin
@@ -38,6 +39,7 @@ import org.dash.wallet.common.transactions.TransactionCategory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -75,12 +77,43 @@ class WalletTransactionMetadataProviderObserveTest {
         }
         coEvery { metadataDao.load(any<TxId>()) } answers { store[firstArg()] }
         every { metadataDao.observe(any()) } answers { flowFor(firstArg()) }
+        // Mutate the backing store and re-emit a fresh instance so observe (which
+        // is distinctUntilChanged) sees the change — like a real DAO UPDATE.
+        coEvery { metadataDao.updateTaxCategory(any(), any()) } answers {
+            val id = firstArg<TxId>()
+            store[id]?.let {
+                val updated = it.copy(taxCategory = secondArg<TaxCategory>())
+                store[id] = updated
+                flowFor(id).value = updated
+            }
+        }
+        coEvery { metadataDao.updateMemo(any(), any()) } answers {
+            val id = firstArg<TxId>()
+            store[id]?.let {
+                val updated = it.copy(memo = secondArg<String>())
+                store[id] = updated
+                flowFor(id).value = updated
+            }
+        }
+
+        // Simulate a wallet that holds NONE of these transactions (the SDK-only
+        // case): getTransaction returns null, so insertTransactionMetadata cannot
+        // derive a row and the provider must use the caller-supplied fallback.
+        // Give it a REAL testnet Context: insertTransactionMetadata calls
+        // Context.propagate(wallet.context), and a relaxed mock context carries
+        // mock NetworkParameters that would pollute bitcoinj's thread-local
+        // context and break unrelated tests sharing the JVM.
+        val wallet = mockk<org.bitcoinj.wallet.Wallet>(relaxed = true)
+        every { wallet.getTransaction(any()) } returns null
+        every { wallet.context } returns org.bitcoinj.core.Context(org.bitcoinj.params.TestNet3Params.get())
+        val walletData = mockk<WalletData>(relaxed = true)
+        every { walletData.wallet } returns wallet
 
         provider = WalletTransactionMetadataProvider(
             transactionMetadataDao = metadataDao,
             addressMetadataDao = mockk<AddressMetadataDao>(relaxed = true),
             iconBitmapDao = mockk<IconBitmapDao>(relaxed = true),
-            walletData = mockk<WalletData>(relaxed = true),
+            walletData = walletData,
             giftCardDao = mockk(relaxed = true),
             transactionMetadataChangeCacheDao = mockk<TransactionMetadataChangeCacheDao>(relaxed = true),
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),
@@ -124,5 +157,47 @@ class WalletTransactionMetadataProviderObserveTest {
         // The fix: convert the dashj hash to a TxId before comparing.
         assertTrue("Sha256Hash.toTxId() must equal the metadata TxId", hash.toTxId() == observed.txId)
         assertEquals("display-order hex must match across the two types", hash.toString(), observed.txId.toString())
+    }
+
+    @Test
+    fun `setTransactionTaxCategory on a tx with no dashj wallet tx persists via the fallback row`() = runTest {
+        // walletData is a relaxed mock, so wallet.getTransaction(...) returns null:
+        // insertTransactionMetadata cannot build a row (no dashj Transaction), the exact
+        // SDK-only gap that dropped the toggle. The provider must fall back to the caller's
+        // minimal row (txid + value/type from the SDK detail) instead.
+        val txId = Sha256Hash.of("sdk-only-toggle-tx".toByteArray()).toTxId()
+        val fallback = metadataFor(txId, received = true) // default would be Income
+
+        assertNull("precondition: no row for this SDK-only tx yet", store[txId])
+
+        provider.setTransactionTaxCategory(txId, TaxCategory.Expense, fallbackMetadata = fallback)
+
+        val observed = provider.observeTransactionMetadata(txId).first()
+        assertNotNull("a fallback row must be created so the stream emits", observed)
+        assertEquals("the user-selected category must persist", TaxCategory.Expense, observed!!.taxCategory)
+        assertEquals("the persisted row must keep the SDK-only txid", txId, observed.txId)
+    }
+
+    @Test
+    fun `setTransactionTaxCategory with no wallet tx and no fallback is a no-op`() = runTest {
+        // Guard: without a fallback the provider still cannot invent a row, so nothing
+        // is persisted (dashj behavior is unchanged — those callers pass no fallback).
+        val txId = Sha256Hash.of("no-fallback-tx".toByteArray()).toTxId()
+
+        provider.setTransactionTaxCategory(txId, TaxCategory.Expense)
+
+        assertNull("no row may be created without a wallet tx or a fallback", store[txId])
+    }
+
+    @Test
+    fun `setTransactionMemo on a tx with no dashj wallet tx persists via the fallback row`() = runTest {
+        val txId = Sha256Hash.of("sdk-only-memo-tx".toByteArray()).toTxId()
+        val fallback = metadataFor(txId, received = false)
+
+        provider.setTransactionMemo(txId, "coffee", fallbackMetadata = fallback)
+
+        val observed = provider.observeTransactionMetadata(txId).first()
+        assertNotNull(observed)
+        assertEquals("the memo must persist for the SDK-only tx", "coffee", observed!!.memo)
     }
 }

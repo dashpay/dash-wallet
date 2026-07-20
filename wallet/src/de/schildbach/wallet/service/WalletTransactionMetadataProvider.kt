@@ -201,6 +201,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     private suspend fun updateAndInsertIfNotExist(
         txId: TxId,
         isSyncingPlatform: Boolean,
+        fallbackMetadata: TransactionMetadata? = null,
         update: suspend (TransactionMetadata) -> Unit
     ) {
         val existing = transactionMetadataDao.load(txId)
@@ -210,7 +211,17 @@ class WalletTransactionMetadataProvider @Inject constructor(
             update(existing)
         } else {
             log.info("txmetadata for $txId does not exist, perform insert, then update")
-            insertTransactionMetadata(txId, isSyncingPlatform)?.let { update(it) }
+            // insertTransactionMetadata derives the row from a dashj wallet
+            // Transaction and returns null when the wallet does not hold the tx
+            // (an SDK-only tx). Fall back to the caller-supplied minimal row
+            // (txid + value/type from the SDK detail) so the edit still persists
+            // in the same table under the same TxId key.
+            val inserted = insertTransactionMetadata(txId, isSyncingPlatform)
+                ?: fallbackMetadata?.also {
+                    log.info("txmetadata for $txId has no wallet tx, inserting SDK fallback row")
+                    transactionMetadataDao.insert(it)
+                }
+            inserted?.let { update(it) }
         }
     }
 
@@ -222,8 +233,13 @@ class WalletTransactionMetadataProvider @Inject constructor(
         transactionMetadataDao.insert(transactionMetadata)
     }
 
-    override suspend fun setTransactionTaxCategory(txId: TxId, taxCategory: TaxCategory, isSyncingPlatform: Boolean) {
-        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
+    override suspend fun setTransactionTaxCategory(
+        txId: TxId,
+        taxCategory: TaxCategory,
+        isSyncingPlatform: Boolean,
+        fallbackMetadata: TransactionMetadata?
+    ) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform, fallbackMetadata) {
             transactionMetadataDao.updateTaxCategory(txId, taxCategory)
             if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertTaxCategory(txId, taxCategory)
@@ -304,8 +320,13 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun setTransactionMemo(txId: TxId, memo: String, isSyncingPlatform: Boolean) {
-        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
+    override suspend fun setTransactionMemo(
+        txId: TxId,
+        memo: String,
+        isSyncingPlatform: Boolean,
+        fallbackMetadata: TransactionMetadata?
+    ) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform, fallbackMetadata) {
             transactionMetadataDao.updateMemo(txId, memo)
             if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertMemo(txId, memo)

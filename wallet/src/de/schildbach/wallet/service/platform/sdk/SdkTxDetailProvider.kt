@@ -19,6 +19,10 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.Constants
 import kotlinx.coroutines.CancellationException
+import org.dash.wallet.common.data.TxId
+import org.dash.wallet.common.data.entity.TransactionMetadata
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.transactions.TransactionCategory
 import org.dashfoundation.dashsdk.keywallet.DecodedTransaction
 import org.dashfoundation.dashsdk.keywallet.TransactionDecoder
 import org.slf4j.LoggerFactory
@@ -78,6 +82,25 @@ data class SdkTxDetail(
     val isInternal: Boolean get() = direction == L1TxUiDirection.INTERNAL ||
         direction == L1TxUiDirection.COINJOIN
 }
+
+/**
+ * A minimal, default (no user-set category / no memo) [TransactionMetadata]
+ * row for this SDK-only transaction, keyed by the neutral [TxId].
+ *
+ * This is the "insert path that takes the txid + value/type from the SDK
+ * detail instead of a dashj wallet Transaction": the provider can neither
+ * derive nor observe a metadata row for a tx the dashj wallet does not hold,
+ * so callers hand this row in as the fallback to persist a user's edit
+ * (tax category, memo) against. Its null [TransactionMetadata.taxCategory]
+ * lets the sheet fall back to [TransactionMetadata.defaultTaxCategory]
+ * (Income for a receive, Expense for a send) — identical to a dashj tx.
+ */
+fun SdkTxDetail.toDefaultMetadata(): TransactionMetadata = TransactionMetadata(
+    TxId.wrap(txIdDisplayHex),
+    timestampMs,
+    Coin.valueOf(netAmountDuffs),
+    if (isSent) TransactionCategory.Sent else TransactionCategory.Received
+)
 
 /**
  * Pure detail assembly — host-JVM unit-testable without Room or JNI.
