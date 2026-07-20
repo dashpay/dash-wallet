@@ -35,9 +35,9 @@ class CutoverReadinessTest {
     /** A streak satisfying all three parity rules, ending at [end]. */
     private fun healthyStreak(end: Long = tenMinutes + 60_000L): List<ParityObservation> =
         listOf(
-            ParityObservation(synced = true, match = true, atElapsedMillis = end - tenMinutes - 30_000L),
-            ParityObservation(synced = true, match = true, atElapsedMillis = end - tenMinutes / 2),
-            ParityObservation(synced = true, match = true, atElapsedMillis = end)
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = end - tenMinutes - 30_000L),
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = end - tenMinutes / 2),
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = end)
         )
 
     private fun readyEvidence(
@@ -76,22 +76,22 @@ class CutoverReadinessTest {
         // not evidence.
         val end = tenMinutes * 3
         val parity = healthyStreak(end = tenMinutes + 60_000L) +
-            ParityObservation(synced = true, match = false, atElapsedMillis = tenMinutes * 2) +
+            ParityObservation(caughtUp = true, match = false, atElapsedMillis = tenMinutes * 2) +
             listOf(
-                ParityObservation(synced = true, match = true, atElapsedMillis = end - 30_000L),
-                ParityObservation(synced = true, match = true, atElapsedMillis = end)
+                ParityObservation(caughtUp = true, match = true, atElapsedMillis = end - 30_000L),
+                ParityObservation(caughtUp = true, match = true, atElapsedMillis = end)
             )
         val verdict = evaluateCutoverReadiness(readyEvidence(parity = parity, now = end + 1))
         assertTrue(verdict.blockers.contains(CutoverBlocker.PARITY_STREAK_TOO_SHORT))
     }
 
     @Test
-    fun unsyncedProbesDoNotCount() {
+    fun notCaughtUpProbesDoNotCount() {
         val end = tenMinutes + 60_000L
         val parity = listOf(
-            ParityObservation(synced = false, match = true, atElapsedMillis = 0L),
-            ParityObservation(synced = false, match = true, atElapsedMillis = end - tenMinutes / 2),
-            ParityObservation(synced = true, match = true, atElapsedMillis = end)
+            ParityObservation(caughtUp = false, match = true, atElapsedMillis = 0L),
+            ParityObservation(caughtUp = false, match = true, atElapsedMillis = end - tenMinutes / 2),
+            ParityObservation(caughtUp = true, match = true, atElapsedMillis = end)
         )
         val verdict = evaluateCutoverReadiness(readyEvidence(parity = parity, now = end + 1))
         assertTrue(verdict.blockers.contains(CutoverBlocker.PARITY_STREAK_TOO_SHORT))
@@ -186,19 +186,31 @@ class CutoverReadinessTest {
     @Test
     fun recorder_matchRequiresAllThreeDimensions() {
         val recorder = ParityStreakRecorder()
-        recorder.record(report(), atElapsedMillis = 1L)
-        recorder.record(report(confirmedMatch = false), atElapsedMillis = 2L)
-        recorder.record(report(txCountsMatch = false), atElapsedMillis = 3L)
+        recorder.record(report(), caughtUp = true, atElapsedMillis = 1L)
+        recorder.record(report(confirmedMatch = false), caughtUp = true, atElapsedMillis = 2L)
+        recorder.record(report(txCountsMatch = false), caughtUp = true, atElapsedMillis = 3L)
 
         val snapshot = recorder.snapshot()
         assertEquals(listOf(true, false, false), snapshot.map { it.match })
-        assertTrue(snapshot.all { it.synced })
+        assertTrue(snapshot.all { it.caughtUp })
+    }
+
+    @Test
+    fun recorder_recordsTheCaughtUpBit_notTheSyncedFlag() {
+        // The report's own SYNCED flag is irrelevant to the streak: a live
+        // shadow is caught up while never latching SYNCED, and vice versa a
+        // SYNCED-but-not-caught-up snapshot must not count.
+        val recorder = ParityStreakRecorder()
+        recorder.record(report(synced = false), caughtUp = true, atElapsedMillis = 1L)
+        recorder.record(report(synced = true), caughtUp = false, atElapsedMillis = 2L)
+
+        assertEquals(listOf(true, false), recorder.snapshot().map { it.caughtUp })
     }
 
     @Test
     fun recorder_boundsTheWindow_andClears() {
         val recorder = ParityStreakRecorder(maxObservations = 3)
-        (1L..5L).forEach { recorder.record(report(), atElapsedMillis = it) }
+        (1L..5L).forEach { recorder.record(report(), caughtUp = true, atElapsedMillis = it) }
         assertEquals(listOf(3L, 4L, 5L), recorder.snapshot().map { it.atElapsedMillis })
 
         recorder.clear()

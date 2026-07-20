@@ -1699,7 +1699,14 @@ class L1ShadowSyncService internal constructor(
             timestampMs = nowMs()
         )
         _latestParity.value = report
-        parityStreakRecorder.record(report, android.os.SystemClock.elapsedRealtime())
+        // The cutover parity streak counts an observation only when the SDK's
+        // filter scan has caught up to the tip — NOT the never-latching SYNCED
+        // flag (see ParityObservation.caughtUp / ShadowSyncProgress.scanCaughtUpToTip).
+        parityStreakRecorder.record(
+            report,
+            caughtUp = _progress.value.scanCaughtUpToTip,
+            atElapsedMillis = android.os.SystemClock.elapsedRealtime()
+        )
         log.info(parityLogLine(report))
         if (report.sdkSynced) {
             // The same evidence the funding gate requires: BOTH balance
@@ -2127,6 +2134,10 @@ class L1ShadowSyncService internal constructor(
                     walletIdHex?.take(8) ?: "none"
                 )
                 stop() // takes the main mutex itself; cancels loops + stops the Rust client
+                // Pre-wipe parity evidence must never count toward the NEXT
+                // (restored/new) wallet's cutover — the restored wallet re-earns
+                // its own streak from scratch.
+                parityStreakRecorder.clear()
                 runCatching { recreator.stopShieldedSync() }
                     .onFailure { log.warn("wipe cleanup: shielded stop failed; continuing", it) }
                 mutex.withLock {

@@ -137,7 +137,7 @@ object CutoverDebugReadout {
             private suspend fun logEvidence() {
                 runCatching { evidenceCollector.collect() }
                     .onSuccess { e ->
-                        val tail = e.parityObservations.takeLastWhile { it.synced && it.match }
+                        val tail = e.parityObservations.takeLastWhile { it.caughtUp && it.match }
                         log.info(
                             "cutover evidence: parityObs={} (matching tail={} spanning {}s, newest {}s ago) " +
                                 "unconfirmedSelfAuthored={} identityOpInFlight={} pendingShieldedLocks={} " +

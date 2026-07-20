@@ -101,7 +101,8 @@ class PlatformUsernameReconcileTest {
         shieldedBalanceService = mockk(relaxed = true),
         cutoverUiDataService = mockk(relaxed = true),
         sdkBlockchainStateService = mockk(relaxed = true),
-        cutoverTxSeamService = mockk(relaxed = true)
+        cutoverTxSeamService = mockk(relaxed = true),
+        cutoverAutoCommitObserver = mockk(relaxed = true)
     )
 
     @Test

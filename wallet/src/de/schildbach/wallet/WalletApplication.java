@@ -249,6 +249,8 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     CutoverCoordinator cutoverCoordinator;
     @Inject
+    de.schildbach.wallet.service.platform.sdk.CutoverAutoCommitObserver cutoverAutoCommitObserver;
+    @Inject
     CutoverEvidenceCollector cutoverEvidenceCollector;
     @Inject
     de.schildbach.wallet.service.platform.sdk.CutoverUiDataService cutoverUiDataService;
@@ -515,6 +517,25 @@ public class WalletApplication extends MultiDexApplication
             // funds on the CoinJoin keychain. Initializing it here keeps those UTXOs
             // recognized and spendable through the regular send flow.
             walletEx.initializeCoinJoin(null, 0);
+        }
+
+        // Phase 5d restore/new-wallet cutover: setWallet is called ONLY by
+        // onboarding after CREATING or RESTORING a wallet (a normal launch
+        // and an app upgrade both load via loadWalletFromProtobuf, not here),
+        // so this is exactly the "fresh wallet setup happening now" seam. A
+        // freshly created/restored wallet has no already-synced dashj balance
+        // to protect, so make the SDK L1-primary from the start (dashj held,
+        // SDK does the fast initial sync). Self-gated on the SDK L1 flag and a
+        // no-op if already committed; runs synchronously on this background
+        // setup thread (mirrors notifyWalletWipe's runBlocking bridge). Upgrade
+        // installs skip this and flip later via CutoverAutoCommitObserver.
+        try {
+            kotlinx.coroutines.BuildersKt.runBlocking(
+                    kotlinx.coroutines.Dispatchers.getIO(),
+                    (scope, continuation) -> cutoverCoordinator.commitForFreshWalletSetup(continuation)
+            );
+        } catch (Exception e) {
+            log.warn("fresh-wallet cutover commit failed during setWallet; staying dual-running", e);
         }
     }
 

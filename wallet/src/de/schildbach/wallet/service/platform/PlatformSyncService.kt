@@ -47,6 +47,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.service.platform.sdk.CutoverAutoCommitObserver
 import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
 import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
 import de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateService
@@ -204,6 +205,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val cutoverUiDataService: CutoverUiDataService,
     private val sdkBlockchainStateService: SdkBlockchainStateService,
     private val cutoverTxSeamService: CutoverTxSeamService,
+    private val cutoverAutoCommitObserver: CutoverAutoCommitObserver,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -278,6 +280,15 @@ class PlatformSynchronizationService @Inject constructor(
             // tx reads served from the SDK store). Same lifecycle and the
             // same provably-inert-pre-cutover contract as above.
             cutoverTxSeamService.start()
+            // Phase 5d AUTO-COMMIT: on an UPGRADE install (existing dashj
+            // wallet), drive the cutover to SDK-primary with no debug
+            // broadcast once the SDK's scan has caught up to the tip AND the
+            // full readiness policy passes. Fail-safe (never a forced/timeout
+            // commit), self-gating (inert until the shadow catches up), and
+            // once-per-process idempotent. Restore/new wallets skip this and
+            // commit immediately at setWallet — see
+            // CutoverCoordinator.commitForFreshWalletSetup.
+            cutoverAutoCommitObserver.start()
             // Bring the SHIELDED runtime up at startup too (Brian): it used
             // to start only when a shielded UI screen called
             // ensureShieldedReady(), so until the user visited More (or a
