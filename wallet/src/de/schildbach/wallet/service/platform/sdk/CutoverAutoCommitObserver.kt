@@ -72,8 +72,8 @@ class CaughtUpStabilityGate(private val requiredReadings: Int) {
  *
  * The stability gate is only the CADENCE pre-filter — the real safety gate
  * is [CutoverCoordinator.autoAdvanceToCutover], which re-runs the full
- * [evaluateCutoverReadiness] policy under its lock (sustained caught-up
- * parity MATCH over the policy window, evidence freshness, no unconfirmed
+ * [evaluateCutoverReadiness] policy under its lock ([CutoverPolicy.MIN_PARITY_STREAK]
+ * consecutive caught-up parity-MATCH probes, evidence freshness, no unconfirmed
  * self-authored txs, no in-flight identity op, shielded ready, a wallet
  * backup on disk). If ANY blocker holds, the commit does not happen and
  * the install stays dual-running on dashj — there is no timeout and no
@@ -213,9 +213,9 @@ class CutoverAutoCommitObserver internal constructor(
         /**
          * Consecutive caught-up progress readings that arm the trigger. The
          * ~1 Hz progress feed makes this a few-second debounce — a light
-         * pre-filter, NOT the safety window. The load-bearing safety window
-         * is [CutoverPolicy.MIN_PARITY_WINDOW_MILLIS] (sustained caught-up
-         * parity MATCH), re-checked inside
+         * pre-filter, NOT the safety gate. The load-bearing anti-blip gate
+         * is [CutoverPolicy.MIN_PARITY_STREAK] consecutive caught-up parity
+         * MATCH probes, re-checked inside
          * [CutoverCoordinator.autoAdvanceToCutover].
          */
         const val AUTO_COMMIT_STABILITY_READINGS = 5

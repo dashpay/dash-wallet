@@ -42,24 +42,24 @@ import org.junit.Test
  */
 class CutoverCoordinatorTest {
 
-    private val tenMinutes = CutoverPolicy.MIN_PARITY_WINDOW_MILLIS
+    private val probeIntervalMs = L1ShadowSyncService.PARITY_INTERVAL_MS
 
     /** A fully drained, caught-up, parity-proven, backed-up evidence set → Ready. */
     private fun readyEvidence(): CutoverEvidence {
-        val end = tenMinutes + 60_000L
+        // MIN_PARITY_STREAK consecutive caught-up MATCH probes at the ~10s
+        // production cadence — spans well over the short parity-window floor.
+        val end = CutoverPolicy.MIN_PARITY_STREAK * probeIntervalMs
         return CutoverEvidence(
-            parityObservations = listOf(
-                ParityObservation(caughtUp = true, match = true, atElapsedMillis = end - tenMinutes - 30_000L),
-                ParityObservation(caughtUp = true, match = true, atElapsedMillis = end - tenMinutes / 2),
-                ParityObservation(caughtUp = true, match = true, atElapsedMillis = end)
-            ),
+            parityObservations = (CutoverPolicy.MIN_PARITY_STREAK - 1 downTo 0).map { back ->
+                ParityObservation(caughtUp = true, match = true, atElapsedMillis = end - back * probeIntervalMs)
+            },
             unconfirmedSelfAuthoredTxs = 0,
             identityOperationInFlight = false,
             pendingShieldedLocks = 0,
             shieldedEnabled = true,
             shieldedReady = true,
             walletBackupExists = true,
-            nowElapsedMillis = end + 60_000L
+            nowElapsedMillis = end + probeIntervalMs
         )
     }
 
