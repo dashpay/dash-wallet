@@ -20,11 +20,14 @@ package org.dash.wallet.common.util
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.content.res.Configuration
 import androidx.fragment.app.FragmentActivity
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.ArrayRes
 import androidx.annotation.RequiresApi
+import java.util.Locale
 
 fun Context.openAppSettings() {
     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
@@ -57,6 +60,23 @@ fun Context.findFragmentActivity(): FragmentActivity {
         ctx = ctx.baseContext
     }
     throw IllegalStateException("No FragmentActivity found in context chain")
+}
+
+/**
+ * A locale replaces a string array wholesale, so a partially translated array can be shorter
+ * than the default one. When the localized array has fewer than [expectedSize] items,
+ * this returns the array from the default (untranslated) resources instead.
+ */
+fun Context.getStringArrayOrDefault(@ArrayRes id: Int, expectedSize: Int): Array<String> {
+    val localized = resources.getStringArray(id)
+
+    if (localized.size >= expectedSize) {
+        return localized
+    }
+
+    val config = Configuration(resources.configuration)
+    config.setLocale(Locale.ROOT)
+    return createConfigurationContext(config).resources.getStringArray(id)
 }
 
 fun Context.shareText(textToShare: String, title: String) {
