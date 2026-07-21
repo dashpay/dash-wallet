@@ -146,12 +146,12 @@ private fun AddressFieldContent(
     focusRequester: FocusRequester? = null,
     onImeAction: (() -> Unit)? = null
 ) {
-    val backgroundColor = if (focused) {
-        MyTheme.Colors.backgroundSecondary
-    } else {
-        MyTheme.Colors.gray300.copy(alpha = 0.1f)
+    val backgroundColor = when {
+        isError -> MyTheme.Colors.red.copy(alpha = 0.1f)
+        focused -> MyTheme.Colors.backgroundSecondary
+        else -> MyTheme.Colors.gray300.copy(alpha = 0.1f)
     }
-    val borderColor = if (focused) {
+    val borderColor = if (focused && !isError) {
         MyTheme.Colors.gray300.copy(alpha = 0.3f)
     } else {
         Color.Transparent
