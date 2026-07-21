@@ -104,7 +104,9 @@ class EncryptWalletLiveData(
 
         value = if (isPinCorrect) {
             securityGuard.savePin(newPin)
-            // Ensure PIN fallback is added for new PIN
+            // Existing fallbacks are tied to the old PIN; remove them so the
+            // ensure* calls below recreate them instead of returning early
+            securityGuard.removeFallbacks()
             securityGuard.ensurePinFallback(newPin)
             val wallet = walletApplication.wallet!!
             val key = wallet.keyCrypter!!.deriveKey(securityGuard.retrievePassword())

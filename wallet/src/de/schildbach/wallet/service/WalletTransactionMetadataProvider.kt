@@ -362,7 +362,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 barcodeValue = giftCard.barcodeValue ?: existing.barcodeValue,
                 barcodeFormat = giftCard.barcodeFormat ?: existing.barcodeFormat,
                 merchantUrl = giftCard.merchantUrl ?: existing.merchantUrl,
-                note = giftCard.note ?: existing.note
+                note = giftCard.note ?: existing.note,
+                redeemUrlChallenge = giftCard.redeemUrlChallenge ?: existing.redeemUrlChallenge
             )
         }
 
@@ -375,15 +376,15 @@ class WalletTransactionMetadataProvider @Inject constructor(
         // for now, only save the first card
         if (merged.index == 0) {
             transactionMetadataChangeCacheDao.insertGiftCardData(
-                giftCard.txId,
-                giftCard.number,
-                giftCard.pin,
-                giftCard.merchantName,
-                giftCard.price,
-                giftCard.merchantUrl,
-                giftCard.note,
-                giftCard.redeemUrlChallenge,
-                giftCard.index
+                merged.txId,
+                merged.number,
+                merged.pin,
+                merged.merchantName,
+                merged.price,
+                merged.merchantUrl,
+                merged.note,
+                merged.redeemUrlChallenge,
+                merged.index
             )
         }
     }
