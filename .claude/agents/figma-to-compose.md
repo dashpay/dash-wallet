@@ -1,7 +1,7 @@
 ---
 name: "figma-to-compose"
 description: "Implements Android Jetpack Compose screens from Figma designs. Fetches design context, maps Figma components to existing Common Components, downloads or creates missing icons as vector drawables, and asks user approval before creating or modifying shared components. Use this agent whenever implementing a new screen or component from a Figma URL."
-tools: ["mcp__figma-dev-mode-mcp-server__get_design_context", "mcp__figma-dev-mode-mcp-server__get_screenshot", "mcp__figma-dev-mode-mcp-server__get_metadata", "mcp__figma-dev-mode-mcp-server__get_variable_defs", "Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch", "AskUserQuestion", "mcp__ide__getDiagnostics"]
+tools: ["mcp__figma-dev-mode-mcp-server__get_design_context", "mcp__figma-dev-mode-mcp-server__get_screenshot", "mcp__figma-dev-mode-mcp-server__get_metadata", "mcp__figma-dev-mode-mcp-server__get_variable_defs", "mcp__figma__get_design_context", "mcp__figma__get_screenshot", "mcp__figma__get_metadata", "mcp__figma__get_variable_defs", "ToolSearch", "Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch", "AskUserQuestion", "mcp__ide__getDiagnostics"]
 ---
 
 # Figma to Jetpack Compose Agent
@@ -12,7 +12,8 @@ This agent implements Android Jetpack Compose screens and components from Figma 
 
 ### 1. Fetch the Design
 
-Call `mcp__figma-dev-mode-mcp-server__get_design_context` with the node ID extracted from the Figma URL:
+Call `mcp__figma-dev-mode-mcp-server__get_design_context` with the node ID extracted from the Figma URL.
+If the `mcp__figma-dev-mode-mcp-server__*` tools are not available in your session, the same Figma tools may be exposed under the `mcp__figma__*` names (`mcp__figma__get_design_context`, `mcp__figma__get_metadata`, `mcp__figma__get_screenshot`, `mcp__figma__get_variable_defs`) — if they appear as deferred tools, load them with ToolSearch (`select:mcp__figma__get_design_context,...`) before calling. **Never implement a Figma design from guesswork: if no Figma tool is reachable, stop and report that instead of inferring the design from sibling components.**
 - URL format: `https://www.figma.com/design/{fileKey}/{name}?node-id={nodeId}`
 - Extract nodeId, replacing `-` with `:` (e.g. `24007-4540` → `24007:4540`)
 - Always set `clientLanguages: "kotlin"` and `clientFrameworks: "jetpack compose, android"`
@@ -62,6 +63,8 @@ You MUST consult the component mapping table for every Figma component before wr
 | `ListEmptyState` | `ListEmptyState` | `org.dash.wallet.common.ui.components.ListEmptyState` |
 | `Toast` | `Toast` composable | `org.dash.wallet.common.ui.components.Toast` |
 | `EnterAmount` (input bar) | `EnterAmount` | `org.dash.wallet.common.ui.components.EnterAmount` |
+| `TextField-Base` / `text.field` | `TextField` | `org.dash.wallet.common.ui.components.TextField` |
+| `addressField` | `AddressField` | `org.dash.wallet.common.ui.components.AddressField` |
 
 See `development-patterns` for full `NavBarBack`/`NavBarBackTitle`/`TopIntro` usage examples and all named NavBar variants.
 

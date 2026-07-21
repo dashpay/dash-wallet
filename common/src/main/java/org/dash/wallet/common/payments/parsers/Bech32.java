@@ -153,10 +153,19 @@ public class Bech32 {
 
     /** Decode a Bech32 string. */
     public static Bech32Data decode(final String str) throws AddressFormatException {
+        return decode(str, 90);
+    }
+
+    /**
+     * Decode with a caller-supplied maximum length. BIP-173 caps bech32 strings at 90
+     * characters, but some chains reuse the encoding beyond that limit (Cardano Shelley
+     * addresses are ~103 characters).
+     */
+    public static Bech32Data decode(final String str, final int maxLength) throws AddressFormatException {
         boolean lower = false, upper = false;
         if (str.length() < 8)
             throw new AddressFormatException.InvalidDataLength("Input too short: " + str.length());
-        if (str.length() > 90)
+        if (str.length() > maxLength)
             throw new AddressFormatException.InvalidDataLength("Input too long: " + str.length());
         for (int i = 0; i < str.length(); ++i) {
             char c = str.charAt(i);

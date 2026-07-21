@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -38,7 +39,7 @@ import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.integrations.maya.api.MayaWebApi
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.MayaErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
@@ -50,7 +51,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MayaConvertCryptoViewModel @Inject constructor(
-    private val coinBaseRepository: MayaWebApi,
+    private val swapProvider: SwapProvider,
     private val config: MayaConfig,
     private val walletUIConfig: WalletUIConfig,
     private val walletDataProvider: WalletDataProvider,
@@ -58,7 +59,14 @@ class MayaConvertCryptoViewModel @Inject constructor(
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
+    val networkParameters get() = walletDataProvider.networkParameters
+
     var paymentIntent: PaymentIntent? = null
+
+    // Source of truth for the inline amount error: the Compose UIState lives in the fragment
+    // and is recreated with the view, so the currently shown error is kept here to survive
+    // configuration changes.
+    var inlineErrorMessage: String? = null
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -97,7 +105,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
             maximum = swapTradeInfo.maximum
         )
 
-        when (val result = coinBaseRepository.getSwapInfo(swapRequest)) {
+        when (val result = swapProvider.getSwapInfo(swapRequest)) {
             is ResponseResource.Success -> {
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     _showLoading.value = false
@@ -142,7 +150,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SELECT_COIN, mapOf())
 
         return try {
-            coinBaseRepository.getUserAccounts(walletUIConfig.getExchangeCurrencyCode())
+            swapProvider.getUserAccounts(walletUIConfig.getExchangeCurrencyCode())
         } catch (ex: Exception) {
             listOf()
         }.filter {
@@ -197,4 +205,11 @@ class MayaConvertCryptoViewModel @Inject constructor(
             )
         }
     }
+
+    /** Friendly message resource for a swap error, mapped by whichever backend is active. */
+    @StringRes
+    fun errorMessageRes(error: String?): Int = swapProvider.errorMessageRes(error)
+
+    /** True when the swap failed because the amount is below the route's minimum (shown inline). */
+    fun isAmountTooLowError(error: String?): Boolean = swapProvider.isAmountTooLowError(error)
 }

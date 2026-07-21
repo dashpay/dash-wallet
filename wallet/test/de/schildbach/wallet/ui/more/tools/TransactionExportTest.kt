@@ -82,6 +82,9 @@ class TransactionExportTest {
         val exporter = TaxBitExporter(transactionMetadataProvider, wallet)
 
         runBlocking {
+            // production callers (ToolsViewModel) initialize the metadata map
+            // before exporting; exportString() requires it
+            exporter.initMetadataMap()
             val csvString = exporter.exportString()
             val csvLines = csvString.split("\n")
 

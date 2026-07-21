@@ -19,10 +19,16 @@
     <fragment
         android:id="@+id/mayaCurrencyPickerFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaCryptoCurrencyPickerFragment"
-        android:label="mayaPortalFragment"
-        tools:layout="@layout/fragment_currency_picker" >
+        android:label="mayaPortalFragment" >
         <action android:id="@+id/mayaCurrencyPicker_to_addressInput"
             app:destination="@id/mayaAddressInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
+
+        <action android:id="@+id/mayaCurrencyPicker_to_dexEnterAmount"
+            app:destination="@id/dexEnterAmountFragment"
             app:enterAnim="@anim/slide_in_right"
             app:popEnterAnim="@anim/activity_stay"
             app:exitAnim="@anim/activity_stay"
@@ -31,10 +37,78 @@
     </fragment>
 
     <fragment
+        android:id="@+id/dexEnterAmountFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.DEXEnterAmountFragment"
+        android:label="dexEnterAmountFragment">
+        <argument
+            android:name="asset"
+            app:argType="string" />
+        <argument
+            android:name="currency"
+            app:argType="string" />
+        <argument
+            android:name="fiatCurrency"
+            app:argType="string"
+            android:defaultValue="USD" />
+
+        <action android:id="@+id/dexEnterAmount_to_dexRefundAddress"
+            app:destination="@id/dexRefundAddressFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/dexRefundAddressFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.DEXRefundAddressFragment"
+        android:label="dexRefundAddressFragment">
+        <argument
+            android:name="asset"
+            app:argType="string" />
+        <argument
+            android:name="currency"
+            app:argType="string" />
+
+        <action android:id="@+id/dexRefundAddress_to_dexReceive"
+            app:destination="@id/dexReceiveFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/dexReceiveFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.DEXReceiveFragment"
+        android:label="dexReceiveFragment">
+        <argument
+            android:name="asset"
+            app:argType="string" />
+        <argument
+            android:name="currency"
+            app:argType="string" />
+        <!-- Human-unit amount of the crypto being sent in; used to build the deposit payment URI. -->
+        <argument
+            android:name="sellAmount"
+            app:argType="string" />
+        <!-- SwapKit inbound deposit address, resolved by the refund screen's createBuyOrder call. -->
+        <argument
+            android:name="depositAddress"
+            app:argType="string" />
+        <!-- Chain memo/tag some chains require alongside the deposit; empty when none. A deposit
+             sent without a required memo can't be attributed to the swap (funds lost), so the
+             receive screen must display it. -->
+        <argument
+            android:name="memo"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+    <fragment
         android:id="@+id/mayaAddressInputFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaAddressInputFragment"
-        android:label="Address Input"
-        tools:layout="@layout/fragment_address_input" >
+        android:label="Address Input" >
         <argument
             android:name="currency"
             app:argType="string" />
@@ -60,8 +134,7 @@
 
     <fragment android:id="@+id/mayaConvertCryptoFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaConvertCryptoFragment"
-        android:label="Enter Amount"
-        tools:layout="@layout/fragment_maya_enter_amount">
+        android:label="Enter Amount">
 
         <argument android:name="currency"
             app:argType="string" />
@@ -71,7 +144,11 @@
 
         <action
             android:id="@+id/mayaConvertCryptoFragmentToMayaConversionPreviewFragment"
-            app:destination="@id/mayaConversionPreviewFragment" />
+            app:destination="@id/mayaConversionPreviewFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <dialog
@@ -83,14 +160,17 @@
     <fragment
         android:id="@+id/mayaConversionPreviewFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaConversionPreviewFragment"
-        android:label="MayaConversionPreviewFragment"
-        tools:layout="@layout/fragment_maya_conversion_preview">
+        android:label="MayaConversionPreviewFragment">
 
         <action
             android:id="@+id/mayaOrderReviewToFeeInfo"
             app:destination="@id/mayaFeeInfoDialog" />
         <action android:id="@+id/mayaOrderPreviewToOrderExecution"
-            app:destination="@+id/mayaConvertResultFragment" />
+            app:destination="@+id/mayaConvertResultFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
         <argument
             android:name="swapModel"
             app:argType="org.dash.wallet.integrations.maya.model.SwapTradeUIModel" />
@@ -100,15 +180,14 @@
             app:argType="org.dash.wallet.common.data.PaymentIntent" />
     </fragment>
 
-    <fragment
+    <dialog
         android:id="@+id/mayaConvertResultFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaConvertResultFragment"
-        android:label="MayaConvertResultFragment"
-        tools:layout="@layout/maya_convert_result_fragment">
+        android:label="MayaConvertResultFragment">
         <argument
             android:name="transactionParams"
             app:argType="org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams"
             />
 
-    </fragment>
+    </dialog>
 </navigation>

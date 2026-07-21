@@ -67,6 +67,7 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -75,6 +76,8 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -127,6 +130,7 @@ class MainViewModelTest {
     private val mockIdentityData = BlockchainIdentityBaseData(IdentityCreationState.NONE, null, null, null, null, false,null, false)
     private val blockchainIdentityConfigMock = mockk<BlockchainIdentityConfig> {
         coEvery { loadBase() } returns mockIdentityData
+        every { observe() } returns flow { }
         every { observeBase() } returns MutableStateFlow(mockIdentityData)
         every { observe(BlockchainIdentityConfig.IDENTITY_ID) } returns MutableStateFlow(identityId)
     }
@@ -150,6 +154,7 @@ class MainViewModelTest {
     }
     private val workManagerMock = mockk<WorkManager> {
         every { getWorkInfosByTagLiveData(any()) } returns MutableLiveData(listOf())
+        every { getWorkInfosByTagFlow(any()) } returns MutableStateFlow(listOf())
     }
     private val savedStateMock = mockk<SavedStateHandle>()
 
@@ -203,11 +208,15 @@ class MainViewModelTest {
 
     }
 
-    private val txDisplayCacheService = mockk<TxDisplayCacheService>()
+    private val txDisplayCacheService = mockk<TxDisplayCacheService>(relaxUnitFun = true)
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
     private val coinJoinConfig = mockk<CoinJoinConfig>()
     private val coinJoinService = mockk<CoinJoinService>()
+    private val crowdNodeApi = mockk<CrowdNodeApi> {
+        every { signUpStatus } returns MutableStateFlow(SignUpStatus.NotStarted)
+        every { balance } returns MutableStateFlow(Resource.success(Coin.ZERO))
+    }
 
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
@@ -219,6 +228,7 @@ class MainViewModelTest {
     fun setup() {
         every { configMock.format } returns MonetaryFormat()
         every { configMock.registerOnSharedPreferenceChangeListener(any()) } just runs
+        every { configMock.isRestoringBackup } returns false
 
         every { blockchainStateMock.observeState() } returns flow { BlockchainState() }
         every { blockchainStateMock.observeSyncStage() } returns MutableStateFlow(PeerGroup.SyncStage.BLOCKS)
@@ -262,6 +272,7 @@ class MainViewModelTest {
         mockkStatic(WorkManager::class)
         every { WorkManager.getInstance(any()) } returns workManagerMock
         every { savedStateMock.get<TxFilterType>(eq("tx_direction")) } returns TxFilterType.ALL
+        every { savedStateMock.get<Boolean>(eq("crowdnode_withdrawal_reminder_shown")) } returns false
         every { savedStateMock.set<TxFilterType>(any(), any()) } just runs
     }
 
@@ -293,7 +304,8 @@ class MainViewModelTest {
                 dashPayContactRequestDao,
                 coinJoinConfig,
                 coinJoinService,
-                txDisplayCacheService
+                txDisplayCacheService,
+                crowdNodeApi
             )
         )
 
@@ -332,7 +344,8 @@ class MainViewModelTest {
                 dashPayContactRequestDao,
                 coinJoinConfig,
                 coinJoinService,
-                txDisplayCacheService
+                txDisplayCacheService,
+                crowdNodeApi
             )
         )
 

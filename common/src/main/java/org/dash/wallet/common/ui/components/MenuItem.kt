@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import android.content.res.Configuration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
@@ -47,8 +48,11 @@ fun MenuItem(
     title: String,
     helpTextAbove: String? = null,
     subtitle: String? = null,
+    subtitleMaxLines: Int = Int.MAX_VALUE,
     subtitle2: String? = null,
     icon: Int? = null,
+    // Custom icon slot (e.g. a Coil AsyncImage for coin logos); used when `icon` is null
+    customIcon: (@Composable () -> Unit)? = null,
     showDirectionIndicator: Boolean = false,
     showInfo: Boolean = false,
     onInfoClick: (() -> Unit)? = null,
@@ -86,12 +90,14 @@ fun MenuItem(
     ) {
             // Icon with direction indicator
             Box(modifier = Modifier.size(26.dp)) {
-                icon?.let {
+                if (icon != null) {
                     Image(
-                        painter = painterResource(id = it),
+                        painter = painterResource(id = icon),
                         contentDescription = null,
                         modifier = Modifier.size(30.dp)
                     )
+                } else {
+                    customIcon?.invoke()
                 }
 
                 // Direction indicator overlay
@@ -166,6 +172,8 @@ fun MenuItem(
                         text = it,
                         style = MyTheme.Typography.BodyMedium,
                         color = colors.textSecondary,
+                        maxLines = subtitleMaxLines,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

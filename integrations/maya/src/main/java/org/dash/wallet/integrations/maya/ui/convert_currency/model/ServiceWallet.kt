@@ -42,12 +42,21 @@ data class SendTransactionToWalletParams(
     val fees: Amount,
     val toAddress: String?,
     val type: String?,
-    val description: String? = "Dash Wallet App"
+    val description: String? = "Dash Wallet App",
+    /** Hex hash of the broadcast DASH swap transaction; used to link the swap on a block explorer. */
+    val txid: String? = null,
+    /**
+     * One-time deposit address the swap provider issued (the swap tx pays into it).
+     * NEAR Intents' explorer looks a swap up by this address.
+     */
+    val depositAddress: String? = null
 ) : Parcelable
 
 @Parcelize
 data class MayaTransactionParams(
     val params: SendTransactionToWalletParams,
     val type: TransactionType,
-    val coinbaseWalletName: String? = null
+    val coinbaseWalletName: String? = null,
+    /** Raw SwapKit provider string (e.g. "MAYACHAIN", "NEAR") of the route the swap settled through. */
+    val routeName: String? = null
 ) : Parcelable

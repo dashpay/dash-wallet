@@ -25,10 +25,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,6 +79,10 @@ const val DASH_CURRENCY_CODE: String = "DASH"
  *
  * The currency symbol (or Dash logo) is placed before or after the number based on [locale]'s
  * standard currency-format pattern — e.g. `$1,234.56` (en-US) vs `1 234,56 €` (fr-FR).
+ *
+ * The currency picker ([showCurrencyPicker]) offers only the currencies that are NOT currently
+ * selected — the selected one is already displayed as the primary amount. The index passed to
+ * [onCurrencyPickerSelect] is always a position in the full [currencyCodes] list.
  */
 @Composable
 fun EnterAmount(
@@ -169,13 +176,26 @@ fun EnterAmount(
         }
 
         if (showCurrencyPicker && currencyCodes.size >= 2) {
+            // Only the unselected currencies are offered — the selected one is already displayed
+            // as the primary amount, so it's not a meaningful option. Tap indices are remapped
+            // back to positions in the caller's full [currencyCodes] list.
+            val pickerIndices = currencyCodes.indices.filter { it != primaryIndex }
+
+            // Wrap the picker to its content instead of letting its options' fillMaxWidth grab the
+            // whole row: width = widest option label, height = the stacked options' natural height
+            // (so it sits compact on the right rather than stretching across the amount area).
             SegmentedPicker(
-                options = currencyCodes.map { SegmentedOption(it) },
-                selectedIndex = primaryIndex,
+                options = pickerIndices.map { SegmentedOption(currencyCodes[it]) },
+                showSelection = false,
                 style = SegmentedPickerStyle(
                     displayMode = PickerDisplayMode.Vertical,
                 ),
-                onOptionSelected = onCurrencyPickerSelect
+                onOptionSelected = { option, index ->
+                    onCurrencyPickerSelect(option, pickerIndices[index])
+                },
+                modifier = Modifier
+                    .width(IntrinsicSize.Max)
+                    .height(IntrinsicSize.Min)
             )
         }
     }

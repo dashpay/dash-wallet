@@ -48,6 +48,7 @@ import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.decodeBitmap
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
+import org.dash.wallet.integrations.maya.data.SwapOrderDao
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.io.ByteArrayOutputStream
@@ -62,6 +63,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     private val iconBitmapDao: IconBitmapDao,
     private val walletData: WalletDataProvider,
     private val giftCardDao: GiftCardDao,
+    private val swapOrderDao: SwapOrderDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
     private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
     private val dashPayConfig: DashPayConfig
@@ -360,7 +362,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 barcodeValue = giftCard.barcodeValue ?: existing.barcodeValue,
                 barcodeFormat = giftCard.barcodeFormat ?: existing.barcodeFormat,
                 merchantUrl = giftCard.merchantUrl ?: existing.merchantUrl,
-                note = giftCard.note ?: existing.note
+                note = giftCard.note ?: existing.note,
+                redeemUrlChallenge = giftCard.redeemUrlChallenge ?: existing.redeemUrlChallenge
             )
         }
 
@@ -373,15 +376,15 @@ class WalletTransactionMetadataProvider @Inject constructor(
         // for now, only save the first card
         if (merged.index == 0) {
             transactionMetadataChangeCacheDao.insertGiftCardData(
-                giftCard.txId,
-                giftCard.number,
-                giftCard.pin,
-                giftCard.merchantName,
-                giftCard.price,
-                giftCard.merchantUrl,
-                giftCard.note,
-                giftCard.redeemUrlChallenge,
-                giftCard.index
+                merged.txId,
+                merged.number,
+                merged.pin,
+                merged.merchantName,
+                merged.price,
+                merged.merchantUrl,
+                merged.note,
+                merged.redeemUrlChallenge,
+                merged.index
             )
         }
     }
@@ -552,21 +555,28 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 }
             }
             .flatMapLatest { bitmaps ->
-                giftCardDao.observeGiftCards().distinctUntilChanged().flatMapLatest { giftCards ->
-                    transactionMetadataDao.observePresentableMetadata()
-                        .distinctUntilChanged()
-                        .map { metadataList ->
-                            metadataList.values.forEach { metadata ->
-                                metadata.customIconId?.let { iconId ->
-                                    metadata.icon = bitmaps[iconId]
-                                }
-
-                                if (ServiceName.isDashSpend(metadata.service)) {
-                                    metadata.title = giftCards[metadata.txId]?.firstOrNull()?.merchantName
-                                }
+                combine(
+                    giftCardDao.observeGiftCards().distinctUntilChanged(),
+                    swapOrderDao.observeOrders().distinctUntilChanged(),
+                    transactionMetadataDao.observePresentableMetadata().distinctUntilChanged()
+                ) { giftCards, swapOrders, metadataList ->
+                    // combine() re-runs with the same cached metadata instances when only
+                    // gift cards or swap orders emit, so decorate copies — mutating in place
+                    // would also mutate previously emitted maps and hide the change from
+                    // downstream diffing (TxDisplayCacheService).
+                    metadataList.mapValues { (txId, metadata) ->
+                        metadata.copy().also { presentable ->
+                            presentable.customIconId?.let { iconId ->
+                                presentable.icon = bitmaps[iconId]
                             }
-                            metadataList
+
+                            if (ServiceName.isDashSpend(presentable.service)) {
+                                presentable.title = giftCards[txId]?.firstOrNull()?.merchantName
+                            }
+
+                            presentable.swapOrder = swapOrders[txId]
                         }
+                    }
                 }
             }
     }

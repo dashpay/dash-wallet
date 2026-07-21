@@ -246,6 +246,21 @@ class DualFallbackEncryptionProvider(
         return success == keysToProtect.size
     }
 
+    /**
+     * Remove all fallback entries so they can be recreated with fresh credentials.
+     * Must be called when the PIN changes: the PIN-fallback is encrypted with the old PIN
+     * and the mnemonic-fallback contains the old PIN, so both would otherwise go stale.
+     */
+    fun removeFallbacks() {
+        securityPrefs.edit {
+            remove(FALLBACK_PIN_PREFIX + SecurityGuard.UI_PIN_KEY_ALIAS)
+            remove(FALLBACK_PIN_PREFIX + SecurityGuard.WALLET_PASSWORD_KEY_ALIAS)
+            remove(FALLBACK_MNEMONIC_PREFIX + SecurityGuard.UI_PIN_KEY_ALIAS)
+            remove(FALLBACK_MNEMONIC_PREFIX + SecurityGuard.WALLET_PASSWORD_KEY_ALIAS)
+        }
+        log.info("Removed fallback encryption entries")
+    }
+
     @Throws(KeyStoreException::class)
     override fun deleteKey(keyAlias: String) {
         primaryProvider.deleteKey(keyAlias)
