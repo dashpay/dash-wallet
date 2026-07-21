@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.dash.wallet.common.ui.components.AddressField
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
 import org.dash.wallet.common.ui.components.Size
@@ -90,7 +91,7 @@ private fun DEXRefundAddressScreenContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(LocalDashColors.current.backgroundPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             NavBarBack(onBackClick = onBackClick)
@@ -134,7 +135,7 @@ private fun DEXRefundAddressScreenContent(
                     // currencyCode is the format arg; messages without a placeholder ignore it.
                     text = stringResource(orderErrorRes, currencyCode),
                     style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.red,
+                    color = LocalDashColors.current.red,
                     modifier = Modifier.padding(top = 8.dp, start = 20.dp, end = 20.dp)
                 )
             }

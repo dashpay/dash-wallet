@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
@@ -110,7 +111,7 @@ fun MayaConvertCryptoScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(LocalDashColors.current.backgroundPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             NavBarBackTitle(
@@ -156,7 +157,7 @@ fun MayaConvertCryptoScreen(
                         Text(
                             text = error,
                             style = MyTheme.Body2Regular,
-                            color = MyTheme.Colors.red,
+                            color = LocalDashColors.current.red,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -183,20 +184,20 @@ fun MayaConvertCryptoScreen(
                         Text(
                             text = stringResource(R.string.you_will_receive),
                             style = MyTheme.OverlineCaptionRegular,
-                            color = MyTheme.Colors.textTertiary,
+                            color = LocalDashColors.current.textTertiary,
                             textAlign = TextAlign.Center
                         )
                         Text(
                             text = receiveAmount,
                             style = MyTheme.Body2Medium,
-                            color = MyTheme.Colors.textPrimary,
+                            color = LocalDashColors.current.textPrimary,
                             textAlign = TextAlign.Center
                         )
                         state.networkLabel?.let { network ->
                             Text(
                                 text = network,
                                 style = MyTheme.OverlineCaptionRegular,
-                                color = MyTheme.Colors.textTertiary,
+                                color = LocalDashColors.current.textTertiary,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -277,18 +278,18 @@ private fun ConvertDirectionCard(
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.Center
         ) {
-            HorizontalDivider(thickness = 1.dp, color = MyTheme.Colors.extraLightGray)
+            HorizontalDivider(thickness = 1.dp, color = LocalDashColors.current.extraLightGray)
             Box(
                 modifier = Modifier
                     .size(24.dp)
-                    .background(MyTheme.Colors.backgroundSecondary, CircleShape)
-                    .border(1.dp, MyTheme.Colors.extraLightGray, CircleShape),
+                    .background(LocalDashColors.current.backgroundSecondary, CircleShape)
+                    .border(1.dp, LocalDashColors.current.extraLightGray, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_arrow_downward_blue_24dp),
                     contentDescription = null,
-                    tint = MyTheme.Colors.textTertiary,
+                    tint = LocalDashColors.current.textTertiary,
                     modifier = Modifier.size(12.dp)
                 )
             }

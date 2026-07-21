@@ -40,6 +40,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.util.Constants
@@ -111,21 +112,23 @@ class MayaConvertCryptoFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MayaConvertCryptoScreen(
-                    state = uiState,
-                    onBackClick = {
-                        convertViewModel.reset()
-                        findNavController().popBackStack()
-                    },
-                    onMaxClick = ::onMaxClick,
-                    onCurrencySelected = ::onCurrencySelected,
-                    onKeyInput = ::onKeyInput,
-                    onContinueClick = {
-                        if (!uiState.isProcessing) {
-                            convertViewModel.continueSwap(pickedCurrencyOption)
+                DashWalletTheme {
+                    MayaConvertCryptoScreen(
+                        state = uiState,
+                        onBackClick = {
+                            convertViewModel.reset()
+                            findNavController().popBackStack()
+                        },
+                        onMaxClick = ::onMaxClick,
+                        onCurrencySelected = ::onCurrencySelected,
+                        onKeyInput = ::onKeyInput,
+                        onContinueClick = {
+                            if (!uiState.isProcessing) {
+                                convertViewModel.continueSwap(pickedCurrencyOption)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }

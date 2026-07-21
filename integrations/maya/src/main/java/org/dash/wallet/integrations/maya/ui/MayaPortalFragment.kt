@@ -48,16 +48,16 @@ class MayaPortalFragment : Fragment() {
             setContent {
                 DashWalletTheme {
                     MayaPortalScreen(
-                    showBuy = mayaViewModel.activeSwapBackend.supportsBuy,
+                        showBuy = mayaViewModel.activeSwapBackend.supportsBuy,
                         onBackClick = {
                             findNavController().popBackStack()
                         },
-                    onBuyClick = {
-                        mayaViewModel.setSwapDirection(SwapDirection.BUY)
-                        safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
-                    },
-                    onSellClick = {
-                        mayaViewModel.setSwapDirection(SwapDirection.SELL)
+                        onBuyClick = {
+                            mayaViewModel.setSwapDirection(SwapDirection.BUY)
+                            safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
+                        },
+                        onSellClick = {
+                            mayaViewModel.setSwapDirection(SwapDirection.SELL)
                             safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
                         }
                     )

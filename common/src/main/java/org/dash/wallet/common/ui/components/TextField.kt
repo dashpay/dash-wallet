@@ -178,17 +178,17 @@ private fun TextFieldContent(
     // Figma: default/filled = gray400 @ 10%, focused = white + dash-blue border + 3dp blue ring,
     // error = red @ 5% + red border. Error wins over focused.
     val backgroundColor = when {
-        isError -> MyTheme.Colors.red5
-        focused && enabled -> MyTheme.Colors.backgroundSecondary
-        else -> MyTheme.Colors.gray400.copy(alpha = 0.1f)
+        isError -> LocalDashColors.current.red5
+        focused && enabled -> LocalDashColors.current.backgroundSecondary
+        else -> LocalDashColors.current.gray400.copy(alpha = 0.1f)
     }
     val borderColor = when {
-        isError -> MyTheme.Colors.red
-        focused && enabled -> MyTheme.Colors.dashBlue
+        isError -> LocalDashColors.current.red
+        focused && enabled -> LocalDashColors.current.dashBlue
         else -> Color.Transparent
     }
     val showFocusRing = focused && enabled && !isError
-    val ringColor = MyTheme.Colors.dashBlue.copy(alpha = 0.1f)
+    val ringColor = LocalDashColors.current.dashBlue.copy(alpha = 0.1f)
     val contentAlpha = if (enabled) 1f else 0.4f
     val shape = RoundedCornerShape(16.dp)
 
@@ -233,7 +233,7 @@ private fun TextFieldContent(
                         Text(
                             text = smallLabel,
                             style = MyTheme.Typography.LabelMedium,
-                            color = MyTheme.Colors.textSecondary.copy(alpha = contentAlpha),
+                            color = LocalDashColors.current.textSecondary.copy(alpha = contentAlpha),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -248,9 +248,9 @@ private fun TextFieldContent(
                             enabled = enabled,
                             singleLine = singleLine,
                             textStyle = MyTheme.Typography.TitleSmall.copy(
-                                color = MyTheme.Colors.textPrimary.copy(alpha = contentAlpha)
+                                color = LocalDashColors.current.textPrimary.copy(alpha = contentAlpha)
                             ),
-                            cursorBrush = SolidColor(MyTheme.Colors.textPrimary),
+                            cursorBrush = SolidColor(LocalDashColors.current.textPrimary),
                             keyboardOptions = keyboardOptions,
                             keyboardActions = if (onImeAction != null) {
                                 KeyboardActions(
@@ -284,7 +284,7 @@ private fun TextFieldContent(
                                 Text(
                                     text = overlay,
                                     style = MyTheme.Typography.TitleSmall,
-                                    color = MyTheme.Colors.textSecondary.copy(alpha = contentAlpha),
+                                    color = LocalDashColors.current.textSecondary.copy(alpha = contentAlpha),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -324,7 +324,7 @@ private fun TextFieldContent(
                             tint = if (trailing.first == R.drawable.ic_clear_input) {
                                 Color.Unspecified
                             } else {
-                                MyTheme.Colors.textPrimary.copy(alpha = contentAlpha)
+                                LocalDashColors.current.textPrimary.copy(alpha = contentAlpha)
                             },
                             modifier = Modifier.size(16.dp)
                         )
@@ -339,7 +339,7 @@ private fun TextFieldContent(
                 Text(
                     text = insideText,
                     style = MyTheme.Typography.BodySmall,
-                    color = MyTheme.Colors.textSecondary.copy(alpha = contentAlpha),
+                    color = LocalDashColors.current.textSecondary.copy(alpha = contentAlpha),
                     textAlign = TextAlign.End,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -353,9 +353,9 @@ private fun TextFieldContent(
                 text = message,
                 style = MyTheme.Typography.BodySmall,
                 color = if (isErrorMessage) {
-                    MyTheme.Colors.red
+                    LocalDashColors.current.red
                 } else {
-                    MyTheme.Colors.textSecondary.copy(alpha = contentAlpha)
+                    LocalDashColors.current.textSecondary.copy(alpha = contentAlpha)
                 },
                 modifier = Modifier
                     .fillMaxWidth()

@@ -45,6 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackTitle
@@ -114,7 +115,7 @@ fun MayaConversionPreviewScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(LocalDashColors.current.backgroundPrimary)
     ) {
         NavBarBackTitle(
             title = stringResource(R.string.maya_crypto_convert_order_preview_title),
@@ -153,7 +154,7 @@ fun MayaConversionPreviewScreen(
                 Text(
                     text = state.slippageNotice,
                     style = MyTheme.Typography.BodySmall,
-                    color = MyTheme.Colors.textSecondary,
+                    color = LocalDashColors.current.textSecondary,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 10.dp)
@@ -165,7 +166,7 @@ fun MayaConversionPreviewScreen(
                     Text(
                         text = state.debugRouteInfo,
                         style = MyTheme.Typography.BodySmall,
-                        color = MyTheme.Colors.textTertiary,
+                        color = LocalDashColors.current.textTertiary,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 10.dp)
@@ -217,7 +218,7 @@ private fun FromRow(state: MayaConversionPreviewUIState) {
         Text(
             text = stringResource(CommonR.string.from_dash_wallet_on_this_device),
             style = MyTheme.Caption,
-            color = MyTheme.Colors.textSecondary,
+            color = LocalDashColors.current.textSecondary,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 10.dp)
@@ -243,19 +244,19 @@ private fun FromRow(state: MayaConversionPreviewUIState) {
                     Icon(
                         painter = painterResource(CommonR.drawable.ic_dash_d_black),
                         contentDescription = null,
-                        tint = MyTheme.Colors.textPrimary,
+                        tint = LocalDashColors.current.textPrimary,
                         modifier = Modifier.size(12.dp)
                     )
                     Text(
                         text = state.fromDashAmount,
                         style = MyTheme.Caption,
-                        color = MyTheme.Colors.textPrimary
+                        color = LocalDashColors.current.textPrimary
                     )
                 }
                 Text(
                     text = state.fromFiatAmount,
                     style = MyTheme.Overline,
-                    color = MyTheme.Colors.textSecondary
+                    color = LocalDashColors.current.textSecondary
                 )
             }
         }
@@ -269,7 +270,7 @@ private fun ToRow(state: MayaConversionPreviewUIState) {
         Text(
             text = stringResource(R.string.to_title),
             style = MyTheme.Body2Regular,
-            color = MyTheme.Colors.textSecondary,
+            color = LocalDashColors.current.textSecondary,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 10.dp)
@@ -286,7 +287,7 @@ private fun ToRow(state: MayaConversionPreviewUIState) {
             Text(
                 text = state.toAmount,
                 style = MyTheme.Body2Regular,
-                color = MyTheme.Colors.textPrimary,
+                color = LocalDashColors.current.textPrimary,
                 textAlign = TextAlign.End,
                 modifier = Modifier.weight(1f)
             )
@@ -320,12 +321,12 @@ private fun CoinBadge(
             Text(
                 text = name,
                 style = MyTheme.CaptionMedium,
-                color = MyTheme.Colors.textPrimary
+                color = LocalDashColors.current.textPrimary
             )
             Text(
                 text = code,
                 style = MyTheme.Overline,
-                color = MyTheme.Colors.textTertiary
+                color = LocalDashColors.current.textTertiary
             )
         }
     }
@@ -348,7 +349,7 @@ private fun LabelValueRow(
         Text(
             text = label,
             style = MyTheme.Body2Medium,
-            color = MyTheme.Colors.textTertiary
+            color = LocalDashColors.current.textTertiary
         )
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.TopEnd) {
             if (valueContent != null) {
@@ -357,7 +358,7 @@ private fun LabelValueRow(
                 Text(
                     text = value.orEmpty(),
                     style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.textPrimary,
+                    color = LocalDashColors.current.textPrimary,
                     textAlign = TextAlign.End,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -385,12 +386,12 @@ private fun FeeRow(state: MayaConversionPreviewUIState, onFeeInfoClick: () -> Un
             Text(
                 text = stringResource(R.string.maya_fee),
                 style = MyTheme.Body2Medium,
-                color = MyTheme.Colors.textTertiary
+                color = LocalDashColors.current.textTertiary
             )
             Icon(
                 painter = painterResource(R.drawable.ic_dash_info_blue_meduim),
                 contentDescription = null,
-                tint = MyTheme.Colors.gray,
+                tint = LocalDashColors.current.gray,
                 modifier = Modifier.size(15.dp)
             )
         }
@@ -413,7 +414,7 @@ private fun TotalRow(state: MayaConversionPreviewUIState) {
         Text(
             text = stringResource(R.string.total),
             style = MyTheme.Body2Medium,
-            color = MyTheme.Colors.textTertiary
+            color = LocalDashColors.current.textTertiary
         )
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
             AmountValue(state.totalAmount, state.symbolFirst, MyTheme.Typography.BodyLargeMedium)
@@ -435,13 +436,13 @@ private fun AmountValue(amount: AmountDisplay, symbolFirst: Boolean, style: Text
             if (symbolFirst) {
                 DashGlyph()
             }
-            Text(text = amount.text, style = style, color = MyTheme.Colors.textPrimary)
+            Text(text = amount.text, style = style, color = LocalDashColors.current.textPrimary)
             if (!symbolFirst) {
                 DashGlyph()
             }
         }
     } else {
-        Text(text = amount.text, style = style, color = MyTheme.Colors.textPrimary)
+        Text(text = amount.text, style = style, color = LocalDashColors.current.textPrimary)
     }
 }
 
@@ -450,7 +451,7 @@ private fun DashGlyph() {
     Icon(
         painter = painterResource(CommonR.drawable.ic_dash_d_black),
         contentDescription = null,
-        tint = MyTheme.Colors.textPrimary,
+        tint = LocalDashColors.current.textPrimary,
         modifier = Modifier.size(12.dp)
     )
 }
@@ -470,7 +471,7 @@ private fun NetworkUnavailable(modifier: Modifier = Modifier) {
         Text(
             text = stringResource(CommonR.string.network_unavailable_title),
             style = MyTheme.H6Bold,
-            color = MyTheme.Colors.textPrimary,
+            color = LocalDashColors.current.textPrimary,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
@@ -480,7 +481,7 @@ private fun NetworkUnavailable(modifier: Modifier = Modifier) {
         Text(
             text = stringResource(CommonR.string.network_unavailable_check_connection),
             style = MyTheme.Body2Regular,
-            color = MyTheme.Colors.textSecondary,
+            color = LocalDashColors.current.textSecondary,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()

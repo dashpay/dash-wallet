@@ -39,6 +39,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.address_input.AddressInputViewModel
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.util.DeepLinkDestination
 import org.dash.wallet.common.util.observe
@@ -108,15 +109,17 @@ class MayaAddressInputFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MayaAddressInputScreen(
-                    state = uiState,
-                    onBackClick = { findNavController().popBackStack() },
-                    onAddressChanged = viewModel::setInput,
-                    onScanClick = { launchScanner(this) },
-                    onSourceClick = ::onSourceClick,
-                    onClipboardClick = ::onClipboardClick,
-                    onContinueClick = ::onContinue
-                )
+                DashWalletTheme {
+                    MayaAddressInputScreen(
+                        state = uiState,
+                        onBackClick = { findNavController().popBackStack() },
+                        onAddressChanged = viewModel::setInput,
+                        onScanClick = { launchScanner(this) },
+                        onSourceClick = ::onSourceClick,
+                        onClipboardClick = ::onClipboardClick,
+                        onContinueClick = ::onContinue
+                    )
+                }
             }
         }
     }

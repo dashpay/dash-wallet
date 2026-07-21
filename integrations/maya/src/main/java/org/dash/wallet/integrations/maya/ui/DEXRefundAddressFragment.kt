@@ -31,6 +31,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
@@ -93,13 +94,15 @@ class DEXRefundAddressFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                DEXRefundAddressScreen(
-                    viewModel = viewModel,
-                    onBackClick = { findNavController().popBackStack() },
-                    onScanClick = { launchScanner(this) },
-                    onPasteClick = ::pasteFromClipboard,
-                    onContinueClick = ::onContinue
-                )
+                DashWalletTheme {
+                    DEXRefundAddressScreen(
+                        viewModel = viewModel,
+                        onBackClick = { findNavController().popBackStack() },
+                        onScanClick = { launchScanner(this) },
+                        onPasteClick = ::pasteFromClipboard,
+                        onContinueClick = ::onContinue
+                    )
+                }
             }
         }
     }

@@ -44,7 +44,6 @@ import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
-import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.common.R as CommonR
@@ -82,7 +81,7 @@ fun MayaPortalScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                    .background(colors.backgroundSecondary, RoundedCornerShape(20.dp))
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 horizontalAlignment = Alignment.Start
@@ -100,13 +99,13 @@ fun MayaPortalScreen(
                     Text(
                         text = stringResource(R.string.dash_dex_title),
                         style = MyTheme.Typography.HeadlineSmallBold,
-                        color = MyTheme.Colors.textPrimary,
+                        color = colors.textPrimary,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
                         text = stringResource(R.string.dash_dex_subtitle),
                         style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.textSecondary,
+                        color = colors.textSecondary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

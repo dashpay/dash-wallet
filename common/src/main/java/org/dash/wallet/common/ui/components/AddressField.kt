@@ -147,12 +147,12 @@ private fun AddressFieldContent(
     onImeAction: (() -> Unit)? = null
 ) {
     val backgroundColor = when {
-        isError -> MyTheme.Colors.red.copy(alpha = 0.1f)
-        focused -> MyTheme.Colors.backgroundSecondary
-        else -> MyTheme.Colors.gray300.copy(alpha = 0.1f)
+        isError -> LocalDashColors.current.red.copy(alpha = 0.1f)
+        focused -> LocalDashColors.current.backgroundSecondary
+        else -> LocalDashColors.current.gray300.copy(alpha = 0.1f)
     }
     val borderColor = if (focused && !isError) {
-        MyTheme.Colors.gray300.copy(alpha = 0.3f)
+        LocalDashColors.current.gray300.copy(alpha = 0.3f)
     } else {
         Color.Transparent
     }
@@ -168,7 +168,7 @@ private fun AddressFieldContent(
             Text(
                 text = label,
                 style = MyTheme.Body2Medium,
-                color = MyTheme.Colors.textSecondary,
+                color = LocalDashColors.current.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -204,7 +204,7 @@ private fun AddressFieldContent(
                     Text(
                         text = innerLabel,
                         style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.textSecondary,
+                        color = LocalDashColors.current.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -215,8 +215,8 @@ private fun AddressFieldContent(
                         value = value,
                         onValueChange = onValueChange,
                         enabled = enabled,
-                        textStyle = MyTheme.Body2Regular.copy(color = MyTheme.Colors.textPrimary),
-                        cursorBrush = SolidColor(MyTheme.Colors.textPrimary),
+                        textStyle = MyTheme.Body2Regular.copy(color = LocalDashColors.current.textPrimary),
+                        cursorBrush = SolidColor(LocalDashColors.current.textPrimary),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = if (onImeAction != null) {
                             KeyboardActions(onDone = { onImeAction() })
@@ -239,7 +239,7 @@ private fun AddressFieldContent(
                         Text(
                             text = placeholder,
                             style = MyTheme.Body2Regular,
-                            color = MyTheme.Colors.textPrimary.copy(alpha = 0.5f),
+                            color = LocalDashColors.current.textPrimary.copy(alpha = 0.5f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -284,7 +284,7 @@ private fun AddressFieldContent(
                             Icon(
                                 painter = painterResource(trailing.first),
                                 contentDescription = null,
-                                tint = MyTheme.Colors.textPrimary,
+                                tint = LocalDashColors.current.textPrimary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -297,7 +297,7 @@ private fun AddressFieldContent(
             Text(
                 text = message,
                 style = MyTheme.Body2Regular,
-                color = if (isError) MyTheme.Colors.red else MyTheme.Colors.textSecondary,
+                color = if (isError) LocalDashColors.current.red else LocalDashColors.current.textSecondary,
                 modifier = Modifier.fillMaxWidth()
             )
         }

@@ -52,6 +52,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
 import org.dash.wallet.common.ui.components.Size
@@ -105,7 +106,7 @@ private fun DEXReceiveScreenContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(LocalDashColors.current.backgroundPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             NavBarBack(onBackClick = onBackClick)
@@ -142,7 +143,7 @@ private fun DEXReceiveScreenContent(
                                 ambientColor = Color(0xFFB8C1CC),
                                 spotColor = Color(0xFFB8C1CC)
                             )
-                            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                            .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(20.dp))
                             .padding(top = 40.dp, bottom = 20.dp, start = 20.dp, end = 20.dp),
                         verticalArrangement = Arrangement.spacedBy(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -152,7 +153,7 @@ private fun DEXReceiveScreenContent(
                                 // coinCode is the format arg; messages without a placeholder ignore it.
                                 text = stringResource(errorMessageRes, coinCode),
                                 style = MyTheme.Body2Regular,
-                                color = MyTheme.Colors.red,
+                                color = LocalDashColors.current.red,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -177,7 +178,7 @@ private fun DEXReceiveScreenContent(
                                 Text(
                                     text = stringResource(R.string.dex_receive_memo_warning),
                                     style = MyTheme.Body2Regular,
-                                    color = MyTheme.Colors.red,
+                                    color = LocalDashColors.current.red,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -224,7 +225,7 @@ private fun ExpiryWarning(coinCode: String) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0x1AB0B6BC))
+            .background(LocalDashColors.current.gray.copy(alpha = 0.10f))
             .padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top
@@ -248,12 +249,12 @@ private fun ExpiryWarning(coinCode: String) {
             Text(
                 text = stringResource(R.string.dex_receive_expiry_title),
                 style = MyTheme.Typography.TitleMediumMedium,
-                color = MyTheme.Colors.textPrimary
+                color = LocalDashColors.current.textPrimary
             )
             Text(
                 text = stringResource(R.string.dex_receive_expiry_message, coinCode),
                 style = MyTheme.Body2Regular,
-                color = MyTheme.Colors.textSecondary
+                color = LocalDashColors.current.textSecondary
             )
         }
     }
@@ -264,6 +265,7 @@ private fun ExpiryWarning(coinCode: String) {
 private fun QrArea(content: String, isLoading: Boolean) {
     Box(
         modifier = Modifier
+            // Stays white in dark mode too: QR modules need a light background to scan reliably.
             .background(Color.White, RoundedCornerShape(10.dp))
             .padding(10.dp),
         contentAlignment = Alignment.Center
@@ -287,7 +289,7 @@ private fun QrArea(content: String, isLoading: Boolean) {
                     modifier = Modifier.size(200.dp)
                 )
             } else {
-                CircularProgressIndicator(color = MyTheme.Colors.dashBlue)
+                CircularProgressIndicator(color = LocalDashColors.current.dashBlue)
             }
         }
     }
@@ -311,13 +313,13 @@ private fun LabeledCopyRow(label: String, value: String, onCopyClick: () -> Unit
             Text(
                 text = label,
                 style = MyTheme.Caption,
-                color = MyTheme.Colors.textSecondary
+                color = LocalDashColors.current.textSecondary
             )
             // Subhead (15sp, text/primary): no 15sp token exists; closest is BodyMedium (14sp).
             Text(
                 text = value,
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textPrimary
+                color = LocalDashColors.current.textPrimary
             )
         }
 
@@ -325,7 +327,7 @@ private fun LabeledCopyRow(label: String, value: String, onCopyClick: () -> Unit
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(14.dp))
-                .background(Color(0x1AB0B6BC))
+                .background(LocalDashColors.current.gray.copy(alpha = 0.10f))
                 .clickable(onClick = onCopyClick)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             contentAlignment = Alignment.Center
@@ -333,7 +335,7 @@ private fun LabeledCopyRow(label: String, value: String, onCopyClick: () -> Unit
             Icon(
                 painter = painterResource(CommonR.drawable.ic_copy),
                 contentDescription = label,
-                tint = MyTheme.Colors.textPrimary,
+                tint = LocalDashColors.current.textPrimary,
                 modifier = Modifier.size(17.dp)
             )
         }
