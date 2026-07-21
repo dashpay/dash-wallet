@@ -146,7 +146,10 @@ class SwapTrackingService @Inject constructor(
             swapOrderDao.updateOrder(updated.copy(lastChecked = System.currentTimeMillis()))
             log.info(
                 "swap {}: status {} -> {} (outbound tx: {})",
-                txHash, order.status, status, outboundTxHash
+                txHash,
+                order.status,
+                status,
+                outboundTxHash
             )
         }
     }

@@ -141,7 +141,9 @@ open class SwapKitWebApi @Inject constructor(
                 // without verbose OkHttp logging; the tracker retries on the next tick.
                 log.warn(
                     "swapkit track({}) HTTP {}: {}",
-                    request.hash ?: request.depositAddress, response.code(), response.errorBody()?.string()
+                    request.hash ?: request.depositAddress,
+                    response.code(),
+                    response.errorBody()?.string()
                 )
                 null
             }
