@@ -211,21 +211,21 @@ private fun AddressFieldContent(
                 }
 
                 Box {
-                BasicTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    enabled = enabled,
-                    textStyle = MyTheme.Body2Regular.copy(color = MyTheme.Colors.textPrimary),
-                    cursorBrush = SolidColor(MyTheme.Colors.textPrimary),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    BasicTextField(
+                        value = value,
+                        onValueChange = onValueChange,
+                        enabled = enabled,
+                        textStyle = MyTheme.Body2Regular.copy(color = MyTheme.Colors.textPrimary),
+                        cursorBrush = SolidColor(MyTheme.Colors.textPrimary),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = if (onImeAction != null) {
                             KeyboardActions(onDone = { onImeAction() })
                         } else {
                             KeyboardActions.Default
                         },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { onFocusChanged(it.isFocused) }
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { onFocusChanged(it.isFocused) }
                             .then(
                                 if (focusRequester != null) {
                                     Modifier.focusRequester(focusRequester)
@@ -233,25 +233,24 @@ private fun AddressFieldContent(
                                     Modifier
                                 }
                             )
-                )
-
-                if (value.isEmpty()) {
-                    Text(
-                        text = placeholder,
-                        style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.textPrimary.copy(alpha = 0.5f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
                     )
+
+                    if (value.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            style = MyTheme.Body2Regular,
+                            color = MyTheme.Colors.textPrimary.copy(alpha = 0.5f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
-            }
             }
 
             // Trailing controls (Figma 36320:8288): while empty — an optional "Paste" text button
             // next to the QR-scan affordance; while focused with text — the clear (✕) button.
             // None in the unfocused filled state.
             val trailing: Pair<Int, () -> Unit>? = when {
-                isError -> null
                 value.isNotEmpty() && focused -> R.drawable.ic_clear_input to { onValueChange("") }
                 value.isEmpty() && showScanIcon -> R.drawable.ic_scan_qr to onScanClick
                 else -> null
@@ -274,23 +273,23 @@ private fun AddressFieldContent(
                         )
                     }
 
-            if (trailing != null) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = trailing.second),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(trailing.first),
-                        contentDescription = null,
-                        tint = MyTheme.Colors.textPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    if (trailing != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .clickable(onClick = trailing.second),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(trailing.first),
+                                contentDescription = null,
+                                tint = MyTheme.Colors.textPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
-            }
-        }
             }
         }
 

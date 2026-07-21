@@ -182,7 +182,8 @@ class DEXEnterAmountViewModel @Inject constructor(
         val selectedIndex = indexForType(codes, amount.anchoredType, assetCurrencyCode)
         val anchoredValue = amount.getValue(amount.anchoredType)
         val displayString = if (restored != null) {
-            formatForDisplay(anchoredValue, maxDecimalsFor(amount.anchoredType))
+            // Passes the new asset explicitly: the UI state still carries the previous one here.
+            formatForDisplay(anchoredValue, amount.anchoredType, asset)
         } else {
             "0"
         }
@@ -282,7 +283,7 @@ class DEXEnterAmountViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 selectedCurrencyIndex = newIndex,
-                amount = formatForDisplay(value, maxDecimalsFor(type)),
+                amount = formatForDisplay(value, type),
                 continueEnabled = value.signum() > 0
             )
         }
@@ -313,9 +314,13 @@ class DEXEnterAmountViewModel @Inject constructor(
             return
         }
 
-        val sellAmount = sellCrypto.setScale(MAX_CRYPTO_DECIMALS, RoundingMode.HALF_UP)
-            .stripTrailingZeros()
-            .toPlainString()
+        // Quantize DOWN to the asset's on-chain decimals — the identical form the refund step
+        // registers with the order (see DEXRefundAddressFragment.onContinue) — so the amount
+        // validated here is the amount actually quoted, and it is exactly representable on chain.
+        val sellAmount = MayaCurrencyList[asset]?.formatSwapAmount(sellCrypto)
+            ?: sellCrypto.setScale(MAX_CRYPTO_DECIMALS, RoundingMode.DOWN)
+                .stripTrailingZeros()
+                .toPlainString()
 
         validationJob?.cancel()
         validationJob = viewModelScope.launch {
@@ -364,13 +369,27 @@ class DEXEnterAmountViewModel @Inject constructor(
             else -> CurrencyInputType.Fiat
         }
 
-    private fun maxDecimalsFor(type: CurrencyInputType): Int =
-        if (type == CurrencyInputType.Fiat) MAX_FIAT_DECIMALS else MAX_CRYPTO_DECIMALS
+    private fun maxDecimalsFor(type: CurrencyInputType, asset: String = _uiState.value.asset): Int = when (type) {
+        CurrencyInputType.Fiat -> MAX_FIAT_DECIMALS
+        CurrencyInputType.Dash -> MAX_CRYPTO_DECIMALS
+        // Cap crypto entry at the asset's on-chain decimals (e.g. 6 for USDC) so a typed
+        // amount is always exactly representable — it goes into the quote and deposit URI as is.
+        CurrencyInputType.Crypto ->
+            MayaCurrencyList[asset]?.swapAmountScale ?: MAX_CRYPTO_DECIMALS
+    }
 
     /** Format a converted value into a plain decimal string (no grouping/symbol, no exponent). */
-    private fun formatForDisplay(value: BigDecimal, decimals: Int): String {
+    private fun formatForDisplay(
+        value: BigDecimal,
+        type: CurrencyInputType,
+        asset: String = _uiState.value.asset
+    ): String {
         if (value.signum() == 0) return "0"
-        return value.setScale(decimals, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+        // Crypto rounds DOWN so what's displayed equals the quantized amount the order will
+        // actually register (see onContinueClicked); fiat/DASH conversions are display-only
+        // and round half-up as usual.
+        val mode = if (type == CurrencyInputType.Crypto) RoundingMode.DOWN else RoundingMode.HALF_UP
+        return value.setScale(maxDecimalsFor(type, asset), mode).stripTrailingZeros().toPlainString()
     }
 
     private fun isPositive(amount: String): Boolean =
