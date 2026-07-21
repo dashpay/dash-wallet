@@ -91,7 +91,11 @@ class MayaCryptoCurrencySwapAmountTest {
             val formatted = BigDecimal(currency.formatSwapAmount(input))
             val scaleOk = formatted.scale() <= minOf(currency.decimals, MayaCryptoCurrency.MAX_SWAP_AMOUNT_DECIMALS)
             val notRoundedUp = formatted <= input
-            if (scaleOk && notRoundedUp) null else "${currency.asset}: $input -> $formatted (decimals=${currency.decimals})"
+            if (scaleOk && notRoundedUp) {
+                null
+            } else {
+                "${currency.asset}: $input -> $formatted (decimals=${currency.decimals})"
+            }
         }
         assertTrue("Currencies with unrepresentable swap amounts:\n" + failures.joinToString("\n"), failures.isEmpty())
     }
