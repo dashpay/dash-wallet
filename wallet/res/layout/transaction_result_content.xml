@@ -453,6 +453,36 @@
             android:src="@drawable/ic_light_gray_arrow_right" />
     </RelativeLayout>
 
+    <RelativeLayout
+        android:id="@+id/open_provider_explorer_card"
+        style="@style/ViewRaised"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="15dp"
+        android:paddingHorizontal="15dp"
+        android:paddingVertical="17dp"
+        android:visibility="gone"
+        android:background="@drawable/rounded_ripple_background"
+        android:theme="@style/ListViewButtonBackground"
+        app:layout_constraintTop_toBottomOf="@id/open_explorer_card"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/view_on_provider_explorer"
+            style="@style/Caption.Medium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:textSize="13sp"
+            tools:text="View MayaChain explorer" />
+
+        <ImageView
+            android:id="@+id/go_to_provider_explorer_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:src="@drawable/ic_light_gray_arrow_right" />
+    </RelativeLayout>
 
     <RelativeLayout
         android:id="@+id/report_issue_card"
@@ -465,7 +495,7 @@
         android:visibility="gone"
         android:background="@drawable/rounded_ripple_background"
         android:theme="@style/ListViewButtonBackground"
-        app:layout_constraintTop_toBottomOf="@id/open_explorer_card"
+        app:layout_constraintTop_toBottomOf="@id/open_provider_explorer_card"
         tools:visibility="visible">
 
         <TextView
@@ -489,7 +519,7 @@
         android:id="@+id/shadow_spacer"
         android:layout_width="match_parent"
         android:layout_height="15dp"
-        app:layout_constraintTop_toBottomOf="@id/open_explorer_card" />
+        app:layout_constraintTop_toBottomOf="@id/open_provider_explorer_card" />
 
     <LinearLayout
         android:id="@+id/payee_verified_by_container"

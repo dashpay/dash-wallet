@@ -94,17 +94,36 @@
     <TextView
         android:id="@+id/time"
         style="@style/Overline.Tertiary"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="4dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:paddingEnd="6dp"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintHorizontal_chainStyle="packed"
+        app:layout_constraintHorizontal_bias="0"
         app:layout_constraintTop_toBottomOf="@id/primary_status"
         app:layout_constraintBottom_toTopOf="@id/comment"
         app:layout_constraintStart_toStartOf="@id/primary_status"
-        app:layout_constraintEnd_toStartOf="@id/rate_container"
+        app:layout_constraintEnd_toStartOf="@id/swap_status"
         tools:text="11:28 AM" />
+
+    <TextView
+        android:id="@+id/swap_status"
+        style="@style/Overline.Medium.Blue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="6dp"
+        android:paddingVertical="1dp"
+        android:background="@drawable/rounded_chip_blue"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/time"
+        app:layout_constraintBottom_toBottomOf="@id/time"
+        app:layout_constraintStart_toEndOf="@id/time"
+        app:layout_constraintEnd_toStartOf="@id/rate_container"
+        tools:text="Processing"
+        tools:visibility="visible" />
 
     <TextView
         android:id="@+id/comment"

@@ -104,9 +104,36 @@ object GenericUtils {
         return currency.getSymbol(getDeviceLocale())
     }
 
-    fun getCoinIcon(code: String): String {
-        return "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/" +
-            code.lowercase(Locale.getDefault()) + ".png"
+    /**
+     * Ordered list of candidate icon URLs for a coin, to be tried in sequence until
+     * one loads.
+     *
+     * When a SwapKit [identifier] is supplied (e.g. "ETH.USDC-0x...") the SwapKit
+     * token-list bucket is tried first: it keys off the full chain-qualified
+     * identifier, so it disambiguates same-ticker tokens across chains and has the
+     * widest coverage of the assets the wallet can route. The bucket only serves
+     * fully-lowercased identifier filenames. CoinCap (broader generic coverage,
+     * includes Solana memecoins like WIF that the older jsupa repo lacks) and the
+     * jsupa repo follow as ticker-keyed fallbacks.
+     *
+     * Some assets (e.g. Solana tokens like $WIF) carry a leading '$' or other
+     * non-alphanumeric characters in their symbol; the ticker-keyed hosts key off
+     * the plain ticker (wif), so strip anything that isn't alphanumeric.
+     */
+    fun getCoinIconUrls(code: String, identifier: String? = null): List<String> {
+        val sanitized = code.lowercase(Locale.getDefault()).filter { it.isLetterOrDigit() }
+        val urls = mutableListOf<String>()
+        if (!identifier.isNullOrEmpty()) {
+            val swapKitId = identifier.lowercase(Locale.getDefault())
+            urls.add("https://storage.googleapis.com/token-list-swapkit/images/$swapKitId.png")
+        }
+        urls.add("https://assets.coincap.io/assets/icons/$sanitized@2x.png")
+        urls.add("https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/$sanitized.png")
+        return urls
+    }
+
+    fun getCoinIcon(code: String, identifier: String? = null): String {
+        return getCoinIconUrls(code, identifier).first()
     }
 
     /**
