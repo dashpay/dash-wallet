@@ -78,6 +78,8 @@ component to our component:
 - ListEmptyState - ListEmptyState
 - tablelist-masternodekeys - TableListMasternodeKeyRow
 - EnterAmount (input bar) - EnterAmount
+- TextField-Base / text.field - TextField
+- addressField - AddressField
 
 ## NavBar / TopNavBase (Figma: NavBar)
 
@@ -912,6 +914,58 @@ EnterAmount(
 - This is the **input bar widget**, not the older numeric-keypad screen. The legacy numeric keypad still lives at `common/ui/enter_amount/EnterAmountFragment.kt` and is unrelated.
 - Typography substitutions vs. the Figma spec: `LabelSmallSemibold` (11 sp) is used in place of the spec's 10 sp SemiBold for the Max label — closest available preset, ~1 sp visual diff.
 - The chevron icon `ic_chevron_down_small.xml` is a small (10 × 6 dp) stroke vector created specifically for this component.
+
+## TextField (Figma: TextField-Base / text.field)
+
+The general-purpose design-system text field lives in:
+```
+common/src/main/java/org/dash/wallet/common/ui/components/TextField.kt
+```
+
+**Figma Design System nodes:** base `4111:12913`, variant set `4112:13707`
+
+A rounded (16 dp) input with a **floating label**: when the field is empty, the label renders
+full-size (`Typography.TitleSmall`, textSecondary) on the text line as the placeholder; once
+there's content it shrinks to a small line above the text (`Typography.LabelMedium`).
+
+### States (driven by focus / content / parameters — no state enum)
+
+| Figma variant | Trigger | Visual |
+|---|---|---|
+| Default | unfocused, empty | `gray400` @ 10% background, label as placeholder |
+| Focused | focused | white background, 1 dp `dashBlue` border, 3 dp `dashBlue` @ 10% focus ring |
+| Typing | focused + text | focused look + automatic clear (✕) trailing button (`ic_clear_input`) |
+| Filled | unfocused + text | resting gray background, small label above text |
+| Error | `isError = true` | `red5` background + 1 dp `red` border; `message` below renders red (wins over focused) |
+| Disabled | `enabled = false` | content at 40% alpha, input ignored |
+
+### Slots
+
+- `label` — floating label inside the field (Figma `label`): full-size on the text line when empty, shrinks above the text once filled
+- `innerLabel` — permanent small label above the text line, always visible even when empty (same as `AddressField.innerLabel`; don't combine with `label`). **Address-input screens use this for "BTC Address"-style text — never a disappearing hint.**
+- `placeholder` — text-line placeholder (hint) when empty; only used when `label` is null
+- `helperTextInside` — right-aligned `Typography.BodySmall` inside the field, below the text line (Figma `helpTextInside`); when null and `maxLength` is set, an automatic `n/max` counter renders here
+- `message` + `isError` — help text below the field (Figma `helpTextOutside`); `isErrorMessage` (defaults to `isError`) controls the message color independently — pass `isErrorMessage = false` for an error-styled field with neutral gray help text (Figma shows both)
+- `trailingIcon` + `onTrailingIconClick` — custom trailing button in a 30 dp / 8 dp-radius touch area (Figma `buttonIcon`); the clear button takes precedence while typing
+- `maxLength`, `singleLine`, `showClearButton`, `keyboardOptions`, `visualTransformation`, `focusRequester`, `onImeAction`
+
+### Example
+
+```kotlin
+TextField(
+    value = uiState.name,
+    onValueChange = viewModel::onNameChanged,
+    label = stringResource(R.string.name_label),
+    message = uiState.nameError?.let { stringResource(it) },
+    isError = uiState.nameError != null,
+    maxLength = 25
+)
+```
+
+### Notes
+
+- For crypto addresses use `AddressField` (QR-scan affordance, long-press-to-paste); for search bars use `SearchField`. `TextField` is the generic single/multi-line input.
+- Layout specs from Figma: min height 58 dp, padding start 16 / end 12 / vertical 10, radius 16, row gap 10, label-to-text gap 2.
 
 ## Typography Mapping (Figma Design System → MyTheme.Typography)
 

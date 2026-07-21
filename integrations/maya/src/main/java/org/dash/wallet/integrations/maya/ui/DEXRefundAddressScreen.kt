@@ -97,11 +97,11 @@ private fun DEXRefundAddressScreenContent(
 
             // Heading + primary description. Reuses the design-system TopIntro (heading + body text).
             // Sits directly below the nav bar — Figma's content `pt-116px` is just the height of the
-            // (overlaid) status bar + nav bar, which NavBarBack already occupies here; only the
-            // `safe-area/top` (10dp) remains as real padding.
+            // (overlaid) status bar + nav bar, which NavBarBack already occupies here; TopIntro's
+            // built-in padding supplies the remaining 10dp `safe-area/top` and the 20dp gap below.
             TopIntro(
                 heading = stringResource(R.string.dex_refund_address_heading),
-                text = stringResource(R.string.dex_refund_address_description, currencyCode, currencyCode),
+                text = stringResource(R.string.dex_refund_address_description, currencyCode, currencyCode)
             )
 
             // Refund address field (design-system AddressField): label + paste/scan input + inline
@@ -123,7 +123,8 @@ private fun DEXRefundAddressScreenContent(
                 enabled = isOnline && !isSubmitting,
                 onScanClick = onScanClick,
                 onLongPress = onPasteClick,
-                modifier = Modifier.padding(top = 20.dp, start = 20.dp, end = 20.dp)
+                onPasteClick = onPasteClick,
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp)
             )
 
             // SwapKit order-creation error (e.g. no route / expired quote), distinct from the

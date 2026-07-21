@@ -108,8 +108,7 @@
     <fragment
         android:id="@+id/mayaAddressInputFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaAddressInputFragment"
-        android:label="Address Input"
-        tools:layout="@layout/fragment_address_input" >
+        android:label="Address Input" >
         <argument
             android:name="currency"
             app:argType="string" />
@@ -135,8 +134,7 @@
 
     <fragment android:id="@+id/mayaConvertCryptoFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaConvertCryptoFragment"
-        android:label="Enter Amount"
-        tools:layout="@layout/fragment_maya_enter_amount">
+        android:label="Enter Amount">
 
         <argument android:name="currency"
             app:argType="string" />
@@ -162,8 +160,7 @@
     <fragment
         android:id="@+id/mayaConversionPreviewFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaConversionPreviewFragment"
-        android:label="MayaConversionPreviewFragment"
-        tools:layout="@layout/fragment_maya_conversion_preview">
+        android:label="MayaConversionPreviewFragment">
 
         <action
             android:id="@+id/mayaOrderReviewToFeeInfo"
@@ -183,15 +180,14 @@
             app:argType="org.dash.wallet.common.data.PaymentIntent" />
     </fragment>
 
-    <fragment
+    <dialog
         android:id="@+id/mayaConvertResultFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaConvertResultFragment"
-        android:label="MayaConvertResultFragment"
-        tools:layout="@layout/maya_convert_result_fragment">
+        android:label="MayaConvertResultFragment">
         <argument
             android:name="transactionParams"
             app:argType="org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams"
             />
 
-    </fragment>
+    </dialog>
 </navigation>

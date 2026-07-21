@@ -17,70 +17,221 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import android.app.Activity
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
-import androidx.core.content.ContextCompat
-import androidx.core.view.isVisible
+import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.ui.address_input.AddressInputFragment
-import org.dash.wallet.common.ui.address_input.AddressSource
-import org.dash.wallet.common.ui.decorators.ListDividerDecorator
-import org.dash.wallet.common.ui.recyclerview.IconifiedListAdapter
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.address_input.AddressInputViewModel
+import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.util.DeepLinkDestination
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
+import org.slf4j.LoggerFactory
+import org.dash.wallet.common.R as CommonR
 
-class MayaAddressInputFragment : AddressInputFragment() {
+/**
+ * Maya sell "Enter address" screen (Figma node 24007:13081).
+ *
+ * Hosts the Compose [MayaAddressInputScreen] while keeping the original behavior of the
+ * view-based [org.dash.wallet.common.ui.address_input.AddressInputFragment] base class:
+ * address parsing/validation via [AddressInputViewModel], QR scanning, clipboard paste,
+ * exchange address sources and the bootstrap-quote check before navigating to enter amount.
+ */
+@AndroidEntryPoint
+class MayaAddressInputFragment : Fragment() {
+    companion object {
+        private val log = LoggerFactory.getLogger(MayaAddressInputFragment::class.java)
+    }
+
+    private val viewModel by viewModels<AddressInputViewModel>()
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private val mayaAddressInputViewModel by viewModels<MayaAddressInputViewModel>()
+    private val args by navArgs<MayaAddressInputFragmentArgs>()
+
+    private var uiState by mutableStateOf(MayaAddressInputUIState())
+
+    // Tracks clipboard availability so the clipboard row is re-derived when the clip changes
+    // while this screen is open (AddressInputViewModel listens for primary-clip changes).
+    private var hadClipboardText: Boolean? = null
+
+    private val scanLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)?.let { scanned ->
+                viewModel.setInput(scanned)
+            }
+        }
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        // Same wiring the view-based fragment did in onViewCreated: the selected asset pins the
+        // currency's payment parsers (falling back to the full Maya list).
+        viewModel.currency = args.currency
+        viewModel.paymentParsers = MayaCurrencyList.getPaymentProcessorForAsset(args.asset)
+            ?: mayaViewModel.paymentParsers
+        mayaAddressInputViewModel.setCurrency(args.currency)
+        mayaAddressInputViewModel.asset = args.asset
+
+        // The nav-arg title ("Convert DASH to %s") is intentionally not used here — the design
+        // (Figma 24007:13081) titles this screen generically.
+        uiState = uiState.copy(
+            title = getString(R.string.maya_enter_address_title),
+            fieldLabel = args.hint,
+            // Restores the inline error shown before a configuration change.
+            errorMessage = mayaAddressInputViewModel.inlineErrorMessage
+        )
+
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                MayaAddressInputScreen(
+                    state = uiState,
+                    onBackClick = { findNavController().popBackStack() },
+                    onAddressChanged = viewModel::setInput,
+                    onScanClick = { launchScanner(this) },
+                    onSourceClick = ::onSourceClick,
+                    onClipboardClick = ::onClipboardClick,
+                    onContinueClick = ::onContinue
+                )
+            }
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val asset = requireArguments().getString("asset")
-        viewModel.paymentParsers = asset?.let { MayaCurrencyList.getPaymentProcessorForAsset(it) }
-            ?: mayaViewModel.paymentParsers
-        mayaAddressInputViewModel.setCurrency(viewModel.currency)
-        adapter = IconifiedListAdapter() { _, index ->
-            val item = viewModel.addressSources[index]
-            clickListener(item)
+
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            // Any change of the entered address invalidates a previously shown error, exactly
+            // like the old doOnTextChanged listener did. The comparison is against the
+            // ViewModel-held last seen address (not the fragment's recreated uiState) so the
+            // replay of the persisted address after a configuration change isn't mistaken
+            // for an edit.
+            if (state.addressInput != mayaAddressInputViewModel.lastSeenAddress) {
+                mayaAddressInputViewModel.lastSeenAddress = state.addressInput
+                mayaAddressInputViewModel.inlineErrorMessage = null
+            }
+            uiState = uiState.copy(
+                address = state.addressInput,
+                continueEnabled = state.addressInput.isNotEmpty(),
+                errorMessage = mayaAddressInputViewModel.inlineErrorMessage
+            )
+
+            if (hadClipboardText != state.hasClipboardText) {
+                hadClipboardText = state.hasClipboardText
+                refreshClipboardRow()
+            }
         }
 
-        asset?.let {
-            mayaAddressInputViewModel.asset = it
-        }
-
-        val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
-        val decorator = ListDividerDecorator(
-            divider,
-            showAfterLast = false,
-            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal),
-            marginEnd = resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal)
-        )
-        binding.contentList.addItemDecoration(decorator)
-        binding.contentList.adapter = adapter
-
-        mayaAddressInputViewModel.addressSources.observe(viewLifecycleOwner) {
-            setAddressSources(it, getString(R.string.input_connect))
+        mayaAddressInputViewModel.addressSources.observe(viewLifecycleOwner) { sources ->
+            uiState = uiState.copy(
+                addressSources = sources.map { source ->
+                    AddressSourceUIState(
+                        id = source.id,
+                        name = getString(source.name),
+                        icon = source.icon,
+                        address = source.address
+                    )
+                }
+            )
         }
     }
 
-    private fun clickListener(item: AddressSource) {
-        if (item.address != null && item.address != "") {
-            binding.addressInput.setText(item.address!!)
+    override fun onResume() {
+        super.onResume()
+        // Clears the isLoading kept through a successful navigation (see onContinue) when the
+        // user comes back to this screen.
+        uiState = uiState.copy(isLoading = false)
+        mayaAddressInputViewModel.refreshAddressSources()
+        refreshClipboardRow()
+    }
+
+    private fun launchScanner(clickView: View) {
+        viewModel.logEvent(AnalyticsConstants.AddressInput.SCAN_QR)
+        scanLauncher.launch(ScanActivity.getTransitionIntent(requireActivity(), clickView))
+    }
+
+    private fun onSourceClick(source: AddressSourceUIState) {
+        if (!source.address.isNullOrEmpty()) {
+            viewModel.setInput(source.address)
         } else {
             // exchange login
-            findNavController().navigate(DeepLinkDestination.Exchange(item.id, "login_and_close").deepLink)
+            findNavController().navigate(DeepLinkDestination.Exchange(source.id, "login_and_close").deepLink)
         }
     }
 
-    override fun continueAction() {
+    private fun onClipboardClick() {
+        uiState.clipboardAddress?.let { viewModel.setInput(it) }
+    }
+
+    /**
+     * Derives the Clipboard row of the sources card: the first address in the clipboard text
+     * matching the selected currency's parser (the same matching the old highlighted
+     * clipboard-content view used); null hides the row.
+     */
+    private fun refreshClipboardRow() {
+        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val text = clipboard.primaryClip?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)?.coerceToText(requireContext())?.toString()
+
+        val address = text?.let { clipboardText ->
+            viewModel.paymentParsers.getAddressParser(viewModel.currency)
+                ?.findAll(clipboardText)
+                ?.firstOrNull()
+                ?.let { range -> clipboardText.substring(range.first, range.last) }
+        }
+        uiState = uiState.copy(clipboardAddress = address)
+    }
+
+    private fun onContinue() {
+        if (uiState.isLoading) {
+            return
+        }
+
         lifecycleScope.launch {
+            val input = uiState.address.trim()
+            try {
+                viewModel.parsePaymentIntent(input)
+                viewModel.setAddressResult(input)
+            } catch (ex: Exception) {
+                log.error("problem processing $input", ex)
+                // Address-format error: also restores the correct copy after a previous,
+                // valid-format attempt replaced it with a swap-specific message.
+                setInlineError(getString(CommonR.string.not_valid_address, viewModel.currency))
+                return@launch
+            }
+
+            setInlineError(null)
+            uiState = uiState.copy(isLoading = true)
             val quote = mayaAddressInputViewModel.getDefaultQuote(viewModel.addressResult.addressInputWithoutPrefix)
+
             if (quote != null && quote.error == null) {
+                // Keep isLoading (Continue disabled) through the navigation so the button doesn't
+                // flash enabled before the next screen appears; onResume resets it when the user
+                // comes back, since this fragment instance survives on the back stack.
                 safeNavigate(
                     MayaAddressInputFragmentDirections.mayaAddressInputToEnterAmount(
                         viewModel.currency,
@@ -95,16 +246,20 @@ class MayaAddressInputFragment : AddressInputFragment() {
                 // dialog, so the user can fix the address and retry without dismissing anything.
                 // The message is resolved by the active backend's aggregator (Maya or SwapKit), so
                 // this screen doesn't need to know which error vocabulary produced it.
-                binding.errorText.text =
-                    getString(mayaAddressInputViewModel.errorMessageRes(quote?.error), viewModel.currency)
-                binding.inputWrapper.isErrorEnabled = true
-                binding.errorText.isVisible = true
+                uiState = uiState.copy(isLoading = false)
+                setInlineError(
+                    getString(
+                        mayaAddressInputViewModel.errorMessageRes(quote?.error),
+                        viewModel.currency
+                    )
+                )
             }
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        mayaAddressInputViewModel.refreshAddressSources()
+    /** Shows/clears the inline validation error, mirroring it into the ViewModel so it survives rotation. */
+    private fun setInlineError(message: String?) {
+        mayaAddressInputViewModel.inlineErrorMessage = message
+        uiState = uiState.copy(errorMessage = message)
     }
 }

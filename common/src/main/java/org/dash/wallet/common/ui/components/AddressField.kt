@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -40,15 +41,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -64,11 +69,16 @@ import org.dash.wallet.common.R
  * - **Focused**: white background with a hairline border; a cursor shows. Empty keeps the QR
  *   icon; with text the trailing icon becomes a clear (✕) button.
  * - **Filled** (unfocused, with text): translucent gray background, no trailing icon.
- * - **Error**: translucent red background and the [message] rendered in red; no trailing icon.
+ * - **Error**: the field keeps its normal look; only the [message] below renders in red.
  *
  * The trailing icon is automatic: QR (when empty, calls [onScanClick]) or clear (when non-empty
  * and focused, resets the value via [onValueChange]). Pass [onLongPress] to support long-press
- * to paste.
+ * to paste, and [onPasteClick] to show a plain-blue "Paste" button next to the QR icon while
+ * the field is empty (Figma node 36320:8288).
+ *
+ * [innerLabel] renders a permanent small label inside the field, above the text line (the
+ * "TextField-Base" style, e.g. "BTC address" on the Maya enter-address screen) — unlike
+ * [placeholder], it stays visible once text is entered.
  */
 @Composable
 fun AddressField(
@@ -76,13 +86,20 @@ fun AddressField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     label: String? = null,
+    innerLabel: String? = null,
     placeholder: String = "",
     message: String? = null,
     isError: Boolean = false,
     showScanIcon: Boolean = true,
     enabled: Boolean = true,
     onScanClick: () -> Unit = {},
-    onLongPress: (() -> Unit)? = null
+    onLongPress: (() -> Unit)? = null,
+    // Optional: shows a "Paste" text button next to the QR icon while the field is empty.
+    onPasteClick: (() -> Unit)? = null,
+    // Optional: lets callers focus the field programmatically (e.g. auto-open the keyboard).
+    focusRequester: FocusRequester? = null,
+    // Optional: invoked when the keyboard's Done action is pressed.
+    onImeAction: (() -> Unit)? = null
 ) {
     // Focus is owned here so the field can switch between its default/filled and focused looks.
     // The rendering lives in the stateless [AddressFieldContent] so previews can force any state.
@@ -95,13 +112,17 @@ fun AddressField(
         onFocusChanged = { focused = it },
         modifier = modifier,
         label = label,
+        innerLabel = innerLabel,
         placeholder = placeholder,
         message = message,
         isError = isError,
         showScanIcon = showScanIcon,
         enabled = enabled,
         onScanClick = onScanClick,
-        onLongPress = onLongPress
+        onLongPress = onLongPress,
+        onPasteClick = onPasteClick,
+        focusRequester = focusRequester,
+        onImeAction = onImeAction
     )
 }
 
@@ -113,13 +134,17 @@ private fun AddressFieldContent(
     onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     label: String? = null,
+    innerLabel: String? = null,
     placeholder: String = "",
     message: String? = null,
     isError: Boolean = false,
     showScanIcon: Boolean = true,
     enabled: Boolean = true,
     onScanClick: () -> Unit = {},
-    onLongPress: (() -> Unit)? = null
+    onLongPress: (() -> Unit)? = null,
+    onPasteClick: (() -> Unit)? = null,
+    focusRequester: FocusRequester? = null,
+    onImeAction: (() -> Unit)? = null
 ) {
     val backgroundColor = when {
         isError -> MyTheme.Colors.red.copy(alpha = 0.1f)
@@ -131,6 +156,9 @@ private fun AddressFieldContent(
     } else {
         Color.Transparent
     }
+    // pointerInput(Unit) never restarts, so the gesture detector would otherwise keep the
+    // lambda captured on first composition; this keeps it current across recompositions.
+    val currentOnLongPress by rememberUpdatedState(onLongPress)
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -156,7 +184,7 @@ private fun AddressFieldContent(
                 .then(
                     if (onLongPress != null) {
                         Modifier.pointerInput(Unit) {
-                            detectTapGestures(onLongPress = { onLongPress() })
+                            detectTapGestures(onLongPress = { currentOnLongPress?.invoke() })
                         }
                     } else {
                         Modifier
@@ -166,11 +194,23 @@ private fun AddressFieldContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Box(
+            Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(vertical = 15.dp)
+                    .padding(vertical = 15.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
+                if (innerLabel != null) {
+                    Text(
+                        text = innerLabel,
+                        style = MyTheme.Body2Regular,
+                        color = MyTheme.Colors.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Box {
                 BasicTextField(
                     value = value,
                     onValueChange = onValueChange,
@@ -178,9 +218,21 @@ private fun AddressFieldContent(
                     textStyle = MyTheme.Body2Regular.copy(color = MyTheme.Colors.textPrimary),
                     cursorBrush = SolidColor(MyTheme.Colors.textPrimary),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = if (onImeAction != null) {
+                            KeyboardActions(onDone = { onImeAction() })
+                        } else {
+                            KeyboardActions.Default
+                        },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged { onFocusChanged(it.isFocused) }
+                            .then(
+                                if (focusRequester != null) {
+                                    Modifier.focusRequester(focusRequester)
+                                } else {
+                                    Modifier
+                                }
+                            )
                 )
 
                 if (value.isEmpty()) {
@@ -193,15 +245,34 @@ private fun AddressFieldContent(
                     )
                 }
             }
+            }
 
-            // Trailing icon: clear (✕) when there's text and the field is focused, otherwise the
-            // QR-scan affordance while empty. None in the error/filled states (matches the design).
+            // Trailing controls (Figma 36320:8288): while empty — an optional "Paste" text button
+            // next to the QR-scan affordance; while focused with text — the clear (✕) button.
+            // None in the unfocused filled state.
             val trailing: Pair<Int, () -> Unit>? = when {
                 isError -> null
                 value.isNotEmpty() && focused -> R.drawable.ic_clear_input to { onValueChange("") }
                 value.isEmpty() && showScanIcon -> R.drawable.ic_scan_qr to onScanClick
                 else -> null
             }
+            val showPasteButton = value.isEmpty() && onPasteClick != null
+
+            if (trailing != null || showPasteButton) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (showPasteButton) {
+                        DashButton(
+                            text = stringResource(R.string.button_paste),
+                            style = Style.PlainBlue,
+                            size = Size.Medium,
+                            stretch = false,
+                            isEnabled = enabled,
+                            onClick = { onPasteClick?.invoke() }
+                        )
+                    }
 
             if (trailing != null) {
                 Box(
@@ -220,6 +291,8 @@ private fun AddressFieldContent(
                 }
             }
         }
+            }
+        }
 
         if (message != null) {
             Text(
@@ -236,7 +309,7 @@ private fun AddressFieldContent(
 // the stateless [AddressFieldContent] directly so the focused states (which depend on real focus at
 // runtime) can be shown statically.
 
-/** Default — the state where the user doesn't interact with the field. */
+/** Default — the state where the user doesn't interact with the field (Paste button + QR). */
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 360)
 @Composable
 private fun AddressFieldDefaultPreview() {
@@ -246,7 +319,8 @@ private fun AddressFieldDefaultPreview() {
         focused = false,
         onFocusChanged = {},
         label = "Address",
-        placeholder = "Long press to paste"
+        placeholder = "Long press to paste",
+        onPasteClick = {}
     )
 }
 
@@ -290,7 +364,7 @@ private fun AddressFieldEnteredLongPreview() {
     )
 }
 
-/** Error — the error message appears below the field in red; the field background is tinted red. */
+/** Error — the error message appears below the field in red; the field itself looks normal. */
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 360)
 @Composable
 private fun AddressFieldErrorPreview() {
@@ -303,6 +377,28 @@ private fun AddressFieldErrorPreview() {
         message = "BTC address is not valid",
         isError = true
     )
+}
+
+/** Inner label — permanent label inside the field, above the text line; stays when filled. */
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 360)
+@Composable
+private fun AddressFieldInnerLabelPreview() {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        AddressFieldContent(
+            value = "",
+            onValueChange = {},
+            focused = true,
+            onFocusChanged = {},
+            innerLabel = "BTC address"
+        )
+        AddressFieldContent(
+            value = "TJvRMiThoqMM97PnnA4qCAx7XQo8wNxjY3",
+            onValueChange = {},
+            focused = true,
+            onFocusChanged = {},
+            innerLabel = "BTC address"
+        )
+    }
 }
 
 /** Filled — the user tapped outside the field area (unfocused, has text, no icon). */

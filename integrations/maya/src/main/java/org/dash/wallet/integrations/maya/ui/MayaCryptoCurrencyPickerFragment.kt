@@ -59,6 +59,19 @@ class MayaCryptoCurrencyPickerFragment : Fragment() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // The search query lives in the nav-graph-scoped MayaViewModel, so it would
+        // otherwise persist back to the portal and into the next visit. Clear it only
+        // when the picker is popped off the back stack (returning to the portal):
+        // isRemoving is false on a configuration change and while the fragment sits on
+        // the back stack after navigating forward, so the query survives rotation and a
+        // forward-then-back trip.
+        if (isRemoving) {
+            viewModel.onSearchQuery("")
+        }
+    }
+
     private fun showErrorAlert(code: Int) {
         var messageId = R.string.loading_error
 

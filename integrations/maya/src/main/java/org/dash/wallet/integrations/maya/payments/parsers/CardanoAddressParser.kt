@@ -82,6 +82,14 @@ class CardanoAddressParser : AddressParser(
         val payload = bytes.copyOfRange(i, i + payloadLength)
         i += payloadLength
         val crcHeader = bytes[i].toInt() and 0xFF
+        // The CRC argument bytes must fit inside the buffer before the multi-byte reads below.
+        val crcArgLength = when (crcHeader) {
+            0x18 -> 1
+            0x19 -> 2
+            0x1A -> 4
+            else -> 0
+        }
+        require(i + crcArgLength < bytes.size) { "Byron CRC overruns the address" }
         val crc: Long
         when {
             crcHeader < 0x18 -> {

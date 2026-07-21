@@ -82,6 +82,9 @@ fun processAmountKeyInput(current: String, key: String, maxDecimalPlaces: Int = 
 fun NumericKeyboardCompose(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    // Label shown on the decimal key (e.g. ',' for a German locale). Display only: the key
+    // emitted through [onKeyInput] is always ".", so input handling stays locale-independent.
+    decimalSeparator: Char = '.',
     bottomSlot: (@Composable ColumnScope.() -> Unit)? = null,
     onKeyInput: (String) -> Unit
 ) {
@@ -142,7 +145,7 @@ fun NumericKeyboardCompose(
                             )
                         } else {
                             Text(
-                                text = key,
+                                text = if (key == ".") decimalSeparator.toString() else key,
                                 style = MyTheme.Typography.TitleLarge,
                                 color = MyTheme.Colors.textPrimary,
                                 textAlign = TextAlign.Center

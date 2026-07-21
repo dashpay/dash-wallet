@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -37,13 +38,15 @@ import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.MyTheme
-import org.dash.wallet.common.ui.components.NavBarBackTitle
+import org.dash.wallet.common.ui.components.NavBarBack
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.components.Toast
 import org.dash.wallet.common.ui.components.ToastImageResource
+import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
 import org.dash.wallet.integrations.maya.R
+import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 @Composable
@@ -61,11 +64,7 @@ fun DEXEnterAmountScreen(
         isValidating = uiState.isValidating,
         isOnline = uiState.isOnline,
         validationFailed = uiState.validationFailed,
-        coinName = uiState.assetCurrencyCode,
-        coinIconUrl = uiState.coinIconUrl,
-        showBalance = uiState.showBalance,
-        dashBalance = uiState.dashBalance,
-        fiatBalance = uiState.fiatBalance,
+        assetDisplayCode = uiState.assetDisplayCode,
         onKeyInput = viewModel::onKeyInput,
         onCurrencySelected = viewModel::onCurrencySelected,
         onBackClick = onBackClick,
@@ -82,24 +81,28 @@ private fun DEXEnterAmountScreenContent(
     isValidating: Boolean,
     isOnline: Boolean,
     validationFailed: Boolean,
-    coinName: String?,
-    coinIconUrl: String?,
-    showBalance: Boolean,
-    dashBalance: String,
-    fiatBalance: String?,
+    // Heading form of the asset being bought: tokens qualified with their host network
+    // ("USDT (Ethereum)"); native L1 coins just the code ("BTC").
+    assetDisplayCode: String,
     onKeyInput: (String) -> Unit,
     onCurrencySelected: (Int) -> Unit,
     onBackClick: () -> Unit,
-    onContinueClick: () -> Unit
+    onContinueClick: () -> Unit,
+    // Overridable so previews can force a specific locale (symbol position, separators).
+    locale: Locale = Locale.getDefault()
 ) {
+    // The ViewModel keeps the amount as a plain '.'-separated string (it round-trips through
+    // BigDecimal parsing and persistence); the locale's decimal separator is applied here,
+    // at the display boundary, and on the keypad's separator key label.
+    val decimalSeparator = remember(locale) { DecimalFormatSymbols.getInstance(locale).decimalSeparator }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            NavBarBackTitle(
-                title = stringResource(R.string.dex_enter_amount_title),
+            NavBarBack(
                 onBackClick = onBackClick
             )
 
@@ -113,11 +116,12 @@ private fun DEXEnterAmountScreenContent(
                     .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                TopIntro(heading = stringResource(R.string.dex_enter_amount_title, assetDisplayCode))
                 EnterAmount(
-                    primaryAmount = amount,
+                    primaryAmount = amount.replace('.', decimalSeparator),
                     currencyCodes = currencyCodes,
                     selectedCurrencyIndex = selectedCurrencyIndex,
-                    locale = Locale.getDefault(),
+                    locale = locale,
                     showMaxButton = false,
                     showBalanceButton = false,
                     showSecondary = false,
@@ -149,6 +153,7 @@ private fun DEXEnterAmountScreenContent(
                 // without a connection — and while the entered amount is being validated, so the
                 // validated amount can't change mid-flight.
                 enabled = isOnline && !isValidating,
+                decimalSeparator = decimalSeparator,
                 onKeyInput = onKeyInput,
                 bottomSlot = {
                     DashButton(
@@ -192,11 +197,7 @@ private fun DEXEnterAmountScreenZeroPreview() {
         isValidating = false,
         isOnline = true,
         validationFailed = false,
-        coinName = "BTC",
-        coinIconUrl = null,
-        showBalance = true,
-        dashBalance = "1.23456789",
-        fiatBalance = "USD 45.67",
+        assetDisplayCode = "BTC",
         onKeyInput = {},
         onCurrencySelected = {},
         onBackClick = {},
@@ -215,14 +216,33 @@ private fun DEXEnterAmountScreenEnabledPreview() {
         isValidating = false,
         isOnline = true,
         validationFailed = false,
-        coinName = "BTC",
-        coinIconUrl = null,
-        showBalance = true,
-        dashBalance = "1.23456789",
-        fiatBalance = "USD 45.67",
+        assetDisplayCode = "BTC",
         onKeyInput = {},
         onCurrencySelected = {},
         onBackClick = {},
         onContinueClick = {}
+    )
+}
+
+/** German locale — decimal comma and the € symbol rendered after the amount ("125,50 €"). */
+@Preview(showBackground = true, widthDp = 393, heightDp = 760)
+@Composable
+private fun DEXEnterAmountScreenGermanPreview() {
+    DEXEnterAmountScreenContent(
+        // The amount string arrives from the ViewModel as a plain '.'-separated string;
+        // the screen renders it (and the keypad's separator key) with the decimal comma.
+        amount = "125.50",
+        currencyCodes = listOf("EUR", DASH_CURRENCY_CODE, "BTC"),
+        selectedCurrencyIndex = 0,
+        continueEnabled = true,
+        isValidating = false,
+        isOnline = true,
+        validationFailed = false,
+        assetDisplayCode = "BTC",
+        onKeyInput = {},
+        onCurrencySelected = {},
+        onBackClick = {},
+        onContinueClick = {},
+        locale = Locale.GERMANY
     )
 }

@@ -116,71 +116,77 @@ private fun DEXReceiveScreenContent(
                     .fillMaxWidth()
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    // Heading sits directly below the nav bar: Figma's content `pt-116px` is just the
-                    // height of the (overlaid) status + nav bar that NavBarBack already occupies, so only
-                    // the 10dp `safe-area/top` remains as real padding (matches DEXRefundAddressScreen).
-                    .padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
+                // Heading sits directly below the nav bar: Figma's content `pt-116px` is just the
+                // height of the (overlaid) status + nav bar that NavBarBack already occupies, so
+                // TopIntro's built-in padding (10dp `safe-area/top`, 20dp sides, 20dp below) covers
+                // the remaining insets and the gap to the card (matches DEXRefundAddressScreen).
                 TopIntro(
                     heading = stringResource(R.string.dex_receive_heading, coinCode),
                     text = stringResource(R.string.dex_receive_description)
                 )
 
-                // White card with QR + URI row. shadows/xs: #B8C1CC ~10% alpha, y=5, blur=20.
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(
-                            elevation = 20.dp,
-                            shape = RoundedCornerShape(20.dp),
-                            ambientColor = Color(0xFFB8C1CC),
-                            spotColor = Color(0xFFB8C1CC)
-                        )
-                        .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
-                        .padding(top = 40.dp, bottom = 20.dp, start = 20.dp, end = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    if (errorMessageRes != null) {
-                        Text(
-                            // coinCode is the format arg; messages without a placeholder ignore it.
-                            text = stringResource(errorMessageRes, coinCode),
-                            style = MyTheme.Body2Regular,
-                            color = MyTheme.Colors.red,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    } else {
-                        QrArea(content = qrContent, isLoading = isLoading || qrContent.isBlank())
-
-                        LabeledCopyRow(
-                            label = stringResource(R.string.dex_receive_uri_label),
-                            value = uri.ifBlank { address },
-                            onCopyClick = { onCopyClick(uri.ifBlank { address }) }
-                        )
-
-                        // Some chains require a memo/tag alongside the deposit; without it the
-                        // funds can't be matched to the swap. The QR only encodes address +
-                        // amount, so the memo gets its own copyable row and a red warning.
-                        if (memo.isNotBlank()) {
-                            LabeledCopyRow(
-                                label = stringResource(R.string.dex_receive_memo_label),
-                                value = memo,
-                                onCopyClick = { onCopyClick(memo) }
+                    // White card with QR + URI row. shadows/xs: #B8C1CC ~10% alpha, y=5, blur=20.
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(
+                                elevation = 20.dp,
+                                shape = RoundedCornerShape(20.dp),
+                                ambientColor = Color(0xFFB8C1CC),
+                                spotColor = Color(0xFFB8C1CC)
                             )
+                            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                            .padding(top = 40.dp, bottom = 20.dp, start = 20.dp, end = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (errorMessageRes != null) {
                             Text(
-                                text = stringResource(R.string.dex_receive_memo_warning),
+                                // coinCode is the format arg; messages without a placeholder ignore it.
+                                text = stringResource(errorMessageRes, coinCode),
                                 style = MyTheme.Body2Regular,
                                 color = MyTheme.Colors.red,
+                                textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()
                             )
+                        } else {
+                            QrArea(content = qrContent, isLoading = isLoading || qrContent.isBlank())
+
+                            LabeledCopyRow(
+                                label = stringResource(R.string.dex_receive_uri_label),
+                                value = uri.ifBlank { address },
+                                onCopyClick = { onCopyClick(uri.ifBlank { address }) }
+                            )
+
+                            // Some chains require a memo/tag alongside the deposit; without it the
+                            // funds can't be matched to the swap. The QR only encodes address +
+                            // amount, so the memo gets its own copyable row and a red warning.
+                            if (memo.isNotBlank()) {
+                                LabeledCopyRow(
+                                    label = stringResource(R.string.dex_receive_memo_label),
+                                    value = memo,
+                                    onCopyClick = { onCopyClick(memo) }
+                                )
+                                Text(
+                                    text = stringResource(R.string.dex_receive_memo_warning),
+                                    style = MyTheme.Body2Regular,
+                                    color = MyTheme.Colors.red,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                     }
-                }
 
-                // Expiry warning card (Figma 36265:22210): yellow triangle + title + refund note.
-                ExpiryWarning(coinCode = coinCode)
+                    // Expiry warning card (Figma 36265:22210): yellow triangle + title + refund note.
+                    ExpiryWarning(coinCode = coinCode)
+                }
             }
 
             // Pinned bottom "Back home" button (btn-l tinted-gray). Figma insets the button an extra
@@ -266,7 +272,7 @@ private fun QrArea(content: String, isLoading: Boolean) {
             modifier = Modifier.size(200.dp),
             contentAlignment = Alignment.Center
         ) {
-            val bitmap = remember(content) {
+            val bitmap = remember(content, isLoading) {
                 if (isLoading || content.isBlank()) null else Qr.qrBitmap(content)
             }
 

@@ -62,6 +62,11 @@ class MayaConvertCryptoViewModel @Inject constructor(
     val networkParameters get() = walletDataProvider.networkParameters
 
     var paymentIntent: PaymentIntent? = null
+
+    // Source of truth for the inline amount error: the Compose UIState lives in the fragment
+    // and is recreated with the view, so the currently shown error is kept here to survive
+    // configuration changes.
+    var inlineErrorMessage: String? = null
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
