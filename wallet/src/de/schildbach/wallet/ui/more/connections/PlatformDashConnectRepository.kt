@@ -217,9 +217,13 @@ class PlatformDashConnectRepository @Inject constructor(
 
         val existing = findOwnLoginKeyResponse(identity.id, appContractIdBytes)
         val signer: Signer = WalletSignerCallback(platformRepo.walletApplication.wallet!!, keyParameter)
-        // Documents default to a HIGH security-level authentication key (DPP default).
-        val highKey = identity.getFirstPublicKey(SecurityLevel.HIGH)
-            ?: error("no HIGH security-level authentication key on identity")
+        // Documents default to a HIGH security-level authentication key (DPP default). Must be
+        // the wallet-controlled ECDSA_SECP256K1 key: after a dash-st key registration the identity
+        // also carries a HIGH ECDSA_HASH160 login key (derived, not in the wallet keychain), and
+        // getFirstPublicKey(HIGH) would otherwise pick that and the signer callback fails.
+        val highKey = identity.getFirstPublicKey(
+            Purpose.AUTHENTICATION, SecurityLevel.HIGH, KeyType.ECDSA_SECP256K1
+        ) ?: error("no wallet-controlled HIGH authentication key on identity")
 
         val result = if (existing == null) {
             val document = platform.platform.documents.create(TYPE_LOCATOR, identity.id, fields)
