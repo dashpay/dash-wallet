@@ -54,7 +54,9 @@ class AddressParserTest {
         assertTrue(parser.exactMatch("34Me5SAG8W8Bf2LxGfPiqVZRKKV1VL1hmW"))
         assertTrue(parser.exactMatch("bc1qxhgnnp745zryn2ud8hm6k3mygkkpkm35020js0"))
         assertTrue(parser.exactMatch("bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297"))
+        assertTrue(parser.exactMatch("bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0"))
         SegwitAddress.fromBech32(network, "bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297")
+        SegwitAddress.fromBech32(network, "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0")
 
         assertEquals(
             4,

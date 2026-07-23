@@ -133,6 +133,7 @@ class MainViewModelTest {
     private val mockIdentityData = BlockchainIdentityBaseData(IdentityCreationState.NONE, null, null, null, null, false,null, false)
     private val blockchainIdentityConfigMock = mockk<BlockchainIdentityConfig> {
         coEvery { loadBase() } returns mockIdentityData
+        every { observe() } returns flow { }
         every { observeBase() } returns MutableStateFlow(mockIdentityData)
         every { observe() } returns MutableStateFlow(
             BlockchainIdentityData(IdentityCreationState.NONE, null, null, null, null, false)
@@ -213,7 +214,7 @@ class MainViewModelTest {
 
     }
 
-    private val txDisplayCacheService = mockk<TxDisplayCacheService>(relaxed = true)
+    private val txDisplayCacheService = mockk<TxDisplayCacheService>(relaxUnitFun = true)
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
     private val coinJoinConfig = mockk<CoinJoinConfig>()

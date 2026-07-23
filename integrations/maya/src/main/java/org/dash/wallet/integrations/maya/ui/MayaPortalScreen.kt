@@ -20,7 +20,6 @@ package org.dash.wallet.integrations.maya.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,10 +28,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -42,17 +41,16 @@ import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
-import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.common.R as CommonR
 
-private val MayaLogoBackground = Color(0xFF151D3F)
-
 @Composable
 fun MayaPortalScreen(
+    showBuy: Boolean = true,
     onBackClick: () -> Unit = {},
-    onConvertClick: () -> Unit = {}
+    onBuyClick: () -> Unit = {},
+    onSellClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -71,34 +69,60 @@ fun MayaPortalScreen(
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 20.dp),
+                .padding(top = 10.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            TopIntro(
-                heading = stringResource(R.string.maya_service_name),
-                text = stringResource(R.string.maya_portal_subtitle)
+            // Intro card: DashDEX illustration + headline + subtitle (adapter-agnostic branding)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                horizontalAlignment = Alignment.Start
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 79.dp, height = 80.dp)
-                        .background(MayaLogoBackground, RoundedCornerShape(20.dp)),
-                    contentAlignment = Alignment.Center
+                Image(
+                    painter = painterResource(R.drawable.ic_dash_dex_illustration),
+                    contentDescription = null,
+                    modifier = Modifier.size(60.dp)
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.ic_maya_logo),
-                        contentDescription = null,
-                        modifier = Modifier.size(44.dp)
+                    Text(
+                        text = stringResource(R.string.dash_dex_title),
+                        style = MyTheme.Typography.HeadlineSmallBold,
+                        color = MyTheme.Colors.textPrimary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text = stringResource(R.string.dash_dex_subtitle),
+                        style = MyTheme.Body2Regular,
+                        color = MyTheme.Colors.textSecondary,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
 
             Menu {
+                // Buying Dash (any crypto -> Dash Wallet) is only available on backends that
+                // support it (SwapKit). Maya can only sell Dash, so the Buy row is hidden there.
+                if (showBuy) {
+                    MenuItem(
+                        title = stringResource(R.string.dash_dex_buy_title),
+                        subtitle = stringResource(R.string.dash_dex_buy_subtitle),
+                        icon = R.drawable.ic_dash_dex_buy,
+                        action = onBuyClick
+                    )
+                }
                 MenuItem(
-                    title = stringResource(R.string.maya_portal_convert_title),
-                    subtitle = stringResource(R.string.maya_portal_convert_subtitle),
-                    icon = R.drawable.ic_convert_icon,
-                    showChevron = true,
-                    action = onConvertClick
+                    title = stringResource(R.string.dash_dex_sell_title),
+                    subtitle = stringResource(R.string.dash_dex_sell_subtitle),
+                    icon = R.drawable.ic_dash_dex_sell,
+                    action = onSellClick
                 )
             }
         }
@@ -107,6 +131,12 @@ fun MayaPortalScreen(
 
 @Composable
 @Preview
-private fun MayaPortalScreenPreview() {
-    MayaPortalScreen()
+private fun MayaPortalScreenBuyAndSellPreview() {
+    MayaPortalScreen(showBuy = true)
+}
+
+@Composable
+@Preview
+private fun MayaPortalScreenSellOnlyPreview() {
+    MayaPortalScreen(showBuy = false)
 }

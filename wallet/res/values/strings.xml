@@ -165,6 +165,10 @@
     <string name="transaction_row_status_error_obsolete">Obsolete</string>
     <string name="transaction_row_status_error_invalid">Invalid</string>
     <string name="transaction_row_status_error_other">Unknown</string>
+    <string name="transaction_row_status_refunded">Refunded</string>
+    <string name="transaction_row_status_failed">Failed</string>
+    <string name="transaction_row_conversion">Conversion · %1$s/%2$s</string>
+    <string name="transaction_row_converted">Converted · %1$s/%2$s</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">On %s at %s</string>
     <string name="transaction_row_status_masternode_registration">Masternode Registration</string>

@@ -1,5 +1,6 @@
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,32 +12,64 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.integrations.ExchangeIntegration
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider
 import org.dash.wallet.common.ui.address_input.AddressSource
-import org.dash.wallet.integrations.maya.api.MayaWebApi
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.SwapQuote
+import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MayaAddressInputViewModel @Inject constructor(
     private val exchangeIntegrationProvider: ExchangeIntegrationProvider,
-    private val mayaWebApi: MayaWebApi
+    private val swapProvider: SwapProvider
 ) : ViewModel() {
+    companion object {
+        // Indicative sell amount for the bootstrap quote: 1 DASH in base units.
+        private const val DEFAULT_QUOTE_VALUE = 1_0000_0000L
+
+        // How many times the default amount is doubled when a route rejects it as
+        // below its minimum (1 -> 2 -> 4 DASH).
+        private const val MAX_QUOTE_DOUBLINGS = 2
+    }
+
     lateinit var asset: String
+
+    // Source of truth for the inline validation error and the address it was shown for:
+    // the Compose UIState lives in the fragment and is recreated with the view, so they
+    // are kept here to survive configuration changes. lastSeenAddress lets the fragment
+    // distinguish a real address edit (which invalidates the error) from the replay of
+    // the persisted address right after recreation.
+    var inlineErrorMessage: String? = null
+    var lastSeenAddress: String? = null
+
     private val inputCurrency = MutableStateFlow<String?>(null)
     private val _addressSources = MutableStateFlow(listOf<AddressSource>())
     val addressSources: Flow<List<AddressSource>>
         get() = _addressSources.asStateFlow()
 
-    private fun refreshAddressSources(it: List<ExchangeIntegration>) {
-        val sources = it.map { integration ->
-            AddressSource(
-                integration.id,
-                integration.name,
-                integration.iconId,
-                integration.address,
-                integration.currency
-            )
-        }
+    private fun refreshAddressSources(integrations: List<ExchangeIntegration>) {
+        // The selected [asset] (e.g. "TRON.USDT") pins the destination network. An
+        // exchange such as Coinbase may only support some networks for a coin (e.g.
+        // ERC-20 USDT, not TRON.USDT) and hand back a deposit address on the wrong
+        // network. Sending the swap output there would lose funds, so drop any
+        // connected source whose address doesn't validate against this asset's own
+        // parser. Sources without an address yet (not connected) are kept so the user
+        // can still connect.
+        val addressParser = if (::asset.isInitialized) MayaCurrencyList[asset]?.addressParser else null
+        val sources = integrations
+            .filter { integration ->
+                val address = integration.address
+                address == null || addressParser == null || addressParser.exactMatch(address.trim())
+            }
+            .map { integration ->
+                AddressSource(
+                    integration.id,
+                    integration.name,
+                    integration.iconId,
+                    integration.address,
+                    integration.currency
+                )
+            }
         _addressSources.value = sources
     }
 
@@ -53,10 +86,29 @@ class MayaAddressInputViewModel @Inject constructor(
     }
 
     suspend fun getDefaultQuote(): SwapQuote? {
-        return mayaWebApi.getDefaultSwapQuote(asset)
+        return swapProvider.getDefaultSwapQuote(asset)
     }
 
     suspend fun getDefaultQuote(destinationAddress: String): SwapQuote? {
-        return mayaWebApi.getDefaultSwapQuote(asset, destinationAddress)
+        var value = DEFAULT_QUOTE_VALUE
+        var quote = swapProvider.getDefaultSwapQuote(asset, destinationAddress, value)
+        // Some routes have a minimum above the default indicative amount, which the
+        // backend reports as an amount-too-low error. Double the amount and retry —
+        // at most [MAX_QUOTE_DOUBLINGS] times — before surfacing the error. Other
+        // errors (bad address, network failure) won't be fixed by a bigger amount,
+        // so they are returned as is.
+        repeat(MAX_QUOTE_DOUBLINGS) {
+            val error = quote?.error
+            if (error == null || !swapProvider.isAmountTooLowError(error)) {
+                return quote
+            }
+            value *= 2
+            quote = swapProvider.getDefaultSwapQuote(asset, destinationAddress, value)
+        }
+        return quote
     }
+
+    /** Friendly message resource for a quote error, mapped by whichever backend is active. */
+    @StringRes
+    fun errorMessageRes(error: String?): Int = swapProvider.errorMessageRes(error)
 }

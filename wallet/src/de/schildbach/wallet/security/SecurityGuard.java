@@ -712,6 +712,17 @@ public class SecurityGuard {
     }
 
     /**
+     * Remove PIN- and mnemonic-based fallback entries so they can be recreated.
+     * Call this after a PIN change, before re-adding fallbacks: the existing PIN-fallback
+     * is encrypted with the old PIN and the mnemonic-fallback contains the old PIN.
+     */
+    public synchronized void removeFallbacks() {
+        if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+            ((DualFallbackEncryptionProvider) encryptionProvider).removeFallbacks();
+        }
+    }
+
+    /**
      * Ensure mnemonic-based fallback encryption for both PIN and wallet password
      * Call this after wallet initialization when mnemonic is available
      *

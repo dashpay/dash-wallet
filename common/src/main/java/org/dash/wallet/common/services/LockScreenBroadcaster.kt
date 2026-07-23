@@ -24,4 +24,11 @@ import org.dash.wallet.common.data.SingleLiveEvent
 // That way, it will be dismissed automatically.
 class LockScreenBroadcaster {
     val activatingLockScreen = SingleLiveEvent<Void>()
+
+    /**
+     * Fired when the lock screen is dismissed (successful unlock). Lets feature modules restore
+     * UI the lock screen tore down — e.g. re-show a result dialog that was auto-dismissed when
+     * the wallet locked (LockScreenActivity dismisses all DialogFragments on lock).
+     */
+    val deactivatingLockScreen = SingleLiveEvent<Void>()
 }

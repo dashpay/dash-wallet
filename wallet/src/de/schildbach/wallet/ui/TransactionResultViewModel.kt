@@ -43,12 +43,14 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
+import org.dash.wallet.integrations.maya.data.SwapOrderDao
 import javax.inject.Inject
 
 @HiltViewModel
 class TransactionResultViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
+    private val swapOrderDao: SwapOrderDao,
     val walletData: WalletDataProvider,
     val configuration: Configuration,
     private val dashPayProfileDao: DashPayProfileDao,
@@ -83,6 +85,13 @@ class TransactionResultViewModel @Inject constructor(
         .filter { ServiceName.isDashSpend(it.service) }
         .map { giftCardDao.getCardForTransaction(it.txId).firstOrNull()?.merchantName }
         .filterNotNull()
+        .asLiveData()
+
+    /** The DEX swap this tx funded, or null if it isn't a swap. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val swapOrder = _transaction
+        .filterNotNull()
+        .flatMapLatest { swapOrderDao.observeOrder(it.txId) }
         .asLiveData()
 
     private val _contact = MutableLiveData<DashPayProfile?>()

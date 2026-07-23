@@ -40,6 +40,7 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -92,6 +93,16 @@ class ContactsFragment : Fragment(),
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // DashPayUserBottomSheet is shown on the activity's FragmentManager (via show(activity)),
+        // so listen there for its result.
+        requireActivity().supportFragmentManager.setFragmentResultListener(
+            DashPayUserBottomSheet.REQUEST_KEY,
+            viewLifecycleOwner
+        ) { _, bundle ->
+            if (bundle.getBoolean(DashPayUserBottomSheet.KEY_CHANGED, false)) {
+                searchContacts()
+            }
+        }
         // blockchainIdentity LiveData is populated asynchronously from DataStore.
         // Reading hasIdentity synchronously can return false before the first
         // emission, misrouting users who have a username to the EvoUpgrade screen.
@@ -314,6 +325,18 @@ class ContactsFragment : Fragment(),
         dashPayViewModel.updateDashPayState()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // identityResolved and viewsInitialized are one-shot guards scoped to a single view
+        // lifecycle, but the fragment instance (and these fields) survives on the navigation back
+        // stack while the view is destroyed and later recreated. If we don't reset them, returning
+        // to this screen (e.g. back from SearchUserFragment) leaves the blockchainIdentity observer
+        // early-returning and setupContactsViews() skipped, so the container stays hidden and the
+        // contact list never repopulates. Reset so a recreated view re-runs the full setup.
+        identityResolved = false
+        viewsInitialized = false
+    }
+
     private fun processResults(data: List<UsernameSearchResult>) {
         val results = ArrayList<ContactSearchResultsAdapter.ViewItem>()
         // process the requests
@@ -401,7 +424,7 @@ class ContactsFragment : Fragment(),
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
         when (args.mode) {
             ContactsScreenMode.SEARCH_CONTACTS, ContactsScreenMode.VIEW_REQUESTS -> {
-                startActivity(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult))
+                DashPayUserBottomSheet.newInstance(usernameSearchResult).show(requireActivity())
             }
             ContactsScreenMode.SELECT_CONTACT -> {
                 handleString(usernameSearchResult.toContactRequest!!.toUserId, true, R.string.scan_to_pay_username_dialog_message)
