@@ -39,16 +39,17 @@ import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.document.DocumentCreateTransition
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
-import org.dashj.platform.dpp.identity.IdentityUpdateTransition
-import org.dashj.platform.dpp.statetransition.StateTransitionFactory
+import org.dashj.platform.dpp.identity.IdentityPublicKey
 import org.dashj.platform.sdk.BlockHeight
 import org.dashj.platform.sdk.CoreBlockHeight
+import org.dashj.platform.sdk.KeyID
 import org.dashj.platform.sdk.KeyType
 import org.dashj.platform.sdk.Purpose
 import org.dashj.platform.sdk.SecurityLevel
 import org.dashj.platform.sdk.callbacks.Signer
 import org.dashj.platform.sdk.client.ClientAppDefinition
 import org.dashj.platform.sdk.dashsdk
+import org.dashj.platform.dashpay.callback.SimpleSignerCallback
 import org.dashj.platform.dashpay.callback.WalletSignerCallback
 import org.dashj.platform.dapiclient.model.DocumentQuery
 import org.slf4j.LoggerFactory
@@ -180,7 +181,9 @@ class PlatformDashConnectRepository @Inject constructor(
             contractId = contractIdBase58,
             label = request.label,
             url = "",
-            status = ConnectionStatus.ACTIVE.name,
+            // ACTIVE only once the login completes (first login: after the dash-st
+            // key registration; repeat login: the app logs in without a second QR)
+            status = ConnectionStatus.APPROVED.name,
             updatedAt = System.currentTimeMillis()
         )
         config.upsertConnection(stored)
@@ -218,11 +221,10 @@ class PlatformDashConnectRepository @Inject constructor(
         val highKey = identity.getFirstPublicKey(SecurityLevel.HIGH)
             ?: error("no HIGH security-level authentication key on identity")
 
-        val document = platform.platform.documents.create(TYPE_LOCATOR, identity.id, fields)
-        val contractId = document.dataContractId
-            ?: error("loginKeyResponse document has no contract id")
-
         val result = if (existing == null) {
+            val document = platform.platform.documents.create(TYPE_LOCATOR, identity.id, fields)
+            val contractId = document.dataContractId
+                ?: error("loginKeyResponse document has no contract id")
             document.revision = DocumentCreateTransition.INITIAL_REVISION
             dashsdk.platformMobilePutPutDocumentSdk(
                 platform.platform.rustSdk,
@@ -236,12 +238,21 @@ class PlatformDashConnectRepository @Inject constructor(
                 BigInteger.valueOf(signer.signerCallback)
             )
         } else {
-            document.revision = existing.revision + 1
+            // A replace transition must reference the EXISTING document's $id — creating a
+            // fresh document generates new entropy and a new id, which Drive rejects with
+            // DocumentNotFoundError (40101). Mutate the stored document instead.
+            val contractId = existing.dataContractId
+                ?: error("loginKeyResponse document has no contract id")
+            // Documents built from query results leave `type` null (only the create path
+            // sets it); a null type segfaults the native replace call, so set it explicitly.
+            existing.type = DOCUMENT_TYPE
+            existing.data = fields
+            existing.revision += 1
             dashsdk.platformMobilePutReplaceDocumentSdk(
                 platform.platform.rustSdk,
-                document.toNative(),
+                existing.toNative(),
                 contractId.toNative(),
-                document.type,
+                existing.type,
                 highKey.toNative(),
                 BlockHeight(10000),
                 CoreBlockHeight(platform.platform.coreBlockHeight),
@@ -270,66 +281,21 @@ class PlatformDashConnectRepository @Inject constructor(
 
         val blockchainIdentity = identityRepository.blockchainIdentity
             ?: throw IllegalStateException("blockchain identity not available")
-        val identity = blockchainIdentity.identity
-            ?: throw IllegalStateException("identity not loaded")
         val identityIdBytes = blockchainIdentity.uniqueIdData
         val keyParameter = platformRepo.getWalletEncryptionKey()
 
-        // deserialize the transition bytes (structure validated by the SDK factory)
-        val factory = StateTransitionFactory(platform.dpp, platform.stateRepository)
-        val stateTransition = factory.createFromBuffer(
-            request.transitionBytes,
-            StateTransitionFactory.Options(true) // skipValidation: we validate ourselves + broadcast validates
-        )
-        val transition = stateTransition as? IdentityUpdateTransition
-            ?: throw DashConnectUriException("dash-st is not an IdentityUpdateTransition")
+        // The dash-st payload is a wasm-sdk (bincode) serialized IdentityUpdateTransition, which
+        // this SDK cannot deserialize (its factory is CBOR-only) and whose embedded revision and
+        // nonce snapshots go stale anyway. The keys it registers are fully deterministic from our
+        // login key, so instead of countersigning the app's bytes we rebuild the equivalent update
+        // against fresh identity state: the same two derived keys, at the current revision, signed
+        // by the master key. The wallet therefore never signs app-supplied transition content.
+        val connection = config.getConnections()
+            .filter { it.status == ConnectionStatus.APPROVED.name }
+            .maxByOrNull { it.updatedAt }
+            ?: throw DashConnectUriException("no login awaiting key registration — scan the app's login QR first")
+        val contractIdBytes = Base58.decode(connection.contractId)
 
-        validateKeyRegistration(transition, identity, identityIdBytes, keyParameter)
-
-        // sign with the identity MASTER authentication key and broadcast
-        val masterPublicKey = blockchainIdentity.getIdentityPublicKeyByPurpose(
-            org.dashj.platform.dashpay.BlockchainIdentity.KeyIndexPurpose.MASTER
-        ) ?: error("no MASTER authentication key on identity")
-        val masterEcKey = blockchainIdentity.getPrivateKeyByPurpose(
-            org.dashj.platform.dashpay.BlockchainIdentity.KeyIndexPurpose.MASTER,
-            keyParameter
-        )
-
-        platform.platform.broadcastStateTransition(transition, identity, masterEcKey, masterPublicKey.id)
-        log.info("broadcast dash-st IdentityUpdateTransition for identity ${blockchainIdentity.uniqueIdString}")
-    }
-
-    /**
-     * Validates the dash-st transition against the protocol rules and STRONGLY verifies that the
-     * two added public keys were derived from THIS wallet's login key (mismatch = forged QR).
-     */
-    private suspend fun validateKeyRegistration(
-        transition: IdentityUpdateTransition,
-        identity: Identity,
-        identityIdBytes: ByteArray,
-        keyParameter: org.bouncycastle.crypto.params.KeyParameter?
-    ) {
-        // identity ownership
-        if (!transition.identityId.toBuffer().contentEquals(identity.id.toBuffer())) {
-            throw DashConnectUriException("dash-st identityId is not ours")
-        }
-        // no key disables allowed
-        if (!transition.disablePublicKeys.isNullOrEmpty()) {
-            throw DashConnectUriException("dash-st must not disable keys")
-        }
-        // exactly 2 keys: authentication/HIGH/ECDSA_HASH160 and encryption/MEDIUM/ECDSA_SECP256K1
-        val addKeys = transition.addPublicKeys.orEmpty()
-        if (addKeys.size != 2) {
-            throw DashConnectUriException("dash-st must add exactly 2 keys, was ${addKeys.size}")
-        }
-        val authKey = addKeys.firstOrNull {
-            it.purpose == Purpose.AUTHENTICATION && it.securityLevel == SecurityLevel.HIGH && it.type == KeyType.ECDSA_HASH160
-        } ?: throw DashConnectUriException("dash-st missing authentication/HIGH/ECDSA_HASH160 key")
-        val encKey = addKeys.firstOrNull {
-            it.purpose == Purpose.ENCRYPTION && it.securityLevel == SecurityLevel.MEDIUM && it.type == KeyType.ECDSA_SECP256K1
-        } ?: throw DashConnectUriException("dash-st missing encryption/MEDIUM/ECDSA_SECP256K1 key")
-
-        // STRONG end-to-end check: re-derive from our login key and match the QR's key data.
         val chainKey = platformRepo.getBlockchainIdentityKey(LoginKeyDerivation.DEFAULT_KEY_INDEX, keyParameter)
             ?: throw IllegalStateException("could not derive authentication chain key")
         val chainKeyPrivateBytes = chainKey.privKeyBytes
@@ -337,27 +303,64 @@ class PlatformDashConnectRepository @Inject constructor(
         var authPriv: ByteArray? = null
         var encPriv: ByteArray? = null
         try {
-            // The app contract id is not carried in the dash-st transition; it is bound only via
-            // the login key. We therefore verify against the contract the wallet is registering for
-            // by trying each known connection's contract id until one matches, OR — since the QR is
-            // scanned right after the dash-key login for the same app — verify against ALL stored
-            // apps. In practice the auth/enc key data uniquely identify the right (identity, app).
-            val candidateContractIds = candidateContractIds()
-            var matched = false
-            for (contractIdBytes in candidateContractIds) {
-                loginKey = LoginKeyDerivation.deriveLoginKey(chainKeyPrivateBytes, identityIdBytes, contractIdBytes)
-                authPriv = KeyExchangeCrypto.deriveAuthPrivateKey(loginKey, identityIdBytes)
-                encPriv = KeyExchangeCrypto.deriveEncryptionPrivateKey(loginKey, identityIdBytes)
-                val expectedAuthData = KeyExchangeCrypto.hash160(KeyExchangeCrypto.compressedPublicKey(authPriv))
-                val expectedEncData = KeyExchangeCrypto.compressedPublicKey(encPriv)
-                if (expectedAuthData.contentEquals(authKey.data) && expectedEncData.contentEquals(encKey.data)) {
-                    matched = true
-                    break
+            loginKey = LoginKeyDerivation.deriveLoginKey(chainKeyPrivateBytes, identityIdBytes, contractIdBytes)
+            authPriv = KeyExchangeCrypto.deriveAuthPrivateKey(loginKey, identityIdBytes)
+            encPriv = KeyExchangeCrypto.deriveEncryptionPrivateKey(loginKey, identityIdBytes)
+            val authData = KeyExchangeCrypto.hash160(KeyExchangeCrypto.compressedPublicKey(authPriv))
+            val encData = KeyExchangeCrypto.compressedPublicKey(encPriv)
+
+            val updatedIdentity = platform.platform.identities.get(blockchainIdentity.uniqueIdentifier)
+                ?: error("identity not found on platform")
+            val hasAuth = updatedIdentity.publicKeys.any { it.data.contentEquals(authData) }
+            val hasEnc = updatedIdentity.publicKeys.any { it.data.contentEquals(encData) }
+
+            if (hasAuth && hasEnc) {
+                log.info("login keys for app ${connection.contractId} already registered on identity")
+            } else {
+                var nextKeyId = updatedIdentity.publicKeys.maxOf { it.id } + 1
+                val addKeys = mutableListOf<IdentityPublicKey>()
+                val signingKeys = mutableMapOf<IdentityPublicKey, ECKey>()
+                if (!hasAuth) {
+                    val key = IdentityPublicKey(
+                        nextKeyId++, KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION,
+                        SecurityLevel.HIGH, null, authData, false
+                    )
+                    addKeys += key
+                    signingKeys[key] = ECKey.fromPrivate(authPriv, true)
                 }
-                KeyExchangeCrypto.wipe(loginKey); KeyExchangeCrypto.wipe(authPriv); KeyExchangeCrypto.wipe(encPriv)
-            }
-            if (!matched) {
-                throw DashConnectUriException("dash-st keys were not derived from this wallet (possible forged QR)")
+                if (!hasEnc) {
+                    val key = IdentityPublicKey(
+                        nextKeyId, KeyType.ECDSA_SECP256K1, Purpose.ENCRYPTION,
+                        SecurityLevel.MEDIUM, null, encData, false
+                    )
+                    addKeys += key
+                    signingKeys[key] = ECKey.fromPrivate(encPriv, true)
+                }
+
+                val masterPublicKey = updatedIdentity.getFirstPublicKey(Purpose.AUTHENTICATION, SecurityLevel.MASTER)
+                    ?: error("no MASTER authentication key on identity")
+                val masterEcKey = blockchainIdentity.getPrivateKeyByPurpose(
+                    org.dashj.platform.dashpay.BlockchainIdentity.KeyIndexPurpose.MASTER,
+                    keyParameter
+                )
+                signingKeys[masterPublicKey] = masterEcKey
+                val signer = SimpleSignerCallback(signingKeys, keyParameter)
+
+                updatedIdentity.revision++
+                val result = dashsdk.platformMobilePutPutIdentityUpdateSdk(
+                    platform.platform.rustSdk,
+                    updatedIdentity.toNative(),
+                    KeyID(masterPublicKey.id),
+                    addKeys.map { it.toNative() },
+                    arrayListOf(),
+                    signer.nativeContext,
+                    BigInteger.valueOf(signer.signerCallback)
+                )
+                result.unwrap()
+                log.info(
+                    "registered ${addKeys.size} login key(s) on identity " +
+                        "${blockchainIdentity.uniqueIdString} for app ${connection.contractId}"
+                )
             }
         } finally {
             KeyExchangeCrypto.wipe(loginKey)
@@ -365,22 +368,18 @@ class PlatformDashConnectRepository @Inject constructor(
             KeyExchangeCrypto.wipe(encPriv)
             KeyExchangeCrypto.wipe(chainKeyPrivateBytes)
         }
+
+        // the app auto-completes login as soon as the keys land on the identity
+        config.updateStatus(connection.contractId, ConnectionStatus.ACTIVE.name, System.currentTimeMillis())
     }
-
-    /** Contract ids of apps the wallet is currently connecting to, as raw 32-byte arrays. */
-    private suspend fun candidateContractIds(): List<ByteArray> =
-        config.getConnections().mapNotNull {
-            try {
-                Base58.decode(it.contractId).takeIf { bytes -> bytes.size == 32 }
-            } catch (ex: Exception) {
-                null
-            }
-        }
-
     // ── disconnect ───────────────────────────────────────────────────────────────
 
     override suspend fun disconnect(connectionId: String) {
         config.updateStatus(connectionId, ConnectionStatus.DISCONNECTED.name, System.currentTimeMillis())
+    }
+
+    override suspend fun removeConnection(connectionId: String) {
+        config.removeConnection(connectionId)
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────────

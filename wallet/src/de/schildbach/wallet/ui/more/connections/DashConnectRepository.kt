@@ -103,6 +103,13 @@ interface DashConnectRepository {
     suspend fun completeKeyRegistration(request: DashStRequest)
 
     suspend fun disconnect(connectionId: String)
+
+    /**
+     * Removes the local connection record so the user can start the login flow over.
+     * Any published `loginKeyResponse` document is left on Platform — a future login
+     * replaces it (unique index on owner + contract).
+     */
+    suspend fun removeConnection(connectionId: String)
 }
 
 /**
@@ -141,5 +148,9 @@ class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
                 it
             }
         }
+    }
+
+    override suspend fun removeConnection(connectionId: String) {
+        connections.value = connections.value.filter { it.id != connectionId }
     }
 }

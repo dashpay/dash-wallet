@@ -79,6 +79,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
+import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -311,7 +312,8 @@ class MainViewModelTest {
                 coinJoinConfig,
                 coinJoinService,
                 txDisplayCacheService,
-                crowdNodeApi
+                crowdNodeApi,
+                mockk<DispatchingSwapProvider>(relaxed = true)
             )
         )
 
@@ -351,7 +353,8 @@ class MainViewModelTest {
                 coinJoinConfig,
                 coinJoinService,
                 txDisplayCacheService,
-                crowdNodeApi
+                crowdNodeApi,
+                mockk<DispatchingSwapProvider>(relaxed = true)
             )
         )
 

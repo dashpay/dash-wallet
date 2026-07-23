@@ -48,6 +48,10 @@ class ConnectionsViewModel @Inject constructor(
     private val identityRepository: IdentityRepository
 ) : ViewModel() {
 
+    companion object {
+        private val log = org.slf4j.LoggerFactory.getLogger(ConnectionsViewModel::class.java)
+    }
+
     sealed class ApproveResult {
         object Idle : ApproveResult()
         object Loading : ApproveResult()
@@ -109,6 +113,7 @@ class ConnectionsViewModel @Inject constructor(
                     }
                 }
             } catch (ex: Exception) {
+                log.error("failed to process scanned DashConnect QR", ex)
                 _scanOutcome.value = ScanOutcome.Error(ex.message)
                 _uiState.update { it.copy(error = ex.message) }
             }
@@ -140,6 +145,7 @@ class ConnectionsViewModel @Inject constructor(
                 _uiState.update { it.copy(pendingRequest = null) }
                 _approveResult.value = ApproveResult.Success(connection)
             } catch (ex: Exception) {
+                log.error("failed to approve DashConnect login", ex)
                 _approveResult.value = ApproveResult.Error(ex.message)
             }
         }
@@ -154,14 +160,16 @@ class ConnectionsViewModel @Inject constructor(
         _approveResult.value = ApproveResult.Idle
     }
 
-    /** An active connection can be disconnected; other states require scanning a QR again. */
-    fun onConnectionClick(connection: DAppConnection) {
+    fun disconnect(connection: DAppConnection) {
         viewModelScope.launch {
-            when (connection.status) {
-                ConnectionStatus.ACTIVE -> repository.disconnect(connection.id)
-                ConnectionStatus.APPROVED,
-                ConnectionStatus.DISCONNECTED -> Unit // requires scanning the QR code again
-            }
+            repository.disconnect(connection.id)
+        }
+    }
+
+    /** Cancels a pending login or removes an old connection so the user can start over. */
+    fun removeConnection(connection: DAppConnection) {
+        viewModelScope.launch {
+            repository.removeConnection(connection.id)
         }
     }
 }

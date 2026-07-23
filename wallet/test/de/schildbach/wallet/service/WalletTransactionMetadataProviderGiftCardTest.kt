@@ -31,6 +31,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
+import org.dash.wallet.integrations.maya.data.SwapOrderDao
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -62,6 +63,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             iconBitmapDao = mockk<IconBitmapDao>(relaxed = true),
             walletData = mockk<WalletDataProvider>(relaxed = true),
             giftCardDao = giftCardDao,
+            swapOrderDao = mockk<SwapOrderDao>(relaxed = true),
             transactionMetadataChangeCacheDao = cacheDao,
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),
             dashPayConfig = mockk<DashPayConfig>(relaxed = true)

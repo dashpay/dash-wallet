@@ -36,6 +36,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.compose_views.createApproveConnectionDialog
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.scan.ScanActivity
 
 /**
@@ -64,7 +65,7 @@ class ConnectionsFragment : Fragment() {
                 ConnectionsScreen(
                     onBackClick = { findNavController().popBackStack() },
                     onScanClick = { launchScanner() },
-                    onConnectionClick = { viewModel.onConnectionClick(it) },
+                    onConnectionClick = { showConnectionOptions(it) },
                     onConnectionQrClick = { launchScanner() }
                 )
             }
@@ -73,6 +74,14 @@ class ConnectionsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        if (savedInstanceState == null) {
+            // A DashConnect QR scanned from another screen's scanner routes here with the URI.
+            arguments?.getString(ARG_SCANNED_URI)?.let { uri ->
+                arguments?.remove(ARG_SCANNED_URI)
+                viewModel.onQrScanned(uri)
+            }
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -113,5 +122,43 @@ class ConnectionsFragment : Fragment() {
         createApproveConnectionDialog(
             viewModel = viewModel
         ).show(parentFragmentManager, "approve_connection_dialog")
+    }
+
+    /** Lets the user cancel a pending login, remove an old connection, or disconnect. */
+    private fun showConnectionOptions(connection: DAppConnection) {
+        val (title, message, action) = when (connection.status) {
+            ConnectionStatus.APPROVED -> Triple(
+                getString(R.string.dash_connect_cancel_login_title, connection.name),
+                getString(R.string.dash_connect_cancel_login_message),
+                { viewModel.removeConnection(connection) }
+            )
+            ConnectionStatus.ACTIVE -> Triple(
+                getString(R.string.dash_connect_disconnect_title, connection.name),
+                getString(R.string.dash_connect_disconnect_message),
+                { viewModel.disconnect(connection) }
+            )
+            ConnectionStatus.DISCONNECTED -> Triple(
+                getString(R.string.dash_connect_remove_title, connection.name),
+                getString(R.string.dash_connect_remove_message),
+                { viewModel.removeConnection(connection) }
+            )
+        }
+
+        AdaptiveDialog.create(
+            R.drawable.ic_warning,
+            title,
+            message,
+            getString(android.R.string.cancel),
+            getString(R.string.dash_connect_confirm)
+        ).show(requireActivity()) { confirmed ->
+            if (confirmed == true) {
+                action()
+            }
+        }
+    }
+
+    companion object {
+        /** Matches the `scannedUri` argument in nav_home.xml. */
+        const val ARG_SCANNED_URI = "scannedUri"
     }
 }

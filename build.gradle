@@ -31,7 +31,7 @@ buildscript {
         constrainLayoutVersion = '2.2.1'
         recyclerViewVersion = "1.2.1"
         glideVersion = '4.12.0'
-        zxingVersion = '3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
+        zxingVersion = '3.5.3' // requires Android 7.x (API 24), which matches minSdkVersion
         swipeRefreshLayoutVersion = '1.1.0'
         composeBom = '2024.03.00'
         composeTooling = '1.7.8'

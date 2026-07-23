@@ -99,6 +99,10 @@ open class DashConnectConfig @Inject constructor(
         set(CONNECTIONS, encode(updated))
     }
 
+    suspend fun removeConnection(contractId: String) {
+        set(CONNECTIONS, encode(getConnections().filter { it.contractId != contractId }))
+    }
+
     private fun encode(connections: List<StoredConnection>): String {
         val array = JSONArray()
         connections.forEach { array.put(it.toJson()) }

@@ -584,6 +584,13 @@
     <string name="dash_connect_unknown_app">Unknown app</string>
     <string name="dash_connect_login_completed">Login completed</string>
     <string name="dash_connect_error">Could not complete the DashConnect request: %1$s</string>
+    <string name="dash_connect_cancel_login_title">Cancel login to %1$s?</string>
+    <string name="dash_connect_cancel_login_message">The pending login will be discarded. You can start over at any time by scanning a new QR code.</string>
+    <string name="dash_connect_disconnect_title">Disconnect from %1$s?</string>
+    <string name="dash_connect_disconnect_message">The app will no longer be able to use your login. You can log back in by scanning a new QR code.</string>
+    <string name="dash_connect_remove_title">Remove %1$s?</string>
+    <string name="dash_connect_remove_message">The connection will be removed from this list. You can connect again at any time by scanning a new QR code.</string>
+    <string name="dash_connect_confirm">Confirm</string>
     <string name="dash_connect_testnet_only_heading">Available on testnet only</string>
     <string name="dash_connect_testnet_only_message">DashConnect login is not yet available on mainnet</string>
 

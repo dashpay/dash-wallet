@@ -43,6 +43,36 @@ class DashConnectUriTest {
     private fun appPublicKey(): ByteArray =
         ECKey.fromPrivate(BigInteger(1, ByteArray(32) { 0x01 }), true).pubKey
 
+    // ── real-world sample captured from yappr testnet (2026-07-22) ─────────────────
+    @Test
+    fun realWorldYapprLoginUri_parses() {
+        val uri = "dash-key:3pYF4Tv365PGzvLukfiqx44ZinzxvhwjF2nmwgxDu7GXQpsoH7V9VLi5u8fWKMCxVnuERp4" +
+            "7QVLoceh4KvPU9a1Xs7PgAGMjeJmcGHyHQY7yry?n=t&v=1"
+        val request = DashConnectUri.parseKeyRequest(uri)
+
+        assertEquals(DashConnectNetwork.TESTNET, request.network)
+        assertEquals(33, request.appEphemeralPubKey.size)
+        assertEquals(32, request.contractId.size)
+        assertTrue(KeyExchangeCrypto.isValidCompressedPoint(request.appEphemeralPubKey))
+        println(
+            "real-world URI parsed: label='${request.label}' " +
+                "contractId=${Base58.encode(request.contractId)}"
+        )
+    }
+
+    // ── real-world dash-st sample captured from yappr testnet (2026-07-22) ─────────
+    @Test
+    fun realWorldYapprRegistrationUri_parses() {
+        val uri = "dash-st:1PtK3t938SqV4ADV89QrEUMadrDs3eMyMnWnDa2RuHhmgvJK1qCTVvLh4DCyhBaZgcPq3quGT2" +
+            "A7Qz1JEWgVN9S9aqMTNG72pCQ9YZZKyghtzFMfLcrs4gunKyWRN73j6By2KF5Jg4RM3RcwJE2HEB4uocvYeeEnkQ" +
+            "C174YyLpGZaY2ZR7yefwYWx1eRBbhtJhwDbTiBRbjXn9ngxnHhxXJpYoV5U28uaasnJR3BaCECGqDZ?n=t&v=1"
+        val request = DashConnectUri.parseStRequest(uri)
+
+        assertEquals(DashConnectNetwork.TESTNET, request.network)
+        assertTrue(request.transitionBytes.isNotEmpty())
+        println("real-world dash-st parsed: ${request.transitionBytes.size} transition bytes")
+    }
+
     // ── serialization matches the exact fixture ────────────────────────────────────
     @Test
     fun serializedFixture_decodesToExpectedFields() {

@@ -65,6 +65,7 @@ import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
+import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
 import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.util.WalletUtils
@@ -345,6 +346,11 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun handleString(input: String, errorDialogTitleResId: Int, cannotClassifyCustomMessageResId: Int) {
+        if (DashConnectUri.isKeyUri(input) || DashConnectUri.isStUri(input)) {
+            // DashConnect QR (dash-key:/dash-st:) — handled by the Connections screen
+            safeNavigate(WalletFragmentDirections.homeToConnections(input))
+            return
+        }
         object : StringInputParser(input, true) {
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 SendCoinsActivity.start(requireActivity(), paymentIntent)
