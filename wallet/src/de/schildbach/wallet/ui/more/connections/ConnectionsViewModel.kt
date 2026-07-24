@@ -125,8 +125,12 @@ class ConnectionsViewModel @Inject constructor(
         // username if it can't be resolved from Platform.
         val username = repository.resolveWalletUsername() ?: identityRepository.getUsername().orEmpty()
         val identityId = identityRepository.blockchainIdentity?.uniqueIdString.orEmpty()
+        // Prefer the app's on-chain name (contract owner's profile / DPNS) over the spoofable QR
+        // label; falls back to the yappr branding and then the raw label.
+        val appDisplay = repository.resolveAppDisplay(request.contractId, request.label)
         return ConnectionRequest(
-            appLabel = request.label,
+            appLabel = appDisplay.name,
+            appUrl = appDisplay.url,
             appContractId = Base58.encode(request.contractId),
             walletUsername = username,
             walletIdentityId = identityId

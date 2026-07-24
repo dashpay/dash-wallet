@@ -133,8 +133,9 @@ internal fun ApproveConnectionContent(
                 .padding(horizontal = 60.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Heading and app label — left-aligned per Figma 5799:51163 / subtitle 5799:51165.
-            // The label is an UNAUTHENTICATED claim carried by the QR (e.g. "Login to Yappr").
+            // Heading and app website — left-aligned per Figma 5799:51163 / subtitle 5799:51165.
+            // The name/url are resolved from Platform (or known branding) where possible; the raw
+            // QR label is an UNAUTHENTICATED fallback (e.g. "Login to Yappr").
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = stringResource(
@@ -146,7 +147,9 @@ internal fun ApproveConnectionContent(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = request.appLabel.ifBlank { stringResource(R.string.dash_connect_unknown_app) },
+                    text = request.appUrl.ifBlank {
+                        request.appLabel.ifBlank { stringResource(R.string.dash_connect_unknown_app) }
+                    },
                     style = MyTheme.Typography.BodyMedium,
                     color = MyTheme.Colors.textSecondary,
                     modifier = Modifier.fillMaxWidth()
@@ -294,7 +297,8 @@ private fun truncateMiddle(value: String, prefix: Int = 7, suffix: Int = 5): Str
 }
 
 private val previewRequest = ConnectionRequest(
-    appLabel = "Login to Yappr",
+    appLabel = "Yappr",
+    appUrl = "yap.pr",
     appContractId = "EWR695MsqPUuW8EnTbYzD4KybNQD5n7CUDWydJYNg63F",
     walletUsername = "john.doe",
     walletIdentityId = "5DbLwAxEWR695MsqP4KybNQD5n7CUDWydJYNg63FzUo8"

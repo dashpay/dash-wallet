@@ -86,6 +86,12 @@ class PlatformDashConnectRepository @Inject constructor(
 
         /** StateTransitionType discriminant for IdentityUpdate. */
         private const val IDENTITY_UPDATE_TYPE = 5
+
+        /**
+         * Bincode variant tag of IdentityUpdate in DPP's StateTransition enum (positional; note it
+         * differs from the StateTransitionType above). Prepended to yappr's tagless dash-st bytes.
+         */
+        private const val STATE_TRANSITION_IDENTITY_UPDATE_VARIANT: Byte = 6
         private const val TYPE_LOCATOR = "$APP_NAME.$DOCUMENT_TYPE"
 
         // loginKeyResponse fields
@@ -208,8 +214,8 @@ class PlatformDashConnectRepository @Inject constructor(
         val contractIdBase58 = Base58.encode(request.contractId)
         val stored = StoredConnection(
             contractId = contractIdBase58,
-            label = displayName ?: username ?: request.label,
-            url = username.orEmpty(),
+            label = displayName ?: username ?: DashConnectBranding.appName(request.label),
+            url = username ?: DashConnectBranding.appUrl(request.label).orEmpty(),
             status = if (keysAlreadyRegistered) {
                 ConnectionStatus.ACTIVE.name
             } else {
@@ -479,7 +485,17 @@ class PlatformDashConnectRepository @Inject constructor(
         expectedAuthData: ByteArray,
         expectedEncData: ByteArray
     ) {
-        val info = NativeStateTransition.deserialize(transitionBytes)
+        // yappr serializes the IdentityUpdateTransition WITHOUT the outer StateTransition enum
+        // tag: the payload starts with the transition's own version byte (0x00 = V0) followed by
+        // the identity id. StateTransition::deserialize expects the enum variant tag first, so
+        // prepend IdentityUpdate's tag (6). Try the tagged form first in case the app ever starts
+        // sending full StateTransition bytes.
+        val info = try {
+            NativeStateTransition.deserialize(byteArrayOf(STATE_TRANSITION_IDENTITY_UPDATE_VARIANT) + transitionBytes)
+        } catch (ex: Exception) {
+            log.info("dash-st is not a tagless IdentityUpdate, retrying as full StateTransition bytes")
+            NativeStateTransition.deserialize(transitionBytes)
+        }
         if (info.type != IDENTITY_UPDATE_TYPE) {
             throw DashConnectUriException("dash-st is not an identity update (type=${info.type})")
         }
@@ -522,6 +538,15 @@ class PlatformDashConnectRepository @Inject constructor(
             null
         }
     }
+
+    override suspend fun resolveAppDisplay(contractId: ByteArray, qrLabel: String): AppDisplay =
+        withContext(Dispatchers.IO) {
+            val (displayName, username) = resolveAppInfo(contractId)
+            AppDisplay(
+                name = displayName ?: username ?: DashConnectBranding.appName(qrLabel),
+                url = username ?: DashConnectBranding.appUrl(qrLabel).orEmpty()
+            )
+        }
 
     // ── helpers ──────────────────────────────────────────────────────────────────
 

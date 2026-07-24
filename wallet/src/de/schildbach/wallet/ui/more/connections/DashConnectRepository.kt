@@ -62,6 +62,8 @@ data class DAppConnection(
 data class ConnectionRequest(
     /** Unauthenticated label claimed by the app (may be blank). */
     val appLabel: String,
+    /** The app's website (resolved DPNS handle or known branding); may be blank. */
+    val appUrl: String,
     /** The app's data-contract id, Base58-encoded. */
     val appContractId: String,
     /** The wallet user's own DashPay username (verified, resolved locally). */
@@ -69,6 +71,25 @@ data class ConnectionRequest(
     /** The wallet user's own identity id, Base58-encoded (verified). */
     val walletIdentityId: String
 )
+
+/**
+ * Display branding for known DApps. DashConnect is currently yappr-specific: the QR carries only an
+ * unauthenticated free-text label ("Login to Yappr") and yappr's contract owner has no on-chain
+ * DashPay profile / DPNS name to resolve, so we substitute yappr's real name and website when we
+ * recognise its login label. Remove (or generalize) once apps expose resolvable metadata — see
+ * MO-945.
+ */
+object DashConnectBranding {
+    private const val YAPPR_QR_LABEL = "Login to Yappr"
+    private const val YAPPR_NAME = "Yappr"
+    private const val YAPPR_URL = "yap.pr"
+
+    /** The friendly app name for a raw QR [label], or the label itself if unrecognised. */
+    fun appName(label: String): String = if (label == YAPPR_QR_LABEL) YAPPR_NAME else label
+
+    /** The website for a raw QR [label], or null if unknown. */
+    fun appUrl(label: String): String? = if (label == YAPPR_QR_LABEL) YAPPR_URL else null
+}
 
 /** The decoded payload of a scanned DashConnect QR code. */
 sealed class DashConnectQr {
@@ -117,7 +138,23 @@ interface DashConnectRepository {
      * null if it can't be resolved.
      */
     suspend fun resolveWalletUsername(): String?
+
+    /**
+     * The best display name and website for an app, resolved from its [contractId]: the contract
+     * owner's DashPay profile displayName / DPNS username if present, else the friendly branding
+     * for the (unauthenticated) QR [qrLabel], else the raw label (url may be blank). Used to show
+     * a trustworthy name on the approve sheet instead of the spoofable QR label. Best-effort;
+     * never throws.
+     */
+    suspend fun resolveAppDisplay(contractId: ByteArray, qrLabel: String): AppDisplay
 }
+
+/** Display name and website for an app, as resolved by [DashConnectRepository.resolveAppDisplay]. */
+data class AppDisplay(
+    val name: String,
+    /** Website or DPNS handle; blank if unknown. */
+    val url: String
+)
 
 /**
  * In-memory mock used by tests and previews. Treats the app contract id as the connection id.
@@ -162,4 +199,10 @@ class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
     }
 
     override suspend fun resolveWalletUsername(): String? = null
+
+    override suspend fun resolveAppDisplay(contractId: ByteArray, qrLabel: String): AppDisplay =
+        AppDisplay(
+            name = DashConnectBranding.appName(qrLabel),
+            url = DashConnectBranding.appUrl(qrLabel).orEmpty()
+        )
 }
