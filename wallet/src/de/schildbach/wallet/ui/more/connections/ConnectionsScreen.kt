@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,12 +42,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.DashSwitch
 import org.dash.wallet.common.ui.components.ListEmptyState
 import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.Menu
@@ -68,7 +71,8 @@ fun ConnectionsScreen(
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
-    onConnectionQrClick: (DAppConnection) -> Unit = {}
+    onConnectionQrClick: (DAppConnection) -> Unit = {},
+    onConnectionToggle: (DAppConnection, Boolean) -> Unit = { _, _ -> }
 ) {
     val viewModel: ConnectionsViewModel = hiltViewModel()
 
@@ -77,7 +81,8 @@ fun ConnectionsScreen(
         onBackClick = onBackClick,
         onScanClick = onScanClick,
         onConnectionClick = onConnectionClick,
-        onConnectionQrClick = onConnectionQrClick
+        onConnectionQrClick = onConnectionQrClick,
+        onConnectionToggle = onConnectionToggle
     )
 }
 
@@ -87,7 +92,8 @@ fun ConnectionsScreen(
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
-    onConnectionQrClick: (DAppConnection) -> Unit = {}
+    onConnectionQrClick: (DAppConnection) -> Unit = {},
+    onConnectionToggle: (DAppConnection, Boolean) -> Unit = { _, _ -> }
 ) {
     val uiState by uiStateFlow.collectAsState()
 
@@ -96,7 +102,8 @@ fun ConnectionsScreen(
         onBackClick = onBackClick,
         onScanClick = onScanClick,
         onConnectionClick = onConnectionClick,
-        onConnectionQrClick = onConnectionQrClick
+        onConnectionQrClick = onConnectionQrClick,
+        onConnectionToggle = onConnectionToggle
     )
 }
 
@@ -106,7 +113,8 @@ private fun ConnectionsScreenContent(
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
-    onConnectionQrClick: (DAppConnection) -> Unit = {}
+    onConnectionQrClick: (DAppConnection) -> Unit = {},
+    onConnectionToggle: (DAppConnection, Boolean) -> Unit = { _, _ -> }
 ) {
     Column(
         modifier = Modifier
@@ -138,20 +146,15 @@ private fun ConnectionsScreenContent(
                         ConnectionListItem(
                             connection = connection,
                             onClick = { onConnectionClick(connection) },
-                            onQrClick = { onConnectionQrClick(connection) }
+                            onQrClick = { onConnectionQrClick(connection) },
+                            onToggle = { enabled -> onConnectionToggle(connection, enabled) }
                         )
+                        // Blue-tint banner attached inside the card, under an APPROVED connection
+                        // awaiting login (Figma 5802:51517 SystemMessage): prompts the login scan.
+                        if (connection.status == ConnectionStatus.APPROVED) {
+                            ScanToCompleteBanner(onScanClick = onScanClick)
+                        }
                     }
-                }
-
-                connectionsHint(uiState.connections)?.let { hint ->
-                    Text(
-                        text = hint,
-                        style = MyTheme.Typography.BodyMedium,
-                        color = MyTheme.Colors.textPrimary,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                    )
                 }
             }
         }
@@ -189,35 +192,95 @@ private fun ConnectionsEmptyState(
     onScanClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    // Icon + heading + body inside a white rounded card (Figma 5787:51009 / 5787:50880),
+    // with the Scan QR button in its own centered wrap below the card.
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
-        contentAlignment = Alignment.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        ListEmptyState(
-            icon = {
-                Image(
-                    painter = painterResource(R.drawable.ic_connections_empty),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(bottom = 12.dp)
-                        .size(80.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                .padding(40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(40.dp)
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_connections_empty),
+                contentDescription = null,
+                modifier = Modifier.size(80.dp)
+            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.dash_connect_empty_heading),
+                    style = MyTheme.Typography.TitleMediumSemibold,
+                    color = MyTheme.Colors.textPrimary,
+                    textAlign = TextAlign.Center
                 )
-            },
-            heading = stringResource(R.string.dash_connect_empty_heading),
-            body = stringResource(R.string.dash_connect_empty_message),
-            actions = {
-                DashButton(
-                    text = stringResource(R.string.dash_connect_scan_qr),
-                    style = Style.FilledBlue,
-                    size = Size.Large,
-                    onClick = onScanClick,
-                    modifier = Modifier
-                        .padding(top = 32.dp)
-                        .width(200.dp)
+                Text(
+                    text = stringResource(R.string.dash_connect_empty_message),
+                    style = MyTheme.Typography.BodyMedium,
+                    color = MyTheme.Colors.textSecondary,
+                    textAlign = TextAlign.Center
                 )
             }
+        }
+
+        DashButton(
+            text = stringResource(R.string.dash_connect_scan_qr),
+            style = Style.FilledBlue,
+            size = Size.Large,
+            onClick = onScanClick,
+            modifier = Modifier
+                .padding(top = 40.dp, start = 80.dp, end = 80.dp)
+                .width(200.dp)
+        )
+    }
+}
+
+/**
+ * Blue-tint SystemMessage banner (Figma 5802:51517): info icon + prompt text + a small
+ * filled-blue "Scan QR" button. Shown for APPROVED connections awaiting login.
+ */
+@Composable
+private fun ScanToCompleteBanner(
+    onScanClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            // No outer horizontal inset: the banner lives inside the Menu card, which already
+            // insets its children — matching Figma where the banner is attached to the card.
+            .background(MyTheme.Colors.dashBlue5, RoundedCornerShape(12.dp))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_info_blue),
+            contentDescription = null,
+            modifier = Modifier.size(24.dp)
+        )
+        Text(
+            text = stringResource(R.string.dash_connect_scan_to_complete_banner),
+            style = MyTheme.Typography.BodyMedium,
+            color = MyTheme.Colors.textPrimary,
+            modifier = Modifier.weight(1f)
+        )
+        DashButton(
+            text = stringResource(R.string.dash_connect_scan_qr),
+            style = Style.FilledBlue,
+            size = Size.Small,
+            stretch = false,
+            onClick = onScanClick
         )
     }
 }
@@ -226,7 +289,8 @@ private fun ConnectionsEmptyState(
 private fun ConnectionListItem(
     connection: DAppConnection,
     onClick: () -> Unit,
-    onQrClick: () -> Unit
+    onQrClick: () -> Unit,
+    onToggle: (Boolean) -> Unit
 ) {
     val statusText = stringResource(
         when (connection.status) {
@@ -235,37 +299,24 @@ private fun ConnectionListItem(
             ConnectionStatus.DISCONNECTED -> R.string.dash_connect_status_disconnected
         }
     )
-    val dotColor = when (connection.status) {
-        ConnectionStatus.ACTIVE -> MyTheme.Colors.green
-        else -> MyTheme.Colors.dashBlue
-    }
-    val showQr = connection.status != ConnectionStatus.ACTIVE
     val dateFormat = remember { SimpleDateFormat("d MMM yyyy, H:mm", Locale.getDefault()) }
+    val dotColor = if (connection.status == ConnectionStatus.ACTIVE) {
+        MyTheme.Colors.green
+    } else {
+        MyTheme.Colors.dashBlue
+    }
 
     ListItem(
         title = connection.name,
-        subtitle = connection.url,
+        subtitle = connection.url.ifBlank { null },
         onClick = onClick,
         trailingContent = {
+            // Figma 5799:51367 active row: status (dot + text) + date column, and — for an
+            // active connection — a toggle to its right whose OFF transition disconnects.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (showQr) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clickable { onQrClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_connections_qr),
-                            contentDescription = stringResource(R.string.dash_connect_scan_qr),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-
                 Column(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -291,27 +342,15 @@ private fun ConnectionListItem(
                         color = MyTheme.Colors.textTertiary
                     )
                 }
+                if (connection.status == ConnectionStatus.ACTIVE) {
+                    DashSwitch(
+                        checked = true,
+                        onCheckedChange = { enabled -> onToggle(enabled) }
+                    )
+                }
             }
         }
     )
-}
-
-/**
- * Hint shown below the connections list. With several connections the hint of
- * the state requiring the most attention is shown (approved > disconnected > active).
- */
-@Composable
-private fun connectionsHint(connections: List<DAppConnection>): String? {
-    connections.firstOrNull { it.status == ConnectionStatus.APPROVED }?.let {
-        return stringResource(R.string.dash_connect_hint_complete_login, it.name)
-    }
-    connections.firstOrNull { it.status == ConnectionStatus.DISCONNECTED }?.let {
-        return stringResource(R.string.dash_connect_hint_log_back_in, it.name)
-    }
-    connections.firstOrNull { it.status == ConnectionStatus.ACTIVE }?.let {
-        return stringResource(R.string.dash_connect_hint_active)
-    }
-    return null
 }
 
 // ── Previews ──────────────────────────────────────────────────────────────────
@@ -358,4 +397,36 @@ private fun ConnectionsScreenDisconnectedPreview() {
             connections = listOf(previewConnection(ConnectionStatus.DISCONNECTED))
         )
     )
+}
+
+@Composable
+@Preview(showBackground = true, backgroundColor = 0xFFF5F6F7)
+private fun ScanToCompleteBannerPreview() {
+    ScanToCompleteBanner(onScanClick = {})
+}
+
+@Composable
+@Preview(showBackground = true)
+private fun ConnectionListItemActivePreview() {
+    Menu {
+        ConnectionListItem(
+            connection = previewConnection(ConnectionStatus.ACTIVE),
+            onClick = {},
+            onQrClick = {},
+            onToggle = {}
+        )
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+private fun ConnectionListItemApprovedPreview() {
+    Menu {
+        ConnectionListItem(
+            connection = previewConnection(ConnectionStatus.APPROVED),
+            onClick = {},
+            onQrClick = {},
+            onToggle = {}
+        )
+    }
 }

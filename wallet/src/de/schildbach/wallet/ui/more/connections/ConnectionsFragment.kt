@@ -66,7 +66,14 @@ class ConnectionsFragment : Fragment() {
                     onBackClick = { findNavController().popBackStack() },
                     onScanClick = { launchScanner() },
                     onConnectionClick = { showConnectionOptions(it) },
-                    onConnectionQrClick = { launchScanner() }
+                    onConnectionQrClick = { launchScanner() },
+                    onConnectionToggle = { connection, enabled ->
+                        // The switch is only ON for active connections; moving it OFF disconnects
+                        // directly (no confirmation dialog — the toggle itself is the action).
+                        if (!enabled) {
+                            viewModel.disconnect(connection)
+                        }
+                    }
                 )
             }
         }
@@ -124,7 +131,11 @@ class ConnectionsFragment : Fragment() {
         ).show(parentFragmentManager, "approve_connection_dialog")
     }
 
-    /** Lets the user cancel a pending login, remove an old connection, or disconnect. */
+    /**
+     * Row-tap actions for the non-active states: cancel a pending login (APPROVED) or remove an
+     * old connection (DISCONNECTED). Active connections are disconnected via the row toggle, so a
+     * tap there does nothing.
+     */
     private fun showConnectionOptions(connection: DAppConnection) {
         val (title, message, action) = when (connection.status) {
             ConnectionStatus.APPROVED -> Triple(
@@ -132,16 +143,12 @@ class ConnectionsFragment : Fragment() {
                 getString(R.string.dash_connect_cancel_login_message),
                 { viewModel.removeConnection(connection) }
             )
-            ConnectionStatus.ACTIVE -> Triple(
-                getString(R.string.dash_connect_disconnect_title, connection.name),
-                getString(R.string.dash_connect_disconnect_message),
-                { viewModel.disconnect(connection) }
-            )
             ConnectionStatus.DISCONNECTED -> Triple(
                 getString(R.string.dash_connect_remove_title, connection.name),
                 getString(R.string.dash_connect_remove_message),
                 { viewModel.removeConnection(connection) }
             )
+            ConnectionStatus.ACTIVE -> return // disconnect is handled by the row toggle
         }
 
         AdaptiveDialog.create(

@@ -133,9 +133,8 @@ internal fun ApproveConnectionContent(
                 .padding(horizontal = 60.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Heading and app contract id — left-aligned per Figma 5799:51163.
-            // The label is an UNAUTHENTICATED claim by the app; the contract id below it is the
-            // app's verifiable on-chain identity.
+            // Heading and app label — left-aligned per Figma 5799:51163 / subtitle 5799:51165.
+            // The label is an UNAUTHENTICATED claim carried by the QR (e.g. "Login to Yappr").
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = stringResource(
@@ -147,7 +146,7 @@ internal fun ApproveConnectionContent(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = request.appContractId,
+                    text = request.appLabel.ifBlank { stringResource(R.string.dash_connect_unknown_app) },
                     style = MyTheme.Typography.BodyMedium,
                     color = MyTheme.Colors.textSecondary,
                     modifier = Modifier.fillMaxWidth()

@@ -28,6 +28,7 @@ import de.schildbach.wallet.ui.more.connections.protocol.DashKeyRequest
 import de.schildbach.wallet.ui.more.connections.protocol.DashStRequest
 import de.schildbach.wallet.ui.more.connections.protocol.KeyExchangeCrypto
 import de.schildbach.wallet.ui.more.connections.protocol.LoginKeyDerivation
+import org.dashj.platform.dpp.statetransition.NativeStateTransition
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -37,8 +38,10 @@ import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.NetworkParameters
 import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.document.DocumentCreateTransition
+import org.dashj.platform.dashpay.Profile
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
+import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.dpp.identity.IdentityPublicKey
 import org.dashj.platform.sdk.BlockHeight
 import org.dashj.platform.sdk.CoreBlockHeight
@@ -80,6 +83,9 @@ class PlatformDashConnectRepository @Inject constructor(
         const val KEY_EXCHANGE_CONTRACT_ID = "7UaqHGBJBbRLJ4fUWS45cnud8PPUugJWoGTt1SKwHJ2P"
         private const val APP_NAME = "dash-connect-key-exchange"
         private const val DOCUMENT_TYPE = "loginKeyResponse"
+
+        /** StateTransitionType discriminant for IdentityUpdate. */
+        private const val IDENTITY_UPDATE_TYPE = 5
         private const val TYPE_LOCATOR = "$APP_NAME.$DOCUMENT_TYPE"
 
         // loginKeyResponse fields
@@ -139,6 +145,9 @@ class PlatformDashConnectRepository @Inject constructor(
 
         var loginKey: ByteArray? = null
         var walletEphemeralPriv: ByteArray? = null
+        var authPriv: ByteArray? = null
+        var encPriv: ByteArray? = null
+        var keysAlreadyRegistered = false
         try {
             loginKey = LoginKeyDerivation.deriveLoginKey(
                 chainKeyPrivateBytes = chainKeyPrivateBytes,
@@ -169,25 +178,72 @@ class PlatformDashConnectRepository @Inject constructor(
                 keyIndex = LoginKeyDerivation.DEFAULT_KEY_INDEX,
                 keyParameter = keyParameter
             )
+
+            // 7. Determine whether this login completes immediately. If our derived login keys are
+            // already on the identity, the app logs in without a dash-st registration, so the
+            // connection is ACTIVE now. Otherwise it's APPROVED, awaiting the key-registration QR.
+            authPriv = KeyExchangeCrypto.deriveAuthPrivateKey(loginKey, identityIdBytes)
+            encPriv = KeyExchangeCrypto.deriveEncryptionPrivateKey(loginKey, identityIdBytes)
+            val authData = KeyExchangeCrypto.hash160(KeyExchangeCrypto.compressedPublicKey(authPriv))
+            val encData = KeyExchangeCrypto.compressedPublicKey(encPriv)
+            val currentIdentity =
+                platform.platform.identities.get(blockchainIdentity.uniqueIdentifier) ?: identity
+            keysAlreadyRegistered =
+                currentIdentity.publicKeys.any { it.data.contentEquals(authData) } &&
+                currentIdentity.publicKeys.any { it.data.contentEquals(encData) }
         } finally {
-            // 7. wipe sensitive copies
+            // 8. wipe sensitive copies
             KeyExchangeCrypto.wipe(loginKey)
             KeyExchangeCrypto.wipe(walletEphemeralPriv)
+            KeyExchangeCrypto.wipe(authPriv)
+            KeyExchangeCrypto.wipe(encPriv)
             KeyExchangeCrypto.wipe(chainKeyPrivateBytes)
         }
+
+        // Resolve a friendly name/handle for the app from Platform (its contract owner's DashPay
+        // profile / DPNS username). Falls back to the QR label. Done after publish so it never
+        // delays the time-sensitive loginKeyResponse.
+        val (displayName, username) = resolveAppInfo(request.contractId)
 
         val contractIdBase58 = Base58.encode(request.contractId)
         val stored = StoredConnection(
             contractId = contractIdBase58,
-            label = request.label,
-            url = "",
-            // ACTIVE only once the login completes (first login: after the dash-st
-            // key registration; repeat login: the app logs in without a second QR)
-            status = ConnectionStatus.APPROVED.name,
+            label = displayName ?: username ?: request.label,
+            url = username.orEmpty(),
+            status = if (keysAlreadyRegistered) {
+                ConnectionStatus.ACTIVE.name
+            } else {
+                ConnectionStatus.APPROVED.name
+            },
             updatedAt = System.currentTimeMillis()
         )
         config.upsertConnection(stored)
         stored.toDAppConnection()
+    }
+
+    /**
+     * Resolves an app's display name and DPNS handle from its data-contract id: contract → owner
+     * identity → DashPay profile displayName and/or DPNS username. Returns (displayName, username),
+     * either of which may be null. Never throws — resolution is best-effort (the row falls back to
+     * the QR label). All SDK calls here are blocking; this runs on the caller's IO context.
+     */
+    private fun resolveAppInfo(contractIdBytes: ByteArray): Pair<String?, String?> {
+        return try {
+            val contract = platform.platform.contracts.get(Identifier.from(contractIdBytes))
+                ?: return Pair(null, null)
+            val ownerId = contract.ownerId
+            val displayName: String? = platform.profiles.get(ownerId)
+                ?.let { Profile(it).displayName }
+                ?.takeIf { it.isNotBlank() }
+            val username: String? = platform.names.getByOwnerId(ownerId)
+                .firstOrNull()
+                ?.let { DomainDocument(it).label }
+                ?.takeIf { it.isNotBlank() }
+            Pair(displayName, username)
+        } catch (ex: Exception) {
+            log.warn("could not resolve app info for ${Base58.encode(contractIdBytes)}", ex)
+            Pair(null, null)
+        }
     }
 
     /**
@@ -266,6 +322,34 @@ class PlatformDashConnectRepository @Inject constructor(
         }
         result.unwrap() // throws on Platform error (surface stale-revision etc.)
         log.info("published loginKeyResponse for app ${Base58.encode(appContractIdBytes)} (replace=${existing != null})")
+
+        // DIAGNOSTIC: confirm the published doc is findable exactly the way the app polls for it —
+        // by (contractId, appEphemeralPubKeyHash). If this finds 0 docs, the app never sees the login.
+        try {
+            log.info(
+                "loginKeyResponse fields: appEphHash={} walletEphPub={} payloadLen={} keyIndex={}",
+                org.bitcoinj.core.Utils.HEX.encode(appEphemeralPubKeyHash),
+                org.bitcoinj.core.Utils.HEX.encode(walletEphemeralPubKey),
+                encryptedPayload.size,
+                keyIndex
+            )
+            val byEph = DocumentQuery.Builder()
+                .where(FIELD_CONTRACT_ID, "==", appContractIdBytes)
+                .where(FIELD_APP_EPH_PUBKEY_HASH, "==", appEphemeralPubKeyHash)
+                .build()
+            val found = platform.platform.documents.get(TYPE_LOCATOR, byEph)
+            log.info("self-verify: query by (contractId, appEphHash) found {} doc(s)", found.size)
+            found.firstOrNull()?.let { doc ->
+                val storedHash = doc.data[FIELD_APP_EPH_PUBKEY_HASH] as? ByteArray
+                log.info(
+                    "self-verify: stored appEphHash={} revision={}",
+                    storedHash?.let { org.bitcoinj.core.Utils.HEX.encode(it) },
+                    doc.revision
+                )
+            }
+        } catch (e: Exception) {
+            log.warn("self-verify query failed", e)
+        }
     }
 
     private fun findOwnLoginKeyResponse(ownerId: Identifier, appContractIdBytes: ByteArray): Document? {
@@ -312,6 +396,12 @@ class PlatformDashConnectRepository @Inject constructor(
             encPriv = KeyExchangeCrypto.deriveEncryptionPrivateKey(loginKey, identityIdBytes)
             val authData = KeyExchangeCrypto.hash160(KeyExchangeCrypto.compressedPublicKey(authPriv))
             val encData = KeyExchangeCrypto.compressedPublicKey(encPriv)
+
+            // Double-check the app's dash-st transition against what we independently derive: it
+            // must be an IdentityUpdate for THIS identity whose added keys are exactly our login
+            // keys. This detects a tampered/forged QR. (We still sign our own rebuilt update below
+            // rather than the app's bytes, so this is defence-in-depth.)
+            verifyKeyRegistrationTransition(request.transitionBytes, identityIdBytes, authData, encData)
 
             val updatedIdentity = platform.platform.identities.get(blockchainIdentity.uniqueIdentifier)
                 ?: error("identity not found on platform")
@@ -376,10 +466,43 @@ class PlatformDashConnectRepository @Inject constructor(
         // the app auto-completes login as soon as the keys land on the identity
         config.updateStatus(connection.contractId, ConnectionStatus.ACTIVE.name, System.currentTimeMillis())
     }
+
+    /**
+     * Natively deserializes the scanned dash-st transition and verifies its contents match what
+     * this wallet expects: an IdentityUpdate for [identityIdBytes] whose added public keys include
+     * exactly our derived authentication key ([expectedAuthData], hash160) and encryption key
+     * ([expectedEncData], compressed). Throws [DashConnectUriException] on any mismatch.
+     */
+    private fun verifyKeyRegistrationTransition(
+        transitionBytes: ByteArray,
+        identityIdBytes: ByteArray,
+        expectedAuthData: ByteArray,
+        expectedEncData: ByteArray
+    ) {
+        val info = NativeStateTransition.deserialize(transitionBytes)
+        if (info.type != IDENTITY_UPDATE_TYPE) {
+            throw DashConnectUriException("dash-st is not an identity update (type=${info.type})")
+        }
+        if (info.ownerId?.toBuffer()?.contentEquals(identityIdBytes) != true) {
+            throw DashConnectUriException("dash-st is for a different identity")
+        }
+        val addedKeyData = info.addPublicKeys.map { it.data }
+        if (addedKeyData.none { it.contentEquals(expectedAuthData) }) {
+            throw DashConnectUriException("dash-st does not add this wallet's authentication key (possible forged QR)")
+        }
+        if (addedKeyData.none { it.contentEquals(expectedEncData) }) {
+            throw DashConnectUriException("dash-st does not add this wallet's encryption key (possible forged QR)")
+        }
+        log.info("dash-st verified: IdentityUpdate for our identity adds our derived login keys")
+    }
+
     // ── disconnect ───────────────────────────────────────────────────────────────
 
     override suspend fun disconnect(connectionId: String) {
-        config.updateStatus(connectionId, ConnectionStatus.DISCONNECTED.name, System.currentTimeMillis())
+        // Toggling off returns the connection to APPROVED (awaiting login) — per Figma 5805:51555
+        // the post-toggle state shows "Approved" + the scan-to-log-in banner, not a distinct
+        // "Disconnected" state. The user can log back in by scanning, or remove it via row-tap.
+        config.updateStatus(connectionId, ConnectionStatus.APPROVED.name, System.currentTimeMillis())
     }
 
     override suspend fun removeConnection(connectionId: String) {

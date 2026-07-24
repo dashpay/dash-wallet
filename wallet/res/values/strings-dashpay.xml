@@ -568,6 +568,7 @@
     <string name="dash_connect_status_active">Active</string>
     <string name="dash_connect_status_disconnected">Disconnected</string>
     <string name="dash_connect_hint_complete_login">Scan the %1$s QR code to complete your login</string>
+    <string name="dash_connect_scan_to_complete_banner">Scan the QR code to complete the login process</string>
     <string name="dash_connect_hint_active">Touch to disconnect at any time</string>
     <string name="dash_connect_hint_log_back_in">Scan the %1$s QR code to log back in</string>
     <string name="dash_connect_approve_title">Approve connection to %1$s?</string>
