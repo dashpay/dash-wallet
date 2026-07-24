@@ -110,6 +110,13 @@ interface DashConnectRepository {
      * replaces it (unique index on owner + contract).
      */
     suspend fun removeConnection(connectionId: String)
+
+    /**
+     * The wallet's own DPNS username in display form (the `label`, e.g. "John.Doe"), resolved from
+     * Platform — as opposed to the lower-cased `normalizedLabel` that the identity stores. Returns
+     * null if it can't be resolved.
+     */
+    suspend fun resolveWalletUsername(): String?
 }
 
 /**
@@ -153,4 +160,6 @@ class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
     override suspend fun removeConnection(connectionId: String) {
         connections.value = connections.value.filter { it.id != connectionId }
     }
+
+    override suspend fun resolveWalletUsername(): String? = null
 }

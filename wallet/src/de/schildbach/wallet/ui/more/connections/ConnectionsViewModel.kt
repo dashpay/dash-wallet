@@ -121,7 +121,9 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     private suspend fun toConnectionRequest(request: DashKeyRequest): ConnectionRequest {
-        val username = identityRepository.getUsername().orEmpty()
+        // Prefer the DPNS display label (e.g. "John.Doe"); fall back to the stored (normalized)
+        // username if it can't be resolved from Platform.
+        val username = repository.resolveWalletUsername() ?: identityRepository.getUsername().orEmpty()
         val identityId = identityRepository.blockchainIdentity?.uniqueIdString.orEmpty()
         return ConnectionRequest(
             appLabel = request.label,

@@ -61,7 +61,7 @@ fun createApproveConnectionDialog(
 ): ComposeBottomSheet {
     return ComposeBottomSheet(
         backgroundStyle = R.style.SecondaryBackground,
-        forceExpand = false
+        forceExpand = true
     ) { dialog ->
         val uiState by viewModel.uiState.collectAsState()
         val approveResult by viewModel.approveResult.collectAsState()
@@ -188,7 +188,7 @@ internal fun ApproveConnectionContent(
                 )
                 DetailRow(
                     label = stringResource(R.string.dash_connect_identity),
-                    value = request.walletIdentityId
+                    value = truncateMiddle(request.walletIdentityId)
                 )
             }
 
@@ -281,11 +281,23 @@ private fun DetailRow(
     }
 }
 
+/**
+ * Truncates a long identifier in the middle, keeping [prefix] leading and [suffix] trailing
+ * characters (e.g. "5DbLwAx…7zUo8"). Short strings are returned unchanged.
+ */
+private fun truncateMiddle(value: String, prefix: Int = 7, suffix: Int = 5): String {
+    return if (value.length <= prefix + suffix + 1) {
+        value
+    } else {
+        "${value.take(prefix)}…${value.takeLast(suffix)}"
+    }
+}
+
 private val previewRequest = ConnectionRequest(
     appLabel = "Login to Yappr",
     appContractId = "EWR695MsqPUuW8EnTbYzD4KybNQD5n7CUDWydJYNg63F",
     walletUsername = "john.doe",
-    walletIdentityId = "5DbLwAx…zUo8"
+    walletIdentityId = "5DbLwAxEWR695MsqP4KybNQD5n7CUDWydJYNg63FzUo8"
 )
 
 @Preview(showBackground = true)

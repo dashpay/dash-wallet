@@ -509,6 +509,20 @@ class PlatformDashConnectRepository @Inject constructor(
         config.removeConnection(connectionId)
     }
 
+    override suspend fun resolveWalletUsername(): String? = withContext(Dispatchers.IO) {
+        try {
+            val ownerId = identityRepository.blockchainIdentity?.uniqueIdentifier
+                ?: return@withContext null
+            platform.names.getByOwnerId(ownerId)
+                .firstOrNull()
+                ?.let { DomainDocument(it).label }
+                ?.takeIf { it.isNotBlank() }
+        } catch (ex: Exception) {
+            log.warn("could not resolve wallet username label", ex)
+            null
+        }
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────────
 
     /** Registers the key-exchange app so [Documents.create]/queries can resolve its contract by id. */

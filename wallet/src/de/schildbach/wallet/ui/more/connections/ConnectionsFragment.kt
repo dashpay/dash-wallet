@@ -36,7 +36,6 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.compose_views.createApproveConnectionDialog
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.scan.ScanActivity
 
 /**
@@ -65,7 +64,7 @@ class ConnectionsFragment : Fragment() {
                 ConnectionsScreen(
                     onBackClick = { findNavController().popBackStack() },
                     onScanClick = { launchScanner() },
-                    onConnectionClick = { showConnectionOptions(it) },
+                    onConnectionClick = { /* no-op: connections are managed by the QR scan and the row slider */ },
                     onConnectionQrClick = { launchScanner() },
                     onConnectionToggle = { connection, enabled ->
                         // The switch is only ON for active connections; moving it OFF disconnects
@@ -129,39 +128,6 @@ class ConnectionsFragment : Fragment() {
         createApproveConnectionDialog(
             viewModel = viewModel
         ).show(parentFragmentManager, "approve_connection_dialog")
-    }
-
-    /**
-     * Row-tap actions for the non-active states: cancel a pending login (APPROVED) or remove an
-     * old connection (DISCONNECTED). Active connections are disconnected via the row toggle, so a
-     * tap there does nothing.
-     */
-    private fun showConnectionOptions(connection: DAppConnection) {
-        val (title, message, action) = when (connection.status) {
-            ConnectionStatus.APPROVED -> Triple(
-                getString(R.string.dash_connect_cancel_login_title, connection.name),
-                getString(R.string.dash_connect_cancel_login_message),
-                { viewModel.removeConnection(connection) }
-            )
-            ConnectionStatus.DISCONNECTED -> Triple(
-                getString(R.string.dash_connect_remove_title, connection.name),
-                getString(R.string.dash_connect_remove_message),
-                { viewModel.removeConnection(connection) }
-            )
-            ConnectionStatus.ACTIVE -> return // disconnect is handled by the row toggle
-        }
-
-        AdaptiveDialog.create(
-            R.drawable.ic_warning,
-            title,
-            message,
-            getString(android.R.string.cancel),
-            getString(R.string.dash_connect_confirm)
-        ).show(requireActivity()) { confirmed ->
-            if (confirmed == true) {
-                action()
-            }
-        }
     }
 
     companion object {
