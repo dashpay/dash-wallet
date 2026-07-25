@@ -148,8 +148,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            // no-op on API 35+, where edge-to-edge is enforced
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            @Suppress("DEPRECATION")
+            window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
+        }
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         this.setupBottomNavigation(viewModel)
@@ -314,9 +318,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    override fun onBackPressed() {
+    override fun handleBackNavigation() {
         if (!goBack()) {
-            super.onBackPressed()
+            super.handleBackNavigation()
         }
     }
 

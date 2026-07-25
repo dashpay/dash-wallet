@@ -8,9 +8,9 @@ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 android {
 
     defaultConfig {
-        compileSdk 35
+        compileSdk 36
         minSdkVersion 24
-        targetSdkVersion 35
+        targetSdkVersion 36
         vectorDrawables.useSupportLibrary = true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

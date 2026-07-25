@@ -29,6 +29,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
+import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -149,6 +150,9 @@ open class LockScreenActivity : SecureActivity() {
         super.setContentView(binding.root)
         setupKeyboardBottomMargin()
         isLocked = autoLogout.shouldLogout()
+        onBackPressedDispatcher.addCallback(this) {
+            handleBackNavigation()
+        }
 
         initView()
         initViewModel()
@@ -572,10 +576,10 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
+    // Back navigation is intercepted while the lock screen is displayed
+    protected open fun handleBackNavigation() {
         if (!lockScreenDisplayed) {
-            super.onBackPressed()
+            finish()
         }
     }
 
