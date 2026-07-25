@@ -17,24 +17,15 @@
 
 package org.dash.wallet.common.util
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.*
 import org.slf4j.LoggerFactory
 import retrofit2.HttpException
-import java.io.BufferedInputStream
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 private val log = LoggerFactory.getLogger(OkHttpClient::class.java)
-
-fun ResponseBody.decodeBitmap(): Bitmap {
-    return BufferedInputStream(byteStream()).use { inputStream ->
-        return@use BitmapFactory.decodeStream(inputStream)
-    }
-}
 
 suspend fun OkHttpClient.get(url: String): Response = call(Request.Builder().url(url).get().build())
 suspend fun OkHttpClient.head(url: String): Response = call(Request.Builder().url(url).head().build())

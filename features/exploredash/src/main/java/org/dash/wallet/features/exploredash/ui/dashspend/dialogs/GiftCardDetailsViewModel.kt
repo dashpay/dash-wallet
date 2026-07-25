@@ -17,12 +17,17 @@
 
 package org.dash.wallet.features.exploredash.ui.dashspend.dialogs
 
+import android.content.Context
 import android.graphics.Bitmap
+import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.google.zxing.BarcodeFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Coin
@@ -71,6 +76,7 @@ data class GiftCardUIState(
 
 @HiltViewModel
 class GiftCardDetailsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val applicationScope: CoroutineScope,
     private val giftCardDao: GiftCardDao,
     private val metadataProvider: TransactionMetadataProvider,
@@ -647,9 +653,13 @@ class GiftCardDetailsViewModel @Inject constructor(
                     return true
                 }
             }
-            val result = Constants.HTTP_CLIENT.get(barcodeUrl)
-            require(result.isSuccessful && result.body != null) { "call is not successful" }
-            val bitmap = result.body!!.decodeBitmap()
+            val imageRequest = ImageRequest.Builder(context)
+                .data(barcodeUrl)
+                .allowHardware(false) // Qr.scanBarcode needs CPU access to the pixels
+                .build()
+            val bitmap = requireNotNull(context.imageLoader.execute(imageRequest).drawable) {
+                "failed to load barcode image"
+            }.toBitmap()
             val decodeResult = Qr.scanBarcode(bitmap)
 
             return if (decodeResult != null) {
