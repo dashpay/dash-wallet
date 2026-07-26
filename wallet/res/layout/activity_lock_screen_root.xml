@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dash_deep_blue"
-    android:fitsSystemWindows="false">
+    android:fitsSystemWindows="true">
 
     <!-- single inset point: root stays false so the background paints
          edge-to-edge, while all switcher content avoids the system bars -->
