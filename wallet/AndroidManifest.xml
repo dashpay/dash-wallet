@@ -444,10 +444,5 @@
             android:name="android.nfc.disable_beam_default"
             android:value="true" />
 
-        <activity
-            android:name="org.dash.wallet.integrations.coinbase.ui.CoinBaseWebClientActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"
-            android:exported="true" />
     </application>
 </manifest>

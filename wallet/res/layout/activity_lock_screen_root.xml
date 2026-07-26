@@ -16,11 +16,11 @@
             android:id="@+id/lock_screen"
             layout="@layout/activity_lock_screen" />
 
+        <!-- insets are consumed by the root; do not re-apply fitsSystemWindows here -->
         <FrameLayout
             android:id="@+id/regular_content"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fitsSystemWindows="true" />
+            android:layout_height="match_parent" />
 
     </ViewAnimator>
 </FrameLayout>
