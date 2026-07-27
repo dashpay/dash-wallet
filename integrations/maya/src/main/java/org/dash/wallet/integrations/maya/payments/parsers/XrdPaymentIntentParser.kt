@@ -46,7 +46,8 @@ class XrdPaymentIntentParser : MayaPaymentIntentParser("XRD", "radix", "XRD.XRD"
                 )
             }
         } else if (addressParser.exactMatch(input)) {
-            return@withContext createPaymentIntent(input)
+            // bech32 may be scanned all-caps; lowercase is the canonical form
+            return@withContext createPaymentIntent(input.lowercase())
         }
         log.info("cannot classify: '{}'", input)
         throw PaymentIntentParserException(

@@ -19,6 +19,7 @@ package org.dash.wallet.common.payments.parsers
 
 import org.bitcoinj.params.MainNetParams
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -58,14 +59,26 @@ class AddressParserTest {
         SegwitAddress.fromBech32(network, "bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297")
         SegwitAddress.fromBech32(network, "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0")
 
+        // All-uppercase bech32 is valid per BIP-173 (QR codes use it for alphanumeric mode).
+        // First one is the BIP-173 uppercase test vector.
+        assertTrue(parser.exactMatch("BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4"))
+        assertTrue(parser.exactMatch("BC1QXHGNNP745ZRYN2UD8HM6K3MYGKKPKM35020JS0"))
+        assertTrue(parser.exactMatch("BC1P5D7RJQ7G6RDK2YHZKS9SMLAQTEDR4DEKQ08GE8ZTWAC72SFR9RUSXG3297"))
+        SegwitAddress.fromBech32(network, "BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4")
+
+        // Mixed case is invalid per BIP-173.
+        assertFalse(parser.exactMatch("bc1qxhgnnp745zryn2ud8hm6k3mygkkpkm35020JS0"))
+        assertFalse(parser.exactMatch("BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3t4"))
+
         assertEquals(
-            4,
+            5,
             parser.findAll(
                 """
                 Here is the first address 183axN6F7ZjwayiJPjjwJgWGas6J9mtfi
                 and the second: 34Me5SAG8W8Bf2LxGfPiqVZRKKV1VL1hmW
                 \n\n bc1qxhgnnp745zryn2ud8hm6k3mygkkpkm35020js0
                 \n bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297
+                \n BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4
                 """
             ).size
         )
@@ -96,6 +109,10 @@ class AddressParserTest {
         assertTrue(parser.exactMatch("kujira1r8egcurpwxftegr07gjv9gwffw4fk00960dj4f"))
         assertTrue(parser.exactMatch("kujira1377jxt6t0jrkk47thc86udxfxnvqkhj7evmd99"))
 
+        // All-uppercase bech32 is valid per BIP-173; mixed case is not.
+        assertTrue(parser.exactMatch("KUJIRA1R8EGCURPWXFTEGR07GJV9GWFFW4FK00960DJ4F"))
+        assertFalse(parser.exactMatch("kujira1R8EGCURPWXFTEGR07GJV9GWFFW4FK00960DJ4F"))
+
         assertEquals(
             2,
             parser.findAll(
@@ -110,6 +127,8 @@ class AddressParserTest {
 
         assertTrue(runeParser.exactMatch("thor166n4w5039meulfa3p6ydg60ve6ueac7tlt0jws"))
         assertTrue(runeParser.exactMatch("thor1ap5vn4svwkpch2c9jm7hlpr2pj47e62xwpcvtw"))
+        assertTrue(runeParser.exactMatch("THOR166N4W5039MEULFA3P6YDG60VE6UEAC7TLT0JWS"))
+        assertFalse(runeParser.exactMatch("THOR166n4w5039meulfa3p6ydg60ve6ueac7tlt0jws"))
 
         assertEquals(
             2,

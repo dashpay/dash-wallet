@@ -49,7 +49,10 @@ class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZE
             }
         } else if (addressParser.exactMatch(input)) {
             try {
-                return@withContext createPaymentIntent(input)
+                // shielded/unified addresses are bech32 and may be scanned all-caps; lowercase is
+                // canonical. Transparent t-addresses are Base58 (case-sensitive) — leave untouched.
+                val address = if (input.startsWith("t")) input else input.lowercase()
+                return@withContext createPaymentIntent(address)
             } catch (ex: AddressFormatException) {
                 log.info("got invalid address", ex)
                 throw PaymentIntentParserException(

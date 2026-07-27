@@ -109,6 +109,26 @@ class AddressParserTest {
         )
         assertTrue(parser.exactMatch("Ae2tdPwUPEZ4YjgvykNpoFeYUxoyhNj2kg8KfKWN2FizsSpLUPv68MpTVDo"))
 
+        // All-uppercase Shelley bech32 is valid per BIP-173 (QR alphanumeric mode); mixed case
+        // is not. Byron Base58 stays case-sensitive, so its uppercased form is rejected.
+        assertTrue(
+            parser.exactMatch(
+                (
+                    "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer" +
+                        "3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
+                    ).uppercase()
+            )
+        )
+        assertFalse(
+            parser.exactMatch(
+                "ADDR1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer" +
+                    "3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
+            )
+        )
+        assertFalse(
+            parser.exactMatch("Ae2tdPwUPEZ4YjgvykNpoFeYUxoyhNj2kg8KfKWN2FizsSpLUPv68MpTVDo".uppercase())
+        )
+
         // Shape-valid Shelley string with an invalid bech32 checksum (the fabricated address
         // this codebase previously used as the ADA example).
         assertFalse(
@@ -294,6 +314,13 @@ class AddressParserTest {
         val unified = "u1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54kh"
         assertTrue(parser.exactMatch(sapling))
         assertTrue(parser.exactMatch(unified))
+
+        // All-uppercase bech32 forms are valid per BIP-173; mixed case is not. Transparent
+        // addresses are Base58 (case-sensitive), so the uppercased form is rejected.
+        assertTrue(parser.exactMatch(sapling.uppercase()))
+        assertTrue(parser.exactMatch(unified.uppercase()))
+        assertFalse(parser.exactMatch("zs1" + sapling.uppercase().substring(3)))
+        assertFalse(parser.exactMatch("t1K79TgQbqu74d6rBmsMu2oFEXEwAmdYiT7".uppercase()))
 
         // 't2' is not a valid transparent prefix (only t1 / t3).
         assertFalse(parser.exactMatch("t2K79TgQbqu74d6rBmsMu2oFEXEwAmdYiT7"))

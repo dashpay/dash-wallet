@@ -51,7 +51,10 @@ open class CardanoPaymentIntentParser(
             }
         } else if (addressParser.exactMatch(input)) {
             try {
-                return@withContext createPaymentIntent(input)
+                // Shelley addresses are bech32 and may be scanned all-caps; lowercase is
+                // canonical. Byron addresses are Base58 (case-sensitive) — leave untouched.
+                val address = if (input.startsWith("addr1", ignoreCase = true)) input.lowercase() else input
+                return@withContext createPaymentIntent(address)
             } catch (ex: AddressFormatException) {
                 log.info("got invalid address", ex)
                 throw PaymentIntentParserException(

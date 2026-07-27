@@ -21,7 +21,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Base58
 import org.bitcoinj.core.NetworkParameters
 
-open class AddressParser(pattern: String, val params: NetworkParameters?) {
+open class AddressParser(pattern: String, val params: NetworkParameters?, ignoreCase: Boolean = false) {
     companion object {
         val PATTERN_BITCOIN_ADDRESS = "[${Base58.ALPHABET.joinToString(separator = "")}]{20,40}"
         private const val PATTERN_ETHEREUM_ADDRESS = "0x[a-fA-F0-9]{40}"
@@ -39,7 +39,7 @@ open class AddressParser(pattern: String, val params: NetworkParameters?) {
         }
     }
 
-    private val addressPattern = Regex(pattern)
+    private val addressPattern = Regex(pattern, if (ignoreCase) setOf(RegexOption.IGNORE_CASE) else emptySet())
 
     open fun exactMatch(inputText: String): Boolean {
         return addressPattern.matches(inputText) && isAddressValid(inputText)

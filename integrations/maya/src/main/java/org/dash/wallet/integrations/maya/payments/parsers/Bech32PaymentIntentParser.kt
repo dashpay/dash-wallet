@@ -71,7 +71,9 @@ open class Bech32PaymentIntentParser(
             }
         } else if (addressParser.exactMatch(input)) {
             try {
-                return@withContext createPaymentIntent(input)
+                // a matched bech32 address is uniformly lower or upper case (mixed is rejected);
+                // lowercase is the canonical form expected in the swap memo
+                return@withContext createPaymentIntent(input.lowercase())
             } catch (ex: AddressFormatException) {
                 log.info("got invalid address", ex)
                 throw PaymentIntentParserException(
