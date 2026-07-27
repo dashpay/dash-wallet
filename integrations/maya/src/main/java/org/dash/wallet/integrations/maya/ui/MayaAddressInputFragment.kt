@@ -79,7 +79,7 @@ class MayaAddressInputFragment : Fragment() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)?.let { scanned ->
-                viewModel.setInput(scanned)
+                viewModel.setInput(normalizeCase(scanned.trim()))
             }
         }
     }
@@ -179,7 +179,7 @@ class MayaAddressInputFragment : Fragment() {
 
     private fun onSourceClick(source: AddressSourceUIState) {
         if (!source.address.isNullOrEmpty()) {
-            viewModel.setInput(source.address)
+            viewModel.setInput(normalizeCase(source.address))
         } else {
             // exchange login
             findNavController().navigate(DeepLinkDestination.Exchange(source.id, "login_and_close").deepLink)
@@ -187,7 +187,15 @@ class MayaAddressInputFragment : Fragment() {
     }
 
     private fun onClipboardClick() {
-        uiState.clipboardAddress?.let { viewModel.setInput(it) }
+        uiState.clipboardAddress?.let { viewModel.setInput(normalizeCase(it)) }
+    }
+
+    /**
+     * A bech32 address scanned or pasted in its all-uppercase QR form is shown and stored in
+     * canonical lowercase; anything else (Base58, URIs, mixed case) is left as entered.
+     */
+    private fun normalizeCase(text: String): String {
+        return viewModel.paymentParsers.getAddressParser(viewModel.currency)?.normalizeCase(text) ?: text
     }
 
     /**

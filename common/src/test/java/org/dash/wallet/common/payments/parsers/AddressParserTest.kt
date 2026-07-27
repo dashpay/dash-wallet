@@ -103,6 +103,41 @@ class AddressParserTest {
     }
 
     @Test
+    fun normalizeCaseTest() {
+        val bitcoinParser = BitcoinAddressParser(BitcoinMainNetParams())
+
+        // All-caps bech32 (QR alphanumeric mode) canonicalizes to lowercase.
+        assertEquals(
+            "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+            bitcoinParser.normalizeCase("BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4")
+        )
+        // Already lowercase, mixed case, and case-significant Base58 pass through unchanged.
+        assertEquals(
+            "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+            bitcoinParser.normalizeCase("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4")
+        )
+        assertEquals(
+            "BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3t4",
+            bitcoinParser.normalizeCase("BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3t4")
+        )
+        assertEquals(
+            "34Me5SAG8W8Bf2LxGfPiqVZRKKV1VL1hmW",
+            bitcoinParser.normalizeCase("34Me5SAG8W8Bf2LxGfPiqVZRKKV1VL1hmW")
+        )
+        // Uppercased Base58 doesn't lowercase into a valid address — untouched.
+        assertEquals(
+            "34ME5SAG8W8BF2LXGFPIQVZRKKV1VL1HMW",
+            bitcoinParser.normalizeCase("34ME5SAG8W8BF2LXGFPIQVZRKKV1VL1HMW")
+        )
+
+        val runeParser = Bech32AddressParser("thor", 38, null)
+        assertEquals(
+            "thor166n4w5039meulfa3p6ydg60ve6ueac7tlt0jws",
+            runeParser.normalizeCase("THOR166N4W5039MEULFA3P6YDG60VE6UEAC7TLT0JWS")
+        )
+    }
+
+    @Test
     fun bech32AddressTest() {
         val parser = Bech32AddressParser("kujira", 38, null)
 

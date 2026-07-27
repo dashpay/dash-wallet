@@ -52,7 +52,7 @@ data class AddressInputResult(
             return if (separator == -1) {
                 addressInput
             } else {
-                addressInput.substring(separator)
+                addressInput.substring(separator + 1)
             }
         }
 }

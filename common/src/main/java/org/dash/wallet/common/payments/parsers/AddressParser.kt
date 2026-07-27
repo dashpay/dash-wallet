@@ -67,6 +67,23 @@ open class AddressParser(pattern: String, val params: NetworkParameters?, ignore
         return validRanges
     }
 
+    /**
+     * Canonicalizes the case of a scanned or pasted address: bech32 QR codes commonly carry
+     * the all-uppercase form (alphanumeric mode), which is lowercased when the lowercase form
+     * is a valid address. Anything containing a lowercase letter is left untouched — Base58
+     * and EIP-55 checksums are case-significant.
+     */
+    fun normalizeCase(input: String): String {
+        return if (input.any { it.isUpperCase() } &&
+            input.none { it.isLowerCase() } &&
+            exactMatch(input.lowercase())
+        ) {
+            input.lowercase()
+        } else {
+            input
+        }
+    }
+
     protected open fun verifyAddress(addressCandidate: String) {
         params?.let { Address.fromString(params, addressCandidate) }
     }
