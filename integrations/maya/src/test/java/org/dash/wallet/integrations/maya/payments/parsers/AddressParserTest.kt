@@ -203,6 +203,14 @@ class AddressParserTest {
         assertFalse(parser.exactMatch("0OIl000000000000000000000000000000"))
         assertFalse(parser.exactMatch(""))
 
+        // Base58 strings inside the length range that are NOT 32-byte ed25519 keys: a Dash
+        // P2PKH address (25-byte Base58Check payload) passed the old lexical check and only
+        // failed at conversion time (MO-969).
+        assertFalse(parser.exactMatch("Xh93hJroCBPn77rPGmi73p3uwfYvY96AqG"))
+        assertFalse(parser.exactMatch("XiqnCEVFCxHDkiivDNFt47mLthdnPCavDe"))
+        // A Bitcoin P2PKH address — same 25-byte Base58Check shape.
+        assertFalse(parser.exactMatch("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
+
         assertEquals(
             2,
             parser.findAll(

@@ -235,6 +235,15 @@ class MayaAddressInputFragment : Fragment() {
                 return@launch
             }
 
+            // A checksum-valid Dash address can pass the permissive lexical validation of some
+            // target chains (e.g. Solana's Base58 length range) and then fail only at
+            // conversion time (MO-969) — reject it explicitly before quoting.
+            if (mayaAddressInputViewModel.isDashAddress(input)) {
+                log.info("rejecting a DASH address as the swap destination for {}", viewModel.currency)
+                setInlineError(getString(CommonR.string.not_valid_address, viewModel.currency))
+                return@launch
+            }
+
             setInlineError(null)
             uiState = uiState.copy(isLoading = true)
             val quote = mayaAddressInputViewModel.getDefaultQuote(viewModel.addressResult.addressInputWithoutPrefix)
