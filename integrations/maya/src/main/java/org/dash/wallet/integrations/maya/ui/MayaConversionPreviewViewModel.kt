@@ -143,13 +143,26 @@ class MayaConversionPreviewViewModel @Inject constructor(
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     commitSwapTradeFailureState.call()
                 } else {
+                    // commitSwapTransaction refreshes the route before broadcasting, and on
+                    // SwapKit/NEAR Intents routes the refreshed quote carries a NEW one-time
+                    // deposit address — the one the tx actually paid. Persist the returned
+                    // (committed) model, not the pre-refresh preview quote, or tracking and
+                    // the explorer link point at an intent that never receives funds (MO-983).
+                    val committedTrade = result.value
+                    if (committedTrade.vaultAddress != swapTradeUIModel.vaultAddress) {
+                        log.info(
+                            "deposit address changed on route refresh: {} -> {}",
+                            swapTradeUIModel.vaultAddress,
+                            committedTrade.vaultAddress
+                        )
+                    }
                     commitSwapTradeSuccessState.value = SendTransactionToWalletParams(
-                        swapTradeUIModel.amount,
-                        swapTradeUIModel.feeAmount,
-                        swapTradeUIModel.destinationAddress,
+                        committedTrade.amount,
+                        committedTrade.feeAmount,
+                        committedTrade.destinationAddress,
                         MayaConstants.TRANSACTION_TYPE_SEND,
                         txid = txId.takeIf { it != Sha256Hash.ZERO_HASH }?.toString(),
-                        depositAddress = swapTradeUIModel.vaultAddress
+                        depositAddress = committedTrade.vaultAddress
                     )
                     val service = when (dispatchingSwapProvider.currentBackend()) {
                         SwapBackend.SWAPKIT -> ServiceName.Swapkit
@@ -160,12 +173,12 @@ class MayaConversionPreviewViewModel @Inject constructor(
                             SwapOrder(
                                 txId = txId,
                                 service = service,
-                                provider = swapTradeUIModel.routeName?.takeIf { it.isNotEmpty() },
-                                fromAsset = swapTradeUIModel.inputCurrency,
-                                toAsset = swapTradeUIModel.outputCurrency,
-                                toAddress = swapTradeUIModel.destinationAddress,
-                                depositAddress = swapTradeUIModel.vaultAddress.takeIf { it.isNotEmpty() },
-                                expectedToAmount = swapTradeUIModel.expectedOutputAmount
+                                provider = committedTrade.routeName?.takeIf { it.isNotEmpty() },
+                                fromAsset = committedTrade.inputCurrency,
+                                toAsset = committedTrade.outputCurrency,
+                                toAddress = committedTrade.destinationAddress,
+                                depositAddress = committedTrade.vaultAddress.takeIf { it.isNotEmpty() },
+                                expectedToAmount = committedTrade.expectedOutputAmount
                                     .takeIf { it.signum() > 0 }?.toPlainString(),
                                 timestamp = System.currentTimeMillis()
                             )
@@ -174,7 +187,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
                     }
                     // TODO add more information about the transaction to metadata.  it is a trade
                     transactionMetadataProvider.markAddressAsync(
-                        swapTradeUIModel.vaultAddress,
+                        committedTrade.vaultAddress,
                         false,
                         TaxCategory.Expense, // TODO: this should be a Trade
                         service
