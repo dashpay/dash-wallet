@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.utils.Fiat
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.SendPaymentService
@@ -626,10 +627,44 @@ class SwapKitApiAggregator @Inject constructor(
     }
 
     override suspend fun getSwapInfo(swapRequest: SwapQuoteRequest): ResponseResource<SwapTradeUIModel> {
-        val sellAmount = swapRequest.amount.dash.setScale(8, RoundingMode.HALF_UP).toPlainString()
-        if (walletDataProvider.wallet == null) {
-            return ResponseResource.Failure(MayaException("wallet not loaded"), false, 0, null)
+        val wallet = walletDataProvider.wallet
+            ?: return ResponseResource.Failure(MayaException("wallet not loaded"), false, 0, null)
+        // A max ("empty wallet") sell sweeps the balance and the miner fee comes out of the
+        // sweep's single output, so the deposit delivers balance − fee. The amount quoted here
+        // is what NEAR Intents expects, and it refuses any deposit below it (auto-refunding
+        // ~1h later minus a 0.001 DASH fee — MO-984), so quote the post-fee sweep output, not
+        // the full balance. Derive it from the CURRENT balance rather than swapRequest.amount:
+        // the pre-broadcast refresh in commitSwapTransaction passes the already-reduced amount
+        // back in, and re-deriving keeps this idempotent across preview and refresh. Deposits
+        // ABOVE the quoted amount are accepted, so only a balance drop is dangerous — that is
+        // guarded again in buildAndSendDepositTx before broadcasting. The receive address is
+        // only a size stand-in for the estimate; the real deposit address is also P2PKH.
+        val effectiveAmount = if (swapRequest.maximum) {
+            val balance = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
+            val sweep = try {
+                sendPaymentService.estimateNetworkFee(
+                    walletDataProvider.currentReceiveAddress(),
+                    balance,
+                    emptyWallet = true
+                )
+            } catch (e: Exception) {
+                log.error("swapkit max sell: sweep fee estimation failed", e)
+                return ResponseResource.Failure(e, false, 0, e.message)
+            }
+            log.info(
+                "swapkit max sell: quoting sweep output {} (balance {}, fee {})",
+                sweep.amountToSend.toFriendlyString(),
+                balance.toFriendlyString(),
+                sweep.fee
+            )
+            swapRequest.amount.copy().apply {
+                dash = sweep.amountToSend.toBigDecimal()
+                anchoredType = swapRequest.amount.anchoredType
+            }
+        } else {
+            swapRequest.amount
         }
+        val sellAmount = effectiveAmount.dash.setScale(8, RoundingMode.HALF_UP).toPlainString()
         // Refund / source address reported to SwapKit. Use the current receive address
         // rather than the wallet's largest-balance UTXO: SwapKit logs this value, and for
         // NEAR routes it is where refunds land, so sending the richest address would link
@@ -708,7 +743,8 @@ class SwapKitApiAggregator @Inject constructor(
             anchoredType = swapRequest.amount.anchoredType
         }
 
-        // Pass swapRequest.amount through unchanged. Mirrors MayaWebApi (which also
+        // Pass the quoted amount through unchanged (effectiveAmount: the request amount,
+        // or the post-fee sweep output for max sells). Mirrors MayaWebApi (which also
         // passes `amount = swapRequest.amount` to SwapTradeUIModel). DO NOT set
         // .crypto from swap.expectedBuyAmount here — Amount.crypto's setter flips
         // the anchor to Crypto and recomputes _dash from crypto/rate, which silently
@@ -722,7 +758,7 @@ class SwapKitApiAggregator @Inject constructor(
             .toBigDecimalOrNull() ?: BigDecimal.ZERO
 
         val result = SwapTradeUIModel(
-            amount = swapRequest.amount,
+            amount = effectiveAmount,
             outputAsset = swapRequest.target_maya_asset,
             feeAmount = feeAmount,
             vaultAddress = vault,
@@ -944,6 +980,33 @@ class SwapKitApiAggregator @Inject constructor(
             // returned one so we notice if a provider ever starts requiring it.
             if (!swapTradeUIModel.memo.isNullOrBlank()) {
                 log.warn("non-Maya deposit route returned a memo; not encoding it: {}", swapTradeUIModel.memo)
+            }
+
+            // A max sell was quoted for (balance − estimated sweep fee) in getSwapInfo. If the
+            // spendable balance dropped since, the sweep's output would come in below the quoted
+            // amount, and NEAR Intents refuses under-delivery — the deposit would sit for ~1h
+            // and refund minus a 0.001 DASH fee. Abort with a recoverable error instead of
+            // broadcasting a doomed deposit. A balance that grew simply over-delivers, which
+            // NEAR accepts.
+            if (swapTradeUIModel.maximum) {
+                val sweep = sendPaymentService.estimateNetworkFee(
+                    depositAddress,
+                    walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED),
+                    emptyWallet = true
+                )
+                if (sweep.amountToSend.isLessThan(amount)) {
+                    log.warn(
+                        "swapkit max sell aborted: sweep would deliver {} < quoted {}",
+                        sweep.amountToSend.toFriendlyString(),
+                        amount.toFriendlyString()
+                    )
+                    return ResponseResource.Failure(
+                        MayaException("wallet balance changed; the deposit would fall below the quoted amount"),
+                        false,
+                        0,
+                        null
+                    )
+                }
             }
 
             log.info("swapkit deposit: {} to {}", amount.toFriendlyString(), depositAddress)
