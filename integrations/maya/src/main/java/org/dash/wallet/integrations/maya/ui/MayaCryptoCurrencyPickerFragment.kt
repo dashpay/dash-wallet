@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
@@ -49,12 +50,14 @@ class MayaCryptoCurrencyPickerFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MayaCryptoCurrencyPickerScreen(
-                    viewModel = viewModel,
-                    onBackClick = { findNavController().popBackStack() },
-                    onCoinClick = ::onCoinSelected,
-                    onShowError = ::showErrorAlert
-                )
+                DashWalletTheme {
+                    MayaCryptoCurrencyPickerScreen(
+                        viewModel = viewModel,
+                        onBackClick = { findNavController().popBackStack() },
+                        onCoinClick = ::onCoinSelected,
+                        onShowError = ::showErrorAlert
+                    )
+                }
             }
         }
     }

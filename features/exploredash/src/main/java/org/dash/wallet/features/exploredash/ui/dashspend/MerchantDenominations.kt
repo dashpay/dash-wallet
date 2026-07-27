@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
@@ -45,7 +46,7 @@ fun MerchantDenominations(
             minimumFractionDigits = 0
         }
     }
-
+    val colors = LocalDashColors.current
     Column(modifier = modifier) {
         Text(
             stringResource(R.string.select_amount),
@@ -54,7 +55,7 @@ fun MerchantDenominations(
         Text(
             stringResource(R.string.select_fixed_amount),
             style = MyTheme.Body2Regular,
-            color = MyTheme.Colors.textSecondary,
+            color = colors.textSecondary,
             modifier = Modifier.padding(top = 4.dp)
         )
 
@@ -80,14 +81,14 @@ fun MerchantDenominations(
                         )
                     },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MyTheme.Colors.dashBlue5,
+                        selectedContainerColor = colors.dashBlue5,
                         containerColor = Color.Transparent,
-                        selectedLabelColor = MyTheme.Colors.textPrimary,
-                        labelColor = MyTheme.Colors.textPrimary
+                        selectedLabelColor = colors.textPrimary,
+                        labelColor = colors.textPrimary
                     ),
                     border = FilterChipDefaults.filterChipBorder(
-                        borderColor = MyTheme.Colors.primary8,
-                        selectedBorderColor = MyTheme.Colors.dashBlue,
+                        borderColor = colors.primary8,
+                        selectedBorderColor = colors.dashBlue,
                         borderWidth = 1.5.dp,
                         selectedBorderWidth = 1.5.dp,
                         enabled = true,

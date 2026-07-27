@@ -2,7 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    style="@style/Button.Primary.Large.White"
+    style="@style/Button.Primary.Large.Inverted"
     android:layout_width="match_parent"
     android:layout_height="70dp"
     android:layout_marginBottom="10dp"

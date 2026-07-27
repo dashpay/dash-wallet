@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +39,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
@@ -52,10 +55,11 @@ fun MayaPortalScreen(
     onBuyClick: () -> Unit = {},
     onSellClick: () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         TopNavBase(
             leadingIcon = ImageVector.vectorResource(CommonR.drawable.ic_menu_chevron),
@@ -77,7 +81,7 @@ fun MayaPortalScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                    .background(colors.backgroundSecondary, RoundedCornerShape(20.dp))
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 horizontalAlignment = Alignment.Start
@@ -95,13 +99,13 @@ fun MayaPortalScreen(
                     Text(
                         text = stringResource(R.string.dash_dex_title),
                         style = MyTheme.Typography.HeadlineSmallBold,
-                        color = MyTheme.Colors.textPrimary,
+                        color = colors.textPrimary,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
                         text = stringResource(R.string.dash_dex_subtitle),
                         style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.textSecondary,
+                        color = colors.textSecondary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -130,13 +134,18 @@ fun MayaPortalScreen(
 }
 
 @Composable
-@Preview
+@Preview(name = "Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 private fun MayaPortalScreenBuyAndSellPreview() {
-    MayaPortalScreen(showBuy = true)
+    DashWalletTheme {
+        MayaPortalScreen(showBuy = true)
+    }
 }
 
 @Composable
 @Preview
 private fun MayaPortalScreenSellOnlyPreview() {
-    MayaPortalScreen(showBuy = false)
+    DashWalletTheme {
+        MayaPortalScreen(showBuy = false)
+    }
 }

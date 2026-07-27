@@ -113,7 +113,7 @@
                     android:layout_marginTop="0dp"
                     android:layout_gravity="center_vertical"
                     android:lineSpacingExtra="2sp"
-                    android:textColor="@color/dash_black"
+                    android:textColor="@color/content_primary"
                     android:textSize="10sp"
                     tools:text="Dash Wallet"
                     tools:visibility="visible" />

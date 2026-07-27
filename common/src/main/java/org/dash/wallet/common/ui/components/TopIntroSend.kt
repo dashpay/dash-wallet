@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -97,6 +98,7 @@ fun TopIntroSend(
     onToggleVisibility: (() -> Unit)? = null,
     modifier: Modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
 ) {
+    val colors = LocalDashColors.current
     // Internal state used only when the caller does not hoist the toggle.
     var internalVisible by rememberSaveable { mutableStateOf(true) }
     val isVisible = balanceVisible ?: internalVisible
@@ -109,7 +111,7 @@ fun TopIntroSend(
         Text(
             text = heading,
             style = MyTheme.Typography.HeadlineMediumBold,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -126,7 +128,7 @@ fun TopIntroSend(
                 Text(
                     text = preposition,
                     style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.textPrimary
+                    color = colors.textPrimary
                 )
                 if (toIconUrl != null) {
                     AsyncImage(
@@ -151,7 +153,7 @@ fun TopIntroSend(
                     Text(
                         text = toName,
                         style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.textPrimary,
+                        color = colors.textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -161,12 +163,11 @@ fun TopIntroSend(
             // Address variant: "to [address]" — preposition secondary, address primary
             Text(
                 text = buildAnnotatedString {
-                    // Per Figma node 4251:16531 the whole "to {address}" line is text/primary.
-                    withStyle(MyTheme.Body2Regular.toSpanStyle().copy(color = MyTheme.Colors.textPrimary)) {
+                    withStyle(MyTheme.Body2Regular.toSpanStyle().copy(color = colors.textPrimary)) {
                         append(preposition)
                         append(" ")
                     }
-                    withStyle(MyTheme.Body2Regular.toSpanStyle().copy(color = MyTheme.Colors.textPrimary)) {
+                    withStyle(MyTheme.Body2Regular.toSpanStyle().copy(color = colors.textPrimary)) {
                         append(toAddress)
                     }
                 },
@@ -207,6 +208,7 @@ private fun BalanceRow(
     isVisible: Boolean,
     onToggleClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     val hiddenPlaceholder = "*****"
     val balanceLabel = stringResource(R.string.balance)
 
@@ -219,7 +221,7 @@ private fun BalanceRow(
         Text(
             text = "$balanceLabel ",
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textSecondary
+            color = colors.textSecondary
         )
 
         // Toggleable content: icon + amounts, or placeholder
@@ -244,9 +246,19 @@ private fun BalanceRow(
                 )
                 if (fiatBalance != null) {
                     Text(
-                        text = "~ $fiatBalance",
-                        style = MyTheme.Typography.BodyMedium,
-                        color = MyTheme.Colors.textSecondary
+                        text = buildAnnotatedString {
+                            withStyle(MyTheme.Typography.BodyMedium.toSpanStyle().copy(color = colors.textPrimary)) {
+                                append(dashBalance)
+                            }
+                            if (fiatBalance != null) {
+                                withStyle(
+                                    MyTheme.Typography.BodyMedium.toSpanStyle().copy(color = colors.textSecondary)
+                                ) {
+                                    append(" · ")
+                                    append(fiatBalance)
+                                }
+                            }
+                        }
                     )
                 }
             }
@@ -254,7 +266,7 @@ private fun BalanceRow(
             Text(
                 text = hiddenPlaceholder,
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary,
+                color = colors.textSecondary,
                 modifier = Modifier.weight(1f, fill = false)
             )
         }
@@ -283,7 +295,7 @@ private fun BalanceRow(
                 contentDescription = stringResource(
                     if (isVisible) R.string.hide_balance else R.string.show_balance
                 ),
-                tint = MyTheme.Colors.textSecondary,
+                tint = colors.textSecondary,
                 modifier = Modifier.size(14.dp)
             )
         }
@@ -292,14 +304,30 @@ private fun BalanceRow(
 
 // ── Previews ────────────────────────────────────────────────────────────────────
 
-@Preview(showBackground = true, widthDp = 393)
 @Composable
-private fun TopIntroSendVisiblePreview() {
+private fun TopIntroSendPreviewScaffold(content: @Composable () -> Unit) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
             .padding(vertical = 8.dp)
     ) {
+        content()
+    }
+}
+
+@Preview(name = "Send Visible Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Send Visible Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun TopIntroSendVisiblePreview() {
+    DashWalletTheme {
+        TopIntroSendVisiblePreviewContent()
+    }
+}
+
+@Composable
+private fun TopIntroSendVisiblePreviewContent() {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
@@ -309,14 +337,18 @@ private fun TopIntroSendVisiblePreview() {
     }
 }
 
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Send Hidden Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Send Hidden Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun TopIntroSendHiddenPreview() {
-    Column(
-        modifier = Modifier
-            .background(MyTheme.Colors.backgroundPrimary)
-            .padding(vertical = 8.dp)
-    ) {
+    DashWalletTheme {
+        TopIntroSendHiddenPreviewContent()
+    }
+}
+
+@Composable
+private fun TopIntroSendHiddenPreviewContent() {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
@@ -328,14 +360,18 @@ private fun TopIntroSendHiddenPreview() {
     }
 }
 
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Send No Fiat Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Send No Fiat Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun TopIntroSendNoFiatPreview() {
-    Column(
-        modifier = Modifier
-            .background(MyTheme.Colors.backgroundPrimary)
-            .padding(vertical = 8.dp)
-    ) {
+    DashWalletTheme {
+        TopIntroSendNoFiatPreviewContent()
+    }
+}
+
+@Composable
+private fun TopIntroSendNoFiatPreviewContent() {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
@@ -344,14 +380,18 @@ private fun TopIntroSendNoFiatPreview() {
     }
 }
 
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Send Icon Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Send Icon Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun TopIntroSendIconPreview() {
-    Column(
-        modifier = Modifier
-            .background(MyTheme.Colors.backgroundPrimary)
-            .padding(vertical = 8.dp)
-    ) {
+    DashWalletTheme {
+        TopIntroSendIconPreviewContent()
+    }
+}
+
+@Composable
+private fun TopIntroSendIconPreviewContent() {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Buy gift card",
             preposition = "at",

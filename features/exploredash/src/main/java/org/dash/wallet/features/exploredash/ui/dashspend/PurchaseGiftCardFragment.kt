@@ -22,6 +22,7 @@ import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
@@ -37,7 +38,8 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.observeOnDestroy
@@ -229,7 +231,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         binding.fixedDenomText.text = fixedAmountFormat.format(0)
 
         binding.composeContainer.setContent {
-            DenominationsBottomContainer()
+            DashWalletTheme {
+                DenominationsBottomContainer()
+            }
         }
     }
 
@@ -423,10 +427,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         val merchant = viewModel.giftCardMerchant.collectAsState().value ?: return
         val isReplaying = viewModel.isBlockchainReplaying.collectAsStateWithLifecycle()
 
+        val colors = LocalDashColors.current
         Box(
             modifier = Modifier.background(
-                color = MyTheme.Colors.backgroundSecondary,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                color = colors.backgroundSecondary,
+                shape = RoundedCornerShape(
                     topStart = 16.dp,
                     topEnd = 16.dp,
                     bottomStart = 0.dp,

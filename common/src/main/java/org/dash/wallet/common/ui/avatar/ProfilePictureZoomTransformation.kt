@@ -34,6 +34,10 @@ class ProfilePictureZoomTransformation(private val zoomedRect: RectF) : Transfor
             "${zoomedRect.right},${zoomedRect.bottom})"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
+        // A zero-dimension bitmap would make the coerceIn bounds below invalid (min > max) and crash.
+        if (input.width == 0 || input.height == 0) {
+            return input
+        }
         // A malformed/empty zoom rect (right<=left or bottom<=top) would otherwise produce a 1px
         // sliver, since the cropWidth/cropHeight coercion floors at 1. Reject it up front.
         if (zoomedRect.right <= zoomedRect.left || zoomedRect.bottom <= zoomedRect.top) {
@@ -45,7 +49,6 @@ class ProfilePictureZoomTransformation(private val zoomedRect: RectF) : Transfor
             .coerceIn(1, input.width - x)
         val cropHeight = Math.round(input.height * (zoomedRect.bottom - zoomedRect.top))
             .coerceIn(1, input.height - y)
-        if (cropWidth <= 0 || cropHeight <= 0) return input
         val zoomX = TARGET / cropWidth
         val zoomY = TARGET / cropHeight
         val matrix = Matrix().apply { setScale(zoomX, zoomY) }

@@ -28,6 +28,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.util.toBigDecimal
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -95,10 +96,12 @@ class DEXEnterAmountFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                DEXEnterAmountScreen(
-                    viewModel = viewModel,
-                    onBackClick = { findNavController().popBackStack() }
-                )
+                DashWalletTheme {
+                    DEXEnterAmountScreen(
+                        viewModel = viewModel,
+                        onBackClick = { findNavController().popBackStack() }
+                    )
+                }
             }
         }
     }

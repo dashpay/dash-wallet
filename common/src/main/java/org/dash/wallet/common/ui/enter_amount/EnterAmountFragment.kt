@@ -43,6 +43,8 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentEnterAmountBinding
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.ui.segmented_picker.PickerDisplayMode
@@ -218,22 +220,25 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
             ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
         )
         binding.currencyOptions.setContent {
-            SegmentedPicker(
-                currencyOptions,
-                modifier = Modifier
-                    .height(48.dp)
-                    .width(40.dp),
-                selectedIndex = pickedCurrencyOption,
-                style = SegmentedPickerStyle(
-                    displayMode = PickerDisplayMode.Vertical,
-                    cornerRadius = 8f,
-                    backgroundColor = Color.Transparent,
-                    thumbColor = MyTheme.Colors.primary5,
-                    textStyle = MyTheme.Micro,
-                    shadowElevation = 0
-                )
-            ) { currency, _ ->
-                binding.amountView.dashToFiat = currency.title == Constants.DASH_CURRENCY
+            DashWalletTheme {
+                val colors = LocalDashColors.current
+                SegmentedPicker(
+                    currencyOptions,
+                    modifier = Modifier
+                        .height(48.dp)
+                        .width(40.dp),
+                    selectedIndex = pickedCurrencyOption,
+                    style = SegmentedPickerStyle(
+                        displayMode = PickerDisplayMode.Vertical,
+                        cornerRadius = 8f,
+                        backgroundColor = Color.Transparent,
+                        thumbColor = colors.primary5,
+                        textStyle = MyTheme.Micro,
+                        shadowElevation = 0
+                    )
+                ) { currency, _ ->
+                    binding.amountView.dashToFiat = currency.title == Constants.DASH_CURRENCY
+                }
             }
         }
 

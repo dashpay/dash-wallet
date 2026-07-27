@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
@@ -438,13 +437,6 @@ class ContactsFragment : Fragment(),
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
-            searchContacts()
-        }
     }
 
     private fun handleString(input: String, fireAction: Boolean, errorDialogTitleResId: Int) {

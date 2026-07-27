@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
@@ -106,7 +107,7 @@ fun MayaAddressInputScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(LocalDashColors.current.backgroundPrimary)
     ) {
         NavBarBackTitle(
             title = state.title,
@@ -148,7 +149,7 @@ fun MayaAddressInputScreen(
                         Text(
                             text = stringResource(R.string.maya_paste_address_from),
                             style = MyTheme.Caption,
-                            color = MyTheme.Colors.textSecondary,
+                            color = LocalDashColors.current.textSecondary,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(10.dp)

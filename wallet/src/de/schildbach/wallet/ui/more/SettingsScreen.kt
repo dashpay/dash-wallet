@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -41,9 +42,10 @@ import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
-import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.common.util.toBigDecimal
@@ -118,14 +120,14 @@ private fun SettingsScreenContent(
     var balance: String? = null
     var balanceIcon: Int? = null
     val decimalFormat = DecimalFormat("0.000")
-    
+
     if (uiState.coinJoinMixingMode == CoinJoinMode.NONE && uiState.coinJoinMixingStatus != MixingStatus.FINISHING) {
         statusId = R.string.turned_off
-   } else {
+    } else {
         if (uiState.coinJoinMixingStatus == MixingStatus.FINISHED) {
             statusId = R.string.coinjoin_progress_finished
         } else {
-            statusId = when(uiState.coinJoinMixingStatus) {
+            statusId = when (uiState.coinJoinMixingStatus) {
                 MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
                 MixingStatus.MIXING -> R.string.coinjoin_mixing
                 MixingStatus.FINISHING -> R.string.coinjoin_mixing_finishing
@@ -146,111 +148,120 @@ private fun SettingsScreenContent(
     }
     val coinJoinStatusText = when {
         uiState.coinJoinMixingMode != CoinJoinMode.NONE && (uiState.coinJoinMixingStatus == MixingStatus.MIXING || uiState.coinJoinMixingStatus == MixingStatus.FINISHING) ->
-            stringResource(R.string.coinjoin_progress_status_percentage, stringResource(statusId), uiState.mixingProgress.toInt())
+            stringResource(
+                R.string.coinjoin_progress_status_percentage,
+                stringResource(statusId),
+                uiState.mixingProgress.toInt()
+            )
+
         else -> stringResource(statusId)
     }
-    
+    val colors = LocalDashColors.current
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
-    ) {
-        // Top Navigation
-        TopNavBase(
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
-            onLeadingClick = onBackClick,
-            centralPart = false,
-            trailingPart = false
-        )
-
-        // Settings Header
-        TopIntro(
-            heading = stringResource(R.string.settings_title),
-        )
-
-        // Scrollable Content
-        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .background(colors.backgroundPrimary)
         ) {
-            Menu {
-                // Local Currency
-                MenuItem(
-                    title = stringResource(R.string.menu_local_currency),
-                    subtitle = uiState.localCurrencySymbol,
-                    icon = R.drawable.ic_local_currency,
-                    action = onLocalCurrencyClick
-                )
+            // Top Navigation
+            TopNavBase(
+                leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
+                onLeadingClick = onBackClick,
+                centralPart = false,
+                trailingPart = false
+            )
 
-                // Rescan Blockchain
-                MenuItem(
-                    title = stringResource(R.string.menu_rescan_blockchain),
-                    icon = R.drawable.ic_rescan_blockchain,
-                    action = onRescanBlockchainClick
-                )
+            // Settings Header
+            TopIntro(
+                heading = stringResource(R.string.settings_title),
+            )
 
-                // About Dash
-                MenuItem(
-                    title = stringResource(R.string.about_dash_title),
-                    icon = R.drawable.ic_dash_blue_filled,
-                    action = onAboutDashClick
-                )
-
-                // Notifications
-                MenuItem(
-                    title = stringResource(R.string.notifications_title),
-                    icon = R.drawable.ic_notification,
-                    action = onNotificationsClick
-                )
-
-                // CoinJoin
-                MenuItem(
-                    title = stringResource(R.string.coinjoin),
-                    subtitle = coinJoinStatusText,
-                    icon = R.drawable.ic_mixing,
-                    action = onCoinJoinClick,
-                    dashAmount = balance,
-                    dashIcon = balanceIcon
-                )
-
-                // Transaction Metadata
-                if (Constants.SUPPORTS_TXMETADATA && uiState.transactionMetadataVisible) {
+            // Scrollable Content
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Menu {
+                    // Local Currency
                     MenuItem(
-                        title = stringResource(R.string.transaction_metadata_title),
-                        subtitle = uiState.transactionMetadataSubtitle,
-                        icon = R.drawable.transaction_metadata,
-                        action = onTransactionMetadataClick
+                        title = stringResource(R.string.menu_local_currency),
+                        subtitle = uiState.localCurrencySymbol,
+                        icon = R.drawable.ic_local_currency,
+                        action = onLocalCurrencyClick
+                    )
+
+                    // Rescan Blockchain
+                    MenuItem(
+                        title = stringResource(R.string.menu_rescan_blockchain),
+                        icon = R.drawable.ic_rescan_blockchain,
+                        action = onRescanBlockchainClick
+                    )
+
+                    // About Dash
+                    MenuItem(
+                        title = stringResource(R.string.about_dash_title),
+                        icon = R.drawable.ic_dash_blue_filled,
+                        action = onAboutDashClick
+                    )
+
+                    // Notifications
+                    MenuItem(
+                        title = stringResource(R.string.notifications_title),
+                        icon = R.drawable.ic_notification,
+                        action = onNotificationsClick
+                    )
+
+                    // CoinJoin
+                    MenuItem(
+                        title = stringResource(R.string.coinjoin),
+                        subtitle = coinJoinStatusText,
+                        icon = R.drawable.ic_mixing,
+                        action = onCoinJoinClick,
+                        dashAmount = balance,
+                        dashIcon = balanceIcon
+                    )
+
+                    // Transaction Metadata
+                    if (Constants.SUPPORTS_TXMETADATA && uiState.transactionMetadataVisible) {
+                        MenuItem(
+                            title = stringResource(R.string.transaction_metadata_title),
+                            subtitle = uiState.transactionMetadataSubtitle,
+                            icon = R.drawable.transaction_metadata,
+                            action = onTransactionMetadataClick
+                        )
+                    }
+
+                    // Battery Optimization
+                    MenuItem(
+                        title = stringResource(R.string.battery_optimization_title),
+                        subtitle = stringResource(
+                            if (uiState.ignoringBatteryOptimizations) {
+                                R.string.battery_optimization_subtitle_unrestricted
+                            } else {
+                                R.string.battery_optimization_subtitle_optimized
+                            },
+                        ),
+                        icon = R.drawable.ic_battery,
+                        action = onBatteryOptimizationClick
                     )
                 }
-
-                // Battery Optimization
-                MenuItem(
-                    title = stringResource(R.string.battery_optimization_title),
-                    subtitle = stringResource(
-                        if (uiState.ignoringBatteryOptimizations) {
-                            R.string.battery_optimization_subtitle_unrestricted
-                        } else {
-                            R.string.battery_optimization_subtitle_optimized
-                        },
-                    ),
-                    icon = R.drawable.ic_battery,
-                    action = onBatteryOptimizationClick
-                )
             }
         }
+}
+
+@Composable
+@Preview(name = "Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+fun MoreScreenPreview() {
+    DashWalletTheme {
+        SettingsScreenContent(uiState = SettingsUIState())
     }
 }
 
 @Composable
-@Preview
-fun MoreScreenPreview() {
-    SettingsScreenContent(uiState = SettingsUIState())
-}
-
-@Composable
-@Preview(name = "Settings with CoinJoin Active")
+@Preview(name = "Settings with CoinJoin Active - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Settings with CoinJoin Active - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 fun MoreScreenPreviewWithCoinJoin() {
     val customState = SettingsUIState(
         localCurrencySymbol = "USD",
@@ -264,5 +275,7 @@ fun MoreScreenPreviewWithCoinJoin() {
         transactionMetadataVisible = true,
         transactionMetadataSubtitle = "Last saved: Jan 15, 2024"
     )
-    SettingsScreenContent(uiState = customState)
+    DashWalletTheme {
+        SettingsScreenContent(uiState = customState)
+    }
 }
