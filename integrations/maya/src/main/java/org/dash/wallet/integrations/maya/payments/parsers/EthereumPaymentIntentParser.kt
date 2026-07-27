@@ -44,7 +44,7 @@ class EthereumPaymentIntentParser(
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
             try {
-                val hexAddress = input.substring(uriPrefix.length)
+                val hexAddress = input.substring(uriPrefix.length + 1)
                 return@withContext createPaymentIntent(hexAddress)
             } catch (ex: Exception) {
                 log.info("got invalid uri: '$input'", ex)
@@ -56,9 +56,9 @@ class EthereumPaymentIntentParser(
                     )
                 )
             }
-        } else if (input.startsWith(currency) || input.startsWith("${currency.uppercase()}:")) {
+        } else if (input.startsWith("$currency:") || input.startsWith("${currency.uppercase()}:")) {
             try {
-                val hexAddress = input.substring(currency.length)
+                val hexAddress = input.substring(currency.length + 1)
                 return@withContext createPaymentIntent(hexAddress)
             } catch (ex: Exception) {
                 log.info("got invalid uri: '$input'", ex)
