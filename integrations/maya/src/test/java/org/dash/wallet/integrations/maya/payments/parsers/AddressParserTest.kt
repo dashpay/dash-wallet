@@ -346,4 +346,31 @@ class AddressParserTest {
             ).size
         )
     }
+
+    @Test
+    fun normalizeCaseTest() {
+        // Only case-insensitive (bech32) forms are canonicalized to lowercase. Case-sensitive
+        // Base58 forms must never be rewritten: where they are validated by pattern only, an
+        // all-caps corrupt address could otherwise be "repaired" into a different, plausible-
+        // looking address instead of being rejected.
+        val zcashParser = ZcashAddressParser()
+        val sapling = "zs1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2"
+        assertEquals(sapling, zcashParser.normalizeCase(sapling.uppercase()))
+        assertEquals(sapling, zcashParser.normalizeCase(sapling))
+        val uppercasedTransparent = "t1K79TgQbqu74d6rBmsMu2oFEXEwAmdYiT7".uppercase()
+        assertEquals(uppercasedTransparent, zcashParser.normalizeCase(uppercasedTransparent))
+
+        val cardanoParser = CardanoAddressParser()
+        val shelley = "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer" +
+            "3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
+        assertEquals(shelley, cardanoParser.normalizeCase(shelley.uppercase()))
+        val uppercasedByron = "Ae2tdPwUPEZ4YjgvykNpoFeYUxoyhNj2kg8KfKWN2FizsSpLUPv68MpTVDo".uppercase()
+        assertEquals(uppercasedByron, cardanoParser.normalizeCase(uppercasedByron))
+
+        // Solana is Base58 with a length-only payload check — an all-caps string whose
+        // lowercase form happens to decode to a 32-byte key must not be rewritten.
+        val solanaParser = SolanaAddressParser()
+        val uppercasedSolana = "DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK".uppercase()
+        assertEquals(uppercasedSolana, solanaParser.normalizeCase(uppercasedSolana))
+    }
 }

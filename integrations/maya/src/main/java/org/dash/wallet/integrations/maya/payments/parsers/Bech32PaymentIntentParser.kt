@@ -43,8 +43,8 @@ open class Bech32PaymentIntentParser(
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
             try {
-                val address = input.substring(uriPrefix.length + 1)
-                return@withContext createPaymentIntent(normalize(address))
+                val address = validate(input.substring(uriPrefix.length + 1))
+                return@withContext createPaymentIntent(address)
             } catch (ex: Exception) {
                 log.info("got invalid uri: '$input'", ex)
                 throw PaymentIntentParserException(
@@ -57,8 +57,8 @@ open class Bech32PaymentIntentParser(
             }
         } else if (input.startsWith("$currency:") || input.startsWith("${currency.uppercase()}:")) {
             try {
-                val address = input.substring(currency.length + 1)
-                return@withContext createPaymentIntent(normalize(address))
+                val address = validate(input.substring(currency.length + 1))
+                return@withContext createPaymentIntent(address)
             } catch (ex: Exception) {
                 log.info("got invalid uri: '$input'", ex)
                 throw PaymentIntentParserException(
@@ -71,7 +71,7 @@ open class Bech32PaymentIntentParser(
             }
         } else if (addressParser.exactMatch(input)) {
             try {
-                return@withContext createPaymentIntent(normalize(input))
+                return@withContext createPaymentIntent(input.lowercase())
             } catch (ex: AddressFormatException) {
                 log.info("got invalid address", ex)
                 throw PaymentIntentParserException(
@@ -95,10 +95,15 @@ open class Bech32PaymentIntentParser(
     }
 
     /**
-     * A valid bech32 address may be scanned all-uppercase (QR alphanumeric mode); lowercase is
-     * the canonical form expected in the swap memo. Anything that isn't a valid bech32 match is
-     * passed through unchanged.
+     * A URI scheme prefix says nothing about the payload that follows it, so the payload gets
+     * the same validation as a bare address before it can reach the swap memo. A valid bech32
+     * address may be scanned all-uppercase (QR alphanumeric mode); lowercase is the canonical
+     * form expected in the memo.
      */
-    private fun normalize(address: String) =
-        if (addressParser.exactMatch(address)) address.lowercase() else address
+    private fun validate(address: String): String {
+        if (!addressParser.exactMatch(address)) {
+            throw AddressFormatException("not a valid $currency address: $address")
+        }
+        return address.lowercase()
+    }
 }

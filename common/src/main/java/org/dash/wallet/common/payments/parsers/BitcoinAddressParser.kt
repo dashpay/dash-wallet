@@ -35,6 +35,12 @@ class BitcoinAddressParser(params: NetworkParameters) : AddressParser(PATTERN_BI
         return result
     }
 
+    // Only the segwit bech32 alternative is case-insensitive; legacy Base58 keeps its case.
+    override fun isCaseInsensitiveFormat(input: String): Boolean {
+        val hrp = params?.segwitAddressHrp ?: return false
+        return input.startsWith("${hrp}1", ignoreCase = true)
+    }
+
     override fun verifyAddress(addressCandidate: String) {
         params?.let {
             try {

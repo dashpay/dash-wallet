@@ -36,6 +36,12 @@ class ZcashAddressParser : AddressParser("t[13][1-9A-HJ-NP-Za-km-z]{33}", null) 
             unifiedParser.exactMatch(inputText)
     }
 
+    // Only the bech32 forms (Sapling zs1..., unified u1...) are case-insensitive; transparent
+    // t-addresses are Base58 and keep their case.
+    override fun isCaseInsensitiveFormat(input: String): Boolean {
+        return input.startsWith("zs1", ignoreCase = true) || input.startsWith("u1", ignoreCase = true)
+    }
+
     override fun findAll(inputText: String): List<IntRange> {
         val result = arrayListOf<IntRange>()
         result.addAll(super.findAll(inputText))

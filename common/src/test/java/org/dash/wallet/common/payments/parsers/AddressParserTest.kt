@@ -135,6 +135,16 @@ class AddressParserTest {
             "thor166n4w5039meulfa3p6ydg60ve6ueac7tlt0jws",
             runeParser.normalizeCase("THOR166N4W5039MEULFA3P6YDG60VE6UEAC7TLT0JWS")
         )
+
+        // A params-less Base58 parser validates by pattern only (no checksum), so the
+        // case-sensitivity gate is what keeps an all-caps Base58 string — whose lowercase
+        // form also matches the pattern — from being rewritten into a different address.
+        val base58Parser = AddressParser.getBase58AddressParser()
+        assertTrue(base58Parser.exactMatch("3AB4ME5SAG8W8BF2XGFPQVZRKKV1V1HMW".lowercase()))
+        assertEquals(
+            "3AB4ME5SAG8W8BF2XGFPQVZRKKV1V1HMW",
+            base58Parser.normalizeCase("3AB4ME5SAG8W8BF2XGFPQVZRKKV1V1HMW")
+        )
     }
 
     @Test

@@ -21,7 +21,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Base58
 import org.bitcoinj.core.NetworkParameters
 
-open class AddressParser(pattern: String, val params: NetworkParameters?, ignoreCase: Boolean = false) {
+open class AddressParser(pattern: String, val params: NetworkParameters?, private val ignoreCase: Boolean = false) {
     companion object {
         val PATTERN_BITCOIN_ADDRESS = "[${Base58.ALPHABET.joinToString(separator = "")}]{20,40}"
         private const val PATTERN_ETHEREUM_ADDRESS = "0x[a-fA-F0-9]{40}"
@@ -70,11 +70,14 @@ open class AddressParser(pattern: String, val params: NetworkParameters?, ignore
     /**
      * Canonicalizes the case of a scanned or pasted address: bech32 QR codes commonly carry
      * the all-uppercase form (alphanumeric mode), which is lowercased when the lowercase form
-     * is a valid address. Anything containing a lowercase letter is left untouched — Base58
-     * and EIP-55 checksums are case-significant.
+     * is a valid address. Only inputs reported by [isCaseInsensitiveFormat] are ever rewritten:
+     * Base58 and EIP-55 are case-significant, and where they are validated by pattern only
+     * (no [params], so no checksum) an all-caps corrupt address could otherwise be "repaired"
+     * into a different, plausible-looking one instead of being rejected.
      */
     fun normalizeCase(input: String): String {
-        return if (input.any { it.isUpperCase() } &&
+        return if (isCaseInsensitiveFormat(input) &&
+            input.any { it.isUpperCase() } &&
             input.none { it.isLowerCase() } &&
             exactMatch(input.lowercase())
         ) {
@@ -83,6 +86,12 @@ open class AddressParser(pattern: String, val params: NetworkParameters?, ignore
             input
         }
     }
+
+    /**
+     * Whether [input] is a candidate for a case-insensitive address format. Parsers that mix
+     * case-insensitive bech32 with case-sensitive alternatives override this per input.
+     */
+    protected open fun isCaseInsensitiveFormat(input: String): Boolean = ignoreCase
 
     protected open fun verifyAddress(addressCandidate: String) {
         params?.let { Address.fromString(params, addressCandidate) }

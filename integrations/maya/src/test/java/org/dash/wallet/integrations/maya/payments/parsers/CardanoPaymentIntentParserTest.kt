@@ -24,9 +24,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
-class Bech32PaymentIntentParserTest {
-    private val parser = RunePaymentIntentProcessor() // RUNE / thor: / THOR.RUNE
-    private val address = "thor166n4w5039meulfa3p6ydg60ve6ueac7tlt0jws"
+class CardanoPaymentIntentParserTest {
+    private val parser = CardanoPaymentIntentParser()
+    private val byron = "Ae2tdPwUPEZ4YjgvykNpoFeYUxoyhNj2kg8KfKWN2FizsSpLUPv68MpTVDo"
 
     /** The swap memo carried in the intent's OP_RETURN output: `=:ASSET:destinationAddress`. */
     private fun memoOf(intent: PaymentIntent): String {
@@ -35,35 +35,20 @@ class Bech32PaymentIntentParserTest {
     }
 
     @Test
-    fun bareAddress_buildsMemo() = runBlocking {
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse(address)))
-    }
-
-    @Test
-    fun uriInput_stripsSchemeIncludingColon() = runBlocking {
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse("thor:$address")))
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse("THOR:$address")))
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse("RUNE:$address")))
-    }
-
-    @Test
-    fun uppercaseAddress_normalizedToCanonicalLowercase() = runBlocking {
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse(address.uppercase())))
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse("THOR:${address.uppercase()}")))
+    fun uriInput_preservesByronCase() = runBlocking {
+        assertEquals("=:ADA.ADA:$byron", memoOf(parser.parse("cardano:$byron")))
+        assertEquals("=:ADA.ADA:$byron", memoOf(parser.parse("CARDANO:$byron")))
     }
 
     @Test
     fun uriWithInvalidPayload_rejected() {
         // A valid scheme prefix must not bypass address validation.
         assertThrows(PaymentIntentParserException::class.java) {
-            runBlocking { parser.parse("thor:notAnAddress") }
+            runBlocking { parser.parse("cardano:notAnAddress") }
         }
+        // An uppercased Byron address is corrupt Base58 — rejected, not "repaired".
         assertThrows(PaymentIntentParserException::class.java) {
-            runBlocking { parser.parse("RUNE:$address-junk") }
-        }
-        // Mixed case is invalid per BIP-173 even after a valid prefix.
-        assertThrows(PaymentIntentParserException::class.java) {
-            runBlocking { parser.parse("thor:thor166N4W5039MEULFA3P6YDG60VE6UEAC7TLT0JWS") }
+            runBlocking { parser.parse("cardano:${byron.uppercase()}") }
         }
     }
 }

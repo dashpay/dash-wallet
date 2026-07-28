@@ -24,9 +24,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
-class Bech32PaymentIntentParserTest {
-    private val parser = RunePaymentIntentProcessor() // RUNE / thor: / THOR.RUNE
-    private val address = "thor166n4w5039meulfa3p6ydg60ve6ueac7tlt0jws"
+class XrdPaymentIntentParserTest {
+    private val parser = XrdPaymentIntentParser()
+
+    // Pattern-valid fixture (the XRD parser has no checksum validation): account_rdx1 + 54
+    // bech32-alphabet chars, within the parser's 50-65 range.
+    private val address = "account_rdx1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54"
 
     /** The swap memo carried in the intent's OP_RETURN output: `=:ASSET:destinationAddress`. */
     private fun memoOf(intent: PaymentIntent): String {
@@ -35,35 +38,20 @@ class Bech32PaymentIntentParserTest {
     }
 
     @Test
-    fun bareAddress_buildsMemo() = runBlocking {
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse(address)))
-    }
-
-    @Test
-    fun uriInput_stripsSchemeIncludingColon() = runBlocking {
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse("thor:$address")))
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse("THOR:$address")))
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse("RUNE:$address")))
-    }
-
-    @Test
-    fun uppercaseAddress_normalizedToCanonicalLowercase() = runBlocking {
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse(address.uppercase())))
-        assertEquals("=:THOR.RUNE:$address", memoOf(parser.parse("THOR:${address.uppercase()}")))
+    fun uriInput_normalizedToCanonicalLowercase() = runBlocking {
+        assertEquals("=:x:$address", memoOf(parser.parse("radix:$address")))
+        assertEquals("=:x:$address", memoOf(parser.parse("RADIX:${address.uppercase()}")))
     }
 
     @Test
     fun uriWithInvalidPayload_rejected() {
         // A valid scheme prefix must not bypass address validation.
         assertThrows(PaymentIntentParserException::class.java) {
-            runBlocking { parser.parse("thor:notAnAddress") }
-        }
-        assertThrows(PaymentIntentParserException::class.java) {
-            runBlocking { parser.parse("RUNE:$address-junk") }
+            runBlocking { parser.parse("radix:notAnAddress") }
         }
         // Mixed case is invalid per BIP-173 even after a valid prefix.
         assertThrows(PaymentIntentParserException::class.java) {
-            runBlocking { parser.parse("thor:thor166N4W5039MEULFA3P6YDG60VE6UEAC7TLT0JWS") }
+            runBlocking { parser.parse("radix:account_rdx1QPZRY9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54") }
         }
     }
 }

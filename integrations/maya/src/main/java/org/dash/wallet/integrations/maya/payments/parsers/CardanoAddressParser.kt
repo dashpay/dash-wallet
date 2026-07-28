@@ -40,6 +40,11 @@ class CardanoAddressParser : AddressParser(
         private const val MAX_SHELLEY_LENGTH = 110
     }
 
+    // Only the Shelley bech32 form is case-insensitive; Byron Base58 keeps its case.
+    override fun isCaseInsensitiveFormat(input: String): Boolean {
+        return input.startsWith("addr1", ignoreCase = true)
+    }
+
     override fun verifyAddress(addressCandidate: String) {
         if (addressCandidate.startsWith("addr1", ignoreCase = true)) {
             val decoded = Bech32.decode(addressCandidate, MAX_SHELLEY_LENGTH)
