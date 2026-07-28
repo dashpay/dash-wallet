@@ -23,6 +23,8 @@ import org.dash.wallet.common.BuildConfig
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 class RemoteDataSource @Inject constructor() {
     fun <Api> buildApi(
@@ -39,6 +41,9 @@ class RemoteDataSource @Inject constructor() {
 
     private fun getRetrofitClient(): OkHttpClient {
         return OkHttpClient.Builder()
+            .connectTimeout(20.seconds.toJavaDuration())
+            .callTimeout(20.seconds.toJavaDuration())
+            .readTimeout(20.seconds.toJavaDuration())
             .also { client ->
                 if (BuildConfig.DEBUG) {
                     val logging = HttpLoggingInterceptor()
