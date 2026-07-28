@@ -79,6 +79,11 @@ class MayaConvertCryptoFragment : Fragment() {
 
     private var selectedCoinBaseAccount: AccountDataUIModel? = null
 
+    // The graph-scoped ViewModel captured while the nav_maya graph is guaranteed on the back
+    // stack — onDestroy also runs when the whole flow is popped to Home (after a completed
+    // swap), where resolving the navGraphViewModels lazy for the first time throws.
+    private var resolvedConvertViewModel: ConvertViewViewModel? = null
+
     private var uiState by mutableStateOf(MayaConvertCryptoUIState())
 
     private val decimalSeparator =
@@ -106,6 +111,7 @@ class MayaConvertCryptoFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        resolvedConvertViewModel = convertViewModel
         setupState()
         setupObservers()
 
@@ -715,6 +721,8 @@ class MayaConvertCryptoFragment : Fragment() {
 
     override fun onDestroy() {
         super.onDestroy()
-        convertViewModel.clear()
+        // Use the instance captured in onCreateView rather than the lazy: re-resolving it
+        // here crashes once the whole flow was popped to Home.
+        resolvedConvertViewModel?.clear()
     }
 }

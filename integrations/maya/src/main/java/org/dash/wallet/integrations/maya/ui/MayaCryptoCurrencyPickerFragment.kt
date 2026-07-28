@@ -42,11 +42,18 @@ class MayaCryptoCurrencyPickerFragment : Fragment() {
 
     private val viewModel by mayaViewModels<MayaViewModel>()
 
+    // The graph-scoped ViewModel captured while the nav_maya graph is guaranteed on the back
+    // stack. onDestroy also runs when the whole flow is popped to Home (after a completed
+    // swap), where resolving the navGraphViewModels lazy for the first time throws — which a
+    // restored back-stack instance whose view was never recreated would otherwise do.
+    private var resolvedViewModel: MayaViewModel? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        resolvedViewModel = viewModel
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
@@ -69,9 +76,10 @@ class MayaCryptoCurrencyPickerFragment : Fragment() {
         // when the picker is popped off the back stack (returning to the portal):
         // isRemoving is false on a configuration change and while the fragment sits on
         // the back stack after navigating forward, so the query survives rotation and a
-        // forward-then-back trip.
+        // forward-then-back trip. Use the instance captured in onCreateView rather than
+        // the lazy: re-resolving it here crashes once the whole flow was popped to Home.
         if (isRemoving) {
-            viewModel.onSearchQuery("")
+            resolvedViewModel?.onSearchQuery("")
         }
     }
 
