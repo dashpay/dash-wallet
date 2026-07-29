@@ -530,13 +530,21 @@ apply from: file("../gradle/google-services.gradle")
 //   sha256sum -c dash-wallet-<variant>.apk.sha256
 // This runs automatically as a finalizer of each assemble<Variant> task.
 android.applicationVariants.all { variant ->
-    variant.outputs.all { output ->
-        def apkFile = output.outputFile
-        def taskName = "generate${variant.name.capitalize()}ApkSha256"
-        def sha256Task = tasks.register(taskName) {
-            description = "Writes a SHA-256 checksum file next to the ${variant.name} APK"
-            onlyIf { apkFile.exists() }
-            doLast {
+    // One task per variant covering all of its APK outputs, so ABI/density splits
+    // do not attempt to register the same task name more than once. Only plain
+    // values (variant name, File list) are captured, keeping the task closures
+    // compatible with the configuration cache.
+    def variantName = variant.name
+    def apkFiles = variant.outputs.collect { it.outputFile }
+    def sha256Task = tasks.register("generate${variantName.capitalize()}ApkSha256") {
+        description = "Writes a SHA-256 checksum file next to each ${variantName} APK"
+        onlyIf { apkFiles.any { it.exists() } }
+        doLast {
+            apkFiles.each { apkFile ->
+                if (!apkFile.exists()) {
+                    logger.warn("Skipping checksum for missing APK: ${apkFile}")
+                    return
+                }
                 def digest = java.security.MessageDigest.getInstance("SHA-256")
                 apkFile.withInputStream { stream ->
                     def buffer = new byte[8192]
@@ -552,6 +560,10 @@ android.applicationVariants.all { variant ->
                 logger.lifecycle("Wrote checksum to ${shaFile}")
             }
         }
-        variant.assembleProvider.configure { finalizedBy(sha256Task) }
     }
+    // A finalizer only runs when the finalized task actually executes, and the
+    // assemble<Variant> lifecycle task is skipped whenever one of its dependencies
+    // (e.g. package<Variant>) fails, so a stale APK left over from a failed build
+    // is never checksummed as if it were the new artifact.
+    variant.assembleProvider.configure { finalizedBy(sha256Task) }
 }
