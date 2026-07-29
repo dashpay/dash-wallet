@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.api
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -124,6 +125,8 @@ class FiatExchangeRateAggregatedProvider @Inject constructor(
             try {
                 updateExchangeRates(currencyCode)
                 poolListLastUpdated = System.currentTimeMillis()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 log.error("failed to refresh fiat exchange rates", e)
             }
