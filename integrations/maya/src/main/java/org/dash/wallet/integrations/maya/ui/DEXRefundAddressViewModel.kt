@@ -159,6 +159,15 @@ class DEXRefundAddressViewModel @Inject constructor(
         persistAddress()
     }
 
+    /**
+     * Canonicalizes a scanned/pasted address for display: the all-uppercase bech32 form QR
+     * codes use becomes lowercase; case-significant forms (Base58, EIP-55) pass through.
+     */
+    fun normalizeCase(text: String): String {
+        val parser = MayaCurrencyList[_uiState.value.asset]?.addressParser
+        return parser?.normalizeCase(text) ?: text
+    }
+
     /** Persist the entered address + its asset so it survives process death. */
     private fun persistAddress() {
         savedStateHandle[KEY_ADDRESS] = _uiState.value.address

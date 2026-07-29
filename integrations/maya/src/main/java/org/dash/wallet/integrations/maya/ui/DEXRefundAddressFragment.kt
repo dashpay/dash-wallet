@@ -64,7 +64,7 @@ class DEXRefundAddressFragment : Fragment() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)?.let { scanned ->
-                viewModel.onAddressChanged(scanned)
+                viewModel.onAddressChanged(viewModel.normalizeCase(scanned.trim()))
             }
         }
     }
@@ -116,7 +116,7 @@ class DEXRefundAddressFragment : Fragment() {
         val pasted = clipboard.primaryClip?.takeIf { it.itemCount > 0 }
             ?.getItemAt(0)?.coerceToText(requireContext())?.toString()
         if (!pasted.isNullOrBlank()) {
-            viewModel.onAddressChanged(pasted.trim())
+            viewModel.onAddressChanged(viewModel.normalizeCase(pasted.trim()))
         }
     }
 

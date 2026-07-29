@@ -369,7 +369,7 @@
     <string name="maya_halted_label">Halted</string>
     <string name="maya_halted_coins_toast">Some coins are temporarily halted and unavailable for trading</string>
     <string name="maya_select_coin_title">Select coin</string>
-    <string name="dex_enter_amount_title">Convert Dash to %s</string>
+    <string name="dex_enter_amount_title">Convert %s to Dash</string>
     <string name="dex_enter_amount_checking">Checking amount…</string>
     <string name="dex_enter_amount_invalid">This amount can\'t be swapped right now. Try a different amount, or try again shortly.</string>
     <string name="maya_route_label_maya" translatable="false">Maya</string>

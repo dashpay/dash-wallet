@@ -79,7 +79,7 @@ class MayaAddressInputFragment : Fragment() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)?.let { scanned ->
-                viewModel.setInput(scanned)
+                viewModel.setInput(normalizeCase(scanned.trim()))
             }
         }
     }
@@ -179,7 +179,7 @@ class MayaAddressInputFragment : Fragment() {
 
     private fun onSourceClick(source: AddressSourceUIState) {
         if (!source.address.isNullOrEmpty()) {
-            viewModel.setInput(source.address)
+            viewModel.setInput(normalizeCase(source.address))
         } else {
             // exchange login
             findNavController().navigate(DeepLinkDestination.Exchange(source.id, "login_and_close").deepLink)
@@ -187,7 +187,15 @@ class MayaAddressInputFragment : Fragment() {
     }
 
     private fun onClipboardClick() {
-        uiState.clipboardAddress?.let { viewModel.setInput(it) }
+        uiState.clipboardAddress?.let { viewModel.setInput(normalizeCase(it)) }
+    }
+
+    /**
+     * A bech32 address scanned or pasted in its all-uppercase QR form is shown and stored in
+     * canonical lowercase; anything else (Base58, URIs, mixed case) is left as entered.
+     */
+    private fun normalizeCase(text: String): String {
+        return viewModel.paymentParsers.getAddressParser(viewModel.currency)?.normalizeCase(text) ?: text
     }
 
     /**
@@ -223,6 +231,15 @@ class MayaAddressInputFragment : Fragment() {
                 log.error("problem processing $input", ex)
                 // Address-format error: also restores the correct copy after a previous,
                 // valid-format attempt replaced it with a swap-specific message.
+                setInlineError(getString(CommonR.string.not_valid_address, viewModel.currency))
+                return@launch
+            }
+
+            // A checksum-valid Dash address can pass the permissive lexical validation of some
+            // target chains (e.g. Solana's Base58 length range) and then fail only at
+            // conversion time (MO-969) — reject it explicitly before quoting.
+            if (mayaAddressInputViewModel.isDashAddress(input)) {
+                log.info("rejecting a DASH address as the swap destination for {}", viewModel.currency)
                 setInlineError(getString(CommonR.string.not_valid_address, viewModel.currency))
                 return@launch
             }

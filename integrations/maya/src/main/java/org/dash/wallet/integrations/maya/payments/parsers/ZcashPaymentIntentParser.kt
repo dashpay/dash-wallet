@@ -38,7 +38,7 @@ class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZE
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
             try {
-                val address = input.substring(uriPrefix.length + 1)
+                val address = validate(input.substring(uriPrefix.length + 1))
                 return@withContext createPaymentIntent(address)
             } catch (ex: Exception) {
                 log.info("got invalid uri: '$input'", ex)
@@ -49,7 +49,7 @@ class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZE
             }
         } else if (addressParser.exactMatch(input)) {
             try {
-                return@withContext createPaymentIntent(input)
+                return@withContext createPaymentIntent(normalizeShielded(input))
             } catch (ex: AddressFormatException) {
                 log.info("got invalid address", ex)
                 throw PaymentIntentParserException(
@@ -63,5 +63,20 @@ class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZE
             IllegalArgumentException(input),
             ResourceString(R.string.error, listOf(input))
         )
+    }
+
+    /**
+     * Shielded/unified addresses are bech32 and may be scanned all-caps; lowercase is
+     * canonical. Transparent t-addresses are Base58 (case-sensitive) — left untouched.
+     */
+    private fun normalizeShielded(address: String) =
+        if (address.startsWith("t")) address else address.lowercase()
+
+    /** URI payloads get the same validation as bare addresses before reaching the swap memo. */
+    private fun validate(address: String): String {
+        if (!addressParser.exactMatch(address)) {
+            throw AddressFormatException("not a valid $currency address: $address")
+        }
+        return normalizeShielded(address)
     }
 }

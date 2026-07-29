@@ -109,6 +109,26 @@ class AddressParserTest {
         )
         assertTrue(parser.exactMatch("Ae2tdPwUPEZ4YjgvykNpoFeYUxoyhNj2kg8KfKWN2FizsSpLUPv68MpTVDo"))
 
+        // All-uppercase Shelley bech32 is valid per BIP-173 (QR alphanumeric mode); mixed case
+        // is not. Byron Base58 stays case-sensitive, so its uppercased form is rejected.
+        assertTrue(
+            parser.exactMatch(
+                (
+                    "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer" +
+                        "3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
+                    ).uppercase()
+            )
+        )
+        assertFalse(
+            parser.exactMatch(
+                "ADDR1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer" +
+                    "3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
+            )
+        )
+        assertFalse(
+            parser.exactMatch("Ae2tdPwUPEZ4YjgvykNpoFeYUxoyhNj2kg8KfKWN2FizsSpLUPv68MpTVDo".uppercase())
+        )
+
         // Shape-valid Shelley string with an invalid bech32 checksum (the fabricated address
         // this codebase previously used as the ADA example).
         assertFalse(
@@ -182,6 +202,14 @@ class AddressParserTest {
         assertFalse(parser.exactMatch("1111111111111111111111111111111"))
         assertFalse(parser.exactMatch("0OIl000000000000000000000000000000"))
         assertFalse(parser.exactMatch(""))
+
+        // Base58 strings inside the length range that are NOT 32-byte ed25519 keys: a Dash
+        // P2PKH address (25-byte Base58Check payload) passed the old lexical check and only
+        // failed at conversion time (MO-969).
+        assertFalse(parser.exactMatch("Xh93hJroCBPn77rPGmi73p3uwfYvY96AqG"))
+        assertFalse(parser.exactMatch("XiqnCEVFCxHDkiivDNFt47mLthdnPCavDe"))
+        // A Bitcoin P2PKH address — same 25-byte Base58Check shape.
+        assertFalse(parser.exactMatch("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
 
         assertEquals(
             2,
@@ -295,6 +323,13 @@ class AddressParserTest {
         assertTrue(parser.exactMatch(sapling))
         assertTrue(parser.exactMatch(unified))
 
+        // All-uppercase bech32 forms are valid per BIP-173; mixed case is not. Transparent
+        // addresses are Base58 (case-sensitive), so the uppercased form is rejected.
+        assertTrue(parser.exactMatch(sapling.uppercase()))
+        assertTrue(parser.exactMatch(unified.uppercase()))
+        assertFalse(parser.exactMatch("zs1" + sapling.uppercase().substring(3)))
+        assertFalse(parser.exactMatch("t1K79TgQbqu74d6rBmsMu2oFEXEwAmdYiT7".uppercase()))
+
         // 't2' is not a valid transparent prefix (only t1 / t3).
         assertFalse(parser.exactMatch("t2K79TgQbqu74d6rBmsMu2oFEXEwAmdYiT7"))
         assertFalse(parser.exactMatch(""))
@@ -310,5 +345,32 @@ class AddressParserTest {
                 """
             ).size
         )
+    }
+
+    @Test
+    fun normalizeCaseTest() {
+        // Only case-insensitive (bech32) forms are canonicalized to lowercase. Case-sensitive
+        // Base58 forms must never be rewritten: where they are validated by pattern only, an
+        // all-caps corrupt address could otherwise be "repaired" into a different, plausible-
+        // looking address instead of being rejected.
+        val zcashParser = ZcashAddressParser()
+        val sapling = "zs1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2"
+        assertEquals(sapling, zcashParser.normalizeCase(sapling.uppercase()))
+        assertEquals(sapling, zcashParser.normalizeCase(sapling))
+        val uppercasedTransparent = "t1K79TgQbqu74d6rBmsMu2oFEXEwAmdYiT7".uppercase()
+        assertEquals(uppercasedTransparent, zcashParser.normalizeCase(uppercasedTransparent))
+
+        val cardanoParser = CardanoAddressParser()
+        val shelley = "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer" +
+            "3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
+        assertEquals(shelley, cardanoParser.normalizeCase(shelley.uppercase()))
+        val uppercasedByron = "Ae2tdPwUPEZ4YjgvykNpoFeYUxoyhNj2kg8KfKWN2FizsSpLUPv68MpTVDo".uppercase()
+        assertEquals(uppercasedByron, cardanoParser.normalizeCase(uppercasedByron))
+
+        // Solana is Base58 with a length-only payload check — an all-caps string whose
+        // lowercase form happens to decode to a 32-byte key must not be rewritten.
+        val solanaParser = SolanaAddressParser()
+        val uppercasedSolana = "DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK".uppercase()
+        assertEquals(uppercasedSolana, solanaParser.normalizeCase(uppercasedSolana))
     }
 }

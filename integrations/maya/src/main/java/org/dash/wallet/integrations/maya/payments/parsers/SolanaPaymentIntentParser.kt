@@ -42,6 +42,10 @@ open class SolanaPaymentIntentParser(
         if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
             try {
                 val address = input.substring(uriPrefix.length + 1)
+                // The URI branch must validate the stripped address like the bare-address
+                // branch below does — createPaymentIntent encodes whatever it is given, so
+                // without this a "solana:"-prefixed non-Solana address slips through.
+                require(addressParser.exactMatch(address)) { "not a valid SOL address: '$address'" }
                 return@withContext createPaymentIntent(address)
             } catch (ex: Exception) {
                 log.info("got invalid uri: '$input'", ex)
