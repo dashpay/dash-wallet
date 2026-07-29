@@ -715,9 +715,14 @@ class MayaConvertCryptoFragment : Fragment() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Resolving the navGraphViewModels lazy throws once the whole flow was popped to
-        // Home (after a completed swap) — the graph scope is gone and its ViewModel state
-        // with it, so there is nothing left to clear.
-        runCatching { convertViewModel }.getOrNull()?.clear()
+        // Clear the entered amounts only when this screen is popped off the back stack:
+        // isRemoving is false on a configuration change, where clear() would wipe the
+        // saved-state amount the recreated fragment is about to restore. Resolving the
+        // navGraphViewModels lazy throws once the whole flow was popped to Home — the
+        // graph scope is gone and its ViewModel state with it, so there is nothing left
+        // to clear.
+        if (isRemoving) {
+            runCatching { convertViewModel }.getOrNull()?.clear()
+        }
     }
 }
