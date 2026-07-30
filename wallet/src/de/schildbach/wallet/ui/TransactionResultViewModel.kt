@@ -26,6 +26,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetailProvider
 import de.schildbach.wallet.service.platform.sdk.toDefaultMetadata
@@ -68,6 +69,7 @@ class TransactionResultViewModel @Inject constructor(
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
     private val sdkTxDetailProvider: SdkTxDetailProvider,
+    private val cutoverUiDataService: CutoverUiDataService,
     val analytics: AnalyticsService,
     val walletApplication: WalletApplication
 ) : ViewModel() {
@@ -93,6 +95,21 @@ class TransactionResultViewModel @Inject constructor(
     private val _sdkTxDetail = MutableStateFlow<SdkTxDetail?>(null)
     val sdkTxDetail: StateFlow<SdkTxDetail?>
         get() = _sdkTxDetail
+
+    /**
+     * Bug A: a direction/amount OVERRIDE for a transaction the dashj wallet
+     * DOES hold but reads wrong post-cutover. An SDK-authored send is committed
+     * into the held/frozen dashj wallet (rollback coherence), but that wallet
+     * doesn't recognize the SDK send's inputs/outputs, so `tx.getValue(wallet)`
+     * is 0 → the sheet mislabels it "Amount Received +0.00". When the cutover is
+     * active we load the authoritative SDK row and expose it here; the binder
+     * drives `isSent` + the net amount from it instead of `tx.getValue(wallet)`.
+     * Non-null only when [transaction] IS non-null (the SDK-only, blank-sheet
+     * case stays on [sdkTxDetail]). Permanently null pre-cutover.
+     */
+    private val _sdkDirectionOverride = MutableStateFlow<SdkTxDetail?>(null)
+    val sdkDirectionOverride: StateFlow<SdkTxDetail?>
+        get() = _sdkDirectionOverride
 
     private val _transactionMetadata: MutableStateFlow<TransactionMetadata?> = MutableStateFlow(null)
     val transactionMetadata
@@ -126,6 +143,18 @@ class TransactionResultViewModel @Inject constructor(
                 val tx = withContext(Dispatchers.IO) { walletData.wallet!!.getTransaction(txId) }
                 if (tx != null) {
                     _transaction.value = tx
+                    // Bug A: post-cutover the held dashj wallet can misread an
+                    // SDK-authored send (value==0 → "Received +0.00"). When the
+                    // cutover is active, load the authoritative SDK row and expose
+                    // it as a direction/amount override the binder reads. Pre-cutover
+                    // the SDK balance is permanently null, so this is a no-op and the
+                    // dashj-driven display is byte-identical.
+                    if (cutoverUiDataService.sdkBalanceOrNull() != null) {
+                        val override = withContext(Dispatchers.IO) { loadSdkDetailOrNull(txId) }
+                        if (override != null) {
+                            _sdkDirectionOverride.value = override
+                        }
+                    }
                     monitorTransactionMetadata(tx.txId)
                     findContact(tx)
                 } else {
@@ -133,20 +162,7 @@ class TransactionResultViewModel @Inject constructor(
                     // SDK-only transaction (a receive the held dashj wallet
                     // never saw). Serve the detail from the SDK store via
                     // the transaction_decode binding instead of a blank sheet.
-                    val detail = withContext(Dispatchers.IO) {
-                        try {
-                            sdkTxDetailProvider.load(txId.toString())
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (t: Throwable) {
-                            // Throwable, not Exception: the SDK's native-lib
-                            // load can throw UnsatisfiedLinkError /
-                            // ExceptionInInitializerError on unsupported
-                            // ABIs — degrade to the plain sheet, don't crash.
-                            log.error("SDK tx-detail lookup failed for {}", txId, t)
-                            null
-                        }
-                    }
+                    val detail = withContext(Dispatchers.IO) { loadSdkDetailOrNull(txId) }
                     if (detail != null) {
                         _sdkTxDetail.value = detail
                         monitorTransactionMetadata(txId)
@@ -155,6 +171,19 @@ class TransactionResultViewModel @Inject constructor(
             }
         }
     }
+
+    private suspend fun loadSdkDetailOrNull(txId: Sha256Hash): SdkTxDetail? =
+        try {
+            sdkTxDetailProvider.load(txId.toString())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            // Throwable, not Exception: the SDK's native-lib load can throw
+            // UnsatisfiedLinkError / ExceptionInInitializerError on unsupported
+            // ABIs — degrade to the plain sheet, don't crash.
+            log.error("SDK tx-detail lookup failed for {}", txId, t)
+            null
+        }
 
     private fun monitorTransactionMetadata(txId: Sha256Hash) {
         // this might take some time, so let it run asynchronously

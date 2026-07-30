@@ -190,7 +190,9 @@ class SdkBlockchainStateMapperTest {
         assertNull(update.bestChainHeight)
         assertNull(update.bestChainDateMs)
         assertNull(update.mnListHeight)
-        assertEquals(0, update.percentageSync)
+        // IDLE/CONNECTING preserve the prior percent (null) rather than
+        // regressing a previously-synced bar to 0 on a restart reconnect.
+        assertNull(update.percentageSync)
         assertEquals(SyncStage.OFFLINE, update.syncStage)
     }
 

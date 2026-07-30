@@ -289,7 +289,10 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val dryRunRequest = viewModel.dryrunSendRequest ?: return
         val address = viewModel.basePaymentIntent.getAddress(Constants.ADDRESS_NETWORK) ?: return
 
-        val txFee = dryRunRequest.tx.fee
+        // Post-cutover the dry-run does not complete the tx (no inputs attached),
+        // so tx.fee is null; fall back to the deterministic display-only estimate.
+        // Pre-cutover tx.fee is set by completeTx and the fallback is never used.
+        val txFee = dryRunRequest.tx.fee ?: viewModel.dryRunFeeEstimate
         val amount: Coin?
         val total: String?
 

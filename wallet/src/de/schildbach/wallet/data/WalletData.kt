@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.data
 
+import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.transactions.WalletTransactionFilter
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Address
@@ -76,6 +77,18 @@ interface WalletData {
         balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED,
         coinSelector: CoinSelector? = null
     ): Flow<Coin>
+
+    /**
+     * The send screen's "max sendable" DISPLAY feed: the dashj max-output-coin-selector
+     * balance (ESTIMATED total minus the fee to spend it all). [de.schildbach.wallet.WalletApplication]
+     * overrides this to overlay the SDK's live total post-cutover (the plain
+     * [observeBalance] overlay skips selector-based streams by design); pre-cutover — and
+     * for this default fallback — it is the dashj value unchanged. This feed drives only
+     * the send screen's displayed available balance / max-amount cap; the real send's coin
+     * selection is owned independently by [de.schildbach.wallet.payments.SendCoinsTaskRunner].
+     */
+    fun observeMaxOutputBalance(): Flow<Coin> =
+        observeBalance(Wallet.BalanceType.ESTIMATED, MaxOutputAmountCoinSelector())
 
     fun canAffordIdentityCreation(): Boolean
 

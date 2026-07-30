@@ -8,6 +8,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.integration.android.BitcoinIntegration
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.ui.more.tools.ConfirmTopUpDialogFragment
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
@@ -20,6 +21,7 @@ import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.slf4j.LoggerFactory
 import de.schildbach.wallet.util.format
@@ -136,6 +138,20 @@ class BuyCreditsFragment : SendCoinsFragment() {
         val rate = enterAmountViewModel.selectedExchangeRate.value
 
         if (editedAmount != null) {
+            // Post-cutover the dashj L1 engine is HELD (0 UTXOs), so building
+            // the top-up asset lock with dashj fails InsufficientMoneyException
+            // — the funds live in the SDK. Route top-up funding through the
+            // SDK's fused topUpFromCore (resume-gated) instead of the dashj
+            // asset-lock + TopupIdentityWorker chain. There is NO dashj tx/txid,
+            // so the SDK outcome is observed directly (no TransactionResult
+            // screen). Pre-cutover this branch is skipped and the dashj path
+            // below is byte-for-byte unchanged.
+            if (buyCreditsViewModel.isCutoverCommitted()) {
+                handleSdkTopUp(editedAmount.toDashjCoin().value)
+                viewModel.resetState()
+                return
+            }
+
             val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it.toDashjFiat()) }
 
             try {
@@ -192,5 +208,69 @@ class BuyCreditsFragment : SendCoinsFragment() {
             playSentSound()
             requireActivity().finish()
         }
+    }
+
+    /**
+     * Post-cutover top-up: fund the identity's credit balance through the SDK's
+     * resume-gated, fused topUpFromCore and observe the three-valued outcome
+     * directly. Unlike the dashj path there is no funding Transaction, so the
+     * TransactionResultActivity screen is skipped — the new credit balance is
+     * surfaced by the credits UI on return.
+     *
+     * Funds safety: the executor runs the mandatory resume gate before any
+     * fresh build and never falls back to dashj. NotBroadcast means nothing was
+     * spent (retry-safe); Ambiguous means the top-up MAY be on chain — the
+     * executor keeps it sticky (refuses any further attempt this process) and
+     * the user is told NOT to retry.
+     */
+    private suspend fun handleSdkTopUp(amountDuffs: Long) {
+        val progress = AdaptiveDialog.progress(getString(R.string.send_coins_sending_msg))
+        progress.show(parentFragmentManager, "buy_credits_sdk_topup")
+        val result = try {
+            buyCreditsViewModel.topUpViaSdk(amountDuffs)
+        } finally {
+            progress.dismissAllowingStateLoss()
+        }
+
+        when (result) {
+            is SdkWriteResult.Broadcast -> {
+                log.info("SDK top-up broadcast; new credit balance {}", result.value)
+                onSdkTopUpSuccess()
+            }
+            is SdkWriteResult.NotBroadcast -> {
+                // Provably nothing spent — retry-safe. Surface the standard
+                // send-error dialog so the user can try again.
+                log.warn("SDK top-up not sent: {}", result.reason)
+                showFailureDialog(Exception(result.reason))
+            }
+            is SdkWriteResult.Ambiguous -> {
+                // The top-up MAY have gone through; the executor is sticky and
+                // refuses any retry. Never offer a retry (double-pay risk).
+                log.error("SDK top-up outcome unconfirmed", result.cause)
+                showSdkTopUpAmbiguousDialog()
+            }
+        }
+    }
+
+    private fun onSdkTopUpSuccess() {
+        // The SDK fuses the asset-lock build with the Platform top-up
+        // registration, so there is no dashj funding tx to return to a calling
+        // activity or to show on the TransactionResult screen. Buy Credits is
+        // always launched via startActivity (no result expected).
+        playSentSound()
+        requireActivity().finish()
+    }
+
+    private suspend fun showSdkTopUpAmbiguousDialog() {
+        if (!isAdded) {
+            return
+        }
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.credit_balance_button_buy),
+            getString(R.string.buy_credits_topup_unconfirmed),
+            getString(R.string.button_dismiss),
+            null
+        ).showAsync(requireActivity())
     }
 }

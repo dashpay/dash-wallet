@@ -369,7 +369,8 @@ class SdkTxDetailTest {
             } throws UnsatisfiedLinkError("dlopen failed: library not found for this ABI")
 
             val detail = runBlocking {
-                SdkTxDetailProvider(sdkService).load(decoded.txidDisplayHex)
+                SdkTxDetailProvider(sdkService, mockk(), mockk(relaxed = true))
+                    .load(decoded.txidDisplayHex)
             }
 
             assertNotNull("row-only detail, not a crash or null", detail)

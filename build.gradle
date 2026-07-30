@@ -8,7 +8,7 @@ buildscript {
         // truth for both the dependency coordinate (wallet/build.gradle) and the
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
         // cutover hands L1 ownership to the SDK.
-        dashSdkVersion = '0.1.0-b2-SNAPSHOT'
+        dashSdkVersion = '0.1.0-v41int9-SNAPSHOT'
         dppVersion = "4.0.0"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
@@ -76,8 +76,8 @@ plugins {
 
 allprojects {
     repositories {
-        google()
         mavenLocal()
+        google()
         mavenCentral()
         maven { url 'https://jitpack.io' }
         maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }

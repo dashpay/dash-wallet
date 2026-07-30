@@ -153,6 +153,13 @@ class CreateUsernameActivity : LockScreenActivity() {
                 userName = username,
                 invite = invite
             )
+            // Bridge the same args into RequestUserNameViewModel here so EVERY
+            // start destination recognizes the invite — not just REQUEST_USERNAME
+            // (which re-bridges in RequestUsernameFragment). Without this, a
+            // first-time invite that starts on the WELCOME screen leaves
+            // isUsingInvite() false and its balance gate blocks Continue. Applies
+            // to both L1 and shielded (L2) invites.
+            requestUserNameViewModel.setCreateUsernameArgs(dashPayViewModel.createUsernameArgs)
 
             val usernameInVoting = requestUserNameViewModel.isUserNameRequested() &&
                 !requestUserNameViewModel.isUsernameLocked() &&

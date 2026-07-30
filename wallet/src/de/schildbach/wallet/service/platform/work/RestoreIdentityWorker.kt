@@ -31,6 +31,8 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.work.BaseForegroundWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
@@ -62,7 +64,8 @@ class RestoreIdentityWorker @AssistedInject constructor(
     val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
     val identityConfig: BlockchainIdentityConfig,
-    val usernameRequestDao: UsernameRequestDao
+    val usernameRequestDao: UsernameRequestDao,
+    val transparentUsernameCreation: SdkTransparentUsernameCreation
 ) : BaseForegroundWorker(
     context,
     parameters,
@@ -115,15 +118,40 @@ class RestoreIdentityWorker @AssistedInject constructor(
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 0)
             platformSyncService.updateSyncStatus(PreBlockStage.StartRecovery)
 
-            // use an "empty" state for each
-            val blockchainIdentityData = BlockchainIdentityData(IdentityCreationState.NONE, null, null, null, null, true)
+            // A fromCreation run can arrive with the creation state ALREADY
+            // advanced to DONE by the transparent-create path (a confirmed,
+            // non-contested primary sets DONE so the welcome tile appears the
+            // instant creation completes). Resetting that to NONE/restoring=true
+            // here — before the background recovery re-advances it — would blink
+            // the just-shown welcome tile out. So for a fromCreation run whose
+            // persisted state is already completed (>= DONE), PRESERVE it: seed
+            // the working object from the persisted state and skip the reset
+            // persist. A genuine device restore (fromCreation=false) and a
+            // not-yet-completed creation (e.g. a contested primary still at
+            // USERNAME_REGISTERED, which must route to VOTING) both keep the
+            // historic empty/restoring reset unchanged.
+            val alreadyCompletedFromCreation = if (fromCreation) {
+                identityConfig.load()?.takeIf { it.creationState >= IdentityCreationState.DONE }
+            } else {
+                null
+            }
+            // use an "empty" state for each (unless preserving a completed fromCreation state)
+            val blockchainIdentityData = alreadyCompletedFromCreation
+                ?: BlockchainIdentityData(IdentityCreationState.NONE, null, null, null, null, true)
 
             val authExtension =
                 walletDataProvider.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
             //authExtension.setWallet(walletApplication.wallet!!) // why is the wallet not set?  we didn't deserialize it probably!
             val cftxs = authExtension.assetLockTransactions
 
-            identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+            if (alreadyCompletedFromCreation == null) {
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+            } else {
+                log.info(
+                    "fromCreation restore: preserving already-completed creation state {} (not resetting to NONE/restoring)",
+                    alreadyCompletedFromCreation.creationState
+                )
+            }
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 1)
             val existingIdentity = identityRepository.getIdentityFromPublicKeyId()
                 ?: throw IllegalArgumentException("identity $identity doesn't exist on the network")
@@ -183,6 +211,56 @@ class RestoreIdentityWorker @AssistedInject constructor(
             identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetName)
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_3_restoring), 5, 4)
+
+            // Post-cutover TRANSPARENT create whose DPNS name did not land: the
+            // identity exists on chain but has no on-chain name yet. This worker
+            // OWNS re-driving ONLY the name step via the same SDK seam the create
+            // path uses — it NEVER funds (the identity already exists), so this is
+            // the refund-safe retry/completion point. Gated on the COMMITTED
+            // cutover rather than `fromCreation`: a home-tile retry re-runs this
+            // worker with fromCreation=false, and post-cutover the dashj name path
+            // is dead, so the SDK must own it either way. A genuine device restore
+            // starts from an empty config (no requested USERNAME) and falls through
+            // to the throw below (ask the user for a new username). Pre-cutover this
+            // is skipped and the classic dashj retry path is unchanged.
+            if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
+                val requestedLabel = identityConfig.get(BlockchainIdentityConfig.USERNAME)
+                val cutoverCommitted = try {
+                    transparentUsernameCreation.isCutoverCommitted()
+                } catch (e: Exception) {
+                    log.warn("cutover-state read failed while completing DPNS registration; skipping", e)
+                    false
+                }
+                if (cutoverCommitted && !requestedLabel.isNullOrEmpty()) {
+                    log.info("identity has no on-chain name yet — registering DPNS name '{}' via the SDK", requestedLabel)
+                    identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.PREORDER_REGISTERING)
+                    identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
+                    when (
+                        val result = transparentUsernameCreation.registerDpnsNameForExistingIdentity(
+                            Identifier.from(identity).toString(),
+                            requestedLabel
+                        )
+                    ) {
+                        is SdkWriteResult.Broadcast -> {
+                            log.info("SDK DPNS registration of '{}' confirmed: {}", requestedLabel, result.value)
+                            // Re-recover so the contested / DONE handling below sees
+                            // the now on-chain name (populates currentUsername; the
+                            // contested block picks up a name in voting).
+                            platformRepo.recoverUsernames(blockchainIdentity)
+                            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERED)
+                        }
+                        // Retryable: leave the state at USERNAME_REGISTERING (the
+                        // catch below stamps a generic error — NOT "missing domain
+                        // document", so the tile shows the retry card, and restoring
+                        // stays true so a retry re-runs THIS worker, never a re-fund).
+                        is SdkWriteResult.NotBroadcast ->
+                            error("username registration did not complete (retryable): ${result.reason}")
+                        is SdkWriteResult.Ambiguous ->
+                            error("username registration outcome unconfirmed (retryable): ${result.cause.message}")
+                    }
+                }
+            }
 
             var foundContestedNameInVotingPeriod = false
             val maybeDualUsernames = blockchainIdentity.currentUsername != null && !Names.isUsernameContestable(blockchainIdentity.currentUsername!!)
@@ -500,6 +578,13 @@ class RestoreIdentityWorker @AssistedInject constructor(
 
             // At this point, let's see what has been recovered.  It is possible that only the identity was recovered.
             // In this case, we should require that the user enters in a new username.
+            // Reached only when the identity has no on-chain name AND there was
+            // nothing to register here (no requested USERNAME persisted) — the
+            // SDK completion step above already handled (and, on failure, threw
+            // a retryable error for) the fresh-create case that HAS a requested
+            // label. With no label there is nothing to re-drive, so this stays
+            // the historic "only the identity was recovered, ask for a new
+            // username" path (a genuine device restore of a name-less identity).
             if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
                 blockchainIdentityData.creationState = IdentityCreationState.USERNAME_REGISTERING
                 blockchainIdentityData.restoring = false

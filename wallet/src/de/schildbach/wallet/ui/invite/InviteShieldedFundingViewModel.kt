@@ -178,16 +178,22 @@ data class InviteShieldedFundingUIState(
      * directly (the L2 "Create a private invitation" path). Requires the
      * shielded features on, the pool [ShieldedSyncStatus.READY] (a mid-sync
      * `Dash.ZERO` is a placeholder, never evidence), and a trusted balance of
-     * at least the NON-contested invite fund-minimum
-     * ([Constants.SHIELDED_USERNAME_FUND_MIN], 0.15 DASH — the 0.1 exit
-     * denomination padded for the shielded-spend fee). The contested choice
-     * (0.35) is re-checked when the inviter picks the username kind at the fee
-     * step; here we only gate whether ANY private invite is offerable.
+     * at least the NON-contested private invite WITHDRAWN cost
+     * ([nonContestedPrivateWithdrawn], 0.1 DASH — the Type-20 exit denomination
+     * that actually leaves the pool). This is the SAME amount the downstream
+     * fee gate checks ([de.schildbach.wallet.ui.invite.inviteFeeRequirement] /
+     * `inviteFeeGate`, `SHIELDED_INVITE_NON_CONTESTED` = 0.1); gating entry on
+     * the padded shield-IN fund-minimum (0.15, which bakes in the L1 Shield fee
+     * that is irrelevant once funds are already shielded) wrongly hid the
+     * private-invite option for a pool holding between 0.1 and 0.15. The
+     * contested choice (0.3) is re-checked when the inviter picks the username
+     * kind at the fee step; here we only gate whether ANY private invite is
+     * offerable.
      */
     val canCreatePrivateInvite: Boolean
         get() = shieldedEnabled &&
             syncStatus == ShieldedSyncStatus.READY &&
-            shieldedBalance >= Dash(Constants.SHIELDED_USERNAME_FUND_MIN.value)
+            shieldedBalance >= nonContestedPrivateWithdrawn
 
     /**
      * The action buttons the sheet renders, in display order. See
@@ -198,6 +204,21 @@ data class InviteShieldedFundingUIState(
      */
     val options: List<InviteShieldedOption>
         get() = inviteShieldedOptions(canCreatePrivateInvite, canShieldMinimum)
+
+    /**
+     * True while the shielded private-invite decision is still resolving —
+     * the flag read has completed ([shieldedEnabled] is true) but the pool
+     * has not yet reached [ShieldedSyncStatus.READY], so neither
+     * [canCreatePrivateInvite] nor [canShieldMinimum] can be TRUSTED yet
+     * (a mid-sync balance is a placeholder). While this is true the sheet
+     * shows a single neutral "Preparing shielded balance…" primary instead
+     * of first rendering "Shield your funds first" and then flipping to
+     * "Create a private invitation" once the pool reaches READY (Fix B — the
+     * button-label flicker). The pool always reaches READY even when empty,
+     * so this resolves without hanging.
+     */
+    val privateDecisionLoading: Boolean
+        get() = shieldedEnabled && syncStatus != ShieldedSyncStatus.READY
 }
 
 /**

@@ -144,6 +144,21 @@ open class DashPayConfig @Inject constructor(
         val SHIELDED_TIMING_INFO_SHOWN = booleanPreferencesKey("shielded_timing_info_shown")
 
         /**
+         * Whether the post-upgrade MIXED-FUNDS (CoinJoin) migration has been
+         * handled for this wallet — set once the user picks an option that
+         * actually spends (shield / combine) or dismisses the prompt for
+         * good. Deliberately NOT set when an attempt provably spent nothing
+         * ([de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationOutcome.NOT_ATTEMPTED]),
+         * so a failed migration is re-offered on the next startup.
+         *
+         * The flag is a nag-suppressor, not the authority: the prompt also
+         * requires a non-zero CoinJoin-keychain balance, so a completed
+         * migration stops it regardless of whether this ever persisted.
+         * See [de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService].
+         */
+        val MIXED_FUNDS_MIGRATION_DONE = booleanPreferencesKey("mixed_funds_migration_done")
+
+        /**
          * Phase 3c of the dashj → Kotlin SDK migration
          * (`docs/kotlin-sdk-migration-plan.md`): route read-only DPNS
          * username resolution/search through the Dash Platform Kotlin SDK
@@ -187,6 +202,29 @@ open class DashPayConfig @Inject constructor(
          * (call `ShieldedBalanceService.stop()` for that).
          */
         val USE_KOTLIN_SDK_SHIELDED = booleanPreferencesKey("use_kotlin_sdk_shielded")
+
+        /**
+         * Phase 4 (invitation slice) of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): route the TRANSPARENT (L1)
+         * DashPay INVITATION create + claim through the Kotlin SDK's DIP-13
+         * invitation wrappers
+         * ([org.dashfoundation.dashsdk.identity.IdentityRegistration.createInvitation]
+         * / [org.dashfoundation.dashsdk.identity.IdentityRegistration.claimInvitation])
+         * instead of the dashj asset-lock voucher path
+         * ([de.schildbach.wallet.service.platform.TopUpRepository.createInviteFundingTransaction]
+         * / [de.schildbach.wallet.service.platform.TopUpRepository.obtainAssetLockTransaction]).
+         * The transparent counterpart of the shielded-invite flag above.
+         *
+         * Default OFF: with the flag off (or the cutover not yet committed)
+         * every L1-invite entry point returns [SdkWriteResult.NotBroadcast]
+         * without touching the SDK, and the dashj create/claim paths are
+         * byte-identical to before. Because the L1 funds live in the SDK only
+         * AFTER the cutover, the routing seams additionally gate on the
+         * COMMITTED CUTOVER (same as
+         * [de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation]).
+         * See [de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation].
+         */
+        val USE_KOTLIN_SDK_L1_INVITE = booleanPreferencesKey("use_kotlin_sdk_l1_invite")
 
         /**
          * Phase 5a of the dashj → Kotlin SDK migration
@@ -233,21 +271,30 @@ open class DashPayConfig @Inject constructor(
         /**
          * The `USE_KOTLIN_SDK_*` flags a DEBUG build seeds ON when unset —
          * pure so [seedDebugDefaultsIfUnset]'s network split is
-         * host-testable. Mainnet debug builds (prodDebug — the external
-         * large-wallet validation vehicle) seed ONLY the read-only L1
-         * shadow: the shielded pool and the SDK write paths are not
-         * validated on mainnet, and seeding them would expose shielded UI
-         * and platform writes to real funds. The shadow flag alone binds
-         * the wallet (SdkWalletBinder counts it) and runs the read-only
-         * parity scan. `USE_KOTLIN_SDK_L1_SEND` is never seeded anywhere.
+         * host-testable. Per Brian's explicit decision (2026-07-27), mainnet
+         * debug builds (prodDebug — the external large-wallet validation
+         * vehicle) now seed the SAME feature set as testnet, INCLUDING the
+         * shielded pool and the SDK write paths — this deliberately exposes
+         * those paths to REAL mainnet funds for on-device validation. Only
+         * the prodDebug build seeds ([seedDebugDefaultsIfUnset] is
+         * `!BuildConfig.DEBUG` gated), so a prodRelease stays features-off by
+         * default. `USE_KOTLIN_SDK_L1_SEND` is never seeded anywhere.
          */
         internal fun debugSeedFlags(isMainnet: Boolean) = if (isMainnet) {
-            listOf(USE_KOTLIN_SDK_L1_SHADOW)
+            // Mainnet: full set (real-funds validation vehicle — see KDoc).
+            listOf(
+                USE_KOTLIN_SDK_DPNS_READS,
+                USE_KOTLIN_SDK_DASHPAY_WRITES,
+                USE_KOTLIN_SDK_SHIELDED,
+                USE_KOTLIN_SDK_L1_INVITE,
+                USE_KOTLIN_SDK_L1_SHADOW
+            )
         } else {
             listOf(
                 USE_KOTLIN_SDK_DPNS_READS,
                 USE_KOTLIN_SDK_DASHPAY_WRITES,
                 USE_KOTLIN_SDK_SHIELDED,
+                USE_KOTLIN_SDK_L1_INVITE,
                 USE_KOTLIN_SDK_L1_SHADOW
             )
         }
@@ -273,6 +320,19 @@ open class DashPayConfig @Inject constructor(
          * source of truth; every engine-start site consults it first.
          */
         val CUTOVER_STATE = stringPreferencesKey("cutover_state")
+
+        /**
+         * Last shielded balance (in duffs) persisted from a fully-synced
+         * (READY) shielded runtime, so the More-screen "Shielded" card can
+         * render the known balance INSTANTLY on open — even while a
+         * background re-scan re-binds the runtime on relaunch — instead of a
+         * "Syncing…" placeholder. Written by
+         * [de.schildbach.wallet.service.platform.sdk.ShieldedBalanceServiceImpl]
+         * only when the balance is trustworthy (status READY); absent until
+         * the first such emission. Follows the last-known-value precedents
+         * above (e.g. [TRANSACTION_METADATA_LAST_PAST_SAVE]).
+         */
+        val LAST_SHIELDED_BALANCE_DUFFS = longPreferencesKey("last_shielded_balance_duffs")
     }
 
     init {
@@ -324,6 +384,16 @@ open class DashPayConfig @Inject constructor(
             log.warn("debug SDK flag seeding failed; unset USE_KOTLIN_SDK_* flags stay OFF", e)
         }
     }
+
+    /**
+     * The last shielded balance persisted from a fully-synced runtime, in
+     * duffs, or null when none has ever been persisted. See
+     * [LAST_SHIELDED_BALANCE_DUFFS].
+     */
+    suspend fun getLastShieldedBalanceDuffs(): Long? = get(LAST_SHIELDED_BALANCE_DUFFS)
+
+    /** Persist the last trustworthy shielded balance (duffs). See [LAST_SHIELDED_BALANCE_DUFFS]. */
+    suspend fun setLastShieldedBalanceDuffs(duffs: Long) = set(LAST_SHIELDED_BALANCE_DUFFS, duffs)
 
     open suspend fun areNotificationsDisabled(): Boolean {
         return (get(LAST_SEEN_NOTIFICATION_TIME) ?: 0) == DISABLE_NOTIFICATIONS

@@ -68,6 +68,7 @@ fun InviteShieldedFundingSheet(
     contestedStandardCost: String,
     canShieldMinimum: Boolean,
     canCreatePrivateInvite: Boolean,
+    primaryLoading: Boolean,
     onCreatePrivateInvite: () -> Unit,
     onShieldFirst: () -> Unit,
     onContinueWithoutPrivacy: () -> Unit,
@@ -157,10 +158,22 @@ fun InviteShieldedFundingSheet(
                 .padding(horizontal = 24.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Primary action: when the shielded pool can already fund an
-            // invitation, offer the L2 "Create a private invitation" path;
-            // otherwise fall back to "Shield your funds first" (L1 shield).
-            if (canCreatePrivateInvite) {
+            // Primary action. While the shielded balance/sync is still
+            // resolving the private-invite decision cannot be trusted, so show
+            // a single disabled "Preparing shielded balance…" primary instead
+            // of first rendering "Shield your funds first" and then flipping to
+            // "Create a private invitation" once the pool reaches READY (Fix B —
+            // button-label flicker). Only once resolved do we render the decided
+            // SHIELD_FIRST / CREATE_PRIVATE button.
+            if (primaryLoading) {
+                DashButton(
+                    text = stringResource(R.string.username_preparing_shielded_balance),
+                    style = Style.Filled,
+                    size = Size.Large,
+                    isEnabled = false,
+                    onClick = {}
+                )
+            } else if (canCreatePrivateInvite) {
                 DashButton(
                     text = stringResource(R.string.invite_payment_create_private),
                     style = Style.Filled,
@@ -272,6 +285,7 @@ private fun InviteShieldedFundingPreview() {
         contestedStandardCost = "0.25",
         canShieldMinimum = true,
         canCreatePrivateInvite = false,
+        primaryLoading = false,
         onCreatePrivateInvite = {},
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},
@@ -289,6 +303,7 @@ private fun InviteShieldedFundingBelowMinimumPreview() {
         contestedStandardCost = "0.25",
         canShieldMinimum = false,
         canCreatePrivateInvite = false,
+        primaryLoading = false,
         onCreatePrivateInvite = {},
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},
@@ -306,6 +321,7 @@ private fun InviteShieldedFundingCreatePrivatePreview() {
         contestedStandardCost = "0.25",
         canShieldMinimum = true,
         canCreatePrivateInvite = true,
+        primaryLoading = false,
         onCreatePrivateInvite = {},
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},

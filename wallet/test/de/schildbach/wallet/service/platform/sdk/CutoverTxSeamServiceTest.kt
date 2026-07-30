@@ -87,6 +87,11 @@ class CutoverTxSeamServiceTest {
 
         override fun observeTotalDuffs(walletIdHex: String): Flow<Long> = emptyFlow()
 
+        override suspend fun currentTotalDuffs(walletIdHex: String): Long = 0L
+
+        override suspend fun currentBalanceSplitDuffs(walletIdHex: String): SdkBalanceSplitDuffs =
+            SdkBalanceSplitDuffs(confirmed = 0L, unconfirmed = 0L)
+
         override fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>> = emptyFlow()
 
         override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> {

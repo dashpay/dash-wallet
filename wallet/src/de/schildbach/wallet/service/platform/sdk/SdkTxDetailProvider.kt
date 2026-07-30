@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import kotlinx.coroutines.CancellationException
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.TransactionMetadata
@@ -72,15 +73,27 @@ data class SdkTxDetail(
      * logged upstream); amounts/time/status above still come from the Room
      * row, but the address lists are empty and [hasOpReturn] is false.
      */
-    val decodeFailed: Boolean = false
+    val decodeFailed: Boolean = false,
+    /**
+     * The Platform-funding role of this transaction when it is a wallet-authored
+     * asset lock the app-side records identify (identity upgrade / top-up /
+     * invite). The SDK records these as INTERNAL moves; classified app-side so
+     * the detail sheet renders "sent to" + the "…Fee" title instead of the
+     * "moved internally to" internal-move presentation. Null for a plain move.
+     */
+    val assetLockKind: AssetLockKind? = null
 ) {
     /** True when the wallet's balance decreased (sent / internal move). */
     val isSent: Boolean get() = netAmountDuffs < 0 || direction == L1TxUiDirection.OUTGOING ||
         direction == L1TxUiDirection.INTERNAL || direction == L1TxUiDirection.COINJOIN
 
-    /** True when every displayed output pays the wallet back (internal move). */
-    val isInternal: Boolean get() = direction == L1TxUiDirection.INTERNAL ||
-        direction == L1TxUiDirection.COINJOIN
+    /**
+     * True when every displayed output pays the wallet back (internal move).
+     * An identified asset-lock funding tx ([assetLockKind]) is NOT an internal
+     * move for display — it funds a Platform action, so it renders "sent to".
+     */
+    val isInternal: Boolean get() = assetLockKind == null &&
+        (direction == L1TxUiDirection.INTERNAL || direction == L1TxUiDirection.COINJOIN)
 }
 
 /**
@@ -121,7 +134,10 @@ internal fun buildSdkTxDetail(
     decoded: DecodedTransaction?,
     myOutputAddresses: Set<String>,
     inputTxoAddresses: List<String?>,
-    inputTxoValues: List<Long?>
+    inputTxoValues: List<Long?>,
+    // Platform-funding role when this internal move is an identified asset lock
+    // (identity upgrade / top-up / invite), else null — see [SdkTxDetail.assetLockKind].
+    assetLockKind: AssetLockKind? = null
 ): SdkTxDetail {
     val outputs = decoded?.outputs.orEmpty()
 
@@ -179,7 +195,8 @@ internal fun buildSdkTxDetail(
         inputAddresses = inputAddresses,
         outputAddresses = outputAddresses,
         hasOpReturn = outputs.any { it.scriptPubkey.firstOrNull() == OP_RETURN },
-        decodeFailed = decoded == null
+        decodeFailed = decoded == null,
+        assetLockKind = assetLockKind
     )
 }
 
@@ -227,7 +244,9 @@ internal fun txoOutpoint(wireTxid: ByteArray, vout: Int): ByteArray =
  */
 @Singleton
 class SdkTxDetailProvider @Inject constructor(
-    private val sdkService: DashSdkService
+    private val sdkService: DashSdkService,
+    private val txDisplayCacheDao: TxDisplayCacheDao,
+    private val assetLockKindResolver: AssetLockKindResolver
 ) {
     /**
      * Load the detail for [txIdDisplayHex] (display-order hex, i.e.
@@ -252,7 +271,7 @@ class SdkTxDetailProvider @Inject constructor(
         }
 
         val entity = db.transactionDao().getByTxid(wireTxid) ?: return null
-        val record = l1TxUiRecord(
+        val baseRecord = l1TxUiRecord(
             txidWireBytes = entity.txid,
             netAmountDuffs = entity.netAmount,
             feeDuffs = entity.fee,
@@ -261,6 +280,43 @@ class SdkTxDetailProvider @Inject constructor(
             firstSeenSec = entity.firstSeen,
             blockTimestampSec = entity.blockTimestamp
         )
+
+        // A fresh pre-block (mempool/IS-locked) receive/send can have net_amount
+        // 0 in the SDK `transactions` row — attribution is not written until the
+        // tx is processed into a block. The live engine event DID carry the
+        // value, and CutoverUiDataService persisted it to
+        // tx_display_cache.valueSatoshis (keyed by lowercase display hex). Prefer
+        // that so the detail sheet shows the real amount instead of "0.00 DASH".
+        //
+        // Sign convention differs by direction (Bug A):
+        // - INCOMING: the cached value IS the received net → use it directly.
+        // - OUTGOING: planL1TxRow writes the cached value as the PRINCIPAL only
+        //   (it excludes the fee — CutoverUiDataService.planL1TxRow), so
+        //   reconstruct the true signed net = -(|principal| + fee) so a sent
+        //   amount renders the same way the dashj path does (|net| amount, fee
+        //   shown separately). INTERNAL/COINJOIN are left untouched.
+        val record = if (
+            baseRecord.netAmountDuffs == 0L &&
+            (baseRecord.direction == L1TxUiDirection.INCOMING ||
+                baseRecord.direction == L1TxUiDirection.OUTGOING)
+        ) {
+            val cachedValue = txDisplayCacheDao
+                .getEntriesByIds(listOf(txIdDisplayHex.lowercase()))
+                .firstOrNull()
+                ?.valueSatoshis
+            if (cachedValue != null && cachedValue != 0L) {
+                val net = if (baseRecord.direction == L1TxUiDirection.INCOMING) {
+                    cachedValue
+                } else {
+                    -(kotlin.math.abs(cachedValue) + (baseRecord.feeDuffs ?: 0L))
+                }
+                baseRecord.copy(netAmountDuffs = net)
+            } else {
+                baseRecord
+            }
+        } else {
+            baseRecord
+        }
 
         val decoded = try {
             TransactionDecoder.decode(
@@ -288,12 +344,18 @@ class SdkTxDetailProvider @Inject constructor(
             txoDao.getByOutpoint(txoOutpoint(input.prevTxid, input.prevVout))
         }
 
+        // Classify a wallet-authored internal move as a Platform-funding asset
+        // lock (upgrade / top-up / invite) so the sheet renders "sent to" + the
+        // "…Fee" title instead of "moved internally to". Null for a plain move.
+        val assetLockKind = assetLockKindResolver.kindFor(txIdDisplayHex.lowercase())
+
         return buildSdkTxDetail(
             record = record,
             decoded = decoded,
             myOutputAddresses = myOutputAddresses,
             inputTxoAddresses = inputTxos.map { it?.address },
-            inputTxoValues = inputTxos.map { it?.amount }
+            inputTxoValues = inputTxos.map { it?.amount },
+            assetLockKind = assetLockKind
         )
     }
 

@@ -43,6 +43,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.InviteHandler
@@ -50,6 +51,7 @@ import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.ui.staking.createCrowdNodeWithdrawalReminderDialog
 import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
+import de.schildbach.wallet.ui.migration.MixedFundsMigrationDialogFragment
 import de.schildbach.wallet.ui.main.MainActivityExt.checkTimeSkew
 import de.schildbach.wallet.ui.main.MainActivityExt.handleFirebaseAction
 import de.schildbach.wallet.ui.main.MainActivityExt.requestDisableBatteryOptimisation
@@ -123,11 +125,20 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private val inviteHandlerViewModel: InviteHandlerViewModel by viewModels()
     @Inject
     lateinit var config: Configuration
+    @Inject
+    lateinit var transparentUsernameCreation: SdkTransparentUsernameCreation
     private lateinit var binding: ActivityMainBinding
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
     private var retryCreationIfInProgress = true
     private var pendingCrowdNodeWithdrawalReminder = false
+
+    /**
+     * The post-upgrade mixed-funds sheet fired while the lock screen was up;
+     * shown as soon as it comes down (same deferral as the CrowdNode
+     * reminder — a sheet rendered under the PIN screen is invisible).
+     */
+    private var pendingMixedFundsMigration = false
     var composeHostFrameLayout: ComposeHostFrameLayout? = null
 
     val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -208,11 +219,36 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             if (it != null) {
                 if (retryCreationIfInProgress && it.creationInProgress) {
                     retryCreationIfInProgress = false
-                    // should this be executed after syncing is finished?
-                    if (it.usingInvite) {
-                        startService(CreateIdentityService.createIntentForRetryFromInvite(this, false))
-                    } else {
-                        startService(CreateIdentityService.createIntentForRetry(this, false))
+                    val usingInvite = it.usingInvite
+                    // POST-CUTOVER the SDK executor + RestoreIdentityWorker own
+                    // resumption of an in-progress creation. This legacy dashj
+                    // retry (CreateIdentityService) must NOT fire then: post-cutover
+                    // it throws InsufficientMoney and stamps a spurious error on
+                    // the home tile even though the SDK path is completing fine.
+                    // Gate it on the COMMITTED cutover (the same signal the create
+                    // routing uses). Pre-cutover this is unchanged — the dashj
+                    // retry still fires. retryCreationIfInProgress is cleared above
+                    // so this never lingers or re-fires.
+                    lifecycleScope.launch {
+                        val cutoverCommitted = try {
+                            transparentUsernameCreation.isCutoverCommitted()
+                        } catch (e: Exception) {
+                            log.warn("cutover-state read failed on creation retry; assuming not committed", e)
+                            false
+                        }
+                        if (cutoverCommitted) {
+                            log.info(
+                                "cutover committed — skipping legacy dashj creation retry; " +
+                                    "the SDK executor + RestoreIdentityWorker own resumption"
+                            )
+                            return@launch
+                        }
+                        // should this be executed after syncing is finished?
+                        if (usingInvite) {
+                            startService(CreateIdentityService.createIntentForRetryFromInvite(this@MainActivity, false))
+                        } else {
+                            startService(CreateIdentityService.createIntentForRetry(this@MainActivity, false))
+                        }
                     }
                 }
                 setupBottomNavigation(viewModel)
@@ -228,6 +264,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 pendingCrowdNodeWithdrawalReminder = true
             } else {
                 presentCrowdNodeWithdrawalReminder()
+            }
+        }
+        viewModel.showMixedFundsMigration.observe(this) {
+            if (lockScreenDisplayed) {
+                pendingMixedFundsMigration = true
+            } else {
+                MixedFundsMigrationDialogFragment.showOnce(this)
             }
         }
 
@@ -540,6 +583,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         if (pendingCrowdNodeWithdrawalReminder) {
             pendingCrowdNodeWithdrawalReminder = false
             presentCrowdNodeWithdrawalReminder()
+        }
+
+        if (pendingMixedFundsMigration) {
+            pendingMixedFundsMigration = false
+            MixedFundsMigrationDialogFragment.showOnce(this)
         }
     }
 

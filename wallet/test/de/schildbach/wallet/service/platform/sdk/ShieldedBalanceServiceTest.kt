@@ -158,6 +158,13 @@ class ShieldedBalanceServiceTest {
 
         override fun observeUnspentNotes(walletId: ByteArray): Flow<List<ShieldedNoteEntity>> = notesFlow
 
+        /** Anchored unspent notes returned by the funding-note anchor gate read. */
+        var anchoredNotes: List<ShieldedNoteEntity> = emptyList()
+        override suspend fun unspentAnchoredNotes(walletId: ByteArray): List<ShieldedNoteEntity> = anchoredNotes
+
+        override suspend fun minUnspentAnchoredBlockHeight(walletId: ByteArray): Long? =
+            anchoredNotes.filter { it.blockHeight > 0 }.minOfOrNull { it.blockHeight }
+
         override fun observeActivity(walletId: ByteArray): Flow<List<ShieldedActivityEntity>> = activityFlow
 
         override suspend fun shieldedDefaultAddress(walletId: ByteArray): ByteArray? = defaultAddress
@@ -253,7 +260,11 @@ class ShieldedBalanceServiceTest {
         override suspend fun estimateShieldFeeCredits(): Long = feeCredits()
     }
 
-    private fun config(enabled: Boolean?, l1ShadowEnabled: Boolean = true): DashPayConfig = mockk {
+    private fun config(
+        enabled: Boolean?,
+        l1ShadowEnabled: Boolean = true,
+        lastBalanceDuffs: Long? = null
+    ): DashPayConfig = mockk {
         if (enabled == null) {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } throws
                 IllegalStateException("datastore unavailable")
@@ -261,6 +272,7 @@ class ShieldedBalanceServiceTest {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns enabled
         }
         coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns l1ShadowEnabled
+        coEvery { getLastShieldedBalanceDuffs() } returns lastBalanceDuffs
     }
 
     /** A source in the fully-ready state: shielded build, wallet bound. */
@@ -290,13 +302,14 @@ class ShieldedBalanceServiceTest {
         source: FakeSource,
         enabled: Boolean? = true,
         l1ShadowEnabled: Boolean = true,
+        lastBalanceDuffs: Long? = null,
         progress: () -> ShadowSyncProgress = { ShadowSyncProgress.IDLE },
         progressFlow: Flow<ShadowSyncProgress> = flowOf(progress()),
         ensureL1SpvRunning: suspend () -> Boolean = { true },
         noteSelfSpendBroadcast: () -> Unit = {}
     ) = ShieldedBalanceServiceImpl(
         source = source,
-        dashPayConfig = config(enabled, l1ShadowEnabled),
+        dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs),
         shieldedDbPath = { dbPath },
         displayHrp = { hrp },
         l1Progress = progress,
@@ -763,6 +776,54 @@ class ShieldedBalanceServiceTest {
             ShieldedSyncStatus.READY,
             mapShieldedSyncStatus(ready = true, firstPassCompleted = true, passInFlight = false)
         )
+    }
+
+    // ── Last-known balance cache + staleness signal ───────────────────────
+
+    @Test
+    fun lastKnownShieldedBalance_readsPersistedDuffs_orNullWhenUnset() = runBlocking {
+        assertNull(service(readySource(), lastBalanceDuffs = null).lastKnownShieldedBalance())
+        assertEquals(
+            Dash(150_000_000L),
+            service(readySource(), lastBalanceDuffs = 150_000_000L).lastKnownShieldedBalance()
+        )
+    }
+
+    @Test
+    fun lastKnownShieldedBalance_configReadFailure_isNull() = runBlocking {
+        val cfg: DashPayConfig = mockk {
+            coEvery { getLastShieldedBalanceDuffs() } throws IllegalStateException("datastore down")
+        }
+        val service = ShieldedBalanceServiceImpl(
+            source = readySource(),
+            dashPayConfig = cfg,
+            shieldedDbPath = { dbPath },
+            displayHrp = { hrp }
+        )
+        assertNull(service.lastKnownShieldedBalance())
+    }
+
+    @Test
+    fun shieldedBalanceMaybeStale_startsFalse_andIsSetByASuccessfulSpend() = runBlocking {
+        val source = readySource()
+        val service = service(source)
+
+        assertFalse(service.shieldedBalanceMaybeStale.value)
+        assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
+        // A successful local spend marks the last-known balance stale so the
+        // card shows "Syncing…" rather than the now-stale amount until the
+        // next completed pass (the poller, which runs only with a sweep scope).
+        assertTrue(service.shieldedBalanceMaybeStale.value)
+    }
+
+    @Test
+    fun shieldedBalanceMaybeStale_notSetByAPreflightRejectedSpend() = runBlocking {
+        val source = readySource()
+        val service = service(source)
+        // Non-positive amount is rejected before any broadcast — nothing was
+        // spent, so the cache is not stale.
+        assertTrue(service.shieldFromCredits(Dash.ZERO) is SdkWriteResult.NotBroadcast)
+        assertFalse(service.shieldedBalanceMaybeStale.value)
     }
 
     @Test

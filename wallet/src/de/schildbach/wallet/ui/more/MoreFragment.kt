@@ -111,6 +111,16 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     private var showInviteSection = false
     private var transferToastHost: ComposeHostFrameLayout? = null
 
+    /**
+     * One-shot: this screen was opened arriving from a completed shielded
+     * transfer (the [ARG_SHOW_TRANSFER_COMPLETED_TOAST] nav argument). Until
+     * the shielded runtime re-settles to READY the last-known balance is
+     * stale, so the card shows "Syncing…" rather than that stale amount
+     * (case (b) of the card-gating rule — see [mapShieldedCardDisplay]).
+     * Cleared once READY is observed.
+     */
+    private var arrivedFromCompletedTransfer = false
+
     private val mainActivityViewModel: MainViewModel by activityViewModels()
     private val editProfileViewModel: EditProfileViewModel by viewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
@@ -126,13 +136,13 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
     /**
      * Balance-card amount format, shared by the Dash and Shielded cards
-     * (design 1691:15460 shows "2.00 Đ"): two decimals, rounded DOWN so a
+     * (design 1691:15460 shows "2.00 Đ"): three decimals, rounded DOWN so a
      * card never overstates the balance; Đ stays an Inter font glyph
      * appended in the string (a trailing ImageView clips).
      */
     private val balanceCardFormat = org.dash.wallet.common.money.MoneyFormat()
         .noCode()
-        .minDecimals(2)
+        .minDecimals(3)
         .optionalDecimals()
         .roundingMode(java.math.RoundingMode.DOWN)
 
@@ -364,9 +374,12 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         // One-shot: arriving from a completed shielded internal transfer
         // (AC12). The argument is consumed so returning to this screen
-        // never re-shows the toast.
+        // never re-shows the toast. It also marks the shielded balance stale
+        // (the transfer just changed it) so the card shows "Syncing…" instead
+        // of the now-stale last-known amount until the runtime re-settles.
         if (arguments?.getBoolean(ARG_SHOW_TRANSFER_COMPLETED_TOAST) == true) {
             arguments?.remove(ARG_SHOW_TRANSFER_COMPLETED_TOAST)
+            arrivedFromCompletedTransfer = true
             showTransferCompletedToast()
         }
     }
@@ -445,31 +458,58 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
             // The shielded card must never flash a bare "0" for a funded wallet
             // while the pool re-syncs (observeShieldedBalance emits Dash.ZERO
-            // until ready AND during a re-scan). Render from the latest of the
-            // balance, the sync status AND the identity presence: a real amount
-            // when READY — or when there is provably nothing shielded to sync
-            // (fresh wallet, see [mapShieldedCardDisplay]) — otherwise a subtle
-            // "Syncing…" placeholder. Display-only: the trust/gating semantics
-            // of shieldedSyncStatus elsewhere are unchanged.
+            // until ready AND during a re-scan), and it must show a balance the
+            // app already knows the moment the screen opens — a "Syncing…"
+            // placeholder appears ONLY when there is genuinely nothing better
+            // to show. Render from the latest of: the live balance, the sync
+            // status, the identity presence, the persisted last-known (cached)
+            // balance, and whether a local spend just made that cache stale
+            // (see [mapShieldedCardDisplay]). Display-only: the trust/gating
+            // semantics of shieldedSyncStatus elsewhere are unchanged.
             var latestBalance = Dash.ZERO
             var latestStatus = shieldedBalanceService.shieldedSyncStatus.value
             // Conservative until the identity store emits: assume a context
             // exists so a migrated wallet never flashes "0" before the first
             // identity emission.
             var latestHasShieldedContext = true
+            // Rendered instantly on open so a background re-scan on relaunch
+            // shows the known balance, not a spinner. Null until the runtime
+            // has ever persisted a trustworthy (READY) balance.
+            var latestCachedBalance = shieldedBalanceService.lastKnownShieldedBalance()
+            // A shielded spend from this app (service flag) OR arrival from a
+            // completed shielded transfer (the nav one-shot, captured in
+            // [arrivedFromCompletedTransfer]) both mean the cached balance is
+            // known-stale until the runtime re-settles → show "Syncing…".
+            var latestMaybeStale =
+                shieldedBalanceService.shieldedBalanceMaybeStale.value || arrivedFromCompletedTransfer
+
+            fun render() = renderShieldedCardAmount(
+                latestStatus, latestBalance, latestHasShieldedContext, latestCachedBalance, latestMaybeStale
+            )
+
             shieldedBalanceService.observeShieldedBalance().observe(viewLifecycleOwner) { balance ->
                 latestBalance = balance
-                renderShieldedCardAmount(latestStatus, latestBalance, latestHasShieldedContext)
+                render()
             }
             shieldedBalanceService.shieldedSyncStatus.observe(viewLifecycleOwner) { status ->
                 latestStatus = status
-                renderShieldedCardAmount(latestStatus, latestBalance, latestHasShieldedContext)
+                // Once the runtime is fully synced the live balance is fresh
+                // and authoritative — any nav-arg staleness one-shot is spent.
+                if (status == ShieldedSyncStatus.READY) {
+                    arrivedFromCompletedTransfer = false
+                    latestMaybeStale = shieldedBalanceService.shieldedBalanceMaybeStale.value
+                }
+                render()
+            }
+            shieldedBalanceService.shieldedBalanceMaybeStale.observe(viewLifecycleOwner) { stale ->
+                latestMaybeStale = stale || arrivedFromCompletedTransfer
+                render()
             }
             mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) { identity ->
                 latestHasShieldedContext = hasShieldedContext(identity)
-                renderShieldedCardAmount(latestStatus, latestBalance, latestHasShieldedContext)
+                render()
             }
-            renderShieldedCardAmount(latestStatus, latestBalance, latestHasShieldedContext)
+            render()
 
             // Bring the shielded runtime up so the balance loads and the sync
             // status advances past NOT_READY, then kick an immediate sync
@@ -488,26 +528,40 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     /**
-     * Render the "Shielded" card's amount. The AMOUNT arm of
-     * [mapShieldedCardDisplay] shows the balance in DASH, formatted exactly
-     * like the sibling Dash Wallet card ("2.00 Đ" — two decimals, rounded
-     * DOWN so the card never overstates, Đ as an Inter glyph in the string);
-     * the credits glyph stays hidden (the card stopped showing credits per
-     * Brian, 2026-07-12). The SYNCING arm shows a subtle "Syncing…"
-     * placeholder, so a still-syncing funded wallet is never misread as
-     * empty — while a fresh wallet with nothing shielded to sync shows its
-     * honest zero (see [mapShieldedCardDisplay]).
+     * Render the "Shielded" card's amount. The amount arms of
+     * [mapShieldedCardDisplay] show a balance in DASH, formatted exactly like
+     * the sibling Dash Wallet card ("2.00 Đ" — two decimals, rounded DOWN so
+     * the card never overstates, Đ as an Inter glyph in the string); the
+     * credits glyph stays hidden (the card stopped showing credits per Brian,
+     * 2026-07-12). [ShieldedCardDisplay.LIVE_AMOUNT] shows the live [balance],
+     * [ShieldedCardDisplay.CACHED_AMOUNT] the persisted last-known
+     * [cachedBalance] (so a relaunch re-scan shows the known balance instead
+     * of a spinner), and the SYNCING arm a subtle "Syncing…" placeholder, so
+     * a still-syncing funded wallet is never misread as empty — while a fresh
+     * wallet with nothing shielded to sync shows its honest zero (see
+     * [mapShieldedCardDisplay]).
      */
-    private fun renderShieldedCardAmount(status: ShieldedSyncStatus, balance: Dash, hasShieldedContext: Boolean) {
+    private fun renderShieldedCardAmount(
+        status: ShieldedSyncStatus,
+        balance: Dash,
+        hasShieldedContext: Boolean,
+        cachedBalance: Dash?,
+        balanceMaybeStale: Boolean
+    ) {
         val amount = binding.shieldedBalanceCardAmount
         binding.shieldedBalanceCardSymbol.isVisible = false
-        if (mapShieldedCardDisplay(status, hasShieldedContext) == ShieldedCardDisplay.AMOUNT) {
+        val shown = when (mapShieldedCardDisplay(status, hasShieldedContext, cachedBalance, balanceMaybeStale)) {
+            ShieldedCardDisplay.LIVE_AMOUNT -> balance
+            ShieldedCardDisplay.CACHED_AMOUNT -> cachedBalance ?: balance
+            ShieldedCardDisplay.SYNCING -> null
+        }
+        if (shown != null) {
             // Mirror the sibling Dash card's EXACT size (both are Subtitle2;
             // reading it at runtime keeps them identical even if the style
             // changes) — the amount arm must undo the smaller Syncing size.
             amount.setTextSize(TypedValue.COMPLEX_UNIT_PX, binding.walletBalanceCardAmount.textSize)
             amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.content_primary))
-            amount.text = "${balanceCardFormat.format(balance)} Đ"
+            amount.text = "${balanceCardFormat.format(shown)} Đ"
         } else {
             amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.content_secondary))
@@ -679,33 +733,52 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 }
 
-/** What the More-screen "Shielded" balance card renders (see [mapShieldedCardDisplay]). */
-internal enum class ShieldedCardDisplay { AMOUNT, SYNCING }
+/**
+ * What the More-screen "Shielded" balance card renders (see
+ * [mapShieldedCardDisplay]): the live balance, the persisted last-known
+ * (cached) balance, or the "Syncing…" placeholder.
+ */
+internal enum class ShieldedCardDisplay { LIVE_AMOUNT, CACHED_AMOUNT, SYNCING }
 
 /**
  * Pure, host-testable display decision for the More-screen "Shielded" card.
  * DISPLAY-ONLY — the trust rule everywhere else (any non-READY status means
  * "balance not yet trustworthy") is unchanged.
  *
- * - READY → the amount: the balance is trustworthy.
- * - NOT_READY with NO shielded context → the amount (which is `Dash.ZERO`,
- *   the flow's placeholder — here it is also the honest balance): on a fresh
- *   wallet with no platform identity bound or being created,
+ * The card must show "Syncing…" ONLY when there is genuinely nothing better
+ * to show. In every other case it prefers a real amount — the live balance
+ * when trustworthy, otherwise the persisted last-known balance — so a
+ * background re-scan on relaunch never hides a balance the app already knows.
+ *
+ * - READY → the LIVE amount: the balance is trustworthy.
+ * - [balanceMaybeStale] (a shielded spend from this app just happened and the
+ *   runtime has not re-settled) → "Syncing…": the last-known amount is
+ *   known-stale, so showing it would be wrong. This is the only case that
+ *   overrides an available cached balance.
+ * - a persisted [cachedBalance] exists → the CACHED amount, no placeholder:
+ *   the common relaunch case (durable notes, runtime re-binding in the
+ *   background), and any not-yet-READY rebind where a known balance beats a
+ *   spinner.
+ * - NO cache and NO shielded context → the LIVE amount (which is `Dash.ZERO`,
+ *   the flow's placeholder — here also the honest balance): on a fresh wallet
+ *   with no platform identity bound or being created,
  *   [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] never binds
  *   the SDK wallet, `ensureShieldedReady` can never succeed, and the status
- *   stays NOT_READY forever — a permanent "Syncing…" would be a lie; there
- *   is nothing shielded to sync.
- * - Anything else → the "Syncing…" placeholder: either a pass is genuinely
- *   in flight (SYNCING — placeholder regardless of identity, defensively),
- *   or bring-up is pending on a wallet that DOES have a shielded context
- *   (e.g. a migrated wallet mid-resync), where a zero must not be shown.
+ *   stays NOT_READY forever — a permanent "Syncing…" would be a lie.
+ * - Otherwise (no cache, a wallet that DOES have a shielded context, bring-up
+ *   still pending) → "Syncing…": the first balance fetch on a funded/migrated
+ *   wallet before the startup pass has completed — never flash a bare zero.
  */
 internal fun mapShieldedCardDisplay(
     status: ShieldedSyncStatus,
-    hasShieldedContext: Boolean
+    hasShieldedContext: Boolean,
+    cachedBalance: Dash?,
+    balanceMaybeStale: Boolean
 ): ShieldedCardDisplay = when {
-    status == ShieldedSyncStatus.READY -> ShieldedCardDisplay.AMOUNT
-    status == ShieldedSyncStatus.NOT_READY && !hasShieldedContext -> ShieldedCardDisplay.AMOUNT
+    status == ShieldedSyncStatus.READY -> ShieldedCardDisplay.LIVE_AMOUNT
+    balanceMaybeStale -> ShieldedCardDisplay.SYNCING
+    cachedBalance != null -> ShieldedCardDisplay.CACHED_AMOUNT
+    !hasShieldedContext -> ShieldedCardDisplay.LIVE_AMOUNT
     else -> ShieldedCardDisplay.SYNCING
 }
 

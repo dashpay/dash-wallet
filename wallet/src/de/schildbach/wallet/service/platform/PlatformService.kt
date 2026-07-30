@@ -65,15 +65,33 @@ interface PlatformService {
 
     /**
      * Fetch the identity for [userId], tolerating the legacy dashj identity
-     * cache being unable to serialize a v4.1-platform identity (e.g. an iOS
-     * username). [identities].get fetches the identity then caches it via
-     * PlatformStateRepository.storeIdentity, whose CBOR serializer throws
-     * `IllegalArgumentException("No converter for ...")` on a v4.1 identity
-     * shape — after the fetch succeeded but before the identity is returned,
-     * so the caller loses it. On that specific failure this refetches via the
-     * cache-bypassing DapiClient path so accept/receive contact-request flows
-     * are not aborted by a purely-local cache limitation. See
+     * cache being unable to serialize an identity that carries contract-bound
+     * keys. Plain [identities].get fetches the identity then caches it via
+     * PlatformStateRepository.storeIdentity, whose CBOR serializer has no
+     * converter for a key's `SingleContractDocumentType` bound and throws
+     * `IllegalArgumentException("No converter for ...")` — AFTER the fetch
+     * succeeded but BEFORE the identity is returned, so every caller of the
+     * plain get loses a perfectly-good identity.
+     *
+     * This affects any v4.1-era identity whose keys carry contract bounds,
+     * INCLUDING the wallet's own newly-registered 6-key identities (keys 4/5
+     * carry `SingleContractDocumentType(dashpay, "contactRequest")`). On that
+     * specific failure this refetches via the cache-bypassing DapiClient path
+     * so no Platform flow is aborted by a purely-local cache limitation. See
      * [fetchIdentityToleratingCacheError].
+     *
+     * Prefer this over `identities.get` at every site that can encounter such
+     * an identity (profile synthesis, invitations, top-ups, contact requests).
+     */
+    fun getIdentity(userId: Identifier): Identity?
+
+    /** String-keyed overload of [getIdentity]; see that method's contract. */
+    fun getIdentity(userId: String): Identity?
+
+    /**
+     * Contact-request entry point for [getIdentity]. Kept as a distinctly named
+     * alias so the accept/receive contact-request flow reads clearly; carries
+     * the same cache tolerance. See [getIdentity].
      */
     fun getContactIdentity(userId: Identifier): Identity?
 }
@@ -221,21 +239,28 @@ class PlatformServiceImplementation @Inject constructor(
         platform.setMasternodeListManager(masternodeListManager)
     }
 
-    override fun getContactIdentity(userId: Identifier): Identity? =
+    override fun getIdentity(userId: Identifier): Identity? =
         fetchIdentityToleratingCacheError(
             cachedGet = { identities.get(userId) },
             cacheBypassingFetch = {
                 // The identity WAS fetched; only the legacy in-memory CBOR
-                // cache write rejected its v4.1 shape. Refetch straight from
-                // the DAPI client (mirrors PlatformStateRepository.fetchIdentity's
-                // own client.getIdentity(id.toBuffer(), true) call), which never
+                // cache write rejected its contract-bound-key shape. Refetch
+                // straight from the DAPI client (mirrors
+                // PlatformStateRepository.fetchIdentity's own
+                // client.getIdentity(id.toBuffer(), true) call), which never
                 // touches storeIdentity, so the identity is recovered uncached.
                 log.warn(
-                    "identity {} fetched but the legacy CBOR cache rejected its v4.1 shape; " +
-                        "bypassing the cache",
+                    "identity {} fetched but the legacy CBOR cache rejected its " +
+                        "contract-bound-key shape; bypassing the cache",
                     userId
                 )
                 client.getIdentity(userId.toBuffer(), true)
             }
         )
+
+    override fun getIdentity(userId: String): Identity? =
+        getIdentity(Identifier.from(userId))
+
+    override fun getContactIdentity(userId: Identifier): Identity? =
+        getIdentity(userId)
 }

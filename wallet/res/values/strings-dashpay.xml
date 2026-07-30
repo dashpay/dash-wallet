@@ -430,6 +430,7 @@
     <string name="credit_balance_button_buy">Buy Credits</string>
     <string name="credit_balance_insufficient_error_message">You don’t have enough funds to buy credits</string>
     <string name="buy_credits_estimated_items">%s - %d contacts / %d profile updates</string>
+    <string name="buy_credits_topup_unconfirmed">Your top-up may have gone through. Please don’t try again — check your credit balance in a few minutes.</string>
 
     <string name="request_username_username_voting_message">+ what is username voting?</string>
     <string name="request_username_character_requirement">Letters, numbers and hyphens only</string>
@@ -619,6 +620,13 @@
          shielded_transfer_failed, shielded_transfer_ambiguous_title). -->
     <string name="shielded_notification_success_message">Your shielded balance is updated</string>
     <string name="shielded_notification_pending_message">It will complete automatically the next time the app syncs</string>
+    <!-- A "Dash Wallet → Shielded" transfer that had only reached the reserve (asset-lock)
+         stage finished later, on its own, with no screen open — the completion of the
+         shielded_locked_pending_* story (ShieldedBalanceService.resumePendingWalletShields).
+         Deliberately promises NO duration: the retry lands on a background sync pass whose
+         timing is not knowable up front. -->
+    <string name="shielded_resumed_title">Shielded transfer completed</string>
+    <string name="shielded_resumed_message">The transfer that was still finishing is done. Your shielded balance is updated.</string>
     <string name="shielded_transfer_failed">This transfer was not sent</string>
     <string name="shielded_transfer_failed_message">Nothing left your balance. Check the details and try again.</string>
     <string name="shielded_transfer_ambiguous_title">Transfer status unknown</string>
@@ -685,5 +693,30 @@
          the shielded balance already covers an invitation: funds the invite
          directly from the shielded pool (L2) instead of an L1 asset lock. -->
     <string name="invite_payment_create_private">Create a private invitation</string>
+
+    <!-- Post-upgrade MIXED-FUNDS migration sheet. Mixing was removed from the
+         app, but wallets that mixed in the past still hold coins on the
+         CoinJoin (DIP-9) keychain, where the app can no longer spend them.
+         Shown once at startup when such a balance exists; re-shown if the
+         chosen operation failed. Copy is deliberately plain — no "DIP-9", no
+         promised duration. The intro line names the removed feature
+         ("CoinJoin") because it is the reason the user is being prompted. -->
+    <string name="mixed_funds_migration_title">Move your mixed funds</string>
+    <!-- Intro line shown at the top of the sheet body: states plainly why the
+         prompt exists. -->
+    <string name="mixed_funds_migration_coinjoin_removed">The CoinJoin feature has been removed from the wallet.</string>
+    <string name="mixed_funds_migration_message">This wallet still holds %s from the mixing feature, which is no longer part of the app. Choose where you would like to keep it.</string>
+    <string name="mixed_funds_migration_shield_action">Move to shielded balance</string>
+    <string name="mixed_funds_migration_shield_note">Keeps these funds private. You can spend them from your shielded balance.</string>
+    <string name="mixed_funds_migration_combine_action">Keep it spendable in Dash</string>
+    <string name="mixed_funds_migration_combine_note">Adds these funds back to your regular balance. This undoes the mixing, so these funds will no longer be private.</string>
+    <!-- Deliberately not "Not now": tapping this stops the prompt for good,
+         so the label has to say so. Swiping the sheet away instead only
+         defers it to the next launch. -->
+    <string name="mixed_funds_migration_not_now_action">Leave it and don\'t ask again</string>
+    <string name="mixed_funds_migration_in_progress">Moving your funds. Please keep the app open.</string>
+    <string name="mixed_funds_migration_started">Your funds are on the way. The balance updates once the transaction confirms.</string>
+    <string name="mixed_funds_migration_failed">Your funds could not be moved and nothing was spent. You can try again next time you open the app.</string>
+    <string name="mixed_funds_migration_unconfirmed">We could not confirm the result. Check your balance before trying again.</string>
 
 </resources>

@@ -200,7 +200,18 @@ internal fun deriveBlockchainStateUpdate(
     return SdkBlockchainStateUpdate(
         bestChainHeight = bestChainHeight,
         bestChainDateMs = bestChainDateMs,
-        percentageSync = if (p.phase == ShadowSyncPhase.ERROR) null else shadowSyncPercent(p),
+        // Preserve the prior percent on states with no trustworthy scan
+        // position — a process-death restart cycles through IDLE/CONNECTING
+        // for ~3 min while reconnecting, and writing 0 there slammed a
+        // previously-synced bar 99→0 (the restart sawtooth). Same
+        // "don't regress on unknown" treatment bestChainHeight already gets;
+        // only real scan phases (and a genuine ERROR → null) move it.
+        percentageSync = when (p.phase) {
+            ShadowSyncPhase.ERROR,
+            ShadowSyncPhase.IDLE,
+            ShadowSyncPhase.CONNECTING -> null
+            else -> shadowSyncPercent(p)
+        },
         mnListHeight = p.mnListHeight.takeIf { it > 0 }?.toInt(),
         syncStage = sdkSyncStage(p.phase),
         networkStalled = snapshot.stalled

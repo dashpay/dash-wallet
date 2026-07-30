@@ -37,6 +37,7 @@ import org.dash.wallet.common.ui.components.MerchantNameIcon
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
+import de.schildbach.wallet.service.platform.sdk.assetLockTitleRes
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
@@ -85,6 +86,16 @@ class TransactionResultViewBinder(
 
     private lateinit var transaction: Transaction
     private var sdkDetail: SdkTxDetail? = null
+
+    /**
+     * Bug A: a direction/amount override for a dashj-held transaction whose
+     * frozen post-cutover wallet reads `getValue(wallet) == 0` (an SDK-authored
+     * send). Unlike [sdkDetail] (which means "no dashj tx at all" and drives the
+     * whole [bindSdkDetail] rendering), this only corrects [bind]'s direction and
+     * net amount — the rest of the dashj-driven sheet is unchanged. Null except
+     * for that post-cutover case.
+     */
+    private var sdkOverride: SdkTxDetail? = null
     private var isError = false
     private var iconBitmap: Bitmap? = null
     @DrawableRes
@@ -109,11 +120,20 @@ class TransactionResultViewBinder(
     private var outputAddresses: List<Address> = listOf()
     private var outputAssetLocks = listOf<String>()
 
-    fun bind(tx: Transaction, profile: DashPayProfile?, payeeName: String? = null, payeeSecuredBy: String? = null) {
+    fun bind(
+        tx: Transaction,
+        profile: DashPayProfile?,
+        payeeName: String? = null,
+        payeeSecuredBy: String? = null,
+        sdkOverride: SdkTxDetail? = null
+    ) {
         this.transaction = tx
         this.dashPayProfile = profile
-        val value = tx.getValue(wallet)
-        val isSent = value.signum() < 0
+        this.sdkOverride = sdkOverride
+        // Bug A: prefer the authoritative SDK direction/net when present — the
+        // held dashj wallet can't value an SDK-authored send (getValue==0).
+        val value = sdkOverride?.let { Coin.valueOf(it.netAmountDuffs) } ?: tx.getValue(wallet)
+        val isSent = sdkOverride?.isSent ?: (value.signum() < 0)
 
         if (payeeName != null) {
             binding.paymentMemo.text = payeeName
@@ -220,7 +240,7 @@ class TransactionResultViewBinder(
         val exchangeRate = tx.exchangeRate
         if (exchangeRate != null) {
             binding.fiatValue.setFiatAmount(
-                tx.getValue(wallet),
+                value,
                 exchangeRate,
                 Constants.LOCAL_FORMAT,
                 exchangeRate.fiat?.toNeutralFiat()?.currencySymbol
@@ -245,7 +265,11 @@ class TransactionResultViewBinder(
 
         if (isSent) {
             binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
-            binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_sent)
+            // A Platform-funding asset lock (upgrade / top-up / invite) surfaces
+            // its "…Fee" title instead of the generic "Amount Sent".
+            binding.transactionTitle.text = detail.assetLockKind
+                ?.let { context.getText(assetLockTitleRes(it)) }
+                ?: context.getText(R.string.transaction_details_amount_sent)
             binding.transactionAmountSignal.text = "-"
         } else {
             binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.system_green))
@@ -396,6 +420,7 @@ class TransactionResultViewBinder(
 
     private fun updateIcon() {
         val sdkDetail = this.sdkDetail
+        val sdkOverride = this.sdkOverride
         if (!::transaction.isInitialized && sdkDetail == null) {
             return
         }
@@ -413,6 +438,13 @@ class TransactionResultViewBinder(
             when {
                 !sdkDetail.isSent -> R.drawable.ic_transaction_received
                 sdkDetail.isInternal -> R.drawable.ic_internal
+                else -> R.drawable.ic_transaction_sent
+            }
+        } else if (sdkOverride != null) {
+            // Bug A: direction from the SDK override, not the dashj value (0).
+            when {
+                !sdkOverride.isSent -> R.drawable.ic_transaction_received
+                sdkOverride.isInternal -> R.drawable.ic_internal
                 else -> R.drawable.ic_transaction_sent
             }
         } else if (transaction.getValue(wallet).signum() >= 0) {
@@ -520,7 +552,10 @@ class TransactionResultViewBinder(
                 )
             }
         } else {
-            if (tx.getValue(wallet).signum() < 0) {
+            // Bug A: honor the SDK direction override (an SDK-authored send the
+            // frozen dashj wallet values at 0 would otherwise title "Received").
+            val isSent = sdkOverride?.isSent ?: (tx.getValue(wallet).signum() < 0)
+            if (isSent) {
                 binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
                 binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_sent)
                 binding.transactionAmountSignal.text = "-"

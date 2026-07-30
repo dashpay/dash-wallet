@@ -99,6 +99,11 @@ class InviteShieldedFundingDialogFragment :
                     contestedStandardCost = state.contestedFee.toPlainString(),
                     canShieldMinimum = state.canShieldMinimum,
                     canCreatePrivateInvite = state.canCreatePrivateInvite,
+                    // While the shielded balance/sync is still resolving the
+                    // primary renders a single neutral "Preparing shielded
+                    // balance…" button (Fix B — no SHIELD_FIRST → CREATE_PRIVATE
+                    // label flicker).
+                    primaryLoading = state.privateDecisionLoading,
                     onCreatePrivateInvite = {
                         // The shielded pool can already fund an invite — go to
                         // the fee step in SHIELDED mode; the invitation is then

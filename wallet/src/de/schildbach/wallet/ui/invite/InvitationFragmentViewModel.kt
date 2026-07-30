@@ -31,6 +31,7 @@ import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedInviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
@@ -129,6 +130,7 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val invitationDao: InvitationsDao,
     private val identityRepository: IdentityRepository,
     private val sdkShieldedInviteCreation: SdkShieldedInviteCreation,
+    private val sdkL1InviteCreation: SdkL1InviteCreation,
     private val shieldedBalanceService: ShieldedBalanceService,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao
@@ -216,6 +218,18 @@ open class InvitationFragmentViewModel @Inject constructor(
         get() = _shieldedInviteShareLink
 
     /**
+     * True while a shielded (L2) or SDK L1 invite spend is in flight — both
+     * [createShieldedInvite] and [createL1Invite] run a ~30s proof/funding
+     * step off the main thread with no other in-flight signal. The confirm
+     * dialog observes this to disable its buttons and show a progress
+     * indicator during creation (Fix C). Reset in a `finally` so it clears on
+     * both success and error.
+     */
+    private val _inviteCreationInFlight = MutableStateFlow(false)
+    val inviteCreationInFlight: StateFlow<Boolean>
+        get() = _inviteCreationInFlight
+
+    /**
      * Fund a SHIELDED (L2) invitation directly from the shielded pool — the
      * private-invitation counterpart of [sendInviteTransaction]. [contested]
      * (derived from the fee the inviter picked) selects the exit denomination.
@@ -223,25 +237,78 @@ open class InvitationFragmentViewModel @Inject constructor(
      * its shareable OneLink to [shieldedInviteShareLink]. Runs the ~30s proof
      * off the main thread.
      */
-    suspend fun createShieldedInvite(contested: Boolean): SdkWriteResult<InvitationLinkData> =
-        withContext(Dispatchers.IO) {
-            val profile = identityRepository.getLocalUserProfile()
-                ?: return@withContext SdkWriteResult.NotBroadcast("no local user profile")
-            when (val result = sdkShieldedInviteCreation.createShieldedInvite(
-                username = profile.username,
-                displayName = profile.displayName,
-                avatarUrl = profile.avatarUrl,
-                contested = contested
-            )) {
-                is SdkWriteResult.Broadcast -> {
-                    _shieldedInviteLink.value = result.value.linkData
-                    _shieldedInviteShareLink.value = result.value.shareLink
-                    SdkWriteResult.Broadcast(result.value.linkData)
+    suspend fun createShieldedInvite(contested: Boolean): SdkWriteResult<InvitationLinkData> {
+        _inviteCreationInFlight.value = true
+        return try {
+            withContext(Dispatchers.IO) {
+                val profile = identityRepository.getLocalUserProfile()
+                    ?: return@withContext SdkWriteResult.NotBroadcast("no local user profile")
+                when (val result = sdkShieldedInviteCreation.createShieldedInvite(
+                    username = profile.username,
+                    displayName = profile.displayName,
+                    avatarUrl = profile.avatarUrl,
+                    contested = contested
+                )) {
+                    is SdkWriteResult.Broadcast -> {
+                        _shieldedInviteLink.value = result.value.linkData
+                        _shieldedInviteShareLink.value = result.value.shareLink
+                        SdkWriteResult.Broadcast(result.value.linkData)
+                    }
+                    is SdkWriteResult.NotBroadcast -> result
+                    is SdkWriteResult.Ambiguous -> result
                 }
-                is SdkWriteResult.NotBroadcast -> result
-                is SdkWriteResult.Ambiguous -> result
             }
+        } finally {
+            _inviteCreationInFlight.value = false
         }
+    }
+
+    /**
+     * Whether a STANDARD (L1) invite should be created through the Kotlin SDK
+     * DIP-13 path ([createL1Invite]) instead of the dashj asset-lock worker
+     * ([sendInviteTransaction]) — the flag is on AND the cutover is committed.
+     * A false result (flag off / pre-cutover / read failure) keeps the dashj
+     * path, byte-identical to before.
+     */
+    suspend fun shouldRouteL1ToSdk(): Boolean = sdkL1InviteCreation.isEnabledAndCommitted()
+
+    /**
+     * Fund a STANDARD (L1) invitation through the Kotlin SDK's DIP-13
+     * invitation wrapper — the post-cutover transparent counterpart of
+     * [sendInviteTransaction]. Unlike the dashj worker path this produces the
+     * bearer link directly (no WorkManager output), so — exactly like
+     * [createShieldedInvite] — on success the funded deep link is published to
+     * [shieldedInviteLink] and its shareable OneLink to [shieldedInviteShareLink]
+     * (the created-invite screen's generic out-of-band link channel). [contested]
+     * (derived from the fee the inviter picked) selects the funding fee. Runs the
+     * funding spend off the main thread.
+     */
+    suspend fun createL1Invite(contested: Boolean): SdkWriteResult<InvitationLinkData> {
+        _inviteCreationInFlight.value = true
+        return try {
+            withContext(Dispatchers.IO) {
+                val profile = identityRepository.getLocalUserProfile()
+                    ?: return@withContext SdkWriteResult.NotBroadcast("no local user profile")
+                when (val result = sdkL1InviteCreation.createL1Invite(
+                    username = profile.username,
+                    displayName = profile.displayName,
+                    avatarUrl = profile.avatarUrl,
+                    inviterIdentityIdBase58 = profile.userId,
+                    contested = contested
+                )) {
+                    is SdkWriteResult.Broadcast -> {
+                        _shieldedInviteLink.value = result.value.linkData
+                        _shieldedInviteShareLink.value = result.value.shareLink
+                        SdkWriteResult.Broadcast(result.value.linkData)
+                    }
+                    is SdkWriteResult.NotBroadcast -> result
+                    is SdkWriteResult.Ambiguous -> result
+                }
+            }
+        } finally {
+            _inviteCreationInFlight.value = false
+        }
+    }
 
     val invitationPreviewImageFile by lazy {
         try {

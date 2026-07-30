@@ -362,6 +362,16 @@ class CutoverUiDataServiceTest {
             return balanceDuffs
         }
 
+        var currentBalanceReads = 0
+
+        override suspend fun currentTotalDuffs(walletIdHex: String): Long =
+            currentBalanceSplitDuffs(walletIdHex).total
+
+        override suspend fun currentBalanceSplitDuffs(walletIdHex: String): SdkBalanceSplitDuffs {
+            currentBalanceReads++
+            return SdkBalanceSplitDuffs(confirmed = balanceDuffs.value, unconfirmed = 0L)
+        }
+
         override fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>> {
             recordSubscriptions++
             return records.map { it }

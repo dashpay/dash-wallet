@@ -176,13 +176,25 @@ class ShieldedBalanceActivity : LockScreenActivity() {
     override fun onResume() {
         super.onResume()
         if (screen == SCREEN_TRANSFER) {
-            transferExecutor.transferUiVisible = true
+            transferExecutor.setTransferUiVisible(this, true)
         }
     }
 
     override fun onPause() {
-        transferExecutor.transferUiVisible = false
+        transferExecutor.setTransferUiVisible(this, false)
         super.onPause()
+    }
+
+    /**
+     * A recreation (or any teardown that skipped straight past onPause)
+     * must leave the executor reading "not visible": the composition that
+     * renders a terminal outcome is gone with this instance. Owner-scoped
+     * so this late callback — it arrives AFTER the replacement instance's
+     * onResume — can never clear the NEW screen's visibility.
+     */
+    override fun onDestroy() {
+        transferExecutor.setTransferUiVisible(this, false)
+        super.onDestroy()
     }
 
     /**

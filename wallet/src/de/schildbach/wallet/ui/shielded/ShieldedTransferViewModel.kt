@@ -21,6 +21,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.payments.ChainLockedCoinSelector
+import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.L1VerificationStatus
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
@@ -158,16 +159,42 @@ data class ShieldedTransferUIState(
     /** Fiat value of 1 DASH; null while no exchange rate is known. */
     val rate: Fiat? = null,
     /**
-     * ChainLocked-only L1 balance (via [ChainLockedCoinSelector]) — the
-     * "From: Dash Wallet" display AND the transferable/Max limit. Funds
-     * a reorg could still take back are never offered for shielding.
+     * The "From: Dash Wallet" display AND the transferable/Max limit — the
+     * funds that can be shielded RIGHT NOW.
+     *
+     * - Pre-cutover: ChainLocked-only L1 balance (via [ChainLockedCoinSelector])
+     *   — funds a reorg could still take back are never offered for shielding.
+     * - Post-cutover: the SDK's CONFIRMED balance (in-a-block OR InstantSend-
+     *   locked). This is exactly what the asset-lock funding selection accepts
+     *   (`is_confirmed || is_instantlocked`); unconfirmed non-IS-locked coins
+     *   are refused pre-broadcast, so they are excluded here and surfaced via
+     *   [pendingWalletBalance] instead.
      */
     val walletBalance: Dash = Dash.ZERO,
     /**
-     * The wallet's TOTAL (estimated) L1 balance — only used to derive
-     * [pendingWalletBalance]; never transferable.
+     * The wallet's TOTAL (estimated) L1 balance — used to derive the
+     * PRE-cutover [pendingWalletBalance] (`total − chainlocked`); never
+     * transferable. Post-cutover pending comes from [cutoverPendingBalance].
      */
     val totalWalletBalance: Dash = Dash.ZERO,
+    /**
+     * Post-cutover "pending" amount: the SDK's unconfirmed portion (native
+     * total − confirmed) — mature mempool funds not yet in a block or
+     * InstantSend-locked, which cannot be shielded until they finalize. Fed
+     * from the SDK balance split; unused pre-cutover. See [pendingWalletBalance].
+     */
+    val cutoverPendingBalance: Dash = Dash.ZERO,
+    /**
+     * True once the cutover balance overlay is active
+     * ([de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
+     * .sdkTotalBalance] non-null). Post-cutover the ChainLocked-only dashj
+     * [walletBalance]/[totalWalletBalance] are frozen (the held dashj wallet
+     * never learns of SDK-only receives), so [pendingWalletBalance] switches to
+     * the SDK-sourced [cutoverPendingBalance] rather than `total − chainlocked`
+     * (which would stick at the whole received amount forever). Conservative
+     * `false` default keeps pre-cutover behavior byte-identical.
+     */
+    val cutoverActive: Boolean = false,
     val shieldedBalance: Dash = Dash.ZERO,
     /** True once the shielded runtime bring-up succeeded. */
     val ready: Boolean = false,
@@ -242,15 +269,26 @@ data class ShieldedTransferUIState(
         }
 
     /**
-     * The not-yet-ChainLocked part of the wallet's L1 balance
-     * (total − chainlocked, clamped at zero — the selector universes can
-     * transiently disagree while flows race). Shown as "<amount> pending"
-     * under the From "Dash Wallet" row so a freshly funded user
-     * understands why the transferable number is smaller: waiting for the
-     * chainlock resolves it.
+     * The part of the wallet's L1 balance that is NOT yet shieldable, shown as
+     * "<amount> pending" under the From "Dash Wallet" row so a freshly funded
+     * user understands why the transferable number is smaller.
+     *
+     * - Pre-cutover: the not-yet-ChainLocked part (`total − chainlocked`,
+     *   clamped at zero — the selector universes can transiently disagree while
+     *   flows race); waiting for the chainlock resolves it.
+     * - Post-cutover ([cutoverActive]): the SDK's unconfirmed portion
+     *   ([cutoverPendingBalance] = native total − confirmed) — mature mempool
+     *   funds not yet in a block or InstantSend-locked. The asset-lock funding
+     *   selection will not spend these and Platform consensus rejects a lock
+     *   without an islock or chainlocked height, so they can't be shielded
+     *   until they finalize (a block confirms them or an islock arrives).
      */
     val pendingWalletBalance: Dash
-        get() = Dash((totalWalletBalance.duffs - walletBalance.duffs).coerceAtLeast(0))
+        get() = if (cutoverActive) {
+            cutoverPendingBalance
+        } else {
+            Dash((totalWalletBalance.duffs - walletBalance.duffs).coerceAtLeast(0))
+        }
 
     val insufficientFunds: Boolean
         get() = amount.isGreaterThan(availableBalance)
@@ -341,6 +379,7 @@ class ShieldedTransferViewModel @Inject constructor(
     walletUIConfig: WalletUIConfig,
     exchangeRates: ExchangeRatesProvider,
     l1ShadowSyncService: L1ShadowSyncService,
+    cutoverUiDataService: CutoverUiDataService,
     private val transferExecutor: ShieldedTransferExecutor
 ) : ViewModel() {
 
@@ -441,6 +480,20 @@ class ShieldedTransferViewModel @Inject constructor(
         // chainlock/best heights move (Room state) or the wallet changes
         // (the observeBalance listener) — see ChainLockedCoinSelector for
         // the fallback decision when no chainlock height is known yet.
+        //
+        // Bug E: the ChainLocked selector is non-null, so
+        // WalletApplication.observeBalance reads the HELD dashj wallet (the
+        // overlay only kicks in for the selector-less streams) = ~0 post-cutover.
+        // Combine with the SDK's CONFIRMED balance (in-a-block OR InstantSend-
+        // locked), preferring it when it exists, so the "From: Dash Wallet"
+        // balance AND the transferable/Max limit track exactly the funds the
+        // asset-lock funding selection will actually spend post-cutover
+        // (`is_confirmed || is_instantlocked`; unconfirmed non-IS-locked coins
+        // are refused pre-broadcast, so offering them in Max would produce a
+        // confusing "not sent"). IS-locked funds ARE included — they shield
+        // immediately via an InstantAssetLockProof at 0 block confirmations.
+        // Pre-cutover the SDK side is permanently null, so the ChainLocked
+        // value passes through byte-identical.
         blockchainStateProvider.observeState()
             .map { state -> (state?.chainlockHeight ?: 0) to (state?.bestChainHeight ?: 0) }
             .distinctUntilChanged()
@@ -449,12 +502,46 @@ class ShieldedTransferViewModel @Inject constructor(
                     coinSelector = ChainLockedCoinSelector(chainLockHeight, bestChainHeight)
                 )
             }
-            .onEach { _uiState.value = _uiState.value.copy(walletBalance = Dash(it.value)) }
+            .combine(cutoverUiDataService.sdkConfirmedBalance) { chainLocked, sdkConfirmed ->
+                Dash((sdkConfirmed ?: chainLocked).value)
+            }
+            .onEach { _uiState.value = _uiState.value.copy(walletBalance = it) }
             .launchIn(viewModelScope)
 
         // Total balance only feeds the "<amount> pending" explainer line.
         walletDataProvider.observeTotalBalance()
             .onEach { _uiState.value = _uiState.value.copy(totalWalletBalance = Dash(it.value)) }
+            .launchIn(viewModelScope)
+
+        // Cutover overlay state: true once the SDK balance feed is live
+        // (post-cutover), which flips pendingWalletBalance onto the SDK-sourced
+        // [cutoverPendingBalance] below. Permanently null pre-cutover, so
+        // cutoverActive stays false and pending behavior is byte-identical.
+        cutoverUiDataService.sdkTotalBalance
+            .onEach { _uiState.value = _uiState.value.copy(cutoverActive = it != null) }
+            .launchIn(viewModelScope)
+
+        // Post-cutover "pending" = the SDK's unconfirmed portion (native total −
+        // confirmed): mature mempool funds not yet in a block or InstantSend-
+        // locked. The asset-lock funding selection will NOT spend these
+        // (`is_confirmed || is_instantlocked`), and Platform consensus rejects
+        // an asset lock lacking an islock or a chainlocked height — so they are
+        // shown as pending, not offered for Max. Resolves when a block confirms
+        // the output or an islock arrives (then it rolls into walletBalance).
+        // Both feeds come from one native read, so they don't disagree except
+        // transiently; the clamp keeps a transient negative at zero.
+        combine(
+            cutoverUiDataService.sdkTotalBalance,
+            cutoverUiDataService.sdkConfirmedBalance
+        ) { total, confirmed ->
+            if (total != null && confirmed != null) {
+                Dash((total.value - confirmed.value).coerceAtLeast(0))
+            } else {
+                Dash.ZERO
+            }
+        }
+            .distinctUntilChanged()
+            .onEach { _uiState.value = _uiState.value.copy(cutoverPendingBalance = it) }
             .launchIn(viewModelScope)
 
         // Live verification status for the funding-gate toast. Flag-gated

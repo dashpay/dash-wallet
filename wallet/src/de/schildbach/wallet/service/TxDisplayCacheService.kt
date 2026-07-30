@@ -321,17 +321,35 @@ class TxDisplayCacheService @Inject constructor(
                     val rowIds = newEntries.map { it.rowId }
                     val existingByRowId = txDisplayCacheDao.getEntriesByIds(rowIds).associateBy { it.rowId }
                     val entries = newEntries.map { entry ->
-                        val existing = existingByRowId[entry.rowId]
-                        if (existing != null && existing.service != null && entry.service == null) {
-                            entry.copy(
+                        val existing = existingByRowId[entry.rowId] ?: return@map entry
+                        var result = entry
+                        if (existing.service != null && result.service == null) {
+                            result = result.copy(
                                 service      = existing.service,
                                 iconType     = existing.iconType,
                                 iconBgType   = existing.iconBgType,
-                                customIconId = entry.customIconId ?: existing.customIconId
+                                customIconId = result.customIconId ?: existing.customIconId
                             )
-                        } else {
-                            entry
                         }
+                        // Post-cutover preserve-guard: this rebuild comes from the
+                        // dashj wrapper, which for an SDK-only tx reports value=0 /
+                        // rate=null. A memo/tax edit must NOT clobber a value/rate
+                        // that CutoverUiDataService already re-stamped onto the row,
+                        // so keep the existing non-degenerate value/rate (mirrors the
+                        // service-preservation guard above).
+                        if (result.valueSatoshis == 0L && existing.valueSatoshis != 0L) {
+                            result = result.copy(valueSatoshis = existing.valueSatoshis)
+                        }
+                        if (result.exchangeRateFiatCode == null &&
+                            result.exchangeRateFiatValue == null &&
+                            existing.exchangeRateFiatCode != null
+                        ) {
+                            result = result.copy(
+                                exchangeRateFiatCode  = existing.exchangeRateFiatCode,
+                                exchangeRateFiatValue = existing.exchangeRateFiatValue
+                            )
+                        }
+                        result
                     }
                     txDisplayCacheDao.insertAll(entries)
                 }

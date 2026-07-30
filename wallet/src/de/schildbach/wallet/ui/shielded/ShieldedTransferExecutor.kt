@@ -32,9 +32,11 @@ import de.schildbach.wallet.service.platform.sdk.dashToCredits
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.MoreFragment
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +47,7 @@ import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.NotificationService
 import org.slf4j.LoggerFactory
+import java.lang.ref.WeakReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -240,8 +243,9 @@ internal fun shieldedMaxFeeAdjustment(
  * ## Outcome surfacing
  *
  * A terminal outcome is announced exactly once, where the user is:
- * - transfer screen visible → the screen's own state machine (success
- *   navigation, inline error, terminal overlays) — nothing extra here;
+ * - transfer screen visible AND provably rendering the result → the
+ *   screen's own state machine (success navigation, inline error,
+ *   terminal overlays) — nothing extra here;
  * - anywhere else (elsewhere in the app OR backgrounded) → a system
  *   notification through the app's [NotificationService] (generic
  *   channel) — the dialog copy promises "We will notify you", and only
@@ -251,6 +255,24 @@ internal fun shieldedMaxFeeAdjustment(
  *   toast. When it lands while foregrounded-elsewhere, Success is also
  *   auto-acknowledged so a later return to a still-alive transfer screen
  *   doesn't re-run the success navigation.
+ *
+ * Suppression is CONFIRMED, never assumed: "visible" is an
+ * activity-lifecycle flag, but the state machine that tells the story
+ * lives in a composition an activity recreation tears down and rebuilds.
+ * An outcome landing inside that window used to surface NEITHER the
+ * overlay nor the notification, so a screen that looks visible now gets
+ * [RENDER_CONFIRM_GRACE_MS] to prove it rendered the result
+ * ([outcomeShownOnScreen]) before the executor stays quiet.
+ *
+ * ## Background pending-shield completions
+ *
+ * A "Dash Wallet → Shielded" transfer can stop half-way — the L1 asset
+ * lock broadcast, the shield transition not
+ * ([ShieldFromWalletOutcome.SHIELD_PENDING_RETRY]) — and is finished later
+ * by [ShieldedBalanceService.resumePendingWalletShields], in the
+ * background, with no screen open and possibly in a later process. The
+ * user was told it "will finish automatically"; the collector started by
+ * [startObservingBackgroundShields] is what finally tells them it did.
  */
 @Singleton
 class ShieldedTransferExecutor @Inject constructor(
@@ -277,6 +299,15 @@ class ShieldedTransferExecutor @Inject constructor(
          * not a cancel/timeout.
          */
         internal const val STALL_TIMEOUT_MS = 40L * 1000
+
+        /**
+         * How long a transfer screen that reports itself visible gets to
+         * PROVE it rendered a terminal outcome before the executor notifies
+         * anyway. Comfortably longer than a recomposition (the success
+         * navigation acknowledges within a frame or two) and short enough
+         * that a genuine miss still reaches the user promptly.
+         */
+        internal const val RENDER_CONFIRM_GRACE_MS = 2L * 1000
     }
 
     /** Test seam: the spend blocks for a ~30s Halo 2 proof and must stay off main. */
@@ -306,17 +337,86 @@ class ShieldedTransferExecutor @Inject constructor(
 
     /**
      * True while the transfer screen is the resumed foreground UI —
-     * maintained by [ShieldedBalanceActivity]'s onResume/onPause. While
-     * visible, the screen's own state machine surfaces outcomes and the
-     * executor stays quiet.
+     * maintained by [ShieldedBalanceActivity] through [setTransferUiVisible].
+     * On its own this is only a HINT that the screen can tell the story;
+     * [outcomeShownOnScreen] is what confirms it did.
      */
     @Volatile
     var transferUiVisible: Boolean = false
+
+    /**
+     * The screen instance that last claimed visibility, weakly held so a
+     * torn-down activity is neither leaked nor able to clobber a newer
+     * one — see [setTransferUiVisible].
+     */
+    private var transferUiOwner: WeakReference<Any>? = null
+
+    /** The background pending-shield announcer — see [startObservingBackgroundShields]. */
+    private var backgroundShieldJob: Job? = null
+
+    /**
+     * The terminal state the ON-SCREEN state machine last acknowledged.
+     * [acknowledge] is reachable only from the screen's result overlays and
+     * its success navigation, so this is the screen's own "I displayed
+     * this" receipt — the evidence [surfaceOutcome] waits for. Cleared per
+     * operation by [submit].
+     */
+    @Volatile
+    private var acknowledgedOutcome: ShieldedSubmitState? = null
 
     private val _submitState = MutableStateFlow<ShieldedSubmitState>(ShieldedSubmitState.Idle)
 
     /** The in-flight/terminal state of the one allowed transfer operation. */
     val submitState: StateFlow<ShieldedSubmitState> = _submitState.asStateFlow()
+
+    /**
+     * Lifecycle-driven visibility, OWNER-SCOPED: only the instance that
+     * claimed visibility may drop it again. An activity recreation delivers
+     * the OLD instance's onDestroy AFTER the new instance's onResume, so an
+     * unguarded flag would read "not visible" for a screen that is in fact
+     * on screen — while a teardown that never reached onPause left it
+     * reading "visible" with no state machine behind it (the
+     * activity-recreation gap where neither surface showed the outcome).
+     */
+    fun setTransferUiVisible(owner: Any, visible: Boolean) {
+        synchronized(this) {
+            if (visible) {
+                transferUiOwner = WeakReference(owner)
+                transferUiVisible = true
+            } else {
+                val current = transferUiOwner?.get()
+                if (current == null || current === owner) {
+                    transferUiOwner = null
+                    transferUiVisible = false
+                }
+            }
+        }
+    }
+
+    /**
+     * Start announcing pending wallet-shield resumes that complete in the
+     * BACKGROUND (idempotent; started once per process from the platform
+     * sync service, alongside the shielded bring-up that kicks the sweep).
+     *
+     * Stage (b) of an interrupted [ShieldedBalanceService.shieldFromWallet]
+     * is retried with no UI whatsoever, so the user who was told the
+     * transfer "will finish automatically" was never told that it had.
+     */
+    fun startObservingBackgroundShields() {
+        synchronized(this) {
+            if (backgroundShieldJob?.isActive == true) return
+            backgroundShieldJob = applicationScope.launch {
+                try {
+                    shieldedBalanceService.walletShieldResumed.collect { resumed ->
+                        surfaceBackgroundShieldCompleted(resumed)
+                    }
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("the background pending-shield announcer stopped", t)
+                }
+            }
+        }
+    }
 
     /**
      * Start the spend on the application scope. Returns false — and
@@ -348,6 +448,8 @@ class ShieldedTransferExecutor @Inject constructor(
                 return false
             }
             _submitState.value = ShieldedSubmitState.Proving
+            // A new operation starts with no on-screen receipt.
+            acknowledgedOutcome = null
         }
 
         applicationScope.launch {
@@ -492,15 +594,23 @@ class ShieldedTransferExecutor @Inject constructor(
      * .Stalled.acknowledged]): the underlying spend may still be wedged
      * in flight, so the state stays non-resubmittable until a real
      * terminal outcome supersedes it (or the process restarts).
+     *
+     * Called only from the screen's result overlays / success navigation,
+     * so it doubles as the screen's "I displayed this" receipt
+     * ([acknowledgedOutcome]) — see [outcomeShownOnScreen].
      */
     fun acknowledge() {
         synchronized(this) {
             when (val state = _submitState.value) {
                 ShieldedSubmitState.Proving -> Unit
                 is ShieldedSubmitState.Stalled -> {
+                    acknowledgedOutcome = state
                     _submitState.value = state.copy(acknowledged = true)
                 }
-                else -> _submitState.value = ShieldedSubmitState.Idle
+                else -> {
+                    acknowledgedOutcome = state
+                    _submitState.value = ShieldedSubmitState.Idle
+                }
             }
         }
     }
@@ -541,18 +651,61 @@ class ShieldedTransferExecutor @Inject constructor(
      */
     private fun surfaceOutcome(state: ShieldedSubmitState) {
         val content = shieldedOutcomeNotification(state) ?: return
+        // The dialog copy promises "We will notify you when it's done",
+        // and an in-app toast is too ephemeral to honor that (observed
+        // live: completion landed during an activity-recreation gap and
+        // the toast was never seen). So the system notification posts
+        // whenever the user is NOT watching the transfer screen — Android
+        // surfaces it fine while the app is foregrounded.
+        if (!transferUiCanShowOutcome()) {
+            postOutcomeNotification(state, content)
+            return
+        }
+        // The screen only LOOKS visible: the flag is activity-lifecycle
+        // state, while the state machine that tells the story lives in a
+        // composition an activity recreation tears down and rebuilds. So
+        // give it a short window to prove it actually rendered the result,
+        // and announce anyway when it didn't — suppressing on the flag
+        // alone is what let an outcome surface nowhere at all.
+        applicationScope.launch {
+            delay(RENDER_CONFIRM_GRACE_MS)
+            if (outcomeShownOnScreen(state)) return@launch
+            log.warn(
+                "the transfer screen never surfaced the {} outcome (recreated or torn down) — notifying",
+                state
+            )
+            postOutcomeNotification(state, content)
+        }
+    }
+
+    /** The transfer screen is the resumed, foregrounded UI right now. */
+    private fun transferUiCanShowOutcome(): Boolean = transferUiVisible && isAppInForeground()
+
+    /**
+     * Whether [state] was — or provably still is — surfaced by the screen
+     * itself, evaluated after the [RENDER_CONFIRM_GRACE_MS] window:
+     *
+     * - the screen acknowledged it: its own receipt, proof it rendered;
+     * - Success is a ONE-SHOT (consumed by the success navigation, and
+     *   dropped by [clearForNewVisit] on a fresh visit), so without that
+     *   receipt it was never told to the user at all;
+     * - every other terminal state is STICKY in [submitState] and its
+     *   overlay re-renders on any recreation, so a still-visible screen IS
+     *   showing it — and a state that has been superseded is announced by
+     *   whatever replaced it.
+     */
+    private fun outcomeShownOnScreen(state: ShieldedSubmitState): Boolean = when {
+        acknowledgedOutcome == state -> true
+        state == ShieldedSubmitState.Success -> false
+        else -> _submitState.value != state || transferUiCanShowOutcome()
+    }
+
+    /** Post the mapped outcome notification. Best-effort: never throws. */
+    private fun postOutcomeNotification(
+        state: ShieldedSubmitState,
+        content: ShieldedOutcomeNotification
+    ) {
         try {
-            // The dialog copy promises "We will notify you when it's done",
-            // and an in-app toast is too ephemeral to honor that (observed
-            // live: completion landed during an activity-recreation gap and
-            // the toast was never seen). So the system notification posts
-            // whenever the user is NOT watching the transfer screen —
-            // Android surfaces it fine while the app is foregrounded. Only
-            // the visible transfer screen suppresses it: its own state
-            // machine tells the story (success navigation / overlays).
-            if (transferUiVisible && isAppInForeground()) {
-                return // the visible transfer screen surfaces it itself
-            }
             notificationService.showNotification(
                 NOTIFICATION_TAG,
                 appContext.getString(content.messageRes),
@@ -572,6 +725,40 @@ class ShieldedTransferExecutor @Inject constructor(
             }
         } catch (t: Throwable) {
             log.warn("failed to announce the shielded transfer outcome", t)
+        }
+    }
+
+    /**
+     * Announce a pending wallet shield that finished in the background —
+     * the completion of the "Transfer in progress / it will finish
+     * automatically" story ([ShieldedSubmitState.LockedPendingShield]).
+     *
+     * Always a system notification: no screen is showing this operation
+     * (the transfer screen mirrors only spends the executor submitted, and
+     * the resume can land in a later process entirely), so suppressing it
+     * would leave the user with no message at all. Reuses [NOTIFICATION_TAG]
+     * so it REPLACES the earlier "Transfer in progress" notice rather than
+     * stacking beside it.
+     */
+    private fun surfaceBackgroundShieldCompleted(resumed: Int) {
+        log.info("{} pending wallet shield(s) completed in the background — announcing", resumed)
+        try {
+            notificationService.showNotification(
+                NOTIFICATION_TAG,
+                appContext.getString(R.string.shielded_resumed_message),
+                title = appContext.getString(R.string.shielded_resumed_title),
+                intent = moreScreenIntent(false)
+            )
+        } catch (t: Throwable) {
+            log.warn("failed to announce the resumed shielded transfer", t)
+        }
+        // The "it will finish automatically" state is spent: leaving it
+        // held would confront the user with a stale "do not send it again"
+        // overlay on the next screen visit.
+        synchronized(this) {
+            if (_submitState.value == ShieldedSubmitState.LockedPendingShield) {
+                _submitState.value = ShieldedSubmitState.Idle
+            }
         }
     }
 }

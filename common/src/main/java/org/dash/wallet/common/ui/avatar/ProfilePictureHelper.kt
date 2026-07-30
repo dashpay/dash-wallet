@@ -41,6 +41,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 
 class ProfilePictureHelper {
@@ -50,6 +51,9 @@ class ProfilePictureHelper {
         private val log = LoggerFactory.getLogger(ProfilePictureHelper::class.java)
 
         private const val ZOOM_PARAM_KEY = "dashpay-profile-pic-zoom"
+
+        /** Cap on the blocking raw-avatar fetch in [avatarBytesBlocking]. */
+        private const val AVATAR_FETCH_TIMEOUT_SECONDS = 10L
 
         fun avatarHashAndFingerprint(context: Context, pictureUrl: Uri, profileAvatarHash: ByteArray?, listener: OnResourceReadyListener? = null) {
             val watch = Stopwatch.createStarted()
@@ -79,6 +83,30 @@ class ProfilePictureHelper {
                             }
                         }
                     })
+        }
+
+        /**
+         * The RAW bytes of the avatar at [pictureUrl] — the same file
+         * [avatarHashAndFingerprint] hashes, so a SHA-256 of the result equals
+         * the profile's `avatarHash`. Needed by the Kotlin-SDK profile write,
+         * which computes the avatar hash + perceptual fingerprint Rust-side
+         * from the raw image instead of taking the app's precomputed pair.
+         *
+         * BLOCKING (Glide's future) and bounded by [AVATAR_FETCH_TIMEOUT_SECONDS]
+         * — background threads only. Returns null on any failure/timeout; the
+         * caller then falls back to the dashj profile path, which carries the
+         * precomputed digest instead.
+         */
+        fun avatarBytesBlocking(context: Context, pictureUrl: Uri): ByteArray? = try {
+            Glide.with(context)
+                .asFile()
+                .load(pictureUrl)
+                .submit()
+                .get(AVATAR_FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .readBytes()
+        } catch (e: Exception) {
+            log.warn("failed to fetch raw avatar bytes", e)
+            null
         }
 
         fun setPicZoomParameter(uri: Uri, newValue: String): Uri {

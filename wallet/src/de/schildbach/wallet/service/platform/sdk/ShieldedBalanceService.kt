@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.money.Dash
 
@@ -223,6 +224,45 @@ interface ShieldedBalanceService {
     val shieldedSyncStatus: StateFlow<ShieldedSyncStatus>
 
     /**
+     * The last shielded balance persisted while the runtime was fully
+     * synced ([ShieldedSyncStatus.READY]), or null when none has been
+     * persisted yet. Survives process death (DataStore-backed — see
+     * [de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS]),
+     * so a balance surface can render the known amount INSTANTLY on open
+     * instead of a "Syncing…" placeholder while a background re-scan
+     * re-binds the runtime on relaunch. Reads the persisted value only — no
+     * SDK/native call — so it is safe to call before [ensureShieldedReady].
+     */
+    suspend fun lastKnownShieldedBalance(): Dash?
+
+    /**
+     * True after a successful shielded spend FROM THIS APP (shield /
+     * transfer / unshield / withdraw / wallet-shield) until the runtime next
+     * reaches [ShieldedSyncStatus.READY] with the post-spend balance — the
+     * window in which the last-known/cached balance is known-STALE and a
+     * balance surface must show a "Syncing…" placeholder instead of that
+     * stale amount. Starts false; inert (stays false) while the flag is off.
+     */
+    val shieldedBalanceMaybeStale: StateFlow<Boolean>
+
+    /**
+     * True when the wallet holds an ANCHORED (confirmed, `blockHeight > 0`)
+     * unspent shielded note set whose total covers [denomination] — the
+     * funding-note precondition the shielded-username create gate is keyed on.
+     *
+     * The pool `shieldedSyncStatus` reaching [ShieldedSyncStatus.READY] means
+     * the sync loop caught up, but a note freshly minted by a wallet-shield is
+     * not yet ANCHORED (has no recorded commitment-tree anchor / `blockHeight`)
+     * at that instant, so a too-soon Type-20 create bounces
+     * (`ShieldedNoRecordedAnchor`). Keying the gate on this read holds the calm
+     * "still preparing" surface until the funding note is genuinely spendable.
+     *
+     * Reads the SDK note store only (no native spend). Returns false when the
+     * runtime is not ready or the read fails (fail-closed / retryable).
+     */
+    suspend fun isFundingNoteAnchoredForDenomination(denomination: Dash): Boolean
+
+    /**
      * The wallet's default shielded (Orchard) receive address for ZIP-32
      * account 0, bech32m-encoded for display (`dash1…` / `tdash1…`), or
      * null when the flag is off, the runtime is not ready, or the wallet
@@ -281,6 +321,30 @@ interface ShieldedBalanceService {
     suspend fun shieldFromWallet(amount: Dash): SdkWriteResult<ShieldFromWalletOutcome>
 
     /**
+     * [shieldFromWallet], but funded STRICTLY from the single funds account
+     * named by [coinJoinAccountPath] (the DIP-9 CoinJoin account) instead of
+     * the unmixed BIP44 account — the post-upgrade "move my previously mixed
+     * funds into the shielded balance" migration.
+     *
+     * PRIVACY INVARIANT: this is single-account selection, NOT a union. The
+     * Rust side resolves [coinJoinAccountPath] to exactly ONE funds account
+     * and every input comes from it (`build_asset_lock_tx_from_selected_account`
+     * in `rs-platform-wallet/src/wallet/asset_lock/build.rs`); BIP44 coins are
+     * never co-spent. Only the CHANGE is routed to BIP44 account 0, because a
+     * non-Standard account cannot derive its own change.
+     *
+     * @param coinJoinAccountPath the ACCOUNT-LEVEL BIP32 path string, `m/`
+     *   prefixed and hardened with `'` — `m/9'/5'/4'/0'` on mainnet,
+     *   `m/9'/1'/4'/0'` elsewhere. Built by
+     *   [de.schildbach.wallet.service.platform.sdk.coinJoinAccountPath].
+     *   A path naming no account is a clean pre-broadcast failure.
+     */
+    suspend fun shieldMixedFundsFromWallet(
+        amount: Dash,
+        coinJoinAccountPath: String
+    ): SdkWriteResult<ShieldFromWalletOutcome>
+
+    /**
      * Whether [shieldFromWallet]'s L1 funding gate would currently pass
      * (flag on + the SDK engine's filter scan caught up to the chain tip).
      * Cheap local read for UI gating; the write path re-checks. Never throws.
@@ -319,6 +383,20 @@ interface ShieldedBalanceService {
      *   is off, the runtime is not ready, or nothing was pending).
      */
     suspend fun resumePendingWalletShields(): Int
+
+    /**
+     * Emits the number of locks completed each time a
+     * [resumePendingWalletShields] sweep finishes stage (b) of at least one
+     * interrupted [shieldFromWallet] — the transfer the user was told would
+     * "finish automatically".
+     *
+     * The sweep runs in the BACKGROUND with no UI (it is kicked from
+     * [ensureShieldedReady]), so without this event nothing ever tells the
+     * user their shielded transfer is done. Hot, no replay: only what
+     * completes while a collector is attached is announced — a stale replay
+     * would re-announce an old transfer on the next app start.
+     */
+    val walletShieldResumed: SharedFlow<Int>
 
     /**
      * Shielded → shielded transfer (Type 16) to [toAddress] (a bech32m

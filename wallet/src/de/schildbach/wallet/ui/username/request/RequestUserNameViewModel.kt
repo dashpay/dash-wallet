@@ -24,6 +24,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CREATION_STATE
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CREATION_STATE_ERROR_MESSAGE
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_ID
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME_REQUESTED
@@ -35,6 +36,7 @@ import de.schildbach.wallet.service.platform.PlatformHealth
 import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
@@ -149,7 +151,18 @@ data class RequestUserNameUIState(
      * re-enables automatically when the status reaches READY. Only ever
      * consulted for the shielded path — see [usernameSubmitButtonState].
      */
-    val shieldedSyncStatus: ShieldedSyncStatus = ShieldedSyncStatus.NOT_READY
+    val shieldedSyncStatus: ShieldedSyncStatus = ShieldedSyncStatus.NOT_READY,
+    /**
+     * Whether the shielded funding note is ANCHORED (confirmed) and covers
+     * the username denomination — the re-keyed confirmation gate. The pool
+     * sync reaching [ShieldedSyncStatus.READY] clears BEFORE a freshly
+     * shielded note anchors, so the button/message gate stays in
+     * [UsernameSubmitButtonState.PreparingShielded] (keeping the 2-hour
+     * privacy-window advisory visible) until this turns true — pre-empting
+     * the `ShieldedNoRecordedAnchor` bounce of a too-soon create. Only
+     * consulted on the shielded path (default false = not anchored yet).
+     */
+    val fundingNoteAnchored: Boolean = false
 )
 
 /**
@@ -189,7 +202,16 @@ fun usernameSubmitButtonState(
     shieldedSyncStatus: ShieldedSyncStatus,
     enoughBalance: Boolean,
     usernameExists: Boolean,
-    usernameContestable: Boolean
+    usernameContestable: Boolean,
+    /**
+     * Whether the shielded funding note is anchored/confirmed and covers the
+     * denomination (see [RequestUsernameUIState.fundingNoteAnchored]). The
+     * shielded gate now clears only once the pool is READY AND this is true,
+     * so the button stays in [UsernameSubmitButtonState.PreparingShielded]
+     * through the post-READY window where the note is not yet anchored.
+     * Defaults true so non-shielded callers/tests are unaffected.
+     */
+    fundingNoteAnchored: Boolean = true
 ): UsernameSubmitButtonState {
     if (usernameType == UsernameType.Secondary) {
         return if (!usernameExists && !usernameContestable) {
@@ -199,7 +221,7 @@ fun usernameSubmitButtonState(
         }
     }
     if (paymentSource == UsernamePaymentSource.SHIELDED_BALANCE &&
-        shieldedSyncStatus != ShieldedSyncStatus.READY
+        (shieldedSyncStatus != ShieldedSyncStatus.READY || !fundingNoteAnchored)
     ) {
         return UsernameSubmitButtonState.PreparingShielded
     }
@@ -268,6 +290,7 @@ class RequestUserNameViewModel @Inject constructor(
     val analytics: AnalyticsService,
     val topUpRepository: TopUpRepository,
     private val shieldedUsernameCreation: SdkShieldedUsernameCreation,
+    private val transparentUsernameCreation: SdkTransparentUsernameCreation,
     private val shieldedBalanceService: ShieldedBalanceService,
     private val platformHealthProbe: PlatformHealthProbe,
     private val identityCreationStatus: IdentityCreationStatusHolder
@@ -360,6 +383,10 @@ class RequestUserNameViewModel @Inject constructor(
                     .collect {
                         _shieldedBalance.value = it
                         recomputeBalanceGate()
+                        // A balance change is when a note lands/anchors — re-read
+                        // the funding-note anchor gate so the button clears
+                        // PreparingShielded only once the note is confirmed.
+                        refreshFundingNoteAnchor()
                     }
             }
             launch {
@@ -374,6 +401,10 @@ class RequestUserNameViewModel @Inject constructor(
                             if (s.shieldedSyncStatus == it) s else s.copy(shieldedSyncStatus = it)
                         }
                         recomputeBalanceGate()
+                        // READY alone no longer clears the gate: a sync pass can
+                        // reach READY before a fresh note anchors, so re-key on
+                        // the funding-note anchor read each pass (Part B).
+                        refreshFundingNoteAnchor()
                     }
             }
         }
@@ -390,6 +421,38 @@ class RequestUserNameViewModel @Inject constructor(
         val requirement = shieldedIdentityFundingRequirement(Dash(Constants.DASH_PAY_FEE_CONTESTED.value))
             ?: return false
         return _shieldedBalance.value >= requirement
+    }
+
+    /**
+     * The shielded funding denomination the anchor gate must cover for the
+     * last-checked username — the 0.3 DASH exit denomination for a contested
+     * name, 0.1 otherwise (Part B). Defaults to the 0.1 non-contested
+     * requirement before any name has been checked.
+     */
+    private fun requiredShieldedDenomination(): Dash {
+        val contestable = lastGateUsername?.let {
+            runCatching { Names.isUsernameContestable(it) }.getOrDefault(false)
+        } ?: false
+        val fee = if (contestable) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+        return shieldedIdentityFundingRequirement(Dash(fee.value))
+            ?: shieldedIdentityFundingRequirement(Dash(Constants.DASH_PAY_FEE.value))
+            ?: Dash(Constants.DASH_PAY_FEE.value)
+    }
+
+    /**
+     * Re-read the funding-note anchor gate (Part B) and mirror it into
+     * [RequestUsernameUIState.fundingNoteAnchored]. Called on every shielded
+     * balance/status emission — a fresh note anchors right around a sync pass,
+     * and the button must not leave PreparingShielded until it does.
+     */
+    private suspend fun refreshFundingNoteAnchor() {
+        val anchored = runCatching {
+            shieldedBalanceService.isFundingNoteAnchoredForDenomination(requiredShieldedDenomination())
+        }.onFailure { log.warn("funding-note anchor read failed", it) }
+            .getOrDefault(false)
+        _uiState.update {
+            if (it.fundingNoteAnchored == anchored) it else it.copy(fundingNoteAnchored = anchored)
+        }
     }
 
     private val _identityBalance = MutableStateFlow(0L)
@@ -516,6 +579,29 @@ class RequestUserNameViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
+        // A TERMINAL, non-retryable creation FAILURE (a double-claimed invite —
+        // CreateIdentityService stamps "Invite has already been used") leaves the
+        // creation state at an intermediate value, so the DONE-based check above
+        // never fires and the ~30s processing dialog stayed up until a manual
+        // dismiss (Brian: "the dialog persists on failure, I have to dismiss it to
+        // see the home screen result"). Clear submitting on this terminal failure
+        // too, so the dialog auto-dismisses and the flow finishes to home where
+        // InviteHandler surfaces the already-claimed result. Deliberately scoped to
+        // the non-retryable already-used string: transient errors are auto-retried
+        // by the service, so leaving them keeps the dialog's "still working"
+        // watchdog line (closing on the first retry stamp was a prior live bug).
+        identityConfig.observe(CREATION_STATE_ERROR_MESSAGE)
+            .onEach { error ->
+                val terminalFailure =
+                    error?.contains("Invite has already been used", ignoreCase = true) == true
+                if (terminalFailure && _uiState.value.usernameRequestSubmitting) {
+                    log.info("identity creation hit a terminal failure — clearing the processing dialog")
+                    _uiState.update {
+                        it.copy(usernameRequestSubmitting = false, usernameRequestSubmitted = true)
+                    }
+                }
+            }
+            .launchIn(viewModelScope)
         identityConfig.observe(IDENTITY_ID)
             .filterNotNull()
             .onEach {
@@ -593,54 +679,77 @@ class RequestUserNameViewModel @Inject constructor(
         // ViewModel re-attaches here and can never re-submit by observing.
         viewModelScope.launch {
             shieldedUsernameCreation.submitState.collect { state ->
-                when (state) {
-                    ShieldedUsernameSubmitState.Idle -> Unit
-                    ShieldedUsernameSubmitState.Proving ->
-                        _uiState.update { it.copy(usernameRequestSubmitting = true) }
-                    is ShieldedUsernameSubmitState.Created -> {
-                        log.info("shielded username creation completed: {}", state.outcome.nameStatus)
-                        _uiState.update {
-                            it.copy(usernameRequestSubmitting = false, usernameRequestSubmitted = true)
-                        }
-                        // Result surfaced; the legacy handoff was enqueued by
-                        // the service — the blockchainIdentity observers take
-                        // over from here.
-                        shieldedUsernameCreation.acknowledge()
-                    }
-                    is ShieldedUsernameSubmitState.NotSent -> {
-                        log.warn("shielded username creation not sent: {}", state.reason)
-                        // The pool-not-ready refusals ("still syncing" /
-                        // "runtime not ready") are transient, not errors —
-                        // surface the calm "still preparing" message rather
-                        // than the red "network error" dialog (Fix A).
-                        val poolNotReady = SdkShieldedUsernameCreation.isPoolNotReadyReason(state.reason)
-                        _uiState.update {
-                            if (poolNotReady) {
-                                it.copy(
-                                    usernameRequestSubmitting = false,
-                                    usernameSubmittedPoolSyncing = true
-                                )
-                            } else {
-                                it.copy(usernameRequestSubmitting = false, usernameSubmittedError = true)
-                            }
-                        }
-                        // Provably nothing spent — retry-safe; reset so a
-                        // retry can re-submit.
-                        shieldedUsernameCreation.acknowledge()
-                    }
-                    ShieldedUsernameSubmitState.MayHaveGoneThrough -> {
-                        // Distinct from usernameSubmittedError: the generic
-                        // error dialog says "try again at no extra cost" and
-                        // offers a retry — both wrong here (observed live:
-                        // an ambiguous creation surfaced the retry dialog).
-                        _uiState.update {
-                            it.copy(usernameRequestSubmitting = false, usernameSubmittedAmbiguous = true)
-                        }
-                        // Deliberately NOT acknowledged: the state stays
-                        // sticky and submit() keeps refusing — an ambiguous
-                        // outcome must never be retried (funds safety).
+                applyUsernameSubmitState(state, shieldedUsernameCreation::acknowledge)
+            }
+        }
+        // Mirror the app-scoped TRANSPARENT (post-cutover, non-shielded)
+        // username creation into uiState exactly the same way. Only one of
+        // the two executors is ever driven per submission (the routing in
+        // submit() picks shielded XOR transparent XOR dashj), so the inactive
+        // one stays Idle and its collector is a no-op.
+        viewModelScope.launch {
+            transparentUsernameCreation.submitState.collect { state ->
+                applyUsernameSubmitState(state, transparentUsernameCreation::acknowledge)
+            }
+        }
+    }
+
+    /**
+     * Shared uiState mapping for a [ShieldedUsernameSubmitState] emitted by
+     * EITHER the shielded or the transparent app-scoped username-creation
+     * executor (both use the same three-valued state machine). [acknowledge]
+     * resets the emitting executor once the terminal state is surfaced — a
+     * no-op for the sticky funds-critical MayHaveGoneThrough.
+     */
+    private fun applyUsernameSubmitState(
+        state: ShieldedUsernameSubmitState,
+        acknowledge: () -> Unit
+    ) {
+        when (state) {
+            ShieldedUsernameSubmitState.Idle -> Unit
+            ShieldedUsernameSubmitState.Proving ->
+                _uiState.update { it.copy(usernameRequestSubmitting = true) }
+            is ShieldedUsernameSubmitState.Created -> {
+                log.info("username creation completed: {}", state.outcome.nameStatus)
+                _uiState.update {
+                    it.copy(usernameRequestSubmitting = false, usernameRequestSubmitted = true)
+                }
+                // Result surfaced; the legacy handoff was enqueued by the
+                // service — the blockchainIdentity observers take over.
+                acknowledge()
+            }
+            is ShieldedUsernameSubmitState.NotSent -> {
+                log.warn("username creation not sent: {}", state.reason)
+                // The pool-not-ready refusals ("still syncing" / "runtime not
+                // ready") are transient, not errors — surface the calm "still
+                // preparing" message rather than the red "network error"
+                // dialog (Fix A). (Transparent funding never emits these.)
+                val poolNotReady = SdkShieldedUsernameCreation.isPoolNotReadyReason(state.reason)
+                _uiState.update {
+                    if (poolNotReady) {
+                        it.copy(
+                            usernameRequestSubmitting = false,
+                            usernameSubmittedPoolSyncing = true
+                        )
+                    } else {
+                        it.copy(usernameRequestSubmitting = false, usernameSubmittedError = true)
                     }
                 }
+                // Provably nothing spent — retry-safe; reset so a retry can
+                // re-submit.
+                acknowledge()
+            }
+            ShieldedUsernameSubmitState.MayHaveGoneThrough -> {
+                // Distinct from usernameSubmittedError: the generic error
+                // dialog says "try again at no extra cost" and offers a retry
+                // — both wrong here (observed live: an ambiguous creation
+                // surfaced the retry dialog).
+                _uiState.update {
+                    it.copy(usernameRequestSubmitting = false, usernameSubmittedAmbiguous = true)
+                }
+                // Deliberately NOT acknowledged: the state stays sticky and
+                // submit() keeps refusing — an ambiguous outcome must never be
+                // retried (funds safety).
             }
         }
     }
@@ -726,6 +835,17 @@ class RequestUserNameViewModel @Inject constructor(
             val reuseTransaction = identity?.let {
                 it.usernameRequested == UsernameRequestStatus.LOCKED || it.usernameRequested == UsernameRequestStatus.LOST_VOTE
             } ?: false
+            // Post-cutover the dashj L1 engine is HELD (0 UTXOs), so the
+            // dashj asset-lock funding CreateIdentityService drives fails
+            // InsufficientMoneyException — the funds live in the SDK. Route
+            // transparent (Dash-balance) REGISTRATION funding through the SDK
+            // once the cutover is committed. Invite and reuse-transaction
+            // submissions keep the dashj path (their funding is already
+            // committed elsewhere / has no transparent SDK API); pre-cutover
+            // keeps dashj byte-for-byte.
+            val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
+                paymentSource != UsernamePaymentSource.SHIELDED_BALANCE &&
+                transparentUsernameCreation.isCutoverCommitted()
             if (paymentSource == UsernamePaymentSource.SHIELDED_BALANCE &&
                 !isUsingInvite() && !reuseTransaction
             ) {
@@ -736,7 +856,25 @@ class RequestUserNameViewModel @Inject constructor(
                 // funding is already committed elsewhere.
                 log.info("routing username creation to the shielded-funded SDK path")
                 val accepted = shieldedUsernameCreation.submit(requestedUserName!!, requestedUsernameSecondary)
-                if (!accepted) {
+                if (accepted) {
+                    // Same as the transparent path: the funding runs on the
+                    // app-scoped executor, but the app could still go cached on
+                    // a screen lock and be reaped mid-proof. Hold the process
+                    // foreground for the duration and drive the home identity
+                    // tile via CreateIdentityService's lightweight SDK-hold
+                    // action (it does NO funding). The shielded=true flag makes
+                    // the hold observe the shielded executor's submit state.
+                    // Started here, from the tap path with the activity visible,
+                    // to satisfy the Android 12+ FGS-start rules.
+                    walletApplication.startService(
+                        CreateIdentityService.createIntentForSdkForegroundHold(
+                            walletApplication,
+                            requestedUserName!!,
+                            requestedUsernameSecondary,
+                            shielded = true
+                        )
+                    )
+                } else {
                     // A refused submit must NEVER die silently (observed
                     // live: a swallowed submit reads as a broken app).
                     // Surface a state the dialogs react to, matched to why
@@ -751,6 +889,43 @@ class RequestUserNameViewModel @Inject constructor(
                                 it.copy(usernameRequestSubmitting = true)
                             // Sticky unconfirmed outcome: never a retryable
                             // error dialog.
+                            ShieldedUsernameSubmitState.MayHaveGoneThrough ->
+                                it.copy(usernameSubmittedAmbiguous = true)
+                            else -> it.copy(usernameSubmittedError = true)
+                        }
+                    }
+                }
+            } else if (cutoverCommitted) {
+                // Committed cutover, Dash-balance funding: the identity's
+                // asset lock is built from the transparent UTXOs the SDK now
+                // holds (register / resume), NOT dashj. Same app-scoped
+                // single-flight + no-double-broadcast contract as the
+                // shielded path.
+                log.info("routing username creation to the transparent-funded SDK path (cutover committed)")
+                val accepted = transparentUsernameCreation.submit(requestedUserName!!, requestedUsernameSecondary)
+                if (accepted) {
+                    // The funding runs on the app-scoped executor (survives the
+                    // screen), but the app would still go cached on a screen
+                    // lock and could be reaped mid-proof. Hold the process
+                    // foreground for the duration of the creation and drive the
+                    // home identity tile via CreateIdentityService's lightweight
+                    // SDK-hold action (it does NO funding). Started here, from
+                    // the tap path with the activity visible, to satisfy the
+                    // Android 12+ FGS-start rules.
+                    walletApplication.startService(
+                        CreateIdentityService.createIntentForSdkForegroundHold(
+                            walletApplication,
+                            requestedUserName!!,
+                            requestedUsernameSecondary
+                        )
+                    )
+                } else {
+                    val state = transparentUsernameCreation.submitState.value
+                    log.info("username submit rejected: transparent creation refused (executor state: {})", state)
+                    _uiState.update {
+                        when (state) {
+                            ShieldedUsernameSubmitState.Proving ->
+                                it.copy(usernameRequestSubmitting = true)
                             ShieldedUsernameSubmitState.MayHaveGoneThrough ->
                                 it.copy(usernameSubmittedAmbiguous = true)
                             else -> it.copy(usernameSubmittedError = true)
@@ -958,6 +1133,10 @@ class RequestUserNameViewModel @Inject constructor(
         val walletBalance = _walletBalance.value
         val inviteBalance = _inviteBalance.value
         val enoughBalance = when {
+            // Shielded (L2) invites have no L1 inviteBalance to check — the note is
+            // verified/spent at claim time (createIdentityFromInvitation). Recognize it
+            // here so the submit gate doesn't block on a ZERO inviteBalance.
+            isUsingInvite() && createUsernameArgs?.invite?.isShielded == true -> true
             isUsingInvite() && contestable -> inviteBalance >= Constants.DASH_PAY_FEE_CONTESTED
             isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE
             // Paying from the shielded pool: the welcome-screen decision
@@ -1088,7 +1267,11 @@ class RequestUserNameViewModel @Inject constructor(
     fun isUsingInvite(): Boolean = createUsernameArgs?.invite != null
 
     suspend fun getInviteAssetLockTransaction(): AssetLockTransaction? = withContext(Dispatchers.IO) {
-        if (isUsingInvite()) {
+        // Shielded (L2) invites carry a one-time Orchard key, not an L1 asset lock,
+        // so there is no asset-lock tx to fetch — the L1 accessors would throw. Leave
+        // inviteAssetLockTx null (invite balance ZERO); the shielded funding is verified
+        // and spent at claim time. computeBalanceGate recognizes shielded separately.
+        if (isUsingInvite() && createUsernameArgs?.invite?.isShielded != true) {
             inviteAssetLockTx.value = try {
                 topUpRepository.getAssetLockTransaction(createUsernameArgs?.invite!!)
             } catch (e: Exception) {

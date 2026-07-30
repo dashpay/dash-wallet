@@ -45,6 +45,7 @@ import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.TxDisplayCacheService
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
 import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.shadowSyncPercent
@@ -129,6 +130,7 @@ class MainViewModel @Inject constructor(
     dashPayContactRequestDao: DashPayContactRequestDao,
     private val txDisplayCacheService: TxDisplayCacheService,
     private val crowdNodeApi: CrowdNodeApi,
+    private val coinJoinFundsMigrationService: CoinJoinFundsMigrationService,
     l1ShadowSyncService: L1ShadowSyncService,
     cutoverCoordinator: CutoverCoordinator
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
@@ -153,10 +155,15 @@ class MainViewModel @Inject constructor(
             .map { shadowSyncPercent(it) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    /** Whether the SDK L1 scan has reached SYNCED — hides the header when [sdkOwnsL1]. */
+    /**
+     * Whether the SDK L1 scan is caught up — hides the header when [sdkOwnsL1].
+     * Uses [ShadowSyncProgress.scanCaughtUpToTip] (not the SDK's never-latching
+     * `synced`/phase==SYNCED) so the header clears for a live shadow SPV that
+     * has reached the tip within tolerance; SYNCED still counts.
+     */
     val sdkL1Synced: StateFlow<Boolean> =
         l1ShadowSyncService.progress
-            .map { it.synced }
+            .map { it.synced || it.scanCaughtUpToTip }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
@@ -262,6 +269,15 @@ class MainViewModel @Inject constructor(
 
     // One-time-per-launch nudge to withdraw a remaining CrowdNode balance after sync.
     val showCrowdNodeWithdrawalReminder = SingleLiveEvent<Unit>()
+
+    /**
+     * Post-upgrade MIXED-FUNDS prompt: this wallet still holds coins on the
+     * CoinJoin keychain that the app can no longer spend, and the user has
+     * not yet chosen what to do with them. Fires at most once per launch and
+     * only after the L1 view is current enough to trust the balance — see
+     * [CoinJoinFundsMigrationService.shouldPrompt].
+     */
+    val showMixedFundsMigration = SingleLiveEvent<Unit>()
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
     var processingSeriousError = false
@@ -314,6 +330,26 @@ class MainViewModel @Inject constructor(
                 }
             }
             .catch { e -> log.error("crowdnode withdrawal reminder flow error", e) }
+            .launchIn(viewModelScope)
+
+        // Post-upgrade MIXED-FUNDS prompt: at most once per launch, and only
+        // once the L1 view is current enough that a zero/non-zero CoinJoin
+        // balance means something (the service owns that predicate — it also
+        // covers the "already synced, percentageSync restarted at 0" case
+        // that a strict isSynced() gate would stall on). Never blocks
+        // startup: this is a background collector, and a wallet with no
+        // mixed funds never emits.
+        blockchainStateProvider.observeState()
+            .filterNotNull()
+            .onEach {
+                val alreadyShown: Boolean = savedStateHandle[MIXED_FUNDS_PROMPT_SHOWN_KEY] ?: false
+                if (alreadyShown) return@onEach
+                if (coinJoinFundsMigrationService.shouldPrompt()) {
+                    savedStateHandle[MIXED_FUNDS_PROMPT_SHOWN_KEY] = true
+                    showMixedFundsMigration.postCall()
+                }
+            }
+            .catch { e -> log.error("mixed-funds migration prompt flow error", e) }
             .launchIn(viewModelScope)
 
         // Phase 5d: the displayed balance follows whichever engine owns L1
@@ -715,6 +751,13 @@ class MainViewModel @Inject constructor(
     companion object {
         private const val DIRECTION_KEY = "tx_direction"
         private const val CROWDNODE_REMINDER_SHOWN_KEY = "crowdnode_withdrawal_reminder_shown"
+
+        /**
+         * Per-launch latch for the mixed-funds prompt. The PERMANENT latch is
+         * [DashPayConfig.MIXED_FUNDS_MIGRATION_DONE]; this one only stops the
+         * blockchain-state flow re-firing it within a single launch.
+         */
+        private const val MIXED_FUNDS_PROMPT_SHOWN_KEY = "mixed_funds_migration_prompt_shown"
         private const val TIME_SKEW_TOLERANCE = 3600000L // 1 hour
         /** Retry cadence for the self-healing Platform-availability poll (see init). */
         private const val PLATFORM_AVAILABILITY_RETRY_MS = 30_000L

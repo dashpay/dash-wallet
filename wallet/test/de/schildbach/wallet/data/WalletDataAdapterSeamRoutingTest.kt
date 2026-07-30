@@ -20,6 +20,7 @@ package de.schildbach.wallet.data
 import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
 import de.schildbach.wallet.service.platform.sdk.CutoverUiSource
 import de.schildbach.wallet.service.platform.sdk.L1TxUiRecord
+import de.schildbach.wallet.service.platform.sdk.SdkBalanceSplitDuffs
 import de.schildbach.wallet.service.platform.sdk.SdkSeamTxSnapshot
 import de.schildbach.wallet.service.platform.sdk.SeamOutputLockRegistry
 import de.schildbach.wallet.service.platform.sdk.l1TxUiRecord
@@ -92,6 +93,10 @@ class WalletDataAdapterSeamRoutingTest {
     ) : CutoverUiSource {
         override suspend fun boundWalletIdOrNull(): String? = "cd".repeat(32)
         override fun observeTotalDuffs(walletIdHex: String): Flow<Long> = emptyFlow()
+
+        override suspend fun currentTotalDuffs(walletIdHex: String): Long = 0L
+        override suspend fun currentBalanceSplitDuffs(walletIdHex: String): SdkBalanceSplitDuffs =
+            SdkBalanceSplitDuffs(confirmed = 0L, unconfirmed = 0L)
         override fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>> = emptyFlow()
         override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> =
             snapshots.map { it }

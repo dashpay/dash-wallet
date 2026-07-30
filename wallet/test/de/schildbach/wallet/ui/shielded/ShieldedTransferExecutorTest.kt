@@ -31,6 +31,7 @@ import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -598,13 +599,115 @@ class ShieldedTransferExecutorTest {
 
         executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1"))
         assertEquals(ShieldedSubmitState.Success, executor.submitState.value)
+        // The visible screen surfaces it and acknowledges (its success
+        // navigation) — that receipt is what keeps the executor quiet past
+        // the render-confirmation window.
+        executor.acknowledge()
 
         advanceTimeBy(ShieldedTransferExecutor.STALL_TIMEOUT_MS * 2)
         runCurrent()
-        assertEquals(ShieldedSubmitState.Success, executor.submitState.value)
+        // Idle, not Stalled: the watchdog never fired
+        assertEquals(ShieldedSubmitState.Idle, executor.submitState.value)
         verify(exactly = 0) {
             notificationService.showNotification(any(), any(), any(), any(), any(), any())
         }
+    }
+
+    // ── The activity-recreation gap ─────────────────────────────────────
+
+    @Test
+    fun visibleScreenThatNeverRendersTheOutcome_isNotifiedAnyway() = runTest(dispatcher) {
+        coEvery { shieldedService.shieldFromWallet(any()) } returns
+            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
+        // the flag says visible, but the composition behind it is gone
+        // (activity recreation) so nothing ever acknowledges
+        val executor = executor(foreground = true, transferScreenVisible = true)
+
+        executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1"))
+        // nothing yet — the screen gets its confirmation window first
+        verify(exactly = 0) {
+            notificationService.showNotification(any(), any(), any(), any(), any(), any())
+        }
+
+        advanceTimeBy(ShieldedTransferExecutor.RENDER_CONFIRM_GRACE_MS)
+        runCurrent()
+
+        verify(exactly = 1) {
+            notificationService.showNotification(
+                ShieldedTransferExecutor.NOTIFICATION_TAG,
+                str(R.string.shielded_notification_success_message),
+                str(R.string.shielded_transfer_completed),
+                null,
+                null,
+                null
+            )
+        }
+    }
+
+    @Test
+    fun visibleScreenKeepsAStickyOverlay_staysQuiet() = runTest(dispatcher) {
+        coEvery { shieldedService.shieldFromWallet(any()) } returns
+            SdkWriteResult.Ambiguous(RuntimeException("timeout"))
+        val executor = executor(foreground = true, transferScreenVisible = true)
+
+        executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1"))
+        advanceTimeBy(ShieldedTransferExecutor.RENDER_CONFIRM_GRACE_MS * 2)
+        runCurrent()
+
+        // the overlay is on a screen that is STILL visible — no duplicate
+        verify(exactly = 0) {
+            notificationService.showNotification(any(), any(), any(), any(), any(), any())
+        }
+        assertEquals(ShieldedSubmitState.MayHaveGoneThrough, executor.submitState.value)
+    }
+
+    @Test
+    fun setTransferUiVisible_aStaleInstanceCannotClearANewerScreen() {
+        val executor = executor(transferScreenVisible = false)
+        val old = Any()
+        val new = Any()
+
+        executor.setTransferUiVisible(old, true)
+        // recreation: the replacement resumes BEFORE the old instance's
+        // onDestroy lands
+        executor.setTransferUiVisible(new, true)
+        executor.setTransferUiVisible(old, false)
+        assertTrue(executor.transferUiVisible)
+
+        executor.setTransferUiVisible(new, false)
+        assertFalse(executor.transferUiVisible)
+    }
+
+    // ── Background pending-shield completions ───────────────────────────
+
+    @Test
+    fun backgroundShieldResume_isAnnouncedAndClearsThePendingState() = runTest(dispatcher) {
+        val resumed = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+        every { shieldedService.walletShieldResumed } returns resumed
+        coEvery { shieldedService.shieldFromWallet(any()) } returns
+            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
+        val executor = executor(foreground = false, transferScreenVisible = false)
+        executor.startObservingBackgroundShields()
+
+        executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1"))
+        assertEquals(ShieldedSubmitState.LockedPendingShield, executor.submitState.value)
+
+        resumed.emit(1)
+        runCurrent()
+
+        // the "it will finish automatically" promise is finally answered
+        verify(exactly = 1) {
+            notificationService.showNotification(
+                ShieldedTransferExecutor.NOTIFICATION_TAG,
+                str(R.string.shielded_resumed_message),
+                str(R.string.shielded_resumed_title),
+                null,
+                null,
+                null
+            )
+        }
+        // …and the stale "do not send it again" overlay is retired
+        assertEquals(ShieldedSubmitState.Idle, executor.submitState.value)
     }
 
     @Test

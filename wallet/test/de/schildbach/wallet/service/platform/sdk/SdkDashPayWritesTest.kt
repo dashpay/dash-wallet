@@ -51,13 +51,14 @@ class SdkDashPayWritesTest {
         var boundWalletId: () -> String? = { null },
         var identityManaged: (String, ByteArray) -> Boolean = { _, _ -> false },
         var onSendContactRequest: (String, ByteArray, ByteArray) -> Unit = { _, _, _ -> },
-        var onCreateOrUpdateProfile: (String, ByteArray, String?, String?, String?, Boolean) -> Unit =
-            { _, _, _, _, _, _ -> }
+        var onCreateOrUpdateProfile: (String, ByteArray, String?, String?, String?, ByteArray?, Boolean) -> Unit =
+            { _, _, _, _, _, _, _ -> }
     ) : SdkDashPayWriteSource {
         var boundCalls = 0
         var managedCalls = 0
         var broadcastCalls = 0
         var lastSender: ByteArray? = null
+        var lastAvatarBytes: ByteArray? = null
         var lastRecipient: ByteArray? = null
         var lastWalletId: String? = null
         var lastProfileArgs: List<Any?>? = null
@@ -90,12 +91,16 @@ class SdkDashPayWritesTest {
             displayName: String?,
             publicMessage: String?,
             avatarUrl: String?,
+            avatarBytes: ByteArray?,
             doCreate: Boolean
         ) {
             broadcastCalls++
             lastWalletId = walletIdHex
+            lastAvatarBytes = avatarBytes
             lastProfileArgs = listOf(identityId, displayName, publicMessage, avatarUrl, doCreate)
-            onCreateOrUpdateProfile(walletIdHex, identityId, displayName, publicMessage, avatarUrl, doCreate)
+            onCreateOrUpdateProfile(
+                walletIdHex, identityId, displayName, publicMessage, avatarUrl, avatarBytes, doCreate
+            )
         }
     }
 
@@ -270,7 +275,7 @@ class SdkDashPayWritesTest {
 
         assertTrue(writes.sendContactRequest(ownUserId, toUserId) is SdkWriteResult.NotBroadcast)
         assertTrue(
-            writes.createOrUpdateProfile(ownUserId, "d", null, null, false, true)
+            writes.createOrUpdateProfile(ownUserId, "d", null, null, null, false, true)
                 is SdkWriteResult.NotBroadcast
         )
         assertEquals(0, source.boundCalls + source.managedCalls + source.broadcastCalls)
@@ -293,7 +298,7 @@ class SdkDashPayWritesTest {
         assertTrue(writes.sendContactRequest("not-base58!!", toUserId) is SdkWriteResult.NotBroadcast)
         assertTrue(writes.sendContactRequest(ownUserId, "not-base58!!") is SdkWriteResult.NotBroadcast)
         assertTrue(
-            writes.createOrUpdateProfile("not-base58!!", null, null, null, false, true)
+            writes.createOrUpdateProfile("not-base58!!", null, null, null, null, false, true)
                 is SdkWriteResult.NotBroadcast
         )
         assertEquals(0, source.broadcastCalls)
@@ -346,7 +351,8 @@ class SdkDashPayWritesTest {
     fun avatarDigestProfile_isNotBroadcast_withoutAnySdkCall() = runBlocking {
         val source = readySource()
         val result = writes(source).createOrUpdateProfile(
-            ownUserId, "name", "msg", "https://a/b.png", hasAvatarDigest = true, doCreate = false
+            ownUserId, "name", "msg", "https://a/b.png",
+            avatarBytes = null, hasAvatarDigest = true, doCreate = false
         )
 
         assertTrue(result is SdkWriteResult.NotBroadcast)
@@ -371,7 +377,8 @@ class SdkDashPayWritesTest {
     fun createOrUpdateProfile_success_isBroadcast_withMappedArgs() = runBlocking {
         val source = readySource()
         val result = writes(source).createOrUpdateProfile(
-            ownUserId, "Alice", null, "https://a/b.png", hasAvatarDigest = false, doCreate = true
+            ownUserId, "Alice", null, "https://a/b.png",
+            avatarBytes = null, hasAvatarDigest = false, doCreate = true
         )
 
         assertTrue(result is SdkWriteResult.Broadcast)
@@ -469,10 +476,11 @@ class SdkDashPayWritesTest {
     @Test
     fun profileBroadcastTimeout_isAmbiguous_noDashjFallback() = runBlocking {
         val source = readySource().apply {
-            onCreateOrUpdateProfile = { _, _, _, _, _, _ -> throw DashSdkError.Timeout("submit timeout") }
+            onCreateOrUpdateProfile = { _, _, _, _, _, _, _ -> throw DashSdkError.Timeout("submit timeout") }
         }
         val result = writes(source).createOrUpdateProfile(
-            ownUserId, "Alice", null, null, hasAvatarDigest = false, doCreate = false
+            ownUserId, "Alice", null, null,
+            avatarBytes = null, hasAvatarDigest = false, doCreate = false
         )
 
         assertTrue(result is SdkWriteResult.Ambiguous)

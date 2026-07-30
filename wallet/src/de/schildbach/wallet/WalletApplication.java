@@ -113,6 +113,7 @@ import org.dash.wallet.integrations.uphold.api.UpholdClient;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import de.schildbach.wallet.payments.BalanceConditionBridge;
+import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector;
 import org.dash.wallet.integrations.uphold.utils.UpholdConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -736,6 +737,15 @@ public class WalletApplication extends MultiDexApplication
 
         // setup WalletBalanceObserver
         walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig);
+
+        // Parity-free cutover (QA directive): make the SDK L1-primary from the FIRST
+        // launch for EVERY wallet — UPGRADES included, not just fresh create/restore
+        // (which commit in setWallet). Each Phase-1 function is tested AFTER cutover, so
+        // dashj should never have to dual-run and parity-match before the SDK takes over.
+        // Idempotent (no-op once CUT_OVER) and self-gated on USE_KOTLIN_SDK_L1_SHADOW, so
+        // it stays inert when the SDK L1 engine is off; once committed the
+        // CutoverAutoCommitObserver parity path never runs (it stands down when CUT_OVER).
+        cutoverCoordinator.commitForFreshWalletSetupAsync();
     }
 
     private void deleteBlockchainFiles() {
@@ -1405,21 +1415,50 @@ public class WalletApplication extends MultiDexApplication
             return FlowKt.emptyFlow();
         }
 
-        // Phase 5d/B7: cutover-aware for the plain ESTIMATED stream (what the neutral
-        // facade's observeEstimatedBalance() serves): post-cutover dashj's ESTIMATED
-        // balance freezes, so the SDK's live total (which sums the same unspent-output
-        // set) wins via the same overlay observeTotalBalance() uses — pre-cutover the
-        // SDK side is permanently null and dashj values pass through unchanged.
-        // Selector-based and non-ESTIMATED streams stay dashj-fed: they serve send-path
+        // Phase 5d/B7: cutover-aware for the selector-less ESTIMATED and
+        // ESTIMATED_SPENDABLE streams (what the neutral facade's
+        // observeEstimatedBalance() serves, and what the Create-Username funding
+        // gate reads via observeBalance(ESTIMATED_SPENDABLE)): post-cutover dashj's
+        // held wallet has no coins, so both freeze at 0, and the SDK's live total
+        // (which sums the same unspent-output set — the correct spendable figure
+        // post-cutover) wins via the same overlay observeTotalBalance() uses —
+        // pre-cutover the SDK side is permanently null and dashj values pass through
+        // unchanged. Selector-based streams stay dashj-fed: they serve send-path
         // coin selection, which another track owns.
         if (cutoverUiDataService != null
-                && balanceType == Wallet.BalanceType.ESTIMATED
+                && (balanceType == Wallet.BalanceType.ESTIMATED
+                        || balanceType == Wallet.BalanceType.ESTIMATED_SPENDABLE)
                 && coinSelector == null) {
             return cutoverUiDataService.overlayTotalBalance(
                     walletBalanceObserver.observe(balanceType, null));
         }
 
         return walletBalanceObserver.observe(balanceType, coinSelector);
+    }
+
+    @NonNull
+    @Override
+    public Flow<Coin> observeMaxOutputBalance() {
+        if (wallet == null || walletBalanceObserver == null) {
+            return FlowKt.emptyFlow();
+        }
+
+        // Phase 5d: the send screen's "max sendable" DISPLAY feed. The dashj
+        // max-output-coin-selector balance (ESTIMATED total minus the fee to spend
+        // it all) is a selector-based stream, so the plain observeBalance() overlay
+        // deliberately skips it. Post-cutover the held dashj wallet has no coins, so
+        // this freezes at 0; the SDK's live total (the correct spendable figure
+        // post-cutover) wins via the SAME overlay observeTotalBalance() uses —
+        // pre-cutover the SDK side is permanently null and the dashj max-output value
+        // passes through unchanged. This feeds only the DISPLAYED available balance /
+        // max-amount cap; the real send's coin selection is owned independently by
+        // SendCoinsTaskRunner and is untouched.
+        final Flow<Coin> maxOutput =
+                walletBalanceObserver.observe(Wallet.BalanceType.ESTIMATED, new MaxOutputAmountCoinSelector());
+        if (cutoverUiDataService != null) {
+            return cutoverUiDataService.overlayTotalBalance(maxOutput);
+        }
+        return maxOutput;
     }
 
 

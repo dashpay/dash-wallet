@@ -673,6 +673,27 @@ class DashSdkServiceImpl @Inject constructor(
     }
 
     /**
+     * See [DashSdkService.storeIdentityPrivateKey] for the full contract.
+     * Delegates to `WalletStorage.storePrivateKey(pubkeyHex, privateKey,
+     * ownerWalletId)` — the SAME single [WalletStorage] instance the FFI
+     * [org.dashfoundation.dashsdk.security.KeystoreSigner] resolves signing
+     * keys from (wired to both the signer and the SDK runtime at bootstrap,
+     * see [bootstrap]), and the same primitive [ensureIdentityKeysSignable]'s
+     * heal pass lands on. Passing [walletId] as the owner records the alias
+     * in the durable owner index so an in-flight registration's prestored
+     * keys are cleaned up on wallet deletion.
+     */
+    override suspend fun storeIdentityPrivateKey(
+        pubkeyHex: String,
+        privateKey: ByteArray,
+        walletId: ByteArray
+    ) {
+        ensureStarted()
+        val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
+        current.walletStorage.storePrivateKey(pubkeyHex, privateKey, walletId)
+    }
+
+    /**
      * See [DashSdkService.provisionDashPayContactAccounts] for the full
      * contract. Wiring: resolve the bound [ManagedPlatformWallet] from the
      * manager's live map, run one DashPay sweep

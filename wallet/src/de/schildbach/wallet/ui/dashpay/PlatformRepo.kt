@@ -432,7 +432,10 @@ class PlatformRepo @Inject constructor(
                 platform.profiles.get(userId)
             }
             if (profileDocument == null) {
-                val identity = platform.identities.get(userId)
+                // Tolerant fetch: this identity may be the wallet's own (or a
+                // peer's) contract-bound-key identity, whose shape the legacy
+                // CBOR cache cannot serialize; getIdentity recovers it uncached.
+                val identity = platform.getIdentity(userId)
                 if (identity != null) {
                     profileDocument =
                         platform.profiles.createProfileDocument("", "", "", null, null, identity)

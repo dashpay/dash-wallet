@@ -19,6 +19,8 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
@@ -33,6 +35,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.identity.IdentityKeyPreview
+import org.dashfoundation.dashsdk.identity.RegistrationKeys
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
@@ -141,24 +144,31 @@ interface ShieldedUsernameSource {
 
     /**
      * Derive the full canonical registration key SET (keyId 0 MASTER/AUTH,
-     * 1 CRITICAL/AUTH, 2 HIGH/AUTH, 3 TRANSFER/CRITICAL) for
-     * [identityIndex]. Pure compute — no Platform RPCs, nothing persisted.
+     * 1 CRITICAL/AUTH, 2 HIGH/AUTH, 3 TRANSFER/CRITICAL, 4 ENCRYPTION and
+     * 5 DECRYPTION bound to DashPay's `contactRequest`) for [identityIndex].
+     * Pure compute — no Platform RPCs, nothing persisted.
+     *
+     * The DashPay pair is always included: BOTH consumers
+     * ([createIdentityFromPool] and [createIdentityFromOneTimeKey]) put a
+     * BRAND-NEW identity on chain — neither resumes a key set some earlier
+     * attempt already committed — so this is always the first (and only)
+     * chance to commit the ENCRYPTION key `select_own_encryption_key`
+     * requires for SDK-routed contact requests.
      */
     suspend fun previewRegistrationKeySet(walletIdHex: String, identityIndex: Int): List<IdentityKeyPreview>
 
     /**
-     * Derive + persist the private key of the registration key at
-     * `(identityIndex, keyIndex)` into the SDK's Keystore-backed store,
-     * keyed by [publicKey]'s hex — the precondition for the FFI signer
-     * (both the Type-20 create and the DPNS registration sign with these
-     * keys). Throws on failure.
+     * Persist the private [privateKey] scalar of ONE registration key
+     * (whose compressed public half is [pubkeyHex]) into the SDK's
+     * Keystore-backed `WalletStorage`, owned by [walletIdHex] — the
+     * precondition for the FFI signer (both the Type-20 create and the DPNS
+     * registration sign with these keys). The signer resolves each identity
+     * key's private half by LOOKUP (`retrievePrivateKey(pubkeyHex)`), never
+     * by derivation, so an unstored key throws `SigningKeyUnavailable`. A
+     * public-key encrypt: never auth-gated, safe unprompted. Throws on
+     * failure. See [DashSdkService.storeIdentityPrivateKey].
      */
-    suspend fun persistRegistrationKey(
-        walletIdHex: String,
-        publicKey: ByteArray,
-        identityIndex: Int,
-        keyIndex: Int
-    )
+    suspend fun storeIdentityPrivateKey(walletIdHex: String, pubkeyHex: String, privateKey: ByteArray)
 
     /**
      * The wallet's own DIP-17 Platform receive address (bech32m) for the
@@ -261,27 +271,29 @@ internal class DashSdkShieldedUsernameSource(
         return manager.identityRegistration.previewRegistrationKeySet(
             walletHandle = wallet(walletIdHex).handle,
             mnemonicResolverHandle = manager.mnemonicResolverHandle,
-            identityIndex = identityIndex
+            identityIndex = identityIndex,
+            // Both Type-20 creates commit a fresh key set, so derive the
+            // DashPay ENCRYPTION/DECRYPTION pair too — the SDK default (-1)
+            // would give only the base four and leave the new identity unable
+            // to send contact requests through the SDK.
+            count = RegistrationKeys.keyCount(includeDashPayKeys = true)
         )
     }
 
-    override suspend fun persistRegistrationKey(
+    override suspend fun storeIdentityPrivateKey(
         walletIdHex: String,
-        publicKey: ByteArray,
-        identityIndex: Int,
-        keyIndex: Int
+        pubkeyHex: String,
+        privateKey: ByteArray
     ) {
-        // repairIdentityKey re-derives the scalar Rust-side and encrypts it
-        // into the SDK's Keystore-backed WalletStorage under the pubkey hex
-        // — exactly the persist the registration FFIs require, without this
-        // module ever touching the private material the preview rows carry.
-        val recorded = manager().repairIdentityKey(
-            walletId = walletId(walletIdHex),
-            publicKeyData = publicKey,
-            identityIndex = identityIndex,
-            keyIndex = keyIndex
-        )
-        checkNotNull(recorded) { "registration key persist returned no storage identifier" }
+        // Encrypt the preview row's own private scalar into the SDK's
+        // Keystore-backed WalletStorage under the pubkey hex, owned by the
+        // wallet — exactly the persist the Type-20 create / DPNS registration
+        // FFI signer requires (it resolves identity keys by lookup, never by
+        // derivation). Uses the same WalletStorage.storePrivateKey primitive
+        // the app's key-heal pass lands on; NOT repairIdentityKey (which is a
+        // POST-registration repair that reads breadcrumbs off a persisted
+        // public_keys row that does not exist yet before create).
+        service.storeIdentityPrivateKey(pubkeyHex, privateKey, walletId(walletIdHex))
     }
 
     override suspend fun fallbackPlatformAddressOrNull(walletIdHex: String): String? {
@@ -307,7 +319,7 @@ internal class DashSdkShieldedUsernameSource(
     ): ByteArray = manager().shieldedIdentityCreateFromPool(
         walletId = walletId(walletIdHex),
         identityIndex = identityIndex,
-        keys = keys,
+        keys = registrationRowsFor(keys),
         denomination = denominationCredits,
         fallbackAddress = fallbackAddress21
     )
@@ -326,7 +338,7 @@ internal class DashSdkShieldedUsernameSource(
         oneTimeSk = oneTimeSk,
         changeAddressRaw43 = changeAddressRaw43,
         identityIndex = identityIndex,
-        keys = keys,
+        keys = registrationRowsFor(keys),
         denomination = denominationCredits,
         fallbackAddress = fallbackAddress21,
         fundingBirthHeight = fundingBirthHeight
@@ -484,6 +496,30 @@ class SdkShieldedUsernameCreation internal constructor(
      * never affects the returned result.
      */
     private val handOffToLegacy: (identityIdBase58: String) -> Unit,
+    /**
+     * Drive the persisted identity CREATION STATE (and error message) — the
+     * same [de.schildbach.wallet.database.entity.BlockchainIdentityConfig]
+     * seam the classic [de.schildbach.wallet.ui.dashpay.CreateIdentityService]
+     * path, the transparent path, and the restore worker use — so the home
+     * tile reflects the DPNS registration step and, for a confirmed
+     * non-contested primary, reaches DONE immediately. No-op default keeps the
+     * host-JVM tests (which have no DataStore) inert.
+     */
+    private val driveCreationState: suspend (state: IdentityCreationState, errorMessage: String?) -> Unit =
+        { _, _ -> },
+    /**
+     * Persist the identity id + requested label(s) + the `restoring` flag so
+     * the tile has context during (and after) the DPNS step. On a name
+     * FAILURE this is called with `restoring = true` so a tile retry routes to
+     * the restore worker (re-drives ONLY the DPNS step for the EXISTING
+     * identity — never re-funds). No-op default keeps the host-JVM tests inert.
+     */
+    private val persistNameContext: suspend (
+        identityIdBase58: String,
+        username: String,
+        secondaryUsername: String?,
+        restoring: Boolean
+    ) -> Unit = { _, _, _, _ -> },
     /** Scope for [submit]; null (tests' default path) makes submit inert. */
     private val executorScope: CoroutineScope? = null
 ) {
@@ -493,6 +529,7 @@ class SdkShieldedUsernameCreation internal constructor(
         dashPayConfig: DashPayConfig,
         shieldedBalanceService: ShieldedBalanceService,
         walletApplication: WalletApplication,
+        blockchainIdentityConfig: BlockchainIdentityConfig,
         applicationScope: CoroutineScope
     ) : this(
         source = DashSdkShieldedUsernameSource(sdkService),
@@ -506,6 +543,17 @@ class SdkShieldedUsernameCreation internal constructor(
         displayHrp = { shieldedHrp(toSdkNetwork(Constants.NETWORK_PARAMETERS)) },
         handOffToLegacy = { identityId ->
             RestoreIdentityOperation(walletApplication).create(identityId, fromCreation = true).enqueue()
+        },
+        driveCreationState = { state, errorMessage ->
+            blockchainIdentityConfig.updateCreationState(state, errorMessage)
+        },
+        persistNameContext = { identityIdBase58, username, secondaryUsername, restoring ->
+            blockchainIdentityConfig.set(BlockchainIdentityConfig.IDENTITY_ID, identityIdBase58)
+            blockchainIdentityConfig.set(BlockchainIdentityConfig.USERNAME, username)
+            secondaryUsername?.let {
+                blockchainIdentityConfig.set(BlockchainIdentityConfig.USERNAME_SECONDARY, it)
+            }
+            blockchainIdentityConfig.set(BlockchainIdentityConfig.RESTORING, restoring)
         },
         executorScope = applicationScope
     )
@@ -625,6 +673,23 @@ class SdkShieldedUsernameCreation internal constructor(
             // evidence — never spend against it.
             return notBroadcast(REASON_POOL_STILL_SYNCING, null)
         }
+        // Funding-note anchor preflight: pool READY clears BEFORE a freshly
+        // shielded funding note is anchored (a recorded commitment-tree
+        // anchor), and a too-soon Type-20 create bounces with
+        // ShieldedNoRecordedAnchor. Require the funding denomination to be
+        // covered by an ANCHORED unspent note set so the UI keeps the calm
+        // "still preparing" surface (transient reason) instead of that bounce.
+        val fundingNoteAnchored = try {
+            shieldedBalanceService.isFundingNoteAnchoredForDenomination(
+                creditsToDash(denominationCredits)
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast(REASON_FUNDING_NOTE_UNCONFIRMED, t)
+        }
+        if (!fundingNoteAnchored) {
+            return notBroadcast(REASON_FUNDING_NOTE_UNCONFIRMED, null)
+        }
         val balance = try {
             shieldedBalanceService.observeShieldedBalance().first()
         } catch (t: Throwable) {
@@ -647,20 +712,35 @@ class SdkShieldedUsernameCreation internal constructor(
             return notBroadcast("SDK bootstrap/bind lookup failed", t)
         }
 
-        // Identity slot + canonical key set, derived and PERSISTED before
-        // anything is signed (the FFI signer reads the Keystore store).
+        // Identity slot + canonical key set. previewRegistrationKeySet returns
+        // the private scalars in hand (IdentityKeyPreview.privateKey) so the
+        // caller can store them for the signer — see the persist step below.
         val identityIndex: Int
         val keys: List<IdentityKeyPreview>
         try {
             identityIndex = source.managedIdentityCount(walletId)
             keys = source.previewRegistrationKeySet(walletId, identityIndex)
             check(keys.isNotEmpty()) { "empty registration key set" }
-            keys.forEachIndexed { keyIndex, key ->
-                source.persistRegistrationKey(walletId, key.publicKey, identityIndex, keyIndex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast("registration key derivation failed", t)
+        }
+
+        // MANDATORY KEY PERSIST before the Type-20 create — the FFI signer
+        // resolves each registration key's private half by LOOKUP
+        // (retrievePrivateKey by pubkey hex), never by derivation, so an
+        // unstored key throws SigningKeyUnavailable (the same on-device
+        // key-persist crash the transparent path hit). Store each preview
+        // row's own scalar, then zero the in-memory copy (storePrivateKey has
+        // encrypted it into the keystore the signer reads).
+        try {
+            keys.forEach { key ->
+                source.storeIdentityPrivateKey(walletId, key.publicKeyHex, key.privateKey)
+                key.privateKey.fill(0)
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
-            return notBroadcast("registration key derivation/persist failed", t)
+            return notBroadcast("registration key persist failed", t)
         }
 
         // REQUIRED creation-failure fallback: the wallet's own DIP-17
@@ -703,17 +783,86 @@ class SdkShieldedUsernameCreation internal constructor(
             contested
         )
 
-        // Best-effort DPNS names — the identity exists either way. The
-        // secondary (dual-username flow) is registered independently of
-        // the primary's outcome: each name that can land should land, and
-        // the legacy handoff below reconciles whatever is on chain.
-        val (nameStatus, nameFailure) = registerNameBestEffort(walletId, identityId, label)
-        val secondaryResult = secondaryLabel?.let { registerNameBestEffort(walletId, identityId, it) }
+        // The identity is on chain. The DPNS name is a SEPARATE, REQUIRED
+        // transition — persist the identity + labels first so the home tile
+        // has context (and, on failure, a tile retry can re-drive ONLY the
+        // DPNS step for THIS identity, never re-fund). restoring=false here so
+        // the tile reads "requesting your username" while the name lands.
+        try {
+            persistNameContext(identityIdBase58, label, secondaryLabel, false)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to persist identity/name context before DPNS registration", t)
+        }
+
+        // State-tracked DPNS names — the identity exists either way. Each
+        // registration drives the creation state (preorder → registering →
+        // registered) so the home tile shows the step. The secondary
+        // (dual-username flow) is registered independently of the primary's
+        // outcome: each name that can land should land, and the legacy handoff
+        // below reconciles whatever is on chain.
+        val (nameStatus, nameFailure) = registerNameTracked(
+            walletId,
+            identityId,
+            label,
+            preorderState = IdentityCreationState.PREORDER_REGISTERING,
+            registeringState = IdentityCreationState.USERNAME_REGISTERING,
+            registeredState = IdentityCreationState.USERNAME_REGISTERED
+        )
+        val secondaryResult = secondaryLabel?.let {
+            registerNameTracked(
+                walletId,
+                identityId,
+                it,
+                preorderState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING,
+                registeringState = IdentityCreationState.USERNAME_SECONDARY_REGISTERING,
+                registeredState = IdentityCreationState.USERNAME_SECONDARY_REGISTERED
+            )
+        }
+
+        // A NON-contested confirmed primary is TERMINAL right here: the
+        // identity and its uncontested name are both on chain, so drive the
+        // creation state to DONE now — independent of (and before) the
+        // best-effort handoff — so `hasUsername` flips immediately and the
+        // home welcome tile + DashPay bottom-nav appear without waiting for
+        // RestoreIdentityWorker's full network recovery to write DONE later.
+        // A CONTESTED primary must NOT be forced to DONE: it still routes
+        // through the worker to VOTING, so leave its state (USERNAME_REGISTERED)
+        // untouched here.
+        val primaryConfirmed = nameStatus == ShieldedUsernameNameStatus.REGISTERED
+        if (primaryConfirmed && !contested) {
+            try {
+                driveCreationState(IdentityCreationState.DONE, null)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn(
+                    "failed to advance creation state to DONE for confirmed non-contested primary {}…; " +
+                        "RestoreIdentityWorker recovery will still reach DONE",
+                    identityIdBase58.take(8),
+                    t
+                )
+            }
+        } else if (!primaryConfirmed) {
+            // The PRIMARY DPNS name did NOT confirm. The identity IS on chain,
+            // but the username is not — registerNameTracked left the creation
+            // state at USERNAME_REGISTERING (with a retryable error for a
+            // provably pre-broadcast rejection; no hard error for an ambiguous
+            // one). Mark restoring so a tile retry — or the background sync —
+            // routes to RestoreIdentityWorker, which re-drives ONLY the DPNS
+            // step for the existing identity (never re-funds).
+            try {
+                persistNameContext(identityIdBase58, label, secondaryLabel, true)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("failed to mark identity restoring after DPNS registration failure", t)
+            }
+        }
 
         // Hand the on-chain identity to the legacy state machine (restore
         // path). Best-effort: a handoff failure must not demote a real
         // Broadcast — the identity/name are on chain; the restore also
-        // re-runs from PlatformSyncService's preBlockDownload discovery.
+        // re-runs from PlatformSyncService's preBlockDownload discovery. For a
+        // contested primary the handoff carries it through to VOTING.
         try {
             handOffToLegacy(identityIdBase58)
         } catch (t: Throwable) {
@@ -805,18 +954,34 @@ class SdkShieldedUsernameCreation internal constructor(
             return notBroadcast("SDK bootstrap/bind lookup failed", t)
         }
 
+        // Same key derivation + persist rule as createUsernameFromShielded (and
+        // the transparent path): previewRegistrationKeySet returns the private
+        // scalars, which must be stored for the FFI signer BEFORE the claim
+        // create — the invitation-claim FFI (createIdentityFromOneTimeKey) signs
+        // with the KeystoreSigner, which resolves identity keys by lookup, not
+        // derivation, so an unstored key throws SigningKeyUnavailable.
         val identityIndex: Int
         val keys: List<IdentityKeyPreview>
         try {
             identityIndex = source.managedIdentityCount(walletId)
             keys = source.previewRegistrationKeySet(walletId, identityIndex)
             check(keys.isNotEmpty()) { "empty registration key set" }
-            keys.forEachIndexed { keyIndex, key ->
-                source.persistRegistrationKey(walletId, key.publicKey, identityIndex, keyIndex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast("registration key derivation failed", t)
+        }
+
+        // MANDATORY KEY PERSIST before the claim create (see
+        // createUsernameFromShielded). Store each preview row's own scalar,
+        // then zero the in-memory copy.
+        try {
+            keys.forEach { key ->
+                source.storeIdentityPrivateKey(walletId, key.publicKeyHex, key.privateKey)
+                key.privateKey.fill(0)
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
-            return notBroadcast("registration key derivation/persist failed", t)
+            return notBroadcast("registration key persist failed", t)
         }
 
         val fallbackAddress = try {
@@ -879,30 +1044,71 @@ class SdkShieldedUsernameCreation internal constructor(
     }
 
     /**
-     * One best-effort DPNS registration for an identity that already
-     * exists on chain — a failure demotes the name's status, never the
-     * creation result. The [classifyBroadcastFailure] contract holds per
-     * name: Ambiguous is never retried here (the legacy handoff/platform
-     * sync reconciles).
+     * One state-tracked DPNS registration for an identity that already exists
+     * on chain. Drives the creation state around `source.registerDpnsName`
+     * ([preorderState] → [registeringState], then [registeredState] on success)
+     * so the home tile reflects the step, and on failure LEAVES the state at
+     * [registeringState] — stamped with the error for a provably pre-broadcast
+     * rejection (retryable error card), but WITHOUT a hard error for an
+     * AMBIGUOUS (unconfirmed) outcome (self-healing: the restore worker
+     * re-checks the on-chain name before re-registering, so it never
+     * double-registers/re-funds). A failure demotes the name's status, never
+     * the creation result; the returned Pair<status, reason> is unchanged from
+     * the previous best-effort helper so the outcome reporting is identical.
      */
-    private suspend fun registerNameBestEffort(
+    private suspend fun registerNameTracked(
         walletId: String,
         identityId: ByteArray,
-        label: String
-    ): Pair<ShieldedUsernameNameStatus, String?> = try {
-        source.registerDpnsName(walletId, identityId, label)
-        ShieldedUsernameNameStatus.REGISTERED to null
-    } catch (t: Throwable) {
-        if (t is CancellationException) throw t
-        when (classifyBroadcastFailure(t)) {
-            is SdkWriteResult.NotBroadcast -> {
-                log.warn("DPNS registration of '{}' rejected pre-broadcast after identity creation", label, t)
-                ShieldedUsernameNameStatus.NOT_REGISTERED to (t.message ?: "name registration failed")
+        label: String,
+        preorderState: IdentityCreationState,
+        registeringState: IdentityCreationState,
+        registeredState: IdentityCreationState
+    ): Pair<ShieldedUsernameNameStatus, String?> {
+        try {
+            driveCreationState(preorderState, null)
+            driveCreationState(registeringState, null)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to record DPNS registering state for '{}'", label, t)
+        }
+        return try {
+            source.registerDpnsName(walletId, identityId, label)
+            try {
+                driveCreationState(registeredState, null)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("failed to record DPNS registered state for '{}'", label, t)
             }
-            else -> {
-                log.error("DPNS registration of '{}' outcome unconfirmed after identity creation", label, t)
-                ShieldedUsernameNameStatus.AMBIGUOUS to (t.message ?: "name registration ambiguous")
+            ShieldedUsernameNameStatus.REGISTERED to null
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            val (status, reason) = when (classifyBroadcastFailure(t)) {
+                is SdkWriteResult.NotBroadcast -> {
+                    log.warn("DPNS registration of '{}' rejected pre-broadcast after identity creation", label, t)
+                    ShieldedUsernameNameStatus.NOT_REGISTERED to (t.message ?: "name registration failed")
+                }
+                else -> {
+                    log.error("DPNS registration of '{}' outcome unconfirmed after identity creation", label, t)
+                    ShieldedUsernameNameStatus.AMBIGUOUS to (t.message ?: "name registration ambiguous")
+                }
             }
+            // Leave the creation state at the registering state. A provably
+            // pre-broadcast rejection (NOT_REGISTERED) is a GENUINE, terminal
+            // failure for this attempt — stamp the error so the home tile shows
+            // the retryable error card. An AMBIGUOUS (unconfirmed) outcome is
+            // the self-healing case (the restore worker re-checks the on-chain
+            // name before re-registering, never a double-register/re-fund), so
+            // DON'T stamp a hard error — keep the sticky non-terminal
+            // "unconfirmed, will reconcile on sync" registering state. The
+            // ambiguous reason is still returned in the outcome for logging.
+            val errorForTile = if (status == ShieldedUsernameNameStatus.AMBIGUOUS) null else reason
+            try {
+                driveCreationState(registeringState, errorForTile)
+            } catch (e: Throwable) {
+                if (e is CancellationException) throw e
+                log.warn("failed to stamp DPNS registration state for '{}'", label, e)
+            }
+            status to reason
         }
     }
 
@@ -942,6 +1148,16 @@ class SdkShieldedUsernameCreation internal constructor(
          */
         const val REASON_RUNTIME_NOT_READY = "shielded runtime not ready"
         const val REASON_POOL_STILL_SYNCING = "shielded pool still syncing"
+
+        /**
+         * Preflight refusal meaning the pool sync is READY but the wallet's
+         * funding note is NOT yet anchored (no recorded commitment-tree
+         * anchor / `blockHeight`), so a Type-20 create would bounce with
+         * `ShieldedNoRecordedAnchor`. Transient and retry-safe (nothing
+         * spent) — grouped with the pool-not-ready reasons so the UI keeps
+         * the calm "still preparing" surface until the note anchors.
+         */
+        const val REASON_FUNDING_NOTE_UNCONFIRMED = "shielded funding note not yet anchored"
 
         /**
          * [createIdentityFromInvitation] refusal meaning the shielded invite
@@ -994,6 +1210,8 @@ class SdkShieldedUsernameCreation internal constructor(
          * "still preparing" surface, not a hard error.
          */
         fun isPoolNotReadyReason(reason: String): Boolean =
-            reason == REASON_RUNTIME_NOT_READY || reason == REASON_POOL_STILL_SYNCING
+            reason == REASON_RUNTIME_NOT_READY ||
+                reason == REASON_POOL_STILL_SYNCING ||
+                reason == REASON_FUNDING_NOTE_UNCONFIRMED
     }
 }

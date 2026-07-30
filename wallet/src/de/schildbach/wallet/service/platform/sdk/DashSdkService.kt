@@ -427,4 +427,47 @@ interface DashSdkService {
      * @param walletIdHex the bound wallet id ([bindAppWallet]'s return).
      */
     suspend fun provisionDashPayContactAccounts(walletIdHex: String): DashPayContactProvisionReport
+
+    /**
+     * Persist the raw private [privateKey] scalar of a single identity
+     * registration key into the SDK's Keystore-backed `WalletStorage`,
+     * keyed by [pubkeyHex] (lower-case hex of the compressed public half)
+     * and recorded under [walletId]'s durable owner index.
+     *
+     * This is the ONE precondition the FFI identity signer needs before an
+     * identity-create state transition can be signed: the
+     * [org.dashfoundation.dashsdk.security.KeystoreSigner] resolves each
+     * registration key's private half by LOOKUP
+     * (`storage.retrievePrivateKey(pubkeyHex)`) — identity keys are never
+     * derived by the signer (only 0xFF platform-address keys are) — so an
+     * absent key throws `SigningKeyUnavailable` ("no private key stored for
+     * <pubkeyHex>"). The identity-create funding flows
+     * ([de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation],
+     * [de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation])
+     * derive these scalars via `previewRegistrationKeySet` (which returns the
+     * private material in hand precisely so the caller can store it) and call
+     * this for each row BEFORE the register/create call, then zero their
+     * in-memory copy.
+     *
+     * Delegates to `WalletStorage.storePrivateKey(pubkeyHex, privateKey,
+     * ownerWalletId = walletId)` — the identical primitive
+     * [ensureIdentityKeysSignable] lands on. It is a public-key encrypt,
+     * NEVER auth-gated under either [KeySecurityPolicy] (matching iOS's
+     * silent identity-key write), so it never prompts and never throws
+     * `UserNotAuthenticatedException`. Idempotent per pubkey. Internally
+     * calls [ensureStarted].
+     *
+     * @param pubkeyHex lower-case hex of the compressed public key — the
+     *   `WalletStorage` key-material id ([org.dashfoundation.dashsdk.identity
+     *   .IdentityKeyPreview.publicKeyHex]).
+     * @param privateKey the 32-byte private scalar to encrypt at rest.
+     * @param walletId the 32-byte bound wallet id ([bindAppWallet]'s return,
+     *   decoded) — recorded in the durable owner index so an in-flight
+     *   registration's prestored keys are discoverable by wallet deletion.
+     */
+    suspend fun storeIdentityPrivateKey(
+        pubkeyHex: String,
+        privateKey: ByteArray,
+        walletId: ByteArray
+    )
 }

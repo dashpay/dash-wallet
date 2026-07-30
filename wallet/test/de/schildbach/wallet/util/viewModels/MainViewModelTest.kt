@@ -228,6 +228,12 @@ class MainViewModelTest {
     private val cutoverCoordinator = mockk<de.schildbach.wallet.service.platform.sdk.CutoverCoordinator> {
         coEvery { dashjEngineMayStart() } returns true
     }
+    // Post-upgrade mixed-funds prompt: no CoinJoin funds in these fixtures,
+    // so the startup collector never fires.
+    private val coinJoinFundsMigrationService =
+        mockk<de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService> {
+            coEvery { shouldPrompt() } returns false
+        }
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
 
@@ -319,6 +325,7 @@ class MainViewModelTest {
                 dashPayContactRequestDao,
                 txDisplayCacheService,
                 crowdNodeApi,
+                coinJoinFundsMigrationService,
                 l1ShadowSyncService,
                 cutoverCoordinator
             )
@@ -360,6 +367,7 @@ class MainViewModelTest {
                 dashPayContactRequestDao,
                 txDisplayCacheService,
                 crowdNodeApi,
+                coinJoinFundsMigrationService,
                 l1ShadowSyncService,
                 cutoverCoordinator
             )

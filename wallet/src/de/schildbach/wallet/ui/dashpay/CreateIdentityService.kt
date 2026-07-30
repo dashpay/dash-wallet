@@ -22,7 +22,10 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
@@ -33,6 +36,8 @@ import de.schildbach.wallet.ui.username.UsernameType
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
@@ -74,11 +79,23 @@ class CreateIdentityService : LifecycleService() {
         private const val ACTION_RETRY_INVITE_WITH_NEW_USERNAME = "org.dash.dashpay.action.ACTION_RETRY_INVITE_WITH_NEW_USERNAME"
         private const val ACTION_RETRY_INVITE_AFTER_INTERRUPTION = "org.dash.dashpay.action.ACTION_RETRY_INVITE_AFTER_INTERRUPTION"
 
+        /**
+         * Post-cutover SDK (transparent) username creation runs on the
+         * app-scoped [SdkTransparentUsernameCreation] executor, not this
+         * service. This action carries NO funding: the service only holds the
+         * process foreground (notification + wakelock, exactly like the dashj
+         * path) so a screen lock cannot get the app reaped mid-proof, and
+         * projects the executor's submit state onto the home identity tile. It
+         * is self-contained and self-stopping — see [handleSdkForegroundHold].
+         */
+        private const val ACTION_HOLD_FOREGROUND_FOR_SDK_CREATE = "org.dash.dashpay.action.HOLD_FOREGROUND_FOR_SDK_CREATE"
+
         private const val EXTRA_USERNAME = "org.dash.dashpay.extra.USERNAME"
         private const val EXTRA_USERNAME_SECONDARY = "org.dash.dashpay.extra.USERNAME_SECONDARY"
         private const val EXTRA_START_FOREGROUND_PROMISED = "org.dash.dashpay.extra.EXTRA_START_FOREGROUND_PROMISED"
         private const val EXTRA_IDENTITY = "org.dash.dashpay.extra.IDENTITY"
         private const val EXTRA_INVITE = "org.dash.dashpay.extra.INVITE"
+        private const val EXTRA_SHIELDED = "org.dash.dashpay.extra.SHIELDED"
 
         @JvmStatic
         fun createIntentForNewUsername(context: Context, username: String, usernameSecondary: String?): Intent {
@@ -125,6 +142,33 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
+        /**
+         * Start the foreground hold for an app-scoped SDK (transparent)
+         * username creation. Must be started from the Activity tap path (a
+         * visible activity) to satisfy the Android 12+ FGS-start-from-background
+         * rules — the caller is [de.schildbach.wallet.ui.username.request
+         * .RequestUserNameViewModel.submit] right after the executor accepted
+         * the submit. Does NOT trigger any funding. [shielded] selects which
+         * executor's submit state the hold observes (shielded pool vs
+         * transparent UTXO creation).
+         */
+        @JvmStatic
+        fun createIntentForSdkForegroundHold(
+            context: Context,
+            username: String,
+            usernameSecondary: String?,
+            shielded: Boolean = false
+        ): Intent {
+            return Intent(context, CreateIdentityService::class.java).apply {
+                action = ACTION_HOLD_FOREGROUND_FOR_SDK_CREATE
+                putExtra(EXTRA_USERNAME, username)
+                usernameSecondary?.let {
+                    putExtra(EXTRA_USERNAME_SECONDARY, it)
+                }
+                putExtra(EXTRA_SHIELDED, shielded)
+            }
+        }
+
         @JvmStatic
         fun createIntentForRetry(context: Context, startForegroundPromised: Boolean = false): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
@@ -155,8 +199,29 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var walletDataProvider: WalletData
     @Inject lateinit var identityCreationStatus: IdentityCreationStatusHolder
     @Inject lateinit var sdkShieldedUsernameCreation: SdkShieldedUsernameCreation
+    @Inject lateinit var transparentUsernameCreation: SdkTransparentUsernameCreation
+    @Inject lateinit var sdkL1InviteCreation: SdkL1InviteCreation
     @Inject lateinit var dashPayConfig: DashPayConfig
     private lateinit var securityGuard: SecurityGuard
+
+    /**
+     * The on-chain identity id from an SDK-routed invite claim — SHIELDED
+     * ([claimShieldedInvitation]) or L1 DIP-13 ([claimL1Invitation]). Used by
+     * [registerUsername] to register the DPNS name through the SDK: an
+     * SDK-created identity's keys live in the SDK keystore, not the dashj
+     * identity keychain, so the legacy dashj signer returns 0. Null for the
+     * legacy dashj invite claim (pre-cutover), where the dashj signer is correct.
+     */
+    private var sdkClaimedInviteIdentityId: String? = null
+
+    /**
+     * True once this service instance is running purely as an SDK-creation
+     * foreground hold ([ACTION_HOLD_FOREGROUND_FOR_SDK_CREATE]). Gates the
+     * [onStartCommand] restart contract to START_NOT_STICKY so a killed
+     * process is never redelivered a null intent into the dashj
+     * [handleCreateIdentityAction] state machine (which fails post-cutover).
+     */
+    private var sdkHoldMode = false
     
     private val walletWipeListener: suspend () -> Unit = {
         log.info("Wallet wipe detected, stopping CreateIdentityService")
@@ -270,12 +335,24 @@ class CreateIdentityService : LifecycleService() {
                     }
                     handleCreateIdentityFromInvitationAction(null, null, null)
                 }
+                ACTION_HOLD_FOREGROUND_FOR_SDK_CREATE -> {
+                    val username = intent.getStringExtra(EXTRA_USERNAME)
+                    val usernameSecondary = intent.getStringExtra(EXTRA_USERNAME_SECONDARY)
+                    val shielded = intent.getBooleanExtra(EXTRA_SHIELDED, false)
+                    handleSdkForegroundHold(username, usernameSecondary, shielded)
+                }
             }
         } else {
             log.info("work in progress, ignoring ${intent.action}")
         }
 
-        return Service.START_STICKY
+        // The SDK-creation hold must NOT be sticky: the funding runs on the
+        // app-scoped executor, so a null-intent restart would only re-enter the
+        // dashj handleCreateIdentityAction(null, null) state machine (line
+        // above) — which fails on a committed cutover (dashj engine held).
+        // START_NOT_STICKY guarantees no such redelivery for this action; the
+        // executor's own resume gate handles re-entry after a process restart.
+        return if (sdkHoldMode) Service.START_NOT_STICKY else Service.START_STICKY
     }
 
     private fun handleCreateIdentityAction(username: String?, usernameSecondary: String?, retryWithNewUserName: Boolean = false) {
@@ -524,6 +601,140 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
+    /**
+     * Foreground hold for an app-scoped SDK (transparent) username creation.
+     * This does NO funding — the single-flight spend lives on
+     * [SdkTransparentUsernameCreation], the single source of truth. Here we
+     * only:
+     *  1. keep the process foreground (the notification + wakelock acquired in
+     *     [onCreate]) so a screen lock cannot get the app reaped mid-proof, and
+     *  2. project the executor's [ShieldedUsernameSubmitState] onto the
+     *     home-screen identity tile through the same `creationState` seam the
+     *     dashj path uses ([IdentityRepository.updateIdentityCreationState]).
+     *
+     * Self-stops on EVERY terminal executor outcome (success, not-sent,
+     * unconfirmed, or an observer failure via the finally). Combined with
+     * START_NOT_STICKY (see [onStartCommand]) the hold never leaks a service or
+     * wakelock and never re-enters the dashj state machine.
+     */
+    private fun handleSdkForegroundHold(username: String?, usernameSecondary: String?, shielded: Boolean = false) {
+        sdkHoldMode = true
+        serviceScope.launch {
+            try {
+                seedSdkCreationInProgress(username, usernameSecondary)
+                // The executor flipped submitState to Proving synchronously in
+                // submit() before this service was started, so the first
+                // observed value is Proving. Wait for the terminal outcome. The
+                // (seenProving && Idle) arm is a defensive catch for the case
+                // where a screen-scoped ViewModel already acknowledged the
+                // terminal (resetting to Idle) before we observed it. The
+                // [shielded] flag selects which executor's state we project —
+                // the shielded-pool creation vs the transparent-UTXO one — so
+                // the shielded path drives the same home tile the transparent
+                // path does.
+                var seenProving = false
+                val submitStateFlow = if (shielded) {
+                    sdkShieldedUsernameCreation.submitState
+                } else {
+                    transparentUsernameCreation.submitState
+                }
+                val terminal = submitStateFlow
+                    .onEach { if (it == ShieldedUsernameSubmitState.Proving) seenProving = true }
+                    .first { state ->
+                        state is ShieldedUsernameSubmitState.Created ||
+                            state is ShieldedUsernameSubmitState.NotSent ||
+                            state == ShieldedUsernameSubmitState.MayHaveGoneThrough ||
+                            (seenProving && state == ShieldedUsernameSubmitState.Idle)
+                    }
+                when (terminal) {
+                    is ShieldedUsernameSubmitState.Created ->
+                        // Identity is on chain; the executor already enqueued
+                        // the RestoreIdentityOperation, whose worker advances
+                        // the tile through its states to DONE. Leave the seed.
+                        log.info("SDK username creation broadcast — restore worker will advance the identity tile")
+                    is ShieldedUsernameSubmitState.NotSent -> {
+                        // Provably nothing spent (retry-safe): retract the
+                        // progress tile so the user can re-request. The
+                        // ViewModel's own dialog surfaced the error when the
+                        // request screen was open.
+                        log.info("SDK username creation not sent ({}) — retracting the progress tile", terminal.reason)
+                        clearSdkCreationIfUntouched()
+                    }
+                    ShieldedUsernameSubmitState.MayHaveGoneThrough -> {
+                        // Unconfirmed outcome (sticky in the executor; never
+                        // auto-retried). Retract the stuck progress card;
+                        // platform-sync recovery repopulates the tile if the
+                        // identity actually landed on chain.
+                        log.warn("SDK username creation outcome unconfirmed — retracting the progress tile; sync recovery reconciles")
+                        clearSdkCreationIfUntouched()
+                    }
+                    else -> {
+                        // Idle after Proving — the terminal was surfaced and
+                        // acknowledged elsewhere; retract only our own untouched
+                        // seed (never stomp a racing advance).
+                        clearSdkCreationIfUntouched()
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.error("SDK foreground-hold observer failed", e)
+            } finally {
+                stopSdkHold()
+            }
+        }
+    }
+
+    /**
+     * Seed the home identity tile with an in-progress card for the requested
+     * name while the app-scoped SDK proof + funding runs. Mirrors the dashj
+     * fresh-create seed (BlockchainIdentityData with the username +
+     * CREDIT_FUNDING_TX_CREATING) so [HistoryHeaderAdapter] renders it
+     * identically. No funds logic — the executor owns the spend.
+     */
+    private suspend fun seedSdkCreationInProgress(username: String?, usernameSecondary: String?) {
+        val name = username?.trim()
+        if (name.isNullOrEmpty()) {
+            log.warn("SDK foreground-hold started without a username; not seeding the identity tile")
+            return
+        }
+        val base = identityRepository.loadBlockchainIdentityBaseData()
+        blockchainIdentityData = BlockchainIdentityData(
+            IdentityCreationState.NONE,
+            null,
+            name,
+            usernameSecondary?.trim()?.takeIf { it.isNotEmpty() },
+            null,
+            false,
+            verificationLink = base.verificationLink
+        )
+        identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+        identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
+    }
+
+    /**
+     * Retract the in-progress seed [seedSdkCreationInProgress] wrote — but only
+     * if nothing has advanced it. If the restore worker (on a Broadcast) has
+     * already moved the state, an identity id was recorded, or an error was
+     * stamped, leave it. Setting the state back to NONE hides the tile
+     * ([helloCardEligible]) without wiping the requested-username pref.
+     */
+    private suspend fun clearSdkCreationIfUntouched() {
+        val data = identityRepository.loadBlockchainIdentityData() ?: return
+        if (data.creationState == IdentityCreationState.CREDIT_FUNDING_TX_CREATING &&
+            data.userId == null &&
+            data.creationStateErrorMessage == null
+        ) {
+            identityRepository.updateIdentityCreationState(data, IdentityCreationState.NONE)
+        }
+    }
+
+    /** Release the foreground hold. onDestroy releases the wakelock + job. */
+    private fun stopSdkHold() {
+        stopForeground(true)
+        stopSelf()
+    }
+
     private suspend fun isShieldedEnabled(): Boolean = try {
         dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
     } catch (e: Exception) {
@@ -545,8 +756,13 @@ class CreateIdentityService : LifecycleService() {
             fundingHeight = invite.fundingHeight,
             label = username
         )) {
-            is SdkWriteResult.Broadcast ->
+            is SdkWriteResult.Broadcast -> {
+                // Remember the on-chain identity id so registerUsername can
+                // register the DPNS name through the SDK (its keys are in the
+                // SDK keystore, not the dashj identity keychain).
+                sdkClaimedInviteIdentityId = result.value
                 log.info("shielded invite claimed — identity {} is on chain", result.value)
+            }
             is SdkWriteResult.NotBroadcast ->
                 if (SdkShieldedUsernameCreation.isInviteAlreadyUsedReason(result.reason)) {
                     log.warn("shielded invite has already been used")
@@ -556,6 +772,50 @@ class CreateIdentityService : LifecycleService() {
                 }
             is SdkWriteResult.Ambiguous ->
                 throw IllegalStateException("shielded invite claim outcome unconfirmed", result.cause)
+        }
+    }
+
+    /**
+     * Whether a STANDARD (L1) invitation claim should be routed through the
+     * Kotlin SDK DIP-13 [SdkL1InviteCreation.claimL1Invite] path instead of the
+     * dashj asset-lock claim ([TopUpRepository.obtainAssetLockTransaction] +
+     * [PlatformRepo.registerIdentity]) — the L1-invite flag is on AND the
+     * cutover is committed. A false result keeps the dashj claim, byte-identical
+     * to before. Mirrors [isShieldedEnabled] for the shielded claim branch.
+     */
+    private suspend fun isL1InviteSdkRoutable(): Boolean = try {
+        sdkL1InviteCreation.isEnabledAndCommitted()
+    } catch (e: Exception) {
+        log.warn("failed to read the L1-invite SDK routing state; treating as off", e)
+        false
+    }
+
+    /**
+     * Claim a STANDARD (L1) invitation through the Kotlin SDK DIP-13 path:
+     * register the invitee's new identity funded by the invite's imported
+     * asset-lock voucher (the bearer `dashpay://invite?…` link), replacing the
+     * dashj asset-lock funding + legacy registerIdentity. On success the
+     * identity is on chain and the caller's existing recovery + DPNS + contact
+     * tail runs. A double-claim (the voucher is already spent) surfaces the same
+     * "Invite has already been used" state the L1 outpoint-collision path
+     * throws; any other failure is surfaced as a claim error. Mirrors
+     * [claimShieldedInvitation].
+     */
+    private suspend fun claimL1Invitation(invite: InvitationLinkData, username: String) {
+        when (val result = sdkL1InviteCreation.claimL1Invite(
+            uri = invite.link.toString(),
+            label = username
+        )) {
+            is SdkWriteResult.Broadcast -> {
+                // Same as the shielded claim: the L1 DIP-13 identity's keys are
+                // in the SDK keystore, so registerUsername must route DPNS to the SDK.
+                sdkClaimedInviteIdentityId = result.value
+                log.info("L1 invite claimed — identity {} is on chain", result.value)
+            }
+            is SdkWriteResult.NotBroadcast ->
+                throw IllegalStateException("L1 invite claim failed: ${result.reason}", result.cause)
+            is SdkWriteResult.Ambiguous ->
+                throw IllegalStateException("L1 invite claim outcome unconfirmed", result.cause)
         }
     }
 
@@ -672,6 +932,15 @@ class CreateIdentityService : LifecycleService() {
         val shieldedInvite = blockchainIdentityData.invite
             ?.takeIf { it.isShielded && isShieldedEnabled() }
 
+        // STANDARD (L1) invitation claim through the SDK DIP-13 path: when the
+        // link is an L1 invite (NOT shielded) and the flag+cutover route, the
+        // invitee's identity is registered directly from the invite's imported
+        // asset-lock voucher (claimInvitation), replacing the dashj asset-lock
+        // funding + legacy registerIdentity. Null (flag off / pre-cutover /
+        // shielded) leaves the unchanged dashj L1 claim untouched.
+        val l1SdkInvite = blockchainIdentityData.invite
+            ?.takeIf { !it.isShielded && isL1InviteSdkRoutable() }
+
         if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CREATING) {
             identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
             //
@@ -679,13 +948,15 @@ class CreateIdentityService : LifecycleService() {
             //
             if (shieldedInvite != null) {
                 claimShieldedInvitation(shieldedInvite, blockchainIdentityData.username!!)
+            } else if (l1SdkInvite != null) {
+                claimL1Invitation(l1SdkInvite, blockchainIdentityData.username!!)
             } else {
                 topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
             }
-        } else if (shieldedInvite == null) {
+        } else if (shieldedInvite == null && l1SdkInvite == null) {
             // if we are retrying, then we need to initialize the credit funding tx
-            // (the shielded claim has no L1 asset lock to re-obtain — the note
-            // was already spent creating the identity on chain).
+            // (an SDK claim — shielded or L1 — has no L1 asset lock to re-obtain;
+            // the voucher was already spent creating the identity on chain).
             topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
         }
 
@@ -712,9 +983,9 @@ class CreateIdentityService : LifecycleService() {
                     val encryptionKey = platformRepo.getWalletEncryptionKey()
                     val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
                     platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
-                } else if (shieldedInvite != null) {
-                    // The L2 claim already put the identity on chain (funded
-                    // from the invite's one-time note) — there is no asset lock
+                } else if (shieldedInvite != null || l1SdkInvite != null) {
+                    // The SDK claim (shielded Type-20 note OR L1 DIP-13 voucher)
+                    // already put the identity on chain — there is no asset lock
                     // to registerIdentity with. Recover it by its slot-0 public
                     // key (SDK/dashj DIP-9 index-0 key parity), exactly as the
                     // existing-identity branch does.
@@ -945,6 +1216,49 @@ class CreateIdentityService : LifecycleService() {
                 blockchainIdentity.currentUsername = username
             }
             UsernameType.Secondary-> blockchainIdentity.secondaryUsername = username
+        }
+
+        // SDK-claimed invite (shielded L2 or L1 DIP-13): the identity was created
+        // by the SDK, so its keys live in the SDK keystore — the legacy dashj
+        // preorderName/registerName below cannot sign it ("signer callback
+        // returned 0"). Register the DPNS name through the SDK instead
+        // (registerDpnsNameForExistingIdentity — no funding, no re-fund, and no
+        // shielded-flag coupling), mirroring RestoreIdentityWorker's completion
+        // step; then let the normal finishRegistration tail (contested check /
+        // DONE / profile) run. Invites are single-username, so only the primary is
+        // routed; a NotBroadcast/Ambiguous leaves the state at USERNAME_REGISTERING
+        // for a retryable tile / RestoreIdentityWorker reconcile (never a re-fund).
+        val sdkClaimedInvite = usernameType == UsernameType.Primary &&
+            blockchainIdentityData.invite?.let {
+                (it.isShielded && isShieldedEnabled()) || (!it.isShielded && isL1InviteSdkRoutable())
+            } == true
+        if (sdkClaimedInvite) {
+            if (blockchainIdentityData.creationState <= preorderRegistering) {
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, preorderRegistering)
+            }
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, domainRegistering)
+            val identityId = sdkClaimedInviteIdentityId ?: blockchainIdentity.uniqueIdString
+            log.info("registering DPNS name '{}' for SDK-claimed invite identity {} via the SDK", username, identityId)
+            when (val result = transparentUsernameCreation.registerDpnsNameForExistingIdentity(identityId, username)) {
+                is SdkWriteResult.Broadcast -> {
+                    log.info("SDK DPNS registration of '{}' confirmed: {}", username, result.value)
+                    // Re-recover so the finishRegistration tail sees the on-chain
+                    // name (populates currentUsername; a contested name lands in
+                    // voting). Best-effort: the name is already confirmed on chain.
+                    try {
+                        platformRepo.recoverUsernames(blockchainIdentity)
+                    } catch (e: Exception) {
+                        log.warn("recoverUsernames after SDK invite DPNS registration failed (non-fatal)", e)
+                    }
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                    identityRepository.updateIdentityCreationState(blockchainIdentityData, domainRegistered)
+                }
+                is SdkWriteResult.NotBroadcast ->
+                    error("invite username registration did not complete (retryable): ${result.reason}")
+                is SdkWriteResult.Ambiguous ->
+                    error("invite username registration outcome unconfirmed (retryable): ${result.cause?.message}")
+            }
+            return
         }
 
         if (blockchainIdentityData.creationState <= preorderRegistering) {

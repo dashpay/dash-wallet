@@ -187,6 +187,15 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
             m.contains("Transaction broadcast failed: SPV")
     } == true ->
         SdkWriteResult.NotBroadcast("pre-broadcast: SPV client not started", t)
+    // A PlatformWalletError::Persistence gate (e.g. the invitation-capability
+    // check: "This operation requires persistence capabilities") is raised
+    // while VALIDATING the operation's preconditions — strictly before any
+    // state transition is built or submitted, so nothing was spent. Surfaced
+    // as a Generic/wallet-operation FFI error carrying this message (the SDK
+    // exposes no typed Persistence error at 0.1.0-v41int3). Message-matched
+    // until a typed error exists; retry-safe.
+    t.message?.contains("requires persistence capabilities") == true ->
+        SdkWriteResult.NotBroadcast("pre-broadcast: persistence-capability gate", t)
     else -> SdkWriteResult.Ambiguous(t)
 }
 
@@ -230,6 +239,12 @@ interface SdkDashPayWriteSource {
      * Broadcast a DashPay profile create ([doCreate]) or update for
      * [identityId], signed Rust-side. Returns only on confirmed broadcast;
      * throws otherwise.
+     *
+     * [avatarBytes] is the RAW avatar image: the SDK computes the document's
+     * `avatarHash` (SHA-256) and `avatarFingerprint` (perceptual) from it
+     * Rust-side — it does not accept the app's precomputed pair. Null when the
+     * profile carries no avatar (or the bytes could not be fetched, in which
+     * case the caller must not route an avatar-bearing profile here).
      */
     suspend fun createOrUpdateProfile(
         walletIdHex: String,
@@ -237,6 +252,7 @@ interface SdkDashPayWriteSource {
         displayName: String?,
         publicMessage: String?,
         avatarUrl: String?,
+        avatarBytes: ByteArray?,
         doCreate: Boolean
     )
 }
@@ -289,6 +305,7 @@ internal class DashSdkDashPayWriteSource(
         displayName: String?,
         publicMessage: String?,
         avatarUrl: String?,
+        avatarBytes: ByteArray?,
         doCreate: Boolean
     ) {
         val manager = manager()
@@ -297,7 +314,7 @@ internal class DashSdkDashPayWriteSource(
             displayName = displayName,
             publicMessage = publicMessage,
             avatarUrl = avatarUrl,
-            avatarBytes = null,
+            avatarBytes = avatarBytes,
             doCreate = doCreate,
             signerHandle = manager.signerHandle
         )
@@ -355,10 +372,13 @@ internal class DashSdkDashPayWriteSource(
  *
  * ## Known gaps (deliberate, documented for Phase 3f)
  *
- * - Profile writes carrying `avatarHash`/`avatarFingerprint` are NOT
- *   routed: the SDK computes both Rust-side from the raw avatar bytes,
- *   which the wallet no longer holds at broadcast time. Such profiles stay
- *   on dashj ([SdkWriteResult.NotBroadcast]).
+ * - Profile writes carrying `avatarHash`/`avatarFingerprint` are routed
+ *   only when the caller also supplies the RAW avatar bytes (the SDK
+ *   recomputes both digests Rust-side and takes no precomputed pair); the
+ *   `UpdateProfileWorker` → `broadcastUpdatedProfile` chain fetches them
+ *   from the same avatar URL the digests were computed over. If the fetch
+ *   fails the profile stays on dashj ([SdkWriteResult.NotBroadcast]), which
+ *   carries the precomputed digest.
  * - Contact requests embed a DIP-15 friendship xpub + accountReference
  *   chosen by the SENDING stack. dashj reads both back from the broadcast
  *   document, but dashj's DIP-15 derivation matching the SDK's has NOT
@@ -400,15 +420,24 @@ internal class DashSdkDashPayWriteSource(
 @Singleton
 class SdkDashPayWrites internal constructor(
     private val source: SdkDashPayWriteSource,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    /**
+     * The DashPay ENCRYPTION/DECRYPTION key retrofit for identities
+     * registered before the six-key registration change (keyIds 0..3 only).
+     * Null in host-JVM tests, which leaves the write path byte-for-byte as it
+     * was before the retrofit existed.
+     */
+    private val dashPayKeys: SdkDashPayKeyProvisioning? = null
 ) {
     @Inject
     constructor(
         sdkService: DashSdkService,
-        dashPayConfig: DashPayConfig
+        dashPayConfig: DashPayConfig,
+        dashPayKeys: SdkDashPayKeyProvisioning
     ) : this(
         source = DashSdkDashPayWriteSource(sdkService),
-        dashPayConfig = dashPayConfig
+        dashPayConfig = dashPayConfig,
+        dashPayKeys = dashPayKeys
     )
 
     /**
@@ -416,12 +445,71 @@ class SdkDashPayWrites internal constructor(
      * `PlatformBroadcastService.sendContactRequest` (dashj:
      * `platform.contactRequests.create`). [ownUserId] / [toUserId] are
      * base58 identity ids; the caller has already authenticated the user.
+     *
+     * This is the one write whose FFI demands an enabled ECDSA_SECP256K1
+     * ENCRYPTION key on the SENDING identity (the DIP-15 ECDH root), so it
+     * also carries the [SdkDashPayKeyProvisioning] retrofit preflight — see
+     * [dashPayEncryptionKeyPreflight].
      */
     suspend fun sendContactRequest(ownUserId: String, toUserId: String): SdkWriteResult<Unit> {
         val recipient = identityBytesOrNull(toUserId)
             ?: return SdkWriteResult.NotBroadcast("malformed recipient identity id")
-        return runWrite(ownUserId, "sendContactRequest") { walletId, ownId ->
+        return runWrite(
+            ownUserId,
+            "sendContactRequest",
+            extraPreflight = { walletId, ownId -> dashPayEncryptionKeyPreflight(walletId, ownId) }
+        ) { walletId, ownId ->
             source.sendContactRequest(walletId, ownId, recipient)
+        }
+    }
+
+    /**
+     * Contact-request-only preflight: does the SENDING identity have the
+     * DIP-15 ECDH root (an enabled ECDSA_SECP256K1 ENCRYPTION key)?
+     *
+     * Returns null to proceed, or a [SdkWriteResult.NotBroadcast] reason that
+     * short-circuits this write to the unchanged dashj fallback.
+     *
+     * Identities registered before the six-key registration change carry only
+     * keyIds 0..3, so the FFI would raise "Invalid identity data: Identity has
+     * no enabled ECDSA_SECP256K1 encryption key" while BUILDING the request —
+     * already classified [SdkWriteResult.NotBroadcast] by
+     * [classifyBroadcastFailure]. Rather than take that same failure forever,
+     * we detect it up front (a local SDK Room read of the identity's key rows)
+     * and kick off the one-time [SdkDashPayKeyProvisioning] retrofit in the
+     * BACKGROUND. This request is not blocked and not made slower by the
+     * on-chain `IdentityUpdate`: it falls back to dashj exactly as it does
+     * today, and the NEXT contact request routes through the SDK.
+     *
+     * Placement rationale: this is the only DashPay write that needs the key
+     * (profile writes do not), and by sitting behind [runWrite]'s existing
+     * gates the retrofit can only ever spend credits on a wallet that has
+     * `USE_KOTLIN_SDK_DASHPAY_WRITES` enabled, is bound to the SDK, has a
+     * managed identity, and is actually trying to add a contact.
+     *
+     * Fail-open: any detection failure — and [DashPayKeyState.UNKNOWN], which
+     * includes every identity whose key layout is not the canonical 0..3 set —
+     * proceeds with the write, i.e. pre-retrofit behaviour.
+     */
+    private suspend fun dashPayEncryptionKeyPreflight(walletIdHex: String, ownId: ByteArray): String? {
+        val provisioning = dashPayKeys ?: return null
+        return try {
+            when (provisioning.state(walletIdHex, ownId)) {
+                DashPayKeyState.PRESENT, DashPayKeyState.UNKNOWN -> null
+                DashPayKeyState.MISSING -> {
+                    val started = provisioning.requestProvisioning(walletIdHex, ownId)
+                    "identity has no DashPay ENCRYPTION key; " +
+                        if (started) {
+                            "provisioning it in the background"
+                        } else {
+                            "provisioning already in flight or exhausted"
+                        }
+                }
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("DashPay encryption-key preflight failed; continuing with the write", t)
+            null
         }
     }
 
@@ -431,25 +519,29 @@ class SdkDashPayWrites internal constructor(
      * `BlockchainIdentity.registerProfile` / `updateProfile`).
      *
      * [hasAvatarDigest] must be true when the profile carries an
-     * `avatarHash`/`avatarFingerprint` — the SDK path cannot reproduce
-     * them (see the class KDoc), so such writes stay on dashj.
+     * `avatarHash`/`avatarFingerprint`. The SDK recomputes both Rust-side
+     * from [avatarBytes] (the raw image) rather than taking the app's
+     * precomputed pair, so an avatar-bearing profile can only be routed here
+     * WITH those bytes; without them the write stays on dashj, which carries
+     * the precomputed digest.
      */
     suspend fun createOrUpdateProfile(
         ownUserId: String,
         displayName: String?,
         publicMessage: String?,
         avatarUrl: String?,
+        avatarBytes: ByteArray?,
         hasAvatarDigest: Boolean,
         doCreate: Boolean
     ): SdkWriteResult<Unit> {
-        if (hasAvatarDigest) {
+        if (hasAvatarDigest && avatarBytes == null) {
             return SdkWriteResult.NotBroadcast(
-                "profile has avatarHash/avatarFingerprint; SDK path needs raw avatar bytes"
+                "profile has avatarHash/avatarFingerprint but no raw avatar bytes; SDK path needs them"
             )
         }
         return runWrite(ownUserId, "createOrUpdateProfile") { walletId, ownId ->
             source.createOrUpdateProfile(
-                walletId, ownId, displayName, publicMessage, avatarUrl, doCreate
+                walletId, ownId, displayName, publicMessage, avatarUrl, avatarBytes, doCreate
             )
         }
     }
@@ -458,10 +550,17 @@ class SdkDashPayWrites internal constructor(
      * Shared orchestration: flag check → preflight (wallet bound, identity
      * managed; every failure here is definitively pre-broadcast) → the one
      * native broadcast attempt, classified by [classifyBroadcastFailure].
+     *
+     * [extraPreflight] is an optional per-operation gate that runs LAST in the
+     * preflight (so it can rely on the bound wallet id and the managed
+     * identity). Returning a non-null reason short-circuits to
+     * [SdkWriteResult.NotBroadcast] — i.e. the unchanged dashj path — without
+     * submitting anything.
      */
     private suspend fun runWrite(
         ownUserId: String,
         operation: String,
+        extraPreflight: suspend (walletIdHex: String, ownIdentityId: ByteArray) -> String? = { _, _ -> null },
         block: suspend (walletIdHex: String, ownIdentityId: ByteArray) -> Unit
     ): SdkWriteResult<Unit> {
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
@@ -484,6 +583,7 @@ class SdkDashPayWrites internal constructor(
             if (t is CancellationException) throw t
             return notBroadcast(operation, "identity-managed preflight failed", t)
         }
+        extraPreflight(walletId, ownId)?.let { return notBroadcast(operation, it, null) }
 
         // The single broadcast attempt.
         return try {

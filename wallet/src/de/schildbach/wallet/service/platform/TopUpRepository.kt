@@ -757,7 +757,9 @@ class TopUpRepositoryImpl @Inject constructor(
         val invitations = invitationsDao.loadAll()
         for (invitation in invitations) {
             if (invitation.acceptedAt == 0L) {
-                val identity = platform.identities.get(invitation.userId)
+                // Tolerant fetch: the invited identity may carry contract-bound
+                // keys whose shape the legacy CBOR cache cannot serialize.
+                val identity = platform.getIdentity(invitation.userId)
                 if (identity != null) {
                     platformRepo.updateDashPayProfile(identity.id.toString())
                     updateInvitation(
@@ -834,6 +836,16 @@ class TopUpRepositoryImpl @Inject constructor(
      */
 
     override fun validateInvitation(invite: InvitationLinkData): Boolean {
+        // Shielded (L2) invites carry a one-time Orchard key (osk), not an L1 asset-lock tx,
+        // so there is nothing on L1 to validate here — touching invite.assetLockTx would NPE.
+        // The funding note is verified at claim time by shieldedIdentityCreateFromOneTimeKey
+        // (createIdentityFromInvitation), which reports NotBroadcast if the note is missing or
+        // already spent. The link was already checked well-formed by isValidShielded, so treat
+        // it as valid here and let the claim flow do the real work.
+        if (invite.isShielded) {
+            log.info("validateInvitation: shielded invite — deferring funds check to claim")
+            return true
+        }
         val stopWatch = Stopwatch.createStarted()
         var tx = getAssetLockTransaction(invite.assetLockTx)
         log.info("validateInvitation: obtaining transaction info for invite took $stopWatch")
@@ -843,7 +855,9 @@ class TopUpRepositoryImpl @Inject constructor(
         }
         if (tx != null) {
             val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx)
-            val identity = platform.identities.get(cfTx.identityId.toStringBase58())
+            // Tolerant fetch: the claimed identity may carry contract-bound keys
+            // whose shape the legacy CBOR cache cannot serialize.
+            val identity = platform.getIdentity(cfTx.identityId.toStringBase58())
             if (identity == null) {
                 // determine if the invite has enough credits
                 if (cfTx.lockedOutput.value < Constants.DASH_PAY_INVITE_MIN) {

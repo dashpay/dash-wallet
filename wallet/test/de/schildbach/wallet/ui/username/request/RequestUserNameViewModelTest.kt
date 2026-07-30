@@ -25,6 +25,7 @@ import de.schildbach.wallet.service.platform.PlatformHealth
 import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameCreationOutcome
@@ -86,6 +87,15 @@ class RequestUserNameViewModelTest {
         every { acknowledge() } just Runs
     }
 
+    private val transparentSubmitState =
+        MutableStateFlow<ShieldedUsernameSubmitState>(ShieldedUsernameSubmitState.Idle)
+
+    private val transparentUsernameCreation = mockk<SdkTransparentUsernameCreation> {
+        every { submitState } returns transparentSubmitState
+        coEvery { isCutoverCommitted() } returns false
+        every { acknowledge() } just Runs
+    }
+
     private val walletApplication = mockk<WalletApplication>(relaxed = true)
 
     private val creationStateFlow = MutableStateFlow<String?>(null)
@@ -108,6 +118,10 @@ class RequestUserNameViewModelTest {
         coEvery { ensureShieldedReady() } returns true
         every { observeShieldedBalance() } returns shieldedBalanceFlow
         every { shieldedSyncStatus } returns shieldedSyncStatusFlow
+        // Funding-note anchor gate (Part B): default anchored so existing
+        // shielded-path expectations (button reaches Enabled at READY) hold;
+        // anchor-specific tests can override this stub.
+        coEvery { isFundingNoteAnchoredForDenomination(any()) } returns true
     }
 
     // Every created ViewModel is tracked so tearDown can cancel its
@@ -133,6 +147,7 @@ class RequestUserNameViewModelTest {
         analytics = mockk<AnalyticsService>(relaxed = true),
         topUpRepository = mockk<TopUpRepository>(relaxed = true),
         shieldedUsernameCreation = shieldedUsernameCreation,
+        transparentUsernameCreation = transparentUsernameCreation,
         shieldedBalanceService = shieldedBalanceService,
         platformHealthProbe = platformHealthProbe,
         identityCreationStatus = IdentityCreationStatusHolder()
@@ -173,7 +188,11 @@ class RequestUserNameViewModelTest {
 
         // submit() hops over Dispatchers.IO for the config write — poll.
         verify(exactly = 1, timeout = 5_000) { shieldedUsernameCreation.submit("alice2", null) }
-        verify(exactly = 0) { walletApplication.startService(any()) }
+        // The shielded path now starts the lightweight CreateIdentityService
+        // foreground HOLD (Fix A1) — the same process-foreground + home-tile
+        // driver the transparent path uses — once the executor accepts the
+        // submit. It carries NO funding (the executor owns the shielded spend).
+        verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
     }
 
     @Test

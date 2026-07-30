@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.shielded
 
 import android.content.Context
 import de.schildbach.wallet.payments.ChainLockedCoinSelector
+import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.L1VerificationStatus
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
@@ -114,6 +115,12 @@ class ShieldedTransferViewModelTest {
         every { verificationStatus } returns shadowVerificationStatus
         every { progress } returns shadowProgress
     }
+    // Pre-cutover by default: a null SDK total leaves the ChainLocked-only
+    // walletBalance passing through byte-identical (Bug E overlay is inert).
+    private val cutoverUiDataService = mockk<CutoverUiDataService> {
+        every { sdkTotalBalance } returns MutableStateFlow<Coin?>(null)
+        every { sdkConfirmedBalance } returns MutableStateFlow<Coin?>(null)
+    }
 
     private fun blockchainState(
         synced: Boolean,
@@ -176,6 +183,7 @@ class ShieldedTransferViewModelTest {
             walletUIConfig,
             exchangeRates,
             l1ShadowSyncService,
+            cutoverUiDataService,
             transferExecutor
         )
 
@@ -823,6 +831,23 @@ class ShieldedTransferViewModelTest {
             Dash.ZERO,
             base.copy(totalWalletBalance = Dash.parse("1.00")).pendingWalletBalance
         )
+    }
+
+    @Test
+    fun pendingWalletBalance_postCutover_isSdkUnconfirmed_notChainlockMath() {
+        // Post-cutover the dashj total/chainlocked figures are frozen, so pending
+        // comes from the SDK split (cutoverPendingBalance = native total −
+        // confirmed), NOT total − walletBalance. walletBalance is the confirmed
+        // (shieldable) figure; the unconfirmed remainder shows as pending.
+        val state = ShieldedTransferUIState(
+            cutoverActive = true,
+            walletBalance = Dash.parse("2.00"),      // SDK confirmed (shieldable / Max)
+            totalWalletBalance = Dash.parse("99.0"),  // frozen dashj value — must be ignored
+            cutoverPendingBalance = Dash.parse("0.75") // SDK unconfirmed
+        )
+        assertEquals(Dash.parse("0.75"), state.pendingWalletBalance)
+        // Max/availableBalance draws from the confirmed figure only.
+        assertEquals(Dash.parse("2.00"), state.availableBalance)
     }
 
     // ── "You will transfer ~" hint — always DASH, both directions (user

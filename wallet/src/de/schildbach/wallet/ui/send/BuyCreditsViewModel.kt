@@ -6,6 +6,8 @@ import androidx.work.WorkInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentTopUp
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -27,7 +29,8 @@ class BuyCreditsViewModel @Inject constructor(
     val identity: BlockchainIdentityConfig,
     val walletDataProvider: WalletData,
     val analytics: AnalyticsService,
-    val dashPayConfig: DashPayConfig
+    val dashPayConfig: DashPayConfig,
+    private val sdkTransparentTopUp: SdkTransparentTopUp
 ) : ViewModel() {
     var identityId: String? = null
     var topUpTransaction: Transaction? = null
@@ -57,5 +60,31 @@ class BuyCreditsViewModel @Inject constructor(
 
     suspend fun getTransaction(txId: Sha256Hash?) = withContext(Dispatchers.IO) {
         walletDataProvider.wallet!!.getTransaction(txId)
+    }
+
+    /**
+     * Whether the cutover is committed. Post-cutover the dashj L1 engine is
+     * HELD (0 UTXOs), so building the top-up asset lock with dashj fails —
+     * the funds live in the SDK, and the go handler routes funding through
+     * [topUpViaSdk] instead of the dashj asset-lock + [TopupIdentityWorker]
+     * chain. Pre-cutover this is false and the existing dashj path is used
+     * byte-for-byte.
+     */
+    suspend fun isCutoverCommitted(): Boolean = sdkTransparentTopUp.isCutoverCommitted()
+
+    /**
+     * Post-cutover top-up: fund the EXISTING identity's credit balance by
+     * [amountDuffs] Core duffs (the user-entered amount) directly through the
+     * SDK's resume-gated `topUpFromCore` (which FUSES the asset-lock build with
+     * the Platform top-up registration — no dashj tx/txid). Returns the
+     * three-valued outcome the go handler observes directly: Broadcast(new
+     * credit balance) / NotBroadcast (nothing spent, retry-safe) / Ambiguous
+     * (unconfirmed — never retried). Returns NotBroadcast when no identity id
+     * is on record.
+     */
+    suspend fun topUpViaSdk(amountDuffs: Long): SdkWriteResult<Long> = withContext(Dispatchers.IO) {
+        val identityId = identity.get(BlockchainIdentityConfig.IDENTITY_ID)
+            ?: return@withContext SdkWriteResult.NotBroadcast("no identity to top up")
+        sdkTransparentTopUp.topUp(identityId, amountDuffs)
     }
 }

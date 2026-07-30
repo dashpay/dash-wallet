@@ -221,7 +221,11 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
         contentBinding = TransactionResultContentBinding.bind(binding.transactionResultContainer)
-        transactionResultViewBinder.bind(tx, dashPayProfile)
+        // Bug A: pass the SDK direction/amount override (non-null only post-cutover,
+        // when the held dashj wallet misreads an SDK-authored send).
+        transactionResultViewBinder.bind(
+            tx, dashPayProfile, sdkOverride = viewModel.sdkDirectionOverride.value
+        )
         contentBinding.openExplorerCard.setOnClickListener { viewOnBlockExplorer() }
         contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
         contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }

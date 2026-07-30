@@ -258,7 +258,8 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 shieldedSyncStatus = it.shieldedSyncStatus,
                 enoughBalance = it.enoughBalance,
                 usernameExists = it.usernameExists,
-                usernameContestable = it.usernameContestable
+                usernameContestable = it.usernameContestable,
+                fundingNoteAnchored = it.fundingNoteAnchored
             )
             // While the shielded pool is still preparing, its balance is a
             // mid-sync placeholder — the affordability gate reads `false` and
@@ -530,6 +531,8 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         )
         if (route == UsernameCompletionRoute.MORE) {
             startActivity(MainActivity.createIntent(requireContext(), R.id.moreFragment))
+        } else {
+            startActivity(MainActivity.createIntent(requireContext(), R.id.walletFragment))
         }
         requireActivity().finish()
     }

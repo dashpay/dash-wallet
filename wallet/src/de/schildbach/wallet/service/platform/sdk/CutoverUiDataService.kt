@@ -20,6 +20,7 @@ package de.schildbach.wallet.service.platform.sdk
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.dao.TxGroupCacheDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -165,7 +167,13 @@ internal data class L1TxRowPlan(
     val isIncoming: Boolean
 )
 
-internal fun planL1TxRow(record: L1TxUiRecord): L1TxRowPlan = when (record.direction) {
+internal fun planL1TxRow(
+    record: L1TxUiRecord,
+    // The Platform-funding role of an INTERNAL/COINJOIN-classified asset lock,
+    // resolved app-side before this pure planner runs (null for a plain move).
+    // When present, the row renders as a SENT "…Fee" instead of "Internal".
+    assetLockKind: AssetLockKind? = null
+): L1TxRowPlan = when (record.direction) {
     L1TxUiDirection.OUTGOING -> L1TxRowPlan(
         rowId = record.txidHex,
         titleRes = if (record.status == L1TxUiStatus.PENDING) {
@@ -183,7 +191,21 @@ internal fun planL1TxRow(record: L1TxUiRecord): L1TxRowPlan = when (record.direc
         timestampMs = record.timestampMs,
         isIncoming = false
     )
-    L1TxUiDirection.INTERNAL, L1TxUiDirection.COINJOIN -> L1TxRowPlan(
+    L1TxUiDirection.INTERNAL, L1TxUiDirection.COINJOIN -> if (assetLockKind != null) {
+        // A Platform-funding asset lock the SDK recorded as an internal move —
+        // render it as the SENT Platform action it funded, not "Internal".
+        L1TxRowPlan(
+            rowId = record.txidHex,
+            titleRes = assetLockTitleRes(assetLockKind),
+            statusRes = -1,
+            iconType = TxDisplayCacheEntry.ICON_SENT,
+            iconBgType = TxDisplayCacheEntry.BG_SENT,
+            filterFlags = TxDisplayCacheEntry.FLAG_SENT,
+            valueDuffs = record.netAmountDuffs,
+            timestampMs = record.timestampMs,
+            isIncoming = false
+        )
+    } else L1TxRowPlan(
         rowId = record.txidHex,
         titleRes = R.string.transaction_row_status_sent_internally,
         statusRes = -1,
@@ -194,7 +216,30 @@ internal fun planL1TxRow(record: L1TxUiRecord): L1TxRowPlan = when (record.direc
         timestampMs = record.timestampMs,
         isIncoming = false
     )
-    L1TxUiDirection.INCOMING -> L1TxRowPlan(
+    L1TxUiDirection.INCOMING -> if (assetLockKind == AssetLockKind.UNSHIELD) {
+        // The unshield/withdraw (AssetUnlock) returns pool funds to the
+        // transparent wallet — the SDK records it INCOMING, but it is a
+        // self-move, not an external receive. Relabel it "Unshielded" and
+        // mark it NON-incoming so it never triggers the coins-received
+        // notification (planL1DisplaySync's notify guard is keyed on
+        // isIncoming). The row still shows the received icon + positive
+        // value, since the transparent balance really does go up.
+        L1TxRowPlan(
+            rowId = record.txidHex,
+            titleRes = assetLockTitleRes(assetLockKind),
+            statusRes = if (record.status == L1TxUiStatus.PENDING) {
+                R.string.transaction_row_status_processing
+            } else {
+                -1
+            },
+            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+            iconBgType = TxDisplayCacheEntry.BG_RECEIVED,
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED,
+            valueDuffs = record.netAmountDuffs,
+            timestampMs = record.timestampMs,
+            isIncoming = false
+        )
+    } else L1TxRowPlan(
         rowId = record.txidHex,
         titleRes = R.string.transaction_row_status_received,
         statusRes = if (record.status == L1TxUiStatus.PENDING) {
@@ -209,6 +254,18 @@ internal fun planL1TxRow(record: L1TxUiRecord): L1TxRowPlan = when (record.direc
         timestampMs = record.timestampMs,
         isIncoming = true
     )
+}
+
+/** The list/detail title string for a Platform-funding asset-lock kind. */
+internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
+    AssetLockKind.UPGRADE -> R.string.dashpay_upgrade_fee
+    AssetLockKind.TOPUP -> R.string.dashpay_topup_fee
+    // Brian's exact wording: the L1 non-private invite reads "Invitation"
+    // (NOT the "Invite Fee" used elsewhere), the shield-in "Shielded", the
+    // unshield/withdraw "Unshielded".
+    AssetLockKind.INVITE -> R.string.transaction_row_invitation
+    AssetLockKind.SHIELD -> R.string.transaction_row_shielded
+    AssetLockKind.UNSHIELD -> R.string.transaction_row_unshielded
 }
 
 // ── Pure display-cache sync planning ──────────────────────────────────
@@ -257,7 +314,17 @@ internal fun planL1DisplaySync(
     groupedTxIds: Set<String>,
     resolve: (Int) -> String,
     nowMs: Long,
-    notifyWindowMs: Long = L1_NOTIFY_RECENCY_WINDOW_MS
+    notifyWindowMs: Long = L1_NOTIFY_RECENCY_WINDOW_MS,
+    // Current exchange rate to stamp on FRESH INCOMING inserts, mirroring
+    // BlockchainServiceImpl.onCoinsReceived. Both null when the rate is
+    // unavailable (or for non-incoming inserts) — the row then carries no
+    // historical rate, exactly as before this fix.
+    incomingFiatCode: String? = null,
+    incomingFiatValue: Long? = null,
+    // Platform-funding role per (INTERNAL/COINJOIN) txid, resolved app-side
+    // before this pure planner runs — turns the mislabelled "Internal" row
+    // into the SENT "…Fee" it funded. Empty = no known asset locks.
+    kindByTxid: Map<String, AssetLockKind> = emptyMap()
 ): L1DisplaySyncPlan {
     val inserts = mutableListOf<TxDisplayCacheEntry>()
     val updates = mutableListOf<TxDisplayCacheEntry>()
@@ -265,7 +332,7 @@ internal fun planL1DisplaySync(
 
     for (record in records) {
         if (record.txidHex in groupedTxIds) continue
-        val plan = planL1TxRow(record)
+        val plan = planL1TxRow(record, kindByTxid[record.txidHex])
         val existing = existingByRowId[record.txidHex]
 
         if (existing == null) {
@@ -281,8 +348,16 @@ internal fun planL1DisplaySync(
                 time = if (plan.timestampMs > 0) plan.timestampMs else nowMs,
                 hasErrors = false,
                 service = null,
-                exchangeRateFiatCode = null,
-                exchangeRateFiatValue = null,
+                // Stamp the current fiat rate on every fresh SDK-discovered row,
+                // mirroring BlockchainServiceImpl.onCoinsReceived — the held dashj
+                // wallet never sees these SDK-only txs, so nothing else records
+                // their rate. Bug C: the SDK send path never sets tx.exchangeRate,
+                // so an OUTGOING insert previously carried no rate → the row showed
+                // fiat "not available". The tx happens "now", so the current rate
+                // is the correct historical rate for both directions (and internal
+                // moves). Both fields stay null only when the rate is unavailable.
+                exchangeRateFiatCode = incomingFiatCode,
+                exchangeRateFiatValue = incomingFiatValue,
                 contactUsername = null,
                 contactDisplayName = null,
                 contactAvatarUrl = null,
@@ -327,6 +402,47 @@ internal fun planL1DisplaySync(
                 (locked && updated.statusText == resolve(R.string.transaction_row_status_confirming)))
         ) {
             updated = updated.copy(statusText = "")
+        }
+
+        // Re-stamp degenerate carried-over / pre-block rows. A dashj-era or
+        // event-born row can carry value=0 (attribution not yet written) or a
+        // null historical rate; once the SDK record has strictly better data,
+        // refresh ONLY those degenerate fields. Idempotent — a row that already
+        // has a value/rate is never rewritten, so user memo/contact/service and
+        // the tax category (a separate table) are all preserved via copy().
+        if (updated.valueSatoshis == 0L && plan.valueDuffs != 0L) {
+            // A zero-value row may also carry the wrong direction/label, so
+            // refresh the whole display shape from the plan (title/icon/flags).
+            updated = updated.copy(
+                valueSatoshis = plan.valueDuffs,
+                iconType = plan.iconType,
+                iconBgType = plan.iconBgType,
+                filterFlags = plan.filterFlags,
+                title = resolve(plan.titleRes)
+            )
+        }
+        if (updated.exchangeRateFiatCode == null && incomingFiatValue != null) {
+            // Stamp the current rate (same current-rate semantics the insert
+            // path uses) — the SDK send path never records tx.exchangeRate, so
+            // nothing else fills the rate for these SDK-only rows.
+            updated = updated.copy(
+                exchangeRateFiatCode = incomingFiatCode,
+                exchangeRateFiatValue = incomingFiatValue
+            )
+        }
+        // Re-label an already-cached plain internal move to the Platform-funding "…Fee"
+        // once its funding kind is known. The ASSET_LOCK_TXID persist races the first
+        // tx-feed insert, so the asset-lock row is usually cached as "Internal" before
+        // resolveAssetLockKind can classify it; without this the ~60s re-resolve has
+        // nowhere to write the UPGRADE label. Only a plain sent_internally row is re-stamped.
+        if (kindByTxid[record.txidHex] != null &&
+            updated.title == resolve(R.string.transaction_row_status_sent_internally)) {
+            updated = updated.copy(
+                title = resolve(plan.titleRes),
+                iconType = plan.iconType,
+                iconBgType = plan.iconBgType,
+                filterFlags = plan.filterFlags
+            )
         }
         if (updated != existing) updates += updated
     }
@@ -439,6 +555,33 @@ interface CutoverUiSource {
      */
     fun observeTotalDuffs(walletIdHex: String): Flow<Long>
 
+    /**
+     * ONE-SHOT authoritative total balance in duffs read straight from the
+     * SDK wallet's NATIVE ledger (`ManagedPlatformWallet.balance()` =
+     * confirmed + unconfirmed) — the SAME read [L1ShadowSyncService.sdkBalanceDuffs]
+     * uses. Unlike [observeTotalDuffs] (which sums the Room `txos` table),
+     * this reflects a self-send's native debit IMMEDIATELY: on a spend the
+     * SDK debits its native ledger at once, but the spent-TXO marks are not
+     * written to Room until the block/IS-lock lands, so a Room re-read would
+     * return the STALE pre-send sum. Used by [balancePipeline]'s post-event /
+     * ticker re-read so the header reaches 0 after a max self-send regardless
+     * of Room `txos` timing.
+     */
+    suspend fun currentTotalDuffs(walletIdHex: String): Long
+
+    /**
+     * ONE-SHOT native-ledger balance SPLIT (confirmed vs unconfirmed) in
+     * duffs, from `ManagedPlatformWallet.balance()`. `confirmed` counts
+     * outputs that are in a block OR InstantSend-locked (the SDK ledger's
+     * `WalletCoreBalance.confirmed`) — exactly the funds the asset-lock
+     * funding selection accepts (`is_confirmed || is_instantlocked`, rust-dashcore
+     * `transaction_builder.rs`), i.e. what can be shielded right now (an IS-lock
+     * yields an InstantAssetLockProof at 0 block confirmations). `unconfirmed`
+     * is mature mempool not yet confirmed/IS-locked — NOT shieldable until a
+     * block or islock lands, so the shielded screen shows it as "pending".
+     */
+    suspend fun currentBalanceSplitDuffs(walletIdHex: String): SdkBalanceSplitDuffs
+
     /** Live wallet-relevant transaction records, neutral shape. */
     fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>>
 
@@ -447,6 +590,16 @@ interface CutoverUiSource {
      * ([de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService]).
      */
     fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot>
+}
+
+/**
+ * Native-ledger balance split in duffs. `confirmed` = outputs in a block OR
+ * InstantSend-locked (immediately shieldable — the asset-lock funding selection
+ * accepts `is_confirmed || is_instantlocked`); `unconfirmed` = mature mempool not
+ * yet confirmed/IS-locked (not shieldable until a block or islock lands).
+ */
+data class SdkBalanceSplitDuffs(val confirmed: Long, val unconfirmed: Long) {
+    val total: Long get() = confirmed + unconfirmed
 }
 
 /** Production [CutoverUiSource]: the live SDK Room DB, reactive. */
@@ -477,6 +630,19 @@ internal class DashSdkCutoverUiSource(
             database().txoDao().observeUnspentByWallet(walletId)
                 .map { rows -> rows.sumOf { it.amount } }
         )
+    }
+
+    override suspend fun currentTotalDuffs(walletIdHex: String): Long =
+        currentBalanceSplitDuffs(walletIdHex).total
+
+    override suspend fun currentBalanceSplitDuffs(walletIdHex: String): SdkBalanceSplitDuffs {
+        // Native ledger read — the SAME accessor L1ShadowSyncService.sdkBalanceDuffs
+        // uses. A self-send debits this immediately; the Room `txos` table lags.
+        val wallet = checkNotNull(manager().wallets.value[walletIdHex]) {
+            "SDK wallet not loaded for native balance read"
+        }
+        val balance = wallet.balance()
+        return SdkBalanceSplitDuffs(confirmed = balance.confirmed, unconfirmed = balance.unconfirmed)
     }
 
     override fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>> = flow {
@@ -626,8 +792,22 @@ class CutoverUiDataService internal constructor(
     private val txDisplayCacheDao: TxDisplayCacheDao,
     private val txGroupCacheDao: TxGroupCacheDao,
     private val walletUIConfig: WalletUIConfig,
+    /**
+     * Current-rate source for stamping fresh SDK-discovered receives, the same
+     * DAO BlockchainServiceImpl.onCoinsReceived reads. Nullable/default-null so
+     * the snapshot-only test constructor (which asserts no rate) needs no rate DB.
+     */
+    private val exchangeRatesDao: ExchangeRatesDao? = null,
     private val resolveString: (Int) -> String,
     private val notifyCoinsReceived: (Long) -> Unit,
+    /**
+     * Classifies an INTERNAL/COINJOIN row's txid as a Platform-funding asset
+     * lock (identity upgrade / top-up / invite) so the list renders the SENT
+     * "…Fee" label instead of "Internal". A fast Room/DataStore probe; returns
+     * null for a plain internal move. Default null-returning for the snapshot
+     * tests (which assert plain send/receive behaviour only).
+     */
+    private val resolveAssetLockKind: suspend (String) -> AssetLockKind? = { null },
     /**
      * The engine's instant tx feed ([L1ShadowSyncService.txEvents]) —
      * mempool detections and IS locks, consumed by [txPipeline] ahead of
@@ -659,9 +839,11 @@ class CutoverUiDataService internal constructor(
         txDisplayCacheDao: TxDisplayCacheDao,
         txGroupCacheDao: TxGroupCacheDao,
         walletUIConfig: WalletUIConfig,
+        exchangeRatesDao: ExchangeRatesDao,
         configuration: Configuration,
         notificationService: NotificationService,
-        l1ShadowSyncService: L1ShadowSyncService
+        l1ShadowSyncService: L1ShadowSyncService,
+        assetLockKindResolver: AssetLockKindResolver
     ) : this(
         source = DashSdkCutoverUiSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -669,6 +851,8 @@ class CutoverUiDataService internal constructor(
         txDisplayCacheDao = txDisplayCacheDao,
         txGroupCacheDao = txGroupCacheDao,
         walletUIConfig = walletUIConfig,
+        exchangeRatesDao = exchangeRatesDao,
+        resolveAssetLockKind = { txDisplayHex -> assetLockKindResolver.kindFor(txDisplayHex) },
         txEvents = l1ShadowSyncService.txEvents,
         isTxFeedTapActive = { l1ShadowSyncService.isTapActive },
         resolveString = { resId -> context.getString(resId) },
@@ -742,6 +926,19 @@ class CutoverUiDataService internal constructor(
      */
     val sdkTotalBalance: StateFlow<Coin?> = _sdkTotalBalance.asStateFlow()
 
+    private val _sdkConfirmedBalance = MutableStateFlow<Coin?>(null)
+
+    /**
+     * The SDK's live CONFIRMED L1 balance (in-a-block OR InstantSend-locked),
+     * or null while the cutover UI feed is inactive. This is the subset the
+     * asset-lock funding selection will actually spend (`is_confirmed ||
+     * is_instantlocked`), so the shielded-transfer screen uses it as the
+     * transferable/Max limit; the total − confirmed remainder is the
+     * still-"pending" (mature-but-unconfirmed) portion. Moves in lockstep with
+     * [sdkTotalBalance] (both come from one `balance()` read in [refreshNativeSplit]).
+     */
+    val sdkConfirmedBalance: StateFlow<Coin?> = _sdkConfirmedBalance.asStateFlow()
+
     /** Synchronous read for [de.schildbach.wallet.WalletApplication.getWalletBalance]. */
     fun sdkBalanceOrNull(): Coin? = _sdkTotalBalance.value
 
@@ -785,6 +982,7 @@ class CutoverUiDataService internal constructor(
                 .collectLatest { active ->
                     if (!active) {
                         _sdkTotalBalance.value = null
+                        _sdkConfirmedBalance.value = null
                         return@collectLatest
                     }
                     log.info("cutover committed — serving home-screen data from the SDK")
@@ -794,6 +992,7 @@ class CutoverUiDataService internal constructor(
                         if (t is CancellationException) throw t
                         log.error("cutover UI pipelines failed; balance override cleared", t)
                         _sdkTotalBalance.value = null
+                        _sdkConfirmedBalance.value = null
                     }
                 }
         }
@@ -833,17 +1032,68 @@ class CutoverUiDataService internal constructor(
         }
     }
 
-    private suspend fun balancePipeline(walletIdHex: String) {
-        source.observeTotalDuffs(walletIdHex)
-            .distinctUntilChanged()
-            .catch { e -> log.error("SDK balance flow failed; balance override frozen", e) }
-            .collect { duffs ->
-                _sdkTotalBalance.value = Coin.valueOf(duffs)
-                // Keep the fast-startup seed fresh (same key the dashj
-                // WalletBalanceObserver maintains).
-                runCatching { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs) }
-                    .onFailure { log.warn("failed to persist LAST_TOTAL_BALANCE", it) }
+    private suspend fun balancePipeline(walletIdHex: String) = coroutineScope {
+        // Seed the confirmed/total split once up front so the shielded screen's
+        // Max (confirmed) and pending (total − confirmed) are populated before
+        // the first tx event or ticker tick.
+        try {
+            refreshNativeSplit(walletIdHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("initial SDK balance split read failed", t)
+        }
+        // Belt-and-suspenders (Bug D). The Room-observable source
+        // (observeUnspentByWallet) re-emits only on `txos` Room invalidation.
+        // A SELF-AUTHORED send settles by a Rust-side spent-TXO write that does
+        // NOT re-fire that Room flow, so after a max-send the balance override
+        // could stay stale (non-zero) even though the store already reads 0
+        // (the L1Parity `.first()` probe correctly sees 0). Keep the Room source
+        // AND additionally re-read a one-shot snapshot on each engine tx event
+        // (a self-spend emits Detected) and each ticker tick — guaranteeing a
+        // re-read after a spend regardless of Room invalidation.
+        launch {
+            source.observeTotalDuffs(walletIdHex)
+                .distinctUntilChanged()
+                .catch { e -> log.error("SDK balance flow failed; balance override frozen", e) }
+                .collect { duffs -> updateSdkBalance(duffs) }
+        }
+        launch {
+            merge(txEvents.map { }, ticker()).collect {
+                try {
+                    // Re-read the SDK's NATIVE ledger split, NOT the Room txos sum:
+                    // a self-send debits the native ledger at once but the spent-TXO
+                    // marks land in Room only on block/IS-lock, so observeTotalDuffs()
+                    // .first() would return the stale pre-send sum. The native read
+                    // reaches 0 immediately after a max send. On error this throws and
+                    // the catch keeps the prior override values (never zeroes the
+                    // header on a transient read failure).
+                    refreshNativeSplit(walletIdHex)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("SDK balance snapshot re-read failed", t)
+                }
             }
+        }
+    }
+
+    /**
+     * Re-read the SDK's native ledger once and publish BOTH the total
+     * (confirmed+unconfirmed → [sdkTotalBalance], the home header) and the
+     * confirmed-only feed ([sdkConfirmedBalance], the shielded Max). One
+     * `balance()` read keeps the two in lockstep.
+     */
+    private suspend fun refreshNativeSplit(walletIdHex: String) {
+        val split = source.currentBalanceSplitDuffs(walletIdHex)
+        _sdkConfirmedBalance.value = Coin.valueOf(split.confirmed)
+        updateSdkBalance(split.total)
+    }
+
+    private suspend fun updateSdkBalance(duffs: Long) {
+        _sdkTotalBalance.value = Coin.valueOf(duffs)
+        // Keep the fast-startup seed fresh (same key the dashj
+        // WalletBalanceObserver maintains).
+        runCatching { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs) }
+            .onFailure { log.warn("failed to persist LAST_TOTAL_BALANCE", it) }
     }
 
     /** One unit of tx-feed work, so both feeds share ONE sequential collector. */
@@ -975,7 +1225,46 @@ class CutoverUiDataService internal constructor(
                 txDisplayCacheDao.getEntriesByIds(chunk).forEach { existing[it.rowId] = it }
             }
 
-            val plan = planL1DisplaySync(records, existing, grouped, resolveString, nowMs())
+            // Read the current fiat rate once per pass to stamp on any fresh
+            // incoming inserts, the same way BlockchainServiceImpl.onCoinsReceived
+            // does (getRateSync of the selected currency). Guarded so a null/absent
+            // or unparseable rate simply leaves the row's rate null.
+            val fiat = runCatching {
+                exchangeRatesDao
+                    ?.getRateSync(walletUIConfig.getExchangeCurrencyCodeBlocking())
+                    ?.fiat
+            }.getOrNull()
+
+            // Classify INTERNAL/COINJOIN rows as Platform-funding asset locks so
+            // the mislabelled "Internal" row renders the SENT "…Fee" it funded.
+            // Only these directions can be asset-lock funding — a fast app-side
+            // Room/DataStore probe per candidate, never blocking the pipeline.
+            val kindByTxid = mutableMapOf<String, AssetLockKind>()
+            for (record in records) {
+                if (record.txidHex in grouped) continue
+                when (record.direction) {
+                    L1TxUiDirection.INTERNAL, L1TxUiDirection.COINJOIN ->
+                        resolveAssetLockKind(record.txidHex)?.let { kindByTxid[record.txidHex] = it }
+                    L1TxUiDirection.INCOMING ->
+                        // The unshield/withdraw (AssetUnlock, transactionTypeKind
+                        // == 7) is recorded INCOMING but is a self-move — relabel
+                        // it "Unshielded" and suppress its coins-received
+                        // notification. Only the UNSHIELD classification is
+                        // accepted here; a genuine external receive stays
+                        // "Received" (the resolver returns null for it).
+                        if (resolveAssetLockKind(record.txidHex) == AssetLockKind.UNSHIELD) {
+                            kindByTxid[record.txidHex] = AssetLockKind.UNSHIELD
+                        }
+                    else -> {}
+                }
+            }
+
+            val plan = planL1DisplaySync(
+                records, existing, grouped, resolveString, nowMs(),
+                incomingFiatCode = fiat?.currencyCode,
+                incomingFiatValue = fiat?.value,
+                kindByTxid = kindByTxid
+            )
             if (plan.inserts.isNotEmpty() || plan.updates.isNotEmpty()) {
                 txDisplayCacheDao.insertAll(plan.inserts + plan.updates)
                 log.info(

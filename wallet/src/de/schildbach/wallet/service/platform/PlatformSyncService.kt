@@ -65,6 +65,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
+import de.schildbach.wallet.ui.shielded.ShieldedTransferExecutor
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.launchIn
@@ -206,6 +207,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val sdkBlockchainStateService: SdkBlockchainStateService,
     private val cutoverTxSeamService: CutoverTxSeamService,
     private val cutoverAutoCommitObserver: CutoverAutoCommitObserver,
+    private val shieldedTransferExecutor: ShieldedTransferExecutor,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -299,6 +301,12 @@ class PlatformSynchronizationService @Inject constructor(
             // on), and it kicks the pending-wallet-shield resume sweep;
             // syncNow() then lands fresh notes promptly. stopSdkEngines()
             // remains the symmetric teardown.
+            // …and listen for what that sweep finishes BEFORE kicking it:
+            // a wallet shield interrupted after its L1 asset lock broadcast
+            // completes here, in the background, with no screen open — the
+            // user was promised it "will finish automatically" and nothing
+            // ever told them it had. Idempotent, once per process.
+            shieldedTransferExecutor.startObservingBackgroundShields()
             launch {
                 runCatching {
                     if (shieldedBalanceService.ensureShieldedReady()) {

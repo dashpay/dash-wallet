@@ -247,10 +247,20 @@ fun shadowSyncPercent(progress: ShadowSyncProgress): Int = when (progress.phase)
     ShadowSyncPhase.IDLE, ShadowSyncPhase.CONNECTING -> 0
     ShadowSyncPhase.SYNCED -> 100
     ShadowSyncPhase.ERROR -> 0
-    else -> syncPct(
-        progress.headerHeight + progress.filterHeight,
-        progress.headerTarget + progress.filterTarget
-    ).coerceAtMost(99)
+    // A live shadow SPV never latches SYNCED (a new testnet block every
+    // ~2.5 min bumps the targets and drops the overall state back to
+    // SYNCING — see [ShadowSyncProgress.scanCaughtUpToTip]). So an active
+    // scan claims 100% once the filter scan has caught up to a real header
+    // tip within [SCAN_TIP_TOLERANCE_BLOCKS]; a genuine mid-scan still caps
+    // at 99%. Fail-closed for IDLE/CONNECTING/ERROR above.
+    else -> if (progress.scanCaughtUpToTip) {
+        100
+    } else {
+        syncPct(
+            progress.headerHeight + progress.filterHeight,
+            progress.headerTarget + progress.filterTarget
+        ).coerceAtMost(99)
+    }
 }
 
 /**

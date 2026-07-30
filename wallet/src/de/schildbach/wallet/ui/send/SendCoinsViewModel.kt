@@ -27,9 +27,9 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.entity.DashPayContactRequest
-import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.service.platform.sdk.SEND_ALL_FEE_RESERVE_DUFFS
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.AnrException
@@ -119,6 +119,16 @@ class SendCoinsViewModel @Inject constructor(
     var dryRunException: Exception? = null
         private set
 
+    /**
+     * Phase 5d: a DISPLAY-only, deterministic fee estimate for the confirm
+     * dialog when the post-cutover dry-run does NOT complete the tx (so
+     * `dryrunSendRequest.tx.fee` is null — no inputs are attached). Null on the
+     * pre-cutover path, where `completeTx` sets the real dashj fee. The SDK
+     * computes and applies the actual (typically much smaller) fee at send.
+     */
+    var dryRunFeeEstimate: Coin? = null
+        private set
+
     private val _dryRunSuccessful = MutableLiveData(false)
     val dryRunSuccessful: LiveData<Boolean>
         get() = _dryRunSuccessful
@@ -152,7 +162,12 @@ class SendCoinsViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        walletDataProvider.observeBalance(Wallet.BalanceType.ESTIMATED, MaxOutputAmountCoinSelector())
+        // DISPLAY-only "max sendable" feed. Post-cutover the dashj max-output balance
+        // freezes at 0 (dashj is held), so this routes through the cutover overlay in
+        // WalletApplication.observeMaxOutputBalance() and shows the SDK's live total;
+        // pre-cutover it is the dashj max-output value unchanged. The real send's coin
+        // selection is unaffected — SendCoinsTaskRunner owns that separately.
+        walletDataProvider.observeMaxOutputBalance()
             .distinctUntilChanged()
             .onEach(_maxOutputAmount::postValue)
             .launchIn(viewModelScope)
@@ -240,6 +255,18 @@ class SendCoinsViewModel @Inject constructor(
                 true,
                 dryrunSendRequest!!.ensureMinRequiredFee
             )
+            // Post-cutover, carry the cutover-aware dry-run's send-all decision.
+            // createSendRequest derives emptyWallet from the dashj max-output
+            // balance, which is held at 0 while the engine is cut over, so it can
+            // never flag a real send-max — that would route the Max send as a
+            // plain SDK send of the full balance (no fee headroom → the SDK send
+            // fails closed). executeDryrun is the authority on send-all here.
+            // Pre-cutover both requests compute emptyWallet identically from the
+            // same balance/amount, so this override is gated on the committed
+            // cutover and the dashj path is otherwise untouched.
+            if (sendCoinsTaskRunner.isCutoverCommitted()) {
+                finalSendRequest.emptyWallet = dryrunSendRequest!!.emptyWallet
+            }
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
             Context.propagate(wallet.context)
@@ -321,13 +348,21 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     fun shouldAdjustAmount(): Boolean {
+        // Fix 5 (belt-and-suspenders): only auto-adjust when the corrected
+        // amount is strictly positive. A bad `missing` (e.g. missing >= amount)
+        // would otherwise yield a non-positive value that AmountView snaps to
+        // "0", blanking the field mid-entry.
         return dryRunException is InsufficientMoneyException &&
-            currentAmount.isLessThan(maxOutputAmount.value ?: Coin.ZERO)
+            currentAmount.isLessThan(maxOutputAmount.value ?: Coin.ZERO) &&
+            getAdjustedAmount().isGreaterThan(Coin.ZERO)
     }
 
     fun getAdjustedAmount(): Coin {
         val missing = (dryRunException as? InsufficientMoneyException)?.missing ?: Coin.ZERO
-        return currentAmount.subtract(missing)
+        val adjusted = currentAmount.subtract(missing)
+        // Never return a negative amount — the caller feeds this straight into
+        // AmountView.setAmount, and a negative snaps to "0" (clearing the field).
+        return if (adjusted.isNegative) Coin.ZERO else adjusted
     }
 
     fun resetState() {
@@ -414,9 +449,10 @@ class SendCoinsViewModel @Inject constructor(
         _currentAmount.value = amount
     }
 
-    private fun executeDryrun(amount: Coin) {
+    private suspend fun executeDryrun(amount: Coin) {
         dryrunSendRequest = null
         dryRunException = null
+        dryRunFeeEstimate = null
 
         if (state.value != State.INPUT || amount == Coin.ZERO) {
             _dryRunSuccessful.postValue(false)
@@ -446,6 +482,80 @@ class SendCoinsViewModel @Inject constructor(
                 signInputs = false,
                 forceEnsureMinRequiredFee = false
             )
+
+            // Phase 5d (Bug 4): once the cutover is committed the dashj engine is
+            // HELD with 0 UTXOs, so wallet.completeTx below would ALWAYS throw
+            // InsufficientMoneyException and wrongly block the Send button — even
+            // though the real send routes through the SDK (SendCoinsTaskRunner /
+            // SdkL1SendService) which owns its own funds. Validate affordability
+            // against the SDK-overlaid maxOutputAmount instead. This stays a
+            // NON-COMMITTING dry-run: it only reads a balance and builds an
+            // UNSIGNED request — no completeTx / signSendRequest / broadcast — so
+            // the real SDK send (which does its own selection, signing and the
+            // funding-gate/send-all-floor preflight) remains the sole authority
+            // and any true shortfall there still fails closed (NotBroadcast,
+            // pre-broadcast, no double-pay). Pre-cutover this branch is skipped
+            // and the dashj completeTx path below is byte-identical to before.
+            if (sendCoinsTaskRunner.isCutoverCommitted()) {
+                val maxOutput = maxOutputAmount.value ?: Coin.ZERO
+                // Reserve = the SDK's own send-all fee reserve
+                // (SEND_ALL_FEE_RESERVE_DUFFS, SdkL1SendService.kt) — ~40x a
+                // typical 1-in/2-out fee, so the gate is strictly NO LOOSER than
+                // the SDK plain-send precondition (amount + actual fee <=
+                // spendable): a dry-run "pass" cannot reach an SDK send that then
+                // reports insufficient funds. It doubles as the deterministic,
+                // display-only fee preview shown in the confirm dialog.
+                val feeReserve = Coin.valueOf(SEND_ALL_FEE_RESERVE_DUFFS)
+
+                // Send-max (drain) detection. An editable amount equal to the
+                // full SDK-overlaid balance is a send-all: mirrors the
+                // pre-cutover dashj emptyWallet rule (maxOutputBalance == amount,
+                // SendCoinsTaskRunner.createSendRequest) but keyed off the
+                // SDK-overlaid balance — dashj's max-output balance is 0 while the
+                // engine is held, so that rule can never fire post-cutover and the
+                // Max/send-all path would otherwise be routed as a plain send of
+                // the FULL balance (no room for the fee → SDK insufficient-funds
+                // → the send fails). A drain takes the fee OUT of the amount
+                // (delivered = total − fee), so the plain-send reserve-headroom
+                // gate below does NOT apply here. The SDK drain's own send-all
+                // floor (spendable − reserve, SdkL1SendService.kt:602-660) is the
+                // real gate: it fails closed (NotBroadcast, pre-broadcast, no
+                // double-pay) on any shortfall and refuses outright while any
+                // app-locked (CrowdNode) output exists — so passing the dry-run
+                // here can never be looser than what the drain actually accepts.
+                val isSendAll = basePaymentIntent.mayEditAmount() &&
+                    maxOutput.isPositive &&
+                    amount == maxOutput
+
+                if (isSendAll) {
+                    // Flag the UNSIGNED dry-run request as emptyWallet so both the
+                    // confirm dialog (gross/delivered split) and the real send
+                    // (which carries this decision — see signAndSendPayment) route
+                    // through the SDK drain. Still non-committing: no completeTx /
+                    // signSendRequest / broadcast happens here.
+                    sendRequest.emptyWallet = true
+                    dryRunFeeEstimate = feeReserve // display-only floor; the drain pays the smaller real fee
+                    dryrunSendRequest = sendRequest
+                    log.info("executeDryRun finished (cutover-aware: SDK send-all / drain)")
+                    monitorJob.cancel()
+                    _dryRunSuccessful.postValue(true)
+                    return
+                }
+
+                if (amount.add(feeReserve).isGreaterThan(maxOutput)) {
+                    // Same signal the dashj path raises, so the existing
+                    // insufficient-funds message and the (clamped) auto-adjust
+                    // behave identically.
+                    throw InsufficientMoneyException(amount.add(feeReserve).subtract(maxOutput))
+                }
+                dryRunFeeEstimate = feeReserve
+                dryrunSendRequest = sendRequest // UNSIGNED, not completed — never broadcast
+                log.info("executeDryRun finished (cutover-aware: SDK-overlaid affordability)")
+                monitorJob.cancel()
+                _dryRunSuccessful.postValue(true)
+                return
+            }
+
             log.info("  start completeTx")
             wallet.completeTx(sendRequest)
 

@@ -16,8 +16,11 @@
  */
 package de.schildbach.wallet.ui.invite
 
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import org.dash.wallet.common.money.Dash
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -79,6 +82,57 @@ class InviteShieldedFundingUIStateTest {
         )
         assertEquals(Dash(15_000_000L), state.nonContestedShieldedCost)
         assertEquals(Dash(35_000_000L), state.contestedShieldedCost)
+    }
+
+    // ── canCreatePrivateInvite gates on the WITHDRAWN cost (0.1), not the
+    //    padded shield-IN fund-minimum (0.15) — no Constants touched ─────────
+
+    @Test
+    fun `canCreatePrivateInvite true once the pool holds the 0-1 withdrawn cost`() {
+        val state = InviteShieldedFundingUIState(
+            shieldedEnabled = true,
+            resolved = true,
+            syncStatus = ShieldedSyncStatus.READY,
+            shieldedBalance = Dash(10_000_000L) // exactly 0.1 DASH — the withdrawn denomination
+        )
+        assertTrue(state.canCreatePrivateInvite)
+    }
+
+    @Test
+    fun `canCreatePrivateInvite true for a pool between the withdrawn cost and the old 0-15 gate`() {
+        // A pool holding 0.12 (>= 0.1 withdrawn, < 0.15 shield-IN minimum) can
+        // fund a non-contested private invite — the old gate wrongly hid it.
+        val state = InviteShieldedFundingUIState(
+            shieldedEnabled = true,
+            resolved = true,
+            syncStatus = ShieldedSyncStatus.READY,
+            shieldedBalance = Dash(12_000_000L) // 0.12 DASH
+        )
+        assertTrue(state.canCreatePrivateInvite)
+    }
+
+    @Test
+    fun `canCreatePrivateInvite false below the withdrawn cost`() {
+        val state = InviteShieldedFundingUIState(
+            shieldedEnabled = true,
+            resolved = true,
+            syncStatus = ShieldedSyncStatus.READY,
+            shieldedBalance = Dash(9_999_999L) // just under 0.1 DASH
+        )
+        assertFalse(state.canCreatePrivateInvite)
+    }
+
+    @Test
+    fun `canCreatePrivateInvite false while the pool is still syncing`() {
+        // A mid-sync Dash.ZERO-or-stale balance is never trusted, even at/above
+        // the withdrawn cost.
+        val state = InviteShieldedFundingUIState(
+            shieldedEnabled = true,
+            resolved = true,
+            syncStatus = ShieldedSyncStatus.NOT_READY,
+            shieldedBalance = Dash(50_000_000L) // 0.5 DASH but NOT_READY
+        )
+        assertFalse(state.canCreatePrivateInvite)
     }
 
     // ── Decision-sheet option set (pure, no Constants) ────────────────────

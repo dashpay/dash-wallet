@@ -86,17 +86,19 @@ class SdkShieldedUsernameCreationTest {
     private val statusFlow = MutableStateFlow(ShieldedSyncStatus.READY)
     private val balanceFlow = MutableStateFlow(denomination)
 
-    private fun balanceService(ready: Boolean = true) = mockk<ShieldedBalanceService> {
-        coEvery { ensureShieldedReady() } returns ready
-        every { shieldedSyncStatus } returns statusFlow
-        every { observeShieldedBalance() } returns balanceFlow
-    }
+    private fun balanceService(ready: Boolean = true, fundingNoteAnchored: Boolean = true) =
+        mockk<ShieldedBalanceService> {
+            coEvery { ensureShieldedReady() } returns ready
+            every { shieldedSyncStatus } returns statusFlow
+            every { observeShieldedBalance() } returns balanceFlow
+            coEvery { isFundingNoteAnchoredForDenomination(any()) } returns fundingNoteAnchored
+        }
 
     private fun happySource() = mockk<ShieldedUsernameSource> {
         coEvery { boundWalletIdOrNull() } returns walletIdHex
         coEvery { managedIdentityCount(walletIdHex) } returns 0
         coEvery { previewRegistrationKeySet(walletIdHex, 0) } returns registrationKeys
-        coEvery { persistRegistrationKey(walletIdHex, any(), 0, any()) } just Runs
+        coEvery { storeIdentityPrivateKey(walletIdHex, any(), any()) } just Runs
         coEvery { fallbackPlatformAddressOrNull(walletIdHex) } returns fallbackAddress
         coEvery {
             createIdentityFromPool(walletIdHex, 0, registrationKeys, denominationCredits, any())
@@ -118,7 +120,7 @@ class SdkShieldedUsernameCreationTest {
         coEvery { boundWalletIdOrNull() } returns walletIdHex
         coEvery { managedIdentityCount(walletIdHex) } returns 0
         coEvery { previewRegistrationKeySet(walletIdHex, 0) } returns registrationKeys
-        coEvery { persistRegistrationKey(walletIdHex, any(), 0, any()) } just Runs
+        coEvery { storeIdentityPrivateKey(walletIdHex, any(), any()) } just Runs
         coEvery { fallbackPlatformAddressOrNull(walletIdHex) } returns fallbackAddress
         coEvery { ownDefaultOrchardAddressRaw43(walletIdHex) } returns changeAddressRaw43
         coEvery {
@@ -423,7 +425,7 @@ class SdkShieldedUsernameCreationTest {
     fun keyPersistFailure_notBroadcast_createNeverAttempted() = runTest {
         val source = happySource()
         coEvery {
-            source.persistRegistrationKey(walletIdHex, any(), 0, 2)
+            source.storeIdentityPrivateKey(walletIdHex, registrationKeys[2].publicKeyHex, any())
         } throws IllegalStateException("keystore auth window expired")
 
         val result = service(source = source).createUsernameFromShielded("alice2")
@@ -472,10 +474,10 @@ class SdkShieldedUsernameCreationTest {
         // → DPNS name.
         coVerifyOrder {
             source.previewRegistrationKeySet(walletIdHex, 0)
-            source.persistRegistrationKey(walletIdHex, registrationKeys[0].publicKey, 0, 0)
-            source.persistRegistrationKey(walletIdHex, registrationKeys[1].publicKey, 0, 1)
-            source.persistRegistrationKey(walletIdHex, registrationKeys[2].publicKey, 0, 2)
-            source.persistRegistrationKey(walletIdHex, registrationKeys[3].publicKey, 0, 3)
+            source.storeIdentityPrivateKey(walletIdHex, registrationKeys[0].publicKeyHex, any())
+            source.storeIdentityPrivateKey(walletIdHex, registrationKeys[1].publicKeyHex, any())
+            source.storeIdentityPrivateKey(walletIdHex, registrationKeys[2].publicKeyHex, any())
+            source.storeIdentityPrivateKey(walletIdHex, registrationKeys[3].publicKeyHex, any())
             source.createIdentityFromPool(walletIdHex, 0, registrationKeys, denominationCredits, any())
             source.registerDpnsName(walletIdHex, identityId, "alice2")
         }

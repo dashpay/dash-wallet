@@ -1714,10 +1714,20 @@ class L1ShadowSyncServiceTest {
                 ShadowSyncProgress(ShadowSyncPhase.HEADERS, 0.3, 1_260_660, 1_514_660, 24_000, 1_514_660)
             )
         )
-        // Only SYNCED may claim 100% — a still-scanning phase at target caps at 99%.
+        // A still-scanning phase claims 100% once the filter scan has caught
+        // up to the header tip within tolerance (scanCaughtUpToTip) — the
+        // live-shadow never-latches-SYNCED case: header at target and filters
+        // at the tip read as done even though the phase is still FILTERS.
         assertEquals(
-            99,
+            100,
             shadowSyncPercent(ShadowSyncProgress(ShadowSyncPhase.FILTERS, 1.0, 100, 100, 100, 100))
+        )
+        // But a genuine mid-scan (headers at the tip, filters only halfway)
+        // is NOT caught up, so it reports the honest combined percent below
+        // 100: (100 + 50) / (100 + 100) = 75%.
+        assertEquals(
+            75,
+            shadowSyncPercent(ShadowSyncProgress(ShadowSyncPhase.FILTERS, 0.5, 100, 100, 50, 100))
         )
         assertEquals(
             100,

@@ -53,7 +53,18 @@ import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
 interface PlatformBroadcastService {
-    suspend fun broadcastUpdatedProfile(dashPayProfile: DashPayProfile, encryptionKey: KeyParameter): DashPayProfile
+    /**
+     * [avatarBytes] is the RAW avatar image, when the caller has it. Only the
+     * Kotlin-SDK profile write uses it (it recomputes the avatarHash +
+     * fingerprint Rust-side); the dashj path keeps using the precomputed
+     * digest carried by [dashPayProfile]. Null keeps an avatar-bearing profile
+     * on dashj.
+     */
+    suspend fun broadcastUpdatedProfile(
+        dashPayProfile: DashPayProfile,
+        encryptionKey: KeyParameter,
+        avatarBytes: ByteArray? = null
+    ): DashPayProfile
     suspend fun sendContactRequest(toUserId: String): DashPayContactRequest
     suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest
     suspend fun broadcastIdentityVerify(username: String, url: String, encryptionKey: KeyParameter?): IdentityVerifyDocument
@@ -335,7 +346,11 @@ class PlatformDocumentBroadcastService @Inject constructor(
     }
 
     @Throws(Exception::class)
-    override suspend fun broadcastUpdatedProfile(dashPayProfile: DashPayProfile, encryptionKey: KeyParameter): DashPayProfile {
+    override suspend fun broadcastUpdatedProfile(
+        dashPayProfile: DashPayProfile,
+        encryptionKey: KeyParameter,
+        avatarBytes: ByteArray?
+    ): DashPayProfile {
         log.info("broadcast profile")
         val blockchainIdentity = identityRepository.blockchainIdentity
             ?: throw IllegalStateException("blockchain identity not available; ensure identity is loaded before calling PlatformBroadcastService.broadcastUpdatedProfile")
@@ -354,14 +369,18 @@ class PlatformDocumentBroadcastService @Inject constructor(
         // NotBroadcast → run the dashj path below unchanged; Broadcast →
         // fetch the committed document and update the database, do NOT run
         // dashj; Ambiguous → surface like a dashj broadcast failure, never
-        // retry via dashj in the same call. Profiles carrying an avatar
-        // hash/fingerprint always come back NotBroadcast (SDK gap — it
-        // recomputes both from raw avatar bytes the app no longer has).
+        // retry via dashj in the same call. A profile carrying an avatar
+        // hash/fingerprint needs the RAW avatar bytes — the SDK recomputes both
+        // digests Rust-side and takes no precomputed pair — so the caller
+        // fetches them from the same avatar URL the digests were computed over;
+        // without them such a profile still comes back NotBroadcast and takes
+        // the dashj path, which carries the precomputed digest.
         val sdkResult = sdkDashPayWrites.createOrUpdateProfile(
             ownUserId = blockchainIdentity.uniqueIdString,
             displayName = displayName,
             publicMessage = publicMessage,
             avatarUrl = avatarUrl,
+            avatarBytes = avatarBytes,
             hasAvatarDigest = dashPayProfile.avatarHash != null || dashPayProfile.avatarFingerprint != null,
             doCreate = dashPayProfile.createdAt == 0L
         )

@@ -38,7 +38,6 @@ import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
-import org.dash.wallet.common.data.SyncStage
 
 @HiltViewModel
 class InviteHandlerViewModel @Inject constructor(
@@ -139,7 +138,10 @@ class InviteHandlerViewModel @Inject constructor(
                     }
                 )
             } else try {
-                if (blockchainStateProvider.getSyncStage() == SyncStage.BLOCKS) {
+                // Post-cutover, L1 sync is driven by the SDK, so dashj's peerGroup.syncStage
+                // never advances to BLOCKS. Gate on the real synced signal (percentageSync==100)
+                // that the rest of the UI already uses, otherwise the invite stays NOT_SYNCED forever.
+                if (blockchainStateProvider.getState()?.isSynced() == true) {
                     updatedInvitation = updatedInvitation.copy(isValid = topUpRepository.validateInvitation(invite))
                 }
 

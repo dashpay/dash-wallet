@@ -489,6 +489,19 @@ class SendCoinsTaskRunner @Inject constructor(
         return WalletSendPaymentService.TransactionDetails(txFee?.toPlainString() ?: "", amountToSend, totalAmount)
     }
 
+    /**
+     * Phase 5d: exposes the SDK cutover-commit state to the send UI's dry-run
+     * via the already-injected [SdkL1SendService] — no direct SdkL1SendService
+     * dependency needed in the ViewModel. Read-only, commits/broadcasts nothing.
+     *
+     * Post-commit the dashj engine is held with 0 UTXOs, so a dashj-based
+     * dry-run (`wallet.completeTx`) always throws InsufficientMoneyException and
+     * wrongly blocks the Send button; the dry-run consults this to validate
+     * affordability against the SDK-overlaid balance instead. Pre-commit this is
+     * false and the dry-run keeps its unchanged dashj `completeTx` path.
+     */
+    suspend fun isCutoverCommitted(): Boolean = sdkL1SendService.cutoverCommitted()
+
     override suspend fun payWithDashUrlTx(dashUri: String, serviceName: String?): Transaction =
         withContext(Dispatchers.IO) {
             val paymentIntent = paymentIntentParser.parse(dashUri, false)

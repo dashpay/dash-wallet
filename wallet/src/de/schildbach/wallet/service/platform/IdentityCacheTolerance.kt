@@ -19,22 +19,29 @@ package de.schildbach.wallet.service.platform
 
 /**
  * Tolerates the legacy dashj-platform (org.dashj.platform 4.0.0-RC2) identity
- * cache being unable to serialize a v4.1-platform identity.
+ * cache being unable to serialize an identity whose keys carry contract bounds.
  *
  * `Platform.identities.get(id)` (dashj `Identities.get` →
  * `PlatformStateRepository.fetchIdentity`) first FETCHES the identity from the
  * DAPI client and only THEN writes it into the in-memory identity cache via
  * `storeIdentity`, which CBOR-encodes the identity through
- * `org.dashj.platform.dpp.util.Cbor`. For an identity created by a newer
- * (v4.1) client — e.g. an iOS username — that encoder has no converter for the
- * identity's `SingleContractDocumentType` and throws
- * `IllegalArgumentException("No converter for ...")` (Cbor.kt:186). The throw
- * happens AFTER the fetch succeeded but BEFORE `fetchIdentity` returns, so the
- * caller never receives the perfectly-good identity and the whole
- * accept/receive contact-request flow aborts
+ * `org.dashj.platform.dpp.util.Cbor`. When a key on the identity carries a
+ * `SingleContractDocumentType` bound, that encoder has no converter for it and
+ * throws `IllegalArgumentException("No converter for ...")` (Cbor.kt:186). The
+ * throw happens AFTER the fetch succeeded but BEFORE `fetchIdentity` returns,
+ * so the caller never receives the perfectly-good identity.
+ *
+ * The trigger is NOT "an iOS username": the shipped iOS DashPay wallet
+ * registers no contract bounds. It is any v4.1-era identity WITH contract-bound
+ * keys — and, critically, that now INCLUDES the wallet's own newly-registered
+ * 6-key identities, whose keys 4/5 carry
+ * `SingleContractDocumentType(dashpay, "contactRequest")`. So the failure is no
+ * longer limited to foreign identities: profile synthesis, invitation/top-up
+ * status updates, and the accept/receive contact-request flow
  * (`PlatformBroadcastService.sendContactRequest` — which is also the reciprocal
  * broadcast used to ACCEPT an incoming request — and the
- * `updateContactRequests` reconcile loop).
+ * `updateContactRequests` reconcile loop) can all hit it on the app's own
+ * identity.
  *
  * The cache is a pure optimization; nothing the contact-request flow does
  * depends on it. [fetchIdentityToleratingCacheError] runs the cached get and,

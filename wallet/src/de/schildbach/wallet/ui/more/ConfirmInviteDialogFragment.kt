@@ -61,6 +61,12 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
         super.onViewCreated(view, savedInstanceState)
         viewModel.amount = Coin.valueOf(args.amount)
         binding.confirmBtn.setOnClickListener {
+            // Show the in-flight indicator SYNCHRONOUSLY on the tap so there is
+            // no feedback gap before the ~30s creation spend starts (Fix C).
+            // The ViewModel's inviteCreationInFlight flow keeps it shown for the
+            // duration of the actual SDK spend; every non-navigating exit below
+            // clears it.
+            setCreatingUi(true)
             lifecycleScope.launch {
                 try {
                     val inviteAmount = Coin.valueOf(args.amount)
@@ -77,13 +83,17 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                                 inviteAmount.toFriendlyString()
                             )
                             binding.confirmMessage.isVisible = true
+                            setCreatingUi(false)
                             return@launch
                         }
                     }
                     // Authenticate right before the spend — the amount has been
                     // confirmed on this screen (standard order; the fee screen no
                     // longer prompts). A cancelled prompt spends nothing.
-                    authManager.authenticate(requireActivity()) ?: return@launch
+                    if (authManager.authenticate(requireActivity()) == null) {
+                        setCreatingUi(false)
+                        return@launch
+                    }
                     // invitationFragmentViewModel.logEvent(AnalyticsConstants.UsersContacts.TOPUP_CONFIRM)
                     val identityId = if (args.shielded) {
                         // SHIELDED (L2) invite: fund a note directly from the
@@ -98,6 +108,27 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                                 binding.confirmMessage.text =
                                     getString(R.string.error_sending_invite_transaction)
                                 binding.confirmMessage.isVisible = true
+                                setCreatingUi(false)
+                                return@launch
+                            }
+                        }
+                    } else if (invitationFragmentViewModel.shouldRouteL1ToSdk()) {
+                        // STANDARD (L1) invite, post-cutover: fund the DIP-13
+                        // voucher through the Kotlin SDK (the transparent Core
+                        // UTXOs the SDK now holds) instead of the dashj
+                        // asset-lock worker. Contested-ness follows the fee the
+                        // inviter picked (0.25 → contested), same rule as the
+                        // shielded branch above.
+                        val contested = inviteAmount.value >=
+                            de.schildbach.wallet.Constants.DASH_PAY_FEE_CONTESTED.value
+                        when (val result = invitationFragmentViewModel.createL1Invite(contested)) {
+                            is de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast ->
+                                result.value.user
+                            else -> {
+                                binding.confirmMessage.text =
+                                    getString(R.string.error_sending_invite_transaction)
+                                binding.confirmMessage.isVisible = true
+                                setCreatingUi(false)
                                 return@launch
                             }
                         }
@@ -111,16 +142,34 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                     log.info("error sending transaction:", e)
                     binding.confirmMessage.text = getString(R.string.error_sending_invite_transaction)
                     binding.confirmMessage.isVisible = true
+                    setCreatingUi(false)
                 }
             }
         }
         binding.dismissBtn.setOnClickListener { dismiss() }
         binding.confirmMessage.isVisible = false
+        // Keep the in-flight indicator in sync with the actual SDK spend — the
+        // synchronous set on tap covers the pre-auth gap; this covers the ~30s
+        // proof/funding duration and its clearing in the ViewModel's finally.
+        invitationFragmentViewModel.inviteCreationInFlight.observe(viewLifecycleOwner) { inFlight ->
+            setCreatingUi(inFlight)
+        }
         viewModel.uiState.observe(viewLifecycleOwner) {
             binding.dashAmountView.text = it.amountStr
             binding.fiatSymbolView.text = it.fiatSymbol
             binding.fiatAmountView.text = it.fiatAmountStr
         }
+    }
+
+    /**
+     * Toggle the invite-creation in-flight UI: show/hide the progress row and
+     * disable/enable the confirm + dismiss buttons so the ~30s spend cannot be
+     * re-triggered or dismissed mid-flight (Fix C).
+     */
+    private fun setCreatingUi(inProgress: Boolean) {
+        binding.creationProgress.isVisible = inProgress
+        binding.confirmBtn.isEnabled = !inProgress
+        binding.dismissBtn.isEnabled = !inProgress
     }
 
 //    override fun dismiss() {

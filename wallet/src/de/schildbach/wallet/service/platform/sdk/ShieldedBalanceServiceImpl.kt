@@ -27,9 +27,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
@@ -347,6 +351,20 @@ interface ShieldedSource {
     /** Live unspent notes for the wallet, from the SDK's Room store. */
     fun observeUnspentNotes(walletId: ByteArray): Flow<List<ShieldedNoteEntity>>
 
+    /**
+     * One-shot unspent, ANCHORED notes for the wallet (the SDK's
+     * `shieldedDao().getUnspentAnchoredNotesByWallet`) — the funding-note
+     * anchor gate reads these and keeps only `blockHeight > 0` rows.
+     */
+    suspend fun unspentAnchoredNotes(walletId: ByteArray): List<ShieldedNoteEntity>
+
+    /**
+     * The lowest anchored block height among the wallet's unspent notes
+     * (`shieldedDao().minUnspentAnchoredBlockHeight`), or null when none is
+     * anchored yet — a cheap "is anything anchored at all" probe.
+     */
+    suspend fun minUnspentAnchoredBlockHeight(walletId: ByteArray): Long?
+
     /** Live activity rows for the wallet, from the SDK's Room store. */
     fun observeActivity(walletId: ByteArray): Flow<List<ShieldedActivityEntity>>
 
@@ -370,6 +388,29 @@ interface ShieldedSource {
      * Blocks for the IS/CL proof AND the ~30s Halo 2 proof.
      */
     suspend fun fundFromAssetLock(walletId: ByteArray, recipientRaw43: ByteArray, amountDuffs: Long)
+
+    /**
+     * [fundFromAssetLock], but funded strictly from the ONE funds account
+     * whose account-level derivation path equals [fundingPath] (the DIP-9
+     * CoinJoin account) — SDK `PlatformWalletManager.shieldedFundFromAssetLock`'s
+     * optional `fundingPath` argument (dashpay/platform#4184).
+     *
+     * Single-account selection: no union across accounts, so CoinJoin coins
+     * are never co-spent with BIP44 coins. Change (only) lands on BIP44
+     * account 0 — a non-Standard account cannot derive change Rust-side.
+     * A path that matches no signable funds account fails pre-broadcast.
+     *
+     * Default throws: only the production source (and fakes that exercise
+     * the mixed-funds migration) need it.
+     */
+    suspend fun fundFromAssetLockFromAccount(
+        walletId: ByteArray,
+        recipientRaw43: ByteArray,
+        amountDuffs: Long,
+        fundingPath: String
+    ): Unit = throw UnsupportedOperationException(
+        "single-account asset-lock funding not supported by this source"
+    )
 
     /**
      * Resume a stuck Type 18 from an already-tracked lock outpoint.
@@ -454,6 +495,12 @@ internal class DashSdkShieldedSource(
     override fun observeUnspentNotes(walletId: ByteArray): Flow<List<ShieldedNoteEntity>> =
         flow { emitAll(database().shieldedDao().observeUnspentNotesByWallet(walletId)) }
 
+    override suspend fun unspentAnchoredNotes(walletId: ByteArray): List<ShieldedNoteEntity> =
+        database().shieldedDao().getUnspentAnchoredNotesByWallet(walletId)
+
+    override suspend fun minUnspentAnchoredBlockHeight(walletId: ByteArray): Long? =
+        database().shieldedDao().minUnspentAnchoredBlockHeight(walletId)
+
     override fun observeActivity(walletId: ByteArray): Flow<List<ShieldedActivityEntity>> =
         flow { emitAll(database().shieldedDao().observeActivityByWallet(walletId)) }
 
@@ -482,6 +529,24 @@ internal class DashSdkShieldedSource(
         walletId = walletId,
         recipientRaw43 = recipientRaw43,
         amountDuffs = amountDuffs
+    )
+
+    override suspend fun fundFromAssetLockFromAccount(
+        walletId: ByteArray,
+        recipientRaw43: ByteArray,
+        amountDuffs: Long,
+        fundingPath: String
+    ) = manager().shieldedFundFromAssetLock(
+        walletId = walletId,
+        recipientRaw43 = recipientRaw43,
+        amountDuffs = amountDuffs,
+        // fundingAccountIndex stays 0: with an explicit fundingPath it only
+        // names the BIP44 account the CHANGE is routed to, and Rust errors
+        // ("BIP44 account N not found for asset-lock change routing") on any
+        // index that isn't provisioned. Account 0 always is.
+        fundingAccountIndex = 0,
+        surplusOutput = null,
+        fundingPath = fundingPath
     )
 
     override suspend fun resumeFundFromAssetLock(
@@ -663,7 +728,15 @@ class ShieldedBalanceServiceImpl internal constructor(
      * ([resumePendingWalletShields]); null (tests' default) disables the
      * automatic trigger — the method itself stays callable.
      */
-    private val sweepScope: CoroutineScope? = null
+    private val sweepScope: CoroutineScope? = null,
+    /**
+     * Seed the asset-lock kind ([AssetLockKind.SHIELD]) in-memory the instant a
+     * wallet-shield's funding lock is known, so the first engine-feed
+     * classification of this L1 lock already reads "Shielded" instead of
+     * momentarily "Internal" — mirroring the transparent/invite paths. No-op
+     * default keeps the host-JVM tests inert.
+     */
+    private val seedAssetLockKind: (displayHex: String, kind: AssetLockKind) -> Unit = { _, _ -> }
 ) : ShieldedBalanceService {
 
     @Inject
@@ -672,7 +745,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         sdkService: DashSdkService,
         dashPayConfig: DashPayConfig,
         l1ShadowSyncService: L1ShadowSyncService,
-        applicationScope: CoroutineScope
+        applicationScope: CoroutineScope,
+        assetLockKindResolver: AssetLockKindResolver
     ) : this(
         source = DashSdkShieldedSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -688,7 +762,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         l1ProgressFlow = { l1ShadowSyncService.progress },
         ensureL1SpvRunning = { l1ShadowSyncService.ensureSpvRunning() },
         noteSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
-        sweepScope = applicationScope
+        sweepScope = applicationScope,
+        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) }
     )
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
@@ -708,8 +783,35 @@ class ShieldedBalanceServiceImpl internal constructor(
     private val _shieldedSyncStatus = MutableStateFlow(ShieldedSyncStatus.NOT_READY)
     override val shieldedSyncStatus: StateFlow<ShieldedSyncStatus> = _shieldedSyncStatus.asStateFlow()
 
+    /**
+     * "The last-known balance is stale" latch — see [shieldedBalanceMaybeStale].
+     * Set the moment a successful local spend broadcasts (its note-store
+     * change has not landed yet), cleared by [startSyncStatusPolling] on the
+     * next completed sync pass.
+     */
+    private val _shieldedBalanceMaybeStale = MutableStateFlow(false)
+    override val shieldedBalanceMaybeStale: StateFlow<Boolean> = _shieldedBalanceMaybeStale.asStateFlow()
+
+    /**
+     * Background pending-shield completions — see [walletShieldResumed].
+     * Buffered so the sweep never suspends on a slow/absent collector.
+     */
+    private val _walletShieldResumed = MutableSharedFlow<Int>(extraBufferCapacity = 4)
+    override val walletShieldResumed: SharedFlow<Int> = _walletShieldResumed.asSharedFlow()
+
     /** The sync-status poll loop (see [startSyncStatusPolling]); null until ready. */
     private var syncStatusJob: Job? = null
+
+    /** The last-known-balance persistence collector (see [startBalancePersistence]); null until ready. */
+    private var balancePersistJob: Job? = null
+
+    override suspend fun lastKnownShieldedBalance(): Dash? = try {
+        dashPayConfig.getLastShieldedBalanceDuffs()?.let { Dash(it) }
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("failed to read the last-known shielded balance; treating as absent", t)
+        null
+    }
 
     override suspend fun ensureShieldedReady(): Boolean {
         if (!isEnabled()) return false
@@ -718,6 +820,10 @@ class ShieldedBalanceServiceImpl internal constructor(
             // Begin (or keep) polling the SDK's pass-in-flight signal so the
             // UI can distinguish "still syncing" from a real zero balance.
             startSyncStatusPolling()
+            // Persist the balance whenever it is trustworthy (READY) so the
+            // last-known amount survives process death and the More card can
+            // render it instantly on the next open (see [startBalancePersistence]).
+            startBalancePersistence()
             // Staged-retry hook: finish any interrupted shieldFromWallet
             // (stage (b) after the L1 lock broadcast) in the background.
             // Cheap when nothing is pending (one Room query); serialized
@@ -784,7 +890,10 @@ class ShieldedBalanceServiceImpl internal constructor(
             readyWalletIdHex.value = null
             syncStatusJob?.cancel()
             syncStatusJob = null
+            balancePersistJob?.cancel()
+            balancePersistJob = null
             _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
+            _shieldedBalanceMaybeStale.value = false
             runCatching { source.stopShieldedSync() }
                 .onFailure { log.warn("failed to stop the shielded sync loop", it) }
         }
@@ -811,6 +920,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             var seenPassInFlight = false
             var firstPassCompleted = false
             var idlePolls = 0
+            var prevInFlight = false
             while (isActive) {
                 if (readyWalletIdHex.value == null) {
                     _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
@@ -830,12 +940,53 @@ class ShieldedBalanceServiceImpl internal constructor(
                         firstPassCompleted = true
                     }
                 }
+                // A sync pass just finished (in-flight → idle transition): the
+                // note store now reflects any local spend, so the last-known
+                // balance is no longer stale. Gated on the TRANSITION (not
+                // steady idle) so a spend's flag is never cleared before its
+                // pass has been observed running.
+                if (prevInFlight && !inFlight) {
+                    _shieldedBalanceMaybeStale.value = false
+                }
+                prevInFlight = inFlight
                 _shieldedSyncStatus.value = mapShieldedSyncStatus(
                     ready = true,
                     firstPassCompleted = firstPassCompleted,
                     passInFlight = inFlight
                 )
                 delay(SYNC_STATUS_POLL_INTERVAL_MS)
+            }
+        }
+    }
+
+    /**
+     * Persist the shielded balance whenever it is TRUSTWORTHY — a
+     * [ShieldedSyncStatus.READY] runtime (bring-up done, first pass complete,
+     * nothing in flight) — so [lastKnownShieldedBalance] survives process
+     * death and the More card renders it instantly on the next open. Gating
+     * on READY (never SYNCING) is what keeps the cache from being clobbered
+     * by the transient zero the note store can read mid re-scan. Idempotent
+     * (a live collector is reused) and scoped to [sweepScope] — with no scope
+     * (unit tests) nothing is persisted and callers exercise the pure display
+     * decision directly.
+     */
+    private fun startBalancePersistence() {
+        val scope = sweepScope ?: return
+        if (balancePersistJob?.isActive == true) return
+        balancePersistJob = scope.launch {
+            var lastPersisted: Long? = null
+            combine(observeShieldedBalance(), _shieldedSyncStatus) { balance, status ->
+                balance to status
+            }.collect { (balance, status) ->
+                if (status != ShieldedSyncStatus.READY) return@collect
+                val duffs = balance.duffs
+                if (duffs == lastPersisted) return@collect
+                runCatching { dashPayConfig.setLastShieldedBalanceDuffs(duffs) }
+                    .onSuccess { lastPersisted = duffs }
+                    .onFailure {
+                        if (it is CancellationException) throw it
+                        log.warn("failed to persist the last-known shielded balance", it)
+                    }
             }
         }
     }
@@ -851,6 +1002,26 @@ class ShieldedBalanceServiceImpl internal constructor(
                     .map { notes -> creditsToDash(notes.sumOf { it.value }) }
             }
         }
+
+    override suspend fun isFundingNoteAnchoredForDenomination(denomination: Dash): Boolean {
+        // Snapshot read only — never force a bring-up here (the gate is polled
+        // on every sync/balance emission). Not-ready → not anchored (fail-closed).
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return false
+        return try {
+            // Anchored = a recorded commitment-tree anchor, i.e. blockHeight > 0.
+            // Require the confirmed unspent note set to cover the denomination:
+            // a READY pool whose freshly-minted note is not yet anchored reads
+            // false, holding the "still preparing" surface past READY.
+            val anchoredCredits = source.unspentAnchoredNotes(walletId)
+                .filter { it.blockHeight > 0 }
+                .sumOf { it.value }
+            creditsToDash(anchoredCredits) >= denomination
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("funding-note anchor read failed; treating the note as not yet anchored", t)
+            false
+        }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeShieldedActivity(): Flow<List<ShieldedActivityEntry>> =
@@ -914,8 +1085,29 @@ class ShieldedBalanceServiceImpl internal constructor(
             }
             .distinctUntilChanged()
 
-    override suspend fun shieldFromWallet(amount: Dash): SdkWriteResult<ShieldFromWalletOutcome> {
-        val operation = "shieldFromWallet"
+    override suspend fun shieldFromWallet(amount: Dash): SdkWriteResult<ShieldFromWalletOutcome> =
+        shieldFromWalletInternal(amount, fundingPath = null)
+
+    override suspend fun shieldMixedFundsFromWallet(
+        amount: Dash,
+        coinJoinAccountPath: String
+    ): SdkWriteResult<ShieldFromWalletOutcome> =
+        shieldFromWalletInternal(amount, fundingPath = coinJoinAccountPath)
+
+    /**
+     * The one staged Type-18 pipeline behind both [shieldFromWallet]
+     * (`fundingPath == null` → the unmixed BIP44 account, today's behavior)
+     * and [shieldMixedFundsFromWallet] (an explicit account-level path →
+     * that ONE account). Everything else — gate, fee floor, mutex, tracked-
+     * lock evidence, failure classification — is identical by construction,
+     * so the mixed-funds migration inherits the hardened contract instead of
+     * duplicating it.
+     */
+    private suspend fun shieldFromWalletInternal(
+        amount: Dash,
+        fundingPath: String?
+    ): SdkWriteResult<ShieldFromWalletOutcome> {
+        val operation = if (fundingPath == null) "shieldFromWallet" else "shieldMixedFundsFromWallet"
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
         if (!isL1FundingFlagOn()) {
             return notBroadcast(operation, "L1 shadow flag off", null)
@@ -997,8 +1189,33 @@ class ShieldedBalanceServiceImpl internal constructor(
             // The single staged attempt: (a) build+broadcast the L1 asset
             // lock from the SDK wallet, (b) Halo 2 proof + Type 18 submit.
             try {
-                source.fundFromAssetLock(walletId, recipient, amount.duffs)
+                if (fundingPath == null) {
+                    source.fundFromAssetLock(walletId, recipient, amount.duffs)
+                } else {
+                    // SINGLE-ACCOUNT: every input comes from the account this
+                    // path names (the DIP-9 CoinJoin account); BIP44 coins are
+                    // never co-spent. Only change returns to BIP44 account 0.
+                    source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
+                }
+                markLocalSpendPending()
                 kickImmediateShieldedSync()
+                // Seed the funding lock's kind as SHIELD (best-effort, post-
+                // success) so the L1 asset lock renders "Shielded" on first
+                // classification instead of "Internal". The new lock is the
+                // outPointHex absent from lockedBefore; its txid part (before
+                // ':') is ALREADY display hex (AssetLockEntity keys on display),
+                // so it is the resolver's seed key directly.
+                try {
+                    source.walletShieldLocks(walletId)
+                        .map { it.outPointHex }
+                        .firstOrNull { it !in lockedBefore }
+                        ?.substringBefore(':')
+                        ?.takeIf { it.length == 64 }
+                        ?.let { seedAssetLockKind(it, AssetLockKind.SHIELD) }
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("shield funding-lock kind seed failed; the row may momentarily read Internal", t)
+                }
                 SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
@@ -1112,6 +1329,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                     // The direct path kicks this too — without it a shield
                     // completed via RESUME (interrupted stage (b)) sat on the
                     // ~60s tick before the balance appeared (observed live).
+                    markLocalSpendPending()
                     kickImmediateShieldedSync()
                 } catch (t: Throwable) {
                     if (t is CancellationException) throw t
@@ -1121,6 +1339,14 @@ class ShieldedBalanceServiceImpl internal constructor(
                         lock.outPointHex, attempts + 1, t
                     )
                 }
+            }
+            // The user was told this transfer "will finish automatically";
+            // this sweep is the only place that knows it HAS, and it runs
+            // with no UI attached — publish it so the app can say so (see
+            // [walletShieldResumed]). tryEmit: announcing must never block
+            // or fail the sweep.
+            if (resumed > 0 && !_walletShieldResumed.tryEmit(resumed)) {
+                log.warn("pending wallet-shield completion event dropped ({} resumed)", resumed)
             }
             resumed
         }
@@ -1223,6 +1449,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         // indeterminate progress; there is no per-proof progress callback).
         return try {
             block(walletId, amountCredits)
+            markLocalSpendPending()
             kickImmediateShieldedSync()
             SdkWriteResult.Broadcast(Unit)
         } catch (t: Throwable) {
@@ -1269,6 +1496,18 @@ class ShieldedBalanceServiceImpl internal constructor(
             log.warn("pending-lock count unavailable; cutover evidence stays UNKNOWN", t)
             null
         }
+    }
+
+    /**
+     * Mark the last-known/cached balance STALE after a successful local
+     * spend (see [shieldedBalanceMaybeStale]): the note-store change has not
+     * landed yet, so a surface must show "Syncing…" rather than the stale
+     * amount until the next completed sync pass clears it (in
+     * [startSyncStatusPolling]). Only the WRITE paths call this — a plain
+     * screen-entry [syncNow] refresh must NOT mark the balance stale.
+     */
+    private fun markLocalSpendPending() {
+        _shieldedBalanceMaybeStale.value = true
     }
 
     private suspend fun kickImmediateShieldedSync() {

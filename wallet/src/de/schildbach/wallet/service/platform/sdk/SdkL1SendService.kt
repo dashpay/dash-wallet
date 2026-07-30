@@ -29,7 +29,6 @@ import org.bitcoinj.core.Address
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.errors.mapNativeErrors
-import org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -198,16 +197,17 @@ interface SdkL1SendSource {
         throw UnsupportedOperationException("send-all not supported by this source")
 
     /**
-     * Run [block] while holding the SDK wallet's per-wallet core-send
-     * lock — the same mutex `ManagedPlatformWallet.sendToAddresses`
-     * serializes its builds under. [SdkL1SendService] wraps the send-all
-     * attempt AND its single adjust-down retry in ONE acquisition, so a
-     * concurrent plain send cannot interleave between the two attempts and
-     * change the drained balance. The mutex is NOT reentrant: [block] must
-     * not call [sendToAddress] (which re-acquires it inside the SDK) or
+     * Run [block] while holding this source's app-owned core-send lock.
+     * [SdkL1SendService] wraps the send-all attempt AND its single
+     * adjust-down retry in ONE acquisition, so a concurrent plain send
+     * cannot interleave between the two attempts and change the drained
+     * balance. This is an app-side [kotlinx.coroutines.sync.Mutex], NOT a
+     * mutex owned by the SDK binary (the pinned v41int2 AAR exposes no such
+     * accessor); the cross-path double-select backstop is the Rust engine's
+     * atomic UTXO reservation. The mutex is NOT reentrant: [block] must not
      * nest another [withCoreSendLock] — the only permitted call inside is
-     * [sendAllToAddress], which is lock-free by contract. Default: runs
-     * [block] directly (sources without a native mutex).
+     * [sendAllToAddress], which never touches this lock. Default: runs
+     * [block] directly (sources that don't serialize a drain).
      */
     suspend fun <T> withCoreSendLock(walletIdHex: String, block: suspend () -> T): T = block()
 
@@ -230,12 +230,40 @@ interface SdkL1SendSource {
      */
     suspend fun sendAllToAddress(walletIdHex: String, addressBase58: String, floorDuffs: Long): String =
         throw UnsupportedOperationException("send-all not supported by this source")
+
+    /**
+     * [sendAllToAddress] aimed at the DIP-9 CoinJoin account
+     * (`CoreTransactionBuilder.AccountType.COIN_JOIN`, index 0) instead of
+     * BIP44 — the post-upgrade mixed-funds migration's "keep it spendable on
+     * L1" option. Single-account by construction: key-wallet's `set_funding`
+     * seeds inputs from that ONE account's UTXO map, so BIP44 coins are never
+     * co-spent. [addressBase58] MUST be an address the same wallet owns.
+     * Same concurrency contract as [sendAllToAddress]. Default throws.
+     */
+    suspend fun drainCoinJoinToAddress(
+        walletIdHex: String,
+        addressBase58: String,
+        floorDuffs: Long
+    ): String = throw UnsupportedOperationException("CoinJoin drain not supported by this source")
 }
 
 /** Production [SdkL1SendSource]: boots the SDK on demand. */
 internal class DashSdkL1SendSource(
     private val service: DashSdkService
 ) : SdkL1SendSource {
+
+    /**
+     * App-owned serialization lock for the send-all (drain) path. A single
+     * [Mutex] is sufficient: only one wallet is ever bound to this source, so
+     * there is exactly one drain sequence to serialize. It guards the whole
+     * send-all attempt + its single adjust-down retry ([withCoreSendLock]) so
+     * a concurrent plain send cannot interleave between the two and change the
+     * drained balance. This is NOT the SDK's own internal build mutex — the
+     * pinned v41int2 AAR exposes no `coreSendMutex` field/accessor. The
+     * cross-path double-select backstop is the Rust engine's atomic UTXO
+     * reservation (in setFunding/buildSigned), not this lock.
+     */
+    private val coreSendMutex = Mutex()
 
     private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
         service.ensureStarted()
@@ -274,19 +302,15 @@ internal class DashSdkL1SendSource(
     }
 
     override suspend fun <T> withCoreSendLock(walletIdHex: String, block: suspend () -> T): T {
-        val manager = manager()
-        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
-        // The same per-wallet mutex ManagedPlatformWallet.sendToAddresses
-        // serializes its builds under — the whole reason the split builder
-        // API is `internal`. Resolved BEFORE any native call, so a lookup
-        // failure is provably pre-broadcast. Held ONCE across the whole
-        // [block] (drain attempt + adjust-down retry) so a concurrent plain
-        // send cannot interleave between the attempts. No deadlock: the
-        // mutex is non-reentrant but nothing inside [block] re-acquires it —
-        // sendAllToAddress below is lock-free by contract, and the plain
-        // send path (sendToAddresses) is never invoked inside the block, so
-        // every acquisition of this mutex is strictly sequential.
-        val coreSendMutex = coreSendMutexOf(wallet)
+        // Serialize the drain under this source's app-owned [coreSendMutex].
+        // Held ONCE across the whole [block] (drain attempt + adjust-down
+        // retry) so a concurrent plain send cannot interleave between the
+        // attempts and change the drained balance. No deadlock: nothing inside
+        // [block] re-acquires it — sendAllToAddress below never touches this
+        // mutex, and the plain send path (sendToAddresses) is never invoked
+        // inside the block, so every acquisition is strictly sequential. The
+        // cross-path double-select safety comes from the Rust engine's atomic
+        // UTXO reservation, not from this lock.
         return withContext(Dispatchers.IO) {
             coreSendMutex.withLock { block() }
         }
@@ -316,21 +340,26 @@ internal class DashSdkL1SendSource(
         }
     }
 
-    /**
-     * The wallet's `coreSendMutex` via its public-static synthetic JVM
-     * accessor (`access$getCoreSendMutex$p` — javac/kotlinc can't reference
-     * synthetic members in source, reflection can; stable in the pinned
-     * AAR). Failure throws [DashSdkError.InvalidState] so
-     * [classifyCoreSendFailure] proves it pre-broadcast.
-     */
-    private fun coreSendMutexOf(wallet: ManagedPlatformWallet): Mutex = try {
-        val accessor = ManagedPlatformWallet::class.java
-            .getMethod("access\$getCoreSendMutex\$p", ManagedPlatformWallet::class.java)
-        accessor.invoke(null, wallet) as Mutex
-    } catch (t: Throwable) {
-        throw DashSdkError.InvalidState(
-            "send-all preflight: coreSendMutex unavailable via the pinned SDK binary", t
-        )
+    override suspend fun drainCoinJoinToAddress(
+        walletIdHex: String,
+        addressBase58: String,
+        floorDuffs: Long
+    ): String {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        // Lock-free for the same reason as sendAllToAddress: the caller holds
+        // coreSendMutex via withCoreSendLock and it is not reentrant.
+        return withContext(Dispatchers.IO) {
+            mapNativeErrors {
+                CoreSendAllNative.buildSignBroadcastDrainCoinJoin(
+                    wallet,
+                    toSdkNetwork(Constants.NETWORK_PARAMETERS),
+                    addressBase58,
+                    floorDuffs,
+                    manager.mnemonicResolverHandle
+                )
+            }
+        }
     }
 }
 
@@ -453,6 +482,15 @@ class SdkL1SendService internal constructor(
      */
     private val hasAppLockedSpendableOutputs: () -> Boolean = { true },
     /**
+     * CoinJoin-drain guard ([drainCoinJoinAccountTo]), the narrow sibling of
+     * [hasAppLockedSpendableOutputs]: does the held dashj wallet track any
+     * app-locked output ON THE DIP-9 CoinJoin keychain? The CoinJoin drain
+     * only ever selects that one account's UTXOs, so the wallet-wide check
+     * would refuse the migration for every CrowdNode user over locks the
+     * drain cannot reach. Default `true` → fail closed.
+     */
+    private val hasAppLockedCoinJoinOutputs: () -> Boolean = { true },
+    /**
      * Send-all guard, seam side (B7 union): locks registered through
      * [SeamOutputLockRegistry] cover outputs of SDK-only transactions
      * (post-cutover CrowdNode API-response txs locked via
@@ -510,6 +548,18 @@ class SdkL1SendService internal constructor(
             wallet == null || wallet.calculateAllSpendCandidates(true, true).any {
                 wallet.isLockedOutput(it.outPointFor)
             }
+        },
+        hasAppLockedCoinJoinOutputs = {
+            // Narrow the same dashj-authoritative lock check to the CoinJoin
+            // keychain: the drain selects ONLY that account's UTXOs, so a
+            // CrowdNode lock on a BIP44 output is irrelevant to it. A missing
+            // wallet, or an unreadable CoinJoin extension, cannot PROVE the
+            // absence of locks → treated as locked (fail closed).
+            @Suppress("DEPRECATION")
+            val wallet = walletData.wallet
+            wallet == null || coinJoinOutputsOrNull(wallet)?.any {
+                wallet.isLockedOutput(it.outPointFor)
+            } ?: true
         },
         seamOutputLockRegistry = seamOutputLockRegistry,
         onSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
@@ -721,6 +771,94 @@ class SdkL1SendService internal constructor(
         }
     }
 
+    /**
+     * Drain the DIP-9 CoinJoin account (`m/9'/coin'/4'/0'`) to
+     * [ownAddressBase58] — the "combine my previously mixed funds into the
+     * spendable balance" half of the post-upgrade mixed-funds migration.
+     *
+     * SINGLE-ACCOUNT, by construction: the builder is pointed at
+     * `AccountType.COIN_JOIN` index 0 and key-wallet seeds its input set from
+     * that account's UTXO map alone ([CoreSendAllNative.buildSignBroadcastDrainCoinJoin]).
+     * BIP44 coins are never co-spent, so no privacy domain is crossed on the
+     * INPUT side. The transaction does de-mix — it links the mixed coins to
+     * the destination — which the calling UI must state plainly.
+     *
+     * [ownAddressBase58] MUST be an address of THIS wallet's unmixed BIP44
+     * account (callers derive it via `WalletData.freshReceiveAddress()`); the
+     * only validation possible here is network/format.
+     *
+     * The floor is `1` duff: the engine overwrites the single output with
+     * `total − fee`, and there is no deliverable to protect on a self-spend.
+     * An empty account therefore fails pre-broadcast with the engine's
+     * "Insufficient funds" build error — [SdkWriteResult.NotBroadcast], no
+     * funds moved. Same classification contract as [sendToAddress]: never
+     * retry a [SdkWriteResult.Ambiguous] result.
+     */
+    suspend fun drainCoinJoinAccountTo(ownAddressBase58: String): SdkWriteResult<String> {
+        val operation = "l1DrainCoinJoin"
+        if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
+        val address = ownAddressBase58.trim()
+        if (address.isEmpty() || !addressValidSafe(address)) {
+            return notBroadcast(operation, "malformed or wrong-network address", null)
+        }
+
+        val walletIdHex = try {
+            source.boundWalletIdOrNull()
+                ?: return notBroadcast(operation, "app wallet not bound to the SDK", null)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast(operation, "SDK bootstrap/bind lookup failed", t)
+        }
+
+        val gate = probeSendGate()
+        if (!gate.allowed) {
+            return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
+        }
+
+        // Fail-closed lock guard, scoped to the account this drain touches.
+        val hasLockedCoinJoinOutputs = try {
+            hasAppLockedCoinJoinOutputs()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK {}: CoinJoin locked-output preflight failed; blocking (fail closed)", operation, t)
+            true
+        }
+        if (hasLockedCoinJoinOutputs) {
+            return notBroadcast(
+                operation,
+                "wallet has app-locked outputs on the CoinJoin account; the drain would spend them",
+                null
+            )
+        }
+
+        return try {
+            val txidHex = source.withCoreSendLock(walletIdHex) {
+                source.drainCoinJoinToAddress(walletIdHex, address, COIN_JOIN_DRAIN_FLOOR_DUFFS)
+            }
+            log.info("SDK {}: drained the CoinJoin account to {}…, txid {}", operation, address.take(8), txidHex)
+            runCatching { onSelfSpendBroadcast() }
+                .onFailure { log.warn("failed to record the self-spend marker", it) }
+            runCatching { bridgeAfterBroadcast(txidHex) }
+                .onFailure { log.warn("failed to launch the bridged-tx commit for {}", txidHex, it) }
+            SdkWriteResult.Broadcast(txidHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            when (val classified = classifyCoreSendFailure(t)) {
+                is SdkWriteResult.NotBroadcast -> {
+                    log.warn("SDK {} rejected pre-broadcast; nothing spent", operation, t)
+                    classified
+                }
+                else -> {
+                    log.error(
+                        "SDK {} outcome unconfirmed — the drain MAY be on the network; NOT retrying",
+                        operation, t
+                    )
+                    classified
+                }
+            }
+        }
+    }
+
     /** [isValidAddress] with failures contained (a throw must not escape a preflight). */
     private fun addressValidSafe(address: String): Boolean = try {
         isValidAddress(address)
@@ -769,5 +907,14 @@ class SdkL1SendService internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkL1SendService::class.java)
+
+        /**
+         * Deliver-at-least floor for the CoinJoin drain. `1` duff: the engine
+         * overwrites the single output with `total − fee` and the destination
+         * is the user's own wallet, so there is no deliverable to protect —
+         * unlike the user-facing send-all, which reserves for the fee to keep
+         * the promised amount intact.
+         */
+        private const val COIN_JOIN_DRAIN_FLOOR_DUFFS = 1L
     }
 }

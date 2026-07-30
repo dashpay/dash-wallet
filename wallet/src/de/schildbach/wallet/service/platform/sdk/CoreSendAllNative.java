@@ -29,9 +29,10 @@ import org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet;
  * <p>The Kotlin SDK's public send surface
  * ({@code ManagedPlatformWallet.sendToAddresses}) never exposes the
  * builder's drain strategy: the split builder API is {@code internal} to
- * the SDK module solely to force every build through the per-wallet
- * {@code coreSendMutex} (see the {@code CoreTransactionBuilder} KDoc). The
- * JNI knob IS already bound —
+ * the SDK module (the pinned v41int2 AAR exposes no {@code coreSendMutex} —
+ * serialization of the drain is the app's own per-source lock, see
+ * {@code SdkL1SendSource.withCoreSendLock}). The JNI knob IS already
+ * bound —
  * {@code WalletManagerNative.coreTxBuilderSetSelectionStrategy} with
  * {@code CoreTransactionBuilder.SelectionStrategy.ALL} (FFI value 5 →
  * {@code CoreSelectionStrategyFFI::All} → key-wallet
@@ -69,14 +70,17 @@ import org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet;
  *       retry hook the Kotlin side uses.</li>
  * </ul>
  *
- * <p>CONCURRENCY CONTRACT: callers MUST hold the wallet's
- * {@code coreSendMutex} across this whole call (the Kotlin side does, via
- * {@code SdkL1SendSource.withCoreSendLock} — ONE acquisition spanning the
- * drain attempt AND its adjust-down retry, so a concurrent plain send
- * cannot change the drained balance between attempts) — the builder's
- * setFunding and buildSigned are two separate FFI calls, and two
- * concurrent same-account builds could otherwise select and sign the same
- * UTXOs.
+ * <p>CONCURRENCY CONTRACT: callers MUST serialize this whole call under the
+ * app-owned per-source send-all lock (the Kotlin side does, via
+ * {@code SdkL1SendSource.withCoreSendLock} — an app-side
+ * {@code kotlinx.coroutines.sync.Mutex}, ONE acquisition spanning the drain
+ * attempt AND its adjust-down retry, so a concurrent plain send cannot
+ * change the drained balance between attempts). This is an APP-side lock,
+ * NOT a mutex owned by the SDK binary — the pinned v41int2 AAR exposes no
+ * {@code coreSendMutex} field or accessor. The cross-path double-select
+ * backstop for two concurrent same-account builds (the builder's setFunding
+ * and buildSigned are two separate FFI calls) is the Rust engine's atomic
+ * UTXO reservation, which the app lock complements but does not replace.
  *
  * <p>SELECTION CAVEAT (why {@link SdkL1SendService} guards the drain):
  * {@code SelectionStrategy::All} selects EVERY spendable UTXO and the FFI
@@ -124,6 +128,71 @@ final class CoreSendAllNative {
             long floorDuffs,
             long coreSignerHandle
     ) {
+        return buildSignBroadcastDrain(
+                wallet,
+                network,
+                addressBase58,
+                floorDuffs,
+                coreSignerHandle,
+                CoreTransactionBuilder.AccountType.BIP44
+        );
+    }
+
+    /**
+     * Build, sign and broadcast a drain of the DIP-9 CoinJoin account
+     * ({@code m/9'/coin'/4'/0'}) to {@code addressBase58} — the "combine my
+     * previously mixed funds back into the spendable (unmixed) balance"
+     * half of the post-upgrade mixed-funds migration.
+     *
+     * <p>PRIVACY INVARIANT: the builder is pointed at ONE account
+     * ({@code AccountType.COIN_JOIN}, index 0). key-wallet's
+     * {@code set_funding} seeds the input set from that account's UTXO map
+     * alone (rs-platform-wallet {@code wallet/core/transaction.rs} →
+     * {@code accounts.coinjoin_accounts.get_mut(&index)}), so BIP44 coins
+     * cannot be co-spent — this is emphatically NOT the multi-account union
+     * that was rejected in review. It DOES de-mix: the resulting transaction
+     * publicly links the CoinJoin outputs to the destination BIP44 address,
+     * which is why the UI must say so before the user picks it.
+     *
+     * <p>{@code SelectionStrategy::All} means no change output is emitted at
+     * all, so the "non-Standard accounts cannot derive change" limitation
+     * never applies (key-wallet's {@code set_funding} takes the CoinJoin
+     * change address with {@code .ok()} and the ALL strategy drops it before
+     * fee sizing). The account is therefore left EMPTY, which is what makes
+     * the migration prompt one-shot.
+     *
+     * <p>{@code addressBase58} MUST be an address the SAME wallet owns on
+     * its unmixed BIP44 account — callers derive it from the wallet, never
+     * from user input.
+     *
+     * <p>Same concurrency contract and failure classification as
+     * {@link #buildSignBroadcastSendAll}.
+     */
+    static String buildSignBroadcastDrainCoinJoin(
+            ManagedPlatformWallet wallet,
+            Network network,
+            String addressBase58,
+            long floorDuffs,
+            long coreSignerHandle
+    ) {
+        return buildSignBroadcastDrain(
+                wallet,
+                network,
+                addressBase58,
+                floorDuffs,
+                coreSignerHandle,
+                CoreTransactionBuilder.AccountType.COIN_JOIN
+        );
+    }
+
+    private static String buildSignBroadcastDrain(
+            ManagedPlatformWallet wallet,
+            Network network,
+            String addressBase58,
+            long floorDuffs,
+            long coreSignerHandle,
+            CoreTransactionBuilder.AccountType accountType
+    ) {
         CoreTransaction signed = null;
         // Same shape as ManagedPlatformWallet.sendToAddresses: buildSigned
         // consumes the builder; close() in finally safely destroys it on the
@@ -132,10 +201,10 @@ final class CoreSendAllNative {
         try {
             builder.addOutput$sdk_release(addressBase58, floorDuffs);
             builder.setSelectionStrategy$sdk_release(CoreTransactionBuilder.SelectionStrategy.ALL);
-            builder.setFunding$sdk_release(wallet, CoreTransactionBuilder.AccountType.BIP44, 0);
+            builder.setFunding$sdk_release(wallet, accountType, 0);
             signed = builder.buildSigned$sdk_release(
                     wallet,
-                    CoreTransactionBuilder.AccountType.BIP44,
+                    accountType,
                     0,
                     coreSignerHandle
             );

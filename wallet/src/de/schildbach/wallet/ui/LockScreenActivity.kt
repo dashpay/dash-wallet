@@ -384,8 +384,28 @@ open class LockScreenActivity : SecureActivity() {
                 }
                 Status.SUCCESS -> {
                     if (biometricHelper.requiresEnabling) {
+                        // Fully SUSPEND auto-logout for the DURATION of the biometric enroll,
+                        // not merely clear the "locked" flags. Clearing deviceWasLocked /
+                        // keepLockedUntilPinEntered alone is not enough: shouldLogout() also
+                        // returns true via (autoLogoutEnabled && logoutTimeExceeded) — when the
+                        // system enroll dialog takes focus the app counts as backgrounded, so the
+                        // next auto-logout timer tick fires onLogout() -> biometricHelper
+                        // .cancelPending() and kills the live BiometricPrompt (ERROR_CANCELED).
+                        // turnOffAutoLogout() stops the timer outright so no tick can fire during
+                        // enrollment; turnOnAutoLogout() in finally always restores it, even if the
+                        // enroll throws. The flag clears stay as belt-and-suspenders (they are
+                        // normally cleared in onCorrectPin, which we defer until AFTER enrollment).
+                        // onCorrectPin still runs LAST so wallet content is not revealed until
+                        // enrollment finishes.
+                        autoLogout.deviceWasLocked = false
+                        autoLogout.keepLockedUntilPinEntered = false
+                        turnOffAutoLogout()
                         lifecycleScope.launch {
-                            biometricHelper.enableBiometricReminder(this@LockScreenActivity, it.data!!)
+                            try {
+                                biometricHelper.enableBiometricReminder(this@LockScreenActivity, it.data!!)
+                            } finally {
+                                turnOnAutoLogout()
+                            }
                             onCorrectPin(it.data)
                         }
                     } else {

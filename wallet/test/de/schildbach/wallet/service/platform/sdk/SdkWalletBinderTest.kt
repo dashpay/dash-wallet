@@ -137,6 +137,15 @@ class SdkWalletBinderTest {
             lastProvisionWalletId = walletIdHex
             return onProvision(walletIdHex)
         }
+
+        var storeKeyCalls = 0
+        override suspend fun storeIdentityPrivateKey(
+            pubkeyHex: String,
+            privateKey: ByteArray,
+            walletId: ByteArray
+        ) {
+            storeKeyCalls++
+        }
     }
 
     private class FakeMnemonicProvider(

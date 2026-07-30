@@ -180,6 +180,29 @@ class TransactionResultActivity : LockScreenActivity() {
             }
         }
 
+        // Bug A (parity with TransactionDetailsDialogFragment): the tx is NOT in
+        // the dashj wallet (post-cutover SDK-only tx) — bind the neutral SDK
+        // detail instead of leaving the sheet blank. Metadata (tax category,
+        // private memo) is txid-keyed and works unchanged.
+        viewModel.sdkTxDetail.filterNotNull().observe(this) { detail ->
+            transactionResultViewBinder.bindSdkDetail(detail)
+            contentBinding.openExplorerCard.setOnClickListener {
+                viewOnExplorerByTxId(detail.txIdDisplayHex)
+            }
+            contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
+            contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
+            binding.transactionCloseBtn.setOnClickListener { onTransactionDetailsDismiss() }
+            transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
+
+            viewModel.transactionMetadata.observe(this) { metadata ->
+                if (metadata != null &&
+                    metadata.txId.toString().equals(detail.txIdDisplayHex, ignoreCase = true)
+                ) {
+                    transactionResultViewBinder.setTransactionMetadata(metadata)
+                }
+            }
+        }
+
         viewModel.topUpWork(txId).observe(this) { workData ->
             log.info("topup work data: {}", workData)
             try {
@@ -232,9 +255,13 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private fun viewOnExplorer(tx: Transaction) {
+        viewOnExplorerByTxId(tx.txId.toString())
+    }
+
+    private fun viewOnExplorerByTxId(txId: String) {
         ComposeBottomSheet(R.style.PrimaryBackground) { dialog ->
             BlockExplorerSelectionView(viewModel.analytics) { explorer ->
-                viewOnBlockExplorer(explorer, "tx/${tx.txId}")
+                viewOnBlockExplorer(explorer, "tx/$txId")
                 dialog.dismiss()
             }
         }.show(this)
@@ -243,7 +270,11 @@ class TransactionResultActivity : LockScreenActivity() {
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-        transactionResultViewBinder.bind(tx, dashPayProfile, payeeName, payeeVerifiedBy)
+        // Bug A: hand the binder the SDK direction/amount override (non-null only
+        // post-cutover, when the held dashj wallet misreads an SDK-authored send).
+        transactionResultViewBinder.bind(
+            tx, dashPayProfile, payeeName, payeeVerifiedBy, viewModel.sdkDirectionOverride.value
+        )
         binding.transactionCloseBtn.setOnClickListener {
             onTransactionDetailsDismiss()
         }

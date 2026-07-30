@@ -73,6 +73,7 @@ class DashPayConfigSeedTest {
         store[DashPayConfig.USE_KOTLIN_SDK_DPNS_READS] = false
         store[DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES] = false
         store[DashPayConfig.USE_KOTLIN_SDK_SHIELDED] = false
+        store[DashPayConfig.USE_KOTLIN_SDK_L1_INVITE] = false
         store[DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] = false
         val config = configBackedByStore()
 
@@ -82,6 +83,7 @@ class DashPayConfigSeedTest {
         assertEquals(false, store[DashPayConfig.USE_KOTLIN_SDK_DPNS_READS])
         assertEquals(false, store[DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES])
         assertEquals(false, store[DashPayConfig.USE_KOTLIN_SDK_SHIELDED])
+        assertEquals(false, store[DashPayConfig.USE_KOTLIN_SDK_L1_INVITE])
         assertEquals(false, store[DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW])
         coVerify(exactly = 0) { config.set(any<Preferences.Key<Boolean>>(), any<Boolean>()) }
     }
@@ -112,23 +114,32 @@ class DashPayConfigSeedTest {
     }
 
     @Test
-    fun mainnetSeedList_isOnlyTheReadOnlyL1Shadow() {
-        // prodDebug (the external mainnet validation build) must never seed
-        // the shielded pool or SDK write paths against real funds.
+    fun mainnetSeedList_isFullSet_realFundsValidationVehicle() {
+        // Per Brian's 2026-07-27 decision, prodDebug (the mainnet validation
+        // build) now seeds the full SDK feature set — deliberately exposing the
+        // shielded/write paths to real funds. Only prodDebug seeds (seeding is
+        // !BuildConfig.DEBUG gated), so a prodRelease stays features-off.
         assertEquals(
-            listOf(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW),
+            listOf(
+                DashPayConfig.USE_KOTLIN_SDK_DPNS_READS,
+                DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES,
+                DashPayConfig.USE_KOTLIN_SDK_SHIELDED,
+                DashPayConfig.USE_KOTLIN_SDK_L1_INVITE,
+                DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW
+            ),
             DashPayConfig.debugSeedFlags(isMainnet = true)
         )
     }
 
     @Test
-    fun testnetSeedList_isAllFourFlags_neverL1Send() {
+    fun testnetSeedList_isFullSet_neverL1Send() {
         val flags = DashPayConfig.debugSeedFlags(isMainnet = false)
         assertEquals(
             listOf(
                 DashPayConfig.USE_KOTLIN_SDK_DPNS_READS,
                 DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES,
                 DashPayConfig.USE_KOTLIN_SDK_SHIELDED,
+                DashPayConfig.USE_KOTLIN_SDK_L1_INVITE,
                 DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW
             ),
             flags
