@@ -27,12 +27,12 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.PaymentIntent
-import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.observeDashBalance
-import org.dash.wallet.common.payments.parsers.withOutputAdded
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.observeDashBalance
+import org.dash.wallet.common.payments.parsers.withOutputAdded
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants

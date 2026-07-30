@@ -88,12 +88,11 @@ class AddressParserTest {
     fun cardanoAddressTest() {
         val parser = CardanoAddressParser()
 
-        // Shelley Bech32 (addr1...) and legacy Byron Base58 (Ae2.../DdzFF...).
-        assertTrue(
-            parser.exactMatch(
-                "addr1q9c8e2wjwj4uxsmrk2lqkkpqalwzvxgyx7uxjkfeg7xc3xa07c6qzwrcfh2x4f4z4uyez5lpd07v3jkh3ttn0xc2x7qspewtaa"
-            )
-        )
+        // Shelley Bech32 (addr1...) and legacy Byron Base58 (Ae2.../DdzFF...). The Shelley address
+        // is split across two literals purely to stay inside the 120-column limit.
+        val shelley = "addr1q9c8e2wjwj4uxsmrk2lqkkpqalwzvxgyx7uxjkfeg7xc3xa07c6qzwrcfh2x4f4z4uyez5" +
+            "lpd07v3jkh3ttn0xc2x7qspewtaa"
+        assertTrue(parser.exactMatch(shelley))
         assertTrue(parser.exactMatch("Ae2tdPwUPEZ4YjgvykNpoFeYUxoyhNj2kg8KfKWN2FizsSpLUPv68MpTVDo"))
 
         // Non-Bech32 character.

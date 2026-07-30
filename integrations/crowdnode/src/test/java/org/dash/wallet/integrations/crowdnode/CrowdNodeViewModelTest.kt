@@ -27,8 +27,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
