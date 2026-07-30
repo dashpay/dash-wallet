@@ -43,7 +43,12 @@ platform :android do
 		UI.user_error!("Missing apk. Run 'publish' lane to build and upload")
 	end
 
-	supply(apk: filename, track: 'internal')
+	mapping = "#{ENV['PWD']}/wallet/build/outputs/mapping/prodRelease/mapping.txt"
+	if !File.exist? "#{mapping}"
+		UI.user_error!("Missing mapping.txt. Run 'publish' lane to build and upload")
+	end
+
+	supply(apk: filename, mapping: mapping, track: 'internal')
   end
 
   desc "Promote to production track with 0.2 rollout by default"

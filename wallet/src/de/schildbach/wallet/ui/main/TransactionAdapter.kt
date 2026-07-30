@@ -42,6 +42,7 @@ import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.money.MonetaryFormat
+import org.dash.wallet.common.data.entity.SwapOrderStatus
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.util.GenericUtils
 import de.schildbach.wallet.util.format
@@ -118,6 +119,7 @@ class TransactionViewHolder(
         setIcon(txView)
         setPrimaryStatus(txView)
         setSecondaryStatus(txView)
+        setSwapStatus(txView)
         setValue(txView.value, txView.hasErrors)
         setFiatValue(txView.value, txView.exchangeRate)
         setTime(txView.time, resourceMapper.dateTimeFormat)
@@ -185,6 +187,19 @@ class TransactionViewHolder(
             binding.secondaryStatus.setTextColor(colorSecondaryStatus)
         } else {
             binding.secondaryStatus.text = null
+        }
+    }
+
+    private fun setSwapStatus(txView: TransactionRowView) {
+        val textRes = when (txView.swapStatus) {
+            null, SwapOrderStatus.COMPLETED -> 0
+            SwapOrderStatus.REFUNDED -> R.string.transaction_row_status_refunded
+            SwapOrderStatus.FAILED -> R.string.transaction_row_status_failed
+            else -> R.string.transaction_row_status_processing
+        }
+        binding.swapStatus.isVisible = textRes != 0
+        if (textRes != 0) {
+            binding.swapStatus.setText(textRes)
         }
     }
 

@@ -37,7 +37,7 @@
             android:layout_height="150dp"
             android:layout_margin="10dp"
             android:inputType="textMultiLine|textNoSuggestions|textVisiblePassword"
-            android:background="@color/dash_white"
+            android:background="@color/background_secondary"
             app:layout_constraintTop_toBottomOf="@id/label" />
 
         <!-- Date Picker Section (Optional) -->

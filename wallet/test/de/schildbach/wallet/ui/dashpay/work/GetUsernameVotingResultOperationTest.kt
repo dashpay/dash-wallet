@@ -29,7 +29,8 @@ import java.util.concurrent.TimeUnit
 class GetUsernameVotingResultOperationTest {
 
     companion object {
-        // must match GetUsernameVotingResultOperation.DELAY_AFTER_VOTING_PERIOD
+        // Buffer after the voting period ends, matching
+        // GetUsernameVotingResultOperation.DELAY_AFTER_VOTING_PERIOD
         private val BUFFER_MINUTES = TimeUnit.MINUTES.toMillis(1)
     }
 
@@ -122,7 +123,7 @@ class GetUsernameVotingResultOperationTest {
         val delay = GetUsernameVotingResultOperation.calculateDelay(votingStartedAt, currentTime)
         
         // Then: Verify the calculation uses actual VOTING_PERIOD_MILLIS and current time
-        // Formula: UsernameRequest.VOTING_PERIOD_MILLIS + votingStartedAt + 2min - System.currentTimeMillis()
+        // Formula: UsernameRequest.VOTING_PERIOD_MILLIS + votingStartedAt + 1min - System.currentTimeMillis()
         val expectedDelay = UsernameRequest.VOTING_PERIOD_MILLIS + votingStartedAt + BUFFER_MINUTES - currentTime
         assertEquals("Delay calculation should follow the exact calculateDelay formula", expectedDelay, delay)
     }

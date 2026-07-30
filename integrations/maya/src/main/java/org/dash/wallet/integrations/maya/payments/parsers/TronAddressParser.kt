@@ -16,7 +16,20 @@
  */
 package org.dash.wallet.integrations.maya.payments.parsers
 
+import org.dash.wallet.common.payments.parsers.Base58
 import org.dash.wallet.common.payments.parsers.AddressParser
 
-/** TRON address parser — Base58Check, 34 characters, leading `T`. */
-class TronAddressParser : AddressParser("T[1-9A-HJ-NP-Za-km-z]{33}", null)
+/**
+ * TRON address parser — Base58Check, 34 characters, leading `T`. Beyond the shape check, the
+ * 4-byte double-SHA256 checksum and the 0x41 mainnet version byte are verified, so a
+ * single-character typo is rejected client-side.
+ */
+class TronAddressParser : AddressParser("T[1-9A-HJ-NP-Za-km-z]{33}", null) {
+    override fun verifyAddress(addressCandidate: String) {
+        // Throws AddressFormatException on a bad checksum; returns version byte + payload.
+        val decoded = Base58.decodeChecked(addressCandidate)
+        require(decoded.size == 21 && decoded[0] == 0x41.toByte()) {
+            "not a TRON mainnet address"
+        }
+    }
+}

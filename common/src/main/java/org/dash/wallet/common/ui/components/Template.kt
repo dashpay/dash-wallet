@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ fun Template(
     icon: ImageVector? = null,
     contentDescription: String? = null
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = modifier
             .size(34.dp)
@@ -46,7 +48,7 @@ fun Template(
             )
             .border(
                 width = 1.5.dp,
-                color = MyTheme.Colors.gray300.copy(alpha = 0.30f),
+                color = colors.gray300.copy(alpha = 0.30f),
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
@@ -56,14 +58,14 @@ fun Template(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 modifier = Modifier,
-                tint = MyTheme.Colors.textPrimary
+                tint = colors.textPrimary
             )
         } else {
             Box(
                 modifier = Modifier
                     .size(5.dp)
                     .background(
-                        color = MyTheme.Colors.textPrimary,
+                        color = colors.textPrimary,
                         shape = CircleShape
                     )
             )
@@ -71,17 +73,22 @@ fun Template(
     }
 }
 
+@Preview(name = "Template Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Template Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-@Preview
 private fun TemplatePreview() {
-    Box(Modifier
-        .size(44.dp)
-        .background(MyTheme.Colors.backgroundPrimary),
-        contentAlignment = Alignment.Center
-    ) {
-        Template(
-            Modifier,
+    DashWalletTheme {
+        val colors = LocalDashColors.current
+        Box(
+            Modifier
+                .size(44.dp)
+                .background(colors.backgroundPrimary),
+            contentAlignment = Alignment.Center
+        ) {
+            Template(
+                Modifier,
             MyImages.MenuChevron
-        )
+            )
+        }
     }
 }

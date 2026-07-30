@@ -27,6 +27,7 @@ import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.SphericalUtil
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -201,6 +202,8 @@ constructor(private val context: Context, private val client: FusedLocationProvi
                 ?.firstOrNull()
                 ?.countryCode
                 .orEmpty()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.info("GeocoderException ${e.message}")
             ""

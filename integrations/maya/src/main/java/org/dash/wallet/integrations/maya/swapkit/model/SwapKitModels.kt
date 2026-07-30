@@ -153,3 +153,33 @@ data class SwapKitPriceItem(
     @SerializedName("price_usd") val priceUsd: Double = 0.0,
     val timestamp: Long? = null
 )
+
+// POST /track
+
+/** At least one identifier is required: hash+chainId, or depositAddress (NEAR Intents). */
+data class SwapKitTrackRequest(
+    val hash: String? = null,
+    val chainId: String? = null,
+    val depositAddress: String? = null
+)
+
+/**
+ * Top-level swap status by tx hash; `legs` carries the same shape per cross-chain stage
+ * (inbound vs outbound). `status` is one of: not_started / pending / swapping / completed /
+ * refunded / unknown / failed. `finalisedAt` is UNIX seconds.
+ */
+data class SwapKitTrackResponse(
+    val chainId: String? = null,
+    val hash: String? = null,
+    val block: Long? = null,
+    val type: String? = null,
+    val status: String? = null,
+    val fromAsset: String? = null,
+    val fromAmount: String? = null,
+    val fromAddress: String? = null,
+    val toAsset: String? = null,
+    val toAmount: String? = null,
+    val toAddress: String? = null,
+    val finalisedAt: Long? = null,
+    val legs: List<SwapKitTrackResponse>? = null
+)

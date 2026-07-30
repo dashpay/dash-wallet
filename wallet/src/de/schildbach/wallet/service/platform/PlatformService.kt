@@ -93,6 +93,18 @@ interface PlatformService {
      * alias so the accept/receive contact-request flow reads clearly; carries
      * the same cache tolerance. See [getIdentity].
      */
+    /**
+     * Fetch the identity for [userId], tolerating the legacy dashj identity
+     * cache being unable to serialize a v4.1-platform identity (e.g. an iOS
+     * username). [identities].get fetches the identity then caches it via
+     * PlatformStateRepository.storeIdentity, whose CBOR serializer throws
+     * `IllegalArgumentException("No converter for ...")` on a v4.1 identity
+     * shape — after the fetch succeeded but before the identity is returned,
+     * so the caller loses it. On that specific failure this refetches via the
+     * cache-bypassing DapiClient path so accept/receive contact-request flows
+     * are not aborted by a purely-local cache limitation. See
+     * [fetchIdentityToleratingCacheError].
+     */
     fun getContactIdentity(userId: Identifier): Identity?
 }
 

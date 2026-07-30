@@ -1,5 +1,6 @@
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -139,126 +140,153 @@ fun Toast(
     }
 }
 
-@Preview(name = "Toast with action")
+@Preview(name = "Toast w/ action Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Toast w/ action Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ToastPreview() {
-    Box(Modifier.width(400.dp).background(Color.White).padding(vertical = 4.dp)) {
-        Toast(
-            text = "The exchange rates are out of date, please do something about it right away",
-            actionText = "OK",
-            imageResource = R.drawable.ic_image_placeholder
-        ) {}
+    DashWalletTheme {
+        Box(Modifier.width(400.dp).background(LocalDashColors.current.backgroundPrimary).padding(vertical = 4.dp)) {
+            Toast(
+                text = "The exchange rates are out of date, please do something about it right away",
+                actionText = "OK",
+                imageResource = R.drawable.ic_image_placeholder
+            ) {}
+        }
     }
 }
 
-@Preview(name = "Toast with action and dismiss")
+@Preview(name = "Toast w/ dismiss Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Toast w/ dismiss Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ToastWithDismissPreview() {
-    Box(Modifier.width(400.dp).background(Color.White).padding(vertical = 4.dp)) {
-        Toast(
-            text = "Some coins are currently halted",
-            actionText = "Action",
-            imageResource = R.drawable.ic_image_placeholder,
-            showDismissButton = true,
-            onDismiss = {}
-        ) {}
+    DashWalletTheme {
+        Box(Modifier.width(400.dp).background(LocalDashColors.current.backgroundPrimary).padding(vertical = 4.dp)) {
+            Toast(
+                text = "Some coins are currently halted",
+                actionText = "Action",
+                imageResource = R.drawable.ic_image_placeholder,
+                showDismissButton = true,
+                onDismiss = {}
+            ) {}
+        }
     }
 }
 
-@Preview(name = "Toast – Warning")
+@Preview(name = "Toast Warning Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Toast Warning Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ToastWarningPreview() {
-    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
-        Toast(
-            text = "Warning",
-            actionText = "Action",
-            imageResource = ToastImageResource.Warning.resourceId,
-            showDismissButton = true,
-            onDismiss = {}
-        ) {}
+    DashWalletTheme {
+        Box(Modifier.width(375.dp).background(LocalDashColors.current.backgroundPrimary).padding(vertical = 4.dp)) {
+            Toast(
+                text = "Warning",
+                actionText = "Action",
+                imageResource = ToastImageResource.Warning.resourceId,
+                showDismissButton = true,
+                onDismiss = {}
+            ) {}
+        }
     }
 }
 
-@Preview(name = "Toast – Info")
+@Preview(name = "Toast Info Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Toast Info Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ToastInfoPreview() {
-    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
-        Toast(
-            text = "Info",
-            actionText = "Action",
-            imageResource = ToastImageResource.Information.resourceId,
-            showDismissButton = true,
-            onDismiss = {}
-        ) {}
+    DashWalletTheme {
+        Box(Modifier.width(375.dp).background(LocalDashColors.current.backgroundPrimary).padding(vertical = 4.dp)) {
+            Toast(
+                text = "Info",
+                actionText = "Action",
+                imageResource = ToastImageResource.Information.resourceId,
+                showDismissButton = true,
+                onDismiss = {}
+            ) {}
+        }
     }
 }
 
-@Preview(name = "Toast – Error")
+@Preview(name = "Toast Error Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Toast Error Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ToastErrorPreview() {
-    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
-        Toast(
-            text = "Error",
-            actionText = "Action",
-            imageResource = ToastImageResource.Error.resourceId,
-            showDismissButton = true,
-            onDismiss = {}
-        ) {}
+    DashWalletTheme {
+        Box(Modifier.width(375.dp).background(LocalDashColors.current.backgroundPrimary).padding(vertical = 4.dp)) {
+            Toast(
+                text = "Error",
+                actionText = "Action",
+                imageResource = ToastImageResource.Error.resourceId,
+                showDismissButton = true,
+                onDismiss = {}
+            ) {}
+        }
     }
 }
 
-@Preview(name = "Toast – Success")
+@Preview(name = "Toast Success Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Toast Success Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ToastSuccessPreview() {
-    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
-        Toast(
-            text = "Success",
-            actionText = "Action",
-            imageResource = ToastImageResource.Success.resourceId,
-            showDismissButton = true,
-            onDismiss = {}
-        ) {}
+    DashWalletTheme {
+        Box(Modifier.width(375.dp).background(LocalDashColors.current.backgroundPrimary).padding(vertical = 4.dp)) {
+            Toast(
+                text = "Success",
+                actionText = "Action",
+                imageResource = ToastImageResource.Success.resourceId,
+                showDismissButton = true,
+                onDismiss = {}
+            ) {}
+        }
     }
 }
 
-@Preview(name = "Toast – Copied")
+@Preview(name = "Toast Copied Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Toast Copied Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ToastCopiedPreview() {
-    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
-        Toast(
-            text = "Copied",
-            actionText = "Action",
-            imageResource = ToastImageResource.Copy.resourceId,
-            showDismissButton = true,
-            onDismiss = {}
-        ) {}
+    DashWalletTheme {
+        Box(Modifier.width(375.dp).background(LocalDashColors.current.backgroundPrimary).padding(vertical = 4.dp)) {
+            Toast(
+                text = "Copied",
+                actionText = "Action",
+                imageResource = ToastImageResource.Copy.resourceId,
+                showDismissButton = true,
+                onDismiss = {}
+            ) {}
+        }
     }
 }
 
-@Preview(name = "Toast – Loading")
+@Preview(name = "Toast Loading Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Toast Loading Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ToastLoadingPreview() {
-    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
-        Toast(
-            text = "Loading",
-            actionText = "Action",
-            imageResource = ToastImageResource.Loading.resourceId,
-            showDismissButton = true,
-            onDismiss = {}
-        ) {}
+    DashWalletTheme {
+        Box(Modifier.width(375.dp).background(LocalDashColors.current.backgroundPrimary).padding(vertical = 4.dp)) {
+            Toast(
+                text = "Loading",
+                actionText = "Action",
+                imageResource = ToastImageResource.Loading.resourceId,
+                showDismissButton = true,
+                onDismiss = {}
+            ) {}
+        }
     }
 }
 
-@Preview(name = "Toast – No internet connection")
+@Preview(name = "Toast No internet Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Toast No internet Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ToastNoInternetPreview() {
-    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
-        Toast(
-            text = "No internet connection",
-            actionText = "Action",
-            imageResource = ToastImageResource.NoInternet.resourceId,
-            showDismissButton = true,
-            onDismiss = {}
-        ) {}
+    DashWalletTheme {
+        Box(Modifier.width(375.dp).background(LocalDashColors.current.backgroundPrimary).padding(vertical = 4.dp)) {
+            Toast(
+                text = "No internet connection",
+                actionText = "Action",
+                imageResource = ToastImageResource.NoInternet.resourceId,
+                showDismissButton = true,
+                onDismiss = {}
+            ) {}
+        }
     }
 }

@@ -26,7 +26,7 @@
             android:background="@color/background_primary"
             app:popupTheme="@style/ThemeOverlay.AppCompat.ActionBar"
             app:theme="@style/ThemeOverlay.AppCompat.ActionBar"
-            app:titleTextColor="@color/dash_black">
+            app:titleTextColor="@color/content_primary">
 
             <TextView
                 android:id="@+id/toolbar_title"

@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -59,6 +60,11 @@ class MayaConvertCryptoViewModel @Inject constructor(
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
     var paymentIntent: PaymentIntent? = null
+
+    // Source of truth for the inline amount error: the Compose UIState lives in the fragment
+    // and is recreated with the view, so the currently shown error is kept here to survive
+    // configuration changes.
+    var inlineErrorMessage: String? = null
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -181,4 +187,11 @@ class MayaConvertCryptoViewModel @Inject constructor(
     fun getUpdatedPaymentIntent(amountInDash: Dash, destinationAddress: String): PaymentIntent? {
         return paymentIntent?.withOutputAdded(amountInDash, destinationAddress)
     }
+
+    /** Friendly message resource for a swap error, mapped by whichever backend is active. */
+    @StringRes
+    fun errorMessageRes(error: String?): Int = swapProvider.errorMessageRes(error)
+
+    /** True when the swap failed because the amount is below the route's minimum (shown inline). */
+    fun isAmountTooLowError(error: String?): Boolean = swapProvider.isAmountTooLowError(error)
 }

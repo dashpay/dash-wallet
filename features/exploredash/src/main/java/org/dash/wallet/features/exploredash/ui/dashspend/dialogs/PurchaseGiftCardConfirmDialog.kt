@@ -70,6 +70,7 @@ import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarTitle
 import org.dash.wallet.common.ui.components.Size
@@ -617,6 +618,7 @@ internal fun PurchaseGiftCardConfirmView(
     onCancel: () -> Unit = {},
     onConfirm: () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = if (uiState.useExpandedLayout) {
             Modifier
@@ -664,7 +666,7 @@ internal fun PurchaseGiftCardConfirmView(
                         ambientColor = Color(0x1AB8C1CC)
                     )
                     .clip(RoundedCornerShape(20.dp))
-                    .background(MyTheme.Colors.backgroundSecondary)
+                    .background(colors.backgroundSecondary)
                     .padding(6.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
@@ -765,6 +767,7 @@ private fun ConfirmRow(
     isCaption: Boolean = false,
     trailing: @Composable () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -775,7 +778,7 @@ private fun ConfirmRow(
         Text(
             text = label,
             style = if (isCaption) MyTheme.CaptionMedium else MyTheme.Typography.BodyMediumMedium,
-            color = MyTheme.Colors.textTertiary,
+            color = colors.textTertiary,
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
@@ -790,10 +793,11 @@ private fun ConfirmValueText(
     isCaption: Boolean = false,
     textAlign: TextAlign = TextAlign.End
 ) {
+    val colors = LocalDashColors.current
     Text(
         text = text,
         style = if (isCaption) MyTheme.Caption else MyTheme.Typography.BodyMedium,
-        color = MyTheme.Colors.textPrimary,
+        color = colors.textPrimary,
         textAlign = textAlign
     )
 }

@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_bright"
+    android:background="@color/background_secondary"
     tools:context=".ui.EnterTwoFaCodeFragment">
 
     <androidx.appcompat.widget.Toolbar
@@ -14,7 +14,7 @@
         android:layout_height="?attr/actionBarSize"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        android:background="@android:color/white"
+        android:background="@color/background_secondary"
         app:layout_constraintTop_toTopOf="parent"/>
 
     <TextView
@@ -142,6 +142,7 @@
 
     <androidx.cardview.widget.CardView
         android:id="@+id/bottom_card"
+        style="@style/CardViewRaised.Radius15"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="-10dp"

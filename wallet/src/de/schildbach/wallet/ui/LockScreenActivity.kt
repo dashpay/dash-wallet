@@ -611,6 +611,7 @@ open class LockScreenActivity : SecureActivity() {
     open fun onLockScreenActivated() { }
 
     open fun onLockScreenDeactivated() {
+        lockScreenBroadcaster.deactivatingLockScreen.call()
         lockScreenDeactivatedListeners.forEach {
             it.invoke()
         }

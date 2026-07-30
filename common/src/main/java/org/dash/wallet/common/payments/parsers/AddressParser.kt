@@ -17,7 +17,7 @@
 
 package org.dash.wallet.common.payments.parsers
 
-open class AddressParser(pattern: String, val params: AddressNetwork?) {
+open class AddressParser(pattern: String, val params: AddressNetwork?, private val ignoreCase: Boolean = false) {
     /** Pattern-only constructor for parsers that skip network validation. */
     constructor(pattern: String) : this(pattern, null)
 
@@ -38,10 +38,10 @@ open class AddressParser(pattern: String, val params: AddressNetwork?) {
         }
     }
 
-    private val addressPattern = Regex(pattern)
+    private val addressPattern = Regex(pattern, if (ignoreCase) setOf(RegexOption.IGNORE_CASE) else emptySet())
 
     open fun exactMatch(inputText: String): Boolean {
-        return addressPattern.matches(inputText)
+        return addressPattern.matches(inputText) && isAddressValid(inputText)
     }
 
     open fun findAll(inputText: String): List<IntRange> {
@@ -66,6 +66,32 @@ open class AddressParser(pattern: String, val params: AddressNetwork?) {
         return validRanges
     }
 
+    /**
+     * Canonicalizes the case of a scanned or pasted address: bech32 QR codes commonly carry
+     * the all-uppercase form (alphanumeric mode), which is lowercased when the lowercase form
+     * is a valid address. Only inputs reported by [isCaseInsensitiveFormat] are ever rewritten:
+     * Base58 and EIP-55 are case-significant, and where they are validated by pattern only
+     * (no [params], so no checksum) an all-caps corrupt address could otherwise be "repaired"
+     * into a different, plausible-looking one instead of being rejected.
+     */
+    fun normalizeCase(input: String): String {
+        return if (isCaseInsensitiveFormat(input) &&
+            input.any { it.isUpperCase() } &&
+            input.none { it.isLowerCase() } &&
+            exactMatch(input.lowercase())
+        ) {
+            input.lowercase()
+        } else {
+            input
+        }
+    }
+
+    /**
+     * Whether [input] is a candidate for a case-insensitive address format. Parsers that mix
+     * case-insensitive bech32 with case-sensitive alternatives override this per input.
+     */
+    protected open fun isCaseInsensitiveFormat(input: String): Boolean = ignoreCase
+
     protected open fun verifyAddress(addressCandidate: String) {
         params?.let { AddressUtils.verify(it, addressCandidate) }
     }
@@ -80,5 +106,12 @@ open class AddressParser(pattern: String, val params: AddressNetwork?) {
         } catch (e: Exception) {
             false
         }
+    }
+
+    protected fun isAddressValid(addressCandidate: String) = try {
+        verifyAddress(addressCandidate)
+        true
+    } catch (_: Exception) {
+        false
     }
 }

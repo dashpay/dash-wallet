@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -98,6 +98,7 @@ fun TopIntroSend(
     onToggleVisibility: (() -> Unit)? = null,
     modifier: Modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
 ) {
+    val colors = LocalDashColors.current
     // Internal state used only when the caller does not hoist the toggle.
     var internalVisible by rememberSaveable { mutableStateOf(true) }
     val isVisible = balanceVisible ?: internalVisible
@@ -109,8 +110,8 @@ fun TopIntroSend(
         // Heading
         Text(
             text = heading,
-            style = MyTheme.H5Bold,
-            color = MyTheme.Colors.textPrimary,
+            style = MyTheme.Typography.HeadlineMediumBold,
+            color = colors.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -127,7 +128,7 @@ fun TopIntroSend(
                 Text(
                     text = preposition,
                     style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.textPrimary
+                    color = colors.textPrimary
                 )
                 if (toIconUrl != null) {
                     AsyncImage(
@@ -152,7 +153,7 @@ fun TopIntroSend(
                     Text(
                         text = toName,
                         style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.textPrimary,
+                        color = colors.textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -162,11 +163,11 @@ fun TopIntroSend(
             // Address variant: "to [address]" — preposition secondary, address primary
             Text(
                 text = buildAnnotatedString {
-                    withStyle(MyTheme.Body2Regular.toSpanStyle().copy(color = MyTheme.Colors.textSecondary)) {
+                    withStyle(MyTheme.Body2Regular.toSpanStyle().copy(color = colors.textPrimary)) {
                         append(preposition)
                         append(" ")
                     }
-                    withStyle(MyTheme.Body2Regular.toSpanStyle().copy(color = MyTheme.Colors.textPrimary)) {
+                    withStyle(MyTheme.Body2Regular.toSpanStyle().copy(color = colors.textPrimary)) {
                         append(toAddress)
                     }
                 },
@@ -176,8 +177,8 @@ fun TopIntroSend(
             )
         }
 
-        // Per Figma: 2dp gap between merchant/address row and balance row.
-        Spacer(modifier = Modifier.height(2.dp))
+        // Per Figma: 4dp (spacing/4, the root column gap) between the heading block and balance row.
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Balance availability row
         BalanceRow(
@@ -207,6 +208,7 @@ private fun BalanceRow(
     isVisible: Boolean,
     onToggleClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     val hiddenPlaceholder = "*****"
     val balanceLabel = stringResource(R.string.balance)
 
@@ -219,72 +221,82 @@ private fun BalanceRow(
         Text(
             text = "$balanceLabel ",
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textSecondary
+            color = colors.textSecondary
         )
 
         // Toggleable content: icon + amounts, or placeholder
         if (isVisible) {
+            // Per Figma node 4251:16531: amount, then Dash logo, then "~ fiat" —
+            // the whole balance row is text/secondary.
             Row(
                 modifier = Modifier.weight(1f, fill = false),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                Text(
+                    text = dashBalance,
+                    style = MyTheme.Typography.BodyMedium,
+                    color = MyTheme.Colors.textSecondary
+                )
                 Image(
                     painter = painterResource(R.drawable.ic_dash_d_gray),
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 )
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(MyTheme.Typography.BodyMedium.toSpanStyle().copy(color = MyTheme.Colors.textPrimary)) {
-                            append(dashBalance)
-                        }
-                        if (fiatBalance != null) {
-                            withStyle(MyTheme.Typography.BodyMedium.toSpanStyle().copy(color = MyTheme.Colors.textSecondary)) {
-                                append(" · ")
-                                append(fiatBalance)
+                if (fiatBalance != null) {
+                    Text(
+                        text = buildAnnotatedString {
+                            withStyle(MyTheme.Typography.BodyMedium.toSpanStyle().copy(color = colors.textPrimary)) {
+                                append(dashBalance)
+                            }
+                            if (fiatBalance != null) {
+                                withStyle(
+                                    MyTheme.Typography.BodyMedium.toSpanStyle().copy(color = colors.textSecondary)
+                                ) {
+                                    append(" · ")
+                                    append(fiatBalance)
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
             }
         } else {
             Text(
                 text = hiddenPlaceholder,
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary,
+                color = colors.textSecondary,
                 modifier = Modifier.weight(1f, fill = false)
             )
         }
 
-        Spacer(modifier = Modifier.width(6.dp))
+        // Per Figma: spacing/8 between the balance text and the eye chip.
+        Spacer(modifier = Modifier.width(8.dp))
 
         // Eye toggle as a btn-xs chip — rounded-12 with subtle dark tint, per Figma.
         val interactionSource = remember { MutableInteractionSource() }
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0x0D0A0B0D))
+                .background(MyTheme.Colors.primary5)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
                     onClick = onToggleClick
                 )
-                .padding(horizontal = 6.dp, vertical = 4.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(
                     if (isVisible) R.drawable.ic_show else R.drawable.ic_hide
                 ),
-                contentDescription = if (isVisible) {
-                    "Hide balance"
-                } else {
-                    "Show balance"
-                },
-                tint = MyTheme.Colors.textSecondary,
-                modifier = Modifier.size(16.dp)
+                contentDescription = stringResource(
+                    if (isVisible) R.string.hide_balance else R.string.show_balance
+                ),
+                tint = colors.textSecondary,
+                modifier = Modifier.size(14.dp)
             )
         }
     }
@@ -292,14 +304,30 @@ private fun BalanceRow(
 
 // ── Previews ────────────────────────────────────────────────────────────────────
 
-@Preview(showBackground = true, widthDp = 393)
 @Composable
-private fun TopIntroSendVisiblePreview() {
+private fun TopIntroSendPreviewScaffold(content: @Composable () -> Unit) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
             .padding(vertical = 8.dp)
     ) {
+        content()
+    }
+}
+
+@Preview(name = "Send Visible Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Send Visible Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun TopIntroSendVisiblePreview() {
+    DashWalletTheme {
+        TopIntroSendVisiblePreviewContent()
+    }
+}
+
+@Composable
+private fun TopIntroSendVisiblePreviewContent() {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
@@ -309,14 +337,18 @@ private fun TopIntroSendVisiblePreview() {
     }
 }
 
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Send Hidden Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Send Hidden Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun TopIntroSendHiddenPreview() {
-    Column(
-        modifier = Modifier
-            .background(MyTheme.Colors.backgroundPrimary)
-            .padding(vertical = 8.dp)
-    ) {
+    DashWalletTheme {
+        TopIntroSendHiddenPreviewContent()
+    }
+}
+
+@Composable
+private fun TopIntroSendHiddenPreviewContent() {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
@@ -328,14 +360,18 @@ private fun TopIntroSendHiddenPreview() {
     }
 }
 
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Send No Fiat Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Send No Fiat Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun TopIntroSendNoFiatPreview() {
-    Column(
-        modifier = Modifier
-            .background(MyTheme.Colors.backgroundPrimary)
-            .padding(vertical = 8.dp)
-    ) {
+    DashWalletTheme {
+        TopIntroSendNoFiatPreviewContent()
+    }
+}
+
+@Composable
+private fun TopIntroSendNoFiatPreviewContent() {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
@@ -344,14 +380,18 @@ private fun TopIntroSendNoFiatPreview() {
     }
 }
 
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Send Icon Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Send Icon Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun TopIntroSendIconPreview() {
-    Column(
-        modifier = Modifier
-            .background(MyTheme.Colors.backgroundPrimary)
-            .padding(vertical = 8.dp)
-    ) {
+    DashWalletTheme {
+        TopIntroSendIconPreviewContent()
+    }
+}
+
+@Composable
+private fun TopIntroSendIconPreviewContent() {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Buy gift card",
             preposition = "at",

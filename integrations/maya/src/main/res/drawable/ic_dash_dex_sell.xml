@@ -1,0 +1,24 @@
+<!--
+  ~ Copyright 2025 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="30dp"
+    android:height="30dp"
+    android:viewportWidth="30"
+    android:viewportHeight="30">
+    <group
+        android:translateX="2.5"
+        android:translateY="2.5">
+        <path
+            android:pathData="M12.5,0C5.59375,0 0,5.59375 0,12.5C0,19.4062 5.59375,25 12.5,25C19.4062,25 25,19.4062 25,12.5C25,5.59375 19.4062,0 12.5,0Z"
+            android:fillColor="#008DE4" />
+        <path
+            android:pathData="M15.0937,11.4583H13.5417V17.7083C13.5417,18.2812 13.0729,18.75 12.5,18.75C11.9271,18.75 11.4583,18.2812 11.4583,17.7083V11.4583H9.89583C9.04166,11.4583 8.55208,10.4792 9.06249,9.79167L11.25,6.875C11.875,6.04167 13.125,6.04167 13.75,6.875L15.9375,9.78125C16.4479,10.4792 15.9583,11.4583 15.0937,11.4583Z"
+            android:fillColor="#FFFFFF" />
+    </group>
+</vector>

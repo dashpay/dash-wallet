@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui.dashspend
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,7 +49,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.EnterAmount
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -102,10 +105,11 @@ fun PurchaseGiftCardScreenV2(
     onShowToast: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         TopNavBase(
             modifier = Modifier.align(Alignment.TopCenter),
@@ -236,6 +240,7 @@ private fun PurchaseLimitsErrorDiscountHint(
     discountHintText: String,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalDashColors.current
     if (minHintText.isEmpty() && maxHintText.isEmpty() && errorText.isEmpty() && discountHintText.isEmpty()) return
 
     // Detect which bound is exceeded so we can colour it red independently.
@@ -256,12 +261,12 @@ private fun PurchaseLimitsErrorDiscountHint(
             Text(
                 text = minHintText,
                 style = MyTheme.Typography.BodyMedium,
-                color = if (minError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
+                color = if (minError) colors.red else colors.textSecondary
             )
             Text(
                 text = maxHintText,
                 style = MyTheme.Typography.BodyMedium,
-                color = if (maxError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
+                color = if (maxError) colors.red else colors.textSecondary
             )
         }
     }
@@ -272,7 +277,7 @@ private fun PurchaseLimitsErrorDiscountHint(
         Text(
             text = errorText,
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.red,
+            color = colors.red,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
@@ -285,7 +290,7 @@ private fun PurchaseLimitsErrorDiscountHint(
             text = discountHintText,
             textAlign = TextAlign.Center,
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -296,6 +301,7 @@ private fun FlexibleSingleContent(
     uiState: PurchaseGiftCardV2UiState,
     onTabChanged: (isMultiple: Boolean) -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column {
         val tabOptions = listOf(
             SegmentedOption(stringResource(R.string.gift_card_tab_single)),
@@ -305,7 +311,9 @@ private fun FlexibleSingleContent(
             options = tabOptions,
             selectedIndex = 0,
             onOptionSelected = { _, index -> onTabChanged(index == 1) },
-            style = SegmentedPickerStyle(cornerRadius = 20f),
+            style = SegmentedPickerStyle(
+                cornerRadius = 20f
+            ),
             modifier = Modifier.fillMaxWidth().height(40.dp)
         )
 
@@ -428,6 +436,7 @@ private fun DenominationList(
     onReset: () -> Unit,
     onShowToast: (String) -> Unit
 ) {
+    val colors = LocalDashColors.current
     val currencyFormat = NumberFormat.getCurrencyInstance().apply {
         currency = Currency.getInstance(Constants.USD_CURRENCY)
         minimumFractionDigits = 0
@@ -446,7 +455,7 @@ private fun DenominationList(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = MyTheme.Colors.backgroundSecondary,
+                color = colors.backgroundSecondary,
                 shape = RoundedCornerShape(20.dp)
             )
             .padding(20.dp),
@@ -508,8 +517,9 @@ private fun DenominationRow(
     onDecrease: () -> Unit,
     onIncrease: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     val decreaseEnabled = quantity > 0
-    val quantityColor = if (increaseEnabled || quantity > 0) MyTheme.Colors.textPrimary else MyTheme.Colors.gray
+    val quantityColor = if (increaseEnabled || quantity > 0) colors.textPrimary else colors.gray
 
     // Per Figma node 3118:45517 the row has natural height (icon 26h, stepper 34h with 4px touch
     // padding = 42 total). Card padding (20dp) + 10dp inter-row gaps already control spacing.
@@ -530,7 +540,7 @@ private fun DenominationRow(
             text = label,
             // Body/Body L Medium per Figma (16sp / 24 line-height / Medium 500).
             style = MyTheme.Typography.BodyLargeMedium,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.weight(1f)
         )
 
@@ -547,7 +557,7 @@ private fun DenominationRow(
                 Icon(
                     painter = painterResource(R.drawable.ic_stepper_minus),
                     contentDescription = null,
-                    tint = if (decreaseEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray,
+                    tint = if (decreaseEnabled) colors.textPrimary else colors.gray,
                     modifier = Modifier.size(11.dp)
                 )
             }
@@ -568,7 +578,7 @@ private fun DenominationRow(
                 Icon(
                     painter = painterResource(R.drawable.ic_stepper_plus),
                     contentDescription = null,
-                    tint = if (increaseEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray,
+                    tint = if (increaseEnabled) colors.textPrimary else colors.gray,
                     modifier = Modifier.size(11.dp)
                 )
             }
@@ -583,6 +593,7 @@ private fun CircleButton(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    val colors = LocalDashColors.current
     // Per Figma: 34dp visible circle (1.5dp stroke) wrapped in a 42dp touch area
     // (4dp padding on each side). `enabled` controls visual styling only — clicks always fire
     // so callers can show a toast explaining why the action is blocked.
@@ -597,7 +608,7 @@ private fun CircleButton(
                 .size(34.dp)
                 .border(
                     width = 1.5.dp,
-                    color = if (enabled) MyTheme.Colors.primary5 else MyTheme.Colors.primary4,
+                    color = if (enabled) colors.primary5 else colors.primary4,
                     shape = CircleShape
                 )
                 .clip(CircleShape),
@@ -609,95 +620,137 @@ private fun CircleButton(
 }
 
 // ── Previews ──────────────────────────────────────────────────────────────────
-
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Single")
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Flexible – Single - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Flexible – Single - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun PreviewFlexibleSingle() {
-    PurchaseGiftCardScreenV2(
-        uiState = PurchaseGiftCardV2UiState(
-            mode = GiftCardPurchaseMode.FlexibleSingle,
-            merchantName = "Amazon",
-            merchantLogoUrl = null,
-            dashBalance = "0.4812",
-            fiatBalance = "$29.50",
-            showBalance = true,
-            amountText = "25",
-            minHintText = "Min: $5.00",
-            maxHintText = "Max: $200.00",
-            totalAmountText = "0.00",
-            canContinue = true,
-            allowedQuantities = mapOf(),
-            errorText = ""
-        ),
-        onBack = {},
-        onInfo = {},
-        onTabChanged = {},
-        onToggleBalance = {},
-        onKeyInput = {},
-        onQuantityChanged = { _, _ -> },
-        onReset = {},
-        onContinue = {}
-    )
+    DashWalletTheme {
+        PurchaseGiftCardScreenV2(
+            uiState = PurchaseGiftCardV2UiState(
+                mode = GiftCardPurchaseMode.FlexibleSingle,
+                merchantName = "Amazon",
+                merchantLogoUrl = null,
+                dashBalance = "0.4812",
+                fiatBalance = "$29.50",
+                showBalance = true,
+                amountText = "25",
+                minHintText = "Min: $5.00",
+                maxHintText = "Max: $200.00",
+                totalAmountText = "0.00",
+                canContinue = true,
+                allowedQuantities = mapOf(),
+                errorText = ""
+            ),
+            onBack = {},
+            onInfo = {},
+            onTabChanged = {},
+            onToggleBalance = {},
+            onKeyInput = {},
+            onQuantityChanged = { _, _ -> },
+            onReset = {},
+            onContinue = {}
+        )
+    }
 }
-
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Multiple")
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Flexible – Multiple - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Flexible – Multiple - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun PreviewFlexibleMultiple() {
-    PurchaseGiftCardScreenV2(
-        uiState = PurchaseGiftCardV2UiState(
-            mode = GiftCardPurchaseMode.FlexibleMultiple(
-                denominations = listOf(5.0, 10.0, 20.0, 50.0, 200.0)
+    DashWalletTheme {
+        PurchaseGiftCardScreenV2(
+            uiState = PurchaseGiftCardV2UiState(
+                mode = GiftCardPurchaseMode.FlexibleMultiple(
+                    denominations = listOf(5.0, 10.0, 20.0, 50.0, 200.0)
+                ),
+                merchantName = "Amazon",
+                merchantLogoUrl = null,
+                dashBalance = "0.4812",
+                fiatBalance = "$29.50",
+                showBalance = true,
+                amountText = "0",
+                denominationQuantities = mapOf(10.0 to 2, 20.0 to 1),
+                totalAmountText = "40.00",
+                canContinue = true,
+                allowedQuantities = mapOf(5.0 to 6, 10.0 to 1, 20.0 to 1),
+                errorText = ""
             ),
-            merchantName = "Amazon",
-            merchantLogoUrl = null,
-            dashBalance = "0.4812",
-            fiatBalance = "$29.50",
-            showBalance = true,
-            amountText = "0",
-            denominationQuantities = mapOf(10.0 to 2, 20.0 to 1),
-            totalAmountText = "40.00",
-            canContinue = true,
-            allowedQuantities = mapOf(5.0 to 6, 10.0 to 1, 20.0 to 1),
-            errorText = ""
-        ),
-        onBack = {},
-        onInfo = {},
-        onTabChanged = {},
-        onToggleBalance = {},
-        onKeyInput = {},
-        onQuantityChanged = { _, _ -> },
-        onReset = {},
-        onContinue = {}
-    )
+            onBack = {},
+            onInfo = {},
+            onTabChanged = {},
+            onToggleBalance = {},
+            onKeyInput = {},
+            onQuantityChanged = { _, _ -> },
+            onReset = {},
+            onContinue = {}
+        )
+    }
 }
-
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Fixed Denominations")
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Fixed Denominations - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Fixed Denominations - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun PreviewFixed() {
-    PurchaseGiftCardScreenV2(
-        uiState = PurchaseGiftCardV2UiState(
-            mode = GiftCardPurchaseMode.Fixed(
-                denominations = listOf(15.0, 25.0, 50.0, 100.0)
+    DashWalletTheme {
+        PurchaseGiftCardScreenV2(
+            uiState = PurchaseGiftCardV2UiState(
+                mode = GiftCardPurchaseMode.Fixed(
+                    denominations = listOf(15.0, 25.0, 50.0, 100.0)
+                ),
+                merchantName = "Target",
+                merchantLogoUrl = null,
+                dashBalance = "0.4812",
+                fiatBalance = "$29.50",
+                showBalance = false,
+                amountText = "0",
+                denominationQuantities = mapOf(25.0 to 1),
+                totalAmountText = "25.00",
+                canContinue = true,
+                allowedQuantities = mapOf(15.0 to 1),
+                errorText = ""
             ),
-            merchantName = "Target",
-            merchantLogoUrl = null,
-            dashBalance = "0.4812",
-            fiatBalance = "$29.50",
-            showBalance = false,
-            amountText = "0",
-            denominationQuantities = mapOf(25.0 to 1),
-            totalAmountText = "25.00",
-            canContinue = true,
-            allowedQuantities = mapOf(15.0 to 1),
-            errorText = ""
-        ),
-        onBack = {},
-        onInfo = {},
-        onTabChanged = {},
-        onToggleBalance = {},
-        onKeyInput = {},
-        onQuantityChanged = { _, _ -> },
-        onReset = {},
-        onContinue = {}
-    )
+            onBack = {},
+            onInfo = {},
+            onTabChanged = {},
+            onToggleBalance = {},
+            onKeyInput = {},
+            onQuantityChanged = { _, _ -> },
+            onReset = {},
+            onContinue = {}
+        )
+    }
 }

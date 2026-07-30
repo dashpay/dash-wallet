@@ -18,21 +18,21 @@
 package org.dash.wallet.integrations.maya.swapkit
 
 import android.content.Intent
+import androidx.annotation.StringRes
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toDash
 import org.dash.wallet.common.util.toFiatValue
-import org.dash.wallet.integrations.maya.BuildConfig
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaException
 import org.dash.wallet.integrations.maya.api.MayaWebApi
@@ -41,6 +41,7 @@ import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
+import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapFees
@@ -53,10 +54,12 @@ import org.dash.wallet.integrations.maya.swapkit.model.SwapKitRoute
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitSwapRequest
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.dash.wallet.integrations.maya.utils.MayaConstants
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -110,13 +113,6 @@ class SwapKitApiAggregator @Inject constructor(
         // Indicative quote size used to pick the recommended network for assets
         // routable via BOTH Maya and NEAR — $50 worth of DASH.
         private val PREFERRED_QUOTE_USD = BigDecimal("50")
-
-        // TEMP TEST FLAG — when true (debug builds only), every Maya-only asset is
-        // rendered as halted so the "Halted" chip / disabled state / toast can be
-        // verified without waiting for a real Maya halt on a listed Maya-only coin
-        // (the only live Maya halts—XRD/ZEC—are not Maya-only here). Set back to
-        // false or delete the forcedHalt branch in markMayaInfo() before merging.
-        private const val DEBUG_FORCE_MAYA_ONLY_HALT = false
     }
 
     override val poolInfoList = MutableStateFlow<List<PoolInfo>>(emptyList())
@@ -129,19 +125,35 @@ class SwapKitApiAggregator @Inject constructor(
         Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     )
     private val gson = Gson()
+
+    // Volatile: written on responseScope (refresh) and reset from the caller thread
+    // (setSwapDirection/reset); a stale read would skip or duplicate a refresh cycle.
+    @Volatile
     private var poolListLastUpdated: Long = 0L
 
+    // Latest fiat rate handed to [observePoolList], remembered so a direction switch can trigger
+    // its own background refresh: observePoolList is not re-invoked when the direction changes, so
+    // [setSwapDirection] must kick the refresh itself. Null until observePoolList first runs.
+    @Volatile
+    private var lastFiatExchangeRate: FiatValue? = null
+
     // When the Maya/NEAR classification was last fetched from /tokens; gates the
-    // CLASSIFICATION_TTL_MS reuse window. 0 = never (forces a fetch).
+    // CLASSIFICATION_TTL_MS reuse window. 0 = never (forces a fetch). Volatile for the
+    // same reason as [poolListLastUpdated].
+    @Volatile
     private var classificationLastUpdated: Long = 0L
 
     // asset → when its preferred network was last resolved; gates PREFERRED_ROUTE_TTL_MS.
-    private val preferredRouteResolvedAt = mutableMapOf<String, Long>()
+    // Concurrent because it is written/read on responseScope but cleared from the
+    // caller thread via setSwapDirection/reset.
+    private val preferredRouteResolvedAt = ConcurrentHashMap<String, Long>()
 
     // Asset → USD price, captured at refresh time. applyPoolPrices re-seeds from
     // this cache so it stays idempotent across re-emissions AND handles
-    // selected-currency switches without re-fetching from SwapKit.
-    private val usdPriceCache = mutableMapOf<String, BigDecimal>()
+    // selected-currency switches without re-fetching from SwapKit. Concurrent because
+    // it is written on responseScope (refresh/hydrate) but read from the ViewModel's
+    // main-dispatcher pipeline via applyPoolPrices.
+    private val usdPriceCache = ConcurrentHashMap<String, BigDecimal>()
 
     // Upper-cased identifiers routable from DASH only via MAYACHAIN (no NEAR
     // fallback). Refreshed alongside the pool list. Empty until first refresh.
@@ -164,6 +176,38 @@ class SwapKitApiAggregator @Inject constructor(
         responseScope.launch { hydrateFromSnapshot() }
     }
 
+    // Active swap direction (set from the UI). For BUY the picker excludes Maya-only assets and
+    // everything routes via NEAR, so refreshPools skips the mayanode halt query and the
+    // preferred-route quotes — neither signal affects any BUY-eligible asset.
+    @Volatile
+    private var swapDirection: SwapDirection = SwapDirection.SELL
+
+    override fun setSwapDirection(direction: SwapDirection) {
+        if (direction == swapDirection) return
+        swapDirection = direction
+        // BUY and SELL keep separate caches (different excluded assets / metadata), so on a
+        // direction switch drop the now-wrong in-memory list and re-hydrate from this direction's
+        // snapshot for an instant render. Resetting poolListLastUpdated forces observePoolList to
+        // run a fresh refresh for the new direction rather than reusing the other direction's.
+        poolInfoList.value = emptyList()
+        poolListLastUpdated = 0L
+        preferredRouteProviders.value = emptyMap()
+        preferredRouteResolvedAt.clear()
+        val rate = lastFiatExchangeRate
+        responseScope.launch {
+            hydrateFromSnapshot()
+            // observePoolList — which normally kicks the background refresh — is NOT re-invoked on
+            // a direction change, so trigger the refresh here or the picker spins forever. If a
+            // snapshot already repopulated the list this is a background revalidation; otherwise it
+            // is what fills the list. When rate is still null observePoolList hasn't run yet and
+            // will trigger the refresh itself once the fiat flow emits, so skipping here is safe.
+            if (rate != null && shouldRefresh()) {
+                refreshPools(rate)
+                poolListLastUpdated = System.currentTimeMillis()
+            }
+        }
+    }
+
     override suspend fun reset() {
         log.info("swapkit reset")
         poolInfoList.value = emptyList()
@@ -177,10 +221,14 @@ class SwapKitApiAggregator @Inject constructor(
         mayaGlobalHalt = false
         preferredRouteProviders.value = emptyMap()
         preferredRouteResolvedAt.clear()
-        runCatching { mayaConfig.set(MayaConfig.SWAPKIT_POOL_SNAPSHOT, "") }
+        runCatching {
+            mayaConfig.set(MayaConfig.SWAPKIT_POOL_SNAPSHOT, "")
+            mayaConfig.set(MayaConfig.SWAPKIT_POOL_SNAPSHOT_BUY, "")
+        }
     }
 
     override fun observePoolList(fiatExchangeRate: FiatValue): Flow<List<PoolInfo>> {
+        lastFiatExchangeRate = fiatExchangeRate
         if (shouldRefresh()) {
             responseScope.launch {
                 refreshPools(fiatExchangeRate)
@@ -211,10 +259,15 @@ class SwapKitApiAggregator @Inject constructor(
         val prices = webApi.getPrices(identifiers)
             .associateBy({ it.identifier.uppercase() }, { it.priceUsd })
 
-        // Refresh the Maya-only classification and Maya halt status before building
-        // the pools so each PoolInfo can be stamped in a single pass.
+        // Always refresh the Maya-only classification — the BUY picker needs it to know which
+        // assets to exclude. Maya halt status only feeds `mayaHalted`, which markMayaInfo sets
+        // for Maya-only assets only; those are excluded on BUY, so skip the mayanode halt query
+        // entirely when buying.
         refreshMayaOnlyClassification()
-        refreshMayaHaltStatus()
+        val isSell = swapDirection == SwapDirection.SELL
+        if (isSell) {
+            refreshMayaHaltStatus()
+        }
 
         // Populate `assetPriceFiat` with the raw USD price (stored as a Fiat with code "USD").
         // [applyPoolPrices] then converts USD → selected fiat in a second pass — same
@@ -225,7 +278,7 @@ class SwapKitApiAggregator @Inject constructor(
         val pools = identifiers.map { identifier ->
             val priceUsd = prices[identifier.uppercase()] ?: 0.0
             val priceUsdFiat = if (priceUsd > 0.0) {
-                val priceBd = BigDecimal(priceUsd)
+                val priceBd = BigDecimal.valueOf(priceUsd)
                 usdPriceCache[identifier] = priceBd
                 priceBd.toFiatValue(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
             } else {
@@ -244,7 +297,12 @@ class SwapKitApiAggregator @Inject constructor(
         // Resolve the recommended network for both-provider assets in the background
         // so the picker can replace "Multiple networks" with the actual provider.
         // Launched separately so it never delays publishing the pool list above.
-        responseScope.launch { resolvePreferredRouteProviders(pools) }
+        // SELL only: this is a DASH->asset (sell-direction) quote used to pick Maya vs NEAR for
+        // the SELL label. BUY routes everything via NEAR, so the picker labels both-provider
+        // assets NEAR statically and no quote is needed.
+        if (isSell) {
+            responseScope.launch { resolvePreferredRouteProviders(pools) }
+        }
     }
 
     /**
@@ -315,60 +373,93 @@ class SwapKitApiAggregator @Inject constructor(
             )
         ) ?: return null
         val providers = response.routes.bestRoute()?.providers ?: return null
+        val hasMaya = providers.any { it.uppercase().contains("MAYA") }
+        val hasNear = providers.any { it.uppercase().contains("NEAR") }
         return when {
-            providers.any { it.uppercase().contains("MAYA") } -> RouteProvider.MAYA
-            providers.any { it.uppercase().contains("NEAR") } -> RouteProvider.NEAR
+            // A mixed route (both providers present) is ambiguous: we can't tell which
+            // builder applies, so leave the asset unresolved rather than guessing MAYA.
+            hasMaya && hasNear -> null
+            hasMaya -> RouteProvider.MAYA
+            hasNear -> RouteProvider.NEAR
             else -> null
         }
     }
 
     /**
-     * Restore the last persisted coin-list snapshot into memory so the picker can
-     * render immediately on cold start. Only applies while no fresh data is present;
+     * DataStore key holding the cached snapshot for [direction]. BUY and SELL keep separate
+     * snapshots because their cached metadata differs (SELL resolves preferred routes + Maya halt
+     * status; BUY excludes Maya-only assets and routes via NEAR), so one direction's background
+     * refresh must not overwrite the other's cache.
+     */
+    private fun snapshotKey(direction: SwapDirection) = when (direction) {
+        SwapDirection.BUY -> MayaConfig.SWAPKIT_POOL_SNAPSHOT_BUY
+        SwapDirection.SELL -> MayaConfig.SWAPKIT_POOL_SNAPSHOT
+    }
+
+    /**
+     * Restore the last persisted coin-list snapshot for the current [swapDirection] into memory so
+     * the picker can render immediately on cold start. Only applies while no fresh data is present;
      * deliberately leaves [poolListLastUpdated] at 0 so [observePoolList] still triggers
      * a background refresh (stale-while-revalidate). Best-effort: any failure is ignored.
      */
     private suspend fun hydrateFromSnapshot() {
         if (poolInfoList.value.isNotEmpty()) return
-        val raw = runCatching { mayaConfig.get(MayaConfig.SWAPKIT_POOL_SNAPSHOT) }.getOrNull()
+        val raw = runCatching { mayaConfig.get(snapshotKey(swapDirection)) }.getOrNull()
         if (raw.isNullOrBlank()) return
-        val snapshot = runCatching { gson.fromJson(raw, SwapKitSnapshot::class.java) }.getOrNull()
-        if (snapshot == null || snapshot.pools.isEmpty()) return
-        // Don't clobber data that landed while we were reading from disk.
+        // Parse defensively: a corrupt or schema-drifted snapshot must never crash
+        // the app. Compute everything up front and only commit to in-memory state on
+        // success, so a failure leaves the existing caches untouched and lets the
+        // background network refresh repopulate.
+        val hydrated = runCatching {
+            val snapshot = gson.fromJson(raw, SwapKitSnapshot::class.java)
+                ?: return@runCatching null
+            if (snapshot.pools.isEmpty()) return@runCatching null
+
+            val freshUsdPrices = mutableMapOf<String, BigDecimal>()
+            val pools = snapshot.pools.map { p ->
+                PoolInfo(asset = p.asset, status = "Available").also { pool ->
+                    if (p.priceUsd > 0.0) {
+                        val priceBd = BigDecimal.valueOf(p.priceUsd)
+                        freshUsdPrices[p.asset] = priceBd
+                        pool.assetPriceFiat = priceBd.toFiatValue(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
+                    }
+                    pool.mayaOnly = p.mayaOnly
+                    pool.nearOnly = p.nearOnly
+                    pool.mayaHalted = p.mayaHalted
+                }
+            }
+            val routes = snapshot.preferredRoutes
+                .mapNotNull { (asset, name) ->
+                    runCatching { asset to RouteProvider.valueOf(name) }.getOrNull()
+                }
+                .toMap()
+            HydratedSnapshot(snapshot, pools, freshUsdPrices, routes)
+        }.onFailure {
+            log.info("swapkit: failed to hydrate snapshot: {}", it.message)
+        }.getOrNull() ?: return
+
+        // Don't clobber data that landed while we were reading/parsing from disk.
         if (poolInfoList.value.isNotEmpty()) return
 
         usdPriceCache.clear()
-        mayaOnlyAssets = snapshot.mayaOnly.toSet()
-        nearOnlyAssets = snapshot.nearOnly.toSet()
-        classificationLastUpdated = snapshot.classificationAtMs
-
-        val pools = snapshot.pools.map { p ->
-            PoolInfo(asset = p.asset, status = "Available").also { pool ->
-                if (p.priceUsd > 0.0) {
-                    val priceBd = BigDecimal(p.priceUsd)
-                    usdPriceCache[p.asset] = priceBd
-                    pool.assetPriceFiat = priceBd.toFiatValue(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
-                }
-                pool.mayaOnly = p.mayaOnly
-                pool.nearOnly = p.nearOnly
-                pool.mayaHalted = p.mayaHalted
-            }
-        }
-        preferredRouteProviders.value = snapshot.preferredRoutes
-            .mapNotNull { (asset, name) ->
-                runCatching { asset to RouteProvider.valueOf(name) }.getOrNull()
-            }
-            .toMap()
+        usdPriceCache.putAll(hydrated.usdPrices)
+        mayaOnlyAssets = hydrated.snapshot.mayaOnly.toSet()
+        nearOnlyAssets = hydrated.snapshot.nearOnly.toSet()
+        classificationLastUpdated = hydrated.snapshot.classificationAtMs
+        preferredRouteProviders.value = hydrated.routes
         // Seed resolution timestamps so the TTL spans cold start — the background
         // refresh only re-quotes preferred routes once they age past the TTL.
-        preferredRouteProviders.value.keys.forEach { asset ->
-            preferredRouteResolvedAt[asset] = snapshot.savedAtMs
+        hydrated.routes.keys.forEach { asset ->
+            preferredRouteResolvedAt[asset] = hydrated.snapshot.savedAtMs
         }
-        poolInfoList.value = pools
-        log.info("swapkit: hydrated {} pools from snapshot", pools.size)
+        poolInfoList.value = hydrated.pools
+        log.info("swapkit: hydrated {} pools from snapshot", hydrated.pools.size)
     }
 
-    /** Persist the current in-memory list + classification + preferred routes. */
+    /**
+     * Persist the current in-memory list + classification + preferred routes under the snapshot
+     * key for the active [swapDirection], so BUY and SELL keep independent caches.
+     */
     private suspend fun persistSnapshot() {
         val pools = poolInfoList.value
         if (pools.isEmpty()) return
@@ -388,7 +479,7 @@ class SwapKitApiAggregator @Inject constructor(
             nearOnly = nearOnlyAssets.toList(),
             preferredRoutes = preferredRouteProviders.value.mapValues { it.value.name }
         )
-        runCatching { mayaConfig.set(MayaConfig.SWAPKIT_POOL_SNAPSHOT, gson.toJson(snapshot)) }
+        runCatching { mayaConfig.set(snapshotKey(swapDirection), gson.toJson(snapshot)) }
             .onFailure { log.info("swapkit: failed to persist snapshot: {}", it.message) }
     }
 
@@ -458,16 +549,32 @@ class SwapKitApiAggregator @Inject constructor(
      * classification + halt status. `mayaHalted` is only meaningful for Maya-only
      * assets — others have a NEAR route and stay tradable through a Maya halt.
      */
+    /**
+     * True once we have real provider classification — either freshly fetched from
+     * /tokens or restored from a snapshot (both set [classificationLastUpdated]). Until
+     * then [markMayaInfo] must not stamp optimistic both-provider tradability onto pools.
+     */
+    private fun isClassificationAvailable(): Boolean =
+        classificationLastUpdated != 0L || mayaOnlyAssets.isNotEmpty() || nearOnlyAssets.isNotEmpty()
+
     private fun markMayaInfo(pool: PoolInfo) {
+        if (!isClassificationAvailable()) {
+            // No real /tokens classification yet (first launch with no snapshot, or the
+            // token-list fetch failed). Don't advertise optimistic both-provider
+            // tradability: a both/Maya-only asset would otherwise be stamped mayaOnly=false
+            // and shown as buyable. Mark it Maya-only so BUY (which only lists !mayaOnly
+            // assets) hides it until real data lands; SELL routes everything via Maya anyway.
+            pool.mayaOnly = true
+            pool.nearOnly = false
+            pool.mayaHalted = false
+            return
+        }
         val isMayaOnly = mayaOnlyAssets.contains(pool.asset.uppercase())
         pool.mayaOnly = isMayaOnly
         pool.nearOnly = nearOnlyAssets.contains(pool.asset.uppercase())
         val chainHalted = mayaGlobalHalt ||
             mayaHaltedChains.contains(pool.asset.substringBefore('.').uppercase())
-        // TEMP TEST: force Maya-only assets to halted in debug builds — see
-        // DEBUG_FORCE_MAYA_ONLY_HALT. Remove this branch before merging.
-        val forcedHalt = BuildConfig.DEBUG && DEBUG_FORCE_MAYA_ONLY_HALT
-        pool.mayaHalted = isMayaOnly && (forcedHalt || chainHalted)
+        pool.mayaHalted = isMayaOnly && chainHalted
     }
 
     override suspend fun getInboundAddresses(): List<InboundAddress> {
@@ -518,10 +625,45 @@ class SwapKitApiAggregator @Inject constructor(
     }
 
     override suspend fun getSwapInfo(swapRequest: SwapQuoteRequest): ResponseResource<SwapTradeUIModel> {
-        val sellAmount = swapRequest.amount.dash.setScale(8, RoundingMode.HALF_UP).toPlainString()
         if (!walletDataProvider.walletLoaded) {
             return ResponseResource.Failure(MayaException("wallet not loaded"), false, 0, null)
         }
+        // A max ("empty wallet") sell sweeps the balance and the miner fee comes out of the
+        // sweep's single output, so the deposit delivers balance − fee. The amount quoted here
+        // is what NEAR Intents expects, and it refuses any deposit below it (auto-refunding
+        // ~1h later minus a 0.001 DASH fee — MO-984), so quote the post-fee sweep output, not
+        // the full balance. Derive it from the CURRENT balance rather than swapRequest.amount:
+        // the pre-broadcast refresh in commitSwapTransaction passes the already-reduced amount
+        // back in, and re-deriving keeps this idempotent across preview and refresh. Deposits
+        // ABOVE the quoted amount are accepted, so only a balance drop is dangerous — that is
+        // guarded again in buildAndSendDepositTx before broadcasting. The receive address is
+        // only a size stand-in for the estimate; the real deposit address is also P2PKH.
+        val effectiveAmount = if (swapRequest.maximum) {
+            val balance = walletDataProvider.getWalletBalance()
+            val sweep = try {
+                sendPaymentService.estimateNetworkFee(
+                    walletDataProvider.currentReceiveAddressString(),
+                    balance,
+                    emptyWallet = true
+                )
+            } catch (e: Exception) {
+                log.error("swapkit max sell: sweep fee estimation failed", e)
+                return ResponseResource.Failure(e, false, 0, e.message)
+            }
+            log.info(
+                "swapkit max sell: quoting sweep output {} (balance {}, fee {})",
+                sweep.amountToSend.toFriendlyString(),
+                balance.toFriendlyString(),
+                sweep.fee
+            )
+            swapRequest.amount.copy().apply {
+                dash = sweep.amountToSend.toBigDecimal()
+                anchoredType = swapRequest.amount.anchoredType
+            }
+        } else {
+            swapRequest.amount
+        }
+        val sellAmount = effectiveAmount.dash.setScale(8, RoundingMode.HALF_UP).toPlainString()
         // Refund / source address reported to SwapKit. Use the current receive address
         // rather than the wallet's largest-balance UTXO: SwapKit logs this value, and for
         // NEAR routes it is where refunds land, so sending the richest address would link
@@ -600,7 +742,8 @@ class SwapKitApiAggregator @Inject constructor(
             anchoredType = swapRequest.amount.anchoredType
         }
 
-        // Pass swapRequest.amount through unchanged. Mirrors MayaWebApi (which also
+        // Pass the quoted amount through unchanged (effectiveAmount: the request amount,
+        // or the post-fee sweep output for max sells). Mirrors MayaWebApi (which also
         // passes `amount = swapRequest.amount` to SwapTradeUIModel). DO NOT set
         // .crypto from swap.expectedBuyAmount here — Amount.crypto's setter flips
         // the anchor to Crypto and recomputes _dash from crypto/rate, which silently
@@ -614,7 +757,7 @@ class SwapKitApiAggregator @Inject constructor(
             .toBigDecimalOrNull() ?: BigDecimal.ZERO
 
         val result = SwapTradeUIModel(
-            amount = swapRequest.amount,
+            amount = effectiveAmount,
             outputAsset = swapRequest.target_maya_asset,
             feeAmount = feeAmount,
             vaultAddress = vault,
@@ -626,6 +769,131 @@ class SwapKitApiAggregator @Inject constructor(
             availableRoutes = quote.routes.map { "${it.providers.joinToString(",")}: ${it.meta?.tags ?: listOf() }" }
         )
         return ResponseResource.Success(result)
+    }
+
+    override suspend fun createBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        destinationAddress: String,
+        refundAddress: String
+    ): ResponseResource<BuyOrder> {
+        // BUY = crypto -> DASH: the mirror of getSwapInfo (which sells DASH). sellAsset is the
+        // chosen crypto, buyAsset is DASH, the deposit lands on the crypto chain, and the
+        // converted DASH is sent to the user's wallet (destinationAddress). The refund address
+        // (a crypto-chain address the user entered) is reported as sourceAddress — for NEAR
+        // routes that's where a failed swap is refunded.
+        val route = when (
+            val result = requestBuyRoute(sellAsset, sellAmount, refundAddress, destinationAddress)
+        ) {
+            is ResponseResource.Success -> result.value
+            is ResponseResource.Failure -> return result
+        }
+
+        // disableBalanceCheck + disableBuildTx: we only need the inbound deposit address. The user
+        // funds the deposit from their own external wallet, so SwapKit must not try to build or
+        // balance-check a transaction from sourceAddress — and on UTXO sell-chains (e.g. BTC) the
+        // build step would fetch per-address balance even with disableBalanceCheck alone.
+        val swap = webApi.postSwap(
+            SwapKitSwapRequest(
+                routeId = route.routeId,
+                sourceAddress = refundAddress,
+                destinationAddress = destinationAddress,
+                disableBalanceCheck = true,
+                disableBuildTx = true
+            )
+        ) ?: return ResponseResource.Failure(MayaException("swapkit /v3/swap failed"), false, 0, null)
+
+        if (swap.error != null) {
+            val errorMessage = buildString {
+                append(swap.error)
+                if (swap.message != null) {
+                    append(": ")
+                    append(swap.message)
+                }
+            }
+            return ResponseResource.Failure(MayaException(errorMessage), false, 0, null)
+        }
+
+        // For a buy the deposit is where the SELL asset (crypto) is sent, i.e. the inbound
+        // address; targetAddress is only a fallback. (The sell path prefers targetAddress because
+        // there the inbound chain is DASH and the value is the Asgard vault.)
+        val depositAddress = swap.inboundAddress ?: swap.targetAddress
+            ?: return ResponseResource.Failure(
+                MayaException("swapkit returned no deposit address"),
+                false,
+                0,
+                null
+            )
+        val expectedDash = (swap.expectedBuyAmount ?: route.expectedBuyAmount)
+            .toBigDecimalOrNull() ?: BigDecimal.ZERO
+
+        return ResponseResource.Success(
+            BuyOrder(
+                depositAddress = depositAddress,
+                memo = swap.memo,
+                expectedDashAmount = expectedDash,
+                sellAsset = sellAsset,
+                sellAmount = sellAmount
+            )
+        )
+    }
+
+    override suspend fun validateBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        refundAddress: String
+    ): ResponseResource<Unit> {
+        // Quote-only validity check for the enter-amount screen: run the same NEAR-pinned buy
+        // quote createBuyOrder would, but stop before /v3/swap (no deposit address is created).
+        // The converted DASH lands in the wallet, so the destination is our own receive address;
+        // the caller passes the asset's example address as the refund/source address.
+        val destinationAddress = walletDataProvider.currentReceiveAddressString()
+        return when (
+            val result = requestBuyRoute(sellAsset, sellAmount, refundAddress, destinationAddress)
+        ) {
+            is ResponseResource.Success -> ResponseResource.Success(Unit)
+            is ResponseResource.Failure -> result
+        }
+    }
+
+    /**
+     * Runs the NEAR-pinned buy quote (crypto [sellAsset] -> DASH) shared by [createBuyOrder] and
+     * [validateBuyOrder], returning the best route or a failure carrying the provider's error.
+     *
+     * Buys are NEAR-only: Maya can't buy DASH, and the refund flow relies on NEAR Intents'
+     * refund-to-sourceAddress semantics (Maya would refund to the inbound tx's VIN0, ignoring the
+     * refund address we collected). Pinning the provider keeps a both-provider asset from ever
+     * resolving to a Maya route here. [refundAddress] is reported as sourceAddress.
+     */
+    private suspend fun requestBuyRoute(
+        sellAsset: String,
+        sellAmount: String,
+        refundAddress: String,
+        destinationAddress: String
+    ): ResponseResource<SwapKitRoute> {
+        val quote = webApi.getQuote(
+            SwapKitQuoteRequest(
+                sellAsset = sellAsset,
+                buyAsset = SwapKitConstants.DASH_ASSET,
+                sellAmount = sellAmount,
+                slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT,
+                sourceAddress = refundAddress,
+                destinationAddress = destinationAddress,
+                providers = listOf(SwapKitConstants.NEAR_PROVIDER)
+            )
+        ) ?: return ResponseResource.Failure(MayaException("swapkit quote failed"), false, 0, null)
+
+        if (quote.error != null) {
+            return ResponseResource.Failure(MayaException(quote.error), false, 0, null)
+        }
+        val route = quote.routes.bestRoute()
+            ?: return ResponseResource.Failure(
+                MayaException(quote.providerErrors?.firstOrNull()?.message ?: "no swapkit route"),
+                false,
+                0,
+                null
+            )
+        return ResponseResource.Success(route)
     }
 
     override suspend fun commitSwapTransaction(
@@ -645,17 +913,26 @@ class SwapKitApiAggregator @Inject constructor(
             )
         )
         return if (refreshed is ResponseResource.Success) {
-            if (isMayaRoute(refreshed.value)) {
-                // Maya route: DASH → Asgard vault with the swap memo as an OP_RETURN.
-                blockchainApi.buildAndSendSwapTx(refreshed.value)
+            val model = refreshed.value
+            // A MAYAChain vault deposit is matched to its swap *only* by the OP_RETURN memo;
+            // sending DASH to a Maya vault without it strands the funds. So the discriminator
+            // is NOT just the provider name (which substring-matching can miss — SwapKit may
+            // return an empty/absent providers list or a Maya-settling provider whose name
+            // doesn't literally contain "MAYA"): if SwapKit returned a memo at all, the deposit
+            // MUST carry it, so route through the OP_RETURN builder. Maya routes always come
+            // with a memo; NEAR deposits never do (see buildAndSendDepositTx), so this only
+            // ever pulls a genuine memo-bearing route back onto the safe path.
+            if (isMayaRoute(model) || !model.memo.isNullOrBlank()) {
+                // Maya route: DASH → Asgard vault with the swap memo as an OP_RETURN. If a Maya
+                // route ever arrives without a memo the builder fabricates "=:ASSET:DEST" and
+                // its 80-byte guard fails loudly — a recoverable error, never a silent loss.
+                blockchainApi.buildAndSendSwapTx(model)
             } else {
-                // NEAR Intents (or any non-Maya provider): a plain DASH deposit to the
-                // one-time SwapKit deposit address — no MAYAChain OP_RETURN memo. Using
-                // the Maya builder here would fabricate a Maya-format memo (Maya doesn't
-                // route the asset, so SwapKit returns no memo and the builder falls back
-                // to "=:ASSET:DEST") and overflow the 80-byte OP_RETURN limit for long
-                // token identifiers such as TRON.USDT-<contract>.
-                buildAndSendDepositTx(refreshed.value)
+                // NEAR Intents (or any non-Maya provider) with no memo: a plain DASH deposit to
+                // the one-time SwapKit deposit address — no MAYAChain OP_RETURN memo. Using the
+                // Maya builder here would fabricate a Maya-format memo and overflow the 80-byte
+                // OP_RETURN limit for long token identifiers such as TRON.USDT-<contract>.
+                buildAndSendDepositTx(model)
             }
         } else {
             refreshed
@@ -666,6 +943,11 @@ class SwapKitApiAggregator @Inject constructor(
      * True when the resolved route settles through MAYAChain. Mirrors the provider
      * classification in [recommendedProviderFor]: [SwapTradeUIModel.routeName] carries
      * the comma-joined SwapKit provider names (e.g. "MAYACHAIN").
+     *
+     * Note: this is a best-effort label only. [commitSwapTransaction] does NOT rely on it
+     * alone to decide whether to attach the OP_RETURN memo — the presence of a memo is the
+     * authoritative signal — because an empty/mislabelled providers list would otherwise route
+     * a memo-required Maya deposit through the memo-less path and strand the funds.
      */
     private fun isMayaRoute(model: SwapTradeUIModel): Boolean =
         model.routeName?.contains("MAYA", ignoreCase = true) == true
@@ -697,9 +979,36 @@ class SwapKitApiAggregator @Inject constructor(
                 log.warn("non-Maya deposit route returned a memo; not encoding it: {}", swapTradeUIModel.memo)
             }
 
+            // A max sell was quoted for (balance − estimated sweep fee) in getSwapInfo. If the
+            // spendable balance dropped since, the sweep's output would come in below the quoted
+            // amount, and NEAR Intents refuses under-delivery — the deposit would sit for ~1h
+            // and refund minus a 0.001 DASH fee. Abort with a recoverable error instead of
+            // broadcasting a doomed deposit. A balance that grew simply over-delivers, which
+            // NEAR accepts.
+            if (swapTradeUIModel.maximum) {
+                val sweep = sendPaymentService.estimateNetworkFee(
+                    swapTradeUIModel.vaultAddress,
+                    walletDataProvider.getWalletBalance(),
+                    emptyWallet = true
+                )
+                if (sweep.amountToSend.isLessThan(amount)) {
+                    log.warn(
+                        "swapkit max sell aborted: sweep would deliver {} < quoted {}",
+                        sweep.amountToSend.toFriendlyString(),
+                        amount.toFriendlyString()
+                    )
+                    return ResponseResource.Failure(
+                        MayaException("wallet balance changed; the deposit would fall below the quoted amount"),
+                        false,
+                        0,
+                        null
+                    )
+                }
+            }
+
             // Broadcast through the neutral (dashj-free) send facade: base58 address
             // string + Dash amount, returning the created transaction's hex txId.
-            log.info("swapkit deposit: {} to {}", amount, swapTradeUIModel.vaultAddress)
+            log.info("swapkit deposit: {} to {}", amount.toFriendlyString(), swapTradeUIModel.vaultAddress)
             val sentTxId = sendPaymentService.sendCoins(
                 swapTradeUIModel.vaultAddress,
                 amount,
@@ -769,6 +1078,8 @@ class SwapKitApiAggregator @Inject constructor(
                 liquidity = "0",
                 outbound = outboundBaseUnits,
                 slippageBps = slippageBpsInt,
+                // SwapKit doesn't break fees down the way Maya does; the outbound fee is the
+                // best available stand-in for the total. Both fields only feed display estimates.
                 total = outboundBaseUnits,
                 totalBps = slippageBpsInt
             ),
@@ -870,6 +1181,14 @@ class SwapKitApiAggregator @Inject constructor(
             ?: first()
     }
 
+    // SwapKit's own error vocabulary → friendly message resource (see SwapKitErrors).
+    @StringRes
+    override fun errorMessageRes(error: String?): Int = SwapKitErrors.messageResFor(error)
+
+    // SwapKit reports a below-minimum sell amount as `noRoutesFound` (no provider can fill it).
+    override fun isAmountTooLowError(error: String?): Boolean =
+        error?.substringBefore(':')?.trim() == "noRoutesFound"
+
     override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: FiatValue) {
         // usdToFiat is the wallet's "1 USD in SELECTED_CURRENCY" rate. Unlike Maya
         // (which recomputes USD from balance_cacao/balance_asset each pass), the
@@ -914,4 +1233,12 @@ private data class SwapKitPoolSnapshot(
     val mayaOnly: Boolean = false,
     val nearOnly: Boolean = false,
     val mayaHalted: Boolean = false
+)
+
+/** Fully-parsed snapshot held until we're ready to commit it to in-memory state. */
+private class HydratedSnapshot(
+    val snapshot: SwapKitSnapshot,
+    val pools: List<PoolInfo>,
+    val usdPrices: Map<String, BigDecimal>,
+    val routes: Map<String, RouteProvider>
 )

@@ -31,7 +31,6 @@ enum class ShortcutOption(
         R.drawable.ic_shortcut_secure_now,
         R.string.shortcut_secure_now
     ),
-
     RECEIVE(
         2,
         R.drawable.ic_transaction_received,
@@ -96,6 +95,11 @@ enum class ShortcutOption(
         13,
         R.drawable.ic_coinbase,
         R.string.coinbase
+    ),
+    DASH_DEX(
+        14,
+        R.drawable.ic_shortcut_dash_dex,
+        R.string.shortcut_dash_dex
     );
 
     companion object  {

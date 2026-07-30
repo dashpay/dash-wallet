@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import org.dash.wallet.common.ui.components.CoinSelect
 import org.dash.wallet.common.ui.components.CoinSelectState
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackTitle
 import org.dash.wallet.common.ui.components.SearchField
@@ -133,7 +134,7 @@ private fun MayaCryptoCurrencyPickerScreenContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(LocalDashColors.current.backgroundPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             NavBarBackTitle(
@@ -157,7 +158,7 @@ private fun MayaCryptoCurrencyPickerScreenContent(
                             .weight(1f)
                     ) {
                         CircularProgressIndicator(
-                            color = MyTheme.Colors.dashBlue,
+                            color = LocalDashColors.current.dashBlue,
                             strokeWidth = 3.dp,
                             modifier = Modifier
                                 .align(Alignment.Center)
@@ -166,18 +167,25 @@ private fun MayaCryptoCurrencyPickerScreenContent(
                     }
                 }
 
-                items.isEmpty() -> {
-                    // Empty list area (offline with no cache, or a genuinely empty list):
-                    // a centered "No available coins" message, per design.
+                displayItems.isEmpty() -> {
+                    // Empty list area. Check the rendered list (displayItems), not the full
+                    // dataset, so this also covers a search that filters every coin out.
+                    // Show a search-specific message when filtering is the cause, otherwise
+                    // the generic "No available coins" (offline with no cache / empty list).
+                    val emptyMessage = if (query.isEmpty()) {
+                        R.string.maya_no_available_coins
+                    } else {
+                        R.string.maya_no_search_results
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
                     ) {
                         Text(
-                            text = stringResource(R.string.maya_no_available_coins),
+                            text = stringResource(emptyMessage),
                             style = MyTheme.Typography.TitleSmall,
-                            color = MyTheme.Colors.textSecondary,
+                            color = LocalDashColors.current.textSecondary,
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
@@ -202,7 +210,7 @@ private fun MayaCryptoCurrencyPickerScreenContent(
                                 spotColor = CardShadowColor
                             )
                             .clip(CardShape)
-                            .background(MyTheme.Colors.backgroundSecondary)
+                            .background(LocalDashColors.current.backgroundSecondary)
                             .padding(6.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                         contentPadding = PaddingValues(bottom = 4.dp)

@@ -138,7 +138,8 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
             binding.discountValue.text = text
         }
 
-        if (merchant?.logoLocation.isNullOrBlank()) {
+        val logoLocation = merchant?.logoLocation
+        if (logoLocation.isNullOrBlank()) {
             // No logo URL — show a generated full-name icon instead of the grey placeholder.
             // Keep logoImg INVISIBLE (not GONE) so it still reserves space and the title,
             // which is constrained to its end, stays anchored over the ComposeView.
@@ -154,7 +155,7 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
         } else {
             binding.logoCompose.isVisible = false
             binding.logoImg.visibility = View.VISIBLE
-            binding.logoImg.load(merchant.logoLocation) {
+            binding.logoImg.load(logoLocation) {
                 crossfade(200)
                 scale(Scale.FILL)
                 placeholder(R.drawable.ic_image_placeholder)

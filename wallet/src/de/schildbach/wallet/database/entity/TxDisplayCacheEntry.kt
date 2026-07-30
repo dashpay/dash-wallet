@@ -27,6 +27,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.data.entity.SwapOrderStatus
 import org.dash.wallet.common.util.ResourceString
 
 /**
@@ -67,6 +68,8 @@ data class TxDisplayCacheEntry(
     val hasErrors: Boolean,
     /** Service name (e.g. "CrowdNode") or null for plain sends/receives. */
     val service: String?,
+    /** [SwapOrderStatus] name of the DEX swap this tx funded, or null if it isn't a swap. */
+    val swapStatus: String? = null,
     /** Currency code of the historical exchange rate (e.g. "USD"), or null if unknown. */
     val exchangeRateFiatCode: String?,
     /** Fiat value of the historical exchange rate in smallest fiat unit, or null if unknown. */
@@ -97,6 +100,7 @@ data class TxDisplayCacheEntry(
         const val ICON_GIFT_CARD = 4
         const val ICON_COINJOIN  = 5
         const val ICON_CROWDNODE = 6
+        const val ICON_CONVERT   = 7
 
         // ── Filter flag bitmask constants ────────────────────────────────────────────
         const val FLAG_SENT      = 1
@@ -128,6 +132,7 @@ data class TxDisplayCacheEntry(
                 R.drawable.ic_gift_card_tx            -> ICON_GIFT_CARD
                 R.drawable.ic_coinjoin_mixing_group   -> ICON_COINJOIN
                 R.drawable.ic_crowdnode_logo          -> ICON_CROWDNODE
+                R.drawable.ic_convert_circle          -> ICON_CONVERT
                 else                                  -> ICON_RECEIVED
             }
             val iconBgType = when (row.iconBackground) {
@@ -151,6 +156,7 @@ data class TxDisplayCacheEntry(
                 time                   = row.time,
                 hasErrors              = row.hasErrors,
                 service                = row.service,
+                swapStatus             = row.swapStatus?.name,
                 exchangeRateFiatCode   = row.exchangeRate?.fiat?.currencyCode,
                 exchangeRateFiatValue  = row.exchangeRate?.fiat?.value,
                 contactUsername        = row.contact?.username,
@@ -180,6 +186,7 @@ data class TxDisplayCacheEntry(
             ICON_GIFT_CARD -> R.drawable.ic_gift_card_tx
             ICON_COINJOIN  -> R.drawable.ic_coinjoin_mixing_group
             ICON_CROWDNODE -> R.drawable.ic_crowdnode_logo
+            ICON_CONVERT   -> R.drawable.ic_convert_circle
             else           -> R.drawable.ic_transaction_received
         }
         val bgRes = when (iconBgType) {
@@ -221,7 +228,10 @@ data class TxDisplayCacheEntry(
             hasErrors         = hasErrors,
             service           = service,
             txWrapper         = null,
-            statusText        = statusText.ifEmpty { null }
+            statusText        = statusText.ifEmpty { null },
+            swapStatus        = swapStatus?.let { name ->
+                SwapOrderStatus.entries.firstOrNull { it.name == name }
+            }
         )
     }
 }

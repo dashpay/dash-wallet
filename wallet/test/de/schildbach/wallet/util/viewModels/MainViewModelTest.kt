@@ -79,6 +79,10 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
+import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -131,6 +135,7 @@ class MainViewModelTest {
     private val mockIdentityData = BlockchainIdentityBaseData(IdentityCreationState.NONE, null, null, null, null, false,null, false)
     private val blockchainIdentityConfigMock = mockk<BlockchainIdentityConfig> {
         coEvery { loadBase() } returns mockIdentityData
+        every { observe() } returns flow { }
         every { observeBase() } returns MutableStateFlow(mockIdentityData)
         every { observe() } returns emptyFlow()
         every { observe(BlockchainIdentityConfig.IDENTITY_ID) } returns MutableStateFlow(identityId)
@@ -236,7 +241,7 @@ class MainViewModelTest {
         }
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
-
+    private val swapProvider = mockk<DispatchingSwapProvider>()
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
 
@@ -293,6 +298,7 @@ class MainViewModelTest {
         mockkStatic(WorkManager::class)
         every { WorkManager.getInstance(any()) } returns workManagerMock
         every { savedStateMock.get<TxFilterType>(eq("tx_direction")) } returns TxFilterType.ALL
+        every { savedStateMock.get<Boolean>(eq("crowdnode_withdrawal_reminder_shown")) } returns false
         every { savedStateMock.set<TxFilterType>(any(), any()) } just runs
     }
 
@@ -327,7 +333,8 @@ class MainViewModelTest {
                 crowdNodeApi,
                 coinJoinFundsMigrationService,
                 l1ShadowSyncService,
-                cutoverCoordinator
+                cutoverCoordinator,
+                swapProvider
             )
         )
 
@@ -369,7 +376,8 @@ class MainViewModelTest {
                 crowdNodeApi,
                 coinJoinFundsMigrationService,
                 l1ShadowSyncService,
-                cutoverCoordinator
+                cutoverCoordinator,
+                swapProvider
             )
         )
 

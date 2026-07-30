@@ -31,15 +31,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
-import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.components.TopNavBase
 
@@ -103,97 +105,102 @@ private fun SettingsScreenContent(
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
-    ) {
-        // Top Navigation
-        TopNavBase(
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
-            onLeadingClick = onBackClick,
-            centralPart = false,
-            trailingPart = false
-        )
-
-        // Settings Header
-        TopIntro(
-            heading = stringResource(R.string.settings_title),
-        )
-
-        // Scrollable Content
-        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .background(colors.backgroundPrimary)
         ) {
-            Menu {
-                // Local Currency
-                MenuItem(
-                    title = stringResource(R.string.menu_local_currency),
-                    subtitle = uiState.localCurrencySymbol,
-                    icon = R.drawable.ic_local_currency,
-                    action = onLocalCurrencyClick
-                )
+            // Top Navigation
+            TopNavBase(
+                leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
+                onLeadingClick = onBackClick,
+                centralPart = false,
+                trailingPart = false
+            )
 
-                // Rescan Blockchain
-                MenuItem(
-                    title = stringResource(R.string.menu_rescan_blockchain),
-                    icon = R.drawable.ic_rescan_blockchain,
-                    action = onRescanBlockchainClick
-                )
+            // Settings Header
+            TopIntro(
+                heading = stringResource(R.string.settings_title),
+            )
 
-                // About Dash
-                MenuItem(
-                    title = stringResource(R.string.about_dash_title),
-                    icon = R.drawable.ic_dash_blue_filled,
-                    action = onAboutDashClick
-                )
-
-                // Notifications
-                MenuItem(
-                    title = stringResource(R.string.notifications_title),
-                    icon = R.drawable.ic_notification,
-                    action = onNotificationsClick
-                )
-
-                // Transaction Metadata
-                if (Constants.SUPPORTS_TXMETADATA && uiState.transactionMetadataVisible) {
+            // Scrollable Content
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Menu {
+                    // Local Currency
                     MenuItem(
-                        title = stringResource(R.string.transaction_metadata_title),
-                        subtitle = uiState.transactionMetadataSubtitle,
-                        icon = R.drawable.transaction_metadata,
-                        action = onTransactionMetadataClick
+                        title = stringResource(R.string.menu_local_currency),
+                        subtitle = uiState.localCurrencySymbol,
+                        icon = R.drawable.ic_local_currency,
+                        action = onLocalCurrencyClick
+                    )
+
+                    // Rescan Blockchain
+                    MenuItem(
+                        title = stringResource(R.string.menu_rescan_blockchain),
+                        icon = R.drawable.ic_rescan_blockchain,
+                        action = onRescanBlockchainClick
+                    )
+
+                    // About Dash
+                    MenuItem(
+                        title = stringResource(R.string.about_dash_title),
+                        icon = R.drawable.ic_dash_blue_filled,
+                        action = onAboutDashClick
+                    )
+
+                    // Notifications
+                    MenuItem(
+                        title = stringResource(R.string.notifications_title),
+                        icon = R.drawable.ic_notification,
+                        action = onNotificationsClick
+                    )
+
+                    // Transaction Metadata
+                    if (Constants.SUPPORTS_TXMETADATA && uiState.transactionMetadataVisible) {
+                        MenuItem(
+                            title = stringResource(R.string.transaction_metadata_title),
+                            subtitle = uiState.transactionMetadataSubtitle,
+                            icon = R.drawable.transaction_metadata,
+                            action = onTransactionMetadataClick
+                        )
+                    }
+
+                    // Battery Optimization
+                    MenuItem(
+                        title = stringResource(R.string.battery_optimization_title),
+                        subtitle = stringResource(
+                            if (uiState.ignoringBatteryOptimizations) {
+                                R.string.battery_optimization_subtitle_unrestricted
+                            } else {
+                                R.string.battery_optimization_subtitle_optimized
+                            },
+                        ),
+                        icon = R.drawable.ic_battery,
+                        action = onBatteryOptimizationClick
                     )
                 }
-
-                // Battery Optimization
-                MenuItem(
-                    title = stringResource(R.string.battery_optimization_title),
-                    subtitle = stringResource(
-                        if (uiState.ignoringBatteryOptimizations) {
-                            R.string.battery_optimization_subtitle_unrestricted
-                        } else {
-                            R.string.battery_optimization_subtitle_optimized
-                        },
-                    ),
-                    icon = R.drawable.ic_battery,
-                    action = onBatteryOptimizationClick
-                )
             }
         }
+}
+
+@Composable
+@Preview(name = "Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+fun MoreScreenPreview() {
+    DashWalletTheme {
+        SettingsScreenContent(uiState = SettingsUIState())
     }
 }
 
 @Composable
-@Preview
-fun MoreScreenPreview() {
-    SettingsScreenContent(uiState = SettingsUIState())
-}
-
-@Composable
-@Preview(name = "Settings populated")
+@Preview(name = "Settings populated - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Settings populated - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 fun MoreScreenPreviewPopulated() {
     val customState = SettingsUIState(
         localCurrencySymbol = "USD",
@@ -201,5 +208,7 @@ fun MoreScreenPreviewPopulated() {
         transactionMetadataVisible = true,
         transactionMetadataSubtitle = "Last saved: Jan 15, 2024"
     )
-    SettingsScreenContent(uiState = customState)
+    DashWalletTheme {
+        SettingsScreenContent(uiState = customState)
+    }
 }

@@ -114,6 +114,8 @@ import org.dash.wallet.integrations.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import de.schildbach.wallet.payments.BalanceConditionBridge;
 import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector;
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
+import org.dash.wallet.integrations.maya.api.SwapTrackingService;
 import org.dash.wallet.integrations.uphold.utils.UpholdConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -256,6 +258,8 @@ public class WalletApplication extends MultiDexApplication
     CutoverEvidenceCollector cutoverEvidenceCollector;
     @Inject
     de.schildbach.wallet.service.platform.sdk.CutoverUiDataService cutoverUiDataService;
+    @Inject
+    SwapTrackingService swapTrackingService;
     private WalletBalanceObserver walletBalanceObserver;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;
@@ -327,6 +331,9 @@ public class WalletApplication extends MultiDexApplication
         // DEBUG-only adb trigger for a one-shot Phase 5d cutover readiness
         // readout (advisory only — can never commit a cutover).
         CutoverDebugReadout.registerIfDebug(this, cutoverCoordinator, cutoverEvidenceCollector);
+
+        // resume status polling for any DEX swaps still in flight
+        swapTrackingService.start();
 
         // enable TLS 1.3 support on Android 9 and lower
         // Android 10 and above support TLS 1.3 by default
