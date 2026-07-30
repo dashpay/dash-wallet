@@ -62,6 +62,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             iconBitmapDao = mockk<IconBitmapDao>(relaxed = true),
             walletData = mockk<WalletDataProvider>(relaxed = true),
             giftCardDao = giftCardDao,
+            swapOrderDao = mockk(relaxed = true),
             transactionMetadataChangeCacheDao = cacheDao,
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),
             dashPayConfig = mockk<DashPayConfig>(relaxed = true)

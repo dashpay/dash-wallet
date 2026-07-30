@@ -319,7 +319,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun handleBackNavigation() {
-        if (!goBack()) {
+        if (!lockScreenDisplayed && !goBack()) {
             super.handleBackNavigation()
         }
     }

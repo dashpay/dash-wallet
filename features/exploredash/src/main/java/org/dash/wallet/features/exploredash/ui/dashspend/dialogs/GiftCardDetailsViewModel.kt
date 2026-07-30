@@ -24,6 +24,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil.imageLoader
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.google.zxing.BarcodeFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -656,6 +657,9 @@ class GiftCardDetailsViewModel @Inject constructor(
             val imageRequest = ImageRequest.Builder(context)
                 .data(barcodeUrl)
                 .allowHardware(false) // Qr.scanBarcode needs CPU access to the pixels
+                // the URL encodes the card number; keep the barcode out of Coil's caches
+                .memoryCachePolicy(CachePolicy.DISABLED)
+                .diskCachePolicy(CachePolicy.DISABLED)
                 .build()
             val bitmap = requireNotNull(context.imageLoader.execute(imageRequest).drawable) {
                 "failed to load barcode image"

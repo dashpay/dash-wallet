@@ -114,6 +114,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.7.2")
+    implementation("androidx.activity:activity-ktx:1.7.2")
     implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycleVersion"
     implementation "com.airbnb.android:lottie-compose:6.6.7"
 
@@ -244,8 +245,9 @@ android {
     android.ndkVersion '21.3.6528147'
     namespace "de.schildbach.wallet_test"
 
+    compileSdk 36
+
     defaultConfig {
-        compileSdk 36
         minSdkVersion 24
         targetSdkVersion 36
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build

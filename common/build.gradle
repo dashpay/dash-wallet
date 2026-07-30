@@ -7,8 +7,9 @@ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 android {
 
+    compileSdk 36
+
     defaultConfig {
-        compileSdk 36
         minSdkVersion 24
         targetSdkVersion 36
         vectorDrawables.useSupportLibrary = true
