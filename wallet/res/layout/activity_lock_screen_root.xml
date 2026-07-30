@@ -6,13 +6,12 @@
     android:background="@color/dash_deep_blue"
     android:fitsSystemWindows="true">
 
-    <!-- single inset point: root stays false so the background paints
-         edge-to-edge, while all switcher content avoids the system bars -->
+    <!-- the root is the single inset point; insets are consumed there,
+         so children must not re-apply fitsSystemWindows -->
     <ViewAnimator
         android:id="@+id/root_view_switcher"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fitsSystemWindows="true"
         tools:ignore="UselessParent">
 
         <include
