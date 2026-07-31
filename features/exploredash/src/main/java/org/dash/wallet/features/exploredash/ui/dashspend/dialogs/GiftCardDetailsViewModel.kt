@@ -36,12 +36,12 @@ import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.money.dashToFiat
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.getIcon
 import org.dash.wallet.common.services.getTransactionMetadata
 import org.dash.wallet.common.services.observeTransactionMetadata
 import org.dash.wallet.common.services.updateGiftCardBarcode
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
