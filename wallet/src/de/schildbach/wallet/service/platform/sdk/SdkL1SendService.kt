@@ -598,13 +598,17 @@ interface SdkL1SendSource {
      * when the account or pool rows are absent (fresh install
      * mid-first-sync, wiped DB).
      *
-     * UPSTREAM GAP (dashpay/platform): the pool has no ISSUED-marker
-     * (`isUsed` flips only when seen on-chain), so every reader of this
-     * pattern converges on the same address until it's used — fine for
-     * current-address semantics, but a `fresh_address` FFI with an
-     * engine-side issued-marker is needed before per-invoice
-     * (dashj-`freshReceiveAddress`-style) handout is possible. Default
-     * throws: only the production source (and BIP70 fakes) need it.
+     * UPSTREAM GAP (dashpay/platform — Kotlin parity, small): the engine
+     * ALREADY exposes this as `core_wallet_next_receive_address` in
+     * rs-platform-wallet-ffi (iOS binds it directly:
+     * `SwiftDashSDKReceiveAddressReader` → `coreWallet().nextReceiveAddress`),
+     * but no rs-unified-sdk-jni/Kotlin plumbing exists. Once ported, swap
+     * this Room read for the FFI call — same answer (lowest unused by the
+     * engine's used-set, same cold-start caveat), engine-authoritative.
+     * Neither carries an issued-marker, so per-invoice
+     * (dashj-`freshReceiveAddress`-style) handout remains a separate,
+     * later ask. Default throws: only the production source (and BIP70
+     * fakes) need it.
      */
     suspend fun unusedExternalAddress(walletIdHex: String): String? =
         throw UnsupportedOperationException("address-pool reads not supported by this source")

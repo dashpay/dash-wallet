@@ -65,6 +65,26 @@ class PaymentProtocolViewModel @Inject constructor(
     var baseSendRequest: SendRequest? = null
     var finalPaymentIntent: PaymentIntent? = null
 
+    /**
+     * Post-cutover preview (issue #1520 Phase 1B item 1): the SDK-built,
+     * signed, inputs-RESERVED payment. Its [SdkDeferredPayment.feeDuffs]
+     * is the EXACT fee of the tx that will be submitted — the fee preview
+     * IS the payment. Consumed by [sendPayment]; released in [onCleared]
+     * when abandoned (idempotent engine-side, TTL backstop besides).
+     * Null pre-cutover — the dashj [baseSendRequest] dry-run then owns
+     * the preview exactly as before.
+     */
+    var deferredPayment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment? = null
+        private set
+
+    /** The preview fee to display, from whichever path built the preview. */
+    val previewFee: Coin?
+        get() = deferredPayment?.let { Coin.valueOf(it.feeDuffs) } ?: baseSendRequest?.tx?.fee
+
+    /** True when a confirmed send can actually run (either path is armed). */
+    val canSendPayment: Boolean
+        get() = baseSendRequest != null || deferredPayment != null
+
     private val _sendRequestLiveData = MutableLiveData<Resource<SendRequest?>>()
     val sendRequestLiveData: LiveData<Resource<SendRequest?>>
         get() = _sendRequestLiveData
@@ -147,11 +167,30 @@ class PaymentProtocolViewModel @Inject constructor(
     }
 
     /**
-     * Creates a base send request for the given payment intent.
-     * This is a dry-run to show the user the transaction details before sending.
+     * Creates the payment preview for the given payment intent.
+     *
+     * Post-cutover: the SDK builds + signs the REAL payment with its
+     * inputs reserved ([deferredPayment]) — the displayed fee is exact
+     * and no dashj `completeTx` dry-run runs. Pre-cutover: the dashj
+     * dry-run [baseSendRequest], byte-identical to before.
      */
     private suspend fun createBaseSendRequest(paymentIntent: PaymentIntent) {
         withContext(Dispatchers.IO) {
+            if (sendCoinsTaskRunner.isCutoverCommitted()) {
+                try {
+                    // A re-preview (retry after a failed send) must not
+                    // leak the previous reservation.
+                    deferredPayment?.let { sendCoinsTaskRunner.releaseDeferredPayment(it) }
+                    deferredPayment = sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent)
+                    baseSendRequest = null
+                    _sendRequestLiveData.postValue(Resource.success(null))
+                } catch (x: Exception) {
+                    deferredPayment = null
+                    baseSendRequest = null
+                    _sendRequestLiveData.postValue(Resource.error(x))
+                }
+                return@withContext
+            }
             Context.propagate(wallet.context)
             try {
                 val sendRequest = sendCoinsTaskRunner.createSendRequest(
@@ -181,17 +220,39 @@ class PaymentProtocolViewModel @Inject constructor(
             try {
                 directPaymentAckLiveData.postValue(Resource.loading(null))
 
-                val sendRequest = sendCoinsTaskRunner.createSendRequest(
-                    basePaymentIntent.mayEditAmount(),
-                    finalPaymentIntent!!,
-                    true,
-                    baseSendRequest!!.ensureMinRequiredFee
-                )
+                val prebuilt = deferredPayment
+                val transaction = if (prebuilt != null) {
+                    // Post-cutover: submit the EXACT tx the preview showed.
+                    // The reservation is consumed (ack → broadcast) or
+                    // released (pre-ack failure) inside the runner either
+                    // way — this reference is dead after the call.
+                    deferredPayment = null
+                    try {
+                        sendCoinsTaskRunner.sendPrebuiltDirectPayment(prebuilt, finalPaymentIntent!!)
+                    } catch (ex: Exception) {
+                        // Pre-ack failures are retryable — rebuild the
+                        // preview so a retry submits a fresh reservation.
+                        // NEVER rebuild after Bip70AckedDisplayException:
+                        // the merchant holds the acked tx and a rebuilt
+                        // retry could double-pay.
+                        if (ex !is SendCoinsTaskRunner.Bip70AckedDisplayException) {
+                            runCatching { createBaseSendRequest(finalPaymentIntent!!) }
+                        }
+                        throw ex
+                    }
+                } else {
+                    val sendRequest = sendCoinsTaskRunner.createSendRequest(
+                        basePaymentIntent.mayEditAmount(),
+                        finalPaymentIntent!!,
+                        true,
+                        baseSendRequest!!.ensureMinRequiredFee
+                    )
 
-                val transaction = sendCoinsTaskRunner.sendDirectPayment(
-                    sendRequest,
-                    finalPaymentIntent!!
-                )
+                    sendCoinsTaskRunner.sendDirectPayment(
+                        sendRequest,
+                        finalPaymentIntent!!
+                    )
+                }
 
                 directPaymentAckLiveData.postValue(Resource.success(transaction))
             } catch (ex: Exception) {
@@ -210,5 +271,21 @@ class PaymentProtocolViewModel @Inject constructor(
             txCompleted = true,
             checkBalanceConditions = true
         )
+    }
+
+    override fun onCleared() {
+        // Abandoned preview (user backed out before confirming): free the
+        // reserved inputs. Fire-and-forget on a detached scope — the
+        // ViewModel scope is already dead here, the release is idempotent,
+        // and the engine's reservation TTL is the backstop if the process
+        // dies first.
+        deferredPayment?.let { payment ->
+            deferredPayment = null
+            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+            kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                sendCoinsTaskRunner.releaseDeferredPayment(payment)
+            }
+        }
+        super.onCleared()
     }
 }

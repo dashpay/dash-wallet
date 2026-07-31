@@ -902,47 +902,42 @@ class SendCoinsTaskRunner @Inject constructor(
     }
 
     /**
-     * Post-cutover BIP70/BIP270 direct payment (issue #1520 Phase 1B
-     * item 1). The SDK builds + signs the payment-request tx with its
-     * inputs RESERVED — nothing broadcast; the BIP70 `Payment` message
-     * carries the SDK's signed raw bytes; and ONLY a merchant ack
-     * broadcasts the tx, which then enters the dashj wallet through the
-     * same bridge every SDK send uses ([SdkBridgedTransactionFactory] —
-     * `maybeCommitTx` inside, so the "merchant broadcast it first" race
-     * is handled exactly like the dashj path).
-     *
-     * Failure semantics (dashj-path parity unless noted):
-     * - Non-address output scripts / missing amounts → fail closed
-     *   ([extractBip70Recipients] null): the SDK builder is address-only.
-     * - PRE-ACK failure (transport error, nack): release the reservation
-     *   and rethrow — the dashj path likewise treats an unacked payment
-     *   as never-sent. NOTE the narrowed recovery window: pre-cutover a
-     *   merchant-broadcast tx could still be discovered via dashj's bloom
-     *   relay during its 0/1/3/5s poll; the SDK's compact-filter view
-     *   cannot see unmined txs, so that rescue is gone. The release keeps
-     *   a user retry from wedging on reserved inputs; an abandoned tx the
-     *   merchant DOES later broadcast conflicts with (never doubles) the
-     *   retry, because both spend the same reserved-then-released inputs.
-     * - POST-ACK: the reservation is NEVER released — the merchant holds
-     *   the signed tx, and releasing would let a retry select different
-     *   inputs and double-pay if the merchant broadcasts the original. An
-     *   SDK broadcast refusal here is logged and tolerated: BIP70
-     *   merchants (CTX) broadcast the acked tx themselves, and the dashj
-     *   path never verified its own announce either.
+     * The merchant ACKED the BIP70 payment but the wallet-side display
+     * bridge failed. The payment IS made — callers must treat this as
+     * success-with-degraded-display (the tx appears after the next sync)
+     * and MUST NOT rebuild and resend: the merchant holds the acked
+     * signed tx, so a rebuilt retry with fresh inputs could double-pay.
      */
-    private suspend fun directPayViaSdk(
-        finalPaymentIntent: PaymentIntent,
-        serviceName: String?
-    ): Transaction {
+    class Bip70AckedDisplayException(message: String) : RuntimeException(message)
+
+    /**
+     * Post-cutover BIP70/BIP270, the BUILD half (issue #1520 Phase 1B
+     * item 1): the SDK builds + signs the payment-request tx with its
+     * inputs RESERVED — nothing broadcast. [SdkDeferredPayment.feeDuffs]
+     * is the EXACT fee of the tx [sendPrebuiltDirectPayment] will submit,
+     * so this doubles as the confirm-screen fee preview (no dashj
+     * `completeTx` dry-run). The caller owns the reservation: follow with
+     * exactly one of [sendPrebuiltDirectPayment] or
+     * [releaseDeferredPayment].
+     *
+     * Fails closed (IllegalStateException) when any output is not a
+     * standard pay-to-address script ([extractBip70Recipients] null): the
+     * SDK builder is address-only. Also runs the same pre-send
+     * leftover-balance condition the dashj path enforces at commit time.
+     */
+    suspend fun buildDeferredBip70Payment(paymentIntent: PaymentIntent): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
-        val recipients = extractBip70Recipients(finalPaymentIntent, de.schildbach.wallet.Constants.ADDRESS_NETWORK)
+        val recipients = extractBip70Recipients(paymentIntent, de.schildbach.wallet.Constants.ADDRESS_NETWORK)
             ?: throw IllegalStateException(
                 "cutover committed: this payment request has an output the SDK builder cannot " +
                     "express (non-address script or missing amount) — not SDK-routable"
             )
-        val requestUrl = finalPaymentIntent.paymentUrl
-            ?: throw InvalidPaymentRequestURL("Final payment intent URL is null")
+        if (paymentIntent.paymentUrl == null) {
+            // Fail fast BEFORE reserving inputs for a payment that could
+            // never be submitted.
+            throw InvalidPaymentRequestURL("Final payment intent URL is null")
+        }
 
         // The same pre-send condition the dashj path enforces at commit
         // time (checkBalanceConditions → the FIRST foreign output).
@@ -954,7 +949,63 @@ class SendCoinsTaskRunner @Inject constructor(
             }
         }
 
-        val payment = sdkL1SendService.buildDeferredPayment(recipients)
+        return sdkL1SendService.buildDeferredPayment(recipients)
+    }
+
+    /** Pass-through: release a [buildDeferredBip70Payment] reservation (abandoned preview). */
+    suspend fun releaseDeferredPayment(payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment) =
+        sdkL1SendService.releaseDeferredPayment(payment)
+
+    /**
+     * Post-cutover BIP70/BIP270 direct payment: build + submit in one step
+     * — the path for flows WITHOUT a preview screen ([payWithDashUrl]).
+     * The preview UI ([de.schildbach.wallet.ui.send.PaymentProtocolViewModel])
+     * instead calls [buildDeferredBip70Payment] at preview time and
+     * [sendPrebuiltDirectPayment] on confirm.
+     */
+    private suspend fun directPayViaSdk(
+        finalPaymentIntent: PaymentIntent,
+        serviceName: String?
+    ): Transaction {
+        val payment = buildDeferredBip70Payment(finalPaymentIntent)
+        return sendPrebuiltDirectPayment(payment, finalPaymentIntent, serviceName)
+    }
+
+    /**
+     * Post-cutover BIP70/BIP270, the SUBMIT half: the BIP70 `Payment`
+     * message carries [payment]'s signed raw bytes; ONLY a merchant ack
+     * broadcasts the tx, which then enters the dashj wallet through the
+     * same bridge every SDK send uses ([SdkBridgedTransactionFactory] —
+     * `maybeCommitTx` inside, so the "merchant broadcast it first" race
+     * is handled exactly like the dashj path).
+     *
+     * Failure semantics (dashj-path parity unless noted):
+     * - PRE-ACK failure (transport error, nack): release the reservation
+     *   and rethrow — the dashj path likewise treats an unacked payment
+     *   as never-sent; [payment] is DEAD afterwards (a retry must
+     *   rebuild). NOTE the narrowed recovery window: pre-cutover a
+     *   merchant-broadcast tx could still be discovered via dashj's bloom
+     *   relay during its 0/1/3/5s poll; the SDK's compact-filter view
+     *   cannot see unmined txs, so that rescue is gone. The release keeps
+     *   a user retry from wedging on reserved inputs; an abandoned tx the
+     *   merchant DOES later broadcast conflicts with (never doubles) the
+     *   retry, because both spend the same reserved-then-released inputs.
+     * - POST-ACK: the reservation is NEVER released — the merchant holds
+     *   the signed tx, and releasing would let a retry select different
+     *   inputs and double-pay if the merchant broadcasts the original. An
+     *   SDK broadcast refusal here is logged and tolerated (CTX broadcasts
+     *   the acked tx itself; the dashj path never verified its own
+     *   announce either), and a display-bridge failure throws the typed
+     *   [Bip70AckedDisplayException] so callers cannot mistake an acked
+     *   payment for a retryable failure.
+     */
+    suspend fun sendPrebuiltDirectPayment(
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        finalPaymentIntent: PaymentIntent,
+        serviceName: String? = null
+    ): Transaction {
+        val requestUrl = finalPaymentIntent.paymentUrl
+            ?: throw InvalidPaymentRequestURL("Final payment intent URL is null")
 
         try {
             serviceName?.let {
@@ -1028,7 +1079,7 @@ class SendCoinsTaskRunner @Inject constructor(
         ) {
             is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged ->
                 bridged.transaction
-            is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged -> throw RuntimeException(
+            is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged -> throw Bip70AckedDisplayException(
                 "BIP70 payment acked (txid ${payment.txidHex}) but the wallet display bridge " +
                     "failed (${bridged.reason}) — the payment IS made; the transaction appears " +
                     "after the next sync"

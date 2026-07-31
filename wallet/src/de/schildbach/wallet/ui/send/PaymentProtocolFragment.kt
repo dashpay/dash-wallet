@@ -99,7 +99,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun authenticateOrConfirm() {
-        if (userAuthorizedDuring && (!config.spendingConfirmationEnabled || viewModel.baseSendRequest == null)) {
+        if (userAuthorizedDuring && (!config.spendingConfirmationEnabled || !viewModel.canSendPayment)) {
             confirmWhenAuthorizedAndNoException()
         } else {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
@@ -116,7 +116,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             return
         }
 
-        if (viewModel.baseSendRequest != null) {
+        if (viewModel.canSendPayment) {
             lifecycleScope.launch {
                 viewModel.sendPayment()
             }
@@ -144,7 +144,9 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                     binding.viewFlipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
-                    displayRequest(viewModel.finalPaymentIntent!!, it!!.data!!)
+                    // data is null on the post-cutover SDK path — the fee
+                    // comes from viewModel.previewFee either way.
+                    displayRequest(viewModel.finalPaymentIntent!!, it.data)
                     binding.viewFlipper.displayedChild = VIEW_PAYMENT
                 }
                 Status.ERROR -> {
@@ -163,7 +165,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         // sendRequest creating error (eg InsufficientMoneyException)
                         displayRequest(viewModel.finalPaymentIntent!!, null)
                         binding.viewFlipper.displayedChild = VIEW_PAYMENT
-                        if (userAuthorizedDuring && (viewModel.baseSendRequest == null)) {
+                        if (userAuthorizedDuring && !viewModel.canSendPayment) {
                             handleSendRequestException()
                         }
                     }
@@ -221,7 +223,13 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             is InsufficientMoneyException -> {
                 showInsufficientMoneyDialog()
             }
-            else -> {
+            // The SDK build reports a shortfall as a native error whose
+            // message carries key-wallet's "Insufficient funds" text
+            // (same predicate as isSendAllShortfall) — same dialog as
+            // dashj's InsufficientMoneyException.
+            else -> if (resource.exception?.message?.contains("Insufficient funds", ignoreCase = true) == true) {
+                showInsufficientMoneyDialog()
+            } else {
                 val exception = resource.exception
                 val message = if (exception == null) {
                     resource.message
@@ -259,7 +267,11 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
 
         val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount.toDashjCoin())
         val fiatAmountStr = fiatAmount?.toFormattedString() ?: getString(R.string.transaction_row_rate_not_available)
-        val txFee = if (sendRequest != null) sendRequest.tx.fee else PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
+        // previewFee covers both preview paths: the SDK deferred build's
+        // exact fee post-cutover, or the dashj dry-run fee pre-cutover.
+        val txFee = sendRequest?.tx?.fee
+            ?: viewModel.previewFee
+            ?: PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
 
         binding.paymentRequest.amount.inputValue.text = amountStr
         binding.paymentRequest.amount.fiatValue.text = fiatAmountStr
