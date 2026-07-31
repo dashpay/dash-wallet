@@ -88,6 +88,8 @@ class SendCoinsTaskRunnerBIP70Test {
     private lateinit var identityRepo: IdentityRepository
     private lateinit var platformRepo: PlatformRepo
     private lateinit var metadataProvider: TransactionMetadataProvider
+    private lateinit var sdkL1SendService: de.schildbach.wallet.service.platform.sdk.SdkL1SendService
+    private lateinit var bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
     private lateinit var wallet: Wallet
 
     private val networkParams: NetworkParameters = TestNet3Params.get()
@@ -108,6 +110,8 @@ class SendCoinsTaskRunnerBIP70Test {
         identityRepo = mockk(relaxed = true)
         platformRepo = mockk(relaxed = true)
         metadataProvider = mockk(relaxed = true)
+        sdkL1SendService = mockk(relaxed = true)
+        bridgedTransactionFactory = mockk(relaxed = true)
         // wallet = mockk(relaxed = true)
 
         // dashj requires a Context to be constructed before reading a wallet
@@ -142,19 +146,20 @@ class SendCoinsTaskRunnerBIP70Test {
                 identityRepo,
                 platformRepo,
                 metadataProvider,
-                // Phase 5b routing is exercised in SendCoinsTaskRunnerSdkRoutingTest;
-                // these BIP70 flows never touch the neutral overload.
-                mockk(relaxed = true),
+                // Phase 5b routing is exercised in SendCoinsTaskRunnerSdkRoutingTest.
+                // The relaxed default keeps cutoverCommitted() false, so the
+                // legacy dashj-path tests below are untouched; the
+                // post-cutover BIP70 tests re-program this named mock.
+                sdkL1SendService,
                 // Self-spend grace arming is exercised in
                 // SendCoinsTaskRunnerSelfSpendGraceTest.
                 mockk(relaxed = true),
                 // 5c.0/5c.1 debug probes (L1SendProbeServiceTest): these
                 // BIP70 flows never touch the neutral overload.
                 mockk(relaxed = true),
-                // Phase 5d bridge factory: only reached under a committed
-                // cutover, which these flows never take (relaxed
-                // SdkL1SendService.cutoverCommitted() reads false).
-                mockk(relaxed = true)
+                // Phase 5d bridge factory: reached only under a committed
+                // cutover — programmed by the post-cutover BIP70 tests.
+                bridgedTransactionFactory
             )
         )
 
@@ -801,5 +806,214 @@ class SendCoinsTaskRunnerBIP70Test {
             // Expected - null payment URL should throw
             assertNotNull(e)
         }
+    }
+
+    // ==================== Post-cutover (SDK deferred) direct-pay tests ====================
+
+    private val deferredTxidHex = "aa".repeat(32)
+
+    private fun deferredPayment() = de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment(
+        txidHex = deferredTxidHex,
+        rawTxBytes = byteArrayOf(1, 2, 3, 4),
+        feeDuffs = 1000L,
+        native = null
+    )
+
+    private fun bip70PaymentIntent(address: Address, amount: Coin, paymentUrl: String) = PaymentIntent(
+        PaymentIntent.Standard.BIP70,
+        "Test Merchant",
+        null,
+        arrayOf(
+            PaymentIntent.Output(
+                amount.toNeutralCoin(),
+                org.bitcoinj.script.ScriptBuilder.createOutputScript(address).program
+            )
+        ),
+        "Test payment",
+        paymentUrl,
+        null,
+        null,
+        null,
+        null,
+        null
+    )
+
+    @Test
+    fun `post-cutover directPay builds via SDK, broadcasts on ACK and returns the bridged tx`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("1.0")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, testAmount, mockWebServer.url("/payment").toString())
+
+        val payment = deferredPayment()
+        val liveTx = mockk<org.bitcoinj.core.Transaction>(relaxed = true)
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, payment.rawTxBytes) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
+                liveTx, adoptedWalletInstance = false
+            )
+
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+        )
+
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+        val result = sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent, "TestService")
+
+        // The bridged live instance comes back; the recipients were the
+        // intent's (address, duffs) pair; the reservation was never released.
+        assertEquals(liveTx, result)
+        io.mockk.coVerify(exactly = 1) {
+            sdkL1SendService.buildDeferredPayment(
+                listOf(testAddress.toBase58() to testAmount.value)
+            )
+        }
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
+
+        // And the Payment message actually went over HTTP.
+        assertEquals(1, mockWebServer.requestCount)
+        assertEquals("POST", mockWebServer.takeRequest().method)
+    }
+
+    @Test
+    fun `post-cutover directPay releases the reservation on NACK and never broadcasts`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("1.0")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, testAmount, mockWebServer.url("/payment").toString())
+
+        val payment = deferredPayment()
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck("nack")))
+        )
+
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+        try {
+            sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent)
+            fail("Expected DirectPayException for NACK")
+        } catch (e: org.dash.wallet.common.services.DirectPayException) {
+            // expected
+        }
+
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+    }
+
+    @Test
+    fun `post-cutover directPay releases the reservation on transport failure`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("1.0")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, testAmount, mockWebServer.url("/payment").toString())
+
+        val payment = deferredPayment()
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
+
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+        try {
+            sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent)
+            fail("Expected exception for HTTP 500")
+        } catch (e: Exception) {
+            assertNotNull(e)
+        }
+
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+    }
+
+    @Test
+    fun `post-cutover directPay fails closed on a non-address output before building`() = runTest {
+        val testAmount = Coin.parseCoin("1.0")
+        // OP_RETURN output — not expressible by the SDK's address-only builder.
+        val opReturnScript = org.bitcoinj.script.ScriptBuilder.createOpReturnScript(
+            byteArrayOf(1, 2, 3)
+        ).program
+        val paymentIntent = PaymentIntent(
+            PaymentIntent.Standard.BIP70,
+            "Test Merchant",
+            null,
+            arrayOf(PaymentIntent.Output(testAmount.toNeutralCoin(), opReturnScript)),
+            "Test payment",
+            mockWebServer.url("/payment").toString(),
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+        try {
+            sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent)
+            fail("Expected IllegalStateException for a non-address output")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("not SDK-routable"))
+        }
+
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any()) }
+        assertEquals(0, mockWebServer.requestCount)
+    }
+
+    // ==================== extractBip70Recipients (pure) ====================
+
+    @Test
+    fun `extractBip70Recipients maps standard outputs and rejects non-address scripts`() {
+        val network = org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(networkParams.id)
+        val addressA = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val p2pkh = org.bitcoinj.script.ScriptBuilder.createOutputScript(addressA).program
+
+        // Single and multi-output standard scripts map in order.
+        val multi = PaymentIntent(
+            PaymentIntent.Standard.BIP70, null, null,
+            arrayOf(
+                PaymentIntent.Output(Coin.valueOf(150_000).toNeutralCoin(), p2pkh),
+                PaymentIntent.Output(Coin.valueOf(250_000).toNeutralCoin(), p2pkh)
+            ),
+            null, null, null, null, null, null, null
+        )
+        assertEquals(
+            listOf(addressA.toBase58() to 150_000L, addressA.toBase58() to 250_000L),
+            extractBip70Recipients(multi, network)
+        )
+
+        // An OP_RETURN output poisons the whole intent (fail closed).
+        val withOpReturn = PaymentIntent(
+            PaymentIntent.Standard.BIP70, null, null,
+            arrayOf(
+                PaymentIntent.Output(Coin.valueOf(150_000).toNeutralCoin(), p2pkh),
+                PaymentIntent.Output(
+                    Coin.valueOf(1).toNeutralCoin(),
+                    org.bitcoinj.script.ScriptBuilder.createOpReturnScript(byteArrayOf(9, 9, 9)).program
+                )
+            ),
+            null, null, null, null, null, null, null
+        )
+        assertEquals(null, extractBip70Recipients(withOpReturn, network))
+
+        // A zero-amount output is not routable either.
+        val zeroAmount = PaymentIntent(
+            PaymentIntent.Standard.BIP70, null, null,
+            arrayOf(PaymentIntent.Output(Coin.ZERO.toNeutralCoin(), p2pkh)),
+            null, null, null, null, null, null, null
+        )
+        assertEquals(null, extractBip70Recipients(zeroAmount, network))
     }
 }

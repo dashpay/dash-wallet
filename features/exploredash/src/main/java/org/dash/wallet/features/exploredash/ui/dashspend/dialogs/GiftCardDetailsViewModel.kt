@@ -274,7 +274,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     cancelTicker()
                                     state
                                 } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
-                                    log.error("CTXSpend returned a redeem url card: not supported")
+                                    log.info("CTXSpend returned a redeem url card")
                                     updateGiftCardWithURL(index = 0, giftCard.redeemUrl, giftCard.redeemUrlChallenge)
                                     val newState = uiState.value.copy(
                                         status = giftCard.status,

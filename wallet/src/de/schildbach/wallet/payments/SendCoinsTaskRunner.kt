@@ -60,7 +60,10 @@ import de.schildbach.wallet.util.toDashjCoin
 import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toDash
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.data.TxId
+import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
+import org.dash.wallet.common.payments.parsers.Scripts
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
@@ -273,6 +276,39 @@ fun extractSdkRoutablePayment(
         return SdkRoutablePayment(address, amount, sendAll = sendRequest.emptyWallet)
     }
     return null
+}
+
+/**
+ * Post-cutover BIP70/BIP270 (issue #1520 Phase 1B item 1): the
+ * `(base58 address, duffs)` recipients of a payment intent when — and ONLY
+ * when — EVERY output is a standard pay-to-address script (P2PKH/P2SH)
+ * with a positive amount, i.e. expressible by the SDK's address-only tx
+ * builder. Null means "not SDK-routable, fail closed" — a non-standard
+ * output script (the builder has no raw-script surface yet) or a
+ * zero/absent amount (payer-chooses requests never reach the direct-pay
+ * leg with unset amounts on the dashj path either).
+ *
+ * Pure — host-testable without a wallet.
+ */
+fun extractBip70Recipients(
+    paymentIntent: PaymentIntent,
+    network: AddressNetwork
+): List<Pair<String, Long>>? {
+    val outputs = paymentIntent.outputs ?: return null
+    if (outputs.isEmpty()) return null
+    val recipients = ArrayList<Pair<String, Long>>(outputs.size)
+    for (output in outputs) {
+        val script = output.scriptData
+        val address = if (Scripts.isP2PKH(script) || Scripts.isP2SH(script)) {
+            Scripts.addressOf(script, network)
+        } else {
+            null
+        } ?: return null
+        val amountDuffs = output.amount?.value ?: return null
+        if (amountDuffs <= 0) return null
+        recipients += address to amountDuffs
+    }
+    return recipients
 }
 
 class SendCoinsTaskRunner @Inject constructor(
@@ -784,6 +820,14 @@ class SendCoinsTaskRunner @Inject constructor(
         finalPaymentIntent: PaymentIntent,
         serviceName: String?
     ): Transaction {
+        // Phase 5d / issue #1520 Phase 1B item 1: post-cutover the dashj
+        // engine is held (completeTx would build a tx nothing can
+        // broadcast), so the whole direct-pay leg runs on the SDK's
+        // deferred build/broadcast surface instead. Pre-cutover the code
+        // below is byte-identical to today.
+        if (sdkL1SendService.cutoverCommitted()) {
+            return directPayViaSdk(finalPaymentIntent, serviceName)
+        }
         log.info("completing sendRequest transaction")
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
@@ -855,6 +899,137 @@ class SendCoinsTaskRunner @Inject constructor(
 
 
         return sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true)
+    }
+
+    /**
+     * Post-cutover BIP70/BIP270 direct payment (issue #1520 Phase 1B
+     * item 1). The SDK builds + signs the payment-request tx with its
+     * inputs RESERVED — nothing broadcast; the BIP70 `Payment` message
+     * carries the SDK's signed raw bytes; and ONLY a merchant ack
+     * broadcasts the tx, which then enters the dashj wallet through the
+     * same bridge every SDK send uses ([SdkBridgedTransactionFactory] —
+     * `maybeCommitTx` inside, so the "merchant broadcast it first" race
+     * is handled exactly like the dashj path).
+     *
+     * Failure semantics (dashj-path parity unless noted):
+     * - Non-address output scripts / missing amounts → fail closed
+     *   ([extractBip70Recipients] null): the SDK builder is address-only.
+     * - PRE-ACK failure (transport error, nack): release the reservation
+     *   and rethrow — the dashj path likewise treats an unacked payment
+     *   as never-sent. NOTE the narrowed recovery window: pre-cutover a
+     *   merchant-broadcast tx could still be discovered via dashj's bloom
+     *   relay during its 0/1/3/5s poll; the SDK's compact-filter view
+     *   cannot see unmined txs, so that rescue is gone. The release keeps
+     *   a user retry from wedging on reserved inputs; an abandoned tx the
+     *   merchant DOES later broadcast conflicts with (never doubles) the
+     *   retry, because both spend the same reserved-then-released inputs.
+     * - POST-ACK: the reservation is NEVER released — the merchant holds
+     *   the signed tx, and releasing would let a retry select different
+     *   inputs and double-pay if the merchant broadcasts the original. An
+     *   SDK broadcast refusal here is logged and tolerated: BIP70
+     *   merchants (CTX) broadcast the acked tx themselves, and the dashj
+     *   path never verified its own announce either.
+     */
+    private suspend fun directPayViaSdk(
+        finalPaymentIntent: PaymentIntent,
+        serviceName: String?
+    ): Transaction {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        Context.propagate(wallet.context)
+        val recipients = extractBip70Recipients(finalPaymentIntent, de.schildbach.wallet.Constants.ADDRESS_NETWORK)
+            ?: throw IllegalStateException(
+                "cutover committed: this payment request has an output the SDK builder cannot " +
+                    "express (non-address script or missing amount) — not SDK-routable"
+            )
+        val requestUrl = finalPaymentIntent.paymentUrl
+            ?: throw InvalidPaymentRequestURL("Final payment intent URL is null")
+
+        // The same pre-send condition the dashj path enforces at commit
+        // time (checkBalanceConditions → the FIRST foreign output).
+        for ((addressBase58, amountDuffs) in recipients) {
+            val address = Address.fromString(NETWORK_PARAMETERS, addressBase58)
+            if (!wallet.isAddressMine(address)) {
+                walletData.checkSendingConditions(address, Coin.valueOf(amountDuffs))
+                break
+            }
+        }
+
+        val payment = sdkL1SendService.buildDeferredPayment(recipients)
+
+        try {
+            serviceName?.let {
+                metadataProvider.setTransactionService(TxId.wrap(payment.txidHex), it)
+            }
+            // dashj stays keychain-of-record post-cutover (held, not gone),
+            // so the refund address derives exactly as on the dashj path.
+            val refundAddress = wallet.freshAddress(KeyChain.KeyPurpose.REFUND)
+            val paymentMessage = PaymentProtocol.createPaymentMessage(
+                listOf(payment.rawTxBytes),
+                finalPaymentIntent.amount,
+                refundAddress.toBase58(),
+                null,
+                finalPaymentIntent.payeeData
+            )
+
+            log.info("trying to send tx {} to {}", payment.txidHex, requestUrl)
+            val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_SEND_PAYMENT)
+            val response = Constants.HTTP_CLIENT.call(buildOkHttpDirectPayRequest(requestUrl, paymentMessage))
+            response.ensureSuccessful()
+            requestUrl.toUri().host?.let {
+                timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
+            }
+            log.info("tx sent via http")
+
+            val byteStream = response.body?.byteStream()
+                ?: throw IOException("Null response for the payment request: $requestUrl")
+            val paymentAck = byteStream.use { Protos.PaymentACK.parseFrom(it) }
+            val acknowledged = PaymentProtocol.parsePaymentAck(paymentAck).memo != "nack"
+            log.info("received {} via http", if (acknowledged) "ack" else "nack")
+            if (!acknowledged) {
+                throw DirectPayException("Payment was not acknowledged by the server")
+            }
+        } catch (t: Throwable) {
+            // Pre-ack: the merchant never accepted the payment — free the
+            // inputs for an immediate retry (see the method KDoc for the
+            // narrowed merchant-broadcast recovery window this accepts).
+            withContext(NonCancellable) {
+                sdkL1SendService.releaseDeferredPayment(payment)
+            }
+            throw t
+        }
+
+        // Acked: the payment IS made from the merchant's side. Broadcast
+        // ourselves too (identical bytes/txid — a merchant broadcast makes
+        // this a harmless duplicate announce), but never release.
+        when (val result = sdkL1SendService.broadcastDeferredPayment(payment)) {
+            is SdkWriteResult.Broadcast ->
+                log.info("BIP70 tx {} broadcast via the SDK", result.value)
+            is SdkWriteResult.NotBroadcast ->
+                log.error(
+                    "BIP70 tx {} acked but the SDK broadcast was refused pre-network ({}) — " +
+                        "relying on the merchant's broadcast; the inputs stay reserved until " +
+                        "the engine's sync/TTL reclaims them",
+                    payment.txidHex, result.reason, result.cause
+                )
+            is SdkWriteResult.Ambiguous ->
+                log.error(
+                    "BIP70 tx {} acked; the SDK broadcast outcome is unconfirmed — the " +
+                        "merchant's broadcast covers delivery",
+                    payment.txidHex, result.cause
+                )
+        }
+
+        return when (
+            val bridged = bridgedTransactionFactory.bridge(payment.txidHex, payment.rawTxBytes)
+        ) {
+            is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged ->
+                bridged.transaction
+            is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged -> throw RuntimeException(
+                "BIP70 payment acked (txid ${payment.txidHex}) but the wallet display bridge " +
+                    "failed (${bridged.reason}) — the payment IS made; the transaction appears " +
+                    "after the next sync"
+            )
+        }
     }
 
     private fun isTransactionOnNetwork(transaction: Transaction): Boolean {
