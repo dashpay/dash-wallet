@@ -111,6 +111,10 @@ class SendCoinsTaskRunnerBIP70Test {
         platformRepo = mockk(relaxed = true)
         metadataProvider = mockk(relaxed = true)
         sdkL1SendService = mockk(relaxed = true)
+        // The relaxed default for a String?-returning suspend fun is "",
+        // which is not a decodable address — default to "no refund address"
+        // (omitted refund_to); tests that exercise refund_to override this.
+        coEvery { sdkL1SendService.refundAddressOrNull() } returns null
         bridgedTransactionFactory = mockk(relaxed = true)
         // wallet = mockk(relaxed = true)
 
@@ -848,6 +852,10 @@ class SendCoinsTaskRunnerBIP70Test {
         val payment = deferredPayment()
         val liveTx = mockk<org.bitcoinj.core.Transaction>(relaxed = true)
         coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        // Exercise the refund_to arm: a valid testnet address from the
+        // SDK address pool goes into the Payment message.
+        coEvery { sdkL1SendService.refundAddressOrNull() } returns
+            "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"
         coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
         coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)

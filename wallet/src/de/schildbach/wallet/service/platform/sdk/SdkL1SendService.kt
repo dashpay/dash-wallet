@@ -23,6 +23,7 @@ import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -44,6 +45,12 @@ import javax.inject.Singleton
  */
 internal const val PWFFI_ERROR_INVALID_PARAMETER = 2
 internal const val PWFFI_ERROR_UNKNOWN = 99
+
+// `AddressPoolTypeTagFFI` discriminant for the SDK Room `CoreAddressEntity`
+// rows: 0 = External (receive chain). The account-tag pair for BIP44
+// account 0 lives with the consolidation helpers below
+// ([ACCOUNT_TYPE_TAG_STANDARD] / [STANDARD_ACCOUNT_TAG_BIP44]).
+internal const val ADDRESS_POOL_TAG_EXTERNAL = 0
 
 /**
  * No-double-broadcast decision table for a throwable raised by the SDK's
@@ -579,6 +586,28 @@ interface SdkL1SendSource {
      */
     suspend fun releaseDeferredPayment(walletIdHex: String, payment: SdkDeferredPayment): Unit =
         throw UnsupportedOperationException("deferred (BIP70) payment not supported by this source")
+
+    /**
+     * The LOWEST-index unused EXTERNAL (receive-chain) address of the
+     * wallet's BIP44 account 0, read from the SDK's Room mirror of the
+     * ENGINE-maintained address pool (`core_addresses`, fed by
+     * `onPersistAccountAddressPoolEntry`) — the SDK's canonical
+     * current-address pattern (KotlinExampleApp `ReceiveAddressSheet`,
+     * iOS `nextCoreReceiveAddress`), used here as the BIP70
+     * `Payment.refund_to` source with no dashj keychain involved. Null
+     * when the account or pool rows are absent (fresh install
+     * mid-first-sync, wiped DB).
+     *
+     * UPSTREAM GAP (dashpay/platform): the pool has no ISSUED-marker
+     * (`isUsed` flips only when seen on-chain), so every reader of this
+     * pattern converges on the same address until it's used — fine for
+     * current-address semantics, but a `fresh_address` FFI with an
+     * engine-side issued-marker is needed before per-invoice
+     * (dashj-`freshReceiveAddress`-style) handout is possible. Default
+     * throws: only the production source (and BIP70 fakes) need it.
+     */
+    suspend fun unusedExternalAddress(walletIdHex: String): String? =
+        throw UnsupportedOperationException("address-pool reads not supported by this source")
 
     /**
      * [sendAllToAddress] aimed at the DIP-9 CoinJoin account
@@ -1193,6 +1222,28 @@ internal class DashSdkL1SendSource(
         checkNotNull(
             payment.native as? org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet.SignedCoreTransaction
         ) { "deferred payment ${payment.txidHex} does not carry the SDK reservation object" }
+
+    override suspend fun unusedExternalAddress(walletIdHex: String): String? {
+        service.ensureStarted()
+        val database = service.databaseOrNull() ?: return null
+        val walletId = decodeHexOrNull(walletIdHex, walletIdHex.length / 2) ?: return null
+        val account = database.accountDao()
+            .getByKey(walletId, ACCOUNT_TYPE_TAG_STANDARD, 0)
+            .firstOrNull { it.standardTag == STANDARD_ACCOUNT_TAG_BIP44 }
+            ?: return null
+        val pool = database.coreAddressDao().observeByAccount(account.id).first()
+        // LOWEST-index unused entry — the SDK's canonical current-address
+        // pattern (KotlinExampleApp ReceiveAddressSheet / iOS
+        // nextCoreReceiveAddress: poolType external, !isUsed, balance 0,
+        // min addressIndex). NOTE: dashj's Receive screen issues from the
+        // same low end of this chain in Phase 1B, so refund_to will often
+        // equal the currently shown receive address — accepted address
+        // reuse; the pool has no issued-marker to coordinate the two.
+        return pool
+            .filter { it.poolTypeTag == ADDRESS_POOL_TAG_EXTERNAL && !it.isUsed && it.balance == 0L }
+            .minByOrNull { it.addressIndex }
+            ?.address
+    }
 
     override suspend fun <T> withCoreSendLock(walletIdHex: String, block: suspend () -> T): T {
         // Serialize the drain under this source's app-owned [coreSendMutex].
@@ -1906,6 +1957,22 @@ class SdkL1SendService internal constructor(
                 payment.txidHex, t
             )
         }
+    }
+
+    /**
+     * The BIP70 `Payment.refund_to` source, post-cutover: the lowest
+     * unused external address from the SDK's persisted address pool
+     * ([SdkL1SendSource.unusedExternalAddress]) — no dashj keychain read.
+     * Contained: null (⇒ the caller omits refund_to, which BIP70 makes
+     * optional) when the wallet is unbound, the pool rows are missing, or
+     * the read fails.
+     */
+    suspend fun refundAddressOrNull(): String? = try {
+        source.boundWalletIdOrNull()?.let { source.unusedExternalAddress(it) }
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("SDK refund-address read failed; the Payment message will omit refund_to", t)
+        null
     }
 
     /** [isValidAddress] with failures contained (a throw must not escape a preflight). */

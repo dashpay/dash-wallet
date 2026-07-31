@@ -960,13 +960,17 @@ class SendCoinsTaskRunner @Inject constructor(
             serviceName?.let {
                 metadataProvider.setTransactionService(TxId.wrap(payment.txidHex), it)
             }
-            // dashj stays keychain-of-record post-cutover (held, not gone),
-            // so the refund address derives exactly as on the dashj path.
-            val refundAddress = wallet.freshAddress(KeyChain.KeyPurpose.REFUND)
+            // refund_to comes from the SDK's persisted address pool — no
+            // dashj keychain on this route. Null → omit the refund output
+            // (optional per BIP70) rather than fall back to dashj.
+            val refundAddress = sdkL1SendService.refundAddressOrNull()
+            if (refundAddress == null) {
+                log.warn("no SDK refund address available; sending the Payment message without refund_to")
+            }
             val paymentMessage = PaymentProtocol.createPaymentMessage(
                 listOf(payment.rawTxBytes),
                 finalPaymentIntent.amount,
-                refundAddress.toBase58(),
+                refundAddress,
                 null,
                 finalPaymentIntent.payeeData
             )
