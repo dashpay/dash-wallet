@@ -75,6 +75,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
@@ -131,6 +132,9 @@ public class SweepWalletFragment extends Fragment {
     private DialogFragment loadingDialog;
 
     private SweepWalletViewModel viewModel;
+
+    @Inject
+    SweepTxBroadcaster sweepTxBroadcaster;
 
     private enum State {
         INTRO,
@@ -625,7 +629,12 @@ public class SweepWalletFragment extends Fragment {
                 sentTransaction = transaction;
 
                 setState(State.SENDING);
+                // Pre-cutover: broadcasts via the dashj peergroup (unchanged).
                 application.processDirectTransaction(sentTransaction);
+                // Post-cutover the peergroup is held and the broadcast above no-ops,
+                // so also push the signed tx to the same Electrum/explorer servers the
+                // sweep used for UTXO discovery. No-op pre-cutover (see SweepTxBroadcaster).
+                sweepTxBroadcaster.broadcastIfCutoverCommitted(sentTransaction);
                 viewModel.logEvent(AnalyticsConstants.SendReceive.IMPORT_PRIVATE_KEY_SUCCESS);
                 showTransactionResult(sentTransaction);
             }

@@ -24,6 +24,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.sdk.SdkDashPayWrites
 import de.schildbach.wallet.service.platform.sdk.SdkIdentityVerifyWrites
+import de.schildbach.wallet.service.platform.sdk.SdkMasternodeQueries
 import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.WalletUnlock
@@ -86,7 +87,8 @@ class PlatformDocumentBroadcastService @Inject constructor(
     val platformSyncService: PlatformSyncService,
     val sdkDashPayWrites: SdkDashPayWrites,
     val sdkIdentityVerifyWrites: SdkIdentityVerifyWrites,
-    val sdkWalletBinder: SdkWalletBinder
+    val sdkWalletBinder: SdkWalletBinder,
+    val sdkMasternodeQueries: SdkMasternodeQueries
 ) : PlatformBroadcastService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformDocumentBroadcastService::class.java)
@@ -310,10 +312,24 @@ class PlatformDocumentBroadcastService @Inject constructor(
             val masternodeKey = ECKey.fromPrivate(masternodeKeyBytes)
             val votingKeyId = KeyId.fromBytes(masternodeKey.pubKeyHash)
             val boas = ByteArrayOutputStream(32 + 20)
-            val masternodes = dashSystemService.system.masternodeListManager.masternodeList.getMasternodesByVotingKey(votingKeyId)
-            masternodes.forEach { masternode ->
+            // dashj first (pre-cutover behavior unchanged); once dashj sync is
+            // held its masternode list is empty, so fall back to the SDK's DML
+            // lookup. Only the proTxHash discovery is routed — the vote
+            // broadcast below stays on dashj-platform DAPI.
+            val dashjMasternodes = try {
+                dashSystemService.system.masternodeListManager.masternodeList.getMasternodesByVotingKey(votingKeyId)
+            } catch (e: Exception) {
+                log.warn("dashj masternode-by-voting-key lookup failed; trying SDK", e)
+                listOf()
+            }
+            val proTxHashes = if (dashjMasternodes.isNotEmpty()) {
+                dashjMasternodes.map { it.proTxHash }
+            } else {
+                sdkMasternodeQueries.proTxHashesByVotingKey(masternodeKey.pubKeyHash)
+            }
+            proTxHashes.forEach { proTxHash ->
                 try {
-                    boas.write(masternode.proTxHash.bytes)
+                    boas.write(proTxHash.bytes)
                     boas.write(masternodeKey.pubKeyHash)
                     val idBytes = Sha256Hash.of(boas.toByteArray())
                     val identity = platform.identities.get(Identifier.from(idBytes.bytes))
@@ -325,7 +341,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
                             val vote = platform.names.broadcastVote(
                                 resourceVoteChoice,
                                 username,
-                                masternode.proTxHash,
+                                proTxHash,
                                 votingIdentityPublicKey,
                                 SimpleSignerCallback(
                                     mapOf(votingIdentityPublicKey to masternodeKey),

@@ -616,6 +616,36 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private var lastContactResumeRefreshMs = 0L
+
+    /**
+     * Force a network contact-request refresh when the user returns to the
+     * home screen. The periodic [PlatformSyncService] poll is scoped to the
+     * blockchain service, which auto-tears-down after a few minutes and does
+     * not reliably re-arm the ticker across service restarts — leaving
+     * multi-minute windows (even in foreground) where contact requests and
+     * acceptances aren't fetched. Opening the Contacts screen already forces a
+     * poll; this closes the gap for the home screen too so the notification
+     * bell refreshes without the user having to drill in.
+     *
+     * Throttled to [CONTACT_RESUME_REFRESH_THROTTLE_MS] so rapid app switching
+     * can't hammer the network, and gated on an established identity + a synced
+     * chain (the underlying [PlatformSyncService.updateContactRequests] also
+     * self-gates, but skipping the coroutine hop when there's nothing to do
+     * keeps resume cheap). Safe no-op for users without a DashPay identity.
+     */
+    fun refreshContactsOnResume() {
+        if (!identityRepository.hasBlockchainIdentity || _isBlockchainSynced.value != true) {
+            return
+        }
+        val now = System.currentTimeMillis()
+        if (now - lastContactResumeRefreshMs < CONTACT_RESUME_REFRESH_THROTTLE_MS) {
+            return
+        }
+        lastContactResumeRefreshMs = now
+        forceUpdateNotificationCount()
+    }
+
     suspend fun dismissUsernameCreatedCardIfDone(): Boolean {
         val data = blockchainIdentityDataDao.loadBase()
 
@@ -774,6 +804,17 @@ class MainViewModel @Inject constructor(
         private const val TIME_SKEW_TOLERANCE = 3600000L // 1 hour
         /** Retry cadence for the self-healing Platform-availability poll (see init). */
         private const val PLATFORM_AVAILABILITY_RETRY_MS = 30_000L
+
+        /**
+         * Throttle window for the on-resume contact-request refresh (see
+         * [refreshContactsOnResume]). The background [PlatformSyncService]
+         * ticker runs every 15s while its sync service is alive; matching that
+         * cadence here means returning to the app never fires a redundant
+         * network poll on top of a tick that just ran, while still refreshing
+         * promptly across the multi-minute gaps left when the blockchain
+         * service tears down and the ticker isn't re-armed.
+         */
+        private const val CONTACT_RESUME_REFRESH_THROTTLE_MS = 15_000L
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }

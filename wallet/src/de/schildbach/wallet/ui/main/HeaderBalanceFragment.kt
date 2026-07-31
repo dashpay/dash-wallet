@@ -25,6 +25,8 @@ import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HeaderBalanceFragmentBinding
@@ -53,14 +55,14 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         viewModel.exchangeRate.observe(viewLifecycleOwner) { updateBalance() }
         viewModel.totalBalance.observe(viewLifecycleOwner) { updateBalance() }
 
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { isSynced ->
-            if (isSynced) {
-                binding.syncingIndicator.isInvisible = true
-                binding.syncingIndicator.animation?.cancel()
-            } else {
-                binding.syncingIndicator.isInvisible = false
-                startSyncingIndicatorAnimation()
-            }
+        // Phase 5d: after a committed cutover the "syncing" indicator reads the
+        // SDK L1 scan instead of dashj (viewModel.sdkOwnsL1); collect that source
+        // too so the indicator clears from whichever engine owns L1 this launch.
+        // Pre-cutover (every install today) this is identical to the dashj-only
+        // rendering.
+        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncingIndicator() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.sdkL1Synced.collect { updateSyncingIndicator() }
         }
 
         viewModel.hideBalance.observe(viewLifecycleOwner) { hideBalance ->
@@ -70,6 +72,23 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
 
         viewModel.showTapToHideHint.observe(viewLifecycleOwner) { showHint ->
             binding.hideBalanceHintText.isVisible = showHint != false
+        }
+    }
+
+    private fun updateSyncingIndicator() {
+        val sdkOwnsL1 = viewModel.sdkOwnsL1.value
+        val isSynced = if (sdkOwnsL1) {
+            viewModel.sdkL1Synced.value
+        } else {
+            viewModel.isBlockchainSynced.value == true
+        }
+
+        if (isSynced) {
+            binding.syncingIndicator.isInvisible = true
+            binding.syncingIndicator.animation?.cancel()
+        } else {
+            binding.syncingIndicator.isInvisible = false
+            startSyncingIndicatorAnimation()
         }
     }
 

@@ -16,8 +16,8 @@
  */
 package org.dash.wallet.integrations.maya.payments.parsers
 
-import org.dash.wallet.common.payments.parsers.Base58
 import org.dash.wallet.common.payments.parsers.AddressParser
+import org.dash.wallet.common.payments.parsers.Base58
 import org.dash.wallet.common.payments.parsers.Bech32
 import java.util.zip.CRC32
 

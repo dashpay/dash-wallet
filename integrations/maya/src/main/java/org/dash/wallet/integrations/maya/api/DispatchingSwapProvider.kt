@@ -25,8 +25,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress

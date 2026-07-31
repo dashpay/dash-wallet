@@ -332,6 +332,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         checkWalletEncryptionDialog()
         viewModel.detectUserCountry()
         viewModel.startBlockchainService()
+        // The periodic contact-request poll is scoped to the blockchain service
+        // and can stall across service teardown/restart; force a throttled
+        // refresh here so returning to the home screen promptly surfaces new
+        // contact requests and acceptances without opening the Contacts screen.
+        viewModel.refreshContactsOnResume()
     }
 
     override fun onNewIntent(intent: Intent?) {

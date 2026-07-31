@@ -21,21 +21,25 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import de.schildbach.wallet.service.DashjDiagnosticSyncState
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
@@ -64,6 +68,8 @@ fun ToolsScreen(
 
     ToolsScreen(
         uiStateFlow = viewModel.uiState,
+        dashjDiagnosticFlow = viewModel.dashjDiagnosticState,
+        onDashjDiagnosticToggle = viewModel::setDashjSyncDiagnostic,
         onBackClick = onBackClick,
         onAddressBookClick = onAddressBookClick,
         onImportPrivateKeyClick = onImportPrivateKeyClick,
@@ -80,6 +86,8 @@ fun ToolsScreen(
 @Composable
 fun ToolsScreen(
     uiStateFlow: StateFlow<ToolsUIState>,
+    dashjDiagnosticFlow: StateFlow<DashjDiagnosticUIState> = MutableStateFlow(DashjDiagnosticUIState()),
+    onDashjDiagnosticToggle: (Boolean) -> Unit = {},
     onBackClick: () -> Unit = {},
     onAddressBookClick: () -> Unit = {},
     onImportPrivateKeyClick: () -> Unit = {},
@@ -92,9 +100,12 @@ fun ToolsScreen(
     onBuyCredits: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
+    val dashjDiagnostic by dashjDiagnosticFlow.collectAsState()
 
     ToolsScreenContent(
         uiState = uiState,
+        dashjDiagnostic = dashjDiagnostic,
+        onDashjDiagnosticToggle = onDashjDiagnosticToggle,
         onBackClick = onBackClick,
         onAddressBookClick = onAddressBookClick,
         onImportPrivateKeyClick = onImportPrivateKeyClick,
@@ -111,6 +122,8 @@ fun ToolsScreen(
 @Composable
 private fun ToolsScreenContent(
     uiState: ToolsUIState,
+    dashjDiagnostic: DashjDiagnosticUIState = DashjDiagnosticUIState(),
+    onDashjDiagnosticToggle: (Boolean) -> Unit = {},
     onBackClick: () -> Unit = {},
     onAddressBookClick: () -> Unit = {},
     onImportPrivateKeyClick: () -> Unit = {},
@@ -212,8 +225,48 @@ private fun ToolsScreenContent(
                     action = onZenLedgerExport
                 )
             }
+
+            // dashj sync (diagnostic): un-holds the legacy dashj engine after the
+            // SDK cutover so it syncs as a backup / parity check. English-only,
+            // like the rest of the SDK-migration debug instrumentation.
+            Menu {
+                MenuItem(
+                    title = "dashj sync (diagnostic)",
+                    subtitle = "Run the legacy dashj engine alongside the SDK to compare",
+                    icon = R.drawable.ic_menu_network_monitor,
+                    checked = dashjDiagnostic.enabled,
+                    onCheckedChange = onDashjDiagnosticToggle
+                )
+                if (dashjDiagnostic.enabled) {
+                    val (label, color) = dashjDiagnosticReadout(dashjDiagnostic)
+                    Text(
+                        text = label,
+                        style = MyTheme.CaptionMedium,
+                        color = color,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
+                }
+            }
         }
     }
+}
+
+/**
+ * The diagnostic percentage readout + its colour: neutral while dashj is still
+ * syncing, GREEN once caught up and matching the SDK, RED on a mismatch.
+ */
+@Composable
+private fun dashjDiagnosticReadout(state: DashjDiagnosticUIState): Pair<String, Color> = when {
+    state.percent < 100 ->
+        "dashj syncing ${state.percent}%" to MyTheme.Colors.textSecondary
+    state.parity == DashjDiagnosticSyncState.Parity.MATCH ->
+        "dashj 100% — matches SDK" to MyTheme.Colors.green
+    state.parity == DashjDiagnosticSyncState.Parity.MISMATCH ->
+        "dashj 100% — MISMATCH vs SDK" to MyTheme.Colors.red
+    else ->
+        "dashj 100% — comparing to SDK…" to MyTheme.Colors.textSecondary
 }
 
 @Composable

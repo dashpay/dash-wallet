@@ -116,8 +116,8 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 var amountText by rememberSaveable { mutableStateOf("0") }
                 val denominationQuantities = remember { mutableStateMapOf<Double, Int>() }
                 var showBalance by remember { mutableStateOf(false) }
-            var minFiat by remember { mutableStateOf<FiatValue?>(null) }
-            var maxFiat by remember { mutableStateOf<FiatValue?>(null) }
+                var minFiat by remember { mutableStateOf<FiatValue?>(null) }
+                var maxFiat by remember { mutableStateOf<FiatValue?>(null) }
 
                 // Refresh min/max values whenever the exchange rate or merchant changes.
                 // Keying on both is necessary because the merchant loads asynchronously after
@@ -280,7 +280,7 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                         amountText = processAmountKeyInput(amountText, key)
                         // Update viewModel order info so confirm dialog has up-to-date amount
                         val fiatAmount = try {
-                        FiatValue.parseFiat(Constants.USD_CURRENCY, amountText)
+                            FiatValue.parseFiat(Constants.USD_CURRENCY, amountText)
                         } catch (e: Exception) {
                             log.debug("Failed to parse fiat amount: $amountText", e)
                             null
@@ -306,7 +306,7 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                         when (val m = mode) {
                             is GiftCardPurchaseMode.FlexibleSingle -> {
                                 val fiat = try {
-                                FiatValue.parseFiat(Constants.USD_CURRENCY, amountText)
+                                    FiatValue.parseFiat(Constants.USD_CURRENCY, amountText)
                                 } catch (e: Exception) {
                                     log.debug("Failed to parse fiat amount: $amountText", e)
                                     return@PurchaseGiftCardScreenV2

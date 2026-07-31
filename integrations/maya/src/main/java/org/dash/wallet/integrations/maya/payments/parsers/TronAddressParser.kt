@@ -16,8 +16,8 @@
  */
 package org.dash.wallet.integrations.maya.payments.parsers
 
-import org.dash.wallet.common.payments.parsers.Base58
 import org.dash.wallet.common.payments.parsers.AddressParser
+import org.dash.wallet.common.payments.parsers.Base58
 
 /**
  * TRON address parser — Base58Check, 34 characters, leading `T`. Beyond the shape check, the

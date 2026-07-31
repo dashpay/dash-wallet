@@ -39,7 +39,6 @@ import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.money.dashToFiat
-import org.dash.wallet.common.money.fiatValue
 import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.payments.parsers.opReturnMessage
 import org.dash.wallet.common.services.analytics.AnalyticsConstants

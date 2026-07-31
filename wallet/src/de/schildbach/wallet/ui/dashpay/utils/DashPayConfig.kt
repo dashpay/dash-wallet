@@ -269,16 +269,16 @@ open class DashPayConfig @Inject constructor(
         val USE_KOTLIN_SDK_L1_SEND = booleanPreferencesKey("use_kotlin_sdk_l1_send")
 
         /**
-         * The `USE_KOTLIN_SDK_*` flags a DEBUG build seeds ON when unset —
-         * pure so [seedDebugDefaultsIfUnset]'s network split is
-         * host-testable. Per Brian's explicit decision (2026-07-27), mainnet
-         * debug builds (prodDebug — the external large-wallet validation
-         * vehicle) now seed the SAME feature set as testnet, INCLUDING the
-         * shielded pool and the SDK write paths — this deliberately exposes
-         * those paths to REAL mainnet funds for on-device validation. Only
-         * the prodDebug build seeds ([seedDebugDefaultsIfUnset] is
-         * `!BuildConfig.DEBUG` gated), so a prodRelease stays features-off by
-         * default. `USE_KOTLIN_SDK_L1_SEND` is never seeded anywhere.
+         * The `USE_KOTLIN_SDK_*` flags every build seeds ON when unset — pure
+         * so [seedDebugDefaultsIfUnset]'s network split is host-testable. Per
+         * Brian's decisions: mainnet prodDebug seeds the SAME feature set as
+         * testnet (2026-07-27), and as of 2026-07-30 **all variants** seed
+         * (the `BuildConfig.DEBUG` gate was removed) so a prodRelease store
+         * build is byte-for-byte behaviourally identical to the QA builds —
+         * no divergence between what is tested and what ships. This means
+         * prodRelease exposes the SDK paths to REAL funds by default; the
+         * pre-release gates (DIP-15 friendship-xpub parity) still apply before
+         * a store rollout. `USE_KOTLIN_SDK_L1_SEND` is never seeded anywhere.
          */
         internal fun debugSeedFlags(isMainnet: Boolean) = if (isMainnet) {
             // Mainnet: full set (real-funds validation vehicle — see KDoc).
@@ -322,6 +322,27 @@ open class DashPayConfig @Inject constructor(
         val CUTOVER_STATE = stringPreferencesKey("cutover_state")
 
         /**
+         * DIAGNOSTIC toggle (Tools screen, debug instrumentation): un-hold the
+         * dashj L1 engine AFTER the Phase 5d cutover has committed, so the
+         * legacy peergroup syncs normally alongside the SDK — a backup /
+         * SDK-vs-dashj parity verification aid. Default OFF.
+         *
+         * Purely ADDITIVE and reversible: with the flag OFF every path that
+         * reads it is a no-op and behavior is byte-for-byte the pre-feature
+         * behavior — the cutover state, the `sdkOwnsL1` decision, and every
+         * SDK surface are untouched. When ON (and the cutover is committed) the
+         * blockchain service's engine-start gate lets the dashj peergroup start
+         * WITHOUT flipping `sdkOwnsL1` (the home header keeps reading the SDK's
+         * L1 sync); dashj's own sync % + SDK-vs-dashj parity verdict are routed
+         * to a separate diagnostic holder
+         * ([de.schildbach.wallet.service.DashjDiagnosticSyncState]) that only
+         * the Tools screen observes, so the shared `blockchain_state` row is
+         * never disturbed. Toggling requires a blockchain-service restart to
+         * re-resolve the gate (see the Tools row).
+         */
+        val DASHJ_SYNC_DIAGNOSTIC = booleanPreferencesKey("dashj_sync_diagnostic")
+
+        /**
          * Last shielded balance (in duffs) persisted from a fully-synced
          * (READY) shielded runtime, so the More-screen "Shielded" card can
          * render the known balance INSTANTLY on open — even while a
@@ -336,13 +357,13 @@ open class DashPayConfig @Inject constructor(
     }
 
     init {
-        // Debug builds seed the Kotlin SDK migration flags ON (once, only if unset) so
-        // flag-gated SDK paths get exercised during testnet verification; release/prod
-        // builds keep them OFF until rollout. QA can still toggle them afterwards.
-        if (BuildConfig.DEBUG) {
-            CoroutineScope(Dispatchers.IO).launch {
-                seedDebugDefaultsIfUnset()
-            }
+        // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
+        // variant — testnet debug, mainnet prodDebug, and the prodRelease store build —
+        // behaves identically (Brian's directive 2026-07-30: QA == mainnet == release, no
+        // flag divergence between what is tested and what ships). QA can still toggle them
+        // afterwards. (Method name kept for now; it no longer gates on BuildConfig.DEBUG.)
+        CoroutineScope(Dispatchers.IO).launch {
+            seedDebugDefaultsIfUnset()
         }
     }
 
@@ -358,7 +379,6 @@ open class DashPayConfig @Inject constructor(
      * seeded is network-dependent — see [debugSeedFlags].
      */
     suspend fun seedDebugDefaultsIfUnset() {
-        if (!BuildConfig.DEBUG) return
         try {
             val seeded = mutableListOf<String>()
             val alreadySet = mutableListOf<String>()
@@ -394,6 +414,19 @@ open class DashPayConfig @Inject constructor(
 
     /** Persist the last trustworthy shielded balance (duffs). See [LAST_SHIELDED_BALANCE_DUFFS]. */
     suspend fun setLastShieldedBalanceDuffs(duffs: Long) = set(LAST_SHIELDED_BALANCE_DUFFS, duffs)
+
+    /**
+     * Whether the dashj-sync DIAGNOSTIC toggle is on (see
+     * [DASHJ_SYNC_DIAGNOSTIC]). Defaults to false when unset.
+     */
+    suspend fun getDashjSyncDiagnostic(): Boolean = get(DASHJ_SYNC_DIAGNOSTIC) ?: false
+
+    /** Reactive mirror of [getDashjSyncDiagnostic] (null → false). */
+    fun observeDashjSyncDiagnostic(): Flow<Boolean> =
+        observe(DASHJ_SYNC_DIAGNOSTIC).map { it ?: false }
+
+    /** Persist the dashj-sync DIAGNOSTIC toggle (see [DASHJ_SYNC_DIAGNOSTIC]). */
+    suspend fun setDashjSyncDiagnostic(enabled: Boolean) = set(DASHJ_SYNC_DIAGNOSTIC, enabled)
 
     open suspend fun areNotificationsDisabled(): Boolean {
         return (get(LAST_SEEN_NOTIFICATION_TIME) ?: 0) == DISABLE_NOTIFICATIONS

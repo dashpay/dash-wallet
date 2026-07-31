@@ -36,6 +36,7 @@ import coil.transform.RoundedCornersTransformation
 import org.dash.wallet.common.ui.components.MerchantNameIcon
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.service.platform.sdk.L1TxUiStatus
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import de.schildbach.wallet.service.platform.sdk.assetLockTitleRes
 import de.schildbach.wallet.ui.DashPayUserActivity
@@ -513,7 +514,15 @@ class TransactionResultViewBinder(
 
     @SuppressLint("SetTextI18n")
     private fun setTransactionDirection(tx: Transaction, wallet: Wallet) {
-        if (tx.confidence.hasErrors()) {
+        // #1/#6 residual: when an SDK detail is present (sdkOverride for a dashj-held tx the frozen
+        // post-cutover wallet mis-reads, or sdkDetail for an SDK-only tx) the lock/confirmation
+        // status is authoritative from the engine-derived L1TxUiStatus — PENDING / INSTANT_LOCKED /
+        // IN_BLOCK / CHAINLOCKED — none of which encode a failure. So an SDK-detailed tx is never
+        // rendered from the frozen dashj confidence's error/failed state; dashj tx.confidence is
+        // consulted only in the dashj-only case, preserving the existing error handling there.
+        val sdkStatus: L1TxUiStatus? = (sdkOverride ?: sdkDetail)?.status
+        val hasError = if (sdkStatus != null) false else tx.confidence.hasErrors()
+        if (hasError) {
             val errorStatus = TxError.fromTransaction(tx)
             val showReportIssue = errorStatus == TxError.DoubleSpend || errorStatus == TxError.Duplicate ||
                 errorStatus == TxError.Unknown || errorStatus == TxError.InConflict

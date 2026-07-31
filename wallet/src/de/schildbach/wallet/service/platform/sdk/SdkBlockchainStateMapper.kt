@@ -85,6 +85,26 @@ internal data class SdkBlockchainStateUpdate(
      * [org.dash.wallet.common.data.entity.BlockchainState.syncFailed]).
      */
     val networkStalled: Boolean
+    // TODO(#1521 Phase 2 item 1): no `chainlockHeight` field here on purpose.
+    //   The dashj path fills BlockchainState.chainlockHeight from
+    //   `chainLockHandler.bestChainLockBlockHeight` (a GLOBAL best-chainlocked
+    //   block height), but the SDK exposes no live equivalent:
+    //   - the progress feed [org.dashfoundation.dashsdk.wallet.SpvSyncProgressData]
+    //     (headers/filterHeaders/filters/masternodes sub-progress) carries no
+    //     chainlock height, so [SdkChainSnapshot] has none to derive from;
+    //   - the only chainlock-height scalars the SDK has are the WRONG shape:
+    //     [org.dashfoundation.dashsdk.wallet.TrackedAssetLock.chainLockHeight]
+    //     is per-asset-lock (the height a single funding outpoint got
+    //     chainlocked, for identity recovery), and
+    //     `WalletEntity.lastAppliedChainLockBytes` is an undecoded bincode
+    //     ChainLock blob living in the persistence layer, not on the app-side
+    //     progress pipeline.
+    //   Populating it would need the SDK to surface a global best-chainlocked
+    //   height on `SpvSyncProgressData` (or a `WalletManagerNative` accessor),
+    //   which `toShadowSyncProgress` would carry into [ShadowSyncProgress] and
+    //   this derivation into a new nullable field. Until then
+    //   [de.schildbach.wallet.service.BlockchainStateDataProvider.updateSdkBlockchainState]
+    //   PRESERVES the row's last dashj-known chainlockHeight (never regresses it).
 )
 
 /**

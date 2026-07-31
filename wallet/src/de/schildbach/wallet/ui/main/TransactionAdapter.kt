@@ -43,6 +43,8 @@ import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.data.entity.SwapOrderStatus
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.avatar.UserAvatarPlaceholderDrawable
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.util.GenericUtils
 import de.schildbach.wallet.util.format
@@ -135,13 +137,35 @@ class TransactionViewHolder(
         if (contact != null) {
             binding.primaryIcon.background = null
             binding.primaryIcon.setPadding(0, 0, 0, 0)
-            binding.primaryIcon.load(contact.avatarUrl) {
-                transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
-                placeholder(R.drawable.ic_avatar)
-                error(R.drawable.ic_avatar)
+            // Fall back to the SAME generated default avatar the profile screens show
+            // (a colored circle with the username's first letter) instead of the gray
+            // ic_avatar silhouette, for a contact whose avatarUrl is blank or fails to
+            // load. Mirrors ProfilePictureDisplay's default path (UserAvatarPlaceholderDrawable).
+            val username = contact.username
+            val fallbackAvatar = ResourcesCompat.getDrawable(resources, R.drawable.ic_avatar, null)
+            val defaultAvatar = if (username.isNotEmpty()) {
+                UserAvatarPlaceholderDrawable.getDrawable(
+                    itemView.context,
+                    username[0],
+                    (iconSize * ProfilePictureDisplay.FONT_SIZE_RATIO).toInt()
+                ) ?: fallbackAvatar
+            } else {
+                fallbackAvatar
+            }
+            if (contact.avatarUrl.isNotEmpty()) {
+                binding.primaryIcon.load(contact.avatarUrl) {
+                    transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+                    placeholder(defaultAvatar)
+                    error(defaultAvatar)
+                }
+            } else {
+                binding.primaryIcon.setImageDrawable(defaultAvatar)
             }
             binding.primaryIcon.setOnClickListener {
-                clickListener.invoke(txView, 0, true)
+                // Only treat the tap as a profile click when the contact carries a real
+                // userId (a defensively-reconstructed cache contact may have ""); the
+                // fragment's handler otherwise opens the transaction detail.
+                clickListener.invoke(txView, 0, contact.userId.isNotEmpty())
             }
 
             binding.secondaryIcon.isVisible = true

@@ -203,9 +203,14 @@ data class TxDisplayCacheEntry(
                 null
             }
         } else null
-        val resolvedContact = contact ?: if (contactUsername != null && contactUserId != null) {
+        // A row with a persisted contactUsername ALWAYS reconstructs a contact, even if
+        // contactUserId is somehow missing (userId falls back to "" — the adapter renders
+        // the avatar treatment either way and only enables the profile click when the
+        // userId is real). Requiring BOTH fields made such a row fall through to the bare
+        // direction drawable despite carrying contact attribution in the DB.
+        val resolvedContact = contact ?: if (!contactUsername.isNullOrEmpty()) {
             DashPayProfile(
-                userId        = contactUserId,
+                userId        = contactUserId ?: "",
                 username      = contactUsername,
                 displayName   = contactDisplayName ?: "",
                 avatarUrl     = contactAvatarUrl ?: ""

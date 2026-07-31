@@ -38,7 +38,9 @@ class MayaAddressInputViewModel @Inject constructor(
 
     lateinit var asset: String
 
-    private val dashAddressParser = AddressParser.getDashAddressParser(AddressNetwork.fromId(walletDataProvider.networkId))
+    private val dashAddressParser = AddressParser.getDashAddressParser(
+        AddressNetwork.fromId(walletDataProvider.networkId)
+    )
 
     /**
      * True when the input is a checksum-valid DASH address on this wallet's network. A Dash

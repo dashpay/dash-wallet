@@ -19,6 +19,7 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.TxDisplayCacheDao
+import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import kotlinx.coroutines.CancellationException
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.TransactionMetadata
@@ -281,39 +282,39 @@ class SdkTxDetailProvider @Inject constructor(
             blockTimestampSec = entity.blockTimestamp
         )
 
-        // A fresh pre-block (mempool/IS-locked) receive/send can have net_amount
-        // 0 in the SDK `transactions` row — attribution is not written until the
-        // tx is processed into a block. The live engine event DID carry the
-        // value, and CutoverUiDataService persisted it to
-        // tx_display_cache.valueSatoshis (keyed by lowercase display hex). Prefer
-        // that so the detail sheet shows the real amount instead of "0.00 DASH".
+        // The tx_display_cache row (written by CutoverUiDataService, keyed by lowercase display
+        // hex) carries the FULL home-list correction — engine net AND the DashPay-contact
+        // correction. For a contact send the SDK `transactions` row surfaces only the +change
+        // (wrong direction: INCOMING / wrong amount), so whenever a plain send/receive cache row
+        // exists it is the AUTHORITATIVE direction + amount override — not only when the SDK net
+        // is 0. Absent (pre-cutover / non-SDK txs) → the SDK row stands unchanged.
         //
-        // Sign convention differs by direction (Bug A):
+        // Only plain send/receive rows (iconType SENT/RECEIVED) override; INTERNAL/COINJOIN/
+        // service rows keep the SDK direction. Sign convention (Bug A):
         // - INCOMING: the cached value IS the received net → use it directly.
-        // - OUTGOING: planL1TxRow writes the cached value as the PRINCIPAL only
-        //   (it excludes the fee — CutoverUiDataService.planL1TxRow), so
-        //   reconstruct the true signed net = -(|principal| + fee) so a sent
-        //   amount renders the same way the dashj path does (|net| amount, fee
-        //   shown separately). INTERNAL/COINJOIN are left untouched.
+        // - OUTGOING: planL1TxRow writes the cached value as the PRINCIPAL only (it excludes the
+        //   fee), so reconstruct the true signed net = -(|principal| + fee) so a sent amount
+        //   renders the same way the dashj path does (|net| amount, fee shown separately).
+        val cacheEntry = txDisplayCacheDao
+            .getEntriesByIds(listOf(txIdDisplayHex.lowercase()))
+            .firstOrNull()
+        val cachedValue = cacheEntry?.valueSatoshis
         val record = if (
-            baseRecord.netAmountDuffs == 0L &&
-            (baseRecord.direction == L1TxUiDirection.INCOMING ||
-                baseRecord.direction == L1TxUiDirection.OUTGOING)
+            cacheEntry != null && cachedValue != null && cachedValue != 0L &&
+            (cacheEntry.iconType == TxDisplayCacheEntry.ICON_SENT ||
+                cacheEntry.iconType == TxDisplayCacheEntry.ICON_RECEIVED)
         ) {
-            val cachedValue = txDisplayCacheDao
-                .getEntriesByIds(listOf(txIdDisplayHex.lowercase()))
-                .firstOrNull()
-                ?.valueSatoshis
-            if (cachedValue != null && cachedValue != 0L) {
-                val net = if (baseRecord.direction == L1TxUiDirection.INCOMING) {
-                    cachedValue
-                } else {
-                    -(kotlin.math.abs(cachedValue) + (baseRecord.feeDuffs ?: 0L))
-                }
-                baseRecord.copy(netAmountDuffs = net)
+            val cachedDirection = if (cachedValue < 0) {
+                L1TxUiDirection.OUTGOING
             } else {
-                baseRecord
+                L1TxUiDirection.INCOMING
             }
+            val net = if (cachedDirection == L1TxUiDirection.INCOMING) {
+                cachedValue
+            } else {
+                -(kotlin.math.abs(cachedValue) + (baseRecord.feeDuffs ?: 0L))
+            }
+            baseRecord.copy(netAmountDuffs = net, direction = cachedDirection)
         } else {
             baseRecord
         }

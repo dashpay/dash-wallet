@@ -28,10 +28,13 @@ import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.NotificationItemPayment
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.DisplayCacheRefreshBus
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -47,6 +50,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import de.schildbach.wallet.data.WalletData
@@ -64,7 +68,9 @@ class DashPayUserActivityViewModel @Inject constructor(
     val platformRepo: PlatformRepo,
     val identityRepository: IdentityRepository,
     private val dashSystemService: DashSystemService,
-    private val walletData: WalletData
+    private val walletData: WalletData,
+    private val txDisplayCacheDao: TxDisplayCacheDao,
+    private val displayCacheRefreshBus: DisplayCacheRefreshBus
 ) : ViewModel() {
 
     companion object {
@@ -171,11 +177,48 @@ class DashPayUserActivityViewModel @Inject constructor(
         combine(
             identityRepository.observeContacts(dashPayProfile.username, UsernameSortOrderBy.DATE_ADDED, true)
                 .distinctUntilChanged(),
+            // Trigger to re-run the merge when a dashj tx changes. It must NOT gate the combine:
+            // combine only emits once EVERY source has emitted, but observeMostRecentTransaction
+            // emits nothing until the dashj wallet changes — and on a wallet whose funds are
+            // entirely SDK-owned (received contact payments are never bridged into the held dashj
+            // wallet, and no send succeeded), the dashj wallet is empty so it never emits, leaving
+            // the whole screen blank. Seed an initial Unit so the combine fires from the contacts +
+            // cache sources; the cache flow (observeByContactUserId) already supplies reactivity.
             walletData.observeMostRecentTransaction()
-                .distinctUntilChanged()
-        ) { contacts, _ ->
+                .map { }
+                .onStart { emit(Unit) },
+            // Reactive corrected-display source: re-emits whenever any of this contact's
+            // tx_display_cache rows change, so the payment rows update LIVE (direction/amount
+            // correct within a tick, "Sending"→"Sent" flips on IS-lock) instead of being resolved
+            // once at list-build time. distinctUntilChanged suppresses no-op re-queries.
+            txDisplayCacheDao.observeByContactUserId(dashPayProfile.userId)
+                .distinctUntilChanged(),
+            // Belt-and-suspenders trigger: CutoverUiDataService signals this bus immediately
+            // after every display-cache write, so the merge re-runs (and re-reads the cache
+            // fresh) even when Room's InvalidationTracker misses the change - the root cause of
+            // a row lingering on "Sending"/"Processing" for minutes. onStart seeds the initial
+            // emission so combine fires from the contacts + cache sources on first observe.
+            displayCacheRefreshBus.changes
+                .onStart { emit(Unit) }
+        ) { contacts, _, _, _ ->
             contacts
-        }.map { toNotificationItems(dashPayProfile.userId, it) }
+        }.map { contacts ->
+            // Re-read the corrected rows FRESH on every trigger (contacts change, dashj tx
+            // change, Room invalidation, or a bus signal) rather than trusting the reactive
+            // Flow's snapshot - this is what makes a late/missed Room invalidation still land.
+            val correctedRows = txDisplayCacheDao.getByContactUserId(dashPayProfile.userId)
+            // Catch INSIDE the map so a transient failure never propagates to the terminal
+            // .catch below — which would COMPLETE the flow and permanently stop live updates
+            // until the screen is recreated (the "stuck on Sending for minutes, fine after
+            // reopen" symptom). On error keep the last emitted list so the flow stays alive and
+            // the next cache/contact change re-runs the merge.
+            try {
+                toNotificationItems(dashPayProfile.userId, contacts, correctedRows)
+            } catch (ex: Exception) {
+                log.error("error building contact notification items", ex)
+                _notifications.value ?: emptyList()
+            }
+        }
          .onEach { results ->
             _notifications.value = results
          }
@@ -185,7 +228,11 @@ class DashPayUserActivityViewModel @Inject constructor(
          .launchIn(viewModelScope)
     }
 
-    suspend fun toNotificationItems(userId: String, contactRequests: List<UsernameSearchResult>): List<NotificationItem> {
+    suspend fun toNotificationItems(
+        userId: String,
+        contactRequests: List<UsernameSearchResult>,
+        correctedRows: List<TxDisplayCacheEntry>
+    ): List<NotificationItem> {
         return withContext(Dispatchers.IO) {
             val results = arrayListOf<NotificationItem>()
             var accountReference = 0
@@ -211,14 +258,45 @@ class DashPayUserActivityViewModel @Inject constructor(
                 }
             }
 
-            val blockchainIdentity = identityRepository.blockchainIdentity ?: run {
-                log.warn("blockchainIdentity is null, cannot get contact transactions")
-                return@withContext emptyList()
+            // dashj-sourced contact txs. On a held/empty dashj wallet (post-cutover) or a
+            // transient error this yields nothing — but the SDK-only rows below (received contact
+            // payments the SDK owns, never bridged into dashj) must STILL render, so fall through
+            // to emptyList() instead of returning and discarding the whole screen.
+            val txs = try {
+                identityRepository.blockchainIdentity
+                    ?.getContactTransactions(Identifier.from(userId), accountReference)
+                    ?: emptyList()
+            } catch (ex: Exception) {
+                log.warn("getContactTransactions failed; rendering SDK-sourced rows only", ex)
+                emptyList()
             }
-            val txs = blockchainIdentity.getContactTransactions(Identifier.from(userId), accountReference)
 
+            // Resolve the SDK-corrected display record for each payment txid from the REACTIVE
+            // cache snapshot passed in (observeByContactUserId). For an SDK-authored contact send
+            // the dashj Transaction mis-reads direction/amount/status (it only sees the +change),
+            // so when a tx_display_cache row exists it carries the authoritative correction and is
+            // threaded into the row. Because this snapshot re-emits on every cache change, the rows
+            // now update live (direction/amount correct within a tick; "Sending"→"Sent" flips on
+            // IS-lock). Absent (pre-cutover / non-SDK txs) → null → the ViewHolder renders from the
+            // dashj tx exactly as before.
+            val correctedById = correctedRows.associateBy { it.rowId }
+
+            val dashjRowIds = HashSet<String>(txs.size)
             txs.forEach {
-                results.add(NotificationItemPayment(it))
+                val rowId = it.txId.toString().lowercase()
+                dashjRowIds.add(rowId)
+                results.add(NotificationItemPayment(it, correctedById[rowId]))
+            }
+
+            // Received contact payments the SDK owns but never bridged into the held dashj
+            // wallet have NO dashj Transaction, so the loop above never emits them. Add one
+            // payment row per cache entry whose txid dashj did not already surface — rendered
+            // and opened entirely from the entry (tx = null). Deduped by rowId: a tx present
+            // in BOTH is rendered once, via the dashj-corrected path above.
+            correctedRows.forEach { entry ->
+                if (entry.rowId !in dashjRowIds) {
+                    results.add(NotificationItemPayment(correctedDisplay = entry))
+                }
             }
 
             //TODO: gather other notification types

@@ -185,6 +185,13 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.isBlockchainSyncFailed.observe(viewLifecycleOwner) { updateSyncState() }
+        // Phase 5d: after a committed cutover the sync state reads the SDK L1
+        // scan instead of dashj (viewModel.sdkOwnsL1); collect that source too
+        // so the shortcut bar refreshes from whichever engine owns L1 this
+        // launch. Pre-cutover this is identical to the dashj-only behavior.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.sdkL1Synced.collect { updateSyncState() }
+        }
 
         if (!configuration.hasDisplayedTaxCategoryExplainer) {
             viewModel.observeMostRecentTransaction().observe(viewLifecycleOwner) { mostRecentTransaction: Transaction ->
@@ -289,7 +296,8 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
 
         binding.syncStatusPane.syncErrorPane.isVisible = false
-        val isSynced = viewModel.isBlockchainSynced.value
+        val sdkOwnsL1 = viewModel.sdkOwnsL1.value
+        val isSynced = if (sdkOwnsL1) viewModel.sdkL1Synced.value else viewModel.isBlockchainSynced.value
 
         if (isSynced != null && isSynced) {
             refreshShortcutBar()
@@ -483,7 +491,12 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     private fun handleStakingNavigation() {
         lifecycleScope.launch {
-            if (viewModel.isBlockchainSynced.value == true) {
+            val isSynced = if (viewModel.sdkOwnsL1.value) {
+                viewModel.sdkL1Synced.value
+            } else {
+                viewModel.isBlockchainSynced.value == true
+            }
+            if (isSynced) {
                 stakingLauncher.launch(Intent(requireContext(), StakingActivity::class.java))
             } else {
                 val openWebsite = AdaptiveDialog.create(

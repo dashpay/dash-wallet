@@ -26,6 +26,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.base.Stopwatch
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.serializeIdentityToleratingContractBounds
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -300,7 +301,15 @@ open class BlockchainIdentityConfig @Inject constructor(
             blockchainIdentityData.userId?.let { prefs[IDENTITY_ID] = it }
             prefs[RESTORING] = blockchainIdentityData.restoring
             blockchainIdentityData.creditFundingTxId?.let { prefs[ASSET_LOCK_TXID] = it.toString() }
-            blockchainIdentityData.identity?.let { prefs[IDENTITY] = it.toBuffer().toHex() }
+            // Serialize tolerantly: the wallet's own 6-key identities carry
+            // contract bounds on keys 4/5 that the legacy dashj CBOR encoder
+            // cannot serialize (`No converter for SingleContractDocumentType`).
+            // A faithful toBuffer() throws here and stalls identity creation at
+            // IDENTITY_REGISTERING. This strips the bounds from the LOCAL cache
+            // blob only; the on-chain registration (SDK path) keeps them.
+            blockchainIdentityData.identity?.let {
+                prefs[IDENTITY] = serializeIdentityToleratingContractBounds(it).toHex()
+            }
             prefs[USING_INVITE] = blockchainIdentityData.usingInvite
             blockchainIdentityData.invite?.let { prefs[INVITE_LINK] = it.link.toString() }
             blockchainIdentityData.registrationStatus?.let { prefs[IDENTITY_REGISTRATION_STATUS] = it.name }

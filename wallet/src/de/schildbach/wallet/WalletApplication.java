@@ -1084,6 +1084,20 @@ public class WalletApplication extends MultiDexApplication
         stopService(blockchainServiceIntent);
     }
 
+    /**
+     * DIAGNOSTIC (Tools "dashj sync" toggle): bounce the blockchain service so
+     * it runs a fresh onCreate and re-resolves the Phase 5d engine-start gate
+     * ({@code dashjEngineMayStart}) against the new
+     * {@code DASHJ_SYNC_DIAGNOSTIC} value — starting the dashj peergroup when
+     * the diagnostic is turned on, or re-holding it when turned off. Stops then
+     * (after a short delay for the teardown to settle) starts the service.
+     */
+    public void restartBlockchainService() {
+        stopService(blockchainServiceIntent);
+        new android.os.Handler(android.os.Looper.getMainLooper())
+                .postDelayed(() -> startBlockchainService(false), 1500);
+    }
+
     public void resetBlockchainState() {
         blockchainStateDataProvider.resetBlockchainState();
     }
