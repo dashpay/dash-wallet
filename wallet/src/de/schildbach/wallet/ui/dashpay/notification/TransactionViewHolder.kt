@@ -25,6 +25,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.AddressBookProvider
 import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.NotificationItemPayment
+import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.ui.transactions.TxResourceMapper
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -34,6 +35,8 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
+import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.util.Constants
 import de.schildbach.wallet.transactions.TransactionUtils
 import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
@@ -79,18 +82,41 @@ class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
 
     override fun bind(notificationItem: NotificationItem, vararg args: Any) {
         val notificationItemPayment = notificationItem as NotificationItemPayment
-        val tx = notificationItemPayment.tx!!
+        val corrected = notificationItemPayment.correctedDisplay
+        val tx = notificationItemPayment.tx
+
+        // SDK-only received contact payment: the SDK owns the tx but it was never bridged
+        // into the held dashj wallet, so there is no dashj Transaction. The cache entry is
+        // then the sole source (always present when tx is null) — render straight from it.
+        if (tx == null) {
+            bindCorrected(null, corrected!!)
+            return
+        }
 
         @Suppress("UNCHECKED_CAST")
         val transactionCache = (args[0] as HashMap<Sha256Hash, TransactionCacheEntry>)
         val bag = (args[1] as TransactionBag)
         val chainLockBlockHeight = (args[2] as Int)
-        bind(tx, transactionCache, bag, chainLockBlockHeight)
+        bind(tx, transactionCache, bag, chainLockBlockHeight, corrected)
     }
 
-    private fun bind(tx: Transaction, transactionCache: HashMap<Sha256Hash, TransactionCacheEntry>, bag: TransactionBag, chainLockBlockHeight: Int) {
+    private fun bind(
+        tx: Transaction,
+        transactionCache: HashMap<Sha256Hash, TransactionCacheEntry>,
+        bag: TransactionBag,
+        chainLockBlockHeight: Int,
+        corrected: TxDisplayCacheEntry?
+    ) {
         if (itemView is CardView) {
             (itemView as CardView).setCardBackgroundColor(if (itemView.isActivated()) colorBackgroundSelected else colorBackground)
+        }
+
+        // Post-cutover correction: when a tx_display_cache row exists for this tx it is the
+        // authoritative source of direction (sign of valueSatoshis), amount, primary title and
+        // status — the dashj Transaction mis-values SDK-authored contact sends. Absent → dashj.
+        if (corrected != null) {
+            bindCorrected(tx, corrected)
+            return
         }
 
         val confidence = tx.confidence
@@ -207,6 +233,77 @@ class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
         }
         if (secondaryStatusId != -1) secondaryStatusView.setText(secondaryStatusId) else secondaryStatusView.text = null
         secondaryStatusView.setTextColor(secondaryStatusColor)
+    }
+
+    /**
+     * Render the row from the SDK-corrected [TxDisplayCacheEntry] (the same record the home
+     * transaction list consumes). Direction/amount come from [TxDisplayCacheEntry.valueSatoshis]
+     * (negative = sent), the primary line from [TxDisplayCacheEntry.title] and the secondary line
+     * from [TxDisplayCacheEntry.statusText] — all resolved strings, no dashj confidence/type reads.
+     * The notification row has no transaction icon view, so iconType/iconBgType are not used here.
+     *
+     * [tx] is null for an SDK-only received contact payment (no dashj Transaction exists); the
+     * row time then comes from the cache entry's [TxDisplayCacheEntry.time] instead of the tx.
+     */
+    private fun bindCorrected(tx: Transaction?, corrected: TxDisplayCacheEntry) {
+        val value = Coin.valueOf(corrected.valueSatoshis)
+        val sent = value.signum() < 0
+        val valueColor = if (corrected.hasErrors) colorError
+            else if (sent) colorValueNegative else colorValuePositve
+
+        timeView.text = WalletUtils.formatDate(tx?.updateTime?.time ?: corrected.time)
+
+        primaryStatusView.text = corrected.title
+        primaryStatusView.setTextColor(if (corrected.hasErrors) colorError else colorPrimaryStatus)
+
+        valueView.setFormat(format)
+        valueView.visibility = View.VISIBLE
+        signalView.visibility = if (!value.isZero) View.VISIBLE else View.GONE
+        dashSymbolView.visibility = View.VISIBLE
+        valueView.setTextColor(valueColor)
+        signalView.setTextColor(valueColor)
+        dashSymbolView.setColorFilter(valueColor)
+        when {
+            value.isPositive -> {
+                signalView.text = String.format("%c", Constants.CURRENCY_PLUS_SIGN)
+                valueView.setAmount(value)
+            }
+            value.isNegative -> {
+                signalView.text = String.format("%c", Constants.CURRENCY_MINUS_SIGN)
+                valueView.setAmount(value.negate())
+            }
+            else -> {
+                valueView.setAmount(Coin.ZERO)
+            }
+        }
+
+        // fiat value — reconstruct the historical rate stored on the cached row (same convention
+        // as TxDisplayCacheEntry.toTransactionRowView). No rate → "rate not available", as dashj does.
+        val exchangeRate = if (corrected.exchangeRateFiatCode != null && corrected.exchangeRateFiatValue != null) {
+            try {
+                ExchangeRate(Coin.COIN, Fiat.valueOf(corrected.exchangeRateFiatCode, corrected.exchangeRateFiatValue))
+            } catch (_: IllegalArgumentException) {
+                null
+            }
+        } else {
+            null
+        }
+        if (!value.isZero && exchangeRate != null) {
+            val exchangeCurrencyCode = GenericUtils.currencySymbol(exchangeRate.fiat.currencyCode)
+            fiatView.setFiatAmount(value, exchangeRate, de.schildbach.wallet.Constants.LOCAL_FORMAT, exchangeCurrencyCode)
+            fiatView.visibility = View.VISIBLE
+            rateNotAvailableView.visibility = View.GONE
+        } else if (!value.isZero) {
+            fiatView.visibility = View.GONE
+            rateNotAvailableView.visibility = View.VISIBLE
+        } else {
+            fiatView.visibility = View.GONE
+            rateNotAvailableView.visibility = View.GONE
+        }
+
+        val status = corrected.statusText
+        secondaryStatusView.text = status.ifEmpty { null }
+        secondaryStatusView.setTextColor(if (corrected.hasErrors) colorError else colorSecondaryStatus)
     }
 
     init {

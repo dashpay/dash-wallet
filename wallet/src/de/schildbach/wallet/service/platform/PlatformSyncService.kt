@@ -155,6 +155,17 @@ interface PlatformSyncService {
     fun updateSyncStatus(stage: PreBlockStage)
     fun preBlockDownload(future: SettableFuture<Boolean>)
 
+    /**
+     * Identity/username/contacts discovery + recovery, extracted from
+     * [preBlockDownload] so it can be triggered from a post-cutover synced hook
+     * (where the dashj peerGroup — and thus the PreBlocksDownloadListener that
+     * used to call [preBlockDownload] — never starts). Idempotent and safe to
+     * call repeatedly. Returns true when it enqueued a RestoreIdentityOperation
+     * (the caller must NOT resume/finish its own sync — the worker drives the
+     * rest), false otherwise.
+     */
+    suspend fun discoverAndRecoverIdentity(): Boolean
+
     suspend fun updateContactRequests(initialSync: Boolean = false)
     fun postUpdateBloomFilters()
     suspend fun updateUsernameRequestsWithVotes()
@@ -228,6 +239,16 @@ class PlatformSynchronizationService @Inject constructor(
     private val updatingContacts = AtomicBoolean(false)
     private val preDownloadBlocks = AtomicBoolean(false)
     private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
+
+    /**
+     * FIX 1 guard: at most one in-flight identity discovery ([getIdentityFromPublicKeyId]
+     * is a network DAPI call). Latched only once an identity is actually found and a
+     * [RestoreIdentityOperation] enqueued; reset when no identity is found so a later
+     * caller (a subsequent peerGroup start pre-cutover, or the next SDK synced tick
+     * post-cutover) may retry — i.e. "runs discovery at most once per process until an
+     * identity is found".
+     */
+    private val identityDiscoveryInFlight = AtomicBoolean(false)
 
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
     private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
@@ -723,6 +744,13 @@ class PlatformSynchronizationService @Inject constructor(
             // fire listeners if there were new contacts
             if (addedContact) {
                 fireContactsUpdatedListeners()
+                // Post-restore contact-attribution repair: display-cache rows planned
+                // by CutoverUiDataService BEFORE the DIP-15 friendship keychains were
+                // (re)established are cached with contactUsername=NULL and would stay
+                // that way until the next ticker tick. A contact (or its keychain) was
+                // just added, so re-run the idempotent sync/plan pass with fresh
+                // contact resolution now. Fire-and-forget; inert pre-cutover.
+                cutoverUiDataService.requestContactReResolution()
             }
 
             // Keep the SDK L1 wallet's DIP-15 friend chains in step with the
@@ -1906,33 +1934,83 @@ class PlatformSynchronizationService @Inject constructor(
             // first check to see if there is a blockchain identity
             // or if the previous restore is incomplete
             val identityData = blockchainIdentityDataDao.load()
+
+            // Identity discovery/recovery (+ contact refresh) is shared with the
+            // post-cutover synced hook (FIX 1). When it enqueues a recovery, the
+            // RestoreIdentityWorker drives the rest — do NOT resume/finish here,
+            // matching the original early-return.
+            val recoveryEnqueued = discoverAndRecoverIdentity()
+            if (recoveryEnqueued) {
+                return@launch
+            }
+
             if (identityData == null || identityData.restoring) {
-                log.info("preBlockDownload: checking for existing associated identity")
+                // resume Sync process, since there is no Platform data to sync
+                finishPreBlockDownload()
+            }
+            initSync(true)
+        }
+    }
+
+    /**
+     * See [PlatformSyncService.discoverAndRecoverIdentity].
+     *
+     * This is the body that historically lived inline in [preBlockDownload]. It
+     * is now callable from the post-cutover synced hook in
+     * [de.schildbach.wallet.service.BlockchainServiceImpl], because once the
+     * cutover is committed the dashj peerGroup never starts and its
+     * PreBlocksDownloadListener never fires — so on a wallet RESTORE the
+     * identity/username/contacts would otherwise never be recovered.
+     *
+     * Idempotence: the (network) discovery + [RestoreIdentityOperation] enqueue
+     * is guarded by [identityDiscoveryInFlight], latched only once an identity is
+     * found; if none is found the guard resets so a later caller can retry. The
+     * else branch (contact refresh) is a no-op when a refresh is already running.
+     */
+    override suspend fun discoverAndRecoverIdentity(): Boolean {
+        if (!Constants.SUPPORTS_PLATFORM) {
+            return false
+        }
+
+        val identityData = blockchainIdentityDataDao.load()
+        if (identityData == null || identityData.restoring) {
+            // Only one discovery in flight; keep it latched only if we actually
+            // find an identity (see [identityDiscoveryInFlight]).
+            if (!identityDiscoveryInFlight.compareAndSet(false, true)) {
+                log.info("discoverAndRecoverIdentity: discovery already in flight, skipping")
+                return false
+            }
+            try {
+                log.info("discoverAndRecoverIdentity: checking for existing associated identity")
 
                 val identity = identityRepository.getIdentityFromPublicKeyId()
 
-                if (identity != null) {
-                    log.info("preBlockDownload: initiate recovery of existing identity ${identity.id}")
+                return if (identity != null) {
+                    log.info("discoverAndRecoverIdentity: initiate recovery of existing identity ${identity.id}")
                     RestoreIdentityOperation(walletApplication)
                         .create(identity.id.toString())
                         .enqueue()
-                    return@launch
+                    // leave the guard latched — recovery is under way
+                    true
                 } else {
-                    log.info("preBlockDownload: no existing identity found")
-                    // resume Sync process, since there is no Platform data to sync
-                    finishPreBlockDownload()
+                    log.info("discoverAndRecoverIdentity: no existing identity found")
+                    identityDiscoveryInFlight.set(false) // allow a later retry
+                    false
                 }
+            } catch (e: Exception) {
+                identityDiscoveryInFlight.set(false)
+                throw e
             }
-            // update contacts, profiles and other platform data
-            else {
-                checkVotingStatus(identityData)
-                reconcileUsernameStatus(identityData)
+        }
+        // update contacts, profiles and other platform data
+        else {
+            checkVotingStatus(identityData)
+            reconcileUsernameStatus(identityData)
 
-                if (!updatingContacts.get()) {
-                    updateContactRequests(initialSync = true)
-                }
+            if (!updatingContacts.get()) {
+                updateContactRequests(initialSync = true)
             }
-            initSync(true)
+            return false
         }
     }
 

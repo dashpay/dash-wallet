@@ -245,16 +245,13 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             }
         }
 
-        mainActivityViewModel.isBlockchainSynced.observe(viewLifecycleOwner) { isSynced ->
-            binding.joinDashpayWait.isVisible = !isSynced
-            binding.joinDashpayIcon.setColorFilter(
-                if (isSynced) {
-                    ContextCompat.getColor(requireContext(), R.color.dash_blue)
-                } else {
-                    ContextCompat.getColor(requireContext(), R.color.gray)
-                }
-            )
-            binding.joinDashpayContainer.isEnabled = isSynced
+        // Phase 5d: after a committed cutover the DashPay "wait for sync" gate
+        // reads the SDK L1 scan instead of dashj (sdkOwnsL1); collect that source
+        // too so the tile enables from whichever engine owns L1 this launch.
+        // Pre-cutover this is identical to the dashj-only behavior.
+        mainActivityViewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateJoinDashPaySyncState() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            mainActivityViewModel.sdkL1Synced.collect { updateJoinDashPaySyncState() }
         }
 
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
@@ -382,6 +379,25 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             arrivedFromCompletedTransfer = true
             showTransferCompletedToast()
         }
+    }
+
+    private fun updateJoinDashPaySyncState() {
+        val sdkOwnsL1 = mainActivityViewModel.sdkOwnsL1.value
+        val isSynced = if (sdkOwnsL1) {
+            mainActivityViewModel.sdkL1Synced.value
+        } else {
+            mainActivityViewModel.isBlockchainSynced.value == true
+        }
+
+        binding.joinDashpayWait.isVisible = !isSynced
+        binding.joinDashpayIcon.setColorFilter(
+            if (isSynced) {
+                ContextCompat.getColor(requireContext(), R.color.dash_blue)
+            } else {
+                ContextCompat.getColor(requireContext(), R.color.gray)
+            }
+        )
+        binding.joinDashpayContainer.isEnabled = isSynced
     }
 
     /**

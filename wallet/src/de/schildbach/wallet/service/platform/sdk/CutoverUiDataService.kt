@@ -24,15 +24,18 @@ import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.dao.TxGroupCacheDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
+import de.schildbach.wallet.service.DisplayCacheRefreshBus
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -172,8 +175,64 @@ internal fun planL1TxRow(
     // The Platform-funding role of an INTERNAL/COINJOIN-classified asset lock,
     // resolved app-side before this pure planner runs (null for a plain move).
     // When present, the row renders as a SENT "…Fee" instead of "Internal".
-    assetLockKind: AssetLockKind? = null
-): L1TxRowPlan = when (record.direction) {
+    assetLockKind: AssetLockKind? = null,
+    // The DashPay contact this row pays to / receives from (IDENTITY only, from the
+    // DIP-15 friendship match). Direction/amount do NOT come from the contact or the
+    // SDK record's net (both unreliable for friendship txs) — they come from
+    // [contactSignedNet].
+    contact: ResolvedTxContact? = null,
+    // The engine's AUTHORITATIVE signed wallet net for this tx (`net_amount` =
+    // Σin−Σout over resolved wallet inputs/outputs), captured at event ingest by
+    // [CutoverUiDataService] and threaded here. Negative = a send, positive = a
+    // receive; its magnitude IS the display amount (fee/change already netted out).
+    // Null when the engine net has not been observed for this txid (e.g. a
+    // snapshot-only tx no event ever fired for) — the contact row then falls back to
+    // the SDK record's own direction/value.
+    contactSignedNet: Long? = null
+): L1TxRowPlan {
+    // A contact row's direction and amount are authored from the engine's own signed
+    // wallet net — the SDK record's direction/netAmount columns are wrong for a
+    // friendship send (they surface the wallet's +change output, not the −payment),
+    // and the DIP-15 issued-address match proved unreliable on-device. A negative net
+    // is a SEND (sent icon/flags, "Sending"/"Sent"); a positive net is a RECEIVE. The
+    // signed net IS the value. When no engine net is known, fall through to the plain
+    // direction planner (the contact IDENTITY is still stamped by the caller).
+    if (contact != null && contactSignedNet != null) {
+        return if (contactSignedNet < 0) {
+            L1TxRowPlan(
+                rowId = record.txidHex,
+                titleRes = if (record.status == L1TxUiStatus.PENDING) {
+                    R.string.transaction_row_status_sending
+                } else {
+                    R.string.transaction_row_status_sent
+                },
+                statusRes = -1,
+                iconType = TxDisplayCacheEntry.ICON_SENT,
+                iconBgType = TxDisplayCacheEntry.BG_SENT,
+                filterFlags = TxDisplayCacheEntry.FLAG_SENT,
+                valueDuffs = contactSignedNet,
+                timestampMs = record.timestampMs,
+                isIncoming = false
+            )
+        } else {
+            L1TxRowPlan(
+                rowId = record.txidHex,
+                titleRes = R.string.transaction_row_status_received,
+                statusRes = if (record.status == L1TxUiStatus.PENDING) {
+                    R.string.transaction_row_status_processing
+                } else {
+                    -1
+                },
+                iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+                iconBgType = TxDisplayCacheEntry.BG_RECEIVED,
+                filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED,
+                valueDuffs = contactSignedNet,
+                timestampMs = record.timestampMs,
+                isIncoming = true
+            )
+        }
+    }
+    return when (record.direction) {
     L1TxUiDirection.OUTGOING -> L1TxRowPlan(
         rowId = record.txidHex,
         titleRes = if (record.status == L1TxUiStatus.PENDING) {
@@ -254,6 +313,7 @@ internal fun planL1TxRow(
         timestampMs = record.timestampMs,
         isIncoming = true
     )
+    }
 }
 
 /** The list/detail title string for a Platform-funding asset-lock kind. */
@@ -324,7 +384,18 @@ internal fun planL1DisplaySync(
     // Platform-funding role per (INTERNAL/COINJOIN) txid, resolved app-side
     // before this pure planner runs — turns the mislabelled "Internal" row
     // into the SENT "…Fee" it funded. Empty = no known asset locks.
-    kindByTxid: Map<String, AssetLockKind> = emptyMap()
+    kindByTxid: Map<String, AssetLockKind> = emptyMap(),
+    // Resolved DashPay contact per txid, from the dashj DIP-15 resolver run
+    // app-side before this pure planner runs — stamps the avatar/username on
+    // the row's avatar/username. Empty = no contact attribution.
+    contactByTxid: Map<String, ResolvedTxContact> = emptyMap(),
+    // The engine's authoritative signed wallet net per txid, captured at event
+    // ingest — the source of truth for a contact row's direction and amount (the SDK
+    // record's own columns are wrong for a friendship send). Absent for a txid whose
+    // engine net was never observed; the contact row then keeps the SDK record's
+    // direction/value (and, once a row is cached correctly, is never regressed —
+    // the re-plan only fires when an authoritative net is present).
+    signedNetByTxid: Map<String, Long> = emptyMap()
 ): L1DisplaySyncPlan {
     val inserts = mutableListOf<TxDisplayCacheEntry>()
     val updates = mutableListOf<TxDisplayCacheEntry>()
@@ -332,7 +403,9 @@ internal fun planL1DisplaySync(
 
     for (record in records) {
         if (record.txidHex in groupedTxIds) continue
-        val plan = planL1TxRow(record, kindByTxid[record.txidHex])
+        val contact = contactByTxid[record.txidHex]
+        val contactSignedNet = signedNetByTxid[record.txidHex]
+        val plan = planL1TxRow(record, kindByTxid[record.txidHex], contact, contactSignedNet)
         val existing = existingByRowId[record.txidHex]
 
         if (existing == null) {
@@ -358,10 +431,14 @@ internal fun planL1DisplaySync(
                 // moves). Both fields stay null only when the rate is unavailable.
                 exchangeRateFiatCode = incomingFiatCode,
                 exchangeRateFiatValue = incomingFiatValue,
-                contactUsername = null,
-                contactDisplayName = null,
-                contactAvatarUrl = null,
-                contactUserId = null,
+                // Stamp the DIP-15 contact so the row shows the contact avatar
+                // (the adapter renders it only when contact != null / the entry
+                // carries a contactUsername+contactUserId). Null-safe: an
+                // un-attributed SDK row keeps the direction icon, as before.
+                contactUsername = contact?.username,
+                contactDisplayName = contact?.displayName,
+                contactAvatarUrl = contact?.avatarUrl,
+                contactUserId = contact?.userId,
                 filterFlags = plan.filterFlags
             )
             if (plan.isIncoming && record.netAmountDuffs > 0 &&
@@ -443,6 +520,56 @@ internal fun planL1DisplaySync(
                 iconBgType = plan.iconBgType,
                 filterFlags = plan.filterFlags
             )
+        }
+        if (contact != null) {
+            // Always attach the contact IDENTITY the insert could not (identity/
+            // contacts load after the SDK feed, so the first insert is cached
+            // un-attributed). Cheap, idempotent, touches only derived fields.
+            if (updated.contactUserId != contact.userId ||
+                updated.contactUsername != contact.username ||
+                updated.contactAvatarUrl != contact.avatarUrl ||
+                updated.contactDisplayName != contact.displayName
+            ) {
+                updated = updated.copy(
+                    contactUsername = contact.username,
+                    contactDisplayName = contact.displayName,
+                    contactAvatarUrl = contact.avatarUrl,
+                    contactUserId = contact.userId
+                )
+            }
+            // Re-plan a cached contact row's DIRECTION/AMOUNT/STATUS only when an
+            // authoritative engine net is known ([contactSignedNet] present). A row
+            // cached wrong (received / +change / stuck "Processing") — from before
+            // the engine net was observed, or from an upgraded install — is corrected
+            // to the send/receive shape derived from that net. Fully idempotent (once
+            // corrected every field equals the plan). Gating on the authoritative net
+            // is deliberate: without it we must NOT touch direction/amount, or a
+            // snapshot pass (whose SDK net is the wrong +change) would REGRESS an
+            // already-correct cached row. The never-touch guards above already
+            // excluded service/gift-card/error/CoinJoin rows.
+            if (contactSignedNet != null) {
+                val desiredTitle = resolve(plan.titleRes)
+                val desiredStatus = if (plan.statusRes != -1) resolve(plan.statusRes) else ""
+                if (updated.iconType != plan.iconType ||
+                    updated.iconBgType != plan.iconBgType ||
+                    updated.filterFlags != plan.filterFlags ||
+                    updated.valueSatoshis != plan.valueDuffs ||
+                    updated.title != desiredTitle ||
+                    updated.statusText != desiredStatus
+                ) {
+                    updated = updated.copy(
+                        title = desiredTitle,
+                        iconType = plan.iconType,
+                        iconBgType = plan.iconBgType,
+                        filterFlags = plan.filterFlags,
+                        // A send shows the fee-excluded sent value and no "Processing"
+                        // (OUTGOING plan.statusRes == -1, clearing the stale text a
+                        // mislabelled received row had stamped).
+                        valueSatoshis = plan.valueDuffs,
+                        statusText = desiredStatus
+                    )
+                }
+            }
         }
         if (updated != existing) updates += updated
     }
@@ -793,6 +920,12 @@ class CutoverUiDataService internal constructor(
     private val txGroupCacheDao: TxGroupCacheDao,
     private val walletUIConfig: WalletUIConfig,
     /**
+     * Fired immediately after every display-cache write/update so the reactive readers
+     * (home Paging + contact-detail merge) force-refresh even when Room's InvalidationTracker
+     * misses the change. Fire-and-forget — never blocks the sync pipeline.
+     */
+    private val displayCacheRefreshBus: DisplayCacheRefreshBus = DisplayCacheRefreshBus(),
+    /**
      * Current-rate source for stamping fresh SDK-discovered receives, the same
      * DAO BlockchainServiceImpl.onCoinsReceived reads. Nullable/default-null so
      * the snapshot-only test constructor (which asserts no rate) needs no rate DB.
@@ -808,6 +941,25 @@ class CutoverUiDataService internal constructor(
      * tests (which assert plain send/receive behaviour only).
      */
     private val resolveAssetLockKind: suspend (String) -> AssetLockKind? = { null },
+    /**
+     * Resolves the DashPay contact for one L1 txid via the dashj DIP-15
+     * resolver ([SdkTxContactResolver]) — the SDK's neutral L1 view is not
+     * friendship-keychain aware, so without this a payment to/from a contact
+     * renders with the plain direction icon (and a send can render as a
+     * RECEIVED row). Returns null for a plain non-contact tx (unchanged
+     * behaviour). Default null-returning for the snapshot tests.
+     */
+    private val resolveContact: suspend (String) -> ResolvedTxContact? = { null },
+    /**
+     * The RESTART-SAFE signed wallet net per txid, derived from the SDK's persisted
+     * TXO table ([SdkTxContactResolver.signedNetsFor], watch-only external friendship
+     * TXOs excluded) — the PREFERRED authoritative direction/amount source for a
+     * CONTACT row once its tx is confirmed/IS-locked (spent-TXO marks guaranteed
+     * written; also covers an already-confirmed send after restart, for which no
+     * [L1TxEvent.Detected] re-fires and [engineNetByTxid] is empty). Still-pending
+     * txs use the live engine net only. Default empty for the snapshot tests.
+     */
+    private val resolveWalletNets: suspend (Set<String>) -> Map<String, Long> = { emptyMap() },
     /**
      * The engine's instant tx feed ([L1ShadowSyncService.txEvents]) —
      * mempool detections and IS locks, consumed by [txPipeline] ahead of
@@ -839,11 +991,13 @@ class CutoverUiDataService internal constructor(
         txDisplayCacheDao: TxDisplayCacheDao,
         txGroupCacheDao: TxGroupCacheDao,
         walletUIConfig: WalletUIConfig,
+        displayCacheRefreshBus: DisplayCacheRefreshBus,
         exchangeRatesDao: ExchangeRatesDao,
         configuration: Configuration,
         notificationService: NotificationService,
         l1ShadowSyncService: L1ShadowSyncService,
-        assetLockKindResolver: AssetLockKindResolver
+        assetLockKindResolver: AssetLockKindResolver,
+        sdkTxContactResolver: SdkTxContactResolver
     ) : this(
         source = DashSdkCutoverUiSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -851,8 +1005,11 @@ class CutoverUiDataService internal constructor(
         txDisplayCacheDao = txDisplayCacheDao,
         txGroupCacheDao = txGroupCacheDao,
         walletUIConfig = walletUIConfig,
+        displayCacheRefreshBus = displayCacheRefreshBus,
         exchangeRatesDao = exchangeRatesDao,
         resolveAssetLockKind = { txDisplayHex -> assetLockKindResolver.kindFor(txDisplayHex) },
+        resolveContact = { txDisplayHex -> sdkTxContactResolver.contactFor(txDisplayHex) },
+        resolveWalletNets = { txids -> sdkTxContactResolver.signedNetsFor(txids) },
         txEvents = l1ShadowSyncService.txEvents,
         isTxFeedTapActive = { l1ShadowSyncService.isTapActive },
         resolveString = { resId -> context.getString(resId) },
@@ -874,6 +1031,25 @@ class CutoverUiDataService internal constructor(
     private val started = AtomicBoolean(false)
 
     /**
+     * The engine's AUTHORITATIVE signed wallet net per txid (`net_amount` =
+     * Σin−Σout over resolved wallet inputs/outputs), captured from each
+     * [L1TxEvent.Detected] at ingest. This is the ONLY reliable direction/amount
+     * signal for a DashPay contact tx: the SDK's persisted `transactions` row
+     * carries the WRONG net for a friendship send (it surfaces the wallet's own
+     * +change output, e.g. +3.83, instead of the −0.1 payment), and the DIP-15
+     * issued-address match proved unreliable on-device. The contact-row planner
+     * reads this map (threaded via [planL1DisplaySync]'s `signedNetByTxid`) to author
+     * the send/receive shape and value. Only ever touched from [txPipeline]'s single
+     * sequential collector (both feeds funnel through it), so a plain map is safe;
+     * capped eldest-evicted so a long-lived process cannot grow it unboundedly.
+     */
+    private val engineNetByTxid =
+        object : LinkedHashMap<String, Long>() {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>): Boolean =
+                size > SEEN_TX_DIRECTIONS_MAX
+        }
+
+    /**
      * Once-per-process coins-received belt over the structural (row
      * already exists) dedup: the display row is the primary guard, but a
      * dashj-side cache rebuild can briefly drop event-born rows, and this
@@ -881,6 +1057,14 @@ class CutoverUiDataService internal constructor(
      * txid. Only ever touched from [txPipeline]'s sequential collector.
      */
     private val notifiedTxIds = mutableSetOf<String>()
+
+    /**
+     * Once-per-process latch for the "contact tx has no authoritative signed net"
+     * WARN in [syncDisplayCache] — the pass retries every tick, so without the
+     * latch an unresolvable tx would log every 60 s. Only ever touched from
+     * [txPipeline]'s sequential collector.
+     */
+    private val noNetWarnedTxids = mutableSetOf<String>()
 
     /**
      * Directions seen per txid across engine [L1TxEvent.Detected] events —
@@ -917,6 +1101,38 @@ class CutoverUiDataService internal constructor(
 
     /** Once-per-process latch for the [runPipelines] tap-mismatch WARN (FIX: silent gate mismatch). */
     private val tapGapWarned = AtomicBoolean(false)
+
+    /**
+     * On-demand contact RE-RESOLUTION requests ([requestContactReResolution]) —
+     * merged with the periodic ticker into [txPipeline]'s snapshot feed, so a
+     * request simply re-runs the NORMAL idempotent sync/plan pass
+     * ([syncDisplayCache]) over the latest SDK records with FRESH contact
+     * resolution. Post-restore, display rows are planned while the DIP-15
+     * friendship keychains are still being recovered, so [resolveContact]
+     * returns null and the rows are cached with contactUsername=NULL; once
+     * contacts/keychains are (re)established this signal closes that gap
+     * immediately instead of waiting for the next ticker tick. replay=0 +
+     * buffer 1 + DROP_OLDEST: requests coalesce (every pass re-reads full
+     * state), tryEmit never suspends/fails, and pre-cutover (no collector)
+     * signals are dropped — provably inert.
+     */
+    private val contactReResolveRequests = MutableSharedFlow<Unit>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    /**
+     * Ask the cutover UI pipeline to re-run its sync/plan pass with fresh
+     * DashPay contact resolution — call after contacts / friendship keychains
+     * are (re)established (PlatformSyncService's addedContact path, which the
+     * post-restore RestoreIdentityWorker→initSync(true) flow also runs
+     * through). Fire-and-forget, non-suspending, idempotent (the pass only
+     * writes rows whose planned fields actually differ) and inert pre-cutover.
+     */
+    fun requestContactReResolution() {
+        contactReResolveRequests.tryEmit(Unit)
+    }
 
     private val _sdkTotalBalance = MutableStateFlow<Coin?>(null)
 
@@ -1017,8 +1233,16 @@ class CutoverUiDataService internal constructor(
         launch { txPipeline(walletIdHex) }
     }
 
-    /** The SDK bind (SdkWalletBinder) can lag app start — poll until bound. */
+    /**
+     * The SDK bind (SdkWalletBinder) can lag app start — poll until bound.
+     * [CutoverUiSource.boundWalletIdOrNull] is `singleOrNull()` over the loaded
+     * wallets, so it is ALSO null while more than one wallet is loaded (the
+     * post-reset/restore orphan window, until the binder's orphan prune runs) —
+     * that state used to park the ENTIRE cutover UI pipeline with zero log
+     * output; now it says so once a minute.
+     */
     private suspend fun awaitBoundWallet(): String {
+        var attempts = 0
         while (true) {
             val id = try {
                 source.boundWalletIdOrNull()
@@ -1028,6 +1252,13 @@ class CutoverUiDataService internal constructor(
                 null
             }
             if (id != null) return id
+            if (attempts++ % 12 == 0) {
+                log.warn(
+                    "cutover UI pipelines waiting for a SINGLE bound SDK wallet (none, or more than " +
+                        "one loaded — post-reset orphan not pruned yet?); retrying every {}ms",
+                    walletBindRetryMs
+                )
+            }
             delay(walletBindRetryMs)
         }
     }
@@ -1121,7 +1352,14 @@ class CutoverUiDataService internal constructor(
         while (currentCoroutineContext().isActive) {
             try {
                 merge(
-                    combine(source.observeWalletTxRecords(walletIdHex), ticker()) { records, _ ->
+                    // The snapshot pass re-runs on: a Room records change, the periodic
+                    // ticker, or an explicit contact re-resolution request (fired when
+                    // contacts/friendship keychains are (re)established — see
+                    // [requestContactReResolution]); combine feeds it the latest records.
+                    combine(
+                        source.observeWalletTxRecords(walletIdHex),
+                        merge(ticker(), contactReResolveRequests)
+                    ) { records, _ ->
                         TxFeedAction.Snapshot(records) as TxFeedAction
                     },
                     txEvents.map { TxFeedAction.EngineEvent(it) }
@@ -1164,6 +1402,25 @@ class CutoverUiDataService internal constructor(
                     event.txidHex, event.contextCode, event.netAmountDuffs
                 )
                 val record = l1TxUiRecordFromEvent(event, nowMs())
+                // Capture the engine's authoritative signed wallet net for this txid
+                // — the source of truth for a contact row's direction/amount, since
+                // the SDK's persisted `transactions.netAmount` is wrong for a
+                // friendship send. Keyed by display txid to match the planner.
+                //
+                // NEGATIVE WINS on same-txid sibling events (verified on-device, S22
+                // sender): the engine emits one Detected per affected account, and a
+                // self-authored friendship send touches BOTH the funding account
+                // (OUTGOING, net = change − inputs = −(amount+fee) — the display-true
+                // net) AND the watch-only external friendship account (INCOMING,
+                // net = +amount — the CONTACT's money, not ours). Last-write-wins let
+                // the +amount sibling clobber the correct negative net and the row
+                // rendered as RECEIVED +0.05. Keeping the minimum keeps the funding
+                // account's net regardless of event order; genuine receives only ever
+                // see one positive event, so they are unaffected.
+                val priorNet = engineNetByTxid[record.txidHex]
+                if (priorNet == null || event.netAmountDuffs < priorNet) {
+                    engineNetByTxid[record.txidHex] = event.netAmountDuffs
+                }
                 val siblings = seenEventDirections.getOrPut(record.txidHex) { mutableSetOf() }
                 if (record.direction == L1TxUiDirection.INCOMING &&
                     L1TxUiDirection.OUTGOING in siblings
@@ -1197,6 +1454,8 @@ class CutoverUiDataService internal constructor(
             val existing = txDisplayCacheDao.getEntriesByIds(listOf(txidHex)).firstOrNull() ?: return
             val updated = planL1InstantLockRowUpdate(existing, resolveString) ?: return
             txDisplayCacheDao.insertAll(listOf(updated))
+            // Force the reactive readers to refresh even if Room's tracker misses the flip.
+            displayCacheRefreshBus.signalChanged()
             log.info("engine IS lock for {} — display row flipped pre-block", txidHex)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
@@ -1259,14 +1518,106 @@ class CutoverUiDataService internal constructor(
                 }
             }
 
+            // Resolve the DIP-15 DashPay contact per row so the list shows the
+            // contact avatar (and the SENT badge for a send the SDK marked
+            // INCOMING) instead of a bare direction icon — the SDK L1 view is not
+            // friendship-keychain aware. A fast app-side probe (held-wallet lookup
+            // + the dashj resolver + one Room read), positive-cached in the
+            // resolver so an already-attributed row is not re-walked each tick.
+            // Asset-lock funding rows are Platform self-moves, never contact
+            // payments, so they are skipped. Fail-soft: a null keeps the plain row.
+            val contactByTxid = mutableMapOf<String, ResolvedTxContact>()
+            for (record in records) {
+                if (record.txidHex in grouped || record.txidHex in kindByTxid) continue
+                // Live DIP-15 resolution first; when it fails (post-restore the
+                // friendship keychains lag behind — identity not loaded yet, tx not
+                // yet in the SDK store, keychain not re-provisioned) fall back to the
+                // contact identity STAMPED ON THE CACHED ROW: a row that already
+                // carries contactUserId is proof of attribution (a tx's contact never
+                // changes), and without this fallback the whole authoritative-contact
+                // re-plan below was silently skipped after a restore/restart — the
+                // verified on-device hole that left dashj's fee-only −260 rewrite of
+                // a −0.4 contact send uncorrected for minutes.
+                val contact = resolveContact(record.txidHex)
+                    ?: existing[record.txidHex]?.let { row ->
+                        val userId = row.contactUserId
+                        val username = row.contactUsername
+                        if (userId != null && username != null) {
+                            ResolvedTxContact(
+                                username = username,
+                                displayName = row.contactDisplayName,
+                                avatarUrl = row.contactAvatarUrl,
+                                userId = userId
+                            )
+                        } else {
+                            null
+                        }
+                    }
+                contact?.let { contactByTxid[record.txidHex] = it }
+            }
+
+            // Authoritative signed wallet net per CONTACT txid — the source of truth
+            // for its direction/amount (the SDK record's own net is wrong for a
+            // friendship send). Two sources, picked per tx by CONFIRMATION state:
+            // - CONFIRMED/IS-locked tx → the RESTART-SAFE TXO-derived net (spent-TXO
+            //   marks are guaranteed written by then, and signedNetsFor excludes the
+            //   watch-only external friendship account, so it is immune to the
+            //   +payment pollution a stale engine event could carry). This also
+            //   re-corrects rows after an app restart, when the engine map is empty.
+            // - Still-PENDING tx → the LIVE engine net only (pre-lock the TXO table
+            //   may hold the +change output while the spent marks are missing, so a
+            //   TXO net computed now could read POSITIVE for a send — never trust it
+            //   before the lock/block lands).
+            // Non-contact rows are never given a net (planL1TxRow only consults it
+            // when a contact is present), so they are unaffected. A contact tx with
+            // NO resolvable net is logged (once per txid per process): its cached
+            // direction/amount cannot be verified or corrected this pass.
+            val signedNetByTxid = HashMap<String, Long>()
+            val statusByTxid = records.associate { it.txidHex to it.status }
+            val confirmedContactTxids = contactByTxid.keys.filterTo(mutableSetOf()) {
+                statusByTxid[it] != L1TxUiStatus.PENDING
+            }
+            if (confirmedContactTxids.isNotEmpty()) {
+                resolveWalletNets(confirmedContactTxids)
+                    .forEach { (txid, net) -> signedNetByTxid[txid] = net }
+            }
+            for (txid in contactByTxid.keys) {
+                val txoNet = signedNetByTxid[txid] // TXO-derived (confirmed txs only)
+                val liveNet = engineNetByTxid[txid]
+                when {
+                    // Both known → take the MORE NEGATIVE. For a send both equal
+                    // −(amount+fee) so this is a no-op; it only bites when one side
+                    // is polluted positive (a stale +payment engine sibling, or a
+                    // TXO snapshot caught mid-write with the spent marks missing) —
+                    // the funding-side negative net is the display-true one either
+                    // way. A genuine receive has both positive and equal.
+                    txoNet != null && liveNet != null ->
+                        signedNetByTxid[txid] = minOf(txoNet, liveNet)
+                    txoNet != null -> { /* already stored */ }
+                    liveNet != null -> signedNetByTxid[txid] = liveNet
+                    else -> if (noNetWarnedTxids.add(txid)) {
+                        log.warn(
+                            "contact tx {} has no authoritative signed net (no TXO-derived net, no " +
+                                "live engine event) — cached row (value={} duffs, iconType={}) cannot " +
+                                "be verified or corrected this pass; will keep retrying",
+                            txid, existing[txid]?.valueSatoshis, existing[txid]?.iconType
+                        )
+                    }
+                }
+            }
+
             val plan = planL1DisplaySync(
                 records, existing, grouped, resolveString, nowMs(),
                 incomingFiatCode = fiat?.currencyCode,
                 incomingFiatValue = fiat?.value,
-                kindByTxid = kindByTxid
+                kindByTxid = kindByTxid,
+                contactByTxid = contactByTxid,
+                signedNetByTxid = signedNetByTxid
             )
             if (plan.inserts.isNotEmpty() || plan.updates.isNotEmpty()) {
                 txDisplayCacheDao.insertAll(plan.inserts + plan.updates)
+                // Force the reactive readers to refresh even if Room's tracker misses the write.
+                displayCacheRefreshBus.signalChanged()
                 log.info(
                     "cutover UI display sync: {} SDK records → {} inserts, {} status updates",
                     records.size, plan.inserts.size, plan.updates.size

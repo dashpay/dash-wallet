@@ -78,7 +78,9 @@ import android.util.Pair;
 import de.schildbach.wallet_test.BuildConfig;
 
 import okhttp3.Call;
+import okhttp3.MediaType;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import okio.BufferedSink;
 import okio.BufferedSource;
@@ -104,6 +106,19 @@ public final class RequestWalletBalanceTask {
 		this.backgroundHandler = backgroundHandler;
 		this.callbackHandler = new Handler(Looper.myLooper());
 		this.resultCallback = resultCallback;
+	}
+
+	/**
+	 * Handler-less constructor for the blocking broadcast path
+	 * ({@link #broadcastTransactionBlocking(AssetManager, String)}), which
+	 * reports its result by return value rather than via the UTXO
+	 * onResult/onFail callbacks. Safe to construct off a Looper thread (e.g. a
+	 * coroutine dispatcher), where the callback-handler constructor would fail.
+	 */
+	public RequestWalletBalanceTask() {
+		this.backgroundHandler = null;
+		this.callbackHandler = null;
+		this.resultCallback = null;
 	}
 
 	public static class JsonRpcRequest {
@@ -143,31 +158,7 @@ public final class RequestWalletBalanceTask {
 							assets.open(Constants.Files.ELECTRUM_SERVERS_FILENAME));
 					final ElectrumServer server = servers.get(new Random().nextInt(servers.size()));
 					log.info("trying to request wallet balance from {}: {}", server.socketAddress, address);
-					final Socket socket;
-					if (server.type == ElectrumServer.Type.TLS) {
-						final SocketFactory sf = sslTrustAllCertificates();
-						socket = sf.createSocket(server.socketAddress.getHostName(), server.socketAddress.getPort());
-						final SSLSession sslSession = ((SSLSocket) socket).getSession();
-						final Certificate certificate = sslSession.getPeerCertificates()[0];
-						final String certificateFingerprint = sslCertificateFingerprint(certificate);
-						if (server.certificateFingerprint == null) {
-							// signed by CA
-							if (!HttpsURLConnection.getDefaultHostnameVerifier()
-									.verify(server.socketAddress.getHostName(), sslSession))
-								throw new SSLHandshakeException("Expected " + server.socketAddress.getHostName()
-										+ ", got " + sslSession.getPeerPrincipal());
-						} else {
-							// self-signed
-							if (!certificateFingerprint.equals(server.certificateFingerprint))
-								throw new SSLHandshakeException("Expected " + server.certificateFingerprint + ", got "
-										+ certificateFingerprint);
-						}
-					} else if (server.type == ElectrumServer.Type.TCP) {
-						socket = new Socket();
-						socket.connect(server.socketAddress, 5000);
-					} else {
-						throw new IllegalStateException("Cannot handle: " + server.type);
-					}
+					final Socket socket = connectToServer(server);
 					final BufferedSink sink = Okio.buffer(Okio.sink(socket));
 					sink.timeout().timeout(5000, TimeUnit.MILLISECONDS);
 					final BufferedSource source = Okio.buffer(Okio.source(socket));
@@ -288,6 +279,171 @@ public final class RequestWalletBalanceTask {
 			is.close();
 		}
 		return servers;
+	}
+
+	/**
+	 * Opens a socket to the given Electrum server using the SAME TLS
+	 * certificate handling (CA-signed or self-signed fingerprint) and TCP
+	 * connect logic {@link #requestWalletBalance} relies on. Extracted so the
+	 * UTXO-discovery path and the broadcast path share one connection routine.
+	 */
+	private Socket connectToServer(final ElectrumServer server) throws IOException {
+		final Socket socket;
+		if (server.type == ElectrumServer.Type.TLS) {
+			final SocketFactory sf = sslTrustAllCertificates();
+			socket = sf.createSocket(server.socketAddress.getHostName(), server.socketAddress.getPort());
+			final SSLSession sslSession = ((SSLSocket) socket).getSession();
+			final Certificate certificate = sslSession.getPeerCertificates()[0];
+			final String certificateFingerprint = sslCertificateFingerprint(certificate);
+			if (server.certificateFingerprint == null) {
+				// signed by CA
+				if (!HttpsURLConnection.getDefaultHostnameVerifier()
+						.verify(server.socketAddress.getHostName(), sslSession))
+					throw new SSLHandshakeException("Expected " + server.socketAddress.getHostName()
+							+ ", got " + sslSession.getPeerPrincipal());
+			} else {
+				// self-signed
+				if (!certificateFingerprint.equals(server.certificateFingerprint))
+					throw new SSLHandshakeException("Expected " + server.certificateFingerprint + ", got "
+							+ certificateFingerprint);
+			}
+		} else if (server.type == ElectrumServer.Type.TCP) {
+			socket = new Socket();
+			socket.connect(server.socketAddress, 5000);
+		} else {
+			throw new IllegalStateException("Cannot handle: " + server.type);
+		}
+		return socket;
+	}
+
+	/**
+	 * Broadcasts a signed transaction (hex of {@code tx.bitcoinSerialize()}) to
+	 * the SAME Electrum servers + block-explorer HTTP endpoints used for UTXO
+	 * discovery, WITHOUT the dashj peergroup. Used by the paper-wallet sweep
+	 * once the SDK cutover holds the dashj peergroup (so the usual
+	 * {@code peerGroup.broadcastTransaction} path no-ops). Blocking: call from a
+	 * background thread. Returns the accepted txid, or throws {@link IOException}
+	 * once every Electrum server and block explorer has failed.
+	 *
+	 * <p>Electrum: sends the {@code blockchain.transaction.broadcast} JSON-RPC
+	 * command and reads the txid back from the {@code result} field. On any
+	 * socket/parse error or an Electrum {@code error} response it falls back to
+	 * the block explorers' {@code POST /tx/send} endpoints, mirroring the UTXO
+	 * path's explorer fallback.
+	 */
+	public String broadcastTransactionBlocking(final AssetManager assets, final String rawTxHex) throws IOException {
+		org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+
+		IOException electrumError = null;
+		Socket socket = null;
+		try {
+			final List<ElectrumServer> servers = loadElectrumServers(
+					assets.open(Constants.Files.ELECTRUM_SERVERS_FILENAME));
+			final ElectrumServer server = servers.get(new Random().nextInt(servers.size()));
+			log.info("trying to broadcast transaction via {}", server.socketAddress);
+			socket = connectToServer(server);
+			final BufferedSink sink = Okio.buffer(Okio.sink(socket));
+			sink.timeout().timeout(5000, TimeUnit.MILLISECONDS);
+			final BufferedSource source = Okio.buffer(Okio.source(socket));
+			source.timeout().timeout(5000, TimeUnit.MILLISECONDS);
+			final Moshi moshi = new Moshi.Builder().build();
+			final JsonAdapter<JsonRpcRequest> requestAdapter = moshi.adapter(JsonRpcRequest.class);
+			final JsonRpcRequest request = new JsonRpcRequest("blockchain.transaction.broadcast",
+					new String[] { rawTxHex });
+			requestAdapter.toJson(sink, request);
+			sink.writeUtf8("\n").flush();
+			final String responseLine = source.readUtf8Line();
+			if (responseLine != null) {
+				final JSONObject json = new JSONObject(responseLine);
+				final Object result = json.opt("result");
+				if (result instanceof String && !((String) result).isEmpty()) {
+					final String txid = (String) result;
+					log.info("electrum accepted transaction, txid {}", txid);
+					return txid;
+				}
+				log.info("electrum rejected transaction: {}", responseLine);
+			}
+		} catch (final IOException x) {
+			log.info("problem broadcasting transaction via electrum", x);
+			electrumError = x;
+		} catch (final JSONException x) {
+			log.info("problem parsing electrum broadcast response", x);
+		} finally {
+			if (socket != null) {
+				try {
+					socket.close();
+				} catch (final IOException x) {
+					// ignore
+				}
+			}
+		}
+
+		// Fall back to the block-explorer push endpoints.
+		final String txid = broadcastTransactionToBlockExplorers(rawTxHex);
+		if (txid != null)
+			return txid;
+
+		throw electrumError != null ? electrumError
+				: new IOException("could not broadcast transaction to any electrum server or block explorer");
+	}
+
+	private String broadcastTransactionToBlockExplorers(final String rawTxHex) {
+		final Stack<String> sendUrls = new Stack<>();
+
+		if (BuildConfig.FLAVOR.equals("prod")) {
+			sendUrls.push("https://insight.dash.org/insight-api/tx/send");
+		} else if (BuildConfig.FLAVOR.equals("_testNet3") || BuildConfig.FLAVOR.equals("staging")) {
+			sendUrls.push("https://insight.testnet.networks.dash.org/insight-api/tx/send");
+		} else if (BuildConfig.FLAVOR.equals("devnet")) {
+			sendUrls.push(String.format("http://insight.%s.networks.dash.org/insight-api/tx/send",
+					Constants.NETWORK_PARAMETERS.getDevNetName().substring("devnet-".length())));
+		}
+
+		while (!sendUrls.empty()) {
+			final String txid = broadcastTransactionToBlockExplorer(sendUrls.pop(), rawTxHex);
+			if (txid != null)
+				return txid;
+		}
+		return null;
+	}
+
+	private String broadcastTransactionToBlockExplorer(final String sendUrl, final String rawTxHex) {
+		log.debug("trying to broadcast transaction via {}", sendUrl);
+		try {
+			final JSONObject payload = new JSONObject();
+			payload.put("rawtx", rawTxHex);
+			final MediaType jsonType = MediaType.get("application/json; charset=utf-8");
+			final RequestBody body = RequestBody.create(payload.toString(), jsonType);
+			final Request request = new Request.Builder()
+					.url(sendUrl)
+					.header("User-Agent", Constants.USER_AGENT)
+					.post(body)
+					.build();
+
+			final Call call = org.dash.wallet.common.util.Constants.INSTANCE.getHTTP_CLIENT().newCall(request);
+			final Response response = call.execute();
+
+			if (response.isSuccessful()) {
+				final String content = response.body().string();
+				final JSONObject json = new JSONObject(content);
+				final String txid = json.optString("txid", null);
+				if (txid != null && !txid.isEmpty()) {
+					log.info("block explorer {} accepted transaction, txid {}", sendUrl, txid);
+					return txid;
+				}
+				log.info("block explorer {} returned no txid: {}", sendUrl, content);
+				return null;
+			} else {
+				log.info("got http error '{}: {}' from {}", response.code(), response.message(), sendUrl);
+				return null;
+			}
+		} catch (final JSONException x) {
+			log.info("problem parsing broadcast response from " + sendUrl, x);
+			return null;
+		} catch (final IOException x) {
+			log.info("problem broadcasting transaction to " + sendUrl, x);
+			return null;
+		}
 	}
 
 	private SSLSocketFactory sslTrustAllCertificates() {

@@ -102,6 +102,20 @@ internal const val PWFFI_ERROR_UNKNOWN = 99
  * TTL window.
  */
 internal fun classifyCoreSendFailure(t: Throwable): SdkWriteResult<Nothing> = when {
+    // Typed selector shortfall (platform-wallet code 22, v41int11's atomic
+    // send + single-account payment paths). Raised strictly while BUILDING —
+    // `map_builder_error` in rs-platform-wallet `wallet/core/transaction.rs`
+    // (atomic finalize) and `PaymentInsufficientFunds` from
+    // `build_signed_payment` are the only producers, both pre-broadcast, so
+    // nothing reached the wire. Without this arm the typed error (whose
+    // message "insufficient unreserved Core funds …" matches no substring
+    // rule below) fell through to Ambiguous, which would surface a plain
+    // insufficient-funds as a "may be on the network" error and block the
+    // dashj fallback that raises the usual InsufficientMoneyException.
+    t is DashSdkError.PlatformWallet.CoreInsufficientFunds ->
+        SdkWriteResult.NotBroadcast(
+            "core send failed pre-broadcast (funding-account shortfall): ${t.message}", t
+        )
     t is DashSdkError.PlatformWallet.WalletOperation &&
         (t.message?.startsWith("set_funding failed") == true ||
             t.message?.startsWith("transaction build failed") == true) ->
@@ -157,6 +171,106 @@ internal fun isSendAllShortfall(t: Throwable): Boolean =
     t is DashSdkError.PlatformWallet.WalletOperation &&
         t.message?.startsWith("transaction build failed") == true &&
         t.message?.contains("Insufficient funds") == true
+
+// ── DashPay receival-account fallback — pure pieces ───────────────────
+
+/**
+ * `AccountTypeTagFFI::DashpayReceivingFunds` — the numeric `typeTag` the
+ * account-balance JSON reports for a DashPay receiving-funds account (a
+ * contact's payments to us). Value from rs-platform-wallet-ffi
+ * `wallet_restore_types.rs` (`DashpayReceivingFunds = 12`), written into
+ * the JSON as `e.type_tag as u8` by the JNI bridge's
+ * `walletManagerAccountBalances` (rs-unified-sdk-jni `dashpay.rs`).
+ */
+internal const val ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS = 12
+
+/**
+ * Fee headroom required ON TOP of the send amount for a receival account
+ * to qualify as the fallback funding source, in duffs. Same sizing
+ * rationale as [SEND_ALL_FEE_RESERVE_DUFFS]: at the builder's default rate
+ * (1000 duffs/kB, the rate both the normal send and the fallback build
+ * use via `feePerKb = 0`) the fee is `~44 + 148·n_inputs` duffs, so
+ * 10 000 covers ~67 inputs — far beyond a typical contact account. If the
+ * real fee ever exceeds it anyway, the build itself fails pre-broadcast
+ * with the engine's typed shortfall and the ORIGINAL BIP44 error is
+ * rethrown — never a broadcast of an underfunded transaction.
+ */
+internal const val RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS = 10_000L
+
+/**
+ * One DashPay receiving-funds account parsed from the account-balance
+ * snapshot — a fallback funding candidate.
+ *
+ * @property derivationPath the account-level DIP-15 path EXACTLY as the
+ *   enumeration reported it (`m/9'/coin'/15'/{i}'/0x<user>/0x<friend>`),
+ *   handed VERBATIM to `buildSignedPaymentWithToken` as `fundingPath` —
+ *   the Rust selector compares it against the very string this call
+ *   produced, and a non-matching path is a hard error, never a silent
+ *   BIP44 fallback.
+ * @property confirmedDuffs the account's confirmed balance.
+ * @property friendIdentityIdHex the contact's identity id (lower hex) —
+ *   log/diagnostic only.
+ */
+internal data class ReceivalFundingAccount(
+    val derivationPath: String,
+    val confirmedDuffs: Long,
+    val friendIdentityIdHex: String
+)
+
+/**
+ * Parse the `accountBalances` JSON array (see
+ * `DashpayNative.walletManagerAccountBalances`) into the DashPay
+ * receiving-funds fallback candidates: rows with
+ * `typeTag == `[ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS] AND a non-null,
+ * non-empty `derivationPath`. Rows of any other type, and receival rows
+ * the engine reports no account-level path for (JSON `null`), are never
+ * candidates. Malformed input returns empty (the caller rethrows the
+ * original shortfall — fail closed).
+ */
+internal fun parseReceivalFundingAccounts(accountBalancesJson: String?): List<ReceivalFundingAccount> {
+    if (accountBalancesJson.isNullOrEmpty()) return emptyList()
+    return try {
+        val rows = org.json.JSONArray(accountBalancesJson)
+        val accounts = ArrayList<ReceivalFundingAccount>(rows.length())
+        for (i in 0 until rows.length()) {
+            val row = rows.getJSONObject(i)
+            if (row.optInt("typeTag", -1) != ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS) continue
+            // isNull covers both an absent key and an explicit JSON null
+            // (optString would coerce the NULL sentinel to the STRING
+            // "null" on Android's org.json — never path-safe).
+            if (row.isNull("derivationPath")) continue
+            val path = row.getString("derivationPath")
+            if (path.isEmpty()) continue
+            accounts.add(
+                ReceivalFundingAccount(
+                    derivationPath = path,
+                    confirmedDuffs = row.optLong("confirmed", 0L),
+                    friendIdentityIdHex = row.optString("friendIdentityId", "")
+                )
+            )
+        }
+        accounts
+    } catch (e: Exception) {
+        emptyList()
+    }
+}
+
+/**
+ * The SINGLE receival account to fund the fallback send from: the one
+ * with the LARGEST `confirmed` among those covering
+ * `amount + feeHeadroom` on their own — or null when none does.
+ * Accounts are NEVER unioned: one funding account per send
+ * (dashpay/platform#4184 funding-domain isolation — the Rust selector
+ * enforces the same rule; this pick just decides WHICH single account to
+ * name). `confirmed` only — unconfirmed receival funds never qualify.
+ */
+internal fun pickReceivalFundingAccount(
+    candidates: List<ReceivalFundingAccount>,
+    amountDuffs: Long,
+    feeHeadroomDuffs: Long = RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS
+): ReceivalFundingAccount? = candidates
+    .filter { it.confirmedDuffs >= amountDuffs + feeHeadroomDuffs }
+    .maxByOrNull { it.confirmedDuffs }
 
 // ── Source seam ───────────────────────────────────────────────────────
 
@@ -265,6 +379,26 @@ internal class DashSdkL1SendSource(
      */
     private val coreSendMutex = Mutex()
 
+    private companion object {
+        private val log = LoggerFactory.getLogger(DashSdkL1SendSource::class.java)
+
+        /**
+         * Decode a lowercase/uppercase hex wallet id (the manager's map key)
+         * into the 32-byte form `PlatformWalletManager.accountBalances`
+         * takes. Throws on malformed input — contained by the fallback's
+         * balance-read catch (rethrows the original shortfall).
+         */
+        private fun hexToBytes(hex: String): ByteArray {
+            require(hex.length % 2 == 0) { "hex string must have even length" }
+            return ByteArray(hex.length / 2) { i ->
+                val hi = Character.digit(hex[2 * i], 16)
+                val lo = Character.digit(hex[2 * i + 1], 16)
+                require(hi >= 0 && lo >= 0) { "malformed hex wallet id" }
+                ((hi shl 4) + lo).toByte()
+            }
+        }
+    }
+
     private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
         service.ensureStarted()
         return checkNotNull(service.walletManagerOrNull()) {
@@ -287,11 +421,119 @@ internal class DashSdkL1SendSource(
         // (setFunding sets inputs AND the change address Rust-side), signed via
         // the manager's mnemonic resolver — no private key crosses the
         // boundary. BIP44 account 0 is sendToAddresses' default.
-        return wallet.sendToAddresses(
-            recipients = listOf(addressBase58 to amountDuffs),
-            network = toSdkNetwork(Constants.NETWORK_PARAMETERS),
-            coreSignerHandle = manager.mnemonicResolverHandle
+        return try {
+            wallet.sendToAddresses(
+                recipients = listOf(addressBase58 to amountDuffs),
+                network = toSdkNetwork(Constants.NETWORK_PARAMETERS),
+                coreSignerHandle = manager.mnemonicResolverHandle
+            )
+        } catch (shortfall: DashSdkError.PlatformWallet.CoreInsufficientFunds) {
+            // BIP44 account 0 cannot cover the payment (typed pre-broadcast
+            // selector shortfall — nothing reached the wire). Try the ONE
+            // DashPay receival account that can, or rethrow unchanged.
+            sendFromReceivalAccountOrRethrow(manager, wallet, walletIdHex, addressBase58, amountDuffs, shortfall)
+        }
+    }
+
+    /**
+     * Fallback for a BIP44 shortfall: spend from a SINGLE DashPay
+     * receiving-funds account (a contact's payments to us) via the
+     * deferred build-token flow —
+     * `buildSignedPaymentWithToken(fundingPath = <the account's own
+     * derivationPath>)` → `broadcastSigned`.
+     *
+     * Funds-safety contract:
+     * - The funding path is the `derivationPath` string the
+     *   account-balance enumeration itself reported, passed VERBATIM —
+     *   never hand-built. Accounts are NEVER unioned; if no single
+     *   receival account covers `amount + `
+     *   [RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS], the ORIGINAL
+     *   [DashSdkError.PlatformWallet.CoreInsufficientFunds] is rethrown
+     *   unchanged (classified NotBroadcast → today's dashj
+     *   InsufficientMoneyException surface).
+     * - Any balance-read/parse/build failure also rethrows the ORIGINAL
+     *   shortfall (with the new failure attached as suppressed): all of
+     *   those steps are strictly pre-broadcast, so NotBroadcast stays
+     *   provable.
+     * - A failure AFTER the build releases the reservation on every path:
+     *   [ManagedPlatformWallet.SignedCoreTransaction] is the reservation
+     *   owner and `use { }` closes it on any exit — a real release when
+     *   the token was never consumed, a native no-op after a consuming
+     *   `broadcastSigned` attempt (whose ambiguous-outcome policy keeps
+     *   the inputs reserved Rust-side, exactly like the normal send). A
+     *   broadcast failure rethrows the BROADCAST throwable — NOT the
+     *   original shortfall — so [classifyCoreSendFailure] can still
+     *   distinguish a definitive rejection from an ambiguous outcome
+     *   (which must never fall back to dashj: potential double PAY).
+     * - `feePerKb = 0` = the SDK default rate, the same
+     *   `FeeRate::normal()` the primary path's builder uses; change from
+     *   the build routes to the unmixed BIP44 account (structural,
+     *   engine-side).
+     */
+    private suspend fun sendFromReceivalAccountOrRethrow(
+        manager: org.dashfoundation.dashsdk.wallet.PlatformWalletManager,
+        wallet: org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet,
+        walletIdHex: String,
+        addressBase58: String,
+        amountDuffs: Long,
+        shortfall: DashSdkError.PlatformWallet.CoreInsufficientFunds
+    ): String {
+        val candidates = try {
+            parseReceivalFundingAccounts(manager.accountBalances(hexToBytes(walletIdHex)))
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK l1Send fallback: account-balance read failed; rethrowing the BIP44 shortfall", t)
+            shortfall.addSuppressed(t)
+            throw shortfall
+        }
+        val account = pickReceivalFundingAccount(candidates, amountDuffs)
+        if (account == null) {
+            if (candidates.isNotEmpty()) {
+                log.info(
+                    "SDK l1Send fallback: receival funds split across {} contact account(s) " +
+                        "(largest confirmed {} duffs), no single account covers {} + {} duffs " +
+                        "headroom; accounts are never unioned — rethrowing the BIP44 shortfall",
+                    candidates.size,
+                    candidates.maxOf { it.confirmedDuffs },
+                    amountDuffs,
+                    RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS
+                )
+            }
+            throw shortfall
+        }
+        log.info(
+            "SDK l1Send: BIP44 account 0 insufficient; spending from DashPay receival account " +
+                "(contact={}…, confirmed={} duffs) via its reported fundingPath",
+            account.friendIdentityIdHex.take(16),
+            account.confirmedDuffs
         )
+        val payment = try {
+            wallet.buildSignedPaymentWithToken(
+                recipients = listOf(addressBase58 to amountDuffs),
+                coreSignerHandle = manager.mnemonicResolverHandle,
+                feePerKb = 0,
+                fundingPath = account.derivationPath
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // Build failures are pre-broadcast by construction (select +
+            // reserve + sign + register; no network) and mint no token, so
+            // there is nothing to release. Rethrow the ORIGINAL shortfall —
+            // provably NotBroadcast — with this failure as diagnostics.
+            log.warn("SDK l1Send fallback: receival-account build failed pre-broadcast; rethrowing the BIP44 shortfall", t)
+            shortfall.addSuppressed(t)
+            throw shortfall
+        }
+        // use{} releases the reservation on EVERY failure exit (close() is a
+        // synchronous, idempotent native release — cancellation-safe, and a
+        // no-op once broadcastSigned consumed the token); the object overload
+        // of broadcastSigned keeps the token GC-reachable across the call.
+        val txidHex = payment.use { wallet.broadcastSigned(payment) }
+        log.info(
+            "SDK l1Send fallback: broadcast {} duffs from the receival account (contact={}…), txid {}",
+            amountDuffs, account.friendIdentityIdHex.take(16), txidHex
+        )
+        return txidHex
     }
 
     override suspend fun spendableBalanceDuffs(walletIdHex: String): Long {

@@ -24,9 +24,11 @@ import androidx.lifecycle.viewModelScope
 import com.google.common.base.Charsets
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.service.DashjDiagnosticSyncState
 import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +36,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -58,13 +61,27 @@ data class ToolsUIState(
     val hasUsername: Boolean = false
 )
 
+/**
+ * DIAGNOSTIC state for the Tools "dashj sync (diagnostic)" row: the toggle
+ * position plus dashj's own sync percentage and the SDK-vs-dashj parity verdict
+ * (meaningful only once [percent] reaches 100). See
+ * [de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.DASHJ_SYNC_DIAGNOSTIC].
+ */
+data class DashjDiagnosticUIState(
+    val enabled: Boolean = false,
+    val percent: Int = 0,
+    val parity: DashjDiagnosticSyncState.Parity = DashjDiagnosticSyncState.Parity.UNKNOWN
+)
+
 @HiltViewModel
 class ToolsViewModel @Inject constructor(
     private val walletData: WalletData,
+    private val walletApplication: WalletApplication,
     private val clipboardManager: ClipboardManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
     blockchainStateDao: BlockchainStateDao,
     private val dashPayConfig: DashPayConfig,
+    dashjDiagnosticSyncState: DashjDiagnosticSyncState,
     private val identityConfig: BlockchainIdentityConfig,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
@@ -88,6 +105,22 @@ class ToolsViewModel @Inject constructor(
 
     private val _exportCsvResult = MutableStateFlow<ExportCsvResult>(ExportCsvResult.Idle)
     val exportCsvResult: StateFlow<ExportCsvResult> = _exportCsvResult.asStateFlow()
+
+    /**
+     * DIAGNOSTIC row state: the [DashPayConfig.DASHJ_SYNC_DIAGNOSTIC] toggle
+     * combined with the live dashj progress + parity verdict from the isolated
+     * [DashjDiagnosticSyncState] holder. Inert default when the toggle is off.
+     */
+    val dashjDiagnosticState: StateFlow<DashjDiagnosticUIState> = combine(
+        dashPayConfig.observeDashjSyncDiagnostic(),
+        dashjDiagnosticSyncState.state
+    ) { enabled, snapshot ->
+        DashjDiagnosticUIState(
+            enabled = enabled,
+            percent = snapshot.percent,
+            parity = snapshot.parity
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashjDiagnosticUIState())
 
     init {
         val extendedKey: DeterministicKey = walletData.wallet!!.watchingKey
@@ -141,6 +174,20 @@ class ToolsViewModel @Inject constructor(
 
     fun resetExportCsvResult() {
         _exportCsvResult.value = ExportCsvResult.Idle
+    }
+
+    /**
+     * Flip the dashj-sync DIAGNOSTIC toggle and bounce the blockchain service
+     * so its Phase 5d engine-start gate re-resolves: ON un-holds the dashj
+     * peergroup (post-cutover) so it syncs as a backup/parity check; OFF
+     * re-holds it and clears the diagnostic readout. Never touches the cutover
+     * state or sdkOwnsL1.
+     */
+    fun setDashjSyncDiagnostic(enabled: Boolean) {
+        viewModelScope.launch {
+            dashPayConfig.setDashjSyncDiagnostic(enabled)
+            walletApplication.restartBlockchainService()
+        }
     }
 
     suspend fun setCreditsExplained() = dashPayConfig.set(DashPayConfig.CREDIT_INFO_SHOWN, true)

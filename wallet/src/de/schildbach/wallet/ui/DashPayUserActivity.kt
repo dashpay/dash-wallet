@@ -338,7 +338,9 @@ class DashPayUserActivity : LockScreenActivity() {
 
             }
             is NotificationItemPayment -> {
-                val transactionDetailsDialogFragment = TransactionDetailsDialogFragment.newInstance(notificationItem.tx!!.txId)
+                // txId resolves from the dashj tx when present, otherwise from the SDK-only
+                // cache entry's rowId — so an un-bridged received contact payment still opens.
+                val transactionDetailsDialogFragment = TransactionDetailsDialogFragment.newInstance(notificationItem.txId)
                 transactionDetailsDialogFragment.show(supportFragmentManager, null)
             }
         }

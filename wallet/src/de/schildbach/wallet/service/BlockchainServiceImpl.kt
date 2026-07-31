@@ -277,6 +277,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Inject lateinit var analyticsService: AnalyticsService
     @Inject lateinit var securityFunctions: AuthenticationManager
     @Inject lateinit var cutoverCoordinator: de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
+    @Inject lateinit var txDisplayCacheDao: de.schildbach.wallet.database.dao.TxDisplayCacheDao
+    @Inject lateinit var dashPayConfig: de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+    @Inject lateinit var l1ShadowSyncService: de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+    @Inject lateinit var dashjDiagnosticSyncState: DashjDiagnosticSyncState
 
     /**
      * Phase 5d cutover gate, resolved ONCE per launch just before
@@ -287,6 +291,57 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      */
     @Volatile
     private var dashjEngineMayStart = true
+
+    /**
+     * DIAGNOSTIC (Tools toggle,
+     * [de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.DASHJ_SYNC_DIAGNOSTIC]):
+     * whether the cutover would OTHERWISE hold dashj this launch — i.e. the SDK
+     * owns L1 (committed). Captured separately from [dashjEngineMayStart]
+     * because the diagnostic OR-s dashj back on, which would otherwise erase
+     * this signal. True + [dashjSyncDiagnostic] is the Option-B isolation
+     * condition in [updateBlockchainState]. False (pre-cutover / flag off) ⇒
+     * everything below is inert.
+     */
+    @Volatile
+    private var dashjHeldByCutover = false
+
+    /** Whether the dashj-sync diagnostic toggle was on when the gate resolved. */
+    @Volatile
+    private var dashjSyncDiagnostic = false
+
+    /** Last parity verdict published to the diagnostic holder — de-dupes the 100% log. */
+    @Volatile
+    private var lastDiagnosticParity: DashjDiagnosticSyncState.Parity? = null
+
+    /**
+     * FIX 1 guard: the post-cutover identity/contacts discovery hook
+     * ([maybeRecoverIdentityPostCutover]) fires at most once — reset only if the
+     * discovery attempt throws, so a later synced notification can retry.
+     */
+    private val postCutoverIdentityRecoveryTriggered = AtomicBoolean(false)
+
+    /**
+     * The SDK-corrected signed net value for [tx] when the cutover UI cache
+     * ([txDisplayCacheDao]) holds a row for it, else the supplied dashj [fallback].
+     *
+     * dashj mis-values SDK-authored sends (it sees only the +change output and reports a positive
+     * "received" value), so the received-coins notification would both fire on a send and show the
+     * wrong amount. The tx_display_cache row carries the engine-corrected signed net (negative =
+     * sent), keyed by lowercase display-hex txid. Absent → dashj value, so pre-cutover / non-SDK
+     * txs are byte-for-byte unchanged.
+     *
+     * Runs synchronously on a bitcoinj wallet-listener thread (never the main thread) and fails
+     * soft to [fallback] on ANY error, keeping the notification path non-blocking and robust.
+     */
+    private fun correctedNetValue(tx: Transaction, fallback: Coin): Coin {
+        return try {
+            val cached = txDisplayCacheDao.getValueSatoshisByIdSync(tx.txId.toString().lowercase())
+            if (cached != null) Coin.valueOf(cached) else fallback
+        } catch (t: Throwable) {
+            log.warn("tx_display_cache lookup failed for {}, using dashj value", tx.txId, t)
+            fallback
+        }
+    }
 
     private var blockStore: BlockStore? = null
     private var headerStore: BlockStore? = null
@@ -409,7 +464,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 transactionsReceived.incrementAndGet()
                 val address = getWalletAddressOfReceived(tx, wallet)
-                val amount = tx.getValue(wallet)
+                // Prefer the SDK-corrected net for the notification amount; falls back to dashj
+                // for pre-cutover / non-SDK txs (see correctedNetValue).
+                val amount = correctedNetValue(tx, tx.getValue(wallet))
                 val confidenceType = tx.confidence.confidenceType
                 val isRestoringBackup = application.configuration.isRestoringBackup
                 handler.post {
@@ -462,7 +519,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
 
             private fun passFilters(tx: Transaction, wallet: Wallet): Boolean {
-                val amount = tx.getValue(wallet)
+                // Prefer the SDK-corrected net so an SDK send mis-read by dashj as a positive
+                // "received" value does not trip the received-coins gate; dashj fallback otherwise.
+                val amount = correctedNetValue(tx, tx.getValue(wallet))
                 val isReceived = amount.signum() > 0
                 if (!isReceived) {
                     return false
@@ -1226,34 +1285,106 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerGroup!!.startBlockChainDownload(blockchainDownloadListener)
                 platformSyncService.addPreBlockProgressListener(blockchainDownloadListener)
             } else if (impediments.isNotEmpty() && peerGroup != null) {
-                blockchainStateDataProvider.setNetworkStatus(NetworkStatus.NOT_AVAILABLE)
-                log.info("stopping peergroup")
-                peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
-                peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
-                peerGroup!!.removePreBlocksDownloadedListener(preBlocksDownloadListener)
-                peerGroup!!.removeWallet(wallet)
-                dashSystemService.system.removeWallet(wallet)
-                platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
-                peerGroup!!.stopAsync()
-                try {
-                    dashSystemService.system.close()
-                } catch (e: Exception) {
-                    log.error("Error closing dash system service", e)
-                }
-                // use the offline risk analyzer
-                if (wallet != null) {
-                    wallet.riskAnalyzer =
-                        OfflineAnalyzer(config.bestHeightEver, System.currentTimeMillis() / 1000)
-                }
-                try {
-                    riskAnalyzer?.shutdown()
-                } catch (e: Exception) {
-                    log.error("Error shutting down risk analyzer", e)
-                }
-                peerGroup = null
-                log.debug("releasing wakelock")
-                if (wakeLock!!.isHeld) {
-                    wakeLock!!.release()
+                stopPeerGroup()
+            }
+        }
+
+        /**
+         * Full dashj peergroup teardown (extracted from [checkService]'s stop
+         * branch so it can be reused unchanged). Callers hold [checkMutex] and
+         * have already confirmed [peerGroup] != null.
+         */
+        fun stopPeerGroup() {
+            val wallet = application.wallet
+            blockchainStateDataProvider.setNetworkStatus(NetworkStatus.NOT_AVAILABLE)
+            log.info("stopping peergroup")
+            peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
+            peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
+            peerGroup!!.removePreBlocksDownloadedListener(preBlocksDownloadListener)
+            peerGroup!!.removeWallet(wallet)
+            dashSystemService.system.removeWallet(wallet)
+            platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
+            peerGroup!!.stopAsync()
+            try {
+                dashSystemService.system.close()
+            } catch (e: Exception) {
+                log.error("Error closing dash system service", e)
+            }
+            // use the offline risk analyzer
+            if (wallet != null) {
+                wallet.riskAnalyzer =
+                    OfflineAnalyzer(config.bestHeightEver, System.currentTimeMillis() / 1000)
+            }
+            try {
+                riskAnalyzer?.shutdown()
+            } catch (e: Exception) {
+                log.error("Error shutting down risk analyzer", e)
+            }
+            peerGroup = null
+            log.debug("releasing wakelock")
+            if (wakeLock!!.isHeld) {
+                wakeLock!!.release()
+            }
+        }
+
+        /**
+         * FIX 2: the DASHJ_SYNC_DIAGNOSTIC toggle (Tools) must take effect on a
+         * LIVE foreground service. [WalletApplication.restartBlockchainService]
+         * can't be relied on to destroy/recreate a foreground service, so
+         * [onCreate]'s one-shot gate resolution never re-runs and the peergroup
+         * never (un)holds. This re-resolves the SAME gate (mirrors the onCreate
+         * computation) under [checkMutex] and actually starts/stops dashj.
+         *
+         * Inert unless the cutover is committed ([dashjHeldByCutover]): pre-cutover
+         * dashj is already the primary L1 engine and the flag only mirrors its
+         * progress into the diagnostic holder, so nothing about whether the
+         * peergroup runs changes — byte-for-byte as before.
+         */
+        fun onDashjDiagnosticChanged(enabled: Boolean) {
+            serviceScope.launch {
+                onCreateCompleted.await()
+                checkMutex.withLock {
+                    try {
+                        // Mirror onCreate's gate resolution (coordinatorAllowsDashj
+                        // is fixed for the launch; only the diagnostic flag changes).
+                        val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
+                            .getOrDefault(true)
+                        val newEngineMayStart = coordinatorAllowsDashj || enabled
+                        val changed = enabled != dashjSyncDiagnostic ||
+                            newEngineMayStart != dashjEngineMayStart
+
+                        dashjSyncDiagnostic = enabled
+                        dashjHeldByCutover = !coordinatorAllowsDashj
+                        dashjEngineMayStart = newEngineMayStart
+                        if (!enabled) {
+                            dashjDiagnosticSyncState.reset()
+                            lastDiagnosticParity = null
+                        }
+
+                        if (!changed) return@withLock
+                        log.info(
+                            "dashj-sync-diagnostic toggle -> {}; re-resolved dashjEngineMayStart={} " +
+                                "(coordinatorAllowsDashj={}, dashjHeldByCutover={})",
+                            enabled, dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover
+                        )
+
+                        if (!dashjHeldByCutover) {
+                            // Pre-cutover: dashj is the primary engine regardless of
+                            // this flag; do not disturb the running peergroup.
+                            return@withLock
+                        }
+
+                        if (dashjEngineMayStart && peerGroup == null) {
+                            // Un-hold: start dashj as a backup / parity check. Reuse
+                            // the normal start path (starts only if impediments empty).
+                            checkService()
+                        } else if (!dashjEngineMayStart && peerGroup != null) {
+                            // Re-hold: stop the diagnostic dashj engine.
+                            stopPeerGroup()
+                        }
+                    } catch (e: Exception) {
+                        log.error("onDashjDiagnosticChanged failed", e)
+                    }
                 }
             }
         }
@@ -1676,9 +1807,25 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // release onCreateCompleted — checkService() awaits that latch,
                 // so the gate is always settled by the time it decides whether
                 // to start the peergroup. Failure defaults to true (start dashj).
-                dashjEngineMayStart = runCatching { cutoverCoordinator.dashjEngineMayStart() }
+                val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
                     .getOrDefault(true)
-                log.info("Phase 5d cutover gate: dashjEngineMayStart={}", dashjEngineMayStart)
+                // DIAGNOSTIC un-hold (Tools toggle): when the cutover has committed
+                // (SDK owns L1) but the tester turned on DASHJ_SYNC_DIAGNOSTIC, let the
+                // dashj peergroup start anyway so it syncs as a backup / parity check.
+                // This ONLY relaxes the LOCAL engine-start gate — it does NOT touch the
+                // cutover state or CutoverCoordinator.sdkOwnsL1Flow(), so sdkOwnsL1 stays
+                // true and the home header keeps reading the SDK's L1 sync. Flag off ⇒
+                // dashjEngineMayStart == coordinatorAllowsDashj, byte-for-byte as before.
+                dashjSyncDiagnostic = runCatching { dashPayConfig.getDashjSyncDiagnostic() }
+                    .getOrDefault(false)
+                dashjHeldByCutover = !coordinatorAllowsDashj
+                dashjEngineMayStart = coordinatorAllowsDashj || dashjSyncDiagnostic
+                if (!dashjSyncDiagnostic) dashjDiagnosticSyncState.reset()
+                log.info(
+                    "Phase 5d cutover gate: dashjEngineMayStart={} (coordinatorAllowsDashj={}, " +
+                        "dashjHeldByCutover={}, dashjSyncDiagnostic={})",
+                    dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover, dashjSyncDiagnostic
+                )
 
                 if (!dashjEngineMayStart && Constants.SUPPORTS_PLATFORM) {
                     // SDK-sourced quorums (Phase 5d follow-up): with the dashj
@@ -1703,6 +1850,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         log.warn("failed to wire SDK-sourced quorums for Platform", it)
                     }
                 }
+
+                // FIX 2: keep the DASHJ_SYNC_DIAGNOSTIC toggle effective on a LIVE
+                // service — restartBlockchainService() can't be relied on to recreate a
+                // foreground service, so the one-shot gate above would never re-resolve.
+                // Observe the flag for the service's lifetime and actually (un)hold the
+                // dashj peergroup. The first (current-value) emission is a no-op (the gate
+                // was just resolved from it). Inert pre-cutover / flag-off.
+                dashPayConfig.observeDashjSyncDiagnostic()
+                    .distinctUntilChanged()
+                    .onEach { enabled -> (networkCallback as? NetworkCallbackImpl)?.onDashjDiagnosticChanged(enabled) }
+                    .launchIn(serviceScope)
 
                 onCreateCompleted.complete(Unit)
                 log.info(".onCreate() finished")
@@ -2144,10 +2302,86 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 //    }
 
     private fun updateBlockchainState() {
+        val percent = percentageSync()
+        val stage = if (peerGroup != null) peerGroup!!.syncStage else null
+
+        // DIAGNOSTIC (Tools toggle): when the cutover has committed (SDK owns L1)
+        // AND the diagnostic un-held dashj, dashj is running purely as a backup /
+        // parity check — it must NOT overwrite the shared blockchain_state row
+        // (percentageSync/syncStage/impediments) the SDK now drives (Option B).
+        // Route its progress to the isolated diagnostic holder instead and return.
+        if (dashjSyncDiagnostic && dashjHeldByCutover) {
+            publishDashjDiagnostic(percent, stage)
+            return
+        }
+
+        // Pre-cutover with the diagnostic on: dashj IS still the primary L1
+        // engine, so keep writing the shared row exactly as before AND mirror
+        // its progress into the diagnostic readout (additive).
+        if (dashjSyncDiagnostic) {
+            publishDashjDiagnostic(percent, stage)
+        }
+
+        // Flag off (or pre-cutover flag off): byte-for-byte the original call.
         blockchainStateDataProvider.updateBlockchainState(
-            blockChain!!, impediments, percentageSync(),
-            if (peerGroup != null) peerGroup!!.syncStage else null
+            blockChain!!, impediments, percent, stage
         )
+    }
+
+    /**
+     * Publish one dashj progress sample to the isolated diagnostic holder
+     * ([dashjDiagnosticSyncState]). Once dashj has caught up (100%) read the
+     * latest SDK-vs-dashj parity verdict from the L1 shadow-sync harness
+     * ([L1ShadowSyncService.latestParity]) and colour the readout MATCH/MISMATCH;
+     * while syncing the verdict is UNKNOWN. Logs a single SDK-vs-dashj line each
+     * time the verdict changes.
+     */
+    private fun publishDashjDiagnostic(rawPercent: Int, stage: PeerGroup.SyncStage?) {
+        // The shared-row percentage is TIME-weighted (block timestamps vs the
+        // clock), which wobbles non-monotonically on testnet's irregular block
+        // production and under-reads badly (e.g. 52% shown at ~75% of blocks
+        // downloaded). For the DIAGNOSTIC readout use a HEIGHT-based percent
+        // during block download — downloaded height over the peers' most
+        // common tip height — which is monotonic and matches reality. Fall
+        // back to the time-based figure outside the BLOCKS stage (headers /
+        // masternode-list phases have no meaningful block-height ratio) or
+        // when heights aren't available. Diagnostic-only: the shared
+        // blockchain_state row and the pre-cutover UI are untouched.
+        val percent = run {
+            val tip = try { peerGroup?.mostCommonChainHeight ?: 0 } catch (_: Exception) { 0 }
+            val height = try { blockChain?.bestChainHeight ?: 0 } catch (_: Exception) { 0 }
+            if (stage == PeerGroup.SyncStage.BLOCKS && tip > 0 && height in 1..tip) {
+                ((height.toLong() * 100L) / tip.toLong()).toInt()
+            } else {
+                rawPercent
+            }
+        }
+        val parity = if (percent >= 100) {
+            val report = l1ShadowSyncService.latestParity.value
+            when {
+                report == null -> DashjDiagnosticSyncState.Parity.UNKNOWN
+                report.fullMatch -> DashjDiagnosticSyncState.Parity.MATCH
+                else -> DashjDiagnosticSyncState.Parity.MISMATCH
+            }.also { verdict ->
+                if (verdict != lastDiagnosticParity) {
+                    if (report != null) {
+                        log.info(
+                            "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
+                                "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={}",
+                            verdict, report.sdkDuffs, report.dashjDuffs,
+                            report.sdkConfirmedDuffs, report.dashjAvailableDuffs,
+                            report.sdkTxCount, report.dashjTxCount
+                        )
+                    } else {
+                        log.info("dashj-sync-diagnostic: dashj caught up (100%) — no SDK parity report yet")
+                    }
+                }
+            }
+        } else {
+            DashjDiagnosticSyncState.Parity.UNKNOWN
+        }
+        lastDiagnosticParity = parity
+        dashjDiagnosticSyncState.update(percent, parity, stage?.name)
     }
 
     override fun getConnectedPeers(): List<Peer> {
@@ -2201,6 +2435,37 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
         this.blockchainState = blockchainState
+        maybeRecoverIdentityPostCutover(blockchainState)
+    }
+
+    /**
+     * FIX 1: once the cutover is committed the dashj peerGroup never starts, so its
+     * PreBlocksDownloadListener never fires [PlatformSyncService.preBlockDownload] —
+     * the trigger that, on a wallet RESTORE, discovered the DashPay identity from the
+     * restored keys and enqueued the identity/username/contacts recovery. Re-arm that
+     * trigger here: when the SDK-sourced L1 scan first reports synced (the
+     * blockchain_state row is SDK-written post-cutover), run the same discovery once.
+     *
+     * Inert pre-cutover ([dashjHeldByCutover] == false): the dashj preBlockDownload
+     * path still owns discovery, so this never double-runs it. Idempotent: fires at
+     * most once via [postCutoverIdentityRecoveryTriggered], reset only on failure so a
+     * later synced notification can retry.
+     */
+    private fun maybeRecoverIdentityPostCutover(blockchainState: BlockchainState?) {
+        if (!dashjHeldByCutover) return // pre-cutover: the dashj peerGroup path owns discovery
+        if (!Constants.SUPPORTS_PLATFORM) return
+        if (blockchainState?.isSynced() != true) return
+        if (!postCutoverIdentityRecoveryTriggered.compareAndSet(false, true)) return
+
+        log.info("cutover committed and SDK L1 scan synced — triggering identity/contacts discovery")
+        serviceScope.launch {
+            try {
+                platformSyncService.discoverAndRecoverIdentity()
+            } catch (e: Exception) {
+                log.error("post-cutover identity discovery/recovery failed", e)
+                postCutoverIdentityRecoveryTriggered.set(false) // allow a later synced tick to retry
+            }
+        }
     }
 
     private fun percentageSync(): Int {
