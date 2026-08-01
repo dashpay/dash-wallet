@@ -54,6 +54,32 @@ adb install wallet/build/outputs/apk/dash-wallet-_testNet3-debug.apk
 ./gradlew build
 ```
 
+### BIP70 payment-request testing (device/emulator)
+
+`scripts/bip70-test-server.py` (stdlib Python, no dependencies) serves a
+local BIP70 invoice and acks the returned Payment — the fastest way to
+exercise the scanned-invoice flow (`PaymentProtocolFragment`: fetch →
+preview → confirm → Payment POST → ACK) end to end. By default the invoice
+pays 0.01 tDASH back to the Dash testnet faucet
+(`yjSvwyLB5X4dqQqVMPMu6UdrFpYZ3u9v5U`); pass your own receive address for a
+fee-only self-pay.
+
+```bash
+# Terminal 1: serve the invoice (defaults: faucet address, 0.01 tDASH, :8330)
+python3 scripts/bip70-test-server.py
+
+# Terminal 2: bridge the port and open the invoice in the wallet
+adb reverse tcp:8330 tcp:8330
+adb shell am start -a android.intent.action.VIEW \
+    -d "dash:?r=http://127.0.0.1:8330/invoice" hashengineering.darkcoin.wallet_test
+```
+
+Post-cutover (`CUT_OVER`) watch logcat for `l1DeferredBuild` when the
+preview opens (SDK builds + reserves the tx, exact fee shown) and
+`l1DeferredBroadcast` of the same txid after confirm — see
+`SendCoinsTaskRunner.directPayViaSdk`. The server can reply `nack` (edit
+`do_POST`) to exercise the reservation-release path.
+
 ### Code Quality
 ```bash
 # Format Kotlin code with ktlint
