@@ -68,4 +68,48 @@ class DisplayCacheRefreshBus @Inject constructor() {
     fun signalChanged() {
         _changes.tryEmit(Unit)
     }
+
+    // ── SDK-authority register (see [markSdkAuthoritative]) ───────────────────────
+    //
+    // Insertion-ordered, eldest-evicted and synchronized: the producer is
+    // CutoverUiDataService's single sequential collector, the consumer is
+    // TxDisplayCacheService's serviceScope — different threads.
+    private val sdkAuthoritativeRowIds: MutableSet<String> = java.util.Collections.newSetFromMap(
+        java.util.Collections.synchronizedMap(
+            object : LinkedHashMap<String, Boolean>() {
+                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>): Boolean =
+                    size > SDK_AUTHORITATIVE_MAX
+            }
+        )
+    )
+
+    /**
+     * Record that the SDK has a DEFINITIVE record for these display rowIds and has
+     * planned/verified their shape this pass — the "SDK-stamped" signal that works for
+     * NON-contact rows (a contact row is additionally self-identifying via its
+     * `contactUserId` column, which survives a process restart; this register does not).
+     *
+     * [de.schildbach.wallet.service.TxDisplayCacheService] consults it via
+     * [isSdkAuthoritative] so its dashj-side rebuild writers never rewrite such a row's
+     * direction/value/title/status: post-cutover dashj cannot value an SDK-authored send
+     * (unconnected inputs → net 0 → a green RECEIVED row titled "Sending"), and a memo or
+     * metadata edit must never change a transaction's direction or amount.
+     *
+     * Bounded ([SDK_AUTHORITATIVE_MAX], eldest evicted) so a very large wallet cannot grow
+     * it unboundedly — an evicted row is simply re-claimed on the next sync pass, and the
+     * SDK planner re-corrects it if a rebuild got there first (idempotent either way).
+     * Never throws; a no-op for an empty collection.
+     */
+    fun markSdkAuthoritative(rowIds: Collection<String>) {
+        if (rowIds.isEmpty()) return
+        sdkAuthoritativeRowIds.addAll(rowIds)
+    }
+
+    /** Whether [rowId] is under SDK authority this process — see [markSdkAuthoritative]. */
+    fun isSdkAuthoritative(rowId: String): Boolean = sdkAuthoritativeRowIds.contains(rowId)
+
+    companion object {
+        /** Cap of the SDK-authority register; ~64 chars/txid keeps this well under a MB. */
+        internal const val SDK_AUTHORITATIVE_MAX = 8_192
+    }
 }

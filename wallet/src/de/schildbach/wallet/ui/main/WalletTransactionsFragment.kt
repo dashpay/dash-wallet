@@ -97,6 +97,13 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private var onViewCreatedTime: Long = 0L
     private var pendingManualRefresh: Boolean = false
 
+    /**
+     * One "still syncing" invite notice per launch. The provisional
+     * NOT_SYNCED verdict can be re-reached on every sync-state emission,
+     * and the notice is informational — repeating it would be a nag.
+     */
+    private var notSyncedInviteNoticeShown = false
+
     private val viewModel by activityViewModels<MainViewModel>()
     private val giftCardViewModel by activityViewModels<GiftCardViewModel>()
     private val binding by viewBinding(WalletTransactionsFragmentBinding::bind)
@@ -322,8 +329,17 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
             header.isSynced = it
             if (inviteHandlerViewModel.isUsingInvite) {
+                // Re-drives the invite through validation on every sync-state
+                // change: an invite checked mid-scan gets the provisional
+                // NOT_SYNCED verdict, and this is what converts it to
+                // VALID/ALREADY_CLAIMED once the scan completes — the user
+                // never has to re-tap the link.
                 lifecycleScope.launch {
-                    processInvitation(inviteHandlerViewModel.invitation.value!!, isSynced = it, isLockScreenActive())
+                    processInvitation(
+                        inviteHandlerViewModel.invitation.value!!,
+                        isLockScreenActive(),
+                        revalidate = it
+                    )
                 }
             }
             updateSyncState()
@@ -424,8 +440,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         inviteHandlerViewModel.invitation.observe(viewLifecycleOwner) { invitation ->
             val isSynced = viewModel.isBlockchainSynced.value == true
-            if (invitation != null && isSynced) {
-                processInvitation(invitation, viewModel.isBlockchainSynced.value == true, isLockScreenActive())
+            // No longer gated on isSynced: an invite that arrives mid-scan
+            // must still get a verdict (the provisional NOT_SYNCED one) and
+            // the accompanying notice, instead of silently doing nothing.
+            if (invitation != null) {
+                processInvitation(invitation, isLockScreenActive())
             }
             header.invitation = invitation
             header.isSynced = isSynced
@@ -453,26 +472,42 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         lifecycleScope.launch {
             inviteHandlerViewModel.invitation.value?.let {
                 // only process for the dialog
-                processInvitation(
-                    it,
-                    viewModel.isBlockchainSynced.value == true,
-                    false
-                )
+                processInvitation(it, isLockScreenActive = false)
             }
         }
     }
 
-    private suspend fun processInvitation(invitation: InvitationLinkData, isSynced: Boolean, isLockScreenActive: Boolean) {
-        if (invitation.validationState != null) return
-        if (isSynced) {
-            if (invitation.expired) {
-                inviteHandlerViewModel.validateInvitation()
-            }
+    private suspend fun processInvitation(
+        invitation: InvitationLinkData,
+        isLockScreenActive: Boolean,
+        /**
+         * Re-drive validation for an invite that only ever got the PROVISIONAL
+         * NOT_SYNCED verdict. Set ONLY by the sync-state observer: validation
+         * republishes the invitation, so re-validating off the invitation feed
+         * itself would loop.
+         */
+        revalidate: Boolean = false
+    ) {
+        // NOT_SYNCED is a PROVISIONAL verdict, not a terminal one — the chain
+        // was still catching up when the invite was checked. Unlike every
+        // other state it must not latch, or the invite would sit behind this
+        // early return for the rest of the launch (the live bug: nothing was
+        // shown at all and the invite never resolved).
+        val state = invitation.validationState
+        val provisional = state == InvitationValidationState.NOT_SYNCED
+        if (state != null && !provisional) return
 
-            val currentInvitation = inviteHandlerViewModel.invitation.value ?: invitation
-            if (!isLockScreenActive) {
-                showInviteValidationDialog(currentInvitation)
-            }
+        // InviteHandlerViewModel.validateInvitation() carries its own sync
+        // gate and answers NOT_SYNCED while the chain is behind, so calling it
+        // mid-sync is safe — and it is what lets the dialog below say
+        // something instead of leaving the user with silence.
+        if ((state == null && invitation.expired) || (provisional && revalidate)) {
+            inviteHandlerViewModel.validateInvitation()
+        }
+
+        val currentInvitation = inviteHandlerViewModel.invitation.value ?: invitation
+        if (!isLockScreenActive) {
+            showInviteValidationDialog(currentInvitation)
         }
     }
 
@@ -516,7 +551,27 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
 
             InvitationValidationState.NOT_SYNCED -> {
-
+                // SAFETY NET, not the primary surface: the invite tile itself
+                // already carries the "still syncing" text
+                // (accept_invitation_row.xml → join_dashpay_wait, shown while
+                // HistoryHeaderAdapter.isSynced is false). This branch is only
+                // reachable in the narrow race where the sync state flips
+                // between the caller's guard and the validator's own check, so
+                // a lightweight message is enough — no modal.
+                //
+                // Deliberately does NOT clearInvitation(): unlike every
+                // terminal branch above, the invite must survive so
+                // processInvitation can re-validate it once the scan finishes.
+                // Shown once per launch so repeated sync-state emissions
+                // cannot turn it into a nag.
+                if (!notSyncedInviteNoticeShown) {
+                    notSyncedInviteNoticeShown = true
+                    Toast.makeText(
+                        requireContext(),
+                        R.string.invitation_not_synced_message,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
 
             else -> {}

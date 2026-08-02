@@ -132,6 +132,7 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val sdkShieldedInviteCreation: SdkShieldedInviteCreation,
     private val sdkL1InviteCreation: SdkL1InviteCreation,
     private val shieldedBalanceService: ShieldedBalanceService,
+    private val assetLockFundingPreflight: de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
@@ -271,6 +272,19 @@ open class InvitationFragmentViewModel @Inject constructor(
      * path, byte-identical to before.
      */
     suspend fun shouldRouteL1ToSdk(): Boolean = sdkL1InviteCreation.isEnabledAndCommitted()
+
+    /**
+     * PRE-FLIGHT funding-eligibility for an SDK-funded L1 invitation of
+     * [amountDuffs]: would the asset-lock coin selection (final —
+     * confirmed/IS-locked — BIP44 coins only) actually find the funds? The
+     * display-balance check alone lets a user start a ~30s creation that
+     * then bounces "Insufficient funds" when the balance is backed by
+     * non-final or out-of-account outputs. Fail-OPEN: true when the
+     * preflight has no evidence (pre-cutover, SDK unavailable, read
+     * failure) — the real build stays the authority.
+     */
+    suspend fun canFundL1Invite(amountDuffs: Long): Boolean =
+        assetLockFundingPreflight.canFundAssetLockDuffs(amountDuffs) ?: true
 
     /**
      * Fund a STANDARD (L1) invitation through the Kotlin SDK's DIP-13

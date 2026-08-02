@@ -219,6 +219,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val cutoverTxSeamService: CutoverTxSeamService,
     private val cutoverAutoCommitObserver: CutoverAutoCommitObserver,
     private val shieldedTransferExecutor: ShieldedTransferExecutor,
+    private val contactRequestNotificationService: ContactRequestNotificationService,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -579,6 +580,17 @@ class PlatformSynchronizationService @Inject constructor(
             val userIdList = HashSet<String>()
             val watch = Stopwatch.createStarted()
             var addedContact = false
+            /**
+             * Whether this pass INSERTED a contact-request row, as opposed to
+             * [addedContact], which is only true when a DIP-15 keychain was also
+             * added to the wallet. The bell/badge must refresh on the former: a
+             * request whose keychain already existed (or whose keychain add
+             * failed) is still a brand new notification for the user, and gating
+             * the listener fire on [addedContact] silently dropped it.
+             */
+            var insertedContactRequest = false
+            /** Received requests newly inserted by this pass, for the system notification. */
+            val newReceivedRequests = mutableListOf<DashPayContactRequest>()
             Context.propagate(platformRepo.walletApplication.wallet!!.context)
 
             val lastContactRequestTimeToMe = if (dashPayContactRequestDao.countAllRequestsToUser(userId) > 0) {
@@ -640,6 +652,7 @@ class PlatformSynchronizationService @Inject constructor(
                     log.info("adding accepted/send request to database: ${contactRequest.toUserId}")
                     userIdList.add(dashPayContactRequest.toUserId)
                     dashPayContactRequestDao.insert(dashPayContactRequest)
+                    insertedContactRequest = true
 
                     // add our receiving from this contact keychain if it doesn't exist
                     addedContact = checkAndAddSentRequest(userId, contactRequest) || addedContact
@@ -668,6 +681,8 @@ class PlatformSynchronizationService @Inject constructor(
                     log.info("adding received request: ${dashPayContactRequest.userId} to database")
                     userIdList.add(dashPayContactRequest.userId)
                     dashPayContactRequestDao.insert(dashPayContactRequest)
+                    insertedContactRequest = true
+                    newReceivedRequests.add(dashPayContactRequest)
 
                     // add the sending to contact keychain if it doesn't exist
                     addedContact = checkAndAddReceivedRequest(userId, contactRequest) || addedContact
@@ -741,8 +756,11 @@ class PlatformSynchronizationService @Inject constructor(
                     identityRepository.updateFrequentContacts()
                 }
             }
-            // fire listeners if there were new contacts
-            if (addedContact) {
+            // Fire listeners if a contact request was inserted, whether or not a
+            // keychain came with it. Gating this on `addedContact` alone meant a
+            // received request whose sending keychain already existed never woke the
+            // contacts/notification observers, so the home-screen bell stayed unlit.
+            if (addedContact || insertedContactRequest) {
                 fireContactsUpdatedListeners()
                 // Post-restore contact-attribution repair: display-cache rows planned
                 // by CutoverUiDataService BEFORE the DIP-15 friendship keychains were
@@ -752,6 +770,13 @@ class PlatformSynchronizationService @Inject constructor(
                 // contact resolution now. Fire-and-forget; inert pre-cutover.
                 cutoverUiDataService.requestContactReResolution()
             }
+
+            // Refresh the unseen-notification badge and (when warranted) post the
+            // system notification. Deliberately NOT gated on `addedContact` or on an
+            // active observer: ContactRequestNotificationService is application-scoped,
+            // so the count is recomputed even when no screen is listening to the fire
+            // above. Fail-soft — it swallows and logs its own errors.
+            contactRequestNotificationService.onContactRequestsSynced(newReceivedRequests, initialSync)
 
             // Keep the SDK L1 wallet's DIP-15 friend chains in step with the
             // dashj contact set: this dashj sync just (re)built the DashPay

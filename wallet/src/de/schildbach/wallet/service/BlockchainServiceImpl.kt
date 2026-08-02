@@ -314,6 +314,25 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var lastDiagnosticParity: DashjDiagnosticSyncState.Parity? = null
 
     /**
+     * Wall-clock moment dashj's diagnostic percent first reached 100 this
+     * stretch (null while below 100). The displayed 100% and the verdict are
+     * WITHHELD until the shadow harness produces a parity report stamped
+     * at/after this moment — i.e. a comparison provably computed against the
+     * caught-up dashj state (owner's spec: no red/purple/green until the
+     * status reaches 100, and no 100 until the parity check is complete).
+     * Same `System.currentTimeMillis` clock as `ParityReport.timestampMs`.
+     */
+    @Volatile
+    private var dashjCaughtUpAtMs: Long? = null
+
+    /** Last args passed to [publishDashjDiagnostic] — lets a new parity report re-publish. */
+    @Volatile
+    private var lastDiagnosticRawPercent = 0
+
+    @Volatile
+    private var lastDiagnosticStage: PeerGroup.SyncStage? = null
+
+    /**
      * FIX 1 guard: the post-cutover identity/contacts discovery hook
      * ([maybeRecoverIdentityPostCutover]) fires at most once — reset only if the
      * discovery attempt throws, so a later synced notification can retry.
@@ -1359,6 +1378,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         if (!enabled) {
                             dashjDiagnosticSyncState.reset()
                             lastDiagnosticParity = null
+                            dashjCaughtUpAtMs = null
                         }
 
                         if (!changed) return@withLock
@@ -1375,8 +1395,16 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         }
 
                         if (dashjEngineMayStart && peerGroup == null) {
-                            // Un-hold: start dashj as a backup / parity check. Reuse
-                            // the normal start path (starts only if impediments empty).
+                            // Un-hold: start dashj as a backup / parity check.
+                            // First honor the tester-chosen "sync from date"
+                            // (diagnostic path only — we are here exactly when
+                            // dashjSyncDiagnostic && dashjHeldByCutover): the
+                            // peergroup is down and checkMutex is held, so the
+                            // stores/chains can be swapped safely. Then reuse the
+                            // normal start path (starts only if impediments empty).
+                            val fromSecs = runCatching { dashPayConfig.getDashjSyncDiagnosticFromSecs() }
+                                .getOrDefault(0L)
+                            application.wallet?.let { maybeRecheckpointDiagnosticStores(fromSecs, it) }
                             checkService()
                         } else if (!dashjEngineMayStart && peerGroup != null) {
                             // Re-hold: stop the diagnostic dashj engine.
@@ -1513,6 +1541,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         // Register for app lifecycle events to detect background/foreground transitions
         ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
+
+        // DIAGNOSTIC (Tools toggle): while the readout is holding at 99%
+        // waiting for a fresh post-catchup parity report (see
+        // publishDashjDiagnostic's freshness gate), progress callbacks alone
+        // can't flip it — once caught up they only fire on new blocks (minutes
+        // apart). Re-publish whenever the shadow harness produces a report so
+        // the 100% + verdict lands within one probe interval (~10s).
+        serviceScope.launch {
+            l1ShadowSyncService.latestParity.collect { report ->
+                if (report != null && dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
+                    publishDashjDiagnostic(lastDiagnosticRawPercent, lastDiagnosticStage)
+                }
+            }
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundAndCatch(createNetworkSyncNotification())
@@ -1827,6 +1869,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover, dashjSyncDiagnostic
                 )
 
+                // DIAGNOSTIC (Tools toggle) "sync from date": before the un-held
+                // dashj engine may start, fast-forward the diagnostic blockstore
+                // to the tester-chosen start date (see
+                // [maybeRecheckpointDiagnosticStores]). Runs BEFORE
+                // onCreateCompleted resolves, so checkService() cannot race it.
+                // STRICTLY scoped to the post-cutover diagnostic path — the
+                // pre-cutover primary dashj engine (dashjHeldByCutover == false)
+                // and its store handling are untouched.
+                if (dashjSyncDiagnostic && dashjHeldByCutover) {
+                    val diagnosticFromSecs = runCatching { dashPayConfig.getDashjSyncDiagnosticFromSecs() }
+                        .getOrDefault(0L)
+                    maybeRecheckpointDiagnosticStores(diagnosticFromSecs, wallet)
+                }
+
                 if (!dashjEngineMayStart && Constants.SUPPORTS_PLATFORM) {
                     // SDK-sourced quorums (Phase 5d follow-up): with the dashj
                     // engine held, checkService() never runs initDashSync() /
@@ -1874,6 +1930,103 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     stopSelf()
                 }
             }
+        }
+    }
+
+    /**
+     * DIAGNOSTIC-ONLY store fast-forward for the "dashj sync (diagnostic)"
+     * Tools toggle. Callers guarantee we are on the post-cutover diagnostic
+     * path ([dashjSyncDiagnostic] && [dashjHeldByCutover]) with the peergroup
+     * down — the pre-cutover primary dashj engine never reaches this and its
+     * store handling stays byte-for-byte unchanged.
+     *
+     * WHY: a post-cutover restore stamps the dashj wallet's seed with the
+     * EARLIEST_HD_SEED_CREATION_TIME sentinel (2015) and rarely persists a
+     * real creation date, so onCreate's normal fresh-store checkpointing
+     * ([CheckpointManager.checkpoint] to earliestKeyCreationTime) lands near
+     * genesis and the diagnostic run syncs the whole chain (~block 1728 of
+     * 1.5M observed on testnet). The Tools toggle now asks for a start date
+     * (restore-flow style); this applies it with the SAME CheckpointManager
+     * mechanism the normal path uses.
+     *
+     * RESUME vs RECREATE: the fresh start the chosen date would give is the
+     * last bundled checkpoint at/before [fromSecs]. If the existing store's
+     * head is already at/beyond that height, the store has real progress —
+     * leave it and resume. Only when the chosen date demands a FRESHER start
+     * (e.g. the store is a from-genesis start at a low height) are the
+     * diagnostic stores deleted and recreated checkpointed at the date. This
+     * rule is idempotent: after a recreation the head equals the checkpoint,
+     * so subsequent calls resume.
+     *
+     * PARITY VALIDITY: syncing from a date at/before the wallet's creation
+     * date still observes every wallet transaction — coins cannot predate the
+     * wallet's keys — so the SDK-vs-dashj parity verdict is unaffected; only
+     * empty pre-birth blocks are skipped. (The dialog subtext tells the tester
+     * to use the wallet's creation date.)
+     *
+     * The dashj wallet itself is deliberately NOT reset (unlike onCreate's
+     * missing-file path): dashj still owns wallet persistence, and wiping its
+     * transactions for a diagnostic is unacceptable. A low
+     * wallet.lastBlockSeenHeight merely triggers checkService()'s existing
+     * "wallet/blockchain out of sync" log line on the diagnostic run.
+     */
+    private fun maybeRecheckpointDiagnosticStores(fromSecs: Long, wallet: Wallet) {
+        if (fromSecs <= 0) return // "Sync everything" — leave the stores alone
+        try {
+            val store = blockStore ?: return
+            val currentHead: StoredBlock? = store.chainHead
+            val target: StoredBlock = assets.open(Constants.Files.CHECKPOINTS_FILENAME).use { stream ->
+                CheckpointManager(Constants.NETWORK_PARAMETERS, stream).getCheckpointBefore(fromSecs)
+            }
+            if (currentHead != null && currentHead.height >= target.height) {
+                log.info(
+                    "dashj-sync-diagnostic: store head {} at/beyond checkpoint {} for from-date {} — resuming",
+                    currentHead.height, target.height, fromSecs
+                )
+                return
+            }
+            log.info(
+                "dashj-sync-diagnostic: store head {} predates checkpoint {} for from-date {} — " +
+                    "recreating diagnostic stores checkpointed at the chosen date",
+                currentHead?.height, target.height, fromSecs
+            )
+            // The peergroup is down and (onCreate latch / checkMutex) no
+            // checkService() can run concurrently; the only live consumer of
+            // the old chain is newBestBlockListener — detach it, swap, re-attach.
+            blockChain?.removeNewBestBlockListener(newBestBlockListener)
+            blockStore?.close()
+            headerStore?.close()
+            blockChainFile?.delete()
+            headerChainFile?.delete()
+            blockStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile)
+            headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
+            // Same checkpoint mechanism as onCreate's fresh-store path: block
+            // store to the chosen date, header store to the most recent checkpoint.
+            var checkpointsInputStream = assets.open(Constants.Files.CHECKPOINTS_FILENAME)
+            CheckpointManager.checkpoint(
+                Constants.NETWORK_PARAMETERS, checkpointsInputStream, blockStore, fromSecs
+            )
+            checkpointsInputStream = assets.open(Constants.Files.CHECKPOINTS_FILENAME)
+            CheckpointManager.checkpoint(
+                Constants.NETWORK_PARAMETERS, checkpointsInputStream, headerStore,
+                System.currentTimeMillis() / 1000
+            )
+            blockChain = BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore)
+            headerChain = BlockChain(Constants.NETWORK_PARAMETERS, headerStore)
+            blockChain?.addNewBestBlockListener(newBestBlockListener)
+            // Mirror onCreate's fresh-store masternode-list handling: the MN
+            // list must re-bootstrap for the jumped-ahead height. checkService()
+            // consumes the flag on the next (diagnostic) peergroup start.
+            resetMNLists(false)
+            resetMNListsOnPeerGroupStart = true
+            log.info(
+                "dashj-sync-diagnostic: diagnostic stores recreated at checkpoint height {} ({})",
+                target.height, target.header.time
+            )
+        } catch (e: Exception) {
+            // Best-effort: a failure here only costs sync time (worst case the
+            // diagnostic syncs from its old position), never correctness.
+            log.error("dashj-sync-diagnostic: failed to re-checkpoint diagnostic stores; continuing", e)
         }
     }
 
@@ -2332,11 +2485,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * Publish one dashj progress sample to the isolated diagnostic holder
      * ([dashjDiagnosticSyncState]). Once dashj has caught up (100%) read the
      * latest SDK-vs-dashj parity verdict from the L1 shadow-sync harness
-     * ([L1ShadowSyncService.latestParity]) and colour the readout MATCH/MISMATCH;
-     * while syncing the verdict is UNKNOWN. Logs a single SDK-vs-dashj line each
-     * time the verdict changes.
+     * ([L1ShadowSyncService.latestParity]) and colour the readout
+     * MATCH/BALANCE_MATCH/MISMATCH; while syncing the verdict is UNKNOWN.
+     *
+     * FRESHNESS GATE (owner's spec): 100% and the verdict colour must land
+     * TOGETHER, and only once the parity check has actually run against the
+     * caught-up dashj state. A report captured while dashj was still
+     * downloading (or from a previous run — [L1ShadowSyncService.latestParity]
+     * is a sticky StateFlow) proves nothing about the final state, so until a
+     * report whose [ParityReport.timestampMs] is at/after the moment dashj
+     * reached 100 ([dashjCaughtUpAtMs]) exists, the snapshot is published with
+     * `verifying = true` (internal percent held at 99, verdict UNKNOWN) and
+     * the Tools readout shows a neutral "Verifying" instead of a percentage.
+     * Logs a single SDK-vs-dashj line each time the verdict changes —
+     * necessarily at/after that same moment.
      */
     private fun publishDashjDiagnostic(rawPercent: Int, stage: PeerGroup.SyncStage?) {
+        lastDiagnosticRawPercent = rawPercent
+        lastDiagnosticStage = stage
         // The shared-row percentage is TIME-weighted (block timestamps vs the
         // clock), which wobbles non-monotonically on testnet's irregular block
         // production and under-reads badly (e.g. 52% shown at ~75% of blocks
@@ -2356,32 +2522,56 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 rawPercent
             }
         }
-        val parity = if (percent >= 100) {
-            val report = l1ShadowSyncService.latestParity.value
+        // Stamp the moment dashj first reaches 100 this stretch; forget it if
+        // the chain falls behind again (new blocks arrived) so the next
+        // catch-up demands a fresh report of its own.
+        if (percent >= 100) {
+            if (dashjCaughtUpAtMs == null) {
+                dashjCaughtUpAtMs = System.currentTimeMillis()
+                log.info(
+                    "dashj-sync-diagnostic: dashj chain caught up — showing 'Verifying' " +
+                        "until a parity report computed against the caught-up state arrives"
+                )
+            }
+        } else {
+            dashjCaughtUpAtMs = null
+        }
+        val report = l1ShadowSyncService.latestParity.value
+        // Fresh = captured at/after the catch-up moment (same wall clock).
+        val caughtUpAtMs = dashjCaughtUpAtMs
+        val freshReport = report?.takeIf { caughtUpAtMs != null && it.timestampMs >= caughtUpAtMs }
+        val parity = if (percent >= 100 && freshReport != null) {
             when {
-                report == null -> DashjDiagnosticSyncState.Parity.UNKNOWN
-                report.fullMatch -> DashjDiagnosticSyncState.Parity.MATCH
+                freshReport.fullMatch -> DashjDiagnosticSyncState.Parity.MATCH
+                // Both balance comparisons agree exactly, only the tx counts
+                // differ — the funds are all accounted for on both sides.
+                freshReport.balancesMatch && freshReport.confirmedBalancesMatch ->
+                    DashjDiagnosticSyncState.Parity.BALANCE_MATCH
                 else -> DashjDiagnosticSyncState.Parity.MISMATCH
             }.also { verdict ->
                 if (verdict != lastDiagnosticParity) {
-                    if (report != null) {
-                        log.info(
-                            "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
-                                "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={}",
-                            verdict, report.sdkDuffs, report.dashjDuffs,
-                            report.sdkConfirmedDuffs, report.dashjAvailableDuffs,
-                            report.sdkTxCount, report.dashjTxCount
-                        )
-                    } else {
-                        log.info("dashj-sync-diagnostic: dashj caught up (100%) — no SDK parity report yet")
-                    }
+                    log.info(
+                        "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
+                            "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={}",
+                        verdict, freshReport.sdkDuffs, freshReport.dashjDuffs,
+                        freshReport.sdkConfirmedDuffs, freshReport.dashjAvailableDuffs,
+                        freshReport.sdkTxCount, freshReport.dashjTxCount
+                    )
                 }
             }
         } else {
             DashjDiagnosticSyncState.Parity.UNKNOWN
         }
         lastDiagnosticParity = parity
-        dashjDiagnosticSyncState.update(percent, parity, stage?.name)
+        // dashj itself is done but the fresh post-catchup report hasn't landed
+        // yet: hold the internal percent at 99 and flag the window so the
+        // readout shows "Verifying" — 100 and the verdict colour then appear
+        // together when the report arrives.
+        val verifying = percent >= 100 && parity == DashjDiagnosticSyncState.Parity.UNKNOWN
+        val displayPercent = if (verifying) 99 else percent
+        dashjDiagnosticSyncState.update(displayPercent, parity, stage?.name, verifying)
+        // Feed the support-log history buffer (deduplicated inside).
+        dashjDiagnosticSyncState.recordParity(displayPercent, parity, report)
     }
 
     override fun getConnectedPeers(): List<Peer> {

@@ -159,6 +159,21 @@ open class DashPayConfig @Inject constructor(
         val MIXED_FUNDS_MIGRATION_DONE = booleanPreferencesKey("mixed_funds_migration_done")
 
         /**
+         * A mixed-funds migration that BROADCAST but whose result is not
+         * user-visible yet — `ACTION|startedAtMillis|baselineShieldedDuffs`
+         * (see [de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration]),
+         * blank/absent when nothing is in flight. Written alongside
+         * [MIXED_FUNDS_MIGRATION_DONE] when a migration records STARTED and
+         * cleared once the result lands (the shielded credit for SHIELD, an
+         * empty SDK CoinJoin account for COMBINE) or the user acknowledges
+         * the timed-out state. Keeps the sheet's PROCESSING presentation
+         * alive across lock-screen teardown / activity recreation / process
+         * death — the on-device bug where the ~1-minute confirmation window
+         * left an unexplained near-zero balance behind the lock screen.
+         */
+        val MIXED_FUNDS_MIGRATION_IN_FLIGHT = stringPreferencesKey("mixed_funds_migration_in_flight")
+
+        /**
          * Phase 3c of the dashj → Kotlin SDK migration
          * (`docs/kotlin-sdk-migration-plan.md`): route read-only DPNS
          * username resolution/search through the Dash Platform Kotlin SDK
@@ -234,13 +249,20 @@ open class DashPayConfig @Inject constructor(
          * on (and the app wallet is bound to the SDK), the shadow service
          * starts the SDK's compact-filter sync into its own storage
          * directory and probes balance/tx-count parity against the dashj
-         * wallet every minute, logging `L1Parity` one-liners. Default OFF:
-         * with the flag off the service is provably inert (no native call,
-         * no SPV storage, no probe loop).
+         * wallet every 10 seconds
+         * (`L1ShadowSyncService.PARITY_INTERVAL_MS`). Default OFF: with the
+         * flag off the service is provably inert (no native call, no SPV
+         * storage, no probe loop).
          *
-         * DEBUG-ONLY INSTRUMENTATION: shadow mode runs TWO SPV engines
-         * (dashj + Rust) — double network and battery cost. It is seeded ON
-         * only in debug builds (below) and must never ship enabled to prod.
+         * SHIPPING POLICY (2026-07-30): the shadow harness is the cutover's
+         * verification instrument and SHIPS ENABLED in every build — the
+         * seeding below turns it ON for all variants, including the
+         * prodRelease store build, so what is tested is what ships. The
+         * parity COMPUTATION runs everywhere (the cutover auto-commit, the
+         * Tools dashj-sync diagnostic and the support-log parity file all
+         * consume its reports); only the VERBOSE `L1Parity` ticker and the
+         * `L1ParityDiff` outpoint dumps are gated on `BuildConfig.DEBUG`
+         * and drop out of release builds.
          * See [de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService].
          */
         val USE_KOTLIN_SDK_L1_SHADOW = booleanPreferencesKey("use_kotlin_sdk_l1_shadow")
@@ -322,6 +344,20 @@ open class DashPayConfig @Inject constructor(
         val CUTOVER_STATE = stringPreferencesKey("cutover_state")
 
         /**
+         * One-shot marker: an EXISTING wallet (an app upgrade — loaded from
+         * the protobuf, not created or restored) was just cut over to the SDK
+         * on this launch, so the one-time sync explainer is still owed to the
+         * user. Written by
+         * [de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
+         * .commitForUpgradedWalletAsync] at the moment the state actually
+         * moves to CUT_OVER, and cleared when the user acknowledges the
+         * explainer — so the screen shows exactly once, ever, and only on the
+         * upgrade path (a fresh install or a restore commits through
+         * `setWallet` instead and already has its own sync expectation).
+         */
+        val CUTOVER_UPGRADE_NOTICE_PENDING = booleanPreferencesKey("cutover_upgrade_notice_pending")
+
+        /**
          * DIAGNOSTIC toggle (Tools screen, debug instrumentation): un-hold the
          * dashj L1 engine AFTER the Phase 5d cutover has committed, so the
          * legacy peergroup syncs normally alongside the SDK — a backup /
@@ -341,6 +377,22 @@ open class DashPayConfig @Inject constructor(
          * re-resolve the gate (see the Tools row).
          */
         val DASHJ_SYNC_DIAGNOSTIC = booleanPreferencesKey("dashj_sync_diagnostic")
+
+        /**
+         * DIAGNOSTIC companion to [DASHJ_SYNC_DIAGNOSTIC]: epoch SECONDS the
+         * un-held dashj engine should start syncing from; 0 (or unset) = sync
+         * everything from the beginning. Chosen in the Tools "Sync from date"
+         * dialog every time the toggle is switched ON, and persisted BEFORE
+         * the flag flips so the service always reads a settled value.
+         *
+         * Why a start date is diagnostically valid: coins cannot predate the
+         * wallet's keys, so syncing from a date at/before the wallet's
+         * creation date still observes every wallet transaction — the
+         * SDK-vs-dashj parity verdict is unaffected. Only read on the
+         * post-cutover diagnostic path (dashj held by the cutover, un-held by
+         * the toggle); the pre-cutover primary dashj engine never consults it.
+         */
+        val DASHJ_SYNC_DIAGNOSTIC_FROM_SECS = longPreferencesKey("dashj_sync_diagnostic_from_secs")
 
         /**
          * Last shielded balance (in duffs) persisted from a fully-synced
@@ -427,6 +479,15 @@ open class DashPayConfig @Inject constructor(
 
     /** Persist the dashj-sync DIAGNOSTIC toggle (see [DASHJ_SYNC_DIAGNOSTIC]). */
     suspend fun setDashjSyncDiagnostic(enabled: Boolean) = set(DASHJ_SYNC_DIAGNOSTIC, enabled)
+
+    /**
+     * The diagnostic dashj sync start date in epoch seconds; 0 = sync
+     * everything (see [DASHJ_SYNC_DIAGNOSTIC_FROM_SECS]).
+     */
+    suspend fun getDashjSyncDiagnosticFromSecs(): Long = get(DASHJ_SYNC_DIAGNOSTIC_FROM_SECS) ?: 0L
+
+    /** Persist the diagnostic dashj sync start date (see [DASHJ_SYNC_DIAGNOSTIC_FROM_SECS]). */
+    suspend fun setDashjSyncDiagnosticFromSecs(secs: Long) = set(DASHJ_SYNC_DIAGNOSTIC_FROM_SECS, secs)
 
     open suspend fun areNotificationsDisabled(): Boolean {
         return (get(LAST_SEEN_NOTIFICATION_TIME) ?: 0) == DISABLE_NOTIFICATIONS

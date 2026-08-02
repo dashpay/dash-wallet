@@ -51,6 +51,7 @@ import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.ui.staking.createCrowdNodeWithdrawalReminderDialog
 import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
+import de.schildbach.wallet.ui.cutover.CutoverSyncNoticeDialogFragment
 import de.schildbach.wallet.ui.migration.MixedFundsMigrationDialogFragment
 import de.schildbach.wallet.ui.main.MainActivityExt.checkTimeSkew
 import de.schildbach.wallet.ui.main.MainActivityExt.handleFirebaseAction
@@ -139,6 +140,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
      * reminder — a sheet rendered under the PIN screen is invisible).
      */
     private var pendingMixedFundsMigration = false
+
+    /** Same lock-screen deferral for the one-time post-upgrade sync explainer. */
+    private var pendingCutoverUpgradeNotice = false
     var composeHostFrameLayout: ComposeHostFrameLayout? = null
 
     val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -271,6 +275,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 pendingMixedFundsMigration = true
             } else {
                 MixedFundsMigrationDialogFragment.showOnce(this)
+            }
+        }
+        viewModel.showCutoverUpgradeNotice.observe(this) {
+            if (lockScreenDisplayed) {
+                pendingCutoverUpgradeNotice = true
+            } else {
+                CutoverSyncNoticeDialogFragment.showOnce(this)
             }
         }
 
@@ -590,9 +601,19 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             presentCrowdNodeWithdrawalReminder()
         }
 
+        if (pendingCutoverUpgradeNotice) {
+            pendingCutoverUpgradeNotice = false
+            CutoverSyncNoticeDialogFragment.showOnce(this)
+        }
+
         if (pendingMixedFundsMigration) {
             pendingMixedFundsMigration = false
             MixedFundsMigrationDialogFragment.showOnce(this)
+        } else {
+            // The lock screen may have torn the mixed-funds sheet down before
+            // the user chose; if no choice has been recorded yet the ViewModel
+            // re-fires the prompt (no-op otherwise).
+            viewModel.recheckMixedFundsMigrationPrompt()
         }
     }
 

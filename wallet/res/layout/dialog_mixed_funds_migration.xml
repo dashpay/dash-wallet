@@ -103,15 +103,6 @@
         android:textAlignment="gravity"
         android:text="@string/mixed_funds_migration_combine_note" />
 
-    <Button
-        android:id="@+id/not_now_button"
-        style="@style/Button.Tertiary.Large.Blue"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_marginHorizontal="15dp"
-        android:text="@string/mixed_funds_migration_not_now_action" />
-
     <LinearLayout
         android:id="@+id/progress_group"
         android:layout_width="match_parent"
@@ -149,7 +140,31 @@
         android:textColor="@color/content_warning"
         android:visibility="gone"
         tools:visibility="visible"
-        tools:text="@string/mixed_funds_migration_failed" />
+        tools:text="@string/mixed_funds_migration_shield_failed" />
+
+    <!-- FAILURE-state buttons: shown instead of the normal choice buttons
+         after a migration attempt failed without spending anything. -->
+    <Button
+        android:id="@+id/restart_button"
+        style="@style/Button.Primary.Large.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="15dp"
+        android:text="@string/mixed_funds_migration_restart_action"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <Button
+        android:id="@+id/transfer_unmixed_button"
+        style="@style/Button.Primary.Large.Grey"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="15dp"
+        android:text="@string/mixed_funds_migration_transfer_unmixed_action"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
     <Space
         android:layout_width="match_parent"

@@ -21,6 +21,7 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -765,10 +766,10 @@ internal class ProbeWatchdogDecider(
 internal fun distinctTxCount(txids: List<ByteArray?>, spendingTxids: List<ByteArray?>): Int {
     val seen = HashSet<String>()
     for (id in txids) {
-        if (id != null) seen += id.joinToString("") { "%02x".format(it) }
+        if (id != null) seen += wireHexOf(id)
     }
     for (id in spendingTxids) {
-        if (id != null) seen += id.joinToString("") { "%02x".format(it) }
+        if (id != null) seen += wireHexOf(id)
     }
     return seen.size
 }
@@ -1034,8 +1035,25 @@ internal class DashSdkL1ShadowSource(
 
     override suspend fun sdkTxCount(walletIdHex: String): Int {
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
-        val txos = database().txoDao().observeByWallet(walletId).first()
-        return distinctTxCount(txos.map { it.txid }, txos.map { it.spendingTxid })
+        // SQL-side distinct count (multi-day-sync fix): the old
+        // `observeByWallet().first()` + per-byte hex dedup materialized the
+        // ENTIRE wallet `txos` table on every parity probe — O(n) entities +
+        // 2n hex strings each tick on a very large wallet. The AAR's DAO has
+        // no such query, so count on the Room handle directly; UNION dedups
+        // the funding/spending txid sets exactly like [distinctTxCount]
+        // (which stays as the pure reference implementation for tests/fakes).
+        val db = database()
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            db.openHelper.readableDatabase.query(
+                androidx.sqlite.db.SimpleSQLiteQuery(
+                    "SELECT COUNT(*) FROM (" +
+                        "SELECT txid AS t FROM txos WHERE walletId = ? AND txid IS NOT NULL " +
+                        "UNION " +
+                        "SELECT spendingTxid AS t FROM txos WHERE walletId = ? AND spendingTxid IS NOT NULL)",
+                    arrayOf<Any?>(walletId, walletId)
+                )
+            ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+        }
     }
 
     override suspend fun dashjBalanceDuffs(): Pair<Long, Long>? =
@@ -1058,7 +1076,7 @@ internal class DashSdkL1ShadowSource(
             // txid FK is still null (brief insert window).
             val rawTxid = row.txid ?: row.outpoint.copyOfRange(0, minOf(32, row.outpoint.size))
             L1Utxo(
-                txidHex = rawTxid.reversedArray().joinToString("") { "%02x".format(it) },
+                txidHex = displayHexOf(rawTxid),
                 vout = row.vout,
                 valueDuffs = row.amount
             )
@@ -1095,14 +1113,24 @@ internal class DashSdkL1ShadowSource(
     override suspend fun clearSdkL1Rows(walletIdHex: String) {
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
         val db = database()
-        val txos = db.txoDao().observeByWallet(walletId).first()
-        val txids = HashMap<String, ByteArray>()
-        for (row in txos) {
-            for (id in listOfNotNull(row.txid, row.spendingTxid)) {
-                txids[id.joinToString("") { "%02x".format(it) }] = id
+        // Distinct txid blobs straight from SQL — the old path materialized
+        // every full TXO entity (all 19 columns) just to collect the two txid
+        // columns, the same unbounded-read class the parity-probe fix removed.
+        val txids = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val out = ArrayList<ByteArray>()
+            db.openHelper.readableDatabase.query(
+                androidx.sqlite.db.SimpleSQLiteQuery(
+                    "SELECT txid AS t FROM txos WHERE walletId = ? AND txid IS NOT NULL " +
+                        "UNION " +
+                        "SELECT spendingTxid AS t FROM txos WHERE walletId = ? AND spendingTxid IS NOT NULL",
+                    arrayOf<Any?>(walletId, walletId)
+                )
+            ).use { cursor ->
+                while (cursor.moveToNext()) out += cursor.getBlob(0)
             }
+            out
         }
-        for (txid in txids.values) {
+        for (txid in txids) {
             db.transactionDao().deleteByTxid(txid)
         }
         db.txoDao().deleteByWallet(walletId)
@@ -1229,6 +1257,15 @@ class L1ShadowSyncService internal constructor(
     private val spvDataDirPath: () -> String,
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val parityIntervalMs: Long = PARITY_INTERVAL_MS,
+    /**
+     * The RELAXED probe cadence once the fast cadence has done its job (the
+     * cutover committed, or the first sustained caught-up MATCH streak
+     * completed — see [slowParityCadenceActive]). The 10s fast cadence exists
+     * only to fill [CutoverPolicy.MIN_PARITY_STREAK] promptly (~20-30s to the
+     * auto-commit); on a MULTI-DAY sync of a large wallet it otherwise keeps
+     * paying the full probe cost every 10s forever.
+     */
+    private val paritySlowIntervalMs: Long = PARITY_SLOW_INTERVAL_MS,
     private val progressLogIntervalMs: Long = PROGRESS_LOG_INTERVAL_MS,
     private val watchdogIntervalMs: Long = WATCHDOG_INTERVAL_MS,
     private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS,
@@ -1612,9 +1649,67 @@ class L1ShadowSyncService internal constructor(
                 log.warn("L1Parity probe failed; will retry on the next tick", t)
             }
             // The interval tick OR one SYNCED-edge ping, whichever comes
-            // first — the schedule is otherwise unchanged.
-            withTimeoutOrNull(parityIntervalMs) { syncedEdgeSignal.receive() }
+            // first — the schedule is otherwise unchanged. ADAPTIVE cadence:
+            // fast ([parityIntervalMs]) only while the streak/commit still
+            // needs feeding, relaxed ([paritySlowIntervalMs]) after — a
+            // multi-day large-wallet sync must not pay the probe every 10s
+            // forever (see [slowParityCadenceActive]).
+            val interval = if (slowParityCadenceActive()) paritySlowIntervalMs else parityIntervalMs
+            withTimeoutOrNull(interval) { syncedEdgeSignal.receive() }
         }
+    }
+
+    /**
+     * Once-per-process latch: the fast parity cadence has served its purpose.
+     * See [slowParityCadenceActive].
+     */
+    @Volatile
+    private var slowParityCadenceLatched = false
+
+    /**
+     * Whether the probe may relax to [paritySlowIntervalMs]. The 10s fast
+     * cadence exists ONLY to fill the cutover auto-commit streak quickly
+     * ([CutoverPolicy.MIN_PARITY_STREAK] consecutive caught-up MATCH probes ≈
+     * 20-30s at 10s cadence — see the [PARITY_INTERVAL_MS] KDoc). So the
+     * cadence relaxes as soon as EITHER latch condition holds, once per
+     * process:
+     * - the cutover is already COMMITTED (the streak's consumer fired — every
+     *   probe after that is pure monitoring), or
+     * - the first sustained caught-up MATCH streak completed (the evidence
+     *   window is full; [CutoverPolicy.MAX_PARITY_AGE_MILLIS] = 5 min keeps
+     *   60s-cadence evidence comfortably fresh for the auto-commit observer).
+     *
+     * Deliberately NOT reverted on a later mismatch (spec'd behavior — one
+     * latch, no flapping): the only cost is that a NEW persistent mismatch
+     * takes ~3 min of consecutive slow probes to reach the rebuild decider
+     * instead of ~30s, which only delays a self-heal, never skips it. The
+     * SYNCED-edge ping still forces an immediate probe on every re-sync edge.
+     * Fail-open to the FAST cadence on any read error (probing too often is
+     * safe; probing too rarely could starve the streak).
+     */
+    private suspend fun slowParityCadenceActive(): Boolean {
+        if (slowParityCadenceLatched) return true
+        val committed = try {
+            !dashjEngineMayStart(
+                CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE))
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            false
+        }
+        val streakDone = !committed && parityStreakRecorder.snapshot()
+            .takeLastWhile { it.caughtUp && it.match }
+            .size >= CutoverPolicy.MIN_PARITY_STREAK
+        if (committed || streakDone) {
+            slowParityCadenceLatched = true
+            log.info(
+                "L1Parity cadence relaxing {}ms -> {}ms ({})",
+                parityIntervalMs, paritySlowIntervalMs,
+                if (committed) "cutover already committed" else "first sustained MATCH streak complete"
+            )
+            return true
+        }
+        return false
     }
 
     /**
@@ -1693,7 +1788,8 @@ class L1ShadowSyncService internal constructor(
 
     /**
      * One parity measurement (see class KDoc for semantics). Internal so
-     * tests drive single probes without the 60s loop. Returns null when
+     * tests drive single probes without the 10s ([PARITY_INTERVAL_MS])
+     * loop. Returns null when
      * the dashj wallet is not available (probe skipped, nothing published).
      */
     internal suspend fun probeParity(walletIdHex: String): ParityReport? {
@@ -1724,7 +1820,13 @@ class L1ShadowSyncService internal constructor(
             caughtUp = _progress.value.scanCaughtUpToTip,
             atElapsedMillis = android.os.SystemClock.elapsedRealtime()
         )
-        log.info(parityLogLine(report))
+        if (BuildConfig.DEBUG) {
+            // Verbose parity ticker — debug/QA builds only (owner's decision:
+            // the shadow FEATURE ships in release, its chatty logging doesn't).
+            // Everything above (latestParity, streak, verification status)
+            // still runs in ALL builds — release consumers depend on it.
+            log.info(parityLogLine(report))
+        }
         if (report.sdkSynced) {
             // The same evidence the funding gate requires: BOTH balance
             // variants matching (see evaluateWalletFundingGate). A synced
@@ -1739,7 +1841,9 @@ class L1ShadowSyncService internal constructor(
             )
         }
 
-        if (report.sdkSynced && !report.balancesMatch) {
+        if (BuildConfig.DEBUG && report.sdkSynced && !report.balancesMatch) {
+            // The outpoint-level dump exists purely as log evidence for the
+            // SDK bug report — debug/QA builds only, like the ticker above.
             maybeLogOutpointDiff(walletIdHex, report)
         }
         // The inflated auto-reset rule only means anything once dashj's own
@@ -2199,7 +2303,9 @@ class L1ShadowSyncService internal constructor(
         private val log = LoggerFactory.getLogger(L1ShadowSyncService::class.java)
 
         /**
-         * Parity probe cadence while the shadow runs (including after SYNCED).
+         * FAST parity probe cadence — in force only until the cutover commits
+         * or the first sustained MATCH streak completes, after which the loop
+         * relaxes to [PARITY_SLOW_INTERVAL_MS] ([slowParityCadenceActive]).
          *
          * Kept short so the cutover-readiness streak fills promptly: the probe
          * feeds [parityStreakRecorder], and the upgrade auto-commit needs
@@ -2219,6 +2325,14 @@ class L1ShadowSyncService internal constructor(
          * guarded, sustained divergence; it never resets a healthy view sooner.
          */
         internal const val PARITY_INTERVAL_MS = 10_000L
+
+        /**
+         * Relaxed probe cadence once the fast cadence's job is done — the
+         * cutover committed or the first sustained MATCH streak completed
+         * ([slowParityCadenceActive]). Restores the original pre-streak 60s
+         * monitoring cost for the long tail of a multi-day sync.
+         */
+        internal const val PARITY_SLOW_INTERVAL_MS = 60_000L
 
         /** Progress one-liner throttle (the SDK feed itself ticks at 1 Hz). */
         internal const val PROGRESS_LOG_INTERVAL_MS = 30_000L

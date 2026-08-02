@@ -288,6 +288,13 @@ public final class Constants {
     public static String NOTIFICATION_CHANNEL_ID_ONGOING = "dash.notifications.ongoing";
     public static String NOTIFICATION_CHANNEL_ID_GENERIC = "dash.notifications.generic";
     public static String NOTIFICATION_CHANNEL_ID_DASHPAY = "dash.notifications.dashpay";
+    /**
+     * Incoming contact requests. Deliberately a channel of its own rather than
+     * {@link #NOTIFICATION_CHANNEL_ID_DASHPAY}: that one is IMPORTANCE_LOW (it carries the
+     * identity-creation progress notification, which must stay silent), and Android freezes a
+     * channel's importance at creation time, so an existing install could never be raised.
+     */
+    public static String NOTIFICATION_CHANNEL_ID_CONTACTS = "dash.notifications.contacts";
 
     public static int USERNAME_MIN_LENGTH = 3;
     public static int USERNAME_NON_CONTESTED_MIN_LENGTH = 20;

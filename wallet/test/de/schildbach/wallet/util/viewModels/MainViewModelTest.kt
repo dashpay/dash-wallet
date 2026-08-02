@@ -228,11 +228,20 @@ class MainViewModelTest {
     private val cutoverCoordinator = mockk<de.schildbach.wallet.service.platform.sdk.CutoverCoordinator> {
         coEvery { dashjEngineMayStart() } returns true
     }
-    // Post-upgrade mixed-funds prompt: no CoinJoin funds in these fixtures,
-    // so the startup collector never fires.
+    // Post-upgrade mixed-funds prompt: no CoinJoin funds in these fixtures
+    // and nothing in flight, so the startup collector never fires and the
+    // watcher re-arm is a no-op.
     private val coinJoinFundsMigrationService =
         mockk<de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService> {
             coEvery { shouldPrompt() } returns false
+            coEvery { inFlightMigration() } returns null
+            every { startInFlightWatcherIfNeeded() } returns Unit
+        }
+    // Application-scoped owner of the bell badge; the ViewModel only reads its
+    // StateFlow and asks for a refresh, so a relaxed mock with an empty count is enough.
+    private val contactRequestNotificationService =
+        mockk<de.schildbach.wallet.service.platform.ContactRequestNotificationService>(relaxed = true) {
+            every { unseenNotificationCount } returns MutableStateFlow(0)
         }
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
@@ -327,7 +336,8 @@ class MainViewModelTest {
                 crowdNodeApi,
                 coinJoinFundsMigrationService,
                 l1ShadowSyncService,
-                cutoverCoordinator
+                cutoverCoordinator,
+                contactRequestNotificationService
             )
         )
 
@@ -369,7 +379,8 @@ class MainViewModelTest {
                 crowdNodeApi,
                 coinJoinFundsMigrationService,
                 l1ShadowSyncService,
-                cutoverCoordinator
+                cutoverCoordinator,
+                contactRequestNotificationService
             )
         )
 

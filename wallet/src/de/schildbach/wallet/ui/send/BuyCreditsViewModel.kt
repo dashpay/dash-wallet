@@ -6,6 +6,7 @@ import androidx.work.WorkInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentTopUp
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
@@ -30,7 +31,8 @@ class BuyCreditsViewModel @Inject constructor(
     val walletDataProvider: WalletData,
     val analytics: AnalyticsService,
     val dashPayConfig: DashPayConfig,
-    private val sdkTransparentTopUp: SdkTransparentTopUp
+    private val sdkTransparentTopUp: SdkTransparentTopUp,
+    private val assetLockFundingPreflight: SdkAssetLockFundingPreflight
 ) : ViewModel() {
     var identityId: String? = null
     var topUpTransaction: Transaction? = null
@@ -86,5 +88,18 @@ class BuyCreditsViewModel @Inject constructor(
         val identityId = identity.get(BlockchainIdentityConfig.IDENTITY_ID)
             ?: return@withContext SdkWriteResult.NotBroadcast("no identity to top up")
         sdkTransparentTopUp.topUp(identityId, amountDuffs)
+    }
+
+    /**
+     * PRE-FLIGHT funding-eligibility for an SDK top-up of [amountDuffs]:
+     * would the asset-lock coin selection (final — confirmed/IS-locked —
+     * BIP44 coins only) actually find the funds? Blocks the go handler
+     * BEFORE the spend attempt when a display balance backed by non-final
+     * or out-of-account outputs cannot fund the lock. Fail-OPEN: true when
+     * the preflight has no evidence (pre-cutover, SDK unavailable, read
+     * failure) — the real build stays the authority.
+     */
+    suspend fun canFundTopUp(amountDuffs: Long): Boolean = withContext(Dispatchers.IO) {
+        assetLockFundingPreflight.canFundAssetLockDuffs(amountDuffs) ?: true
     }
 }

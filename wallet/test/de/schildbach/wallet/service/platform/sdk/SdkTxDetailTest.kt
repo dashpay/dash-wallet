@@ -368,8 +368,14 @@ class SdkTxDetailTest {
                 TransactionDecoder.decode(any(), any())
             } throws UnsatisfiedLinkError("dlopen failed: library not found for this ABI")
 
+            // No tx_display_cache row for this txid (pre-cutover / non-contact
+            // tx): the provider consults the dao before decoding, and an empty
+            // result must leave the SDK row's direction/amount unchanged.
+            val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+                coEvery { getEntriesByIds(any()) } returns emptyList()
+            }
             val detail = runBlocking {
-                SdkTxDetailProvider(sdkService, mockk(), mockk(relaxed = true))
+                SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true))
                     .load(decoded.txidDisplayHex)
             }
 

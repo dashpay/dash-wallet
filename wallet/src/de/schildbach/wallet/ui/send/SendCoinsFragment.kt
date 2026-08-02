@@ -477,10 +477,21 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         if (!isAdded) {
             return
         }
+        // Belt and braces for the not-yet-synced case. The blockContinue gate
+        // (viewModel.isBlockchainReplaying, which now also covers "not synced")
+        // should stop a mid-sync send from ever getting here, but if one does,
+        // the SDK send path throws IllegalStateException whose message is
+        // internal machinery ("…ROLLBACK_CUTOVER…") — never show that to a
+        // user. Everything else keeps the original verbatim rendering.
+        val message = if (exception is IllegalStateException) {
+            getString(R.string.send_coins_fragment_hint_replaying)
+        } else {
+            exception.toString()
+        }
         AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(R.string.send_coins_error_msg),
-            exception.toString(),
+            message,
             getString(R.string.button_dismiss),
             null
         ).showAsync(requireActivity())

@@ -24,6 +24,7 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.service.platform.PlatformHealth
 import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
@@ -102,14 +103,29 @@ class RequestUserNameViewModelTest {
     private val identityConfig = mockk<BlockchainIdentityConfig> {
         every { observe(BlockchainIdentityConfig.IDENTITY_ID) } returns emptyFlow()
         every { observe(BlockchainIdentityConfig.CREATION_STATE) } returns creationStateFlow
+        // Observed by the terminal-failure ("Invite has already been used")
+        // dialog-dismiss watcher; no error in these scenarios.
+        every { observe(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns emptyFlow()
         coEvery { get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK) } returns null
         coEvery { get(BlockchainIdentityConfig.USERNAME) } returns null
         coEvery { set(BlockchainIdentityConfig.USERNAME, any()) } just Runs
         coEvery { set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, any()) } just Runs
     }
 
+    private val walletBalanceFlow = MutableStateFlow(org.bitcoinj.core.Coin.ZERO)
     private val walletData = mockk<WalletData> {
-        every { observeBalance(any(), any()) } returns emptyFlow()
+        every { observeBalance(any(), any()) } returns walletBalanceFlow
+    }
+
+    /**
+     * Asset-lock funding PREFLIGHT (the S22 "display balance passed, the
+     * real build bounced" gate). Default `null` = no evidence → fail OPEN,
+     * so every pre-existing expectation is unchanged; the settling tests
+     * override it with a concrete eligible sum.
+     */
+    private val assetLockEligibleDuffs = MutableStateFlow<Long?>(null)
+    private val assetLockFundingPreflight = mockk<SdkAssetLockFundingPreflight> {
+        coEvery { eligibleAssetLockFundingDuffsOrNull() } answers { assetLockEligibleDuffs.value }
     }
 
     private val shieldedSyncStatusFlow = MutableStateFlow(ShieldedSyncStatus.NOT_READY)
@@ -150,7 +166,8 @@ class RequestUserNameViewModelTest {
         transparentUsernameCreation = transparentUsernameCreation,
         shieldedBalanceService = shieldedBalanceService,
         platformHealthProbe = platformHealthProbe,
-        identityCreationStatus = IdentityCreationStatusHolder()
+        identityCreationStatus = IdentityCreationStatusHolder(),
+        assetLockFundingPreflight = assetLockFundingPreflight
     ).also { createdViewModels += it }
 
     @Before
@@ -375,6 +392,76 @@ class RequestUserNameViewModelTest {
         viewModel.checkUsernameValid("alice2", de.schildbach.wallet.ui.username.UsernameType.Primary)
 
         assertFalse(viewModel.uiState.value.enoughBalance)
+    }
+
+    // ── asset-lock funding preflight (the S22 settling-funds gate) ──────────
+
+    @Test
+    fun checkUsernameValid_dashSource_settlingFunds_gateTheCreation() = runTest(dispatcher) {
+        // The S22 repro: display balance ~0.994 DASH covers the 0.03 fee,
+        // but the funds the asset-lock build can actually select (final
+        // BIP44 coins) are 1449 duffs of dust — the old gate let the user
+        // pick a name and sit through the ~30s dialog before the build
+        // bounced "Insufficient funds: available 1449, required 3000000".
+        assetLockEligibleDuffs.value = 1_449L
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
+        val viewModel = viewModel()
+
+        viewModel.checkUsernameValid("alice2", de.schildbach.wallet.ui.username.UsernameType.Primary)
+
+        val state = viewModel.uiState.value
+        assertFalse(state.enoughBalance)
+        assertTrue(state.fundsSettling)
+    }
+
+    @Test
+    fun checkUsernameValid_dashSource_eligibleFunds_pass() = runTest(dispatcher) {
+        // Eligible sum covers fee + headroom → the gate opens normally.
+        assetLockEligibleDuffs.value = 99_400_000L
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
+        val viewModel = viewModel()
+
+        viewModel.checkUsernameValid("alice2", de.schildbach.wallet.ui.username.UsernameType.Primary)
+
+        val state = viewModel.uiState.value
+        assertTrue(state.enoughBalance)
+        assertFalse(state.fundsSettling)
+    }
+
+    @Test
+    fun checkUsernameValid_dashSource_noPreflightEvidence_failsOpen() = runTest(dispatcher) {
+        // Preflight has no evidence (pre-cutover / SDK unavailable) — the
+        // display-balance gate alone decides; the flow must never be
+        // blocked on an unrelated hiccup.
+        assetLockEligibleDuffs.value = null
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
+        val viewModel = viewModel()
+
+        viewModel.checkUsernameValid("alice2", de.schildbach.wallet.ui.username.UsernameType.Primary)
+
+        val state = viewModel.uiState.value
+        assertTrue(state.enoughBalance)
+        assertFalse(state.fundsSettling)
+    }
+
+    @Test
+    fun checkUsernameValid_dashSource_gateRecomputes_whenFundsSettle() = runTest(dispatcher) {
+        // Settling funds become final (IS-lock/confirmation lands): the
+        // balance emission re-reads the eligibility and the gate must
+        // self-correct without retyping — the same async-input recompute
+        // contract the shielded status gate has.
+        assetLockEligibleDuffs.value = 1_449L
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
+        val viewModel = viewModel()
+        viewModel.checkUsernameValid("alice2", de.schildbach.wallet.ui.username.UsernameType.Primary)
+        assertTrue(viewModel.uiState.value.fundsSettling)
+
+        assetLockEligibleDuffs.value = 99_400_000L
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_001L)
+
+        val state = viewModel.uiState.value
+        assertTrue(state.enoughBalance)
+        assertFalse(state.fundsSettling)
     }
 
     @Test

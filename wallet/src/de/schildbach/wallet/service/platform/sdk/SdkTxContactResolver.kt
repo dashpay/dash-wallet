@@ -94,6 +94,29 @@ class SdkTxContactResolver @Inject constructor(
     private val resolved = ConcurrentHashMap<String, ResolvedTxContact>()
 
     /**
+     * Bounded/TTL'd NEGATIVE cache — txids the FULL DIP-15 resolution walked
+     * and found no friendship match for. Without it, every un-attributed row
+     * re-ran the whole probe chain (Room tx fetch + raw-byte parse + keychain
+     * walk) on every 60s display-sync tick forever — the resolver N+1.
+     * Only the definitive "resolver ran with all prerequisites and matched
+     * nothing" verdict is cached; every TRANSIENT null (identity not loaded,
+     * SDK DB down, tx not persisted yet, profile row missing) keeps the
+     * pre-existing retry-next-pass semantics. Busted by [clearNegativeCache]
+     * (wired to [CutoverUiDataService.requestContactReResolution] — the
+     * post-restore / added-contact re-resolution signal, exactly the moment a
+     * previously-unmatched tx can start matching) and by the TTL belt.
+     */
+    private val negative = NegativeTxidCache()
+
+    /**
+     * Bust every cached negative verdict — called when contacts / friendship
+     * keychains are (re)established so the next pass genuinely re-resolves
+     * (the post-restore re-resolution flow must never be blocked by a stale
+     * "no match" cached while the keychains were still being recovered).
+     */
+    fun clearNegativeCache() = negative.clear()
+
+    /**
      * @param txDisplayHex DISPLAY-order (byte-reversed) txid hex — the same
      *   convention `tx_display_cache` rowIds and `Sha256Hash.toString()` use.
      */
@@ -101,15 +124,13 @@ class SdkTxContactResolver @Inject constructor(
         val hex = txDisplayHex.lowercase()
         if (hex.length != 64 || !hex.all { it.isDigit() || it in 'a'..'f' }) return null
         resolved[hex]?.let { return it }
+        if (negative.isNegative(hex)) return null
         return try {
             if (!identityRepo.hasBlockchainIdentity) return null
             val identity = identityRepo.blockchainIdentity ?: return null
             val db = sdkService.databaseOrNull() ?: return null
             // The SDK persists txid in WIRE order; display hex is byte-reversed.
-            val wireTxid = hex.chunked(2)
-                .map { it.toInt(16).toByte() }
-                .toByteArray()
-                .reversedArray()
+            val wireTxid = hexToBytesOrNull(hex)?.reversedArray() ?: return null
             val entity = db.transactionDao().getByTxid(wireTxid) ?: return null
             val raw = entity.transactionData ?: return null
             // Parse the SDK's own raw bytes into a dashj Transaction — no wallet
@@ -118,7 +139,16 @@ class SdkTxContactResolver @Inject constructor(
             // Reuse the dashj DIP-15 resolver: matches an output address against the
             // friendship keychains and returns the contact identity (Base58), or null
             // when no friendship output matches (a plain non-contact tx).
-            val userId = identity.getContactForTransaction(tx) ?: return null
+            val userId = identity.getContactForTransaction(tx)
+            if (userId == null) {
+                // The DEFINITIVE no-match: identity + tx + keychains were all
+                // present and the resolver matched nothing. Cache it so the 60s
+                // ticker stops re-walking the keychains for this txid (busted by
+                // clearNegativeCache when a contact is added / restored).
+                negative.markNegative(hex)
+                return null
+            }
+            // Profile not synced yet is TRANSIENT — retried next pass, never cached.
             val profile = dashPayProfileDao.loadByUserId(userId) ?: return null
             ResolvedTxContact(
                 username = profile.username,
@@ -161,8 +191,27 @@ class SdkTxContactResolver @Inject constructor(
      * excluded from BOTH sums: they are never this wallet's money. The receiver's own
      * `dashpayReceivingFunds` (type 12) TXOs are kept — those really are its funds.
      *
-     * Loads the wallet TXO + account snapshots ONCE for the whole batch (two Room
-     * reads, off-main). Fail-soft to an empty map on any error, but never SILENTLY:
+     * NULL-`accountId` CLASSIFICATION (verified on-device, S22 `ca05a582…` /
+     * `6cee34d3…`): the persistence layer writes friendship-send TXOs with
+     * `accountId` NULL, so the exclusion above never fired and the −0.05 send
+     * displayed as −fee (−226). The authoritative fallback is the `core_addresses`
+     * table: every such TXO carries `coreAddressId` (= its address, the
+     * `core_addresses` PK), and `core_addresses.accountId` IS populated —
+     * the 0.05 payment output joins to a type-13 `dashpayExternalAccount` row
+     * (path `m/9'/1'/15'/0'/<theirId>/<ourId>/…`) while the change output joins to
+     * the type-0 BIP44 account. So the external-account exclusion also fires when
+     * the TXO's ADDRESS belongs to an external account's `core_addresses` set
+     * (fetched per external account via `coreAddressDao().observeByAccount`).
+     * `transaction_account_involvements` was empty for these txs on-device and
+     * carries no amounts — not usable. If neither `accountId` nor the address
+     * classifies the TXO, it is kept (previous behavior; the outer WARN covers
+     * hard failures).
+     *
+     * BOUNDED read: the account snapshot plus a chunked raw IN query fetching ONLY
+     * the TXO rows touching the requested txids (the old full-table
+     * `observeByWallet().first()` materialized every wallet TXO per pass — the
+     * multi-day-sync "too many records" failure class). Fail-soft to an empty map
+     * on any error, but never SILENTLY:
      * every bail-out logs why, so a contact row that cannot be verified is visible
      * in the log instead of just staying wrong (post-restore this used to bail
      * silently when the orphan SDK wallet had not been pruned yet and
@@ -194,13 +243,67 @@ class SdkTxContactResolver @Inject constructor(
                 .filter { it.accountType == ACCOUNT_TYPE_DASHPAY_EXTERNAL }
                 .map { it.id }
                 .toSet()
-            val txos = db.txoDao().observeByWallet(walletId).first()
+            // Addresses OWNED by the external (watch-only, contact's) accounts —
+            // the classification fallback for TXOs persisted with a NULL accountId
+            // (see KDoc). `core_addresses` is keyed by address and its accountId is
+            // populated even when the TXO's is not. One small read per external
+            // account (one per friendship).
+            val externalAddresses = HashSet<String>()
+            for (accountId in externalAccountIds) {
+                db.coreAddressDao().observeByAccount(accountId).first()
+                    .mapTo(externalAddresses) { it.address }
+            }
+            // BOUNDED TXO read (multi-day-sync fix): the old code materialized the
+            // ENTIRE wallet `txos` table (observeByWallet(walletId).first()) on every
+            // pass just to sum a handful of contact txids — on a very large wallet
+            // that is tens of thousands of Room entities per 60s tick and the exact
+            // "too many records" CursorWindow/memory failure class. The SDK AAR's DAO
+            // has no per-txid-set query, so read the four needed columns via a raw
+            // chunked IN query on the Room handle (same 999-variable cap discipline
+            // as syncDisplayCache's 500-chunks).
+            val wireTxidByHex = HashMap<String, ByteArray>(txDisplayHexes.size)
+            for (hex in txDisplayHexes) {
+                hexToBytesOrNull(hex)?.reversedArray()?.let { wireTxidByHex[hex] = it }
+            }
             val received = HashMap<String, Long>()
             val spent = HashMap<String, Long>()
-            for (txo in txos) {
-                if (txo.accountId != null && txo.accountId in externalAccountIds) continue
-                txo.txid?.let { received.merge(displayHexOf(it), txo.amount, Long::plus) }
-                txo.spendingTxid?.let { spent.merge(displayHexOf(it), txo.amount, Long::plus) }
+            // A row can satisfy the txid IN of one chunk AND the spendingTxid IN
+            // of another, so it may come back from two chunk queries — each row
+            // must contribute exactly once (the old full-table loop's semantics),
+            // hence the outpoint-PK dedup.
+            val seenOutpoints = HashSet<String>()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                for (chunk in wireTxidByHex.values.chunked(SIGNED_NET_TXID_CHUNK)) {
+                    val placeholders = chunk.joinToString(",") { "?" }
+                    val sql = "SELECT outpoint, txid, spendingTxid, amount, accountId, coreAddressId, address " +
+                        "FROM txos WHERE walletId = ? AND " +
+                        "(txid IN ($placeholders) OR spendingTxid IN ($placeholders))"
+                    val args = ArrayList<Any?>(1 + chunk.size * 2)
+                    args.add(walletId)
+                    args.addAll(chunk)
+                    args.addAll(chunk)
+                    db.openHelper.readableDatabase.query(
+                        androidx.sqlite.db.SimpleSQLiteQuery(sql, args.toTypedArray())
+                    ).use { cursor ->
+                        while (cursor.moveToNext()) {
+                            if (!seenOutpoints.add(wireHexOf(cursor.getBlob(0)))) continue
+                            val txid = if (cursor.isNull(1)) null else cursor.getBlob(1)
+                            val spendingTxid = if (cursor.isNull(2)) null else cursor.getBlob(2)
+                            val amount = cursor.getLong(3)
+                            val accountId = if (cursor.isNull(4)) null else cursor.getLong(4)
+                            val coreAddressId = if (cursor.isNull(5)) null else cursor.getString(5)
+                            val address = if (cursor.isNull(6)) null else cursor.getString(6)
+                            // Same exclusion rules as before (see KDoc): external
+                            // (watch-only, contact's) accounts by accountId, or —
+                            // when accountId is NULL — by the address joining to an
+                            // external account's core_addresses set.
+                            if (accountId != null && accountId in externalAccountIds) continue
+                            if (accountId == null && (coreAddressId ?: address) in externalAddresses) continue
+                            txid?.let { received.merge(displayHexOf(it), amount, Long::plus) }
+                            spendingTxid?.let { spent.merge(displayHexOf(it), amount, Long::plus) }
+                        }
+                    }
+                }
             }
             val out = HashMap<String, Long>()
             for (hex in txDisplayHexes) {
@@ -230,5 +333,13 @@ class SdkTxContactResolver @Inject constructor(
          * [SdkL1SendService].
          */
         internal const val ACCOUNT_TYPE_DASHPAY_EXTERNAL = 13
+
+        /**
+         * Per-chunk txid count of the [signedNetsFor] raw IN query: each chunk
+         * binds walletId + 2× the txids, so 400 keeps every statement well
+         * under SQLite's 999-variable cap (same discipline as the display
+         * sync's 500-chunks over a single IN list).
+         */
+        internal const val SIGNED_NET_TXID_CHUNK = 400
     }
 }

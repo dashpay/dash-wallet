@@ -46,6 +46,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.launchIn
 import org.bitcoinj.crypto.DeterministicKey
 import de.schildbach.wallet.data.WalletData
+import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -70,7 +71,23 @@ data class ToolsUIState(
 data class DashjDiagnosticUIState(
     val enabled: Boolean = false,
     val percent: Int = 0,
-    val parity: DashjDiagnosticSyncState.Parity = DashjDiagnosticSyncState.Parity.UNKNOWN
+    val parity: DashjDiagnosticSyncState.Parity = DashjDiagnosticSyncState.Parity.UNKNOWN,
+    /** dashj caught up, fresh parity report pending — show "Verifying". */
+    val verifying: Boolean = false
+)
+
+/**
+ * The "Sync from date" prompt shown each time the dashj-sync DIAGNOSTIC
+ * toggle is switched ON (restore-flow style): the tester picks the date the
+ * un-held dashj engine checkpoints its fresh blockstore to, instead of
+ * syncing from near-genesis. [defaultDateMillis] pre-selects the wallet's
+ * known creation date when it is sane (a real user-provided restore date,
+ * i.e. after the [de.schildbach.wallet.Constants.EARLIEST_HD_SEED_CREATION_TIME]
+ * sentinel — which also rules out epoch/pre-2014 garbage); null = no sane
+ * default, the tester must pick a date or choose "sync everything".
+ */
+data class DashjSyncFromPrompt(
+    val defaultDateMillis: Long? = null
 )
 
 @HiltViewModel
@@ -81,6 +98,7 @@ class ToolsViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
     blockchainStateDao: BlockchainStateDao,
     private val dashPayConfig: DashPayConfig,
+    private val blockchainServiceConfig: BlockchainServiceConfig,
     dashjDiagnosticSyncState: DashjDiagnosticSyncState,
     private val identityConfig: BlockchainIdentityConfig,
     private val analyticsService: AnalyticsService
@@ -118,7 +136,8 @@ class ToolsViewModel @Inject constructor(
         DashjDiagnosticUIState(
             enabled = enabled,
             percent = snapshot.percent,
-            parity = snapshot.parity
+            parity = snapshot.parity,
+            verifying = snapshot.verifying
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashjDiagnosticUIState())
 
@@ -176,16 +195,74 @@ class ToolsViewModel @Inject constructor(
         _exportCsvResult.value = ExportCsvResult.Idle
     }
 
+    /** Non-null while the "Sync from date" dialog is up (toggle switched ON, choice pending). */
+    private val _dashjSyncFromPrompt = MutableStateFlow<DashjSyncFromPrompt?>(null)
+    val dashjSyncFromPrompt: StateFlow<DashjSyncFromPrompt?> = _dashjSyncFromPrompt.asStateFlow()
+
     /**
-     * Flip the dashj-sync DIAGNOSTIC toggle and bounce the blockchain service
-     * so its Phase 5d engine-start gate re-resolves: ON un-holds the dashj
-     * peergroup (post-cutover) so it syncs as a backup/parity check; OFF
-     * re-holds it and clears the diagnostic readout. Never touches the cutover
-     * state or sdkOwnsL1.
+     * Flip the dashj-sync DIAGNOSTIC toggle: OFF persists immediately and
+     * bounces the blockchain service so its Phase 5d engine-start gate
+     * re-resolves (re-holds the peergroup post-cutover, clears the readout).
+     * ON does NOT persist yet — it raises the "Sync from date" prompt
+     * ([dashjSyncFromPrompt], restore-flow style) so the tester picks where
+     * the diagnostic dashj sync starts; the flag only flips once a choice is
+     * confirmed ([confirmDashjSyncFromDate] / [confirmDashjSyncFromBeginning]),
+     * and cancelling ([cancelDashjSyncFromPrompt]) leaves it off. Each
+     * OFF→ON flip re-prompts (fresh choice every enable). Never touches the
+     * cutover state or sdkOwnsL1.
      */
     fun setDashjSyncDiagnostic(enabled: Boolean) {
+        if (!enabled) {
+            _dashjSyncFromPrompt.value = null
+            viewModelScope.launch {
+                dashPayConfig.setDashjSyncDiagnostic(false)
+                walletApplication.restartBlockchainService()
+            }
+            return
+        }
         viewModelScope.launch {
-            dashPayConfig.setDashjSyncDiagnostic(enabled)
+            // Default the date input to the wallet's creation date when sane.
+            // BlockchainServiceConfig.getWalletCreationDate() already nulls the
+            // EARLIEST_HD_SEED_CREATION_TIME sentinel that restored wallets are
+            // stamped with (WalletFactory.restoreWalletFromSeed always seeds at
+            // the oldest possible time), so only a REAL user-provided restore
+            // date survives; the wallet's own earliestKeyCreationTime is used
+            // as a fallback under the same sanity rule (also excludes epoch /
+            // pre-2014 values — the sentinel is 2015-03-29).
+            val defaultSecs = runCatching { blockchainServiceConfig.getWalletCreationDate() }.getOrNull()
+                ?: walletData.wallet?.earliestKeyCreationTime
+                    ?.takeIf { it > Constants.EARLIEST_HD_SEED_CREATION_TIME }
+            _dashjSyncFromPrompt.value = DashjSyncFromPrompt(defaultDateMillis = defaultSecs?.times(1000L))
+        }
+    }
+
+    /**
+     * "Sync from date" confirmed with a date: persist the start date FIRST
+     * (the service must never see the flag ON with a stale/unsettled date),
+     * then flip the flag ON and bounce the service. Syncing from a date at or
+     * before the wallet's creation date still sees every wallet transaction —
+     * coins cannot predate the wallet's keys — so the parity verdict stays
+     * valid.
+     */
+    fun confirmDashjSyncFromDate(dateMillis: Long) {
+        enableDashjSyncDiagnostic(fromSecs = dateMillis / 1000L)
+    }
+
+    /** "Sync everything (from the beginning)" chosen: 0 = no start date. */
+    fun confirmDashjSyncFromBeginning() {
+        enableDashjSyncDiagnostic(fromSecs = 0L)
+    }
+
+    /** Prompt dismissed/cancelled: the toggle stays OFF, nothing persisted. */
+    fun cancelDashjSyncFromPrompt() {
+        _dashjSyncFromPrompt.value = null
+    }
+
+    private fun enableDashjSyncDiagnostic(fromSecs: Long) {
+        _dashjSyncFromPrompt.value = null
+        viewModelScope.launch {
+            dashPayConfig.setDashjSyncDiagnosticFromSecs(fromSecs)
+            dashPayConfig.setDashjSyncDiagnostic(true)
             walletApplication.restartBlockchainService()
         }
     }

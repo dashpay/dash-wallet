@@ -191,6 +191,41 @@ class CutoverCoordinator @Inject constructor(
         scope.launch { commitForFreshWalletSetup() }
     }
 
+    /**
+     * The UPGRADE seam's counterpart to [commitForFreshWalletSetupAsync]:
+     * same commit, but it additionally arms the one-time sync explainer
+     * ([DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING]) when — and only when —
+     * the state ACTUALLY moves to CUT_OVER on this launch.
+     *
+     * That "actually moved" condition is what distinguishes the case worth
+     * explaining from the ones that are not:
+     * - an app UPGRADE arrives in a pre-commit state and flips here → armed;
+     * - every later launch of the same install is already CUT_OVER → no-op;
+     * - a fresh install / restore commits through `setWallet`
+     *   ([commitForFreshWalletSetupAsync]) and never reaches this seam, so it
+     *   keeps its own (already expected) post-restore sync wait.
+     *
+     * Fire-and-forget on the injected scope for the same reason as
+     * [commitForFreshWalletSetupAsync] — the caller is on the main thread and
+     * must not block on DataStore I/O. Never throws.
+     */
+    fun commitForUpgradedWalletAsync() {
+        scope.launch {
+            val before = currentState()
+            val status = commitForFreshWalletSetup()
+            val justCutOver = status.state == CutoverState.CUT_OVER && before != CutoverState.CUT_OVER
+            if (!justCutOver) return@launch
+            runCatching { dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, true) }
+                .onSuccess { log.info("upgrade cutover: one-time sync explainer armed") }
+                .onFailure {
+                    if (it is CancellationException) throw it
+                    // Non-fatal: the cutover itself already committed; the
+                    // user simply does not get the explainer.
+                    log.warn("failed to arm the upgrade sync explainer", it)
+                }
+        }
+    }
+
     suspend fun commitForFreshWalletSetup(): CutoverStatus = mutex.withLock {
         val current = currentState()
         if (current == CutoverState.CUT_OVER || current == CutoverState.SETTLED) {
