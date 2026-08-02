@@ -1404,10 +1404,12 @@ class CutoverUiDataService internal constructor(
      * Whether the SDK L1 scan has caught up — the gate that decides whether
      * [overlayTotalBalance] publishes the LIVE SDK figure or holds the
      * last-known one, and whether [updateSdkBalance] is allowed to persist
-     * [WalletUIConfig.LAST_TOTAL_BALANCE]. Fed from the same
-     * `synced || scanCaughtUpToTip` predicate as the home header's blinking
-     * "Syncing balance" label. Defaults to a constant `true` so the
-     * fake-fed tests keep exercising the live/persisting path.
+     * [WalletUIConfig.LAST_TOTAL_BALANCE]. Fed from
+     * [de.schildbach.wallet.service.L1SyncStatusService.sdkScanCaughtUp] —
+     * literally the same flow the home header's blinking "Syncing balance"
+     * label reads, so the label and the displayed figure cannot drift apart.
+     * Defaults to a constant `true` so the fake-fed tests keep exercising
+     * the live/persisting path.
      */
     private val l1Synced: Flow<Boolean> = flowOf(true),
     private val nowMs: () -> Long = System::currentTimeMillis,
@@ -1429,6 +1431,7 @@ class CutoverUiDataService internal constructor(
         configuration: Configuration,
         notificationService: NotificationService,
         l1ShadowSyncService: L1ShadowSyncService,
+        l1SyncStatusService: de.schildbach.wallet.service.L1SyncStatusService,
         assetLockKindResolver: AssetLockKindResolver,
         sdkTxContactResolver: SdkTxContactResolver
     ) : this(
@@ -1446,9 +1449,11 @@ class CutoverUiDataService internal constructor(
         clearContactResolutionCaches = { sdkTxContactResolver.clearNegativeCache() },
         txEvents = l1ShadowSyncService.txEvents,
         isTxFeedTapActive = { l1ShadowSyncService.isTapActive },
-        // Same predicate as MainViewModel.sdkL1Synced (the blinking
-        // "Syncing balance" label) — see [l1Synced].
-        l1Synced = l1ShadowSyncService.progress.map { it.synced || it.scanCaughtUpToTip },
+        // THE SAME SOURCE as the home header's blinking "Syncing balance"
+        // label (both read L1SyncStatusService) — see [l1Synced]. Previously
+        // this was a second hand-copied `synced || scanCaughtUpToTip`
+        // expression that had to be kept in lockstep by hand.
+        l1Synced = l1SyncStatusService.sdkScanCaughtUp,
         resolveString = { resId -> context.getString(resId) },
         notifyCoinsReceived = { duffs ->
             notificationService.showNotification(
@@ -1640,6 +1645,25 @@ class CutoverUiDataService internal constructor(
     /** Synchronous read for [de.schildbach.wallet.WalletApplication.getWalletBalance]. */
     fun sdkBalanceOrNull(): Coin? = _sdkTotalBalance.value
 
+    private val _cutoverActive = MutableStateFlow(false)
+
+    /**
+     * Whether the cutover is COMMITTED and this service's SDK pipelines are
+     * therefore the source of truth for the home screen — the EXPLICIT
+     * answer to "are we post-cutover?".
+     *
+     * It exists because callers used to infer it from `sdkBalanceOrNull()
+     * != null` / `sdkTotalBalance != null`. That happens to be equivalent
+     * today only because the balance flows are pinned to null pre-cutover;
+     * it is not what those flows MEAN, and it would silently change meaning
+     * the first time a balance is published for any other reason. Read from
+     * the same [cutoverUiActive] gate that starts the pipelines.
+     */
+    val cutoverActive: StateFlow<Boolean> = _cutoverActive.asStateFlow()
+
+    /** Synchronous [cutoverActive] read for non-reactive call sites. */
+    fun isCutoverActive(): Boolean = _cutoverActive.value
+
     private val _sdkSpendableUtxoCount = MutableStateFlow<Int?>(null)
 
     /**
@@ -1689,8 +1713,8 @@ class CutoverUiDataService internal constructor(
     /**
      * Whether the SDK's L1 scan has caught up. Mirrors EXACTLY the predicate
      * behind the home header's blinking "Syncing balance" label
-     * ([de.schildbach.wallet.ui.main.MainViewModel.sdkL1Synced]:
-     * `synced || scanCaughtUpToTip`) so the label and the displayed figure
+     * ([de.schildbach.wallet.service.sdkL1ScanCaughtUp], which the label and
+     * this hold now BOTH read) so the label and the displayed figure
      * flip in the same instant — a "Syncing balance" label over a live,
      * climbing figure (or a settled figure with the label still blinking)
      * would be worse than either state alone.
@@ -1792,6 +1816,7 @@ class CutoverUiDataService internal constructor(
             cutoverUiActive()
                 .distinctUntilChanged()
                 .collectLatest { active ->
+                    _cutoverActive.value = active
                     if (!active) {
                         _sdkTotalBalance.value = null
                         _sdkConfirmedBalance.value = null

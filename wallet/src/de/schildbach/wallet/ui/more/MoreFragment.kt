@@ -245,13 +245,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             }
         }
 
-        // Phase 5d: after a committed cutover the DashPay "wait for sync" gate
-        // reads the SDK L1 scan instead of dashj (sdkOwnsL1); collect that source
-        // too so the tile enables from whichever engine owns L1 this launch.
-        // Pre-cutover this is identical to the dashj-only behavior.
-        mainActivityViewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateJoinDashPaySyncState() }
         viewLifecycleOwner.lifecycleScope.launch {
-            mainActivityViewModel.sdkL1Synced.collect { updateJoinDashPaySyncState() }
+            mainActivityViewModel.syncStatus.collect { updateJoinDashPaySyncState(it.isSynced) }
         }
 
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
@@ -381,14 +376,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
     }
 
-    private fun updateJoinDashPaySyncState() {
-        val sdkOwnsL1 = mainActivityViewModel.sdkOwnsL1.value
-        val isSynced = if (sdkOwnsL1) {
-            mainActivityViewModel.sdkL1Synced.value
-        } else {
-            mainActivityViewModel.isBlockchainSynced.value == true
-        }
-
+    private fun updateJoinDashPaySyncState(isSynced: Boolean) {
         binding.joinDashpayWait.isVisible = !isSynced
         binding.joinDashpayIcon.setColorFilter(
             if (isSynced) {

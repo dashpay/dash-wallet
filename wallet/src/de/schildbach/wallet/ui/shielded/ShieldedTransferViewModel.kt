@@ -513,12 +513,13 @@ class ShieldedTransferViewModel @Inject constructor(
             .onEach { _uiState.value = _uiState.value.copy(totalWalletBalance = Dash(it.value)) }
             .launchIn(viewModelScope)
 
-        // Cutover overlay state: true once the SDK balance feed is live
-        // (post-cutover), which flips pendingWalletBalance onto the SDK-sourced
-        // [cutoverPendingBalance] below. Permanently null pre-cutover, so
-        // cutoverActive stays false and pending behavior is byte-identical.
-        cutoverUiDataService.sdkTotalBalance
-            .onEach { _uiState.value = _uiState.value.copy(cutoverActive = it != null) }
+        // Cutover overlay state: flips pendingWalletBalance onto the
+        // SDK-sourced [cutoverPendingBalance] below. Reads the EXPLICIT
+        // cutover gate — this used to test `sdkTotalBalance != null`, which is
+        // equivalent only by accident of that flow being pinned to null
+        // pre-cutover, and would silently change meaning if it ever were not.
+        cutoverUiDataService.cutoverActive
+            .onEach { _uiState.value = _uiState.value.copy(cutoverActive = it) }
             .launchIn(viewModelScope)
 
         // Post-cutover "pending" = the SDK's unconfirmed portion (native total −

@@ -47,9 +47,8 @@ import de.schildbach.wallet.service.TxDisplayCacheService
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
-import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
-import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
-import de.schildbach.wallet.service.platform.sdk.shadowSyncPercent
+import de.schildbach.wallet.service.L1SyncStatusService
+import de.schildbach.wallet.service.L1SyncUiStatus
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.BaseContactsViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -131,41 +130,21 @@ class MainViewModel @Inject constructor(
     private val txDisplayCacheService: TxDisplayCacheService,
     private val crowdNodeApi: CrowdNodeApi,
     private val coinJoinFundsMigrationService: CoinJoinFundsMigrationService,
-    l1ShadowSyncService: L1ShadowSyncService,
-    cutoverCoordinator: CutoverCoordinator,
+    l1SyncStatusService: L1SyncStatusService,
     private val contactRequestNotificationService: ContactRequestNotificationService
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false
 
     /**
-     * Phase 5d: has the cutover flipped so the SDK owns L1 this launch
-     * (state CUT_OVER/SETTLED)? Resolved once, mirroring the per-launch
-     * engine gate in BlockchainServiceImpl, so the home "Syncing N%" header
-     * reads from whichever engine actually drives L1 this launch — the SDK
-     * L1 scan post-cutover ([sdkSyncPercentage]/[sdkL1Synced]), dashj before
-     * ([blockchainSyncPercentage]/[isBlockchainSynced]). false (dashj) for
-     * every install until a deliberate cutover commit.
+     * The L1 chain-sync state every sync-aware home screen renders —
+     * "is it synced", "what percent", "did it fail" — with NO indication of
+     * which engine produced it ([L1SyncStatusService] makes that choice at
+     * the seam). Replaces the old `sdkOwnsL1` UI flag and the two parallel
+     * SDK/dashj feed pairs the Fragments used to select between.
      */
-    val sdkOwnsL1: StateFlow<Boolean> =
-        flow { emit(runCatching { !cutoverCoordinator.dashjEngineMayStart() }.getOrDefault(false)) }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-
-    /** SDK L1 scan progress as a single 0..100 percent, for the header when [sdkOwnsL1]. */
-    val sdkSyncPercentage: StateFlow<Int> =
-        l1ShadowSyncService.progress
-            .map { shadowSyncPercent(it) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    /**
-     * Whether the SDK L1 scan is caught up — hides the header when [sdkOwnsL1].
-     * Uses [ShadowSyncProgress.scanCaughtUpToTip] (not the SDK's never-latching
-     * `synced`/phase==SYNCED) so the header clears for a live shadow SPV that
-     * has reached the tip within tolerance; SYNCED still counts.
-     */
-    val sdkL1Synced: StateFlow<Boolean> =
-        l1ShadowSyncService.progress
-            .map { it.synced || it.scanCaughtUpToTip }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val syncStatus: StateFlow<L1SyncUiStatus> =
+        l1SyncStatusService.status
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), L1SyncUiStatus())
 
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)

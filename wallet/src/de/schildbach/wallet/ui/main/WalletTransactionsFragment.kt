@@ -85,6 +85,8 @@ import de.schildbach.wallet.util.toNeutralCoin
 import de.schildbach.wallet.util.toNeutralFiat
 import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.service.L1SyncUiStatus
+import kotlinx.coroutines.flow.map
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
@@ -326,33 +328,25 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         })
 
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
-            header.isSynced = it
-            if (inviteHandlerViewModel.isUsingInvite) {
-                // Re-drives the invite through validation on every sync-state
-                // change: an invite checked mid-scan gets the provisional
-                // NOT_SYNCED verdict, and this is what converts it to
-                // VALID/ALREADY_CLAIMED once the scan completes — the user
-                // never has to re-tap the link.
-                lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.syncStatus.map { it.isSynced }.distinctUntilChanged().collect { isSynced ->
+                header.isSynced = isSynced
+                if (inviteHandlerViewModel.isUsingInvite) {
+                    // Re-drives the invite through validation on every sync-state
+                    // change: an invite checked mid-scan gets the provisional
+                    // NOT_SYNCED verdict, and this is what converts it to
+                    // VALID/ALREADY_CLAIMED once the scan completes — the user
+                    // never has to re-tap the link.
                     processInvitation(
                         inviteHandlerViewModel.invitation.value!!,
                         isLockScreenActive(),
-                        revalidate = it
+                        revalidate = isSynced
                     )
                 }
             }
-            updateSyncState()
-        }
-        viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
-        // Phase 5d: after a committed cutover the header reads the SDK L1 scan
-        // instead of dashj (viewModel.sdkOwnsL1); collect those sources so the
-        // single "Syncing N%" status updates from whichever engine owns L1.
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.sdkSyncPercentage.collect { updateSyncState() }
         }
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.sdkL1Synced.collect { updateSyncState() }
+            viewModel.syncStatus.collect { updateSyncState(it) }
         }
 
         // Collect live PagingData and submit to the live (PagingDataAdapter) adapter.
@@ -439,7 +433,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         }
 
         inviteHandlerViewModel.invitation.observe(viewLifecycleOwner) { invitation ->
-            val isSynced = viewModel.isBlockchainSynced.value == true
+            val isSynced = viewModel.syncStatus.value.isSynced
             // No longer gated on isSynced: an invite that arrives mid-scan
             // must still get a verdict (the provisional NOT_SYNCED one) and
             // the accompanying notice, instead of silently doing nothing.
@@ -594,22 +588,18 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         startActivity(createUsernameActivityIntent)
     }
 
-    private fun updateSyncState() {
-        // Phase 5d: the single "Syncing N%" header reads from whichever engine
-        // owns L1 this launch — the SDK L1 scan after a committed cutover
-        // (viewModel.sdkOwnsL1), dashj otherwise. Pre-cutover (every install
-        // today) this is byte-identical to the original dashj-only rendering.
-        val sdkOwnsL1 = viewModel.sdkOwnsL1.value
-        val isSynced = if (sdkOwnsL1) viewModel.sdkL1Synced.value else viewModel.isBlockchainSynced.value
-        val percentage = if (sdkOwnsL1) viewModel.sdkSyncPercentage.value else viewModel.blockchainSyncPercentage.value
+    /** The single "Syncing N%" header — engine-agnostic (see L1SyncStatusService). */
+    private fun updateSyncState(status: L1SyncUiStatus) {
+        val isSynced = status.isSynced
+        val percentage = status.percentage
 
-        if (isSynced != null && isSynced) {
+        if (isSynced) {
             binding.syncing.isVisible = false
         } else {
             binding.syncing.isVisible = true
             var syncing = getString(R.string.syncing)
 
-            if (percentage == null || percentage == 0) {
+            if (percentage == 0) {
                 syncing += "…"
                 binding.syncing.text = syncing
             } else {

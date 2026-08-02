@@ -73,7 +73,7 @@ class CutoverSyncNoticeViewModel @Inject constructor(
                 _uiState.value = CutoverSyncNoticeUIState(
                     syncPercent = shadowSyncPercent(progress),
                     // Same predicate as the home header's blinking "Syncing
-                    // balance" label (MainViewModel.sdkL1Synced).
+                    // balance" label (L1SyncStatusService.sdkScanCaughtUp).
                     synced = progress.synced || progress.scanCaughtUpToTip
                 )
             }

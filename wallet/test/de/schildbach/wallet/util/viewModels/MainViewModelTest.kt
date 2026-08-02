@@ -216,17 +216,15 @@ class MainViewModelTest {
         every { signUpStatus } returns MutableStateFlow(SignUpStatus.NotStarted)
         every { balance } returns MutableStateFlow(Resource.success(Dash.ZERO))
     }
-    private val l1ShadowSyncService = mockk<de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService> {
-        every { progress } returns MutableStateFlow(
-            de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress.IDLE
-        )
-        every { verificationStatus } returns MutableStateFlow(
-            de.schildbach.wallet.service.platform.sdk.L1VerificationStatus.UNKNOWN
-        )
-        every { latestParity } returns MutableStateFlow(null)
-    }
-    private val cutoverCoordinator = mockk<de.schildbach.wallet.service.platform.sdk.CutoverCoordinator> {
-        coEvery { dashjEngineMayStart() } returns true
+    /**
+     * The engine-agnostic sync seam. The ViewModel no longer knows which L1
+     * engine produced the status — see [de.schildbach.wallet.service.L1SyncStatusService].
+     */
+    private val syncStatusFlow =
+        MutableStateFlow(de.schildbach.wallet.service.L1SyncUiStatus())
+    private val l1SyncStatusService = mockk<de.schildbach.wallet.service.L1SyncStatusService> {
+        every { status } returns syncStatusFlow
+        every { sdkScanCaughtUp } returns MutableStateFlow(false)
     }
     // Post-upgrade mixed-funds prompt: no CoinJoin funds in these fixtures
     // and nothing in flight, so the startup collector never fires and the
@@ -335,8 +333,7 @@ class MainViewModelTest {
                 txDisplayCacheService,
                 crowdNodeApi,
                 coinJoinFundsMigrationService,
-                l1ShadowSyncService,
-                cutoverCoordinator,
+                l1SyncStatusService,
                 contactRequestNotificationService
             )
         )
@@ -378,8 +375,7 @@ class MainViewModelTest {
                 txDisplayCacheService,
                 crowdNodeApi,
                 coinJoinFundsMigrationService,
-                l1ShadowSyncService,
-                cutoverCoordinator,
+                l1SyncStatusService,
                 contactRequestNotificationService
             )
         )

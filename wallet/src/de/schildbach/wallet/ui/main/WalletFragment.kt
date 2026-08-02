@@ -87,6 +87,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import de.schildbach.wallet.service.L1SyncUiStatus
 
 @AndroidEntryPoint
 class WalletFragment : Fragment(R.layout.home_content) {
@@ -179,14 +180,8 @@ class WalletFragment : Fragment(R.layout.home_content) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.transactionsLoaded.collect { if (it) refreshShortcutBar() }
         }
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
-        viewModel.isBlockchainSyncFailed.observe(viewLifecycleOwner) { updateSyncState() }
-        // Phase 5d: after a committed cutover the sync state reads the SDK L1
-        // scan instead of dashj (viewModel.sdkOwnsL1); collect that source too
-        // so the shortcut bar refreshes from whichever engine owns L1 this
-        // launch. Pre-cutover this is identical to the dashj-only behavior.
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.sdkL1Synced.collect { updateSyncState() }
+            viewModel.syncStatus.collect { updateSyncState(it) }
         }
 
         if (!configuration.hasDisplayedTaxCategoryExplainer) {
@@ -281,19 +276,15 @@ class WalletFragment : Fragment(R.layout.home_content) {
         shortcutViewModel.userHasContacts = viewModel.hasIdentity && viewModel.hasContacts.value
     }
 
-    private fun updateSyncState() {
-        val isSyncFailed = viewModel.isBlockchainSyncFailed.value
-
-        if (isSyncFailed != null && isSyncFailed) {
+    private fun updateSyncState(status: L1SyncUiStatus) {
+        if (status.isFailed) {
             binding.syncStatusPane.syncErrorPane.isVisible = true
             return
         }
 
         binding.syncStatusPane.syncErrorPane.isVisible = false
-        val sdkOwnsL1 = viewModel.sdkOwnsL1.value
-        val isSynced = if (sdkOwnsL1) viewModel.sdkL1Synced.value else viewModel.isBlockchainSynced.value
 
-        if (isSynced != null && isSynced) {
+        if (status.isSynced) {
             refreshShortcutBar()
         }
     }
@@ -480,12 +471,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     private fun handleStakingNavigation() {
         lifecycleScope.launch {
-            val isSynced = if (viewModel.sdkOwnsL1.value) {
-                viewModel.sdkL1Synced.value
-            } else {
-                viewModel.isBlockchainSynced.value == true
-            }
-            if (isSynced) {
+            if (viewModel.syncStatus.value.isSynced) {
                 stakingLauncher.launch(Intent(requireContext(), StakingActivity::class.java))
             } else {
                 val openWebsite = AdaptiveDialog.create(

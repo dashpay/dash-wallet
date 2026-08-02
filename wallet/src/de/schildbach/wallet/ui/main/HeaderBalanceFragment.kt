@@ -55,14 +55,13 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         viewModel.exchangeRate.observe(viewLifecycleOwner) { updateBalance() }
         viewModel.totalBalance.observe(viewLifecycleOwner) { updateBalance() }
 
-        // Phase 5d: after a committed cutover the "syncing" indicator reads the
-        // SDK L1 scan instead of dashj (viewModel.sdkOwnsL1); collect that source
-        // too so the indicator clears from whichever engine owns L1 this launch.
-        // Pre-cutover (every install today) this is identical to the dashj-only
-        // rendering.
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncingIndicator() }
+        // The blinking "Syncing balance" indicator. Its predicate must stay in
+        // lockstep with CutoverUiDataService's balance HOLD — a label over a
+        // live climbing figure, or a settled figure with the label still
+        // blinking, is worse than either state alone. Both now read the same
+        // source (L1SyncStatusService), so they cannot drift apart.
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.sdkL1Synced.collect { updateSyncingIndicator() }
+            viewModel.syncStatus.collect { updateSyncingIndicator(it.isSynced) }
         }
 
         viewModel.hideBalance.observe(viewLifecycleOwner) { hideBalance ->
@@ -75,14 +74,7 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         }
     }
 
-    private fun updateSyncingIndicator() {
-        val sdkOwnsL1 = viewModel.sdkOwnsL1.value
-        val isSynced = if (sdkOwnsL1) {
-            viewModel.sdkL1Synced.value
-        } else {
-            viewModel.isBlockchainSynced.value == true
-        }
-
+    private fun updateSyncingIndicator(isSynced: Boolean) {
         if (isSynced) {
             binding.syncingIndicator.isInvisible = true
             binding.syncingIndicator.animation?.cancel()
