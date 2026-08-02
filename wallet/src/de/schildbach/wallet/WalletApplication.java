@@ -1423,6 +1423,23 @@ public class WalletApplication extends MultiDexApplication
 
     @Override
     public int spendableUtxoCount() {
+        // Post-cutover the dashj wallet is HELD, so its UTXO set is frozen at
+        // the cutover snapshot (or empty on a fresh restore) — and unlike the
+        // balance this count was never overlaid. Its consumer is the shielded
+        // max-fee reserve, which sizes itself at ~148 bytes per input, so a
+        // stale count under-reserves (the max-shield retry fails again) or
+        // over-reserves (the user cannot shield their full balance). Serve the
+        // SDK's live count instead. Null = keep dashj: pre-cutover always, and
+        // post-cutover until the SDK scan has caught up — see
+        // CutoverUiDataService.sdkSpendableUtxoCountOrNull for why this one
+        // deliberately does NOT hold a last-known value the way the balance does.
+        final Integer sdkCount = cutoverUiDataService != null
+                ? cutoverUiDataService.sdkSpendableUtxoCountOrNull()
+                : null;
+        if (sdkCount != null) {
+            return sdkCount;
+        }
+
         final Wallet wallet = this.wallet;
         if (wallet == null) {
             return 0;

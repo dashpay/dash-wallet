@@ -1605,6 +1605,37 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.error("onCreate: wallet is null after cleanup, service cannot continue")
                     return@launch
                 }
+                // Phase 5d: resolve the cutover engine gate ONCE, before we
+                // release onCreateCompleted — checkService() awaits that latch,
+                // so the gate is always settled by the time it decides whether
+                // to start the peergroup. Failure defaults to true (start dashj).
+                //
+                // Resolved HERE, at the very top of the init, rather than after
+                // the block-store setup below: the missing-blockstore
+                // `wallet.reset()` a few lines down must know whether the SDK
+                // owns L1 (see mayResetDashjWalletForMissingBlockstore), and the
+                // idle detector's tick receiver — registered further down — picks
+                // its sample source from the same flags.
+                val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
+                    .getOrDefault(true)
+                // DIAGNOSTIC un-hold (Tools toggle): when the cutover has committed
+                // (SDK owns L1) but the tester turned on DASHJ_SYNC_DIAGNOSTIC, let the
+                // dashj peergroup start anyway so it syncs as a backup / parity check.
+                // This ONLY relaxes the LOCAL engine-start gate — it does NOT touch the
+                // cutover state or CutoverCoordinator.sdkOwnsL1Flow(), so sdkOwnsL1 stays
+                // true and the home header keeps reading the SDK's L1 sync. Flag off ⇒
+                // dashjEngineMayStart == coordinatorAllowsDashj, byte-for-byte as before.
+                dashjSyncDiagnostic = runCatching { dashPayConfig.getDashjSyncDiagnostic() }
+                    .getOrDefault(false)
+                dashjHeldByCutover = !coordinatorAllowsDashj
+                dashjEngineMayStart = coordinatorAllowsDashj || dashjSyncDiagnostic
+                if (!dashjSyncDiagnostic) dashjDiagnosticSyncState.reset()
+                log.info(
+                    "Phase 5d cutover gate: dashjEngineMayStart={} (coordinatorAllowsDashj={}, " +
+                        "dashjHeldByCutover={}, dashjSyncDiagnostic={})",
+                    dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover, dashjSyncDiagnostic
+                )
+
                 peerConnectivityListener = PeerConnectivityListener()
                 broadcastPeerState(0)
                 blockChainFile =
@@ -1614,9 +1645,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 mnlistinfoBootStrapStream = loadStream(Constants.Files.MNLIST_BOOTSTRAP_FILENAME)
                 qrinfoBootStrapStream = loadStream(Constants.Files.QRINFO_BOOTSTRAP_FILENAME)
                 if (!blockChainFileExists) {
-                    log.info("blockchain does not exist, resetting wallet")
                     propagateContext()
-                    wallet.reset()
+                    // wallet.reset() exists so dashj can re-download the chain
+                    // from scratch. Post-cutover that re-download never happens
+                    // (the peergroup is held) while dashj is still the wallet of
+                    // record the home-screen history is rebuilt from — so the
+                    // reset would permanently destroy history in exchange for
+                    // nothing. See mayResetDashjWalletForMissingBlockstore.
+                    val dashjTxCount = runCatching { wallet.getTransactionCount(true) }.getOrDefault(0)
+                    if (mayResetDashjWalletForMissingBlockstore(dashjHeldByCutover, dashjTxCount)) {
+                        log.info("blockchain does not exist, resetting wallet")
+                        wallet.reset()
+                    } else {
+                        log.warn(
+                            "blockchain store is missing, but the SDK owns L1 and the dashj wallet " +
+                                "still holds {} transactions — SKIPPING wallet.reset(). The held " +
+                                "peergroup would never re-download them, and the reset also wipes " +
+                                "the transaction display caches, so the history would be " +
+                                "unrecoverable",
+                            dashjTxCount
+                        )
+                    }
                     resetMNLists(false)
                     resetMNListsOnPeerGroupStart = true
                 }
@@ -1849,30 +1898,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 ).distinctUntilChanged()
                     .onEach { updateTxConfidence() }
                     .launchIn(serviceScope)
-
-                // Phase 5d: resolve the cutover engine gate ONCE, before we
-                // release onCreateCompleted — checkService() awaits that latch,
-                // so the gate is always settled by the time it decides whether
-                // to start the peergroup. Failure defaults to true (start dashj).
-                val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
-                    .getOrDefault(true)
-                // DIAGNOSTIC un-hold (Tools toggle): when the cutover has committed
-                // (SDK owns L1) but the tester turned on DASHJ_SYNC_DIAGNOSTIC, let the
-                // dashj peergroup start anyway so it syncs as a backup / parity check.
-                // This ONLY relaxes the LOCAL engine-start gate — it does NOT touch the
-                // cutover state or CutoverCoordinator.sdkOwnsL1Flow(), so sdkOwnsL1 stays
-                // true and the home header keeps reading the SDK's L1 sync. Flag off ⇒
-                // dashjEngineMayStart == coordinatorAllowsDashj, byte-for-byte as before.
-                dashjSyncDiagnostic = runCatching { dashPayConfig.getDashjSyncDiagnostic() }
-                    .getOrDefault(false)
-                dashjHeldByCutover = !coordinatorAllowsDashj
-                dashjEngineMayStart = coordinatorAllowsDashj || dashjSyncDiagnostic
-                if (!dashjSyncDiagnostic) dashjDiagnosticSyncState.reset()
-                log.info(
-                    "Phase 5d cutover gate: dashjEngineMayStart={} (coordinatorAllowsDashj={}, " +
-                        "dashjHeldByCutover={}, dashjSyncDiagnostic={})",
-                    dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover, dashjSyncDiagnostic
-                )
 
                 // DIAGNOSTIC (Tools toggle) "sync from date": before the un-held
                 // dashj engine may start, fast-forward the diagnostic blockstore

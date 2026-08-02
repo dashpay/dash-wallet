@@ -888,6 +888,17 @@ interface CutoverUiSource {
      */
     suspend fun currentMaxSendableDuffs(walletIdHex: String): Long? = null
 
+    /**
+     * ONE-SHOT count of the wallet's UNSPENT transaction outputs — the SDK
+     * analogue of dashj's `calculateAllSpendCandidates(false, false).size`
+     * that [org.dash.wallet.common.WalletDataProvider.spendableUtxoCount]
+     * is contracted to return, i.e. the cardinality of the same output set
+     * whose amounts the total balance sums.
+     *
+     * Null when unavailable. Default null: sources without a TXO store.
+     */
+    suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = null
+
     /** Live wallet-relevant transaction records, neutral shape. */
     fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>>
 
@@ -957,6 +968,24 @@ internal class DashSdkCutoverUiSource(
 
     override suspend fun currentTotalDuffs(walletIdHex: String): Long =
         currentBalanceSplitDuffs(walletIdHex).total
+
+    override suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        val db = database()
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            db.openHelper.readableDatabase.query(
+                androidx.sqlite.db.SimpleSQLiteQuery(
+                    // COUNT over EXACTLY the predicate queryUnspentSumDuffs sums,
+                    // so the count and the total describe the same output set —
+                    // which is the invariant dashj's calculateAllSpendCandidates
+                    // / getBalance(ESTIMATED) pair has, and what
+                    // WalletDataProvider.spendableUtxoCount is contracted to.
+                    "SELECT COUNT(*) FROM txos WHERE walletId = ? AND isSpent = 0",
+                    arrayOf<Any?>(walletId)
+                )
+            ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+        }
+    }
 
     override suspend fun currentMaxSendableDuffs(walletIdHex: String): Long? {
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
@@ -1611,6 +1640,52 @@ class CutoverUiDataService internal constructor(
     /** Synchronous read for [de.schildbach.wallet.WalletApplication.getWalletBalance]. */
     fun sdkBalanceOrNull(): Coin? = _sdkTotalBalance.value
 
+    private val _sdkSpendableUtxoCount = MutableStateFlow<Int?>(null)
+
+    /**
+     * The SDK's live UNSPENT-output COUNT
+     * ([CutoverUiSource.currentSpendableUtxoCount]), or null while the
+     * cutover UI feed is inactive / the read is unavailable. Refreshed on
+     * the same cadence as the native balance split ([refreshNativeSplit]),
+     * so the count and the balance always describe the same moment.
+     */
+    val sdkSpendableUtxoCount: StateFlow<Int?> = _sdkSpendableUtxoCount.asStateFlow()
+
+    /**
+     * Synchronous cutover overlay for
+     * [de.schildbach.wallet.WalletApplication.spendableUtxoCount], or null
+     * to keep the dashj value.
+     *
+     * ## Why this needed an overlay at all
+     *
+     * Unlike the balance, this count was never overlaid, so post-cutover it
+     * reported the HELD dashj wallet's frozen UTXO set. Its only consumer is
+     * the shielded max-fee reserve
+     * ([de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve]), which
+     * sizes the reserve at ~148 bytes per input: a stale count under-reserves
+     * (the max-shield retry fails again) or over-reserves (the user cannot
+     * shield their full balance).
+     *
+     * ## Why it does NOT hold a last-known value like the balance does
+     *
+     * The balance holds because a climbing mid-scan partial reads as FUND
+     * LOSS to the user. This number is never displayed, so that reason does
+     * not apply — but the mid-scan partial is still an UNDER-count, and
+     * under-reserving is the failing direction (over-reserving merely leaves
+     * a little more transparent, which the change output returns).
+     *
+     * So instead of holding a persisted last-known count (which would need a
+     * new pref and could over-reserve indefinitely after a genuine
+     * consolidation), the overlay simply does not engage until the SDK scan
+     * has caught up — the SAME [_l1Synced] gate the balance hold uses. Until
+     * then the dashj count passes through, which on an upgrade IS the real
+     * pre-cutover count (a sound over-estimate) and on a fresh restore is 0
+     * exactly as today, where there is nothing to shield anyway because the
+     * shielded funding gate is closed for the whole of that window.
+     */
+    fun sdkSpendableUtxoCountOrNull(): Int? =
+        _sdkSpendableUtxoCount.value?.takeIf { _l1Synced.value }
+
     /**
      * Whether the SDK's L1 scan has caught up. Mirrors EXACTLY the predicate
      * behind the home header's blinking "Syncing balance" label
@@ -1721,6 +1796,7 @@ class CutoverUiDataService internal constructor(
                         _sdkTotalBalance.value = null
                         _sdkConfirmedBalance.value = null
                         _sdkMaxSendable.value = null
+                        _sdkSpendableUtxoCount.value = null
                         return@collectLatest
                     }
                     log.info("cutover committed — serving home-screen data from the SDK")
@@ -1732,6 +1808,7 @@ class CutoverUiDataService internal constructor(
                         _sdkTotalBalance.value = null
                         _sdkConfirmedBalance.value = null
                         _sdkMaxSendable.value = null
+                        _sdkSpendableUtxoCount.value = null
                     }
                 }
         }
@@ -1868,6 +1945,18 @@ class CutoverUiDataService internal constructor(
             if (t is CancellationException) throw t
             log.warn("SDK max-sendable read failed; falling back to the wallet-wide total", t)
             _sdkMaxSendable.value = null
+        }
+        // The UTXO COUNT rides the same cadence so it always describes the
+        // same moment as the split above (the shielded max-fee reserve sizes
+        // itself from the count while shielding the balance). Contained the
+        // same way: a failed read drops to null so the overlay falls back to
+        // dashj rather than freezing a stale count.
+        try {
+            _sdkSpendableUtxoCount.value = source.currentSpendableUtxoCount(walletIdHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK spendable-UTXO-count read failed; falling back to the dashj count", t)
+            _sdkSpendableUtxoCount.value = null
         }
     }
 

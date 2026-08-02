@@ -124,6 +124,35 @@ class SyncActivityIdleDetectorTest {
         assertTrue(isSyncIdle(List(MIN_COLLECT_HISTORY) { sample }))
     }
 
+    // ── The missing-blockstore wallet.reset() guard ───────────────────
+
+    @Test
+    fun walletReset_allowedPreCutover_soDashjCanResyncAsBefore() {
+        assertTrue(
+            "pre-cutover the peergroup DOES re-download — behaviour must be unchanged",
+            mayResetDashjWalletForMissingBlockstore(sdkOwnsL1 = false, dashjTransactionCount = 42)
+        )
+    }
+
+    @Test
+    fun walletReset_refusedPostCutover_whenItWouldDestroyHistory() {
+        // FIX-pin: post-cutover the peergroup is held, so the reset buys no
+        // re-download — it just empties the wallet the home-screen history is
+        // rebuilt from, and its reset listener deletes both display caches.
+        assertFalse(
+            mayResetDashjWalletForMissingBlockstore(sdkOwnsL1 = true, dashjTransactionCount = 42)
+        )
+    }
+
+    @Test
+    fun walletReset_stillAllowedPostCutover_whenThereIsNothingToLose() {
+        // A wallet with no transactions (fresh install) loses nothing, so it
+        // keeps the original path rather than adding a second behaviour.
+        assertTrue(
+            mayResetDashjWalletForMissingBlockstore(sdkOwnsL1 = true, dashjTransactionCount = 0)
+        )
+    }
+
     @Test
     fun sdkSample_clampsBackwardsHeightsToZero() {
         // A re-scan walks the filter height backwards; a negative "download

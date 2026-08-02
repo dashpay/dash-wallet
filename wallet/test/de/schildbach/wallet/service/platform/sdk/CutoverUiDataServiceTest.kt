@@ -707,6 +707,11 @@ class CutoverUiDataServiceTest {
 
         var currentBalanceReads = 0
 
+        /** The SDK's live unspent-output count (null = read unavailable). */
+        var utxoCount: Int? = 0
+
+        override suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = utxoCount
+
         override suspend fun currentTotalDuffs(walletIdHex: String): Long =
             currentBalanceSplitDuffs(walletIdHex).total
 
@@ -853,6 +858,61 @@ class CutoverUiDataServiceTest {
             Coin.valueOf(123_456),
             service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first()
         )
+    }
+
+    // ── Spendable-UTXO-count overlay (shielded max-fee reserve) ───────
+
+    @Test
+    fun preCutover_spendableUtxoCountKeepsTheDashjValue() = runTest {
+        val source = FakeSource().apply { utxoCount = 11 }
+        val service = buildService(source, configWithState("DUAL_RUNNING"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertNull(
+            "pre-cutover the overlay must not engage at all",
+            service.sdkSpendableUtxoCountOrNull()
+        )
+    }
+
+    @Test
+    fun postCutover_spendableUtxoCountServedFromSdk() = runTest {
+        // FIX-pin: this count was never overlaid, so post-cutover it reported
+        // the HELD dashj wallet's frozen UTXO set — and the shielded max-fee
+        // reserve sizes itself at ~148 bytes per input from it.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L)).apply { utxoCount = 11 }
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertEquals(11, service.sdkSpendableUtxoCountOrNull())
+    }
+
+    @Test
+    fun postCutover_midScan_spendableUtxoCountFallsBackToDashj() = runTest {
+        // A mid-scan partial UNDER-counts, and under-reserving is the failing
+        // direction — so unlike the balance this does not hold a last-known
+        // value, it simply does not engage until the scan has caught up.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L)).apply { utxoCount = 3 }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope, l1Synced = flowOf(false)
+        )
+        service.start()
+        runCurrent()
+
+        assertNull(service.sdkSpendableUtxoCountOrNull())
+        // …while the live count itself is still tracked underneath.
+        assertEquals(3, service.sdkSpendableUtxoCount.value)
+    }
+
+    @Test
+    fun postCutover_spendableUtxoCountUnavailableFallsBackToDashj() = runTest {
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L)).apply { utxoCount = null }
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertNull(service.sdkSpendableUtxoCountOrNull())
     }
 
     @Test
