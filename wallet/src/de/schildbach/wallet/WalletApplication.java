@@ -550,8 +550,16 @@ public class WalletApplication extends MultiDexApplication
         // the restore-from-FILE caller invokes setWallet on the MAIN thread, so
         // this must NOT block on DataStore I/O. The commit self-gates on the SDK
         // L1 flag and is a no-op if already committed; the home screen reads
-        // cutover state reactively. Upgrade installs skip this and flip later via
-        // CutoverAutoCommitObserver.
+        // cutover state reactively.
+        //
+        // An UPGRADE install never reaches here (it loads via
+        // loadWalletFromProtobuf) — it commits at the finalizeInitialization
+        // seam below instead. But the converse is NOT true: a fresh
+        // create/restore reaches BOTH seams, because onboarding's PIN step calls
+        // saveWalletAndFinalizeInitialization() -> finalizeInitialization()
+        // afterwards. That is why this call also latches
+        // "freshWalletSetupThisLaunch" inside the coordinator, which suppresses
+        // the one-time UPGRADE sync explainer the other seam would otherwise arm.
         cutoverCoordinator.commitForFreshWalletSetupAsync();
     }
 
@@ -756,9 +764,16 @@ public class WalletApplication extends MultiDexApplication
         //
         // The UPGRADE variant: identical commit, but it also arms the one-time
         // sync explainer when this launch is the one that actually flips the
-        // state (see CutoverCoordinator.commitForUpgradedWalletAsync). This
-        // seam is only reached by wallets LOADED from the protobuf, so a fresh
-        // create/restore (which commits in setWallet) never arms it.
+        // state (see CutoverCoordinator.commitForUpgradedWalletAsync).
+        //
+        // NOTE this seam is NOT upgrade-only. It runs on every launch that
+        // loads the wallet from the protobuf (WalletApplication:936) AND at the
+        // end of onboarding, because SetPinViewModel.initWallet() calls
+        // saveWalletAndFinalizeInitialization() -> finalizeInitialization()
+        // right after setWallet() created/restored the wallet. So a fresh
+        // create/restore DOES reach here; the coordinator suppresses the
+        // explainer for it via the freshWalletSetupThisLaunch latch that
+        // setWallet's commit sets synchronously.
         cutoverCoordinator.commitForUpgradedWalletAsync();
     }
 

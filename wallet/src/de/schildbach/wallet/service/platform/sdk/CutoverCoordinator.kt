@@ -188,8 +188,38 @@ class CutoverCoordinator @Inject constructor(
      * commit has not landed by the time the blockchain service starts.
      */
     fun commitForFreshWalletSetupAsync() {
+        // Set SYNCHRONOUSLY, before any coroutine is dispatched: `setWallet`
+        // (the only caller) happens-before `finalizeInitialization` on the
+        // same launch, so the upgrade seam is guaranteed to observe this even
+        // though the commit itself is fire-and-forget. See
+        // [freshWalletSetupThisLaunch].
+        freshWalletSetupThisLaunch = true
         scope.launch { commitForFreshWalletSetup() }
     }
+
+    /**
+     * Whether a FRESH wallet setup (create or restore) happened on this
+     * launch — i.e. [commitForFreshWalletSetupAsync] was called.
+     *
+     * This exists because "did the state move to CUT_OVER on this launch?"
+     * is NOT a usable test for "is this an upgrade". A fresh create/restore
+     * reaches BOTH seams: `WalletApplication.setWallet` fires the fresh
+     * commit, and the onboarding PIN step then calls
+     * `saveWalletAndFinalizeInitialization` → `finalizeInitialization` →
+     * [commitForUpgradedWalletAsync]. Whichever of the two lands the write
+     * first, the other sees a DUAL_RUNNING → CUT_OVER transition and would
+     * arm the one-time UPGRADE explainer for a user who just restored.
+     * Ordering alone cannot fix that (both commits are async and either can
+     * win), so the fresh path SUPPRESSES the notice positively.
+     *
+     * Process-scoped by design: it only has to survive from `setWallet` to
+     * `finalizeInitialization` within one onboarding. A later launch loads
+     * from the protobuf, never calls `setWallet`, and by then the state is
+     * already CUT_OVER — so the transition test correctly reports "no move"
+     * and nothing is armed.
+     */
+    @Volatile
+    private var freshWalletSetupThisLaunch = false
 
     /**
      * The UPGRADE seam's counterpart to [commitForFreshWalletSetupAsync]:
@@ -197,13 +227,21 @@ class CutoverCoordinator @Inject constructor(
      * ([DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING]) when — and only when —
      * the state ACTUALLY moves to CUT_OVER on this launch.
      *
-     * That "actually moved" condition is what distinguishes the case worth
-     * explaining from the ones that are not:
-     * - an app UPGRADE arrives in a pre-commit state and flips here → armed;
-     * - every later launch of the same install is already CUT_OVER → no-op;
-     * - a fresh install / restore commits through `setWallet`
-     *   ([commitForFreshWalletSetupAsync]) and never reaches this seam, so it
-     *   keeps its own (already expected) post-restore sync wait.
+     * TWO conditions must hold, and both are required:
+     * - the state ACTUALLY moved to CUT_OVER on this launch — read and
+     *   decided INSIDE [mutex] alongside the write itself ([commitLocked]),
+     *   so a concurrent commit cannot slip between the "before" read and the
+     *   write and make an already-committed install look like it just
+     *   flipped; and
+     * - no FRESH wallet setup happened on this launch
+     *   ([freshWalletSetupThisLaunch]) — a create/restore reaches this seam
+     *   too (via `finalizeInitialization`), and it must keep its own
+     *   already-expected post-restore sync wait rather than being told its
+     *   wallet was "upgraded".
+     *
+     * So: an app UPGRADE arriving in a pre-commit state flips here and arms;
+     * every later launch of the same install is already CUT_OVER and no-ops;
+     * a fresh create/restore is positively suppressed.
      *
      * Fire-and-forget on the injected scope for the same reason as
      * [commitForFreshWalletSetupAsync] — the caller is on the main thread and
@@ -211,10 +249,16 @@ class CutoverCoordinator @Inject constructor(
      */
     fun commitForUpgradedWalletAsync() {
         scope.launch {
-            val before = currentState()
-            val status = commitForFreshWalletSetup()
-            val justCutOver = status.state == CutoverState.CUT_OVER && before != CutoverState.CUT_OVER
+            val (_, justCutOver) = mutex.withLock { commitLocked("upgraded-wallet launch") }
             if (!justCutOver) return@launch
+            if (freshWalletSetupThisLaunch) {
+                log.info(
+                    "upgrade seam committed the cutover, but a fresh wallet setup ran on this " +
+                        "launch — suppressing the one-time UPGRADE sync explainer (a restore's " +
+                        "sync wait is already expected)"
+                )
+                return@launch
+            }
             runCatching { dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, true) }
                 .onSuccess { log.info("upgrade cutover: one-time sync explainer armed") }
                 .onFailure {
@@ -227,9 +271,20 @@ class CutoverCoordinator @Inject constructor(
     }
 
     suspend fun commitForFreshWalletSetup(): CutoverStatus = mutex.withLock {
+        commitLocked("fresh-wallet setup (restore/new)").first
+    }
+
+    /**
+     * The immediate (non-readiness) commit, plus whether THIS call is the
+     * one that moved the state to CUT_OVER. Both halves are computed under
+     * [mutex] from a single state read, so the transition verdict cannot be
+     * corrupted by a racing commit — the property the one-time upgrade
+     * explainer depends on. Must be called under [mutex].
+     */
+    private suspend fun commitLocked(reason: String): Pair<CutoverStatus, Boolean> {
         val current = currentState()
         if (current == CutoverState.CUT_OVER || current == CutoverState.SETTLED) {
-            return@withLock CutoverStatus(current, READY_VERDICT)
+            return CutoverStatus(current, READY_VERDICT) to false
         }
         if (!sdkL1EngineEnabled()) {
             log.info(
@@ -237,9 +292,12 @@ class CutoverCoordinator @Inject constructor(
                     "engine is inactive, so dashj must keep owning L1 (staying {})",
                 current
             )
-            return@withLock CutoverStatus(current, READY_VERDICT)
+            return CutoverStatus(current, READY_VERDICT) to false
         }
-        writeState(current, CutoverState.CUT_OVER, "fresh-wallet setup (restore/new)")
+        val status = writeState(current, CutoverState.CUT_OVER, reason)
+        // A failed persist reports the OLD state (writeState's contract), so
+        // this is false — never a phantom "just cut over".
+        return status to (status.state == CutoverState.CUT_OVER)
     }
 
     /**

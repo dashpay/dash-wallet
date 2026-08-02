@@ -42,11 +42,15 @@ import org.dash.wallet.common.data.SyncStage
  *   `spvTipUnixSecondsFlow`), 0 while unknown — dashj's
  *   `chainHead.header.time` analogue.
  * @property stalled the derived progress-stall verdict ([isSpvProgressStalled]).
+ * @property chainLockHeight the highest GLOBAL chainlock height the engine
+ *   has applied this session ([L1ShadowSyncService.chainLockHeight]), 0
+ *   before the first chainlock event of the session.
  */
 internal data class SdkChainSnapshot(
     val progress: ShadowSyncProgress,
     val tipUnixSeconds: Long,
-    val stalled: Boolean
+    val stalled: Boolean,
+    val chainLockHeight: Int = 0
 )
 
 /**
@@ -84,27 +88,39 @@ internal data class SdkBlockchainStateUpdate(
      * closest honest signal that sync is not making progress (drives
      * [org.dash.wallet.common.data.entity.BlockchainState.syncFailed]).
      */
-    val networkStalled: Boolean
-    // TODO(#1521 Phase 2 item 1): no `chainlockHeight` field here on purpose.
-    //   The dashj path fills BlockchainState.chainlockHeight from
-    //   `chainLockHandler.bestChainLockBlockHeight` (a GLOBAL best-chainlocked
-    //   block height), but the SDK exposes no live equivalent:
-    //   - the progress feed [org.dashfoundation.dashsdk.wallet.SpvSyncProgressData]
-    //     (headers/filterHeaders/filters/masternodes sub-progress) carries no
-    //     chainlock height, so [SdkChainSnapshot] has none to derive from;
-    //   - the only chainlock-height scalars the SDK has are the WRONG shape:
-    //     [org.dashfoundation.dashsdk.wallet.TrackedAssetLock.chainLockHeight]
-    //     is per-asset-lock (the height a single funding outpoint got
-    //     chainlocked, for identity recovery), and
-    //     `WalletEntity.lastAppliedChainLockBytes` is an undecoded bincode
-    //     ChainLock blob living in the persistence layer, not on the app-side
-    //     progress pipeline.
-    //   Populating it would need the SDK to surface a global best-chainlocked
-    //   height on `SpvSyncProgressData` (or a `WalletManagerNative` accessor),
-    //   which `toShadowSyncProgress` would carry into [ShadowSyncProgress] and
-    //   this derivation into a new nullable field. Until then
-    //   [de.schildbach.wallet.service.BlockchainStateDataProvider.updateSdkBlockchainState]
-    //   PRESERVES the row's last dashj-known chainlockHeight (never regresses it).
+    val networkStalled: Boolean,
+    /**
+     * GLOBAL best-chainlocked block height — dashj's
+     * `chainLockHandler.bestChainLockBlockHeight` analogue — or null
+     * (preserve the row's value) when the engine has applied no chainlock
+     * this session.
+     *
+     * SOURCE (resolves the former "the SDK exposes no chainlock feed"
+     * TODO): the progress feed
+     * [org.dashfoundation.dashsdk.wallet.SpvSyncProgressData] indeed
+     * carries none, and the SDK's only chainlock-height SCALARS are the
+     * wrong shape ([org.dashfoundation.dashsdk.wallet.TrackedAssetLock.chainLockHeight]
+     * is per-asset-lock; `WalletEntity.lastAppliedChainLockBytes` is an
+     * undecoded bincode blob in the persistence layer). But the engine's
+     * WALLET-EVENT stream does carry it: `WalletEvent::ChainLockProcessed`
+     * (and `BlockProcessed`'s `chain_lock`) embed the full quorum-signed
+     * `ChainLock`, and every event reaches the app as its Rust `Debug`
+     * string on the tap [L1ShadowSyncService] already collects. See
+     * [parseL1ChainLockHeight] / [L1ShadowSyncService.chainLockHeight].
+     *
+     * LOWER BOUND, never an over-report: only chainlocks applied while
+     * this process was collecting are known, so the value trails the true
+     * chainlock tip and is 0 until the session's first chainlock event.
+     * That direction is the safe one for every consumer — a height at or
+     * below it is PROVEN chainlocked; above it is merely unknown, and
+     * [de.schildbach.wallet.payments.ChainLockedCoinSelector] then falls
+     * back to its depth rule. The writer
+     * ([de.schildbach.wallet.service.BlockchainStateDataProvider.updateSdkBlockchainState])
+     * additionally clamps it monotonically against the row, so a fresh
+     * session cannot regress a height dashj (or an earlier session)
+     * already established.
+     */
+    val chainlockHeight: Int?
 )
 
 /**
@@ -191,6 +207,9 @@ internal fun sdkSyncStage(phase: ShadowSyncPhase): SyncStage = when (phase) {
  *   re-scan simply reads as percentageSync < 100 (the writer clears the
  *   row's flag).
  * - syncStage / networkStalled: [sdkSyncStage] / [SdkChainSnapshot.stalled].
+ * - chainlockHeight: [SdkChainSnapshot.chainLockHeight] when the engine has
+ *   applied a chainlock this session, else null (preserve) — see the field
+ *   KDoc for why a lower bound is the safe direction.
  * Pure — host-testable.
  */
 internal fun deriveBlockchainStateUpdate(
@@ -234,6 +253,9 @@ internal fun deriveBlockchainStateUpdate(
         },
         mnListHeight = p.mnListHeight.takeIf { it > 0 }?.toInt(),
         syncStage = sdkSyncStage(p.phase),
-        networkStalled = snapshot.stalled
+        networkStalled = snapshot.stalled,
+        // 0 = "no chainlock observed this session" — preserve, exactly like
+        // the other unknown-is-null fields; never claim height 0.
+        chainlockHeight = snapshot.chainLockHeight.takeIf { it > 0 }
     )
 }

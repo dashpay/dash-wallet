@@ -20,7 +20,14 @@ package org.dash.wallet.common.data.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.*
-// TODO: chainlockHeight is not updated when chainlocks are received
+// NOTE on [chainlockHeight]: it is a MONOTONIC LOWER BOUND on the network's
+// best chainlocked height, not a live mirror of it. Pre-cutover the dashj
+// writer refreshes it from `chainLockHandler.bestChainLockBlockHeight` only
+// on sync-progress callbacks; post-cutover the Kotlin SDK writer advances it
+// from the engine's `ChainLockProcessed` wallet events, which it only sees
+// while the process is running. Read it as "everything at or below this
+// height is PROVEN chainlocked" and treat anything above as unknown — never
+// as "not chainlocked".
 // TODO: not updated on new blocks after sync has finished
 @Entity(tableName = "blockchain_state")
 data class BlockchainState(var bestChainDate: Date?,

@@ -211,15 +211,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     companion object {
         private const val MINIMUM_PEER_COUNT = 16
-        private const val MIN_COLLECT_HISTORY = 2
-        private const val IDLE_HEADER_TIMEOUT_MIN = 2
-        private const val IDLE_MNLIST_TIMEOUT_MIN = 2
-        private const val IDLE_BLOCK_TIMEOUT_MIN = 2
-        private const val IDLE_TRANSACTION_TIMEOUT_MIN = 9
-        private val MAX_HISTORY_SIZE = max(
-            IDLE_TRANSACTION_TIMEOUT_MIN.toDouble(),
-            IDLE_BLOCK_TIMEOUT_MIN.toDouble()
-        ).toInt()
+        // The idle thresholds, the history ring size and the idle RULE now
+        // live in SyncActivityIdleDetector.kt (same package) so they are
+        // host-JVM testable and shared by both engines' sample sources.
         private const val APPWIDGET_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS
         private const val BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS
         private val TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(180)
@@ -1418,90 +1412,94 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
-    private class ActivityHistoryEntry(
-        val numTransactionsReceived: Int, val numBlocksDownloaded: Int,
-        val numHeadersDownloaded: Int, val numMnListDiffsDownloaded: Int
-    ) {
-        override fun toString(): String {
-            return "$numTransactionsReceived/$numBlocksDownloaded/$numHeadersDownloaded/$numMnListDiffsDownloaded"
-        }
-    }
+    /**
+     * SDK L1 wallet-events observed since the last idle-detector tick — the
+     * post-cutover analogue of [transactionsReceived] (which only the dashj
+     * wallet listener ever increments). Fed by the tap started in
+     * [onCreate]; read-and-cleared by [tickReceiver].
+     */
+    private val sdkTxEventsReceived = AtomicInteger(0)
 
     private var tickRecieverRegistered = false
     private val tickReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         private var lastChainHeight = 0
         private var lastHeaderHeight = 0
-        private val activityHistory = arrayListOf<ActivityHistoryEntry> ()
+        private var lastSdkProgress: de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress? = null
+        private var sdkSampled = false
+        private val activityHistory = arrayListOf<SyncActivitySample>()
+
         override fun onReceive(context: Context, intent: Intent) {
-            val chainHeight = blockChain!!.bestChainHeight
-            val headerHeight = headerChain!!.bestChainHeight
-            if (lastChainHeight > 0 || lastHeaderHeight > 0) {
-                val numBlocksDownloaded = chainHeight - lastChainHeight
-                val numTransactionsReceived = transactionsReceived.getAndSet(0)
-                // instead of counting headers, count header messages which contain up to 2000 headers
-                val numHeadersDownloaded = headerHeight - lastHeaderHeight
-                val numMnListDiffsDownloaded = mnListDiffsReceived.getAndSet(0)
+            // WHICH ENGINE'S ACTIVITY COUNTS. The detector exists to stop a
+            // genuinely idle service, and its four counters were all dashj-fed.
+            // Post-cutover the dashj peergroup is HELD, so every one of them is
+            // permanently 0 and the detector trips ~2 minutes after EVERY start,
+            // killing the service mid-SDK-scan. Sample the engine that actually
+            // owns L1 instead — same idle rule, honest inputs (see
+            // SyncActivityIdleDetector.kt). Pre-cutover [dashjHeldByCutover] is
+            // false and this is byte-for-byte the original dashj path.
+            val sample = if (dashjHeldByCutover) sdkSample() else dashjSample()
+            if (sample != null) {
+                pushAndEvaluate(sample)
+            }
+        }
 
-                // push history
-                activityHistory.add(
-                    0,
-                    ActivityHistoryEntry(
-                        numTransactionsReceived,
-                        numBlocksDownloaded,
-                        numHeadersDownloaded,
-                        numMnListDiffsDownloaded
-                    )
+        /** The original dashj counters; null until a first reference height exists. */
+        private fun dashjSample(): SyncActivitySample? {
+            val chainHeight = blockChain?.bestChainHeight ?: 0
+            val headerHeight = headerChain?.bestChainHeight ?: 0
+            val sample = if (lastChainHeight > 0 || lastHeaderHeight > 0) {
+                SyncActivitySample(
+                    transactionsReceived = transactionsReceived.getAndSet(0),
+                    blocksDownloaded = chainHeight - lastChainHeight,
+                    // instead of counting headers, count header messages which contain up to 2000 headers
+                    headersDownloaded = headerHeight - lastHeaderHeight,
+                    mnListDiffsDownloaded = mnListDiffsReceived.getAndSet(0)
                 )
-
-                // trim
-                while (activityHistory.size > MAX_HISTORY_SIZE) {
-                    activityHistory.removeAt(
-                        activityHistory.size - 1
-                    )
-                }
-
-                // print
-                val builder = StringBuilder()
-                for (entry in activityHistory) {
-                    if (builder.isNotEmpty()) {
-                        builder.append(", ")
-                    }
-                    builder.append(entry)
-                }
-                log.info("History of transactions/blocks/headers/mnlistdiff: $builder")
-
-                // determine if block and transaction activity is idling
-                var isIdle = false
-                if (activityHistory.size >= MIN_COLLECT_HISTORY) {
-                    isIdle = true
-                    for (i in activityHistory.indices) {
-                        val entry = activityHistory[i]
-                        val blocksActive =
-                            entry.numBlocksDownloaded > 0 && i <= IDLE_BLOCK_TIMEOUT_MIN
-                        val transactionsActive = (entry.numTransactionsReceived > 0
-                                && i <= IDLE_TRANSACTION_TIMEOUT_MIN)
-                        val headersActive =
-                            entry.numHeadersDownloaded > 0 && i <= IDLE_HEADER_TIMEOUT_MIN
-                        val mnListDiffsActive =
-                            entry.numMnListDiffsDownloaded > 0 && i <= IDLE_MNLIST_TIMEOUT_MIN
-                        if (blocksActive || transactionsActive || headersActive || mnListDiffsActive) {
-                            isIdle = false
-                            break
-                        }
-                    }
-                }
-
-                // if idling, shutdown service
-                if (isIdle) {
-                    log.info("idling detected, stopping service")
-                    if (blockchainState?.replaying == true) {
-                        rescheduleService()
-                    }
-                    stopSelf()
-                }
+            } else {
+                null
             }
             lastChainHeight = chainHeight
             lastHeaderHeight = headerHeight
+            return sample
+        }
+
+        /** The SDK L1 engine's equivalent counters (see [sdkActivitySample]). */
+        private fun sdkSample(): SyncActivitySample? {
+            val current = l1ShadowSyncService.progress.value
+            val txEvents = sdkTxEventsReceived.getAndSet(0)
+            val sample = if (sdkSampled) {
+                sdkActivitySample(lastSdkProgress, current, txEvents)
+            } else {
+                null // first tick: no reference snapshot yet (mirrors dashj above)
+            }
+            lastSdkProgress = current
+            sdkSampled = true
+            return sample
+        }
+
+        private fun pushAndEvaluate(sample: SyncActivitySample) {
+            // push history (newest first)
+            activityHistory.add(0, sample)
+
+            // trim
+            while (activityHistory.size > MAX_HISTORY_SIZE) {
+                activityHistory.removeAt(activityHistory.size - 1)
+            }
+
+            log.info(
+                "History of transactions/blocks/headers/mnlistdiff ({}): {}",
+                if (dashjHeldByCutover) "sdk" else "dashj",
+                activityHistory.joinToString(", ")
+            )
+
+            // if idling, shutdown service
+            if (isSyncIdle(activityHistory)) {
+                log.info("idling detected, stopping service")
+                if (blockchainState?.replaying == true) {
+                    rescheduleService()
+                }
+                stopSelf()
+            }
         }
     }
 
@@ -1554,6 +1552,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     publishDashjDiagnostic(lastDiagnosticRawPercent, lastDiagnosticStage)
                 }
             }
+        }
+
+        // Idle detector, SDK side: the post-cutover analogue of the dashj
+        // wallet's transactionsReceived counter (see SyncActivityIdleDetector).
+        // Counting only — the tick receiver reads and clears it.
+        serviceScope.launch {
+            l1ShadowSyncService.txEvents.collect { sdkTxEventsReceived.incrementAndGet() }
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

@@ -552,6 +552,56 @@ internal fun isDashjChainCaughtUp(
 internal const val DASHJ_TIP_TOLERANCE_BLOCKS = 2
 
 /**
+ * What a parity probe is allowed to do right now.
+ *
+ * @property probe run the comparison at all (publish [ParityReport],
+ *   record the streak, log the ticker).
+ * @property driveVerification let the result move
+ *   [L1ShadowSyncService.verificationStatus] (which the shielded-transfer
+ *   screen renders and the funding gate reads).
+ * @property allowSelfHeal let [ShadowResetDecider] act on the result — up
+ *   to and including a full SDK-wallet rebuild.
+ */
+internal data class ParityProbePolicy(
+    val probe: Boolean,
+    val driveVerification: Boolean,
+    val allowSelfHeal: Boolean
+)
+
+/**
+ * WHEN PARITY IS MEANINGFUL. The harness compares the SDK's L1 view
+ * against dashj's; that only says anything while dashj is a live, syncing
+ * engine.
+ *
+ * - NOT COMMITTED (dual-run): dashj is the primary engine and the wallet
+ *   of record. Parity is the whole point — it gates the cutover — so
+ *   everything is allowed, exactly as before.
+ * - COMMITTED + diagnostic ON: the tester deliberately un-held dashj
+ *   (`DASHJ_SYNC_DIAGNOSTIC`), so the comparison is real and worth
+ *   showing in Tools — but dashj is a BACKUP, catching up from behind,
+ *   and the SDK is the wallet of record. So the probe runs and publishes,
+ *   while a disagreement must NOT move the user-facing verification
+ *   status and must NOT trigger a self-heal that would destroy the
+ *   authoritative SDK ledger on the word of a still-syncing observer.
+ * - COMMITTED + diagnostic OFF: dashj is HELD. Its balance is frozen at
+ *   the cutover snapshot, so the first receive after the flip makes the
+ *   verdict permanently MISMATCH. Probing here measures nothing: it
+ *   pinned `verificationStatus` at PROBING forever (the shielded screen's
+ *   "Almost done" that never clears) and fed a guaranteed-failing
+ *   comparison to the rebuild decider. Do not probe.
+ *
+ * Pure — host-testable.
+ */
+internal fun parityProbePolicy(
+    cutoverCommitted: Boolean,
+    dashjDiagnosticEnabled: Boolean
+): ParityProbePolicy = when {
+    !cutoverCommitted -> ParityProbePolicy(probe = true, driveVerification = true, allowSelfHeal = true)
+    dashjDiagnosticEnabled -> ParityProbePolicy(probe = true, driveVerification = false, allowSelfHeal = false)
+    else -> ParityProbePolicy(probe = false, driveVerification = false, allowSelfHeal = false)
+}
+
+/**
  * Decides when a persistent parity mismatch warrants a ONE-TIME automatic
  * SELF-HEAL — a full SDK-wallet REBUILD
  * ([L1ShadowSyncService.recoverByRecreatingWallet]) — from the probe
@@ -882,6 +932,47 @@ fun parseL1TxEvent(eventDebug: String): L1TxEvent? = when {
         }
     else -> null
 }
+
+/**
+ * The `ChainLock`'s own `block_height` inside a `WalletEvent` Debug
+ * string. `block_height` is the field name of
+ * `dashcore::ephemerealdata::chain_lock::ChainLock` ONLY — a transaction's
+ * own block height is `BlockInfo { height: .. }` and `BlockProcessed`'s is
+ * `height: ..`, so this cannot match a non-chainlock number. Anchored on
+ * the `chain_lock:` field so it also cannot drift onto some future field
+ * that happens to be called `block_height`; `\s*` (not a literal space)
+ * tolerates a pretty-printed `{:#?}` should the FFI ever switch.
+ */
+private val CHAIN_LOCK_HEIGHT = Regex("""\bchain_lock:\s*(?:Some\(\s*)?ChainLock\s*\{\s*block_height:\s*(\d+)""")
+
+/**
+ * The GLOBAL best-chainlocked block height carried by one engine
+ * wallet-event Debug string, or null when the event carries no chainlock.
+ *
+ * Two variants carry one (`key-wallet-manager/src/events.rs`, both
+ * `#[derive(Debug)]`):
+ * - `ChainLockProcessed { .., chain_lock: ChainLock { block_height: H, .. }, .. }`
+ *   — emitted by `WalletManager::apply_chain_lock` whenever the wallet's
+ *   `last_applied_chain_lock` ADVANCED (replays of the same chainlock are
+ *   silent). `dash-spv`'s `spawn_chainlock_wallet_dispatch` only forwards
+ *   VALIDATED chainlocks, buffering the highest one during the initial
+ *   sync cycle and applying it at `SyncComplete { cycle: 0 }`;
+ * - `BlockProcessed { .., chain_lock: Some(ChainLock { block_height: H, .. }), .. }`
+ *   — a block processed while already chainlocked.
+ *
+ * H is a real quorum-signed chainlock height (the proof travels with it),
+ * so it is authoritative, not an inference from wallet transactions.
+ *
+ * LOWER BOUND, by construction: the app only learns of chainlocks the
+ * engine applied while this process was running and collecting, so the
+ * value trails the true network chainlock tip (it is 0 until the first
+ * event of a session). Every consumer must treat "below the reported
+ * height" as proven-chainlocked and everything above as merely UNKNOWN —
+ * under-reporting is conservative, over-reporting would not be. Pure —
+ * host-testable.
+ */
+fun parseL1ChainLockHeight(eventDebug: String): Int? =
+    CHAIN_LOCK_HEIGHT.find(eventDebug)?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it > 0 }
 
 // ── Source seam ───────────────────────────────────────────────────────
 
@@ -1335,6 +1426,24 @@ class L1ShadowSyncService internal constructor(
     /** Hot stream of wallet-relevant engine tx events (see [_txEvents]). */
     val txEvents: SharedFlow<L1TxEvent> = _txEvents.asSharedFlow()
 
+    private val _chainLockHeight = MutableStateFlow(0)
+
+    /**
+     * The highest GLOBAL chainlock height the SDK L1 engine has applied
+     * this session ([parseL1ChainLockHeight]), 0 before the first
+     * chainlock event lands. MONOTONIC — a later event never lowers it.
+     *
+     * This is the post-cutover replacement for dashj's
+     * `chainLockHandler.bestChainLockBlockHeight`, which stops advancing
+     * the moment the peergroup is held: [SdkBlockchainStateService] carries
+     * it into the persisted `BlockchainState.chainlockHeight` so
+     * [de.schildbach.wallet.payments.ChainLockedCoinSelector] and the
+     * transaction-status readouts keep working. A LOWER BOUND on the true
+     * chainlock tip (see [parseL1ChainLockHeight]) — safe because every
+     * consumer treats it as "proven chainlocked at or below this height".
+     */
+    val chainLockHeight: StateFlow<Int> = _chainLockHeight.asStateFlow()
+
     /**
      * Whether the wallet-event tap coroutine feeding [txEvents] is live.
      * Observability seam for [CutoverUiDataService]: the tap is gated on
@@ -1405,6 +1514,44 @@ class L1ShadowSyncService internal constructor(
      * evidence never counts toward a cutover.
      */
     val parityStreakRecorder = ParityStreakRecorder()
+
+    /**
+     * The current [parityProbePolicy], re-resolved at the top of every
+     * [parityLoop] iteration (the config reads are DataStore I/O, far too
+     * expensive for the 1 Hz progress monitor to repeat). Starts at the
+     * pre-cutover "everything allowed" value so behaviour is unchanged for
+     * the fraction of a second before the loop's first — immediate —
+     * iteration lands.
+     */
+    @Volatile
+    private var parityPolicy = ParityProbePolicy(
+        probe = true,
+        driveVerification = true,
+        allowSelfHeal = true
+    )
+
+    /**
+     * Resolve [parityProbePolicy] from persisted state. Fails OPEN to the
+     * pre-cutover policy on a read error — probing when it turns out to be
+     * meaningless only costs a wasted comparison, whereas silently not
+     * probing during a real dual-run would starve the cutover streak.
+     */
+    private suspend fun resolveParityPolicy(): ParityProbePolicy {
+        val committed = try {
+            !dashjEngineMayStart(CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)))
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("parity policy: cutover state unreadable; assuming dual-run", t)
+            false
+        }
+        val diagnostic = try {
+            dashPayConfig.getDashjSyncDiagnostic()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            false
+        }
+        return parityProbePolicy(committed, diagnostic)
+    }
 
     private val _verificationStatus = MutableStateFlow(L1VerificationStatus.UNKNOWN)
 
@@ -1584,7 +1731,20 @@ class L1ShadowSyncService internal constructor(
                     if (!mapped.synced) {
                         updateVerificationStatus(L1VerificationStatus.SCANNING)
                     } else if (_verificationStatus.value != L1VerificationStatus.VERIFIED) {
-                        updateVerificationStatus(L1VerificationStatus.PROBING)
+                        // PROBING means "synced, waiting on a parity verdict".
+                        // When no meaningful verdict is coming — the cutover has
+                        // committed, so dashj is either held (frozen, guaranteed
+                        // mismatch) or a still-catching-up diagnostic backup —
+                        // the chain state IS the whole verdict. Leaving it at
+                        // PROBING is what pinned the shielded screen's "Almost
+                        // done" toast forever.
+                        updateVerificationStatus(
+                            if (parityPolicy.driveVerification) {
+                                L1VerificationStatus.PROBING
+                            } else {
+                                L1VerificationStatus.VERIFIED
+                            }
+                        )
                     }
                     if (mapped.phase == ShadowSyncPhase.SYNCED && lastPhase != ShadowSyncPhase.SYNCED) {
                         // One ping per edge into SYNCED: the parity loop
@@ -1621,6 +1781,18 @@ class L1ShadowSyncService internal constructor(
         while (currentCoroutineContext().isActive) {
             try {
                 source.walletEventStrings().collect { debug ->
+                    // Chainlock feed first: it rides the SAME event stream but
+                    // on OTHER variants (ChainLockProcessed / BlockProcessed),
+                    // which parseL1TxEvent drops. Monotonic — a replayed or
+                    // out-of-order event must never lower the reported height
+                    // (consumers read it as "proven chainlocked up to here").
+                    parseL1ChainLockHeight(debug)?.let { height ->
+                        val previous = _chainLockHeight.value
+                        if (height > previous) {
+                            _chainLockHeight.value = height
+                            log.info("L1 engine chainlock height {} -> {}", previous, height)
+                        }
+                    }
                     val event = parseL1TxEvent(debug) ?: return@collect
                     log.info("L1 engine tx event: {}", event)
                     if (!_txEvents.tryEmit(event)) {
@@ -1640,10 +1812,28 @@ class L1ShadowSyncService internal constructor(
         // A ping left over from a previous run (or a pre-start edge) must
         // not double the startup probe below.
         while (syncedEdgeSignal.tryReceive().isSuccess) { /* drain */ }
+        var loggedSuspension = false
         while (currentCoroutineContext().isActive) {
             lastProbeHeartbeatMs = nowMs()
             try {
-                probeParity(walletIdHex)
+                // Re-resolved every tick so the Tools DASHJ_SYNC_DIAGNOSTIC
+                // toggle (and the cutover commit itself) take effect on a live
+                // loop without a restart.
+                val policy = resolveParityPolicy()
+                parityPolicy = policy
+                if (policy.probe) {
+                    loggedSuspension = false
+                    probeParity(walletIdHex)
+                } else if (!loggedSuspension) {
+                    loggedSuspension = true
+                    log.info(
+                        "L1Parity probing suspended: the cutover is committed and the dashj " +
+                            "engine is held, so its balance is frozen at the cutover snapshot — " +
+                            "any comparison against it is a guaranteed MISMATCH that measures " +
+                            "nothing. Turn on the Tools 'dashj sync (diagnostic)' toggle to " +
+                            "un-hold dashj and resume probing."
+                    )
+                }
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 log.warn("L1Parity probe failed; will retry on the next tick", t)
@@ -1827,7 +2017,11 @@ class L1ShadowSyncService internal constructor(
             // still runs in ALL builds — release consumers depend on it.
             log.info(parityLogLine(report))
         }
-        if (report.sdkSynced) {
+        // Post-cutover the SDK is the wallet of record and dashj is at best a
+        // catching-up diagnostic backup, so a disagreement is evidence about
+        // DASHJ, not about the SDK — it must not move the user-facing verdict
+        // (see parityProbePolicy). Pre-cutover this is the original behaviour.
+        if (report.sdkSynced && parityPolicy.driveVerification) {
             // The same evidence the funding gate requires: BOTH balance
             // variants matching (see evaluateWalletFundingGate). A synced
             // mismatch stays PROBING unless the decider below makes it
@@ -1845,6 +2039,15 @@ class L1ShadowSyncService internal constructor(
             // The outpoint-level dump exists purely as log evidence for the
             // SDK bug report — debug/QA builds only, like the ticker above.
             maybeLogOutpointDiff(walletIdHex, report)
+        }
+        if (!parityPolicy.allowSelfHeal) {
+            // Post-cutover the SDK wallet IS the ledger of record. Rebuilding
+            // it (or standing down to FAILED) because a diagnostic dashj
+            // engine that is still catching up disagrees would destroy the
+            // authoritative side on the word of the unauthoritative one.
+            // The report/streak/logging above still publish — the diagnostic
+            // stays fully useful, it just cannot act.
+            return report
         }
         // The inflated auto-reset rule only means anything once dashj's own
         // initial sync is genuinely complete (see isDashjChainCaughtUp — the

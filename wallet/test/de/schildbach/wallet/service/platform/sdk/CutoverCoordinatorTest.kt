@@ -300,4 +300,100 @@ class CutoverCoordinatorTest {
 
         assertEquals(CutoverState.CUT_OVER.name, current)
     }
+
+    // ── One-time UPGRADE sync explainer (armed only on a real upgrade) ─
+
+    /**
+     * A coordinator over stateful CUTOVER_STATE + a captured
+     * CUTOVER_UPGRADE_NOTICE_PENDING write, on an Unconfined scope so the
+     * fire-and-forget seams run inline. Third element reports whether the
+     * explainer was armed.
+     */
+    private fun noticeCoordinator(
+        stored: String? = null,
+        flag: Boolean? = true
+    ): Triple<CutoverCoordinator, () -> String?, () -> Boolean> {
+        var current = stored
+        var noticeArmed = false
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns flag
+        coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
+            current = secondArg()
+            Unit
+        }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, any<Boolean>()) } answers {
+            noticeArmed = secondArg()
+            Unit
+        }
+        val collector = mockk<CutoverEvidenceCollector>()
+        val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined))
+        return Triple(coordinator, { current }, { noticeArmed })
+    }
+
+    @Test
+    fun upgradeNotice_armed_onAGenuineUpgradeThatFlipsTheState() = runBlocking {
+        val (coordinator, stored, armed) = noticeCoordinator(stored = null)
+        coordinator.commitForUpgradedWalletAsync()
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertTrue("an upgrade arriving pre-commit is exactly the case worth explaining", armed())
+    }
+
+    @Test
+    fun upgradeNotice_notArmed_onALaterLaunchOfAnAlreadyCommittedInstall() = runBlocking {
+        val (coordinator, _, armed) = noticeCoordinator(stored = CutoverState.CUT_OVER.name)
+        coordinator.commitForUpgradedWalletAsync()
+        assertFalse("nothing flipped, so there is nothing to explain", armed())
+    }
+
+    @Test
+    fun upgradeNotice_notArmed_whenAFreshWalletSetupRanOnThisLaunch() = runBlocking {
+        // FIX-pin: a fresh create/restore reaches BOTH seams — setWallet fires
+        // commitForFreshWalletSetupAsync, and onboarding's PIN step then calls
+        // finalizeInitialization -> commitForUpgradedWalletAsync. Whoever writes
+        // first, the other observes a DUAL_RUNNING -> CUT_OVER move and used to
+        // arm the UPGRADE explainer for a user who had just restored.
+        val (coordinator, stored, armed) = noticeCoordinator(stored = null)
+
+        coordinator.commitForFreshWalletSetupAsync()
+        coordinator.commitForUpgradedWalletAsync()
+
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertFalse("a restore's sync wait is already expected — do not explain it", armed())
+    }
+
+    @Test
+    fun upgradeNotice_notArmed_whenTheUPGRADESeamIsTheOneThatFlipsTheState() = runBlocking {
+        // The ORDERING-INDEPENDENT half of the same fix. Both commits are
+        // fire-and-forget, so on a fresh restore either can land first, and the
+        // loser sees a DUAL_RUNNING -> CUT_OVER move. Here the FRESH commit
+        // no-ops (SDK L1 flag momentarily off) and the UPGRADE seam performs
+        // the flip — the case a "did the state move?" test alone gets wrong.
+        // The latch is set SYNCHRONOUSLY by commitForFreshWalletSetupAsync, so
+        // suppression does not depend on which write won.
+        var current: String? = null
+        var noticeArmed = false
+        var sdkL1Enabled = false
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } answers { sdkL1Enabled }
+        coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
+            current = secondArg()
+            Unit
+        }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, any<Boolean>()) } answers {
+            noticeArmed = secondArg()
+            Unit
+        }
+        val coordinator = CutoverCoordinator(config, mockk(), CoroutineScope(Dispatchers.Unconfined))
+
+        coordinator.commitForFreshWalletSetupAsync()
+        assertEquals("the fresh commit no-opped, as intended for this case", null, current)
+
+        sdkL1Enabled = true
+        coordinator.commitForUpgradedWalletAsync()
+
+        assertEquals("the UPGRADE seam is the one that wrote CUT_OVER", CutoverState.CUT_OVER.name, current)
+        assertFalse("…but a fresh setup ran this launch, so no upgrade explainer", noticeArmed)
+    }
 }

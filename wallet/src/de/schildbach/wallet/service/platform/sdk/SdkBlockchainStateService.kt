@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
@@ -48,7 +49,9 @@ import javax.inject.Singleton
  * service re-derives that row from the Kotlin SDK's SPV progress instead:
  *
  * - source: [L1ShadowSyncService.progress] (the mirrored SDK 1 Hz SPV
- *   feed) plus the SDK's `spvTipUnixSecondsFlow` tip timestamp;
+ *   feed), the SDK's `spvTipUnixSecondsFlow` tip timestamp, and
+ *   [L1ShadowSyncService.chainLockHeight] (the engine's applied-chainlock
+ *   feed, replacing dashj's frozen `bestChainLockBlockHeight`);
  * - cadence: a 1 s tick (also the stall clock) — EQUALITY-GATED: a
  *   derivation is propagated ONLY when the polled [SdkChainSnapshot]
  *   actually changed, the iOS-validated pattern (naive 1 Hz propagation
@@ -85,7 +88,17 @@ class SdkBlockchainStateService internal constructor(
     private val clearDerivedState: () -> Unit = {},
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val stallThresholdMs: Long = SPV_STALL_THRESHOLD_MS,
-    private val tickIntervalMs: Long = TICK_INTERVAL_MS
+    private val tickIntervalMs: Long = TICK_INTERVAL_MS,
+    /**
+     * The engine's applied-chainlock height feed
+     * ([L1ShadowSyncService.chainLockHeight]) — the post-cutover source of
+     * `BlockchainState.chainlockHeight` (dashj's
+     * `chainLockHandler.bestChainLockBlockHeight` stops advancing the
+     * moment the peergroup is held). Defaulted to a constant 0 so a caller
+     * that supplies no feed keeps the old "preserve the row's chainlock
+     * height" behavior exactly.
+     */
+    private val chainLockHeight: Flow<Int> = flowOf(0)
 ) {
     @Inject
     constructor(
@@ -108,7 +121,8 @@ class SdkBlockchainStateService internal constructor(
             emitAll(manager.spvTipUnixSecondsFlow)
         },
         applyUpdate = blockchainStateDataProvider::updateSdkBlockchainState,
-        clearDerivedState = blockchainStateDataProvider::clearSdkDerivedState
+        clearDerivedState = blockchainStateDataProvider::clearSdkDerivedState,
+        chainLockHeight = l1ShadowSyncService.chainLockHeight
     )
 
     private val started = AtomicBoolean(false)
@@ -176,8 +190,17 @@ class SdkBlockchainStateService internal constructor(
                 emit(0L)
             }
 
-        combine(progress, safeTip, ticker()) { p, tip, _ -> p to tip }
-            .collect { (p, tip) ->
+        val safeChainLock = chainLockHeight
+            .onStart { emit(0) } // unblock combine() before the first chainlock event
+            .catch { e ->
+                log.warn("SDK chainlock-height feed failed; the row keeps its last value", e)
+                emit(0)
+            }
+
+        combine(progress, safeTip, safeChainLock, ticker()) { p, tip, clHeight, _ ->
+            Triple(p, tip, clHeight)
+        }
+            .collect { (p, tip, clHeight) ->
                 val now = nowMs()
                 if (p != lastProgress) {
                     lastProgress = p
@@ -186,7 +209,8 @@ class SdkBlockchainStateService internal constructor(
                 val snapshot = SdkChainSnapshot(
                     progress = p,
                     tipUnixSeconds = tip,
-                    stalled = isSpvProgressStalled(p.phase, now - lastProgressChangeMs, stallThresholdMs)
+                    stalled = isSpvProgressStalled(p.phase, now - lastProgressChangeMs, stallThresholdMs),
+                    chainLockHeight = clHeight
                 )
                 // THE equality gate: identical snapshot → no derivation, no
                 // Room write, no flow churn (see class KDoc).

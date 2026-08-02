@@ -36,22 +36,29 @@ import org.bitcoinj.wallet.CoinSelector
  *    ([TransactionConfidence.isChainLocked] — set live by the
  *    `ChainLocksHandler` as chainlock signatures arrive), or
  * 2. its `appearedAtChainHeight` is at or below [chainLockHeight] — the
- *    persisted `BlockchainState.chainlockHeight`, written by
- *    `BlockchainStateDataProvider.updateBlockchainState` from
- *    `chainLockHandler.bestChainLockBlockHeight`. A chainlock at height H
+ *    persisted `BlockchainState.chainlockHeight`. A chainlock at height H
  *    locks the whole chain up to H, so every transaction in a block at or
  *    below H is chainlocked.
  *
+ * [chainLockHeight] has TWO writers, one per L1 engine, and both produce a
+ * monotonic LOWER BOUND on the network's best chainlocked height:
+ * - pre-cutover, `BlockchainStateDataProvider.updateBlockchainState` reads
+ *   dashj's `chainLockHandler.bestChainLockBlockHeight` on every
+ *   sync-progress callback;
+ * - post-cutover the dashj peergroup is HELD and that value freezes, so
+ *   `updateSdkBlockchainState` advances the row from the Kotlin SDK
+ *   engine's applied-chainlock events instead
+ *   (`L1ShadowSyncService.chainLockHeight` ←
+ *   `WalletEvent::ChainLockProcessed`), taking the max so a fresh session's
+ *   not-yet-observed 0 can never regress the row.
+ *
  * ## Fallback decision (documented per AC4)
  *
- * Testnet and mainnet both produce chainlocks and both sources above
- * populate (verified: `BlockchainStateDataProvider` persists
- * `chainlockHeight`/`mnlistHeight` on every sync-progress update, and the
- * app's transaction UI already relies on `confidence.isChainLocked` on
- * all networks). However `BlockchainState.chainlockHeight` is only
- * refreshed during sync-progress callbacks (see the TODO in
- * `BlockchainState`), so it can lag or read 0 right after a fresh install
- * before the first chainlock is processed. Treating "no chainlock info"
+ * Because both writers under-report rather than over-report, "at or below
+ * [chainLockHeight]" is PROVEN chainlocked and anything above it is merely
+ * UNKNOWN — never "not chainlocked". The value can still lag, or read 0
+ * right after a fresh install before the first chainlock is observed.
+ * Treating "no chainlock info"
  * as "nothing is chainlocked" would zero the user's balance and brick the
  * feature whenever chainlocks lag — instead, when [chainLockHeight] is
  * 0/unavailable the selector falls back to a conservative depth check:
