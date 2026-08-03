@@ -331,12 +331,13 @@ class SendCoinsTaskRunner @Inject constructor(
         private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
 
         /**
-         * Poll cadence for the BIP70 IS-lock timeout rescue (~12s total)
-         * — the successor of the dashj rescue's 0/1/3/5s loop, widened
-         * because an InstantSend lock takes a moment longer to observe
-         * than raw bloom relay did.
+         * Poll cadence for the BIP70 timeout rescue (~20s total) — the
+         * successor of the dashj rescue's 0/1/3/5s loop. Mempool arrival
+         * was observed within seconds in the field test; the extra
+         * headroom covers relay/persistence jitter on a slow network.
          */
-        private val IS_LOCK_RESCUE_DELAYS_MS = listOf(1_000L, 2_000L, 3_000L, 3_000L, 3_000L)
+        private val BROADCAST_OBSERVE_DELAYS_MS =
+            listOf(1_000L, 2_000L, 3_000L, 3_000L, 3_000L, 4_000L, 4_000L)
     }
     private val paymentIntentParser = DashPaymentIntentParser(org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(NETWORK_PARAMETERS.id))
 
@@ -984,11 +985,11 @@ class SendCoinsTaskRunner @Inject constructor(
             // old dashj isTransactionOnNetwork rescue, on a stronger
             // signal than bloom relay).
             if (t !is DirectPayException && t !is CancellationException &&
-                awaitServerBroadcastByInstantSendLock(payment)
+                awaitServerBroadcastObserved(payment)
             ) {
                 log.warn(
-                    "Payment POST for {} failed but the tx is IS-locked on the network — " +
-                        "the BIP70 server broadcast it; completing as paid",
+                    "Payment POST for {} failed but the engine has OBSERVED the tx on the " +
+                        "network — the BIP70 server broadcast it; completing as paid",
                     payment.txidHex, t
                 )
                 return completeAckedPayment(payment)
@@ -1005,22 +1006,36 @@ class SendCoinsTaskRunner @Inject constructor(
     }
 
     /**
-     * The bounded IS-lock watch behind the timeout rescue: poll the SDK
-     * Room row's `TransactionContext` for [payment]'s txid on the old
-     * dashj rescue's cadence (~12s total). True only once the engine has
-     * observed the tx at [de.schildbach.wallet.service.platform.sdk.TX_CONTEXT_INSTANT_SEND]
-     * or beyond — mempool-only (context 0) deliberately does NOT count,
-     * because a build-time row could exist without any broadcast.
+     * The bounded network-observation watch behind the timeout rescue:
+     * poll for an SDK store row for [payment]'s txid (~20s total). The
+     * EXISTENCE of a row is the proof — the engine only records a
+     * transaction it has observed on the network (dash-spv's mempool sync
+     * persists an unmined wallet-relevant tx at context 0 within seconds
+     * of it being relayed, then advances it to in-block). We have not
+     * broadcast at this point, so an observed tx can only have been
+     * broadcast by the BIP70 server.
+     *
+     * Field-verified on testnet (2026-08-03) rather than assumed:
+     * - built-but-never-sent payments (`a6cc9ead`, `ed08074b`) have NO
+     *   row — so row existence cannot false-positive on our own build;
+     * - a server-broadcast payment (`2c3be7d8`) HAS one;
+     * - an externally broadcast wallet-relevant tx went context 0 → 2 in
+     *   under a minute, and NEVER surfaced an InstantSend context or
+     *   `isInstantLocked` flag on the pinned engine — which is why this
+     *   keys on observation, not on IS-lock (the earlier IS-lock-only
+     *   version could never fire).
      */
-    private suspend fun awaitServerBroadcastByInstantSendLock(
+    private suspend fun awaitServerBroadcastObserved(
         payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
     ): Boolean {
-        for (delayMs in IS_LOCK_RESCUE_DELAYS_MS) {
+        for (delayMs in BROADCAST_OBSERVE_DELAYS_MS) {
             delay(delayMs)
             val context = l1SendProbeService.observedTxContext(payment.txidHex)
-            if (context != null &&
-                context >= de.schildbach.wallet.service.platform.sdk.TX_CONTEXT_INSTANT_SEND
-            ) {
+            if (context != null) {
+                log.info(
+                    "BIP70 tx {} observed by the engine at context {} — on the network",
+                    payment.txidHex, context
+                )
                 return true
             }
         }

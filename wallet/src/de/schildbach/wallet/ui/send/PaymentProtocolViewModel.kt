@@ -226,12 +226,24 @@ class PaymentProtocolViewModel @Inject constructor(
                     try {
                         sendCoinsTaskRunner.sendPrebuiltDirectPayment(prebuilt, finalPaymentIntent!!)
                     } catch (ex: Exception) {
-                        // Pre-ack failures are retryable — rebuild the
-                        // preview so a retry submits a fresh reservation.
-                        // NEVER rebuild after Bip70AckedDisplayException:
-                        // the merchant holds the acked tx and a rebuilt
-                        // retry could double-pay.
-                        if (ex !is SendCoinsTaskRunner.Bip70AckedDisplayException) {
+                        // Re-arm ONLY on a definitive refusal (nack): the
+                        // server said no, nothing is on the network, and a
+                        // fresh reservation is safe.
+                        //
+                        // NEVER re-arm on an AMBIGUOUS failure (transport
+                        // error that the network-observation rescue could
+                        // not resolve): the engine cannot see the mempool
+                        // spend of the released inputs, so a rebuilt retry
+                        // may select DIFFERENT inputs and pay the merchant
+                        // twice if the server did broadcast after all.
+                        // Observed in the field test (2026-08-03): the
+                        // rebuild produced a different tx (ed08074b) for
+                        // an invoice whose original (2c3be7d8) was already
+                        // on-chain. The user must restart the payment.
+                        //
+                        // Also never re-arm after Bip70AckedDisplayException
+                        // — the merchant holds an ACKED tx.
+                        if (ex is org.dash.wallet.common.services.DirectPayException) {
                             runCatching { createBaseSendRequest(finalPaymentIntent!!) }
                         }
                         throw ex
