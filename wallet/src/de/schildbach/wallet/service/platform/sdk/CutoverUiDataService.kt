@@ -797,6 +797,122 @@ internal fun planL1InstantLockRowUpdate(
     return updated.takeIf { it != existing }
 }
 
+// ── Historical CoinJoin mixing grouping (display-only) ────────────────
+
+/**
+ * The rowId/groupId prefix of a per-day mixing group — the SAME convention the
+ * dashj-era wrapper uses ([de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet]:
+ * `id = "coinjoin_$groupDate"`, ISO yyyy-MM-dd), so both writers converge on ONE
+ * row per day instead of duplicating groups.
+ */
+internal const val MIXING_GROUP_ROWID_PREFIX = "coinjoin_"
+
+/**
+ * Whether one SDK record is a HISTORICAL CoinJoin mixing transaction that
+ * belongs in the per-day "Mixing" group row (mixing itself was removed from
+ * the app — these can only be pre-existing wallet history):
+ *  - direction [L1TxUiDirection.COINJOIN] — the SDK's Rust classifier
+ *    affirmatively tagged a mixing round;
+ *  - direction [L1TxUiDirection.INTERNAL] whose txid CREATED at least one TXO
+ *    on a CoinJoin account ([coinJoinFundedTxids], from the SDK `accounts`
+ *    table, `accountType == 1`) — denomination creation / collateral /
+ *    combine-dust, which the SDK records as plain internal moves.
+ *
+ * Deliberately mirrors the dashj classifier's exclusions
+ * (`CoinJoinTransactionType.None`/`Send` → not grouped): a tx that only SPENDS
+ * mixed funds creates no CoinJoin-account TXO and keeps its individual row.
+ * Callers must additionally exclude asset-lock-funding records (`kindByTxid`) —
+ * a shield funded from the CoinJoin account may return change TO it.
+ */
+internal fun isHistoricalMixingRecord(
+    record: L1TxUiRecord,
+    coinJoinFundedTxids: Set<String>
+): Boolean = record.direction == L1TxUiDirection.COINJOIN ||
+    (record.direction == L1TxUiDirection.INTERNAL && record.txidHex in coinJoinFundedTxids)
+
+/** The per-day mixing group rowId for one record (system-zone local date, dashj parity). */
+internal fun mixingGroupIdFor(
+    record: L1TxUiRecord,
+    zoneId: java.time.ZoneId,
+    nowMs: Long
+): String {
+    val date = java.time.Instant
+        .ofEpochMilli(if (record.timestampMs > 0) record.timestampMs else nowMs)
+        .atZone(zoneId)
+        .toLocalDate()
+    return "$MIXING_GROUP_ROWID_PREFIX$date"
+}
+
+/**
+ * One planned per-day "Mixing" group update: the upserted display row plus the
+ * NEW member txids to append to the group cache (oldest-first — the caller
+ * assigns [TxGroupCacheEntry.sortOrder] continuing from the existing members).
+ */
+internal data class MixingGroupUpdate(
+    val groupId: String,
+    /** ISO yyyy-MM-dd, for [TxGroupCacheEntry.groupDate]. */
+    val groupDateIso: String,
+    /** New member txids (display hex), oldest-first. */
+    val newMemberTxids: List<String>,
+    val row: TxDisplayCacheEntry
+)
+
+/**
+ * Pure planner: collapse [newMixingRecords] (already classified by
+ * [isHistoricalMixingRecord] and known NOT to be in any group yet) into
+ * per-day "Mixing" group rows, merging INCREMENTALLY over [existingRowByGroupId]
+ * — an engine-event pass may carry a single record, so the existing row's
+ * value/count are extended rather than recomputed. Mirrors the dashj-era
+ * rendering ([de.schildbach.wallet.ui.transactions.TransactionRowView.fromTransactionWrapper]
+ * for a `CoinJoinMixingTxSet`): "Mixing Transactions" title, CoinJoin group
+ * icon on the sent background, [TxDisplayCacheEntry.FLAG_COINJOIN] (visible
+ * under the ALL filter only, like pre-removal), value = Σ member nets.
+ * A pre-existing row's memo and historical rate are preserved.
+ */
+internal fun planMixingGroupUpdates(
+    newMixingRecords: List<L1TxUiRecord>,
+    existingRowByGroupId: Map<String, TxDisplayCacheEntry>,
+    mixingTitle: String,
+    zoneId: java.time.ZoneId,
+    nowMs: Long
+): List<MixingGroupUpdate> {
+    if (newMixingRecords.isEmpty()) return emptyList()
+    return newMixingRecords
+        .groupBy { mixingGroupIdFor(it, zoneId, nowMs) }
+        .map { (groupId, members) ->
+            val existing = existingRowByGroupId[groupId]
+            val ordered = members
+                .distinctBy { it.txidHex }
+                .sortedBy { if (it.timestampMs > 0) it.timestampMs else nowMs }
+            val newestMs = ordered.maxOf { if (it.timestampMs > 0) it.timestampMs else nowMs }
+            MixingGroupUpdate(
+                groupId = groupId,
+                groupDateIso = groupId.removePrefix(MIXING_GROUP_ROWID_PREFIX),
+                newMemberTxids = ordered.map { it.txidHex },
+                row = TxDisplayCacheEntry(
+                    rowId = groupId,
+                    title = mixingTitle,
+                    valueSatoshis = (existing?.valueSatoshis ?: 0L) + ordered.sumOf { it.netAmountDuffs },
+                    iconType = TxDisplayCacheEntry.ICON_COINJOIN,
+                    iconBgType = TxDisplayCacheEntry.BG_SENT,
+                    statusText = "",
+                    comment = existing?.comment ?: "",
+                    transactionAmount = (existing?.transactionAmount ?: 0) + ordered.size,
+                    time = maxOf(existing?.time ?: 0L, newestMs),
+                    hasErrors = false,
+                    service = null,
+                    exchangeRateFiatCode = existing?.exchangeRateFiatCode,
+                    exchangeRateFiatValue = existing?.exchangeRateFiatValue,
+                    contactUsername = null,
+                    contactDisplayName = null,
+                    contactAvatarUrl = null,
+                    contactUserId = null,
+                    filterFlags = TxDisplayCacheEntry.FLAG_COINJOIN
+                )
+            )
+        }
+}
+
 // ── Seam tx snapshot (post-cutover WalletDataProvider reads) ──────────
 
 /**
@@ -898,6 +1014,23 @@ interface CutoverUiSource {
      * Null when unavailable. Default null: sources without a TXO store.
      */
     suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = null
+
+    /**
+     * The subset of [txidHexes] (display-order txid hex) that CREATED at least
+     * one TXO on a CoinJoin account (`accounts.accountType == 1`, the FFI
+     * `AccountTypeTagFFI::CoinJoin` tag space — see
+     * [de.schildbach.wallet.service.platform.sdk.ACCOUNT_TYPE_TAG_COIN_JOIN]).
+     * Used by the historical-mixing display grouping to classify
+     * INTERNAL-direction records ([isHistoricalMixingRecord]) — deliberately
+     * txid-side only (funded TXOs), never spendingTxid, so a tx that merely
+     * SPENDS mixed funds is not classified as mixing (dashj
+     * `CoinJoinTransactionType.Send` parity). Default empty: sources without
+     * account-level data (test fixtures).
+     */
+    suspend fun coinJoinFundedTxids(
+        walletIdHex: String,
+        txidHexes: Collection<String>
+    ): Set<String> = emptySet()
 
     /** Live wallet-relevant transaction records, neutral shape. */
     fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>>
@@ -1004,6 +1137,48 @@ internal class DashSdkCutoverUiSource(
         }
         val balance = wallet.balance()
         return SdkBalanceSplitDuffs(confirmed = balance.confirmed, unconfirmed = balance.unconfirmed)
+    }
+
+    override suspend fun coinJoinFundedTxids(
+        walletIdHex: String,
+        txidHexes: Collection<String>
+    ): Set<String> {
+        if (txidHexes.isEmpty()) return emptySet()
+        val walletId = walletIdFromHex(walletIdHex) ?: return emptySet()
+        val wireTxids = txidHexes.mapNotNull { hexToBytesOrNull(it.lowercase())?.reversedArray() }
+        if (wireTxids.isEmpty()) return emptySet()
+        val db = database()
+        val out = HashSet<String>()
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            for (chunk in wireTxids.chunked(TXID_IN_CHUNK)) {
+                val placeholders = chunk.joinToString(",") { "?" }
+                val args = ArrayList<Any?>(1 + chunk.size)
+                args.add(walletId)
+                args.addAll(chunk)
+                db.openHelper.readableDatabase.query(
+                    androidx.sqlite.db.SimpleSQLiteQuery(
+                        // Same txos→core_addresses→accounts join discipline as
+                        // SdkAssetLockFundingPreflight (accountId can be NULL on
+                        // the TXO row itself, so route through the address).
+                        // accountType 1 = AccountTypeTagFFI::CoinJoin
+                        // (ACCOUNT_TYPE_TAG_COIN_JOIN). txid-side ONLY: a tx that
+                        // merely spends CoinJoin TXOs is not mixing.
+                        "SELECT DISTINCT t.txid FROM txos t " +
+                            "JOIN core_addresses ca ON ca.address = t.address " +
+                            "JOIN accounts a ON a.id = ca.accountId " +
+                            "WHERE t.walletId = ? " +
+                            "AND a.accountType = $ACCOUNT_TYPE_TAG_COIN_JOIN " +
+                            "AND t.txid IN ($placeholders)",
+                        args.toTypedArray()
+                    )
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        if (!cursor.isNull(0)) out += displayHexOf(cursor.getBlob(0))
+                    }
+                }
+            }
+        }
+        return out
     }
 
     override fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>> = flow {
@@ -2004,7 +2179,18 @@ class CutoverUiDataService internal constructor(
         data class EngineEvent(val event: L1TxEvent) : TxFeedAction()
     }
 
+    /**
+     * The bound SDK wallet id once [txPipeline] runs — read by the historical-
+     * mixing classification probe in [syncDisplayCache]
+     * ([CutoverUiSource.coinJoinFundedTxids] is wallet-scoped). Volatile only
+     * for memory visibility; both writer and reader live on [txPipeline]'s
+     * sequential collector.
+     */
+    @Volatile
+    private var activeWalletIdHex: String? = null
+
     private suspend fun txPipeline(walletIdHex: String) {
+        activeWalletIdHex = walletIdHex
         // Two feeds, one sequential collector (merge preserves per-feed
         // order and never runs two actions concurrently — that serial
         // execution is what makes the insert/notify dedup race-free):
@@ -2206,6 +2392,93 @@ class CutoverUiDataService internal constructor(
                             kindByTxid[record.txidHex] = AssetLockKind.UNSHIELD
                         }
                     else -> {}
+                }
+            }
+
+            // ── Historical CoinJoin mixing → per-day "Mixing" group rows ──
+            // Wallets that mixed before the CoinJoin feature was removed still
+            // hold those transactions, and a restored (post-cutover) dashj
+            // wallet never sees them — so without this every historical mixing
+            // round rendered as its own scattered "Internal" row. Collapse
+            // SDK-discovered mixing txs into the SAME per-day group rows the
+            // dashj pipeline builds ("coinjoin_<date>" / TYPE_COINJOIN), so
+            // both writers converge on one "Mixing Transactions" row per day.
+            // DISPLAY-ONLY — no mixing functionality is involved. Asset-lock-
+            // funding records are excluded (a shield funded from the CoinJoin
+            // account may return change to it); records already grouped by the
+            // dashj rebuild are excluded via [grouped].
+            val mixingCandidates = records.filter {
+                it.txidHex !in grouped && it.txidHex !in kindByTxid &&
+                    (it.direction == L1TxUiDirection.COINJOIN || it.direction == L1TxUiDirection.INTERNAL)
+            }
+            if (mixingCandidates.isNotEmpty()) {
+                val internalTxids = mixingCandidates
+                    .filter { it.direction == L1TxUiDirection.INTERNAL }
+                    .map { it.txidHex }
+                val coinJoinFunded = when {
+                    internalTxids.isEmpty() -> emptySet()
+                    else -> {
+                        val boundWalletId = activeWalletIdHex
+                        if (boundWalletId == null) {
+                            emptySet()
+                        } else {
+                            try {
+                                source.coinJoinFundedTxids(boundWalletId, internalTxids)
+                            } catch (t: Throwable) {
+                                if (t is CancellationException) throw t
+                                log.warn(
+                                    "CoinJoin-account classification probe failed; " +
+                                        "internal rows stay ungrouped this pass",
+                                    t
+                                )
+                                emptySet()
+                            }
+                        }
+                    }
+                }
+                val mixingRecords = mixingCandidates.filter { isHistoricalMixingRecord(it, coinJoinFunded) }
+                if (mixingRecords.isNotEmpty()) {
+                    val zone = java.time.ZoneId.systemDefault()
+                    val groupIds = mixingRecords.map { mixingGroupIdFor(it, zone, nowMs()) }.distinct()
+                    val existingGroupRows = txDisplayCacheDao.getEntriesByIds(groupIds).associateBy { it.rowId }
+                    val groupUpdates = planMixingGroupUpdates(
+                        mixingRecords,
+                        existingGroupRows,
+                        resolveString(R.string.coinjoin_mixing_transactions),
+                        zone,
+                        nowMs()
+                    )
+                    val groupEntries = mutableListOf<TxGroupCacheEntry>()
+                    for (update in groupUpdates) {
+                        // Continue sortOrder after any existing members (e.g. a
+                        // dashj-era group for the same day gaining SDK-only txs).
+                        val startOrder = txGroupCacheDao.getGroupEntries(update.groupId).size
+                        update.newMemberTxids.forEachIndexed { index, txid ->
+                            groupEntries += TxGroupCacheEntry(
+                                groupId = update.groupId,
+                                txId = txid,
+                                wrapperType = TxGroupCacheEntry.TYPE_COINJOIN,
+                                groupDate = update.groupDateIso,
+                                sortOrder = startOrder + index
+                            )
+                        }
+                    }
+                    // Membership first (later passes must see these txids as
+                    // grouped), then the display swap in ONE transaction: group
+                    // row in, scattered individual member rows out.
+                    txGroupCacheDao.insertAll(groupEntries)
+                    txDisplayCacheDao.upsertGroupRows(
+                        rows = groupUpdates.map { it.row },
+                        removeRowIds = groupUpdates.flatMap { it.newMemberTxids }
+                    )
+                    // For the rest of this pass mixing members behave like any
+                    // other grouped tx: the contact loop and the planner skip them.
+                    grouped += groupUpdates.flatMap { it.newMemberTxids }
+                    displayCacheRefreshBus.signalChanged()
+                    log.info(
+                        "historical mixing display grouping: {} tx(s) collapsed into {} per-day group row(s)",
+                        groupUpdates.sumOf { it.newMemberTxids.size }, groupUpdates.size
+                    )
                 }
             }
 

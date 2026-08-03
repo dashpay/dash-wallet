@@ -725,6 +725,14 @@ class CutoverUiDataServiceTest {
             return records.map { it }
         }
 
+        /** Txids that funded a CoinJoin-account TXO (historical-mixing classification probe). */
+        var coinJoinFunded: Set<String> = emptySet()
+
+        override suspend fun coinJoinFundedTxids(
+            walletIdHex: String,
+            txidHexes: Collection<String>
+        ): Set<String> = coinJoinFunded.intersect(txidHexes.toSet())
+
         override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> =
             records.map { SdkSeamTxSnapshot(it, emptyMap(), emptySet(), emptyMap()) }
     }
@@ -1310,5 +1318,203 @@ class CutoverUiDataServiceTest {
         live.emit(L1TxEvent.Detected(txid, 500_000L, null, contextCode = 0, directionCode = 0))
         runCurrent()
         assertEquals(resolve(R.string.transaction_row_status_received), store.getValue(txid).title)
+    }
+
+    // ── Historical mixing classification + per-day group planning ─────
+
+    @Test
+    fun mixing_coinJoinDirectionClassifiesWithoutAccountProbe() {
+        // The SDK's Rust classifier affirmatively tagged a mixing round —
+        // no CoinJoin-account membership lookup needed.
+        assertTrue(isHistoricalMixingRecord(record(net = 0, direction = 3), emptySet()))
+    }
+
+    @Test
+    fun mixing_internalClassifiesOnlyWhenCoinJoinAccountFunded() {
+        val internal = record(firstByte = 5, net = -300, direction = 2)
+        // A plain internal move stays an individual "Internal" row…
+        assertFalse(isHistoricalMixingRecord(internal, emptySet()))
+        // …but a denomination-creation/collateral tx (funded a CoinJoin-account
+        // TXO) belongs in the mixing group.
+        assertTrue(isHistoricalMixingRecord(internal, setOf(displayHex(5))))
+        // Ordinary sends/receives are never mixing, account-funded or not
+        // (a spend OF mixed funds keeps its own row — dashj `Send` parity).
+        assertFalse(isHistoricalMixingRecord(record(firstByte = 5, direction = 0), setOf(displayHex(5))))
+        assertFalse(isHistoricalMixingRecord(record(firstByte = 5, net = -300, direction = 1), setOf(displayHex(5))))
+    }
+
+    @Test
+    fun mixing_groupIdIsTheDashjWrapperConvention() {
+        val utc = java.time.ZoneId.of("UTC")
+        // Same id as CoinJoinMixingTxSet ("coinjoin_$groupDate", ISO date) so
+        // the SDK writer and a dashj rebuild converge on ONE row per day.
+        assertEquals("coinjoin_2025-07-20", mixingGroupIdFor(record(direction = 3), utc, now))
+        // A record with no timestamp falls back to nowMs (never epoch-0 grouping).
+        assertEquals(
+            "coinjoin_2025-07-20",
+            mixingGroupIdFor(record(direction = 3, firstSeenSec = 0), utc, now)
+        )
+    }
+
+    @Test
+    fun mixing_freshRecordsCollapsePerLocalDay() {
+        val utc = java.time.ZoneId.of("UTC")
+        val day1a = record(firstByte = 1, net = 0, direction = 3)
+        val day1b = record(firstByte = 2, net = -446, direction = 3, firstSeenSec = now / 1000 + 60)
+        val day2 = record(firstByte = 3, net = -300, direction = 3, firstSeenSec = now / 1000 + 86_400)
+        val updates = planMixingGroupUpdates(
+            listOf(day1b, day1a, day2), emptyMap(), "Mixing Transactions", utc, now
+        ).sortedBy { it.groupId }
+
+        assertEquals(2, updates.size)
+        val (d1, d2) = updates
+        assertEquals("coinjoin_2025-07-20", d1.groupId)
+        assertEquals("2025-07-20", d1.groupDateIso)
+        // Members oldest-first regardless of input order (group-cache sortOrder).
+        assertEquals(listOf(displayHex(1), displayHex(2)), d1.newMemberTxids)
+        // The dashj-era CoinJoinMixingTxSet rendering: Σ member nets, group icon
+        // on the sent background, the COINJOIN filter bucket (ALL tab only).
+        assertEquals(-446L, d1.row.valueSatoshis)
+        assertEquals(2, d1.row.transactionAmount)
+        assertEquals(TxDisplayCacheEntry.ICON_COINJOIN, d1.row.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, d1.row.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_COINJOIN, d1.row.filterFlags)
+        assertEquals("Mixing Transactions", d1.row.title)
+        assertEquals((now / 1000 + 60) * 1000, d1.row.time)
+        assertEquals("", d1.row.statusText)
+        assertFalse(d1.row.hasErrors)
+        assertNull(d1.row.service)
+        assertNull(d1.row.contactUserId)
+
+        assertEquals("coinjoin_2025-07-21", d2.groupId)
+        assertEquals(listOf(displayHex(3)), d2.newMemberTxids)
+        assertEquals(1, d2.row.transactionAmount)
+        assertEquals(-300L, d2.row.valueSatoshis)
+    }
+
+    @Test
+    fun mixing_incrementalMergeExtendsExistingGroupRow() {
+        // An engine-event pass carries a single record; the existing per-day row
+        // (from an earlier pass or a dashj-era rebuild) is EXTENDED, not rebuilt.
+        val utc = java.time.ZoneId.of("UTC")
+        val groupId = "coinjoin_2025-07-20"
+        val existing = TxDisplayCacheEntry(
+            rowId = groupId,
+            title = "Mixing Transactions",
+            valueSatoshis = -1_000L,
+            iconType = TxDisplayCacheEntry.ICON_COINJOIN,
+            iconBgType = TxDisplayCacheEntry.BG_SENT,
+            statusText = "",
+            comment = "my memo",
+            transactionAmount = 3,
+            time = now - 3_600_000,
+            hasErrors = false,
+            service = null,
+            exchangeRateFiatCode = "USD",
+            exchangeRateFiatValue = 42L,
+            contactUsername = null,
+            contactDisplayName = null,
+            contactAvatarUrl = null,
+            contactUserId = null,
+            filterFlags = TxDisplayCacheEntry.FLAG_COINJOIN
+        )
+        val late = record(firstByte = 9, net = -446, direction = 3)
+        val updates = planMixingGroupUpdates(
+            listOf(late), mapOf(groupId to existing), "Mixing Transactions", utc, now
+        )
+
+        val update = updates.single()
+        assertEquals(groupId, update.groupId)
+        assertEquals(listOf(displayHex(9)), update.newMemberTxids)
+        assertEquals(-1_446L, update.row.valueSatoshis)
+        assertEquals(4, update.row.transactionAmount)
+        assertEquals(now, update.row.time) // newest member wins
+        // The pre-existing row's memo and historical rate survive the merge.
+        assertEquals("my memo", update.row.comment)
+        assertEquals("USD", update.row.exchangeRateFiatCode)
+        assertEquals(42L, update.row.exchangeRateFiatValue)
+    }
+
+    @Test
+    fun postCutover_historicalMixingCollapsesIntoPerDayGroupRow() = runTest {
+        // Two SDK-classified mixing rounds + one CoinJoin-account-funded internal
+        // (denomination creation) on the same day, plus one plain internal move.
+        val mix1 = record(firstByte = 1, net = 0, context = 3, direction = 3)
+        val mix2 = record(firstByte = 2, net = -446, context = 3, direction = 3, firstSeenSec = now / 1000 + 60)
+        val denom = record(firstByte = 3, net = -300, context = 3, direction = 2, firstSeenSec = now / 1000 + 120)
+        val plainInternal = record(firstByte = 4, net = -200, context = 3, direction = 2)
+        val source = FakeSource(records = MutableStateFlow(listOf(mix1, mix2, denom, plainInternal)))
+            .apply { coinJoinFunded = setOf(displayHex(3)) }
+        val displayDao = mockk<TxDisplayCacheDao>(relaxed = true)
+        coEvery { displayDao.getEntriesByIds(any()) } returns emptyList()
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        coEvery { groupDao.getGroupEntries(any()) } returns emptyList<TxGroupCacheEntry>()
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+
+        // The three mixing txs collapsed into ONE per-day "Mixing" group row…
+        val groupRows = slot<List<TxDisplayCacheEntry>>()
+        val removedIds = slot<List<String>>()
+        coVerify { displayDao.upsertGroupRows(capture(groupRows), capture(removedIds)) }
+        val row = groupRows.captured.single()
+        assertTrue(row.rowId.startsWith(MIXING_GROUP_ROWID_PREFIX))
+        assertEquals(resolve(R.string.coinjoin_mixing_transactions), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_COINJOIN, row.iconType)
+        assertEquals(TxDisplayCacheEntry.FLAG_COINJOIN, row.filterFlags)
+        assertEquals(3, row.transactionAmount)
+        assertEquals(-746L, row.valueSatoshis)
+        // …their previously-scattered individual rows are removed…
+        assertEquals(setOf(displayHex(1), displayHex(2), displayHex(3)), removedIds.captured.toSet())
+        // …their membership is persisted for the group-cache readers
+        // (detail-on-tap, later-pass exclusion, dashj-side writers)…
+        val members = slot<List<TxGroupCacheEntry>>()
+        coVerify { groupDao.insertAll(capture(members)) }
+        assertEquals(3, members.captured.size)
+        assertTrue(
+            members.captured.all {
+                it.wrapperType == TxGroupCacheEntry.TYPE_COINJOIN && it.groupId == row.rowId
+            }
+        )
+        // …and the plain internal move keeps its own individual row.
+        val inserted = slot<List<TxDisplayCacheEntry>>()
+        coVerify { displayDao.insertAll(capture(inserted)) }
+        assertEquals(listOf(displayHex(4)), inserted.captured.map { it.rowId })
+    }
+
+    @Test
+    fun postCutover_alreadyGroupedMixingTxsAreNeverRegrouped() = runTest {
+        // A dashj-era rebuild (upgraded install) already grouped this tx: the
+        // SDK pass must not double-count it into the group row.
+        val mix = record(firstByte = 1, net = -446, context = 3, direction = 3)
+        val source = FakeSource(records = MutableStateFlow(listOf(mix)))
+        val displayDao = mockk<TxDisplayCacheDao>(relaxed = true)
+        coEvery { displayDao.getEntriesByIds(any()) } returns emptyList()
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns listOf(
+            TxGroupCacheEntry(
+                groupId = "coinjoin_2025-07-20",
+                txId = displayHex(1),
+                wrapperType = TxGroupCacheEntry.TYPE_COINJOIN,
+                groupDate = "2025-07-20",
+                sortOrder = 0
+            )
+        )
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+
+        coVerify(exactly = 0) { displayDao.upsertGroupRows(any(), any()) }
+        coVerify(exactly = 0) { displayDao.insertAll(any()) }
+        coVerify(exactly = 0) { groupDao.insertAll(any()) }
     }
 }

@@ -91,6 +91,23 @@ interface TxDisplayCacheDao {
     @Query("DELETE FROM tx_display_cache")
     suspend fun deleteAll()
 
+    /** Delete specific rows by rowId. */
+    @Query("DELETE FROM tx_display_cache WHERE rowId IN (:rowIds)")
+    suspend fun deleteByIds(rowIds: List<String>)
+
+    /**
+     * Atomically upsert group rows while removing the individual rows their member
+     * transactions previously rendered as — used when historical CoinJoin mixing
+     * transactions collapse into their per-day "Mixing" group row. One transaction so
+     * the pager never observes the intermediate state (both the group row AND the
+     * individual member rows, or neither).
+     */
+    @Transaction
+    suspend fun upsertGroupRows(rows: List<TxDisplayCacheEntry>, removeRowIds: List<String>) {
+        if (rows.isNotEmpty()) insertAll(rows)
+        if (removeRowIds.isNotEmpty()) deleteByIds(removeRowIds)
+    }
+
     /**
      * Atomically replace the entire cache: delete all existing rows and insert the new ones
      * in a single transaction.  This prevents Room's InvalidationTracker from firing between
