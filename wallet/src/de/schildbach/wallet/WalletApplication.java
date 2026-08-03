@@ -764,7 +764,8 @@ public class WalletApplication extends MultiDexApplication
         //
         // The UPGRADE variant: identical commit, but it also arms the one-time
         // sync explainer when this launch is the one that actually flips the
-        // state (see CutoverCoordinator.commitForUpgradedWalletAsync).
+        // state AND the previous version was pre-11.10 (see
+        // CutoverCoordinator.commitForUpgradedWalletAsync).
         //
         // NOTE this seam is NOT upgrade-only. It runs on every launch that
         // loads the wallet from the protobuf (WalletApplication:936) AND at the
@@ -774,7 +775,14 @@ public class WalletApplication extends MultiDexApplication
         // create/restore DOES reach here; the coordinator suppresses the
         // explainer for it via the freshWalletSetupThisLaunch latch that
         // setWallet's commit sets synchronously.
-        cutoverCoordinator.commitForUpgradedWalletAsync();
+        //
+        // config.lastVersionCode is the versionCode recorded by the PREVIOUS
+        // launch (0 on a never-run install). It is a final field captured when
+        // Configuration was constructed, so it still holds the pre-upgrade
+        // value here even though finalizeInitialization already persisted this
+        // launch's code via config.updateLastVersionCode() — and it is stable
+        // no matter which of the two afterLoadWallet() call paths runs first.
+        cutoverCoordinator.commitForUpgradedWalletAsync(config.lastVersionCode);
     }
 
     private void deleteBlockchainFiles() {
