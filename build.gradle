@@ -74,9 +74,41 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "$kotlin_version" apply false
 }
 
+// Credentials for the GitHub Packages Maven registry that hosts the pre-release
+// Dash Platform Kotlin SDK (see the repository declaration below). GitHub Packages
+// requires authentication for reads as well as writes.
+//   CI     : GITHUB_ACTOR / GITHUB_TOKEN environment variables.
+//   Local  : optional gpr.user / gpr.token in ~/.gradle/gradle.properties.
+// Never commit a token; both sources are read at configuration time only.
+def githubPackagesUser = System.getenv('GITHUB_ACTOR') ?: findProperty('gpr.user')
+def githubPackagesToken = System.getenv('GITHUB_TOKEN') ?: findProperty('gpr.token')
+
 allprojects {
     repositories {
         mavenLocal()
+        // org.dashj:dash-sdk-android pre-release snapshots are published to GitHub
+        // Packages on dashpay/platform; they are deliberately not on Maven Central
+        // until the SDK cutover ships. mavenLocal() above is declared first, so a
+        // locally published SDK build still wins for local development, and this
+        // repository is only consulted when the coordinate is not already in ~/.m2.
+        // The content filter keeps every other dependency off this registry —
+        // GitHub Packages answers unknown coordinates with 401/403, which would
+        // otherwise turn unrelated lookups into hard resolution failures.
+        // Declared only when credentials exist so a credential-less checkout keeps
+        // building against ~/.m2.
+        if (githubPackagesUser && githubPackagesToken) {
+            maven {
+                name 'GitHubPackagesDashPlatform'
+                url 'https://maven.pkg.github.com/dashpay/platform'
+                credentials {
+                    username = githubPackagesUser
+                    password = githubPackagesToken
+                }
+                content {
+                    includeModule('org.dashj', 'dash-sdk-android')
+                }
+            }
+        }
         google()
         mavenCentral()
         maven { url 'https://jitpack.io' }
