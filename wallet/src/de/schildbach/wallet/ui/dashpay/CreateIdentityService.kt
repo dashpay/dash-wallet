@@ -25,8 +25,10 @@ import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.ShieldedInviteOverageTopUp
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.work.ShieldedInviteOverageWorker
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_TEXT
@@ -201,6 +203,7 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var sdkShieldedUsernameCreation: SdkShieldedUsernameCreation
     @Inject lateinit var transparentUsernameCreation: SdkTransparentUsernameCreation
     @Inject lateinit var sdkL1InviteCreation: SdkL1InviteCreation
+    @Inject lateinit var shieldedInviteOverageTopUp: ShieldedInviteOverageTopUp
     @Inject lateinit var dashPayConfig: DashPayConfig
     private lateinit var securityGuard: SecurityGuard
 
@@ -774,6 +777,19 @@ class CreateIdentityService : LifecycleService() {
                 // SDK keystore, not the dashj identity keychain).
                 sdkClaimedInviteIdentityId = result.value
                 log.info("shielded invite claimed — identity {} is on chain", result.value)
+                // OVERAGE → identity: when the claim recorded a pending
+                // overage (a legacy 0.3 note exited at 0.25; the 0.05 change
+                // landed in the claimer's own pool), start the background
+                // completion now. Non-blocking: the username registration
+                // proceeds regardless, and the worker retries on its own
+                // (MainActivity re-enqueues at launch while a record exists).
+                try {
+                    if (shieldedInviteOverageTopUp.hasPending()) {
+                        ShieldedInviteOverageWorker.enqueue(walletApplication)
+                    }
+                } catch (e: Exception) {
+                    log.warn("failed to enqueue the invite overage top-up; the launch re-enqueue will catch it", e)
+                }
             }
             // The terminal already-claimed outcome is recognised from the TYPED
             // SDK error (ShieldedInviteAlreadyClaimed, native code 37) as well

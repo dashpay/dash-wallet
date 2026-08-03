@@ -44,6 +44,8 @@ import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.ShieldedInviteOverageTopUp
+import de.schildbach.wallet.service.platform.work.ShieldedInviteOverageWorker
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.InviteHandler
@@ -128,6 +130,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     lateinit var config: Configuration
     @Inject
     lateinit var transparentUsernameCreation: SdkTransparentUsernameCreation
+    @Inject
+    lateinit var shieldedInviteOverageTopUp: ShieldedInviteOverageTopUp
     private lateinit var binding: ActivityMainBinding
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
@@ -183,6 +187,22 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             // Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false)
             upgradeWalletCoinJoin(false)
+        }
+
+        // A shielded invite claim whose note exceeded the exit denomination
+        // persists a pending OVERAGE record (the remainder must end up on the
+        // claimed identity). The worker is normally enqueued right after the
+        // claim, but if the app died in between, this launch check is what
+        // resumes it — WorkManager KEEP makes the re-enqueue idempotent.
+        lifecycleScope.launch {
+            try {
+                if (shieldedInviteOverageTopUp.hasPending()) {
+                    log.info("pending invite overage top-up found at launch — enqueueing its worker")
+                    ShieldedInviteOverageWorker.enqueue(application)
+                }
+            } catch (e: Exception) {
+                log.warn("pending invite-overage check failed at launch", e)
+            }
         }
 
         viewModel.currencyChangeDetected.observe(

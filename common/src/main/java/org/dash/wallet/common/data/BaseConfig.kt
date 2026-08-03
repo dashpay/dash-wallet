@@ -133,6 +133,13 @@ abstract class BaseConfig(
         }
     }
 
+    /** Remove [key] entirely, so a later [get] returns null (not a stale value). */
+    open suspend fun <T> remove(key: Preferences.Key<T>) {
+        context.dataStore.edit { preferences ->
+            preferences.remove(key)
+        }
+    }
+
     fun observeSecureData(key: Preferences.Key<String>): Flow<String?> {
         return data.secureMap { preferences -> preferences[key].orEmpty() }
     }

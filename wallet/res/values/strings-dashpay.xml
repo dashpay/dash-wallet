@@ -598,12 +598,13 @@
          here was wrong — it told people who HAD paid the contested fee that
          they could not use it. The wording must stay non-committal.
          Kept to two short sentences: the four-line version was unreadable on
-         the claim screen. The dropped "everything the invitation was funded
-         with goes to your new account" sentence was also no longer true — a
-         pre-v13 0.3 DASH invitation exits at the 0.25 denomination and its
-         0.05 remainder returns to the claimer's own shielded change, not to
-         the new account (see SHIELDED_IDENTITY_DENOMINATIONS_CREDITS). -->
-    <string name="request_username_invitation_unknown_tier_message">This invitation may not cover a contested username. You can still request one — if it doesn\'t, the invitation stays unused.</string>
+         the claim screen. The second sentence's "goes to your new account"
+         is true again as of the overage top-up (ShieldedInviteOverageTopUp):
+         a pre-v13 0.3 DASH invitation exits at the 0.25 denomination and the
+         0.05 remainder is moved onto the identity by the follow-up top-up,
+         so the whole funded value ends up on the account (minus network
+         fees, as with any transaction). -->
+    <string name="request_username_invitation_unknown_tier_message">This invitation may not cover a contested username — you can still request one, and if it doesn\'t, the invitation stays unused. Whatever it was funded with goes to your new account.</string>
     <string name="username_types_title">What are contested and non-contested usernames?</string>
     <string name="username_types_message">There are two types of usernames: contested and non-contested.\n\nNon-contested usernames have at least one number (2-9) or are longer than 20 characters and will be automatically approved.\n\nIf you want to create a contested username which is shorter and without numbers, you need to register with DashPay without an invitation, pay the required fee and wait for approval upon completion of the voting period.</string>
     <string name="accept_invitation_hide">Hide</string>

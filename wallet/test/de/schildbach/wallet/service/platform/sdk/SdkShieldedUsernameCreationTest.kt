@@ -157,11 +157,20 @@ class SdkShieldedUsernameCreationTest {
         }
     }
 
+    /** Captures the invite-overage records the claim path persists. */
+    private class OverageRecorder {
+        val records = mutableListOf<Pair<String, Long>>()
+        suspend fun invoke(identityIdBase58: String, overageCredits: Long) {
+            records.add(identityIdBase58 to overageCredits)
+        }
+    }
+
     private fun service(
         source: ShieldedUsernameSource = happySource(),
         flag: Boolean? = true,
         balance: ShieldedBalanceService = balanceService(),
         handoff: HandoffRecorder = HandoffRecorder(),
+        overages: OverageRecorder = OverageRecorder(),
         scope: TestScope? = null
     ) = SdkShieldedUsernameCreation(
         source = source,
@@ -172,6 +181,7 @@ class SdkShieldedUsernameCreationTest {
         feeCredits = { contested -> if (contested) contestedFeeCredits else feeCredits },
         displayHrp = { "tdash" },
         handOffToLegacy = handoff::invoke,
+        recordInviteOverage = overages::invoke,
         executorScope = scope
     )
 
@@ -880,6 +890,63 @@ class SdkShieldedUsernameCreationTest {
                 any(), any(), any(), any(), any(), legacyContestedNoteCredits, any(), any()
             )
         }
+    }
+
+    // ── Invite-claim overage recording (all remaining value → identity) ──
+
+    @Test
+    fun claim_legacy0Point3Note_recordsThe0Point05Overage_beforeReturning() = runTest {
+        val source = claimSource()
+        val overages = OverageRecorder()
+
+        val result = service(source = source, overages = overages)
+            .createIdentityFromInvitation(
+                oneTimeKeyHex, fundingHeight, "alice2", fundingCredits = legacyContestedNoteCredits
+            )
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        // 0.3 note − 0.25 exit denomination = 0.05 pending for the identity.
+        assertEquals(
+            listOf(identityIdBase58 to 5_000_000_000L),
+            overages.records
+        )
+    }
+
+    @Test
+    fun claim_exactDenominationInvite_recordsNoOverage() = runTest {
+        val source = claimSource()
+        val overages = OverageRecorder()
+
+        val result = service(source = source, overages = overages)
+            .createIdentityFromInvitation(
+                oneTimeKeyHex, fundingHeight, "alice2", fundingCredits = contestedDenominationCredits
+            )
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertTrue(overages.records.isEmpty())
+    }
+
+    @Test
+    fun claim_descendedLadder_recordsNoOverage() = runTest {
+        val source = claimSource()
+        val overages = OverageRecorder()
+        // amt lies high (0.3): the 0.25 attempt is refused because the real
+        // note is smaller, and the ladder descends. The claimed difference is
+        // fiction — nothing may be recorded.
+        coEvery {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                contestedDenominationCredits, any(), any()
+            )
+        } throws noteBelowDenominationError()
+
+        val result = service(source = source, overages = overages)
+            .createIdentityFromInvitation(
+                oneTimeKeyHex, fundingHeight, "alice2", fundingCredits = legacyContestedNoteCredits
+            )
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertTrue(overages.records.isEmpty())
     }
 
     @Test

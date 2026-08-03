@@ -135,6 +135,30 @@ open class DashPayConfig @Inject constructor(
         val INVITATION_FROM_ONBOARDING = booleanPreferencesKey("invitation_link_from_onboarding")
 
         /**
+         * Pending invite-claim OVERAGE record (see
+         * [de.schildbach.wallet.service.platform.sdk.ShieldedInviteOverageTopUp]):
+         * a claimed shielded invite whose note value exceeded the clamped exit
+         * denomination (legacy 0.3 note → 0.25 claim) left the remainder in
+         * the claimer's own pool as the claim's change note; per the product
+         * decision it must end up as credits on the NEW identity. The record
+         * survives process death (INVITATION_LINK precedent) so the follow-up
+         * top-up resumes at next launch.
+         * - IDENTITY_ID: the claimed identity (base58); presence = pending.
+         * - CREDITS: the gross overage, in Platform credits.
+         * - NET_CREDITS: set once the unshield step SUCCEEDED (gross − the
+         *   Rust-computed unshield fee) — its presence advances the resume
+         *   point past the unshield.
+         * - TOPUP_STARTED: set immediately BEFORE the top-up broadcast
+         *   attempt, so a rerun that finds no address balance can tell "the
+         *   top-up consumed it" (done) from "the unshield hasn't surfaced
+         *   yet" (retry).
+         */
+        val INVITE_OVERAGE_IDENTITY_ID = stringPreferencesKey("invite_overage_identity_id")
+        val INVITE_OVERAGE_CREDITS = longPreferencesKey("invite_overage_credits")
+        val INVITE_OVERAGE_NET_CREDITS = longPreferencesKey("invite_overage_net_credits")
+        val INVITE_OVERAGE_TOPUP_STARTED = booleanPreferencesKey("invite_overage_topup_started")
+
+        /**
          * Whether the "Transfers take different times" sheet (Figma
          * 1740:16412) has been shown on the shielded internal-transfer
          * screen. It auto-opens once on the user's first visit and is set

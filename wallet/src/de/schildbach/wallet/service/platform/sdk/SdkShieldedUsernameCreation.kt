@@ -187,6 +187,40 @@ internal fun inviteClaimDenominationLadder(
 }
 
 /**
+ * The invite-claim OVERAGE, in Platform credits — the part of a claimed note's
+ * value that could NOT be exited into the new identity because the exit
+ * denomination is clamped to the allowed set — or null when there is none (or
+ * none can be safely determined).
+ *
+ * A legacy 0.3 contested note exits at 0.25; the 0.05 remainder re-enters the
+ * pool as a change note to the CLAIMER's own Orchard address. Per the product
+ * decision ("all remaining value after username creation ends up on the
+ * identity") that remainder is then moved onto the new identity by
+ * [ShieldedInviteOverageTopUp] — this function is what tells the claim path
+ * how much that is.
+ *
+ * Non-null ONLY when the overage is provable from the claim itself:
+ * - [fundingCredits] (the link's `amt`) is a real invite note value
+ *   ([SHIELDED_INVITE_NOTE_VALUES_CREDITS]) — junk/absent values prove
+ *   nothing; and
+ * - [spentDenominationCredits] is exactly the ladder's FIRST rung for that
+ *   note value ([largestExitDenominationAtOrBelow]) — a claim that DESCENDED
+ *   proves the `amt` lied high (the note was smaller than claimed), so the
+ *   difference is fiction and topping it up would chase value that does not
+ *   exist; and
+ * - the difference is positive (an exact-denomination invite has no overage).
+ */
+internal fun inviteClaimOverageCredits(
+    fundingCredits: Long?,
+    spentDenominationCredits: Long,
+    allowed: List<Long> = SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList()
+): Long? {
+    val believed = fundingCredits?.takeIf { it in SHIELDED_INVITE_NOTE_VALUES_CREDITS } ?: return null
+    if (largestExitDenominationAtOrBelow(believed, allowed) != spentDenominationCredits) return null
+    return (believed - spentDenominationCredits).takeIf { it > 0 }
+}
+
+/**
  * The allowed exit-denomination set the SDK itself quoted in a refusal, parsed
  * out of [message], or null when the message is not that refusal. The Rust
  * refusal (rs-platform-wallet `shielded/note_selection.rs`, and the identical
@@ -657,6 +691,17 @@ class SdkShieldedUsernameCreation internal constructor(
         secondaryUsername: String?,
         restoring: Boolean
     ) -> Unit = { _, _, _, _ -> },
+    /**
+     * Persist a pending invite-claim OVERAGE record (see
+     * [inviteClaimOverageCredits] / [ShieldedInviteOverageTopUp]) — called
+     * BEFORE the claim result is returned, so an app death right after the
+     * claim still finds the record at next launch and completes the top-up.
+     * Best-effort: a persist failure is logged and never affects the claim
+     * result (the identity is on chain either way). No-op default keeps the
+     * host-JVM tests inert.
+     */
+    private val recordInviteOverage: suspend (identityIdBase58: String, overageCredits: Long) -> Unit =
+        { _, _ -> },
     /** Scope for [submit]; null (tests' default path) makes submit inert. */
     private val executorScope: CoroutineScope? = null
 ) {
@@ -691,6 +736,9 @@ class SdkShieldedUsernameCreation internal constructor(
                 blockchainIdentityConfig.set(BlockchainIdentityConfig.USERNAME_SECONDARY, it)
             }
             blockchainIdentityConfig.set(BlockchainIdentityConfig.RESTORING, restoring)
+        },
+        recordInviteOverage = { identityIdBase58, overageCredits ->
+            ShieldedInviteOverageTopUp.persistPendingRecord(dashPayConfig, identityIdBase58, overageCredits)
         },
         executorScope = applicationScope
     )
@@ -1271,6 +1319,25 @@ class SdkShieldedUsernameCreation internal constructor(
             creditsToDash(spentDenominationCredits).toPlainString(),
             contested
         )
+        // OVERAGE → the identity (product decision): when the claimed note's
+        // value provably exceeds the exit denomination (legacy 0.3 note →
+        // 0.25 claim), the remainder landed in the claimer's own pool as the
+        // claim's change note — persist a pending record BEFORE returning so
+        // the follow-up top-up (ShieldedInviteOverageTopUp) survives an app
+        // death here. Best-effort: the claim outcome is already final.
+        inviteClaimOverageCredits(fundingCredits, spentDenominationCredits)?.let { overage ->
+            try {
+                recordInviteOverage(identityIdBase58, overage)
+                log.info(
+                    "invite overage of {} DASH recorded for identity {}… — a follow-up top-up moves it onto the identity",
+                    creditsToDash(overage).toPlainString(),
+                    identityIdBase58.take(8)
+                )
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.error("failed to persist the invite overage record — the {} DASH overage stays in the claimer's shielded balance", creditsToDash(overage).toPlainString(), t)
+            }
+        }
         return SdkWriteResult.Broadcast(identityIdBase58)
     }
 
