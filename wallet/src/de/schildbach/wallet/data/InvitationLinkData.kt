@@ -80,6 +80,31 @@ data class InvitationLinkData(
          */
         private const val PARAM_ONE_TIME_KEY = "osk"
         private const val PARAM_FUNDING_HEIGHT = "bh"
+
+        /**
+         * The shielded invitation's funding NOTE VALUE in Platform credits
+         * (`amt`) — the fixed Type-20 exit denomination the inviter actually
+         * funded (0.1 DASH = 10_000_000_000 credits non-contested, 0.3 DASH =
+         * 30_000_000_000 contested).
+         *
+         * This exists because the claim side has NO other way to learn the
+         * invite's tier. An L1 invite carries its asset-lock txid, so the
+         * claimer can read the funded amount off chain; a shielded invite
+         * carries only a one-time Orchard spending key, and the SDK's claim
+         * FFI (`shieldedIdentityCreateFromOneTimeKey`) takes the denomination
+         * as an INPUT — it never reports the note's value. Without this
+         * parameter the claim screen cannot tell a 0.3 (contested) invite from
+         * a 0.1 (non-contested) one and wrongly tells every claimer they may
+         * only pick a non-contested username.
+         *
+         * ADVISORY and OPTIONAL: links minted before this parameter existed
+         * omit it, and a claimer that cannot read a tier must not assert one
+         * (see `InviteUsernameTier.UNKNOWN`). It is a hint for the claimer's
+         * own UI only — nothing trusts it with funds, because the note itself
+         * is what the claim spends and the FFI fails closed if the requested
+         * denomination is not actually there.
+         */
+        private const val PARAM_FUNDING_CREDITS = "amt"
         private val VALIDATION_EXPIRED = TimeUnit.MINUTES.toMillis(1)
 
         fun create(username: String, displayName: String, avatarUrl: String, cftx: AssetLockTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
@@ -107,19 +132,27 @@ data class InvitationLinkData(
          * ([PARAM_CFTX] / [PARAM_PRIVATE_KEY] / [PARAM_IS_LOCK]) entirely.
          * There is no pre-created identity — the receiver creates theirs on
          * claim from the note funded to [oneTimeKeyHex].
+         *
+         * [fundingCredits] is the note's value in Platform credits — the tier
+         * hint the claim screen needs (see [PARAM_FUNDING_CREDITS]). Omitted
+         * from the link when null or non-positive.
          */
         fun createShielded(
             username: String,
             displayName: String,
             avatarUrl: String,
             oneTimeKeyHex: String,
-            fundingHeight: Int
+            fundingHeight: Int,
+            fundingCredits: Long? = null
         ): InvitationLinkData {
             val linkBuilder = URI_PREFIX.toUri().buildUpon()
                 .appendQueryParameter(PARAM_USER, username)
                 .appendQueryParameter(PARAM_ONE_TIME_KEY, oneTimeKeyHex)
                 .appendQueryParameter(PARAM_FUNDING_HEIGHT, fundingHeight.toString())
 
+            if (fundingCredits != null && fundingCredits > 0) {
+                linkBuilder.appendQueryParameter(PARAM_FUNDING_CREDITS, fundingCredits.toString())
+            }
             if (displayName.isNotEmpty()) {
                 linkBuilder.appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
             }
@@ -230,6 +263,19 @@ data class InvitationLinkData(
     @IgnoredOnParcel
     val fundingHeight: Int? by lazy {
         link.getQueryParameter(PARAM_FUNDING_HEIGHT)?.toIntOrNull()
+    }
+
+    /**
+     * The shielded funding note's value in Platform credits (L2 only), or
+     * null when the link does not carry it — either because it is an L1
+     * invite or because it was minted before [PARAM_FUNDING_CREDITS] existed.
+     * Null means "tier unknown", NOT "non-contested": callers must not
+     * assert a tier they cannot read (see [PARAM_FUNDING_CREDITS]).
+     * Non-positive/unparseable values are treated as absent.
+     */
+    @IgnoredOnParcel
+    val shieldedFundingCredits: Long? by lazy {
+        link.getQueryParameter(PARAM_FUNDING_CREDITS)?.toLongOrNull()?.takeIf { it > 0 }
     }
 
     @Deprecated("use link")

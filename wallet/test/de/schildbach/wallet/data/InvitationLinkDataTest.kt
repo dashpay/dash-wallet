@@ -46,6 +46,9 @@ class InvitationLinkDataTest {
         const val ONE_TIME_KEY_HEX = "0011223344556677889900aabbccddeeff00112233445566778899aabbccddee"
         const val FUNDING_HEIGHT = 123456
 
+        /** 0.3 DASH in Platform credits — the CONTESTED exit denomination. */
+        const val CONTESTED_CREDITS = 30_000_000_000L
+
         /** A representative L1 asset-lock invite link, built by hand (no dashj). */
         fun l1Link() = (
             "dashpay://invite" +
@@ -103,6 +106,61 @@ class InvitationLinkDataTest {
     fun `shielded link without a one-time key is invalid`() {
         val link = "dashpay://invite?du=bob&bh=10".toUri()
         assertFalse(InvitationLinkData.isValid(link))
+    }
+
+    // ── Funding amount (the invite's TIER hint) ───────────────────────
+    //
+    // A shielded invite has no on-chain asset lock to read its amount off,
+    // so the link is the only channel for it. Without it the claim screen
+    // reported EVERY shielded invite as non-contested — including ones whose
+    // creator had paid the 0.3 DASH contested fee.
+
+    @Test
+    fun `shielded create round-trips the funding note value in credits`() {
+        val data = InvitationLinkData.createShielded(
+            username = "bob",
+            displayName = "",
+            avatarUrl = "",
+            oneTimeKeyHex = ONE_TIME_KEY_HEX,
+            fundingHeight = FUNDING_HEIGHT,
+            fundingCredits = CONTESTED_CREDITS
+        )
+        assertTrue(InvitationLinkData.isValid(data.link))
+        assertEquals(CONTESTED_CREDITS, data.shieldedFundingCredits)
+    }
+
+    @Test
+    fun `a shielded link minted without the amount reads as unknown, not zero`() {
+        val data = InvitationLinkData(
+            "dashpay://invite?du=bob&osk=$ONE_TIME_KEY_HEX&bh=0".toUri()
+        )
+        assertTrue(data.isShielded)
+        // Null — "we cannot tell" — never a number the UI could compare
+        // against the contested fee and silently conclude "non-contested".
+        assertNull(data.shieldedFundingCredits)
+    }
+
+    @Test
+    fun `a null or non-positive funding amount is left out of the link`() {
+        val omitted = InvitationLinkData.createShielded(
+            "bob", "", "", ONE_TIME_KEY_HEX, FUNDING_HEIGHT, fundingCredits = null
+        )
+        assertFalse(omitted.link.queryParameterNames.contains("amt"))
+        assertNull(omitted.shieldedFundingCredits)
+
+        val zero = InvitationLinkData.createShielded(
+            "bob", "", "", ONE_TIME_KEY_HEX, FUNDING_HEIGHT, fundingCredits = 0L
+        )
+        assertFalse(zero.link.queryParameterNames.contains("amt"))
+        assertNull(zero.shieldedFundingCredits)
+    }
+
+    @Test
+    fun `a garbage funding amount reads as unknown rather than throwing`() {
+        val data = InvitationLinkData(
+            "dashpay://invite?du=bob&osk=$ONE_TIME_KEY_HEX&amt=not-a-number".toUri()
+        )
+        assertNull(data.shieldedFundingCredits)
     }
 
     // ── L1 variant unchanged ──────────────────────────────────────────

@@ -310,7 +310,14 @@ class SdkShieldedInviteCreation internal constructor(
             displayName = displayName,
             avatarUrl = avatarUrl,
             oneTimeKeyHex = bytes32ToHex(key.spendingKey),
-            fundingHeight = fundingHeight ?: 0
+            fundingHeight = fundingHeight ?: 0,
+            // The note's value — the ONLY way the claimer can learn which
+            // tier this invite paid for. A shielded invite has no on-chain
+            // asset lock to read the amount off, and the claim FFI takes the
+            // denomination as an input rather than reporting the note's, so
+            // without this the claim screen cannot tell a 0.3 contested
+            // invite from a 0.1 non-contested one.
+            fundingCredits = denominationCredits
         )
 
         // Wrap the raw deep link in an AppsFlyer OneLink so the shared/copied

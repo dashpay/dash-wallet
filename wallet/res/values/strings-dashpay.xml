@@ -499,6 +499,12 @@
          denomination actually leaving that balance). -->
     <string name="username_cost_from_shielded_balance">from shielded balance</string>
     <string name="request_username_requirements_message_invite_noncontested">The username must meet one of these criteria</string>
+    <!-- The same rows, headed non-committally, for an invitation whose tier
+         the app cannot read. "MUST meet one of these criteria" would be the
+         same false assertion as the notice above them: the criteria are what
+         a NON-contested invitation requires, and this invitation may well be
+         a contested one. -->
+    <string name="request_username_requirements_message_invite_unknown_tier">For a non-contested username, it must meet one of these criteria</string>
     <string name="request_username_requirements_message">The username must meet these criteria</string>
     <string name="request_username_length_requirement">Between 3 and 23 characters</string>
     <string name="request_username_length_requirement_noncontested">Between 20 and 23 characters</string>
@@ -583,6 +589,15 @@
     <string name="invitation_fee_confirm_and_pay_button">Confirm and pay</string>
     <string name="error_sending_invite_transaction">Error sending invite transaction</string>
     <string name="request_username_invitation_only_noncontested_message">You can only create a non-contested username using this invitation</string>
+    <!-- Shown in place of the definite "only non-contested" notice when the
+         invitation's funding amount cannot be read, so the app genuinely does
+         not know which tier it paid for. This is the case for shielded
+         invitations created before the link carried its note value: the note
+         has no on-chain asset lock to read and the SDK cannot value a
+         one-time key's note before spending it. Asserting "non-contested"
+         here was wrong — it told people who HAD paid the contested fee that
+         they could not use it. The wording must stay non-committal. -->
+    <string name="request_username_invitation_unknown_tier_message">This invitation may only support a non-contested username. If it was created for a contested username you can still request one — if it was not, the request will not go through and the invitation stays unused.</string>
     <string name="username_types_title">What are contested and non-contested usernames?</string>
     <string name="username_types_message">There are two types of usernames: contested and non-contested.\n\nNon-contested usernames have at least one number (2-9) or are longer than 20 characters and will be automatically approved.\n\nIf you want to create a contested username which is shorter and without numbers, you need to register with DashPay without an invitation, pay the required fee and wait for approval upon completion of the voting period.</string>
     <string name="accept_invitation_hide">Hide</string>

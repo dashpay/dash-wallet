@@ -178,6 +178,12 @@ class SdkShieldedInviteCreationTest {
 
         // The 0.1 note is funded to the generated one-time address.
         coVerify { source.fundNoteToRaw43(walletIdHex, orchardAddress, denominationCredits) }
+        // …and the link states what was funded, so the CLAIMER can tell which
+        // tier this invite paid for. A shielded note has no on-chain asset
+        // lock to read the amount off and the claim FFI never reports a note's
+        // value, so the link is the only channel for it — without it the claim
+        // screen falls back to "non-contested only" for every invite.
+        assertEquals(denominationCredits, link.shieldedFundingCredits)
         // A shielded tracking row is persisted (keyed with the shielded prefix).
         assertTrue(
             inserted.captured.fundingAddress
@@ -235,6 +241,14 @@ class SdkShieldedInviteCreationTest {
                 .createShieldedInvite("alice", "Alice", "", contested = true)
             assertTrue(result is SdkWriteResult.Broadcast)
             coVerify { source.fundNoteToRaw43(walletIdHex, orchardAddress, contestedDenominationCredits) }
+            // The two tiers must differ in the LINK as well as in the spend.
+            // Funding 0.3 while emitting a link indistinguishable from a 0.1
+            // invite is what made the claimer's screen insist the contested
+            // fee bought nothing.
+            assertEquals(
+                contestedDenominationCredits,
+                (result as SdkWriteResult.Broadcast).value.linkData.shieldedFundingCredits
+            )
         } finally {
             balanceFlow.value = creditsToDash(denominationCredits)
         }

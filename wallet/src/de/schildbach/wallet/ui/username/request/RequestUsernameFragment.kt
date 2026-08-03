@@ -417,8 +417,14 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         }
 
         requestUserNameViewModel.inviteBalance.observe(viewLifecycleOwner) {
-            val isInviteForContestedNames = requestUserNameViewModel.isInviteForContestedNames()
-            val isInviteContested = requestUserNameViewModel.isUsingInvite() && requestUserNameViewModel.isInviteForContestedNames()
+            // ONE tier value drives the notice, the requirement rows and (via
+            // computeBalanceGate) the submit button, so the screen can no longer
+            // contradict itself the way it did on the S22: a notice reading
+            // "only a non-contested username" above a contested name with the
+            // Request Username button enabled.
+            val inviteTier = requestUserNameViewModel.inviteTier()
+            val isInviteForContestedNames = inviteTier == InviteUsernameTier.CONTESTED
+            val isInviteContested = requestUserNameViewModel.isUsingInvite() && isInviteForContestedNames
             binding.charLengthRequirement.text = getString(
                 if (isInviteContested) {
                     R.string.request_username_length_requirement
@@ -439,12 +445,37 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             )
             binding.inviteOnlyNoncontested.isVisible = requestUserNameViewModel.isUsingInvite() &&
                     !isInviteForContestedNames
+            // Only claim "non-contested only" when the invite's funding is
+            // actually readable and says so. When it is not (a shielded invite
+            // whose link carries no note value) the copy must not assert a
+            // restriction the app cannot verify.
+            binding.inviteOnlyNoncontestedMessage.setText(
+                if (inviteTier == InviteUsernameTier.UNKNOWN) {
+                    R.string.request_username_invitation_unknown_tier_message
+                } else {
+                    R.string.request_username_invitation_only_noncontested_message
+                }
+            )
             // "The username must meet one of these criteria" — shown to
             // EVERYONE who sees the non-contested qualifier rows (not just
             // invites): without it the meet-one-of semantics are invisible
             // and the rows read as two hard requirements (Brian).
             binding.usernameRequirements.isVisible =
                 !isInviteContested && usernameType != UsernameType.Secondary
+            // …but "MUST meet" is only true when we know the invitation is
+            // non-contested. On an unreadable invite the rows describe what a
+            // non-contested invitation would need, nothing more — otherwise
+            // they contradict the notice directly above them, which tells the
+            // user a contested name may still be requested.
+            binding.usernameRequirements.setText(
+                if (requestUserNameViewModel.isUsingInvite() &&
+                    inviteTier == InviteUsernameTier.UNKNOWN
+                ) {
+                    R.string.request_username_requirements_message_invite_unknown_tier
+                } else {
+                    R.string.request_username_requirements_message_invite_noncontested
+                }
+            )
         }
 
         dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {

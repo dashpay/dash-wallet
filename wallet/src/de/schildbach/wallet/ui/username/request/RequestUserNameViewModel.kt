@@ -35,6 +35,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.platform.PlatformHealth
 import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.service.platform.sdk.ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
@@ -42,6 +43,7 @@ import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
+import de.schildbach.wallet.service.platform.sdk.creditsToDash
 import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
@@ -59,10 +61,15 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -176,6 +183,81 @@ data class RequestUserNameUIState(
      */
     val fundingNoteAnchored: Boolean = false
 )
+
+/**
+ * Which kind of username an invitation's funding actually pays for — the
+ * SINGLE source of truth the claim screen's notice, its requirement rows and
+ * its submit gate must all derive from. Previously those three read different
+ * things and could contradict each other on screen (the notice said
+ * "non-contested only" while the button happily accepted a contested name).
+ */
+enum class InviteUsernameTier {
+    /** The invite funded the contested denomination — any username is fine. */
+    CONTESTED,
+
+    /** The invite funded the non-contested denomination only. */
+    NON_CONTESTED,
+
+    /**
+     * The invite's funding amount is NOT READABLE, so no claim may be made
+     * about which usernames it supports. This is the honest state for a
+     * shielded invitation minted before the link carried its note value
+     * ([InvitationLinkData.shieldedFundingCredits]) — a shielded note has no
+     * on-chain asset lock to read, and the SDK exposes no way to value a
+     * one-time key's note before spending it. The UI must not assert a tier
+     * here; it lets the user proceed, because a contested name against an
+     * actually-non-contested note fails CLOSED at claim time (the FFI cannot
+     * find a note covering the larger denomination and returns a
+     * pre-broadcast refusal, so nothing is spent and the invite is not burnt).
+     */
+    UNKNOWN
+}
+
+/**
+ * Resolve an invitation's [InviteUsernameTier] — pure, so the contradictory
+ * combinations that shipped are covered by unit tests.
+ *
+ * - L1 invites carry an asset-lock txid, so the funded amount is read off
+ *   chain into [l1InviteBalance] (ZERO until the lookup completes, which
+ *   reads as NON_CONTESTED exactly as before — the callers re-render when
+ *   the balance lands).
+ * - Shielded invites have no asset lock. They carry their note value in the
+ *   link when minted by a build that includes it; older links carry nothing
+ *   and are [InviteUsernameTier.UNKNOWN].
+ *
+ * The threshold is the same for both: the contested fee. The shielded exit
+ * denominations (0.1 / 0.3 DASH) straddle it just as the L1 amounts do.
+ */
+fun inviteUsernameTier(invite: InvitationLinkData?, l1InviteBalance: Coin): InviteUsernameTier {
+    if (invite == null) return InviteUsernameTier.UNKNOWN
+    if (!invite.isShielded) {
+        return if (l1InviteBalance >= Constants.DASH_PAY_FEE_CONTESTED) {
+            InviteUsernameTier.CONTESTED
+        } else {
+            InviteUsernameTier.NON_CONTESTED
+        }
+    }
+    val credits = invite.shieldedFundingCredits ?: return InviteUsernameTier.UNKNOWN
+    val funded = Coin.valueOf(creditsToDash(credits).duffs)
+    return if (funded >= Constants.DASH_PAY_FEE_CONTESTED) {
+        InviteUsernameTier.CONTESTED
+    } else {
+        InviteUsernameTier.NON_CONTESTED
+    }
+}
+
+/**
+ * Whether a claim screen driven by [tier] may submit a username whose
+ * contestability is [contestable]. Only a KNOWN non-contested invite blocks
+ * a contested name; an unreadable tier must not block, because refusing on a
+ * guess would strand a user who genuinely paid the contested fee.
+ */
+fun inviteTierAllowsUsername(tier: InviteUsernameTier, contestable: Boolean): Boolean =
+    when (tier) {
+        InviteUsernameTier.CONTESTED -> true
+        InviteUsernameTier.NON_CONTESTED -> !contestable
+        InviteUsernameTier.UNKNOWN -> true
+    }
 
 /**
  * Tri-state of the username request button, computed PURELY so the
@@ -312,6 +394,20 @@ class RequestUserNameViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
         private val CONTEST_DOCUMENT_FEE = Coin.valueOf(0, 20).value * 1000
         private val NON_CONTEST_DOCUMENT_FEE = Coin.valueOf(1000000).value * 1000
+
+        /**
+         * Re-read cadence for the asset-lock funding preflight WHILE the
+         * "funds settling" explanation is showing. Settling clears when the
+         * SDK mirror flips the funds final (IS lock / confirmation) — an
+         * event with NO balance-amount change, so [WalletData.observeBalance]
+         * never re-emits for it and the entry/balance triggers alone leave
+         * the gate stale (observed on S21: a change output confirmed at
+         * 10:38:41, the screen still showed settling at ~10:40 until
+         * re-entry). Internal so the host test drives the poll on virtual
+         * time. Only runs while `fundsSettling` is true, so the steady-state
+         * cost is zero.
+         */
+        internal const val SETTLING_ELIGIBILITY_POLL_MS = 5_000L
     }
 
     private val workerJob = SupervisorJob()
@@ -482,7 +578,9 @@ class RequestUserNameViewModel @Inject constructor(
      * (final BIP44-account-0 coins — see [SdkAssetLockFundingPreflight]),
      * or null when the preflight does not apply (pre-cutover / no
      * evidence — fail OPEN, the display-balance gate alone decides).
-     * Refreshed asynchronously on entry and on every balance change;
+     * Refreshed asynchronously on entry, on every balance change, and on
+     * a modest poll while the settling row is showing (finality flips with
+     * no balance-amount change — see [SETTLING_ELIGIBILITY_POLL_MS]);
      * [recomputeBalanceGate] re-resolves the gate when it lands — the
      * same async-gate-input pattern the shielded sync status uses.
      * Prevents the observed S22 failure mode: display balance ~0.994
@@ -742,6 +840,30 @@ class RequestUserNameViewModel @Inject constructor(
         // Entry kick: the balance flow may not emit until a change, but the
         // eligibility snapshot must exist before the first gate compute.
         refreshAssetLockFundingEligibility()
+        // While the settling row is SHOWING, the event that clears it (the
+        // SDK mirror flipping the funds final) changes no balance amount, so
+        // neither trigger above ever re-fires — poll the preflight at a
+        // modest cadence until the gate resolves (see
+        // [SETTLING_ELIGIBILITY_POLL_MS]). `flatMapLatest` cancels the loop
+        // the moment `fundsSettling` drops, and `refreshAssetLockFunding-
+        // Eligibility` only recomputes the gate on a CHANGED snapshot, so an
+        // unchanged poll tick is a single no-op DB read.
+        _uiState.map { it.fundsSettling }
+            .distinctUntilChanged()
+            .flatMapLatest { settling ->
+                if (!settling) {
+                    emptyFlow()
+                } else {
+                    flow {
+                        while (true) {
+                            delay(SETTLING_ELIGIBILITY_POLL_MS)
+                            emit(Unit)
+                        }
+                    }
+                }
+            }
+            .onEach { refreshAssetLockFundingEligibility() }
+            .launchIn(viewModelScope)
 
         inviteAssetLockTx.onEach {
             _inviteBalance.value = getInvitationAmount()
@@ -1226,9 +1348,15 @@ class RequestUserNameViewModel @Inject constructor(
         val inviteBalance = _inviteBalance.value
         val enoughBalance = when {
             // Shielded (L2) invites have no L1 inviteBalance to check — the note is
-            // verified/spent at claim time (createIdentityFromInvitation). Recognize it
-            // here so the submit gate doesn't block on a ZERO inviteBalance.
-            isUsingInvite() && createUsernameArgs?.invite?.isShielded == true -> true
+            // verified/spent at claim time (createIdentityFromInvitation), so there is
+            // no balance to compare and the gate must not block on a ZERO inviteBalance.
+            // What it CAN enforce is the invite's tier, which is the same value the
+            // screen's "only a non-contested username" notice is drawn from: those two
+            // used to disagree (this arm returned an unconditional `true`, so the button
+            // stayed enabled for a contested name under a notice saying it was not
+            // allowed). An UNKNOWN tier still passes — see InviteUsernameTier.UNKNOWN.
+            isUsingInvite() && createUsernameArgs?.invite?.isShielded == true ->
+                inviteTierAllowsUsername(inviteTier(), contestable)
             isUsingInvite() && contestable -> inviteBalance >= Constants.DASH_PAY_FEE_CONTESTED
             isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE
             // Paying from the shielded pool: the welcome-screen decision
@@ -1414,7 +1542,23 @@ class RequestUserNameViewModel @Inject constructor(
         } ?: Coin.ZERO
     }
 
-    fun isInviteForContestedNames(): Boolean = getInvitationAmount() >= Constants.DASH_PAY_FEE_CONTESTED
+    /**
+     * The claim screen's SINGLE source of truth for what this invitation
+     * pays for. Everything on the screen — the notice, the requirement rows
+     * and the submit gate — must be derived from this one value.
+     *
+     * Reads the L1 asset-lock amount for a standard invite and the note
+     * value carried by the link for a shielded one. It is deliberately
+     * [InviteUsernameTier.UNKNOWN] rather than NON_CONTESTED for a shielded
+     * invite whose link has no amount: [getInvitationAmount] only ever
+     * resolves an L1 asset lock, so shielded invites used to fall through it
+     * as Coin.ZERO and every one of them was reported as non-contested —
+     * including invites whose creator had paid the contested fee.
+     */
+    fun inviteTier(): InviteUsernameTier =
+        inviteUsernameTier(createUsernameArgs?.invite, getInvitationAmount())
+
+    fun isInviteForContestedNames(): Boolean = inviteTier() == InviteUsernameTier.CONTESTED
 
     suspend fun hasSecondaryName(): Boolean {
         return identityConfig.get(IDENTITY_ID) != null &&

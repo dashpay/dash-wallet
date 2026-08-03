@@ -332,6 +332,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
                 <TextView
+                    android:id="@+id/invite_only_noncontested_message"
                     style="@style/Overline.Medium"
                     android:layout_weight="1"
                     android:layout_width="0dp"
