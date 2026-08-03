@@ -59,11 +59,21 @@ class UsernamePaymentViewModelTest {
 
     /**
      * The shielded pool balance actually required: the smallest fixed
-     * Type-20 denomination covering the fee (0.03 DASH → 0.1 DASH) — the
-     * identity is funded by spending a whole denomination, so affordability
-     * is denomination-based, not fee-based.
+     * Type-20 denomination covering the fee — the identity is funded by
+     * spending a whole denomination, so affordability is denomination-based,
+     * not fee-based. Since v13 added the 0.03 denomination the non-contested
+     * fee IS a denomination, so requirement == fee for today's fees.
      */
     private val requirement = shieldedIdentityFundingRequirement(fee)!!
+
+    /**
+     * A fee that is NOT itself a denomination (0.05 DASH → the 0.1
+     * denomination), so the "covers the fee but not the denomination" gap the
+     * affordability rule exists for is still exercised after v13 collapsed it
+     * for both of today's real fees.
+     */
+    private val feeBetweenDenominations = Dash(5_000_000L)
+    private val requirementAboveThatFee = shieldedIdentityFundingRequirement(feeBetweenDenominations)!!
 
     private val balanceFlow = MutableStateFlow(Dash.ZERO)
     private val statusFlow = MutableStateFlow(ShieldedSyncStatus.NOT_READY)
@@ -124,16 +134,16 @@ class UsernamePaymentViewModelTest {
 
     @Test
     fun state_balanceCoversFeeButNotDenomination_promptsMakePrivate() {
-        // Denomination affordability, not just fee: a pool covering the
-        // 0.03 fee but not the 0.1 DASH Type-20 denomination the creation
-        // actually spends must not unlock the shielded option.
+        // Denomination affordability, not just fee: a pool covering the fee
+        // but not the Type-20 denomination the creation actually spends must
+        // not unlock the shielded option.
         val state = UsernamePaymentUIState(
             shieldedEnabled = true,
             syncStatus = ShieldedSyncStatus.READY,
-            shieldedBalance = Dash(requirement.duffs - 1),
-            usernameFee = fee
+            shieldedBalance = Dash(requirementAboveThatFee.duffs - 1),
+            usernameFee = feeBetweenDenominations
         )
-        assertTrue(state.shieldedBalance >= fee)
+        assertTrue(state.shieldedBalance >= feeBetweenDenominations)
         assertFalse(state.canPayFeeFromShielded)
         assertEquals(UsernamePaymentPrompt.MAKE_USERNAME_PRIVATE, state.prompt)
     }

@@ -62,8 +62,10 @@ class SdkShieldedInviteCreationTest {
     /** 0.03 / 0.25 DASH in credits — without loading Constants. */
     private val feeCredits = 3_000_000_000L
     private val contestedFeeCredits = 25_000_000_000L
-    private val denominationCredits = 10_000_000_000L // 0.1 DASH
-    private val contestedDenominationCredits = 30_000_000_000L // 0.3 DASH
+    // Both are members of the allowed exit-denomination set (v13); the pre-v13
+    // 0.1 / 0.3 pair is not — 0.3 is not exitable at all.
+    private val denominationCredits = 3_000_000_000L // 0.03 DASH
+    private val contestedDenominationCredits = 25_000_000_000L // 0.25 DASH
 
     private val spendingKey = ByteArray(32) { (it + 1).toByte() }
     private val orchardAddress = ByteArray(43) { 9 }
@@ -143,7 +145,7 @@ class SdkShieldedInviteCreationTest {
 
     @Test
     fun balanceBelowDenomination_notBroadcast_neverFunds() = runTest {
-        balanceFlow.value = Dash(5_000_000L) // 0.05 DASH < 0.1 denomination
+        balanceFlow.value = Dash(1_000_000L) // 0.01 DASH < the 0.03 denomination
         try {
             val source = happySource()
             val result = service(source = source)

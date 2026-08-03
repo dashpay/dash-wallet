@@ -46,58 +46,111 @@ import javax.inject.Singleton
 // ── Pure mapping helpers ──────────────────────────────────────────────
 
 /**
- * The fixed Type-20 exit denominations, in Platform credits — the only
- * amounts `shielded_identity_create_from_pool` can spend from the pool
- * (0.1 / 0.3 / 0.5 / 1.0 DASH; 1 DASH = 1e11 credits). Ascending.
+ * The ALLOWED EXIT-DENOMINATION SET, in Platform credits — the only amounts a
+ * Type-20 shielded identity-create (`shielded_identity_create_from_pool` and
+ * `shielded_identity_create_from_one_time_key`) may spend out of the pool.
+ * Ascending. 1 DASH = 1e11 credits.
+ *
+ * MIRRORS the protocol's `shielded_identity_create_denominations`
+ * (rs-platform-version, `DRIVE_ABCI_VALIDATION_VERSIONS_V9` → the active set
+ * from protocol version 13). This is NOT an app-side preference: a denomination
+ * outside the set is refused by `select_notes_for_denomination`
+ * (rs-platform-wallet `shielded/note_selection.rs`) BEFORE any Orchard build,
+ * and by `validate_structure` on the transition itself, with
+ *
+ *     "denomination {d} is not a member of the allowed exit-denomination set {…}"
+ *
+ * v13 revised the pre-v13 (`…_V8`) set — it ADDS 0.03 and 0.25 DASH and RETIRES
+ * 0.3 DASH. Anything computed here must be a member; see
+ * [parseAllowedExitDenominations] for the runtime divergence guard that catches
+ * a future revision of the set on a live network before it can strand a claim.
+ *
+ * INVITE FEE TIERS (0.1 / 0.3 DASH, the amounts an inviter historically debited)
+ * ARE NOT EXIT DENOMINATIONS — 0.3 is not a member and can never be exited.
  */
 internal val SHIELDED_IDENTITY_DENOMINATIONS_CREDITS = longArrayOf(
+    3_000_000_000L, // 0.03 DASH
     10_000_000_000L, // 0.1 DASH
-    30_000_000_000L, // 0.3 DASH
+    25_000_000_000L, // 0.25 DASH
     50_000_000_000L, // 0.5 DASH
     100_000_000_000L // 1.0 DASH
 )
 
 /**
- * Fee → denomination mapping: the SMALLEST fixed Type-20 denomination
- * that covers [feeCredits], or null when the fee is non-positive or
- * exceeds the largest denomination. The metered creation fee is taken
- * from the denomination Rust-side and the change returns to the pool, so
- * "covers" is a simple ≥ — no extra margin is required.
+ * Fee → denomination mapping: the SMALLEST member of the allowed
+ * exit-denomination set ([allowed], defaulting to
+ * [SHIELDED_IDENTITY_DENOMINATIONS_CREDITS]) that covers [feeCredits], or null
+ * when the fee is non-positive or exceeds the largest denomination. The metered
+ * creation fee is taken from the denomination Rust-side and the change returns
+ * to the pool, so "covers" is a simple ≥ — no extra margin is required.
  *
- * Concretely, for today's fees:
+ * Concretely, for today's fees under the v13 set:
  * - non-contested username, `Constants.DASH_PAY_FEE` = 0.03 DASH
- *   (3e9 credits) → 0.1 DASH (1e10 credits), the smallest denomination.
+ *   (3e9 credits) → 0.03 DASH, now the smallest denomination and an exact
+ *   match for the fee the transparent/L1 path funds.
  * - contested username, `Constants.DASH_PAY_FEE_CONTESTED` = 0.25 DASH
- *   (2.5e10 credits) → 0.3 DASH (3e10 credits). The identity is created
- *   holding `denomination − metered fee` in credits, and a contested DPNS
- *   registration needs ~0.2 DASH of those credits for the prefunded
- *   voting balance Drive attaches to every contestable label — the 0.1
- *   denomination cannot cover it, 0.3 can.
+ *   (2.5e10 credits) → 0.25 DASH. The identity is created holding
+ *   `denomination − metered fee` in credits, and a contested DPNS registration
+ *   needs ~0.2 DASH of those credits for the prefunded voting balance Drive
+ *   attaches to every contestable label — 0.1 cannot cover it, 0.25 can.
+ *   (Before v13 this resolved to 0.3, which the active set no longer accepts.)
  */
-internal fun chooseShieldedIdentityDenominationCredits(feeCredits: Long): Long? {
+internal fun chooseShieldedIdentityDenominationCredits(
+    feeCredits: Long,
+    allowed: List<Long> = SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList()
+): Long? {
     if (feeCredits <= 0) return null
-    return SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.firstOrNull { it >= feeCredits }
+    return allowed.sorted().firstOrNull { it >= feeCredits }
 }
 
 /**
- * The denominations a shielded INVITE is ever minted at, in Platform credits
- * — [SdkShieldedInviteCreation.createShieldedInvite] maps the picked fee
- * through [chooseShieldedIdentityDenominationCredits], so an invite note is
- * 0.1 DASH (non-contested) or 0.3 DASH (contested), nothing else. Ascending.
- * Bounds the claim-side fallback ladder ([inviteClaimDenominationLadder]):
- * a link-claimed value outside this set is treated as unreadable, so a
- * tampered `amt` cannot make the claim chase denominations no invite funds.
+ * The note values a shielded INVITE is ever minted at, in Platform credits.
+ * [SdkShieldedInviteCreation.createShieldedInvite] funds a note of
+ * [chooseShieldedIdentityDenominationCredits] for the picked tier, so a note
+ * minted TODAY is 0.03 (non-contested) or 0.25 (contested) — but invites minted
+ * before the v13 set existed carry 0.1 or 0.3, and those links are still live.
+ * Ascending, union of both eras.
+ *
+ * A funded note value is NOT the same thing as an exit denomination: the 0.3
+ * legacy contested note is a real note that no longer has a matching exit
+ * denomination, so claiming it exits 0.25 and the 0.05 remainder returns to the
+ * claimer's OWN Orchard change address (nothing is stranded).
+ *
+ * Bounds the claim-side ladder ([inviteClaimDenominationLadder]): a link-claimed
+ * value outside this set is treated as unreadable, so a tampered `amt` cannot
+ * make the claim chase values no invite was ever funded with.
  */
-internal val SHIELDED_INVITE_DENOMINATIONS_CREDITS = longArrayOf(
-    10_000_000_000L, // 0.1 DASH — non-contested invite
-    30_000_000_000L // 0.3 DASH — contested invite
+internal val SHIELDED_INVITE_NOTE_VALUES_CREDITS = longArrayOf(
+    3_000_000_000L, // 0.03 DASH — non-contested invite (v13 onwards)
+    10_000_000_000L, // 0.1 DASH — non-contested invite (pre-v13)
+    25_000_000_000L, // 0.25 DASH — contested invite (v13 onwards)
+    30_000_000_000L // 0.3 DASH — contested invite (pre-v13); NOT an exit denomination
 )
 
 /**
- * The ordered list of Type-20 denominations an invitation CLAIM attempts, per
- * the product decision that the new IDENTITY gets the invite's full value
- * (as platform credits) rather than the username-derived minimum with the
- * remainder routed to the claimer's own Orchard change address.
+ * The largest member of [allowed] that is ≤ [valueCredits], or null when the
+ * value is below every denomination. This is the note-value → denomination
+ * rule: a note can only ever exit at a denomination it fully covers (the FFI
+ * targets the denomination EXACTLY and refuses when the selected notes fall
+ * short), and every credit above it re-enters the pool as the claimer's own
+ * change note — so the largest covered denomination is the most the identity
+ * can be funded with.
+ */
+internal fun largestExitDenominationAtOrBelow(
+    valueCredits: Long,
+    allowed: List<Long> = SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList()
+): Long? = allowed.filter { it <= valueCredits }.maxOrNull()
+
+/**
+ * The ordered list of exit denominations an invitation CLAIM attempts, per the
+ * product decision that the new IDENTITY gets as much of the invite's value as
+ * the protocol lets it (rather than the username-derived minimum, with the rest
+ * routed to the claimer's own Orchard change address).
+ *
+ * EVERY element is a member of [allowed] (the allowed exit-denomination set) —
+ * that is the invariant this function exists to hold. A funded note value is
+ * mapped THROUGH the set, never emitted directly: a 0.3 legacy contested note
+ * yields 0.25, because 0.3 is not exitable.
  *
  * - [minimumCredits] is the username-derived floor (the smallest denomination
  *   covering the chosen name's creation fee, from
@@ -105,30 +158,61 @@ internal val SHIELDED_INVITE_DENOMINATIONS_CREDITS = longArrayOf(
  *   the name, so the ladder never descends past it.
  * - [fundingCredits] is the note value the link claims (`amt`,
  *   `InvitationLinkData.shieldedFundingCredits`), or null for a legacy link
- *   that carries none. It is only BELIEVED when it is a real invite
- *   denomination ([SHIELDED_INVITE_DENOMINATIONS_CREDITS]) at or above the
- *   floor; anything else (absent, junk, non-member, below the floor) is
- *   treated as unknown.
- * - Unknown starts at the LARGEST invite denomination (contested, 0.3) so a
- *   legacy contested invite still funds the identity in full; the claim then
- *   falls back DOWN the ladder on the specific "note does not cover the
- *   denomination" pre-broadcast refusal (fail-closed: nothing is spent by a
+ *   that carries none. It is only BELIEVED when it is a real invite note value
+ *   ([SHIELDED_INVITE_NOTE_VALUES_CREDITS]); anything else (absent, junk,
+ *   non-member) is treated as unknown.
+ * - Unknown starts at the largest denomination any invite note could cover (the
+ *   largest allowed denomination ≤ the largest invite note value = 0.25) so a
+ *   legacy contested invite still funds the identity as fully as it can; the
+ *   claim then falls back DOWN the ladder on the specific "note does not cover
+ *   the denomination" pre-broadcast refusal (fail-closed: nothing is spent by a
  *   refused attempt — see [SdkShieldedUsernameCreation.isNoteBelowDenominationFailure]).
  *
- * The same descent is what defuses a tampered-high `amt`: the oversized
- * attempt finds no covering note, the FFI refuses pre-broadcast, and the
- * claim steps down until it meets the note that actually exists. An empty
- * result means no invite denomination covers the username fee (the caller
- * refuses without attempting anything).
+ * The same descent is what defuses a tampered-high `amt`: the oversized attempt
+ * finds no covering note, the FFI refuses pre-broadcast, and the claim steps
+ * down until it meets the note that actually exists. An empty result means no
+ * denomination the invite could cover also covers the username fee (the caller
+ * refuses without attempting anything) — e.g. a 0.03 invite and a contested
+ * name.
  */
-internal fun inviteClaimDenominationLadder(minimumCredits: Long, fundingCredits: Long?): List<Long> {
-    val known = fundingCredits?.takeIf {
-        it in SHIELDED_INVITE_DENOMINATIONS_CREDITS && it >= minimumCredits
-    }
-    val start = known ?: SHIELDED_INVITE_DENOMINATIONS_CREDITS.max()
-    return SHIELDED_INVITE_DENOMINATIONS_CREDITS
-        .filter { it in minimumCredits..start }
-        .sortedDescending()
+internal fun inviteClaimDenominationLadder(
+    minimumCredits: Long,
+    fundingCredits: Long?,
+    allowed: List<Long> = SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList()
+): List<Long> {
+    val believedNoteValue = fundingCredits?.takeIf { it in SHIELDED_INVITE_NOTE_VALUES_CREDITS }
+    val noteCeiling = believedNoteValue ?: SHIELDED_INVITE_NOTE_VALUES_CREDITS.max()
+    val start = largestExitDenominationAtOrBelow(noteCeiling, allowed) ?: return emptyList()
+    return allowed.filter { it in minimumCredits..start }.sortedDescending()
+}
+
+/**
+ * The allowed exit-denomination set the SDK itself quoted in a refusal, parsed
+ * out of [message], or null when the message is not that refusal. The Rust
+ * refusal (rs-platform-wallet `shielded/note_selection.rs`, and the identical
+ * one in rs-dpp's Type-20 builder) formats the live set inline:
+ *
+ *     "…denomination 30000000000 is not a member of the allowed
+ *      exit-denomination set [3000000000, 10000000000, 25000000000, …]"
+ *
+ * so the refusal is also the ONLY runtime channel that reports the set — the
+ * SDK exposes no accessor for it. Used to (a) log a loud divergence warning and
+ * (b) re-derive the claim ladder from the authoritative set, so a future
+ * protocol revision of the denominations costs one refused (fail-closed,
+ * nothing-spent) attempt instead of stranding every claim.
+ */
+internal fun parseAllowedExitDenominations(message: String?): List<Long>? {
+    val marker = "allowed exit-denomination set"
+    val at = message?.indexOf(marker) ?: return null
+    if (at < 0) return null
+    val open = message.indexOf('[', at).takeIf { it >= 0 } ?: return null
+    val close = message.indexOf(']', open).takeIf { it >= 0 } ?: return null
+    val values = message.substring(open + 1, close)
+        .split(',')
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .map { it.toLongOrNull() ?: return null }
+    return values.takeIf { it.isNotEmpty() && it.all { v -> v > 0 } }?.sorted()
 }
 
 /**
@@ -707,7 +791,8 @@ class SdkShieldedUsernameCreation internal constructor(
 
         // Fee → denomination (explicit mapping, see
         // chooseShieldedIdentityDenominationCredits: non-contested
-        // 0.03 DASH → 0.1, contested 0.25 DASH → 0.3).
+        // 0.03 DASH → 0.03, contested 0.25 DASH → 0.25 — both members of the
+        // allowed exit-denomination set).
         val fee = try {
             feeCredits(contested)
         } catch (t: Throwable) {
@@ -948,22 +1033,24 @@ class SdkShieldedUsernameCreation internal constructor(
      * from the invite note, which the FFI transiently scans for from
      * [fundingHeight] (advisory hint; null = no hint).
      *
-     * DENOMINATION — the identity gets the invite's FULL value (product
-     * decision): [fundingCredits] is the note value the link carries (`amt`,
-     * [de.schildbach.wallet.data.InvitationLinkData.shieldedFundingCredits]);
-     * when it is a readable invite denomination the claim requests exactly
-     * that, so a 0.3 contested invite claimed with a non-contested name still
-     * funds the new identity with the full 0.3 in credits instead of
-     * requesting the 0.1 username minimum and leaking the 0.2 difference to
-     * the CLAIMER's own Orchard change address. When it is unreadable (legacy
-     * links minted before `amt` existed, or a value that is not a real invite
-     * denomination) the claim tries the denominations DESCENDING —
-     * contested 0.3 first, then non-contested 0.1 — retrying only on the
-     * specific fail-closed "no note covers this denomination" refusal
+     * DENOMINATION — the identity gets as much of the invite's value as the
+     * protocol allows (product decision): [fundingCredits] is the note value
+     * the link carries (`amt`,
+     * [de.schildbach.wallet.data.InvitationLinkData.shieldedFundingCredits]),
+     * and the claim requests the LARGEST allowed exit denomination that note
+     * covers. A legacy 0.3 contested invite claimed with a non-contested name
+     * therefore exits 0.25 (0.3 is not a member of the allowed
+     * exit-denomination set — see [SHIELDED_IDENTITY_DENOMINATIONS_CREDITS])
+     * instead of the 0.03 username minimum; the 0.05 remainder returns to the
+     * CLAIMER's own Orchard change address as spendable shielded value, not to
+     * the identity. When the note value is unreadable (legacy links minted
+     * before `amt` existed, or a value that is not a real invite note value)
+     * the claim tries the denominations DESCENDING from 0.25, retrying only on
+     * the specific fail-closed "no note covers this denomination" refusal
      * (nothing is spent by a refused attempt; see
      * [inviteClaimDenominationLadder] and [isNoteBelowDenominationFailure]).
      * [label] is the username the claimer will register; its tier sets the
-     * FLOOR of that ladder (a contested name needs at least the 0.3
+     * FLOOR of that ladder (a contested name needs at least the 0.25
      * denomination — same mapping the pool path uses), never the amount.
      *
      * On success returns [SdkWriteResult.Broadcast] with the new identity id
@@ -1091,7 +1178,17 @@ class SdkShieldedUsernameCreation internal constructor(
         // idempotence handling).
         var claimedIdentityId: ByteArray? = null
         var spentDenominationCredits = 0L
-        for ((attempt, denominationCredits) in denominationLadder.withIndex()) {
+        var ladder = denominationLadder
+        var attempt = 0
+        // The SDK's exit-denomination set is mirrored, not queried, so a protocol
+        // revision of it can only be observed from the refusal itself. Re-derive
+        // the ladder ONCE from the set the SDK quoted (fail-closed: the refusal
+        // is pre-broadcast, nothing was spent) so a divergence costs one attempt
+        // rather than every claim. Once only — a second divergence would mean the
+        // parse is wrong, and looping on it must not be possible.
+        var divergenceHandled = false
+        while (attempt < ladder.size) {
+            val denominationCredits = ladder[attempt]
             try {
                 claimedIdentityId = source.createIdentityFromOneTimeKey(
                     walletIdHex = walletId,
@@ -1117,13 +1214,35 @@ class SdkShieldedUsernameCreation internal constructor(
                     log.warn("shielded invite claim rejected — the one-time note is already spent", t)
                     return SdkWriteResult.NotBroadcast(REASON_INVITE_ALREADY_USED, t)
                 }
-                if (attempt < denominationLadder.lastIndex && isNoteBelowDenominationFailure(t)) {
+                val sdkAllowed = parseAllowedExitDenominations(t.message)
+                if (!divergenceHandled && sdkAllowed != null &&
+                    sdkAllowed != SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList()
+                ) {
+                    divergenceHandled = true
+                    log.error(
+                        "exit-denomination set DIVERGED from the SDK's — ours {}, SDK {}; " +
+                            "re-deriving the claim ladder from the SDK's set",
+                        SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList(),
+                        sdkAllowed
+                    )
+                    val correctedMinimum = chooseShieldedIdentityDenominationCredits(fee, sdkAllowed)
+                    val corrected = correctedMinimum?.let {
+                        inviteClaimDenominationLadder(it, fundingCredits, sdkAllowed)
+                    }.orEmpty()
+                    if (corrected.isNotEmpty()) {
+                        ladder = corrected
+                        attempt = 0
+                        continue
+                    }
+                }
+                if (attempt < ladder.lastIndex && isNoteBelowDenominationFailure(t)) {
                     log.info(
                         "no invite note covers the {} denomination ({}) — falling back to {}",
                         creditsToDash(denominationCredits).toPlainString(),
                         t.message,
-                        creditsToDash(denominationLadder[attempt + 1]).toPlainString()
+                        creditsToDash(ladder[attempt + 1]).toPlainString()
                     )
+                    attempt++
                     continue
                 }
                 return when (val classified = classifyBroadcastFailure(t)) {

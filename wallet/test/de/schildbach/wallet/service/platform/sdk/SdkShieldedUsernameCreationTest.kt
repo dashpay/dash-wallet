@@ -59,16 +59,34 @@ class SdkShieldedUsernameCreationTest {
     /** 0.03 DASH in credits — Constants.DASH_PAY_FEE without loading Constants. */
     private val feeCredits = 3_000_000_000L
 
+    /**
+     * VERBATIM from the on-device claim of a 0.3-DASH-funded shielded invite
+     * that exposed the invalid-denomination defect. The refusal is the only
+     * runtime channel that reports the protocol's exit-denomination set, so
+     * this fixture is what pins the app's mirror to it.
+     */
+    private val liveSdkDenominationRefusal =
+        "shielded identity-create-from-one-time-key failed: Shielded build error: " +
+            "denomination 30000000000 is not a member of the allowed exit-denomination set " +
+            "[3000000000, 10000000000, 25000000000, 50000000000, 100000000000]"
+
     /** 0.25 DASH in credits — Constants.DASH_PAY_FEE_CONTESTED without loading Constants. */
     private val contestedFeeCredits = 25_000_000_000L
 
-    /** The smallest covering denomination: 0.1 DASH. */
-    private val denominationCredits = 10_000_000_000L
+    /** The smallest covering denomination: 0.03 DASH (an exact member since v13). */
+    private val denominationCredits = 3_000_000_000L
     private val denomination = creditsToDash(denominationCredits)
 
-    /** The smallest denomination covering the contested fee: 0.3 DASH. */
-    private val contestedDenominationCredits = 30_000_000_000L
+    /** The smallest denomination covering the contested fee: 0.25 DASH. */
+    private val contestedDenominationCredits = 25_000_000_000L
     private val contestedDenomination = creditsToDash(contestedDenominationCredits)
+
+    /**
+     * The value a PRE-V13 contested invite note carries: 0.3 DASH. A real note
+     * value, but NOT a member of the exit-denomination set — the regression was
+     * requesting it verbatim as the claim denomination.
+     */
+    private val legacyContestedNoteCredits = 30_000_000_000L
 
     private val registrationKeys = List(4) { index ->
         IdentityKeyPreview(
@@ -161,19 +179,22 @@ class SdkShieldedUsernameCreationTest {
 
     @Test
     fun denominationMapping_smallestCoveringDenomination() {
-        // 0.03 DASH (the non-contested fee) → 0.1 DASH.
-        assertEquals(10_000_000_000L, chooseShieldedIdentityDenominationCredits(3_000_000_000L))
+        // 0.03 DASH (the non-contested fee) → 0.03 DASH, an exact member of
+        // the v13 set (before v13 added 0.03 this had to round up to 0.1).
+        assertEquals(3_000_000_000L, chooseShieldedIdentityDenominationCredits(3_000_000_000L))
         // Exactly a denomination maps to itself.
         assertEquals(10_000_000_000L, chooseShieldedIdentityDenominationCredits(10_000_000_000L))
-        assertEquals(30_000_000_000L, chooseShieldedIdentityDenominationCredits(30_000_000_000L))
+        assertEquals(25_000_000_000L, chooseShieldedIdentityDenominationCredits(25_000_000_000L))
         assertEquals(50_000_000_000L, chooseShieldedIdentityDenominationCredits(50_000_000_000L))
         assertEquals(100_000_000_000L, chooseShieldedIdentityDenominationCredits(100_000_000_000L))
         // One credit over a denomination steps up to the next.
-        assertEquals(30_000_000_000L, chooseShieldedIdentityDenominationCredits(10_000_000_001L))
-        assertEquals(50_000_000_000L, chooseShieldedIdentityDenominationCredits(30_000_000_001L))
+        assertEquals(10_000_000_000L, chooseShieldedIdentityDenominationCredits(3_000_000_001L))
+        assertEquals(25_000_000_000L, chooseShieldedIdentityDenominationCredits(10_000_000_001L))
+        assertEquals(50_000_000_000L, chooseShieldedIdentityDenominationCredits(25_000_000_001L))
         assertEquals(100_000_000_000L, chooseShieldedIdentityDenominationCredits(50_000_000_001L))
-        // A contested-scale fee (0.25 DASH) would map to 0.3.
-        assertEquals(30_000_000_000L, chooseShieldedIdentityDenominationCredits(25_000_000_000L))
+        // The RETIRED 0.3 value is not a denomination — a fee of exactly 0.3
+        // steps UP to 0.5 rather than resolving to the non-member 0.3.
+        assertEquals(50_000_000_000L, chooseShieldedIdentityDenominationCredits(30_000_000_000L))
     }
 
     @Test
@@ -184,10 +205,54 @@ class SdkShieldedUsernameCreationTest {
         assertNull(chooseShieldedIdentityDenominationCredits(100_000_000_001L))
     }
 
+    /**
+     * The app MIRRORS the protocol's `shielded_identity_create_denominations`
+     * (there is no SDK accessor for it), so the mirror is pinned to the set the
+     * SDK itself quotes in its refusal — the one runtime channel that reports
+     * it. [liveSdkDenominationRefusal] is the verbatim message from the
+     * on-device claim that exposed this defect; when the SDK's set changes,
+     * this test is what fails.
+     */
+    @Test
+    fun exitDenominationSet_matchesTheSetTheSdkQuotes() {
+        assertEquals(
+            parseAllowedExitDenominations(liveSdkDenominationRefusal),
+            SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList()
+        )
+        // Ascending, and no value the ladder could emit sits outside it.
+        assertEquals(
+            SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList().sorted(),
+            SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList()
+        )
+    }
+
+    @Test
+    fun parseAllowedExitDenominations_readsTheSetOrNothing() {
+        assertEquals(
+            listOf(3_000_000_000L, 10_000_000_000L, 25_000_000_000L, 50_000_000_000L, 100_000_000_000L),
+            parseAllowedExitDenominations(liveSdkDenominationRefusal)
+        )
+        assertNull(parseAllowedExitDenominations(null))
+        assertNull(parseAllowedExitDenominations("Insufficient shielded balance: available 1, required 2"))
+        // A malformed list is not half-believed.
+        assertNull(parseAllowedExitDenominations("allowed exit-denomination set [1000, oops]"))
+        assertNull(parseAllowedExitDenominations("allowed exit-denomination set 1000"))
+    }
+
+    @Test
+    fun largestExitDenominationAtOrBelow_mapsANoteValueIntoTheSet() {
+        // The defect in one line: a 0.3 legacy invite note exits at 0.25.
+        assertEquals(25_000_000_000L, largestExitDenominationAtOrBelow(30_000_000_000L))
+        assertEquals(25_000_000_000L, largestExitDenominationAtOrBelow(25_000_000_000L))
+        assertEquals(10_000_000_000L, largestExitDenominationAtOrBelow(24_999_999_999L))
+        assertEquals(3_000_000_000L, largestExitDenominationAtOrBelow(3_000_000_000L))
+        assertNull(largestExitDenominationAtOrBelow(2_999_999_999L))
+    }
+
     @Test
     fun fundingRequirement_isTheDenominationInDash() {
-        // 0.03 DASH fee → 0.1 DASH pool requirement.
-        assertEquals(Dash(10_000_000L), shieldedIdentityFundingRequirement(Dash(3_000_000L)))
+        // 0.03 DASH fee → 0.03 DASH pool requirement (its own denomination).
+        assertEquals(Dash(3_000_000L), shieldedIdentityFundingRequirement(Dash(3_000_000L)))
         assertNull(shieldedIdentityFundingRequirement(Dash.ZERO))
         // Above 1.0 DASH no denomination covers.
         assertNull(shieldedIdentityFundingRequirement(Dash(200_000_000L)))
@@ -707,8 +772,9 @@ class SdkShieldedUsernameCreationTest {
         val source = claimSource()
 
         // Legacy links carry no `amt`: the note value is UNKNOWN, so the
-        // claim starts at the largest invite denomination (contested 0.3) —
-        // a legacy contested invite still funds the identity in full.
+        // claim starts at the largest denomination any invite note could
+        // cover (0.25) — a legacy contested invite still funds the identity
+        // as fully as the exit-denomination set allows.
         val result = service(source = source)
             .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
 
@@ -727,14 +793,15 @@ class SdkShieldedUsernameCreationTest {
     /** The FFI's fail-closed refusal when the key's note(s) don't cover the denomination. */
     private fun noteBelowDenominationError() = DashSdkError.PlatformWallet.WalletOperation(
         "shielded identity-create-from-one-time-key failed: " +
-            "Insufficient shielded balance: available 10000000000, required 30000000000"
+            "Insufficient shielded balance: available 10000000000, required 25000000000"
     )
 
     @Test
-    fun claim_legacyLink_noteTooSmallForContested_fallsBackToNonContested() = runTest {
+    fun claim_legacyLink_noteTooSmallForContested_fallsBackDownTheLadder() = runTest {
         val source = claimSource()
-        // The real note is 0.1: the 0.3 attempt is refused pre-broadcast
-        // (nothing spent), and the claim falls back down the ladder.
+        // The real note is 0.1: the 0.25 attempt is refused pre-broadcast
+        // (nothing spent), and the claim falls back down the ladder to the
+        // next allowed denomination, 0.1.
         coEvery {
             source.createIdentityFromOneTimeKey(
                 walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
@@ -753,7 +820,7 @@ class SdkShieldedUsernameCreationTest {
             )
             source.createIdentityFromOneTimeKey(
                 walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
-                denominationCredits, any(), any()
+                10_000_000_000L, any(), any()
             )
         }
     }
@@ -761,7 +828,7 @@ class SdkShieldedUsernameCreationTest {
     @Test
     fun claim_tamperedOversizedNoteValue_failsClosedThenFallsBack() = runTest {
         val source = claimSource()
-        // A tampered link claims 0.3 but the note is really 0.1: the
+        // A tampered link claims 0.25 but the note is really 0.1: the
         // oversized attempt finds no covering note and is refused
         // pre-broadcast, then the ladder meets the real note. The tampered
         // `amt` cost one refused attempt — it moved no funds.
@@ -781,7 +848,36 @@ class SdkShieldedUsernameCreationTest {
         coVerify(exactly = 1) {
             source.createIdentityFromOneTimeKey(
                 walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
-                denominationCredits, any(), any()
+                10_000_000_000L, any(), any()
+            )
+        }
+    }
+
+    /**
+     * THE ON-DEVICE CASE: a 0.3-funded (pre-v13 contested) invite. The claim
+     * must request 0.25 — the largest exit denomination that note covers — and
+     * NEVER the 0.3 note value itself, which the FFI refuses as a non-member of
+     * the allowed exit-denomination set.
+     */
+    @Test
+    fun claim_legacy0Point3Note_requests0Point25_neverTheNoteValue() = runTest {
+        val source = claimSource()
+
+        val result = service(source = source)
+            .createIdentityFromInvitation(
+                oneTimeKeyHex, fundingHeight, "alice2", fundingCredits = legacyContestedNoteCredits
+            )
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                contestedDenominationCredits, any(), any()
+            )
+        }
+        coVerify(exactly = 0) {
+            source.createIdentityFromOneTimeKey(
+                any(), any(), any(), any(), any(), legacyContestedNoteCredits, any(), any()
             )
         }
     }
@@ -809,7 +905,7 @@ class SdkShieldedUsernameCreationTest {
     @Test
     fun claim_contestedUsername_neverDescendsBelowItsFloor() = runTest {
         val source = claimSource()
-        // A contested username needs the 0.3 denomination; when the note
+        // A contested username needs the 0.25 denomination; when the note
         // cannot cover it there is nothing smaller that could fund the name,
         // so the refusal is terminal — never a doomed 0.1 attempt.
         coEvery {
@@ -904,9 +1000,9 @@ class SdkShieldedUsernameCreationTest {
             "this invitation cannot be claimed again"
         )
 
-        // A legacy link (no `amt`) with a non-contested name has a TWO-rung
+        // A legacy link (no `amt`) with a non-contested name has a THREE-rung
         // ladder, so a descend would show up as a second attempt.
-        assertEquals(2, inviteClaimDenominationLadder(denominationCredits, null).size)
+        assertEquals(3, inviteClaimDenominationLadder(denominationCredits, null).size)
 
         val result = service(source = source)
             .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
@@ -1031,14 +1127,60 @@ class SdkShieldedUsernameCreationTest {
 
     // ── Invite-claim denomination ladder (pure) ──────────────────────────
 
+    /**
+     * THE REGRESSION, pinned: whatever the inputs, the ladder may only ever
+     * emit members of the allowed exit-denomination set. A funded note value is
+     * mapped THROUGH the set, never passed through — the 0.3 legacy note value
+     * that the FFI refused must never appear.
+     */
+    @Test
+    fun claimLadder_onlyEverEmitsAllowedExitDenominations() {
+        val allowed = SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toSet()
+        val floors = listOf(denominationCredits, contestedDenominationCredits, 50_000_000_000L)
+        val funding = listOf(
+            null, 0L, -1L, 12_345L, 3_000_000_000L, 10_000_000_000L,
+            25_000_000_000L, legacyContestedNoteCredits, 99_999_999_999_999L
+        )
+        for (floor in floors) {
+            for (value in funding) {
+                val ladder = inviteClaimDenominationLadder(floor, value)
+                assertTrue(
+                    "ladder($floor, $value) = $ladder escaped the allowed set",
+                    ladder.all { it in allowed }
+                )
+                assertTrue(
+                    "ladder($floor, $value) = $ladder descended below the floor",
+                    ladder.all { it >= floor }
+                )
+                assertEquals(ladder.sortedDescending(), ladder)
+            }
+        }
+    }
+
+    @Test
+    fun claimLadder_legacy0Point3Note_startsAtTheLargestCoveredDenomination() {
+        // The on-device case: a 0.3-funded invite claimed with a non-contested
+        // name. 0.3 is NOT exitable → 0.25 is, and the 0.05 remainder returns
+        // to the claimer's own change address.
+        assertEquals(
+            listOf(contestedDenominationCredits, 10_000_000_000L, denominationCredits),
+            inviteClaimDenominationLadder(denominationCredits, legacyContestedNoteCredits)
+        )
+        // Same note, contested name: the floor collapses it to one attempt.
+        assertEquals(
+            listOf(contestedDenominationCredits),
+            inviteClaimDenominationLadder(contestedDenominationCredits, legacyContestedNoteCredits)
+        )
+    }
+
     @Test
     fun claimLadder_knownValueIsTheSingleStart_withTamperFallback() {
-        // Known 0.3, non-contested floor: full value first, then the floor.
+        // Known 0.25 (today's contested invite), non-contested floor.
         assertEquals(
-            listOf(contestedDenominationCredits, denominationCredits),
+            listOf(contestedDenominationCredits, 10_000_000_000L, denominationCredits),
             inviteClaimDenominationLadder(denominationCredits, contestedDenominationCredits)
         )
-        // Known 0.1, non-contested floor: exactly one attempt.
+        // Known 0.03 (today's non-contested invite) at its own floor: one attempt.
         assertEquals(
             listOf(denominationCredits),
             inviteClaimDenominationLadder(denominationCredits, denominationCredits)
@@ -1046,20 +1188,13 @@ class SdkShieldedUsernameCreationTest {
     }
 
     @Test
-    fun claimLadder_unknownValueDescendsFromContested() {
-        assertEquals(
-            listOf(contestedDenominationCredits, denominationCredits),
-            inviteClaimDenominationLadder(denominationCredits, null)
-        )
-        // Junk / non-member / below-floor values are never believed.
-        assertEquals(
-            listOf(contestedDenominationCredits, denominationCredits),
-            inviteClaimDenominationLadder(denominationCredits, 12_345L)
-        )
-        assertEquals(
-            listOf(contestedDenominationCredits, denominationCredits),
-            inviteClaimDenominationLadder(denominationCredits, 50_000_000_000L)
-        )
+    fun claimLadder_unknownValueDescendsFromTheLargestClaimableDenomination() {
+        val fromTheTop = listOf(contestedDenominationCredits, 10_000_000_000L, denominationCredits)
+        assertEquals(fromTheTop, inviteClaimDenominationLadder(denominationCredits, null))
+        // Junk / non-member values are never believed → same ladder as unknown.
+        assertEquals(fromTheTop, inviteClaimDenominationLadder(denominationCredits, 12_345L))
+        // 0.5 is an exit denomination but NOT an invite note value → not believed.
+        assertEquals(fromTheTop, inviteClaimDenominationLadder(denominationCredits, 50_000_000_000L))
     }
 
     @Test
@@ -1068,17 +1203,34 @@ class SdkShieldedUsernameCreationTest {
             listOf(contestedDenominationCredits),
             inviteClaimDenominationLadder(contestedDenominationCredits, null)
         )
-        // A known 0.1 below a contested floor is invalid → unknown → the
-        // floor-only ladder (which then fails closed at claim time).
-        assertEquals(
-            listOf(contestedDenominationCredits),
-            inviteClaimDenominationLadder(contestedDenominationCredits, denominationCredits)
+        // A believed 0.03 note cannot fund a contested name: refuse outright
+        // rather than burn a ~30 s attempt that must fail.
+        assertTrue(
+            inviteClaimDenominationLadder(contestedDenominationCredits, denominationCredits).isEmpty()
         )
     }
 
     @Test
-    fun claimLadder_floorAboveEveryInviteDenomination_isEmpty() {
+    fun claimLadder_floorAboveEveryClaimableDenomination_isEmpty() {
         assertTrue(inviteClaimDenominationLadder(50_000_000_000L, null).isEmpty())
+    }
+
+    /**
+     * The divergence escape hatch: fed the set the SDK quotes, the ladder is
+     * derived from THAT set rather than the app's mirror — so a protocol
+     * revision costs one refused (nothing-spent) attempt, not every claim.
+     */
+    @Test
+    fun claimLadder_honoursAnSdkReportedDenominationSet() {
+        val sdkAllowed = listOf(10_000_000_000L, 30_000_000_000L, 50_000_000_000L)
+        assertEquals(
+            listOf(30_000_000_000L, 10_000_000_000L),
+            inviteClaimDenominationLadder(10_000_000_000L, legacyContestedNoteCredits, sdkAllowed)
+        )
+        assertEquals(
+            10_000_000_000L,
+            chooseShieldedIdentityDenominationCredits(feeCredits, sdkAllowed)
+        )
     }
 
     @Test

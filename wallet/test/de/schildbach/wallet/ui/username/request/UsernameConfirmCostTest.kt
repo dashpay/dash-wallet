@@ -35,8 +35,8 @@ import org.junit.Test
  */
 class UsernameConfirmCostTest {
 
-    private val shieldedContestedDenomination = Coin.valueOf(30_000_000) // 0.3 DASH
-    private val shieldedNonContestedDenomination = Coin.valueOf(10_000_000) // 0.1 DASH
+    private val shieldedContestedDenomination = Coin.valueOf(25_000_000) // 0.25 DASH
+    private val shieldedNonContestedDenomination = Coin.valueOf(3_000_000) // 0.03 DASH
 
     @Test
     fun `L1 contested primary creation shows the contested fee`() {
@@ -75,7 +75,7 @@ class UsernameConfirmCostTest {
     }
 
     @Test
-    fun `shielded contested creation shows the 0_3 exit denomination from the shielded balance`() {
+    fun `shielded contested creation shows the 0_25 exit denomination from the shielded balance`() {
         val cost = resolveUsernameConfirmCost(
             UsernameType.Primary,
             isContestable = true,
@@ -87,7 +87,7 @@ class UsernameConfirmCostTest {
     }
 
     @Test
-    fun `shielded non-contested creation shows the 0_1 exit denomination from the shielded balance`() {
+    fun `shielded non-contested creation shows the 0_03 exit denomination from the shielded balance`() {
         val cost = resolveUsernameConfirmCost(
             UsernameType.Primary,
             isContestable = false,
@@ -101,7 +101,7 @@ class UsernameConfirmCostTest {
     @Test
     fun `dual-flow secondary (instant) confirm is free even on the shielded path`() {
         // The instant/secondary name adds no incremental cost; the identity
-        // funding (0.3 shielded) is disclosed on the PRIMARY confirm. Showing
+        // funding (0.25 shielded) is disclosed on the PRIMARY confirm. Showing
         // a price here would wrongly imply the instant name costs something.
         val cost = resolveUsernameConfirmCost(
             UsernameType.Secondary,

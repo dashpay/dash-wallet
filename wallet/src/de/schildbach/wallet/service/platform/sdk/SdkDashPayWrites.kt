@@ -69,6 +69,12 @@ sealed class SdkWriteResult<out T> {
  *   codes that shouldn't appear on a document transition, classified
  *   correctly in case they ever do.
  *
+ * Also definitively pre-broadcast, message-matched because the SDK exposes no
+ * typed error for them: the shielded BUILD-INPUT refusals (exit-denomination
+ * membership, denomination-vs-metered-fee, address decode/network, note-value
+ * overflow) — see the rules at the bottom of the table for why the match is on
+ * the specific refusals and not on the "Shielded build error" family.
+ *
  * NOTE [DashSdkError.isRetryable] is deliberately NOT consulted: it means
  * "retrying can plausibly succeed" (true for NetworkError/Timeout), which
  * is exactly the opposite of proof that nothing was submitted.
@@ -196,6 +202,35 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // until a typed error exists; retry-safe.
     t.message?.contains("requires persistence capabilities") == true ->
         SdkWriteResult.NotBroadcast("pre-broadcast: persistence-capability gate", t)
+    // Shielded BUILD-INPUT validation, all raised inside
+    // rs-platform-wallet's `select_notes_for_denomination`
+    // (shielded/note_selection.rs) or the address decode that precedes the
+    // operation — strictly before the Orchard build, the proof, and the
+    // broadcast, with no note reservation taken. Surfaced as a
+    // WalletOperation error whose message wraps
+    // `PlatformWalletError::ShieldedBuildError` (observed live on an invite
+    // claim: "shielded identity-create-from-one-time-key failed: Shielded
+    // build error: denomination 30000000000 is not a member of the allowed
+    // exit-denomination set […]" — a 0.3 legacy invite note against the v13
+    // set). Retryable with a denomination the protocol accepts.
+    //
+    // NOTE the match is on the SPECIFIC refusals, deliberately NOT on the
+    // "Shielded build error" prefix: `identity_create_from_one_time_key`
+    // ALSO raises ShieldedBuildError AFTER a successful broadcast, when it
+    // synthesizes the identity from an unexpected proof-result variant
+    // (rs-platform-wallet shielded/operations.rs). Treating the whole family
+    // as pre-broadcast would report an on-chain identity as never-submitted.
+    t.message?.let { m ->
+        m.contains("is not a member of the allowed exit-denomination set") ||
+            m.contains("does not exceed the predicted identity-create fee") ||
+            m.contains("invalid platform address") ||
+            m.contains("not a platform address") ||
+            m.contains("platform address network mismatch") ||
+            m.contains("invalid core address") ||
+            m.contains("core address network mismatch") ||
+            m.contains("overflows u64")
+    } == true ->
+        SdkWriteResult.NotBroadcast("pre-broadcast shielded build-input validation failure", t)
     else -> SdkWriteResult.Ambiguous(t)
 }
 

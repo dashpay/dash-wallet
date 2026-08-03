@@ -240,6 +240,77 @@ class SdkDashPayWritesTest {
     }
 
     @Test
+    fun classify_shieldedBuildInputValidation_isNotBroadcast() {
+        // The live invite-claim failure: a pre-v13 0.3 DASH invite note was
+        // requested as the exit denomination, and rs-platform-wallet's
+        // select_notes_for_denomination refused it against the active set —
+        // BEFORE the Orchard build, the proof and the broadcast, with no note
+        // reservation taken. Classifying this as Ambiguous told the user the
+        // identity might be on chain and left the flow un-retryable in spirit;
+        // it is provably terminal NotBroadcast.
+        val liveShapes = listOf<Throwable>(
+            // verbatim from the on-device claim log
+            DashSdkError.PlatformWallet.WalletOperation(
+                "shielded identity-create-from-one-time-key failed: Shielded build error: " +
+                    "denomination 30000000000 is not a member of the allowed exit-denomination " +
+                    "set [3000000000, 10000000000, 25000000000, 50000000000, 100000000000]"
+            ),
+            // the sibling refusal on the same function: the denomination must
+            // exceed the metered identity-create fee
+            DashSdkError.PlatformWallet.WalletOperation(
+                "shielded identity-create-from-pool failed: Shielded build error: denomination " +
+                    "3000000000 does not exceed the predicted identity-create fee 3100000000; " +
+                    "the new identity would be created with a non-positive balance"
+            ),
+            // address decode / network guards, run before the operation starts
+            DashSdkError.PlatformWallet.WalletOperation(
+                "shielded unshield failed: Shielded build error: invalid platform address: bad hrp"
+            ),
+            DashSdkError.PlatformWallet.WalletOperation(
+                "shielded unshield failed: Shielded build error: platform address network " +
+                    "mismatch: mainnet address, wallet Testnet"
+            ),
+            DashSdkError.PlatformWallet.WalletOperation(
+                "shielded withdraw failed: Shielded build error: invalid core address: base58 error"
+            ),
+            DashSdkError.PlatformWallet.WalletOperation(
+                "shielded withdraw failed: Shielded build error: core address network mismatch: x"
+            ),
+            // note-value arithmetic guards in select_notes
+            DashSdkError.PlatformWallet.WalletOperation(
+                "shielded transfer failed: Shielded build error: amount + fee overflows u64"
+            )
+        )
+        for (error in liveShapes) {
+            val result = classifyBroadcastFailure(error)
+            assertTrue(
+                "${error.javaClass.simpleName}(${error.message}) must be NotBroadcast",
+                result is SdkWriteResult.NotBroadcast
+            )
+            assertSame(error, (result as SdkWriteResult.NotBroadcast).cause)
+        }
+    }
+
+    /**
+     * The reason the rule above matches SPECIFIC refusals and not the
+     * "Shielded build error" family: `identity_create_from_one_time_key` also
+     * raises ShieldedBuildError AFTER a successful broadcast, when it
+     * synthesizes the identity from an unexpected proof-result variant
+     * (rs-platform-wallet shielded/operations.rs). That one MUST stay
+     * Ambiguous — the identity is on chain.
+     */
+    @Test
+    fun classify_postBroadcastShieldedBuildError_staysAmbiguous() {
+        val postBroadcast = DashSdkError.PlatformWallet.WalletOperation(
+            "shielded identity-create-from-one-time-key failed: Shielded build error: " +
+                "invalid identity structure for the derived id"
+        )
+        val result = classifyBroadcastFailure(postBroadcast)
+        assertTrue(result is SdkWriteResult.Ambiguous)
+        assertSame(postBroadcast, (result as SdkWriteResult.Ambiguous).cause)
+    }
+
+    @Test
     fun classify_everythingElse_isAmbiguous() {
         val possiblyBroadcast = listOf<Throwable>(
             DashSdkError.NetworkError("connection reset"),

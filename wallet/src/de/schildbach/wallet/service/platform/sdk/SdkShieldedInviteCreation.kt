@@ -54,10 +54,16 @@ data class ShieldedInvite(
  * The fixed Type-20 exit denomination (in Platform credits) a SHIELDED
  * invitation funds, for a username of the given contested-ness — the same
  * fee → denomination mapping the from-pool username creation uses
- * ([chooseShieldedIdentityDenominationCredits]): non-contested → 0.1 DASH,
- * contested → 0.3 DASH (the 0.3 lets the claimer's identity cover the ~0.2
+ * ([chooseShieldedIdentityDenominationCredits]): non-contested → 0.03 DASH,
+ * contested → 0.25 DASH (the 0.25 lets the claimer's identity cover the ~0.2
  * prefunded voting balance a contested DPNS registration debits). Null when
  * no denomination covers the fee (should not happen for the fixed fees).
+ *
+ * Funding a note at an ALLOWED EXIT DENOMINATION is what makes the whole note
+ * claimable: an invite minted at 0.3 (the pre-v13 contested mapping) can only
+ * ever exit at 0.25, so its last 0.05 lands in the CLAIMER's own shielded
+ * change rather than the new identity's credits. Live 0.3 links still claim
+ * correctly (see [inviteClaimDenominationLadder]); new ones no longer split.
  */
 internal fun shieldedInviteDenominationCredits(feeCreditsForKind: Long): Long? =
     chooseShieldedIdentityDenominationCredits(feeCreditsForKind)

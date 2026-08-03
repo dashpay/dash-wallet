@@ -621,9 +621,10 @@ class RequestUserNameViewModelTest {
     @Test
     fun checkUsernameValid_shieldedSource_contestedName_gateFailureNamesTheDenomination() =
         runVmTest {
-            // The insufficient-balance row must name the 0.3 funding
-            // denomination the contested creation actually needs, not the
-            // 0.25 fee (or a hardcoded L1 amount).
+            // The insufficient-balance row must name the 0.25 funding
+            // denomination the contested creation actually needs (the smallest
+            // member of the allowed exit-denomination set that covers the 0.25
+            // contested fee), not a hardcoded L1 amount.
             shieldedSyncStatusFlow.value = ShieldedSyncStatus.READY
             shieldedBalanceFlow.value = Dash(10_000_000L) // 0.1 DASH — not enough
             val viewModel = viewModel()
@@ -633,7 +634,7 @@ class RequestUserNameViewModelTest {
 
             val state = viewModel.uiState.value
             assertFalse(state.enoughBalance)
-            assertEquals(Dash(30_000_000L).toPlainString(), state.requiredAmount)
+            assertEquals(Dash(25_000_000L).toPlainString(), state.requiredAmount)
         }
 
     // ── Never-silent submits ────────────────────────────────────────────────

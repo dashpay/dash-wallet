@@ -83,9 +83,12 @@ data class InvitationLinkData(
 
         /**
          * The shielded invitation's funding NOTE VALUE in Platform credits
-         * (`amt`) — the fixed Type-20 exit denomination the inviter actually
-         * funded (0.1 DASH = 10_000_000_000 credits non-contested, 0.3 DASH =
-         * 30_000_000_000 contested).
+         * (`amt`) — what the inviter actually funded: 0.03 DASH
+         * (3_000_000_000 credits) non-contested / 0.25 DASH (25_000_000_000)
+         * contested today, or 0.1 / 0.3 for links minted before the protocol
+         * revised the exit-denomination set. A note VALUE, not necessarily an
+         * exit denomination: the legacy 0.3 note exits at 0.25 (see
+         * `inviteClaimDenominationLadder`).
          *
          * This exists because the claim side has NO other way to learn the
          * invite's tier. An L1 invite carries its asset-lock txid, so the
@@ -93,9 +96,9 @@ data class InvitationLinkData(
          * carries only a one-time Orchard spending key, and the SDK's claim
          * FFI (`shieldedIdentityCreateFromOneTimeKey`) takes the denomination
          * as an INPUT — it never reports the note's value. Without this
-         * parameter the claim screen cannot tell a 0.3 (contested) invite from
-         * a 0.1 (non-contested) one and wrongly tells every claimer they may
-         * only pick a non-contested username.
+         * parameter the claim screen cannot tell a contested invite from a
+         * non-contested one and wrongly tells every claimer they may only pick
+         * a non-contested username.
          *
          * ADVISORY and OPTIONAL: links minted before this parameter existed
          * omit it, and a claimer that cannot read a tier must not assert one
