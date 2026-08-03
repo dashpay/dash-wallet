@@ -99,10 +99,29 @@ data class InvitationLinkData(
          *
          * ADVISORY and OPTIONAL: links minted before this parameter existed
          * omit it, and a claimer that cannot read a tier must not assert one
-         * (see `InviteUsernameTier.UNKNOWN`). It is a hint for the claimer's
-         * own UI only — nothing trusts it with funds, because the note itself
-         * is what the claim spends and the FFI fails closed if the requested
-         * denomination is not actually there.
+         * (see `InviteUsernameTier.UNKNOWN`). Two readers, neither of which
+         * trusts it with funds it does not have:
+         *
+         * - the claim screen's tier UI (notice / requirement rows / submit
+         *   gate);
+         * - the claim itself, which requests the claimed value as the
+         *   Type-20 denomination so the new IDENTITY receives the invite's
+         *   full note value in credits regardless of the username tier the
+         *   claimer picks (`SdkShieldedUsernameCreation
+         *   .createIdentityFromInvitation`). Safe against tampering because
+         *   the note itself is what the claim spends and the FFI fails
+         *   CLOSED, pre-broadcast, when no note covers the requested
+         *   denomination: a lying-high or junk `amt` just downgrades to the
+         *   same descending-ladder attempt order a link without `amt` gets
+         *   (0.3 → 0.1), and nothing is spent by a refused attempt. A
+         *   lying-LOW `amt` (0.1 written onto a 0.3 invite) is believed —
+         *   indistinguishable from a genuine 0.1 invite — and makes the
+         *   claim spend the 0.3 note at the 0.1 denomination with the 0.2
+         *   difference going to the CLAIMER's own Orchard change address.
+         *   That moves no value to a third party: only the claimer benefits
+         *   from tampering their own bearer link, and they were receiving
+         *   the full value either way (as spendable shielded DASH instead
+         *   of identity credits).
          */
         private const val PARAM_FUNDING_CREDITS = "amt"
         private val VALIDATION_EXPIRED = TimeUnit.MINUTES.toMillis(1)

@@ -744,17 +744,29 @@ class CreateIdentityService : LifecycleService() {
 
     /**
      * Claim a SHIELDED (L2) invitation: create the identity directly from the
-     * invite's one-time Orchard key (Type-20). On success the identity is on
-     * chain and the caller's existing recovery + DPNS + contact-request tail
-     * runs. A double-claim (the note's nullifier is already spent) maps to the
-     * same "Invite has already been used" state the L1 outpoint-collision path
-     * throws; any other failure is surfaced as a claim error.
+     * invite's one-time Orchard key (Type-20). The new identity is funded with
+     * the invite's FULL note value (the link's `amt`,
+     * [InvitationLinkData.shieldedFundingCredits]) regardless of which
+     * username tier the claimer picked — a 0.3 contested invite claimed with
+     * a non-contested name still puts all 0.3 into the identity's credits
+     * instead of the 0.1 username minimum. Legacy links without `amt` try the
+     * denominations descending (0.3 → 0.1), falling back only on the
+     * fail-closed "no covering note" refusal, so a claim never spends more
+     * than the note actually holds (see
+     * [SdkShieldedUsernameCreation.createIdentityFromInvitation]).
+     *
+     * On success the identity is on chain and the caller's existing recovery +
+     * DPNS + contact-request tail runs. A double-claim (the note's nullifier
+     * is already spent) maps to the same "Invite has already been used" state
+     * the L1 outpoint-collision path throws; any other failure is surfaced as
+     * a claim error.
      */
     private suspend fun claimShieldedInvitation(invite: InvitationLinkData, username: String) {
         when (val result = sdkShieldedUsernameCreation.createIdentityFromInvitation(
             oneTimeSkHex = invite.oneTimeKey,
             fundingHeight = invite.fundingHeight,
-            label = username
+            label = username,
+            fundingCredits = invite.shieldedFundingCredits
         )) {
             is SdkWriteResult.Broadcast -> {
                 // Remember the on-chain identity id so registerUsername can

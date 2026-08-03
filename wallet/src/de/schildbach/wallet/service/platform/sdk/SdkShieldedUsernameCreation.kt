@@ -79,6 +79,58 @@ internal fun chooseShieldedIdentityDenominationCredits(feeCredits: Long): Long? 
 }
 
 /**
+ * The denominations a shielded INVITE is ever minted at, in Platform credits
+ * — [SdkShieldedInviteCreation.createShieldedInvite] maps the picked fee
+ * through [chooseShieldedIdentityDenominationCredits], so an invite note is
+ * 0.1 DASH (non-contested) or 0.3 DASH (contested), nothing else. Ascending.
+ * Bounds the claim-side fallback ladder ([inviteClaimDenominationLadder]):
+ * a link-claimed value outside this set is treated as unreadable, so a
+ * tampered `amt` cannot make the claim chase denominations no invite funds.
+ */
+internal val SHIELDED_INVITE_DENOMINATIONS_CREDITS = longArrayOf(
+    10_000_000_000L, // 0.1 DASH — non-contested invite
+    30_000_000_000L // 0.3 DASH — contested invite
+)
+
+/**
+ * The ordered list of Type-20 denominations an invitation CLAIM attempts, per
+ * the product decision that the new IDENTITY gets the invite's full value
+ * (as platform credits) rather than the username-derived minimum with the
+ * remainder routed to the claimer's own Orchard change address.
+ *
+ * - [minimumCredits] is the username-derived floor (the smallest denomination
+ *   covering the chosen name's creation fee, from
+ *   [chooseShieldedIdentityDenominationCredits]) — nothing below it can fund
+ *   the name, so the ladder never descends past it.
+ * - [fundingCredits] is the note value the link claims (`amt`,
+ *   `InvitationLinkData.shieldedFundingCredits`), or null for a legacy link
+ *   that carries none. It is only BELIEVED when it is a real invite
+ *   denomination ([SHIELDED_INVITE_DENOMINATIONS_CREDITS]) at or above the
+ *   floor; anything else (absent, junk, non-member, below the floor) is
+ *   treated as unknown.
+ * - Unknown starts at the LARGEST invite denomination (contested, 0.3) so a
+ *   legacy contested invite still funds the identity in full; the claim then
+ *   falls back DOWN the ladder on the specific "note does not cover the
+ *   denomination" pre-broadcast refusal (fail-closed: nothing is spent by a
+ *   refused attempt — see [SdkShieldedUsernameCreation.isNoteBelowDenominationFailure]).
+ *
+ * The same descent is what defuses a tampered-high `amt`: the oversized
+ * attempt finds no covering note, the FFI refuses pre-broadcast, and the
+ * claim steps down until it meets the note that actually exists. An empty
+ * result means no invite denomination covers the username fee (the caller
+ * refuses without attempting anything).
+ */
+internal fun inviteClaimDenominationLadder(minimumCredits: Long, fundingCredits: Long?): List<Long> {
+    val known = fundingCredits?.takeIf {
+        it in SHIELDED_INVITE_DENOMINATIONS_CREDITS && it >= minimumCredits
+    }
+    val start = known ?: SHIELDED_INVITE_DENOMINATIONS_CREDITS.max()
+    return SHIELDED_INVITE_DENOMINATIONS_CREDITS
+        .filter { it in minimumCredits..start }
+        .sortedDescending()
+}
+
+/**
  * The shielded pool balance required to fund a username whose creation
  * fee is [fee] — the chosen Type-20 denomination as [Dash], or null when
  * no denomination covers the fee. This is the affordability bar the UI
@@ -893,9 +945,25 @@ class SdkShieldedUsernameCreation internal constructor(
      * by the link), instead of the wallet's own pool. Unlike the pool path
      * this does NOT preflight the wallet's shielded balance — the funds come
      * from the invite note, which the FFI transiently scans for from
-     * [fundingHeight] (advisory hint; null = no hint). [label] is the username
-     * the claimer will register (only used to pick the funding denomination,
-     * the same contested→0.3 / non-contested→0.1 mapping the pool path uses).
+     * [fundingHeight] (advisory hint; null = no hint).
+     *
+     * DENOMINATION — the identity gets the invite's FULL value (product
+     * decision): [fundingCredits] is the note value the link carries (`amt`,
+     * [de.schildbach.wallet.data.InvitationLinkData.shieldedFundingCredits]);
+     * when it is a readable invite denomination the claim requests exactly
+     * that, so a 0.3 contested invite claimed with a non-contested name still
+     * funds the new identity with the full 0.3 in credits instead of
+     * requesting the 0.1 username minimum and leaking the 0.2 difference to
+     * the CLAIMER's own Orchard change address. When it is unreadable (legacy
+     * links minted before `amt` existed, or a value that is not a real invite
+     * denomination) the claim tries the denominations DESCENDING —
+     * contested 0.3 first, then non-contested 0.1 — retrying only on the
+     * specific fail-closed "no note covers this denomination" refusal
+     * (nothing is spent by a refused attempt; see
+     * [inviteClaimDenominationLadder] and [isNoteBelowDenominationFailure]).
+     * [label] is the username the claimer will register; its tier sets the
+     * FLOOR of that ladder (a contested name needs at least the 0.3
+     * denomination — same mapping the pool path uses), never the amount.
      *
      * On success returns [SdkWriteResult.Broadcast] with the new identity id
      * (base58) — the legacy claim tail then recovers it by its slot-0 public
@@ -911,7 +979,8 @@ class SdkShieldedUsernameCreation internal constructor(
     suspend fun createIdentityFromInvitation(
         oneTimeSkHex: String,
         fundingHeight: Int?,
-        label: String
+        label: String,
+        fundingCredits: Long? = null
     ): SdkWriteResult<String> {
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
         val name = label.trim()
@@ -936,8 +1005,15 @@ class SdkShieldedUsernameCreation internal constructor(
             if (t is CancellationException) throw t
             return notBroadcast("username fee unavailable", t)
         }
-        val denominationCredits = chooseShieldedIdentityDenominationCredits(fee)
+        val minimumCredits = chooseShieldedIdentityDenominationCredits(fee)
             ?: return notBroadcast("no shielded denomination covers the username fee", null)
+        // The denominations to attempt, LARGEST first — the identity gets the
+        // invite's full value, with the username tier only setting the floor
+        // (see the method KDoc and inviteClaimDenominationLadder).
+        val denominationLadder = inviteClaimDenominationLadder(minimumCredits, fundingCredits)
+        if (denominationLadder.isEmpty()) {
+            return notBroadcast("no shielded invite denomination covers the username fee", null)
+        }
 
         // The runtime must be up (viewing-key derivation + the transient note
         // scan run on it), but we do NOT gate on the wallet's own pool balance
@@ -1000,44 +1076,73 @@ class SdkShieldedUsernameCreation internal constructor(
             return notBroadcast("own default orchard address lookup failed", t)
         } ?: return notBroadcast("no bound shielded sub-wallet for the claimer yet", null)
 
-        // THE claim spend — one attempt, ~30s Halo 2 proof.
-        val identityId = try {
-            source.createIdentityFromOneTimeKey(
-                walletIdHex = walletId,
-                oneTimeSk = oneTimeSk,
-                changeAddressRaw43 = changeAddressRaw43,
-                identityIndex = identityIndex,
-                keys = keys,
-                denominationCredits = denominationCredits,
-                fallbackAddress21 = fallbackRaw21,
-                fundingBirthHeight = fundingHeight
-            )
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            if (isInviteAlreadyUsedFailure(t)) {
-                log.warn("shielded invite claim rejected — the one-time note is already spent", t)
-                return SdkWriteResult.NotBroadcast(REASON_INVITE_ALREADY_USED, t)
-            }
-            return when (val classified = classifyBroadcastFailure(t)) {
-                is SdkWriteResult.NotBroadcast -> {
-                    log.warn("shielded invite claim rejected pre-broadcast", t)
-                    classified
+        // THE claim spend — each attempt is a ~30s Halo 2 proof. Walk the
+        // denomination ladder LARGEST first. A "note does not cover this
+        // denomination" refusal is fail-closed — the FFI's transient scan +
+        // note selection run strictly BEFORE proof generation or broadcast,
+        // nothing is spent, no reservation is held (the note belongs to the
+        // foreign one-time key, not to any subwallet), and the invite stays
+        // unused — so stepping down and retrying is safe. ONLY that refusal
+        // descends: an already-used invite, any other pre-broadcast
+        // rejection, and every unprovable outcome terminate exactly as a
+        // single attempt would (Ambiguous is NEVER retried — the identity
+        // may already be on chain and a retry could double-spend the note's
+        // idempotence handling).
+        var claimedIdentityId: ByteArray? = null
+        var spentDenominationCredits = 0L
+        for ((attempt, denominationCredits) in denominationLadder.withIndex()) {
+            try {
+                claimedIdentityId = source.createIdentityFromOneTimeKey(
+                    walletIdHex = walletId,
+                    oneTimeSk = oneTimeSk,
+                    changeAddressRaw43 = changeAddressRaw43,
+                    identityIndex = identityIndex,
+                    keys = keys,
+                    denominationCredits = denominationCredits,
+                    fallbackAddress21 = fallbackRaw21,
+                    fundingBirthHeight = fundingHeight
+                )
+                spentDenominationCredits = denominationCredits
+                break
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                if (isInviteAlreadyUsedFailure(t)) {
+                    log.warn("shielded invite claim rejected — the one-time note is already spent", t)
+                    return SdkWriteResult.NotBroadcast(REASON_INVITE_ALREADY_USED, t)
                 }
-                else -> {
-                    log.error(
-                        "shielded invite claim outcome unconfirmed — the identity MAY be on chain; do NOT retry",
-                        t
+                if (attempt < denominationLadder.lastIndex && isNoteBelowDenominationFailure(t)) {
+                    log.info(
+                        "no invite note covers the {} denomination ({}) — falling back to {}",
+                        creditsToDash(denominationCredits).toPlainString(),
+                        t.message,
+                        creditsToDash(denominationLadder[attempt + 1]).toPlainString()
                     )
-                    SdkWriteResult.Ambiguous(t)
+                    continue
+                }
+                return when (val classified = classifyBroadcastFailure(t)) {
+                    is SdkWriteResult.NotBroadcast -> {
+                        log.warn("shielded invite claim rejected pre-broadcast", t)
+                        classified
+                    }
+                    else -> {
+                        log.error(
+                            "shielded invite claim outcome unconfirmed — the identity MAY be on chain; do NOT retry",
+                            t
+                        )
+                        SdkWriteResult.Ambiguous(t)
+                    }
                 }
             }
+        }
+        val identityId = checkNotNull(claimedIdentityId) {
+            "invite-claim ladder exited without an identity or a classified failure"
         }
         val identityIdBase58 = Identifier.from(identityId).toString()
         log.info(
             "shielded-invite-claimed identity created at index {} ({}…) — {} denomination, contested={}",
             identityIndex,
             identityIdBase58.take(8),
-            creditsToDash(denominationCredits).toPlainString(),
+            creditsToDash(spentDenominationCredits).toPlainString(),
             contested
         )
         return SdkWriteResult.Broadcast(identityIdBase58)
@@ -1192,6 +1297,33 @@ class SdkShieldedUsernameCreation internal constructor(
                 m.contains("outpoint already", ignoreCase = true) ||
                 m.contains("double spend", ignoreCase = true)
         }
+
+        /**
+         * Whether a native claim-spend failure means the one-time key's
+         * note(s) exist but do NOT cover the requested denomination — the
+         * ONLY refusal the invite-claim denomination ladder
+         * ([inviteClaimDenominationLadder]) may fall back down on.
+         *
+         * This is rs-platform-wallet's typed
+         * `ShieldedInsufficientBalance { available, required }`, raised by
+         * `select_notes` during note SELECTION — strictly before the Halo 2
+         * proof or any broadcast, with no reservation held (the notes belong
+         * to the foreign one-time key, not to a subwallet) — so nothing was
+         * spent and a smaller-denomination retry is safe. The FFI surfaces it
+         * as an `ErrorWalletOperation` whose message embeds the error's
+         * Display text ("Insufficient shielded balance: available N,
+         * required M"); message-matched until the SDK exposes it typed.
+         *
+         * Deliberately does NOT match `ShieldedNoUnspentNotes` ("No unspent
+         * shielded notes available"): that means the key owns nothing the
+         * scan can see AT ALL (never funded, or the wallet's platform sync
+         * hasn't reached the note yet) — a smaller denomination re-scans the
+         * same tree and finds the same nothing, so descending would only
+         * burn two more full transient scans to reach the identical
+         * terminal refusal.
+         */
+        internal fun isNoteBelowDenominationFailure(t: Throwable): Boolean =
+            t.message?.contains("Insufficient shielded balance") == true
 
         /** Decode a 64-char lowercase-hex 32-byte scalar; throws on bad input. */
         internal fun hexToBytes32(hex: String): ByteArray {

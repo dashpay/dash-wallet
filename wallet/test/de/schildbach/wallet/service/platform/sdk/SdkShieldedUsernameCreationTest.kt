@@ -652,17 +652,21 @@ class SdkShieldedUsernameCreationTest {
     }
 
     @Test
-    fun claim_happyPath_broadcastsIdentity_fromTheOneTimeKey_nonContestedDenomination() = runTest {
+    fun claim_knownNonContestedNoteValue_spendsExactlyThatValue() = runTest {
         val source = claimSource()
 
+        // The link says the note is the 0.1 non-contested denomination — the
+        // claim requests exactly that, in ONE attempt.
         val result = service(source = source)
-            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+            .createIdentityFromInvitation(
+                oneTimeKeyHex, fundingHeight, "alice2", fundingCredits = denominationCredits
+            )
 
         assertEquals(identityIdBase58, (result as SdkWriteResult.Broadcast).value)
         // The one-time key (decoded to 32 bytes), the claimer's own change
-        // address, the non-contested 0.1 denomination and the funding-height
-        // hint are all threaded through.
-        coVerify {
+        // address, the note's 0.1 denomination and the funding-height hint
+        // are all threaded through.
+        coVerify(exactly = 1) {
             source.createIdentityFromOneTimeKey(
                 walletIdHex,
                 match { it.size == 32 && it[0].toInt() == 0x00 && (it[1].toInt() and 0xFF) == 0x11 },
@@ -674,6 +678,265 @@ class SdkShieldedUsernameCreationTest {
                 fundingHeight
             )
         }
+    }
+
+    @Test
+    fun claim_contestedNoteValue_nonContestedUsername_identityGetsTheFullNote() = runTest {
+        val source = claimSource()
+
+        // THE product decision: a 0.3 contested invite claimed with a
+        // NON-contested username ("alice2") funds the identity with the full
+        // 0.3 — not the 0.1 username minimum with the 0.2 difference routed
+        // to the claimer's own Orchard change address.
+        val result = service(source = source)
+            .createIdentityFromInvitation(
+                oneTimeKeyHex, fundingHeight, "alice2", fundingCredits = contestedDenominationCredits
+            )
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                contestedDenominationCredits, any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun claim_legacyLinkWithoutNoteValue_attemptsTheContestedDenominationFirst() = runTest {
+        val source = claimSource()
+
+        // Legacy links carry no `amt`: the note value is UNKNOWN, so the
+        // claim starts at the largest invite denomination (contested 0.3) —
+        // a legacy contested invite still funds the identity in full.
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                contestedDenominationCredits, any(), any()
+            )
+        }
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    /** The FFI's fail-closed refusal when the key's note(s) don't cover the denomination. */
+    private fun noteBelowDenominationError() = DashSdkError.PlatformWallet.WalletOperation(
+        "shielded identity-create-from-one-time-key failed: " +
+            "Insufficient shielded balance: available 10000000000, required 30000000000"
+    )
+
+    @Test
+    fun claim_legacyLink_noteTooSmallForContested_fallsBackToNonContested() = runTest {
+        val source = claimSource()
+        // The real note is 0.1: the 0.3 attempt is refused pre-broadcast
+        // (nothing spent), and the claim falls back down the ladder.
+        coEvery {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                contestedDenominationCredits, any(), any()
+            )
+        } throws noteBelowDenominationError()
+
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+
+        assertEquals(identityIdBase58, (result as SdkWriteResult.Broadcast).value)
+        coVerifyOrder {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                contestedDenominationCredits, any(), any()
+            )
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                denominationCredits, any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun claim_tamperedOversizedNoteValue_failsClosedThenFallsBack() = runTest {
+        val source = claimSource()
+        // A tampered link claims 0.3 but the note is really 0.1: the
+        // oversized attempt finds no covering note and is refused
+        // pre-broadcast, then the ladder meets the real note. The tampered
+        // `amt` cost one refused attempt — it moved no funds.
+        coEvery {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                contestedDenominationCredits, any(), any()
+            )
+        } throws noteBelowDenominationError()
+
+        val result = service(source = source)
+            .createIdentityFromInvitation(
+                oneTimeKeyHex, fundingHeight, "alice2", fundingCredits = contestedDenominationCredits
+            )
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                denominationCredits, any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun claim_junkNoteValue_treatedAsUnknown_startsAtContested() = runTest {
+        val source = claimSource()
+
+        // A value that is not a real invite denomination (tampered/garbage)
+        // is never believed — the claim behaves exactly like a legacy link.
+        val result = service(source = source)
+            .createIdentityFromInvitation(
+                oneTimeKeyHex, fundingHeight, "alice2", fundingCredits = 12_345L
+            )
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(
+                walletIdHex, any(), changeAddressRaw43, 0, registrationKeys,
+                contestedDenominationCredits, any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun claim_contestedUsername_neverDescendsBelowItsFloor() = runTest {
+        val source = claimSource()
+        // A contested username needs the 0.3 denomination; when the note
+        // cannot cover it there is nothing smaller that could fund the name,
+        // so the refusal is terminal — never a doomed 0.1 attempt.
+        coEvery {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        } throws noteBelowDenominationError()
+
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice")
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun claim_noNotesAtAll_terminalRefusal_neverDescends() = runTest {
+        val source = claimSource()
+        // ShieldedNoUnspentNotes means the key owns nothing the scan can see
+        // — a smaller denomination re-scans the same tree and finds the same
+        // nothing, so the ladder must not burn two more full scans on it.
+        coEvery {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        } throws DashSdkError.PlatformWallet.WalletOperation(
+            "shielded identity-create-from-one-time-key failed: No unspent shielded notes available"
+        )
+
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun claim_alreadyUsedFirstAttempt_neverDescends() = runTest {
+        val source = claimSource()
+        coEvery {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        } throws DashSdkError.InvalidState("orchard nullifier already spent on chain")
+
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(
+            SdkShieldedUsernameCreation.isInviteAlreadyUsedReason(
+                (result as SdkWriteResult.NotBroadcast).reason
+            )
+        )
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    // ── Invite-claim denomination ladder (pure) ──────────────────────────
+
+    @Test
+    fun claimLadder_knownValueIsTheSingleStart_withTamperFallback() {
+        // Known 0.3, non-contested floor: full value first, then the floor.
+        assertEquals(
+            listOf(contestedDenominationCredits, denominationCredits),
+            inviteClaimDenominationLadder(denominationCredits, contestedDenominationCredits)
+        )
+        // Known 0.1, non-contested floor: exactly one attempt.
+        assertEquals(
+            listOf(denominationCredits),
+            inviteClaimDenominationLadder(denominationCredits, denominationCredits)
+        )
+    }
+
+    @Test
+    fun claimLadder_unknownValueDescendsFromContested() {
+        assertEquals(
+            listOf(contestedDenominationCredits, denominationCredits),
+            inviteClaimDenominationLadder(denominationCredits, null)
+        )
+        // Junk / non-member / below-floor values are never believed.
+        assertEquals(
+            listOf(contestedDenominationCredits, denominationCredits),
+            inviteClaimDenominationLadder(denominationCredits, 12_345L)
+        )
+        assertEquals(
+            listOf(contestedDenominationCredits, denominationCredits),
+            inviteClaimDenominationLadder(denominationCredits, 50_000_000_000L)
+        )
+    }
+
+    @Test
+    fun claimLadder_contestedFloorNeverDescendsBelowIt() {
+        assertEquals(
+            listOf(contestedDenominationCredits),
+            inviteClaimDenominationLadder(contestedDenominationCredits, null)
+        )
+        // A known 0.1 below a contested floor is invalid → unknown → the
+        // floor-only ladder (which then fails closed at claim time).
+        assertEquals(
+            listOf(contestedDenominationCredits),
+            inviteClaimDenominationLadder(contestedDenominationCredits, denominationCredits)
+        )
+    }
+
+    @Test
+    fun claimLadder_floorAboveEveryInviteDenomination_isEmpty() {
+        assertTrue(inviteClaimDenominationLadder(50_000_000_000L, null).isEmpty())
+    }
+
+    @Test
+    fun isNoteBelowDenominationFailure_matchesOnlyTheInsufficientRefusal() {
+        assertTrue(
+            SdkShieldedUsernameCreation.isNoteBelowDenominationFailure(noteBelowDenominationError())
+        )
+        // No notes at all is NOT the descend case…
+        assertFalse(
+            SdkShieldedUsernameCreation.isNoteBelowDenominationFailure(
+                DashSdkError.PlatformWallet.WalletOperation("No unspent shielded notes available")
+            )
+        )
+        // …and neither is anything else.
+        assertFalse(
+            SdkShieldedUsernameCreation.isNoteBelowDenominationFailure(
+                DashSdkError.Timeout("dapi timeout")
+            )
+        )
+        assertFalse(SdkShieldedUsernameCreation.isNoteBelowDenominationFailure(RuntimeException()))
     }
 
     @Test

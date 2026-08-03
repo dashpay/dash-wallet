@@ -596,8 +596,13 @@
          has no on-chain asset lock to read and the SDK cannot value a
          one-time key's note before spending it. Asserting "non-contested"
          here was wrong — it told people who HAD paid the contested fee that
-         they could not use it. The wording must stay non-committal. -->
-    <string name="request_username_invitation_unknown_tier_message">This invitation may only support a non-contested username. If it was created for a contested username you can still request one — if it was not, the request will not go through and the invitation stays unused.</string>
+         they could not use it. The wording must stay non-committal.
+         The last sentence reflects the claim behavior: the new identity is
+         funded with the invitation's FULL note value regardless of which
+         username tier is chosen (a contested-funded invitation claimed with
+         a non-contested name still puts everything into the new account, not
+         just the non-contested minimum). -->
+    <string name="request_username_invitation_unknown_tier_message">This invitation may only support a non-contested username. If it was created for a contested username you can still request one — if it was not, the request will not go through and the invitation stays unused. Whichever username you choose, everything the invitation was funded with goes to your new account.</string>
     <string name="username_types_title">What are contested and non-contested usernames?</string>
     <string name="username_types_message">There are two types of usernames: contested and non-contested.\n\nNon-contested usernames have at least one number (2-9) or are longer than 20 characters and will be automatically approved.\n\nIf you want to create a contested username which is shorter and without numbers, you need to register with DashPay without an invitation, pay the required fee and wait for approval upon completion of the voting period.</string>
     <string name="accept_invitation_hide">Hide</string>
