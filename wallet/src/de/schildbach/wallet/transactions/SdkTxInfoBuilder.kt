@@ -82,8 +82,12 @@ object SdkTxInfoBuilder {
     private val log = LoggerFactory.getLogger(SdkTxInfoBuilder::class.java)
 
     /**
-     * Builds `TxInfo`s for every wallet-relevant record in [snapshot],
-     * keyed by display txid hex, preserving the store's row order.
+     * Builds `TxInfo`s for every record in [SdkSeamTxSnapshot.walletRecords],
+     * keyed by display txid hex, preserving the row order. NOTE
+     * (scalability): production seam snapshots carry only a BOUNDED delta in
+     * `walletRecords`, and the seam service builds per-record infos on demand
+     * via [buildTxInfo] instead — this bulk entry point serves fixtures and
+     * callers that hold genuinely small snapshots.
      *
      * @param dashjTxLookup fallback lookup into the HELD dashj wallet for
      *        connected-output resolution when the SDK store doesn't know
@@ -95,9 +99,39 @@ object SdkTxInfoBuilder {
         params: NetworkParameters,
         dashjTxLookup: (Sha256Hash) -> Transaction?
     ): Map<String, TxInfo> {
-        val parseCache = HashMap<String, Transaction?>()
+        val recordByTxid = snapshot.walletRecords.associateBy { it.txidHex }
+        val builder = Builder(snapshot, params, dashjTxLookup) { recordByTxid[it] }
+        val result = LinkedHashMap<String, TxInfo>(snapshot.walletRecords.size)
+        for (record in snapshot.walletRecords) {
+            result[record.txidHex] = builder.txInfoOf(record, depth = 1)
+        }
+        return result
+    }
 
-        fun parsedTx(txidHex: String): Transaction? {
+    /**
+     * Builds ONE record's `TxInfo` — the bounded, on-demand path the
+     * post-cutover seam uses ([de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService]):
+     * nothing is materialized beyond this transaction (inputs/outputs stay
+     * lazy, `spentBy` resolves depth-1 through the snapshot's
+     * [SdkSeamTxSnapshot.recordByTxid] point lookup).
+     */
+    fun buildTxInfo(
+        record: L1TxUiRecord,
+        snapshot: SdkSeamTxSnapshot,
+        params: NetworkParameters,
+        dashjTxLookup: (Sha256Hash) -> Transaction?
+    ): TxInfo = Builder(snapshot, params, dashjTxLookup, snapshot.recordByTxid).txInfoOf(record, depth = 1)
+
+    /** Shared build logic; [recordLookup] resolves `spentBy` spender records. */
+    private class Builder(
+        private val snapshot: SdkSeamTxSnapshot,
+        private val params: NetworkParameters,
+        private val dashjTxLookup: (Sha256Hash) -> Transaction?,
+        private val recordLookup: (String) -> L1TxUiRecord?
+    ) {
+        private val parseCache = HashMap<String, Transaction?>()
+
+        private fun parsedTx(txidHex: String): Transaction? {
             if (txidHex in parseCache) return parseCache[txidHex]
             val tx = snapshot.payloadByTxid[txidHex]?.let { payload ->
                 try {
@@ -115,7 +149,7 @@ object SdkTxInfoBuilder {
             return tx
         }
 
-        fun inputsOf(txidHex: String): List<TxInputInfo> {
+        private fun inputsOf(txidHex: String): List<TxInputInfo> {
             val tx = parsedTx(txidHex) ?: return emptyList()
             return tx.inputs.map { input ->
                 val outpoint = input.outpoint
@@ -140,8 +174,6 @@ object SdkTxInfoBuilder {
                 )
             }
         }
-
-        val recordByTxid = snapshot.walletRecords.associateBy { it.txidHex }
 
         fun txInfoOf(record: L1TxUiRecord, depth: Int): TxInfo {
             val txidHex = record.txidHex
@@ -177,7 +209,7 @@ object SdkTxInfoBuilder {
                             index = index,
                             spentBy = if (depth > 0) {
                                 snapshot.spenderByOutpoint[outpointKey]
-                                    ?.let { spenderHex -> recordByTxid[spenderHex] }
+                                    ?.let { spenderHex -> recordLookup(spenderHex) }
                                     ?.let { spender -> txInfoOf(spender, depth - 1) }
                             } else {
                                 null
@@ -191,11 +223,5 @@ object SdkTxInfoBuilder {
                 raw = null
             )
         }
-
-        val result = LinkedHashMap<String, TxInfo>(snapshot.walletRecords.size)
-        for (record in snapshot.walletRecords) {
-            result[record.txidHex] = txInfoOf(record, depth = 1)
-        }
-        return result
     }
 }

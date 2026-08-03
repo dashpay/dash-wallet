@@ -725,6 +725,23 @@ class CutoverUiDataServiceTest {
             return records.map { it }
         }
 
+        /** Reconcile-walk invocations (the ticker/re-resolve full pass). */
+        var reconcileWalks = 0
+
+        /** When set, the reconcile walk delivers THESE pages instead of one full page. */
+        var reconcilePagesOverride: List<List<L1TxUiRecord>>? = null
+
+        override suspend fun forEachWalletTxRecordPage(
+            walletIdHex: String,
+            onPage: suspend (List<L1TxUiRecord>) -> Unit
+        ) {
+            reconcileWalks++
+            val pages = reconcilePagesOverride ?: listOf(records.value)
+            for (page in pages) {
+                if (page.isNotEmpty()) onPage(page)
+            }
+        }
+
         /** Txids that funded a CoinJoin-account TXO (historical-mixing classification probe). */
         var coinJoinFunded: Set<String> = emptySet()
 
@@ -969,6 +986,49 @@ class CutoverUiDataServiceTest {
         runCurrent()
 
         coVerify(exactly = 0) { displayDao.insertAll(any()) }
+    }
+
+    // ── The paged reconcile lane (the O(wallet)-per-second fix) ───────
+
+    @Test
+    fun reconcile_firstFullWalkWaitsOutTheStartupGrace() = runTest {
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+        // Launch window: the bounded change feed runs; NO whole-wallet walk.
+        assertEquals(0, source.reconcileWalks)
+
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
+        runCurrent()
+        assertEquals(1, source.reconcileWalks)
+    }
+
+    @Test
+    fun reconcile_multiPageWalkSyncsEveryPage() = runTest {
+        // A large wallet's reconcile arrives as BOUNDED pages; every page
+        // must converge into the display cache without the pipeline ever
+        // holding the whole set.
+        val pageA = listOf(record(firstByte = 1, net = 100, context = 3, direction = 0))
+        val pageB = listOf(record(firstByte = 2, net = 200, context = 3, direction = 0))
+        val pageC = listOf(record(firstByte = 3, net = -300, fee = 100, context = 3, direction = 1))
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+            .apply { reconcilePagesOverride = listOf(pageA, pageB, pageC) }
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
+        runCurrent()
+
+        assertEquals(setOf(displayHex(1), displayHex(2), displayHex(3)), store.keys)
+        assertEquals(resolve(R.string.transaction_row_status_sent), store.getValue(displayHex(3)).title)
     }
 
     // ── The engine-event (instant receive) feed ───────────────────────

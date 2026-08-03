@@ -133,11 +133,14 @@ class WalletDataAdapter @Inject constructor(
         val all: Collection<TxInfo> = if (sdkTxs != null) {
             // Post-cutover: the SDK-fed set, plus (dedup'd by txid) any held-dashj-wallet
             // transactions the SDK store never learned — history must never shrink across
-            // the cutover.
+            // the cutover. The SDK map is a LAZY store-backed view, so enumerate it ONCE
+            // and dedup against a local id set instead of a per-dashj-tx containsKey probe.
+            val sdkValues = sdkTxs.values.toList()
+            val sdkIds = sdkValues.mapTo(HashSet()) { it.txId }
             val dashjOnly = walletData.getTransactions()
-                .filter { it.txId.toString() !in sdkTxs }
+                .filter { it.txId.toString() !in sdkIds }
                 .map { it.toTxInfo(walletData.transactionBag, walletData.networkParameters) }
-            sdkTxs.values + dashjOnly
+            sdkValues + dashjOnly
         } else {
             walletData.getTransactions()
                 .map { it.toTxInfo(walletData.transactionBag, walletData.networkParameters) }

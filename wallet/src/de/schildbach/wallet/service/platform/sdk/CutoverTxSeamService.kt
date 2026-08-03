@@ -134,6 +134,15 @@ class CutoverTxSeamService internal constructor(
      * The SDK-fed wallet transaction set keyed by display txid hex, or null
      * while the seam feed is inactive (pre-cutover, rolled back, pipeline
      * failed) or not yet primed. Null = caller must use the dashj path.
+     *
+     * SCALABILITY: the returned map is a LAZY view ([SeamTxInfoView]) over
+     * the snapshot's point/enumeration lookups — `get`/`containsKey` are
+     * fresh per-txid reads (production: indexed store queries), and
+     * `keys`/`values` enumerate on demand. Nothing O(wallet) is retained,
+     * and per-record `TxInfo`s are built only when actually read — the old
+     * design materialized (and re-materialized every second) one `TxInfo`
+     * per wallet transaction, which at ~100k transactions was one of the
+     * crash-loop drivers.
      */
     fun sdkTxInfosOrNull(): Map<String, TxInfo>? = _sdkTxInfos
 
@@ -258,7 +267,20 @@ class CutoverTxSeamService internal constructor(
 
     private suspend fun runPipeline(activatedAtMs: Long) {
         val walletIdHex = awaitBoundWallet()
-        var baselineStatuses: Map<String, L1TxUiStatus>? = null
+        var primed = false
+        // Per-activation event-diff baseline, BOUNDED (the scalability fix:
+        // the old full `baselineStatuses` map retained one entry per wallet
+        // transaction and was rebuilt per emission). Recency-ordered,
+        // eldest-evicted; the production source's emissions only ever carry
+        // new rows and the bounded recent tail, and the tail re-touches its
+        // txids every pass, so a row can only fall out of this LRU long
+        // after its context stopped changing. Worst case for an evicted
+        // straggler: one spurious new-tx-style event — consumers are
+        // filter-driven and idempotent to a re-sighting.
+        val knownStatuses = object : LinkedHashMap<String, L1TxUiStatus>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, L1TxUiStatus>): Boolean =
+                size > SEAM_STATUS_LRU_MAX
+        }
         source.observeSeamTxSnapshots(walletIdHex)
             .catch { e ->
                 log.error("SDK seam tx flow failed; seam reads fall back to dashj", e)
@@ -267,48 +289,49 @@ class CutoverTxSeamService internal constructor(
                 primingReplay = emptyList()
             }
             .collect { snapshot ->
-                val infos = try {
-                    SdkTxInfoBuilder.buildTxInfos(snapshot, networkParameters, dashjTxLookup)
-                } catch (t: Throwable) {
-                    if (t is CancellationException) throw t
-                    log.error("building seam TxInfos failed; keeping the previous snapshot", t)
-                    return@collect
-                }
-                val statuses = snapshot.walletRecords.associate { it.txidHex to it.status }
-                val previous = baselineStatuses
-                _sdkTxInfos = infos
-                baselineStatuses = statuses
+                // The synchronous read surface: a LAZY view over the store's
+                // point/enumeration lookups — always current, O(1) retained.
+                val view = SeamTxInfoView(snapshot, networkParameters, dashjTxLookup)
 
-                if (previous == null) {
-                    // Priming snapshot: baseline only — no history replay for
-                    // pre-activation rows (matches attaching dashj wallet
-                    // listeners). Rows that LANDED during the priming window
-                    // (firstSeen at/after activation) become the bounded
-                    // per-subscriber replay, since no consumer flow could
-                    // have carried them. Only then does the routing gate
-                    // flip, so switching consumers find the replay in place.
+                if (!primed) {
+                    primed = true
+                    // Priming emission (production: the bounded recent tail):
+                    // baseline only — no history replay for pre-activation
+                    // rows (matches attaching dashj wallet listeners). Rows
+                    // that LANDED during the priming window (firstSeen
+                    // at/after activation) become the bounded per-subscriber
+                    // replay, since no consumer flow could have carried
+                    // them. Only then does the routing gate flip, so
+                    // switching consumers find the replay in place.
+                    for (record in snapshot.walletRecords) {
+                        knownStatuses[record.txidHex] = record.status
+                    }
                     primingReplay = snapshot.walletRecords
                         .filter { it.timestampMs >= activatedAtMs }
-                        .mapNotNull { infos[it.txidHex] }
+                        .mapNotNull { buildInfoOrNull(it, snapshot) }
+                    _sdkTxInfos = view
                     log.info(
-                        "seam tx feed primed with {} wallet transactions ({} in the priming window); serving seam tx reads from the SDK",
-                        infos.size,
+                        "seam tx feed primed ({} recent records, {} in the priming window); " +
+                            "serving seam tx reads from the SDK store",
+                        snapshot.walletRecords.size,
                         primingReplay.size
                     )
                     _active.value = true
                     return@collect
                 }
-                // First post-prime snapshot: every flip-driven resubscription
+                // First post-prime emission: every flip-driven resubscription
                 // has attached; retire the priming replay (see its docs).
                 primingReplay = emptyList()
+                _sdkTxInfos = view
+                // Event diff over THIS emission's bounded delta only (the
+                // production source emits new/changed records, never the
+                // whole table): unknown txid → new-tx-style event; known
+                // txid with a different context → confidence-style event.
                 for (record in snapshot.walletRecords) {
-                    val tx = infos[record.txidHex] ?: continue
-                    val emitted = when {
-                        record.txidHex !in previous -> events.tryEmit(TxSeamEvent(tx, isConfidenceUpdate = false))
-                        previous[record.txidHex] != record.status ->
-                            events.tryEmit(TxSeamEvent(tx, isConfidenceUpdate = true))
-                        else -> true
-                    }
+                    val previous = knownStatuses.put(record.txidHex, record.status)
+                    if (previous == record.status) continue
+                    val tx = buildInfoOrNull(record, snapshot) ?: continue
+                    val emitted = events.tryEmit(TxSeamEvent(tx, isConfidenceUpdate = previous != null))
                     if (!emitted) {
                         log.warn("seam event buffer overflow — dropped event for {}", record.txidHex)
                     }
@@ -316,7 +339,71 @@ class CutoverTxSeamService internal constructor(
             }
     }
 
+    private fun buildInfoOrNull(record: L1TxUiRecord, snapshot: SdkSeamTxSnapshot): TxInfo? =
+        try {
+            SdkTxInfoBuilder.buildTxInfo(record, snapshot, networkParameters, dashjTxLookup)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.error("building a seam TxInfo failed for {}", record.txidHex, t)
+            null
+        }
+
     companion object {
         private val log = LoggerFactory.getLogger(CutoverTxSeamService::class.java)
+
+        /**
+         * [runPipeline]'s status-LRU cap. Far larger than the production
+         * source's recent-tail window (2×[SdkTxStoreWalker.RECENT_TAIL_ROWS])
+         * so tail-refreshed txids can never be evicted between passes, and a
+         * few KB at ~64-char txids.
+         */
+        internal const val SEAM_STATUS_LRU_MAX = 8_192
     }
+}
+
+/**
+ * LAZY `Map<String, TxInfo>` facade over one [SdkSeamTxSnapshot]'s
+ * point/enumeration lookups — the post-cutover seam's synchronous read
+ * surface. `get`/`containsKey` are per-txid reads (production: fresh indexed
+ * store queries — the returned `TxInfo` always carries CURRENT lock state);
+ * `keys`/`values`/`entries` enumerate on demand through
+ * [SdkSeamTxSnapshot.allWalletRecords] (production: a paged, transient walk
+ * used only by the rare full reads — `getTransactions()`, the
+ * `waitUntilLocked` current-state replay). Nothing O(wallet) is retained by
+ * the view itself; the one-shot enumeration result is cached per view
+ * instance so a single caller's keys-then-values sequence walks the store
+ * once.
+ */
+internal class SeamTxInfoView(
+    private val snapshot: SdkSeamTxSnapshot,
+    private val networkParameters: NetworkParameters,
+    private val dashjTxLookup: (Sha256Hash) -> Transaction?
+) : Map<String, TxInfo> {
+
+    private val allRecords: List<L1TxUiRecord> by lazy { snapshot.allWalletRecords() }
+
+    private fun infoOf(record: L1TxUiRecord): TxInfo =
+        SdkTxInfoBuilder.buildTxInfo(record, snapshot, networkParameters, dashjTxLookup)
+
+    override fun get(key: String): TxInfo? = snapshot.recordByTxid(key)?.let(::infoOf)
+
+    override fun containsKey(key: String): Boolean = snapshot.recordByTxid(key) != null
+
+    override fun containsValue(value: TxInfo): Boolean = get(value.txId.lowercase()) != null
+
+    override val keys: Set<String>
+        get() = allRecords.mapTo(LinkedHashSet()) { it.txidHex }
+
+    override val values: Collection<TxInfo>
+        get() = allRecords.map(::infoOf)
+
+    override val entries: Set<Map.Entry<String, TxInfo>>
+        get() = allRecords.mapTo(LinkedHashSet()) {
+            java.util.AbstractMap.SimpleImmutableEntry(it.txidHex, infoOf(it))
+        }
+
+    override val size: Int
+        get() = keys.size
+
+    override fun isEmpty(): Boolean = allRecords.isEmpty()
 }

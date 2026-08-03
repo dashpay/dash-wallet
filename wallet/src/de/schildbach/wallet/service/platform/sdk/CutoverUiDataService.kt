@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -921,8 +922,17 @@ internal fun planMixingGroupUpdates(
  * Neutral/primitive-only, like [L1TxUiRecord]; the dashj-typed conversion
  * happens at the seam ([de.schildbach.wallet.transactions.SdkTxInfoBuilder]).
  *
- * @param walletRecords wallet-relevant transactions (TXO-joined), same set
- *        as [CutoverUiSource.observeWalletTxRecords].
+ * SCALABILITY CONTRACT (the ~100k-tx crash-loop fix): the production source
+ * NEVER materializes the whole wallet into one of these. [walletRecords]
+ * carries only the BOUNDED delta of this emission (the priming recent tail,
+ * then new/changed rows), and completeness is served LAZILY through the
+ * closure members — point lookups and on-demand paged enumeration straight
+ * from the store, zero retained state. Test fixtures keep passing complete
+ * little lists and get equivalent semantics from the defaults.
+ *
+ * @param walletRecords the wallet-relevant records OF THIS EMISSION — a
+ *        bounded delta in production (never the whole table); fixtures pass
+ *        the full set.
  * @param payloadByTxid raw serialized transaction bytes for any SDK-known
  *        transaction, keyed by DISPLAY-order txid hex — the lookup that
  *        resolves an input's connected output. CONTRACT: consumers may only
@@ -933,15 +943,28 @@ internal fun planMixingGroupUpdates(
  *        keep passing plain maps.
  * @param mineOutpoints wallet-owned outputs as "txidHex:vout" keys (the SDK
  *        TXO set — the same output universe dashj's `isMine` covers,
- *        parity-proven by the shadow harness).
+ *        parity-proven by the shadow harness). CONTRACT: consumers may only
+ *        call `contains` — the production source backs this with a lazy
+ *        per-outpoint indexed EXISTS, so iteration/`size` see an empty view.
  * @param spenderByOutpoint "txidHex:vout" → display txid hex of the tx
- *        spending that output, from the TXO rows' `spendingTxid`.
+ *        spending that output. CONTRACT: `get`/`containsKey` only — lazy
+ *        per-outpoint lookup in production.
+ * @param recordByTxid point lookup of ONE wallet-relevant record by display
+ *        txid hex, FRESH from the store in production (used by the seam's
+ *        lazy TxInfo map and the `spentBy` depth-1 resolution). Default:
+ *        linear probe of [walletRecords] (fixtures).
+ * @param allWalletRecords ON-DEMAND enumeration of every wallet-relevant
+ *        record — paged at the query level in production and transient
+ *        (invoked only by the seam's rare `values`/`keys` reads, never on
+ *        the per-second pipeline path). Default: [walletRecords].
  */
 class SdkSeamTxSnapshot(
     val walletRecords: List<L1TxUiRecord>,
     val payloadByTxid: Map<String, ByteArray>,
     val mineOutpoints: Set<String>,
-    val spenderByOutpoint: Map<String, String>
+    val spenderByOutpoint: Map<String, String>,
+    val recordByTxid: (String) -> L1TxUiRecord? = { txid -> walletRecords.firstOrNull { it.txidHex == txid } },
+    val allWalletRecords: () -> List<L1TxUiRecord> = { walletRecords }
 )
 
 // ── Source seam ───────────────────────────────────────────────────────
@@ -1032,12 +1055,39 @@ interface CutoverUiSource {
         txidHexes: Collection<String>
     ): Set<String> = emptySet()
 
-    /** Live wallet-relevant transaction records, neutral shape. */
+    /**
+     * Live wallet-relevant transaction records, neutral shape, in BOUNDED
+     * batches. Each emission is a page of new/changed records (production:
+     * an initial recent-tail prime, then watermark-driven deltas via
+     * [SdkTxStoreWalker] — never the whole table); fixtures may emit their
+     * full little record set. Whole-wallet convergence is NOT this flow's
+     * job — that is [forEachWalletTxRecordPage], which the pipeline runs on
+     * its 60s reconcile ticker.
+     */
     fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>>
+
+    /**
+     * FULL reconcile walk over every wallet-relevant record, delivered as
+     * bounded pages — the periodic (ticker/re-resolve) convergence pass.
+     * Production pages the store with a bounded keyset window and throttles
+     * between pages ([SdkTxStoreWalker.walkAll]) so an arbitrarily large
+     * wallet can never exhaust memory or starve the process. Default:
+     * one page holding the current record flow's latest emission (fixtures).
+     */
+    suspend fun forEachWalletTxRecordPage(
+        walletIdHex: String,
+        onPage: suspend (List<L1TxUiRecord>) -> Unit
+    ) {
+        val records = observeWalletTxRecords(walletIdHex).firstOrNull() ?: return
+        if (records.isNotEmpty()) onPage(records)
+    }
 
     /**
      * Live [SdkSeamTxSnapshot]s for the post-cutover seam reads
      * ([de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService]).
+     * Same bounded-delta contract as [observeWalletTxRecords]: the FIRST
+     * emission primes (recent tail), later emissions carry only new/changed
+     * records; complete/point reads go through the snapshot's lazy members.
      */
     fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot>
 }
@@ -1186,36 +1236,82 @@ internal class DashSdkCutoverUiSource(
         val db = database()
         // Wallet membership is the TXO join (tx rows are not wallet-scoped;
         // this app binds a single wallet) — the same convention the parity
-        // probe's distinct count uses. MULTI-DAY-SYNC FIX: the old combine
-        // materialized the FULL `transactions` table (observeAll, every
-        // payload blob included) plus the full wallet TXO table on EVERY Room
-        // change — the "too many records" failure class. Now the two tables
-        // only TRIGGER (cheap COUNT flows re-emitted per invalidation), the
-        // rebuild is sampled to at most one per [SNAPSHOT_SAMPLE_MS], and the
-        // snapshot queries fetch ONLY wallet-relevant rows without payloads.
+        // probe's distinct count uses.
+        //
+        // SCALABILITY FIX (the ~100k-tx crash-loop): the previous "bounded"
+        // revision still re-queried EVERY wallet TXO ref and EVERY
+        // wallet-relevant transaction row per sampled trigger — O(wallet)
+        // per second, growing as sync filled the table until the OS killed
+        // the process before first frame. This flow is now strictly
+        // INCREMENTAL: the two tables only TRIGGER (cheap COUNT flows
+        // re-emitted per invalidation), a sampled trigger first runs the
+        // walker's O(1)-class fingerprint (an unchanged store is confirmed
+        // and skipped without touching a row), and a changed store drains
+        // only NEW rows past the keyset watermark plus a bounded recent-tail
+        // status refresh — never the whole table. Whole-wallet convergence
+        // is [forEachWalletTxRecordPage] (the pipeline's 60s reconcile).
+        val walker = SdkTxStoreWalker(db, walletId)
+        walker.primeWatermarks()
+        // Initial bounded emission: the recent tail, so recent statuses are
+        // fresh long before the first full reconcile walk finishes.
+        walker.tailRecords().takeIf { it.isNotEmpty() }?.let { emit(it) }
         emitAll(
             snapshotTriggers(db, walletId)
                 .sampleLatest(SNAPSHOT_SAMPLE_MS)
-                .map { queryWalletTxRecords(db, walletId) }
+                .transform { walker.drainChanges { page -> if (page.isNotEmpty()) emit(page) } }
         )
     }
 
-    override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> = flow {
+    override suspend fun forEachWalletTxRecordPage(
+        walletIdHex: String,
+        onPage: suspend (List<L1TxUiRecord>) -> Unit
+    ) {
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+        // A fresh walker per walk: keyset-paged (bounded window), throttled
+        // between pages, cooperative — an arbitrarily large table walks in
+        // O(page) memory and never blocks the pipeline's event lane (the
+        // service interleaves these pages with engine events).
+        SdkTxStoreWalker(database(), walletId).walkAll(onPage)
+    }
+
+    override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> = flow {
+        val walletIdHexLower = walletIdHex.lowercase()
+        val walletId = requireNotNull(walletIdFromHex(walletIdHexLower)) { "malformed SDK wallet id" }
         val db = database()
-        // Same trigger/sample/bounded-query discipline as
-        // observeWalletTxRecords (see there). Payloads are NOT materialized
-        // per emission at all: the snapshot's payloadByTxid is a lazy
-        // per-txid PK lookup with a small LRU (payload bytes are immutable,
-        // so a cached entry can never go stale), which drops the per-emission
-        // cost from "every payload blob in the store" to zero and the
-        // retained heap to the LRU.
+        // Same incremental discipline as observeWalletTxRecords (see there):
+        // the FIRST emission primes the seam with the bounded recent tail,
+        // later emissions carry only new/changed records. Completeness is
+        // served through the snapshot's LAZY members — per-txid payload
+        // lookup (small LRU; payload bytes are immutable so entries never go
+        // stale), per-outpoint indexed EXISTS/lookup, per-txid fresh record
+        // reads, and an on-demand paged enumeration for the rare full reads.
+        // Nothing O(wallet) is ever built on the per-second path.
+        val walker = SdkTxStoreWalker(db, walletId)
+        walker.primeWatermarks()
+        emit(seamSnapshot(db, walker, walker.tailRecords()))
         emitAll(
             snapshotTriggers(db, walletId)
                 .sampleLatest(SNAPSHOT_SAMPLE_MS)
-                .map { querySeamSnapshot(db, walletId) }
+                .transform {
+                    walker.drainChanges { page ->
+                        if (page.isNotEmpty()) emit(seamSnapshot(db, walker, page))
+                    }
+                }
         )
     }
+
+    private fun seamSnapshot(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        walker: SdkTxStoreWalker,
+        page: List<L1TxUiRecord>
+    ): SdkSeamTxSnapshot = SdkSeamTxSnapshot(
+        walletRecords = page,
+        payloadByTxid = LazyPayloadMap { displayHex -> loadPayload(db, displayHex) },
+        mineOutpoints = LazyOutpointSet(walker),
+        spenderByOutpoint = LazySpenderMap(walker),
+        recordByTxid = { displayHex -> walker.recordFor(displayHex) },
+        allWalletRecords = { walker.allRecordsNow() }
+    )
 
     /**
      * Re-emits on every `txos`/`transactions` table invalidation (Room count
@@ -1229,143 +1325,31 @@ internal class DashSdkCutoverUiSource(
     ): Flow<Unit> =
         combine(db.txoDao().countByWallet(walletId), db.transactionDao().count()) { _, _ -> }
 
-    /** Light projection of one wallet TXO row (refs only — no entity, no blobs beyond txids). */
-    private class TxoRef(val txid: ByteArray?, val vout: Int, val spendingTxid: ByteArray?)
-
-    /** Light projection of one wallet-relevant `transactions` row (payload deliberately excluded). */
-    private class TxRow(
-        val txid: ByteArray,
-        val netAmount: Long,
-        val fee: Long?,
-        val context: Int,
-        val direction: Int,
-        val firstSeen: Long,
-        val blockTimestamp: Int
-    )
-
-    private fun queryWalletTxoRefs(
-        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
-        walletId: ByteArray
-    ): List<TxoRef> =
-        db.openHelper.readableDatabase.query(
-            androidx.sqlite.db.SimpleSQLiteQuery(
-                "SELECT txid, vout, spendingTxid FROM txos WHERE walletId = ?",
-                arrayOf<Any?>(walletId)
-            )
-        ).use { cursor ->
-            val out = ArrayList<TxoRef>(cursor.count)
-            while (cursor.moveToNext()) {
-                out += TxoRef(
-                    txid = if (cursor.isNull(0)) null else cursor.getBlob(0),
-                    vout = cursor.getInt(1),
-                    spendingTxid = if (cursor.isNull(2)) null else cursor.getBlob(2)
-                )
-            }
-            out
+    /**
+     * Contains-only view over the wallet's TXO outpoint set — one indexed
+     * EXISTS per probe, zero retained state. See the
+     * [SdkSeamTxSnapshot.mineOutpoints] contract (consumers only ever use
+     * `in`; iteration/`size` see an empty view).
+     */
+    private class LazyOutpointSet(private val walker: SdkTxStoreWalker) : Set<String> by emptySet() {
+        override fun contains(element: String): Boolean {
+            val (txidHex, vout) = splitOutpointKey(element) ?: return false
+            return walker.isMineOutpoint(txidHex, vout)
         }
+    }
 
     /**
-     * The wallet-relevant `transactions` rows (no payload column), chunked
-     * under SQLite's 999-variable cap and re-sorted to the DAO's
-     * `ORDER BY firstSeen DESC` so record order matches the old
-     * observeAll-based snapshot exactly.
+     * Get-only view over "txidHex:vout" → spender display txid hex — one
+     * indexed lookup per probe. See the [SdkSeamTxSnapshot.spenderByOutpoint]
+     * contract (consumers only ever `get`/`containsKey`).
      */
-    private fun queryTxRowsByTxids(
-        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
-        wireTxids: Collection<ByteArray>
-    ): List<TxRow> {
-        val out = ArrayList<TxRow>(wireTxids.size)
-        for (chunk in wireTxids.chunked(TXID_IN_CHUNK)) {
-            val placeholders = chunk.joinToString(",") { "?" }
-            db.openHelper.readableDatabase.query(
-                androidx.sqlite.db.SimpleSQLiteQuery(
-                    "SELECT txid, netAmount, fee, context, direction, firstSeen, blockTimestamp " +
-                        "FROM transactions WHERE txid IN ($placeholders)",
-                    chunk.toTypedArray<Any?>()
-                )
-            ).use { cursor ->
-                while (cursor.moveToNext()) {
-                    out += TxRow(
-                        txid = cursor.getBlob(0),
-                        netAmount = cursor.getLong(1),
-                        fee = if (cursor.isNull(2)) null else cursor.getLong(2),
-                        context = cursor.getInt(3),
-                        direction = cursor.getInt(4),
-                        firstSeen = cursor.getLong(5),
-                        blockTimestamp = cursor.getInt(6)
-                    )
-                }
-            }
+    private class LazySpenderMap(private val walker: SdkTxStoreWalker) : Map<String, String> by emptyMap() {
+        override fun get(key: String): String? {
+            val (txidHex, vout) = splitOutpointKey(key) ?: return null
+            return walker.spenderOf(txidHex, vout)
         }
-        out.sortByDescending { it.firstSeen }
-        return out
-    }
 
-    private suspend fun queryWalletTxRecords(
-        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
-        walletId: ByteArray
-    ): List<L1TxUiRecord> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        // Same membership rule as before: every tx that funded a wallet TXO
-        // plus every tx that spent one (spendingTxid counted even when the
-        // row's txid FK is still null — the brief insert window).
-        val wireByHex = LinkedHashMap<String, ByteArray>()
-        for (ref in queryWalletTxoRefs(db, walletId)) {
-            ref.txid?.let { wireByHex[wireHexOf(it)] = it }
-            ref.spendingTxid?.let { wireByHex[wireHexOf(it)] = it }
-        }
-        queryTxRowsByTxids(db, wireByHex.values).map {
-            l1TxUiRecord(
-                txidWireBytes = it.txid,
-                netAmountDuffs = it.netAmount,
-                feeDuffs = it.fee,
-                contextCode = it.context,
-                directionCode = it.direction,
-                firstSeenSec = it.firstSeen,
-                blockTimestampSec = it.blockTimestamp
-            )
-        }
-    }
-
-    private suspend fun querySeamSnapshot(
-        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
-        walletId: ByteArray
-    ): SdkSeamTxSnapshot = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        // Wallet membership via the TXO join, exactly like the old combine:
-        // rows whose txid FK is still null are skipped entirely (their
-        // outpoint key would be meaningless), matching the previous
-        // `row.txid?.let { … } ?: continue`.
-        val mineOutpoints = HashSet<String>()
-        val spenderByOutpoint = HashMap<String, String>()
-        val wireByHex = LinkedHashMap<String, ByteArray>()
-        for (ref in queryWalletTxoRefs(db, walletId)) {
-            val txid = ref.txid ?: continue
-            val txidHex = displayHexOf(txid)
-            wireByHex[txidHex] = txid
-            val outpointKey = "$txidHex:${ref.vout}"
-            mineOutpoints += outpointKey
-            ref.spendingTxid?.let { spender ->
-                val spenderHex = displayHexOf(spender)
-                wireByHex[spenderHex] = spender
-                spenderByOutpoint[outpointKey] = spenderHex
-            }
-        }
-        val records = queryTxRowsByTxids(db, wireByHex.values).map {
-            l1TxUiRecord(
-                txidWireBytes = it.txid,
-                netAmountDuffs = it.netAmount,
-                feeDuffs = it.fee,
-                contextCode = it.context,
-                directionCode = it.direction,
-                firstSeenSec = it.firstSeen,
-                blockTimestampSec = it.blockTimestamp
-            )
-        }
-        SdkSeamTxSnapshot(
-            walletRecords = records,
-            payloadByTxid = LazyPayloadMap { displayHex -> loadPayload(db, displayHex) },
-            mineOutpoints = mineOutpoints,
-            spenderByOutpoint = spenderByOutpoint
-        )
+        override fun containsKey(key: String): Boolean = get(key) != null
     }
 
     /**
@@ -1421,17 +1405,34 @@ internal class DashSdkCutoverUiSource(
         private val log = LoggerFactory.getLogger(DashSdkCutoverUiSource::class.java)
 
         /**
-         * Snapshot rebuild sample period: during a heavy sync the SDK store
-         * changes many times a second; one rebuild per second bounds the CPU
-         * while conflation guarantees the FINAL state always lands.
+         * Change-drain sample period: during a heavy sync the SDK store
+         * changes many times a second; one drain per second bounds the query
+         * cadence while conflation guarantees the FINAL state always lands.
+         * A drain is NOT a rebuild — an unchanged store costs one fingerprint
+         * ([SdkTxStoreWalker.drainChanges]) and a changed one costs O(delta),
+         * never O(wallet).
          */
         const val SNAPSHOT_SAMPLE_MS = 1_000L
 
         /** Chunk size for raw `txid IN (…)` queries (SQLite's variable cap is 999). */
         const val TXID_IN_CHUNK = 500
 
-        /** [payloadLru] cap; ~256 typical payloads is a few hundred KB at most. */
-        const val PAYLOAD_LRU_MAX = 256
+        /**
+         * [payloadLru] cap — sized to the walker's page window
+         * ([SdkTxStoreWalker.PAGE_TXO_ROWS]) so one page's worth of lazily
+         * resolved payloads always fits without thrashing (~a few hundred KB
+         * at typical payload sizes), instead of the old fixed 256 that a
+         * large wallet's seam reads churned through.
+         */
+        const val PAYLOAD_LRU_MAX = SdkTxStoreWalker.PAGE_TXO_ROWS
+
+        /** Split a "txidHex:vout" outpoint key, null when malformed. */
+        fun splitOutpointKey(key: String): Pair<String, Int>? {
+            val sep = key.lastIndexOf(':')
+            if (sep <= 0 || sep == key.length - 1) return null
+            val vout = key.substring(sep + 1).toIntOrNull() ?: return null
+            return key.substring(0, sep) to vout
+        }
     }
 }
 
@@ -1590,7 +1591,16 @@ class CutoverUiDataService internal constructor(
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val refreshIntervalMs: Long = REFRESH_INTERVAL_MS,
     private val walletBindRetryMs: Long = WALLET_BIND_RETRY_MS,
-    private val txFeedRetryMs: Long = TX_FEED_RETRY_MS
+    private val txFeedRetryMs: Long = TX_FEED_RETRY_MS,
+    /**
+     * Grace before the FIRST full reconcile walk of an activation. Startup
+     * must be O(visible): the home screen renders from the persisted display
+     * cache and the change feed's bounded recent tail immediately, while the
+     * whole-wallet convergence walk — O(wallet), even paged — waits out the
+     * launch-critical window instead of competing with first frame (the
+     * ~100k-tx crash-loop started life as exactly that competition).
+     */
+    private val reconcileInitialDelayMs: Long = RECONCILE_INITIAL_DELAY_MS
 ) {
     @Inject
     constructor(
@@ -2173,10 +2183,13 @@ class CutoverUiDataService internal constructor(
             .onFailure { log.warn("failed to persist LAST_TOTAL_BALANCE", it) }
     }
 
-    /** One unit of tx-feed work, so both feeds share ONE sequential collector. */
+    /** One unit of tx-feed work, so all feeds share ONE sequential collector. */
     private sealed class TxFeedAction {
         data class Snapshot(val records: List<L1TxUiRecord>) : TxFeedAction()
         data class EngineEvent(val event: L1TxEvent) : TxFeedAction()
+
+        /** Request for a FULL paged reconcile walk (ticker / contact re-resolution). */
+        object Reconcile : TxFeedAction()
     }
 
     /**
@@ -2191,12 +2204,19 @@ class CutoverUiDataService internal constructor(
 
     private suspend fun txPipeline(walletIdHex: String) {
         activeWalletIdHex = walletIdHex
-        // Two feeds, one sequential collector (merge preserves per-feed
-        // order and never runs two actions concurrently — that serial
-        // execution is what makes the insert/notify dedup race-free):
-        // - the Room snapshot flow (+ periodic ticker) — the CONVERGENT
-        //   feed: re-runs the idempotent sync pass so a concurrent
-        //   dashj-side cache rebuild can never permanently drop SDK rows;
+        // Three feeds, one sequential collector (merge never runs two
+        // actions concurrently — that serial execution is what makes the
+        // insert/notify dedup race-free):
+        // - the Room CHANGE feed — bounded incremental pages of new/changed
+        //   records (the production source fingerprints and drains deltas,
+        //   never the whole table — the ~100k-tx crash-loop fix);
+        // - the RECONCILE lane — the periodic ticker and explicit contact
+        //   re-resolution requests trigger a FULL walk, but as bounded pages
+        //   produced by a CHILD coroutine and funneled back through this
+        //   same collector ([reconcilePages]), so a walk over an arbitrarily
+        //   large wallet interleaves with — never blocks — engine events,
+        //   and the 60s-ticker convergence semantics (a concurrent dashj-side
+        //   cache rebuild can never permanently drop SDK rows) are preserved;
         // - the engine's instant tx events — the FAST feed: a mempool
         //   receive renders (and notifies) the moment the engine sees the
         //   tx, and an IS lock flips the row before any block confirms it.
@@ -2208,25 +2228,54 @@ class CutoverUiDataService internal constructor(
         // the tap ([L1ShadowSyncService.tapWalletEvents]).
         while (currentCoroutineContext().isActive) {
             try {
-                merge(
-                    // The snapshot pass re-runs on: a Room records change, the periodic
-                    // ticker, or an explicit contact re-resolution request (fired when
-                    // contacts/friendship keychains are (re)established — see
-                    // [requestContactReResolution]); combine feeds it the latest records.
-                    combine(
-                        source.observeWalletTxRecords(walletIdHex),
-                        merge(ticker(), contactReResolveRequests)
-                    ) { records, _ ->
-                        TxFeedAction.Snapshot(records) as TxFeedAction
-                    },
-                    txEvents.map { TxFeedAction.EngineEvent(it) }
-                ).collect { action ->
-                    when (action) {
-                        is TxFeedAction.Snapshot -> syncDisplayCache(action.records)
-                        is TxFeedAction.EngineEvent -> handleTxEvent(action.event)
+                coroutineScope {
+                    // Unbuffered: each page emission suspends the walker until
+                    // the sequential collector has processed it — natural
+                    // backpressure, and events slot in between pages.
+                    val reconcilePages = MutableSharedFlow<List<L1TxUiRecord>>()
+                    var reconcileJob: kotlinx.coroutines.Job? = null
+                    val reconcileAgain = AtomicBoolean(false)
+                    merge(
+                        source.observeWalletTxRecords(walletIdHex)
+                            .map { TxFeedAction.Snapshot(it) as TxFeedAction },
+                        reconcilePages.map { TxFeedAction.Snapshot(it) as TxFeedAction },
+                        merge(reconcileTicker(), contactReResolveRequests)
+                            .map { TxFeedAction.Reconcile as TxFeedAction },
+                        txEvents.map { TxFeedAction.EngineEvent(it) }
+                    ).collect { action ->
+                        when (action) {
+                            is TxFeedAction.Snapshot -> syncDisplayCache(action.records)
+                            is TxFeedAction.EngineEvent -> handleTxEvent(action.event)
+                            TxFeedAction.Reconcile -> {
+                                // Coalesce: a request landing mid-walk re-runs ONE
+                                // more full walk when the current one finishes (a
+                                // re-resolution request must still see a complete
+                                // pass over freshly-busted caches).
+                                if (reconcileJob?.isActive == true) {
+                                    reconcileAgain.set(true)
+                                } else {
+                                    reconcileJob = launch {
+                                        do {
+                                            reconcileAgain.set(false)
+                                            try {
+                                                source.forEachWalletTxRecordPage(walletIdHex) { page ->
+                                                    reconcilePages.emit(page)
+                                                }
+                                            } catch (t: Throwable) {
+                                                if (t is CancellationException) throw t
+                                                log.warn(
+                                                    "full reconcile walk failed; the next ticker tick retries",
+                                                    t
+                                                )
+                                            }
+                                        } while (reconcileAgain.get())
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-                return // both upstream feeds completed normally
+                return // all upstream feeds completed normally
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 log.error("SDK tx feed failed; re-collecting in {}ms", txFeedRetryMs, t)
@@ -2322,6 +2371,20 @@ class CutoverUiDataService internal constructor(
     }
 
     private fun ticker(): Flow<Unit> = flow {
+        while (true) {
+            emit(Unit)
+            delay(refreshIntervalMs)
+        }
+    }
+
+    /**
+     * The reconcile lane's ticker: DELAY-FIRST, unlike [ticker] — the first
+     * full walk waits out [reconcileInitialDelayMs] (see there) and the
+     * change feed alone carries the launch window; thereafter one walk per
+     * [refreshIntervalMs] preserves the 60s convergence semantics.
+     */
+    private fun reconcileTicker(): Flow<Unit> = flow {
+        delay(reconcileInitialDelayMs)
         while (true) {
             emit(Unit)
             delay(refreshIntervalMs)
@@ -2623,6 +2686,9 @@ class CutoverUiDataService internal constructor(
 
     companion object {
         internal const val REFRESH_INTERVAL_MS = 60_000L
+
+        /** Grace before an activation's first full reconcile walk — see [reconcileInitialDelayMs]. */
+        internal const val RECONCILE_INITIAL_DELAY_MS = 10_000L
         internal const val WALLET_BIND_RETRY_MS = 5_000L
         /** Backoff before re-collecting the merged tx feed after an exception. */
         internal const val TX_FEED_RETRY_MS = 5_000L
