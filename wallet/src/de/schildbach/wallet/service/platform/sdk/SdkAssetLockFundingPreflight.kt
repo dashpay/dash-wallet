@@ -37,6 +37,52 @@ import javax.inject.Singleton
 const val ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS = 10_000L
 
 /**
+ * `transactions.context` codes that are LOCK EVIDENCE for finality
+ * (`0=mempool, 1=instantSend, 2=inBlock, 3=chainLocked` — the same code
+ * table [L1ShadowSyncService]'s event dedupe documents):
+ * `1` = the engine recorded a received IS lock, `3` = the tx sits in a
+ * chain-locked block. Needed because the AAR's `txos` mirror writer
+ * NEVER sets `txos.isInstantLocked` on Android (verified on-device, S21
+ * `dash-sdk.db`: the flag is 0 on every row ever written while
+ * `transactions.context = 3` for the same txids) — the per-output flag is
+ * dead, so per-TX context is the only surviving IS-lock evidence.
+ * `2` (inBlock, not chain-locked) is deliberately NOT lock evidence: a
+ * plain block can reorg, and a mined output's `isConfirmed` flag IS
+ * maintained correctly (same on-device evidence), so `2` adds nothing the
+ * confirmed term doesn't already cover.
+ */
+internal const val TX_CONTEXT_INSTANT_SEND = 1
+internal const val TX_CONTEXT_CHAIN_LOCKED = 3
+
+/**
+ * The asset-lock eligibility SQL over the SDK's Room mirror — extracted as
+ * a constant so the host-level regression tests run the EXACT production
+ * query against the AAR's own schema. See the [SdkAssetLockFundingPreflight]
+ * class KDoc for the source-level trace of every predicate term, and
+ * [TX_CONTEXT_INSTANT_SEND]/[TX_CONTEXT_CHAIN_LOCKED] for why finality is
+ * `isConfirmed OR isInstantLocked OR transactions.context IN (1, 3)`.
+ *
+ * Account attribution takes `COALESCE(t.accountId, ca.accountId)` — on
+ * Android `txos.accountId` is NULL on every row (on-device evidence), so
+ * the `core_addresses` address join is the live path, but a future AAR
+ * that starts populating the column must not break attribution when an
+ * address row is missing (hence the LEFT joins; a row with NEITHER
+ * resolvable stays excluded — the engine can't route what it can't
+ * attribute).
+ */
+internal const val ELIGIBLE_ASSET_LOCK_DUFFS_SQL =
+    "SELECT COALESCE(SUM(t.amount), 0) FROM txos t " +
+        "LEFT JOIN core_addresses ca ON ca.address = t.address " +
+        "JOIN accounts a ON a.id = COALESCE(t.accountId, ca.accountId) " +
+        "LEFT JOIN transactions tx ON tx.txid = t.txid " +
+        "WHERE t.walletId = ? " +
+        "AND t.isSpent = 0 AND t.spendingTxid IS NULL " +
+        "AND t.isLocked = 0 AND t.isCoinbase = 0 " +
+        "AND (t.isConfirmed = 1 OR t.isInstantLocked = 1 " +
+        "OR tx.context IN ($TX_CONTEXT_INSTANT_SEND, $TX_CONTEXT_CHAIN_LOCKED)) " +
+        "AND a.accountType = 0 AND a.standardTag = 0 AND a.accountIndex = 0"
+
+/**
  * Pure coverage predicate for the preflight (host-JVM testable): can
  * [eligibleDuffs] of asset-lock-eligible funds cover a lock of
  * [requiredDuffs] plus fee headroom?
@@ -91,11 +137,18 @@ internal fun assetLockFundingCovers(
  * table, written from the engine's changesets — same source of truth):
  *
  * `Σ amount` over unspent BIP44-account-0 TXOs where
- * `!isLocked && (isConfirmed || isInstantLocked) && coinbase-mature`
- * — mirroring `require_final_inputs` + `Utxo::is_spendable` exactly.
- * Account scoping routes `txos.address → core_addresses.accountId →
- * accounts` (the same join the SDK's own `buildUtxoRestoreData` uses,
- * because `txos.accountId` is not populated on Android), restricted to
+ * `!isLocked && (isConfirmed || isInstantLocked || txContext ∈ {IS, CL})
+ * && coinbase-mature` — mirroring `require_final_inputs` +
+ * `Utxo::is_spendable`, with one Android-mirror correction: the AAR's txo
+ * writer never sets `txos.isInstantLocked` (dead flag, see
+ * [TX_CONTEXT_INSTANT_SEND]), so IS-lock finality is read from the
+ * per-transaction `transactions.context` instead — otherwise every fresh
+ * receive waits a full block (observed on S21: a 1.0 tDASH faucet receive
+ * gated username creation for ~25 minutes despite its IS lock).
+ * Account scoping routes `COALESCE(txos.accountId,
+ * core_addresses.accountId)` (the address join is the live path — the
+ * AAR persists `txos.accountId` as NULL on every Android row, the same
+ * blindness class [SdkTxContactResolver] compensates for), restricted to
  * `accountType = 0 (Standard), standardTag = 0 (BIP44), accountIndex = 0` —
  * the account every non-shielded asset lock funds from. Rows with a linked
  * `spendingTxid` are excluded (mid-spend; the SDK's restore builder applies
@@ -198,10 +251,11 @@ class SdkAssetLockFundingPreflight internal constructor(
          * One read-only SQL pass over the SDK's Room mirror (same
          * `openHelper` raw-query precedent as
          * [CutoverUiDataService]'s unspent-sum probe). Returns `null` when
-         * the DB or the bound wallet id is unavailable. INNER joins drop
-         * rows with no resolvable account — the SDK's own restore builder
-         * skips exactly those rows ("a UTXO the wallet can't attribute
-         * can't be routed"), so the engine never funds from them either.
+         * the DB or the bound wallet id is unavailable. The INNER `accounts`
+         * join drops rows with no resolvable account (via either
+         * attribution route) — the SDK's own restore builder skips exactly
+         * those rows ("a UTXO the wallet can't attribute can't be routed"),
+         * so the engine never funds from them either.
          *
          * Coinbase maturity: phone wallets essentially never hold coinbase
          * outputs; rather than plumb a chain-tip read for the `height+100`
@@ -216,17 +270,12 @@ class SdkAssetLockFundingPreflight internal constructor(
             val walletId = walletIdHex?.let { walletIdFromHex(it) } ?: return null
             return withContext(Dispatchers.IO) {
                 db.openHelper.readableDatabase.query(
+                    // The asset-lock eligibility predicate — see the class KDoc
+                    // for the source-level trace of every term, and the
+                    // constant's KDoc for the dead-`isInstantLocked` and
+                    // NULL-`accountId` mirror realities it compensates for.
                     androidx.sqlite.db.SimpleSQLiteQuery(
-                        // The asset-lock eligibility predicate — see the class
-                        // KDoc for the source-level trace of every term.
-                        "SELECT COALESCE(SUM(t.amount), 0) FROM txos t " +
-                            "JOIN core_addresses ca ON ca.address = t.address " +
-                            "JOIN accounts a ON a.id = ca.accountId " +
-                            "WHERE t.walletId = ? " +
-                            "AND t.isSpent = 0 AND t.spendingTxid IS NULL " +
-                            "AND t.isLocked = 0 AND t.isCoinbase = 0 " +
-                            "AND (t.isConfirmed = 1 OR t.isInstantLocked = 1) " +
-                            "AND a.accountType = 0 AND a.standardTag = 0 AND a.accountIndex = 0",
+                        ELIGIBLE_ASSET_LOCK_DUFFS_SQL,
                         arrayOf<Any?>(walletId)
                     )
                 ).use { cursor -> if (cursor.moveToFirst()) cursor.getLong(0) else 0L }

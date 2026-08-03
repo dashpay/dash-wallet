@@ -124,8 +124,14 @@ class RequestUserNameViewModelTest {
      * override it with a concrete eligible sum.
      */
     private val assetLockEligibleDuffs = MutableStateFlow<Long?>(null)
+
+    /** Preflight read count — the settling-poll cadence assertions. */
+    private var eligibilityReads = 0
     private val assetLockFundingPreflight = mockk<SdkAssetLockFundingPreflight> {
-        coEvery { eligibleAssetLockFundingDuffsOrNull() } answers { assetLockEligibleDuffs.value }
+        coEvery { eligibleAssetLockFundingDuffsOrNull() } answers {
+            eligibilityReads++
+            assetLockEligibleDuffs.value
+        }
     }
 
     private val shieldedSyncStatusFlow = MutableStateFlow(ShieldedSyncStatus.NOT_READY)
@@ -462,6 +468,52 @@ class RequestUserNameViewModelTest {
         val state = viewModel.uiState.value
         assertTrue(state.enoughBalance)
         assertFalse(state.fundsSettling)
+    }
+
+    @Test
+    fun checkUsernameValid_dashSource_settlingGate_clearsByPoll_withoutABalanceEmission() = runTest(dispatcher) {
+        // The S21 staleness repro (build 11.10.46): the settling row was
+        // showing, the change output then CONFIRMED on the SDK mirror at
+        // 10:38:41 — but confirming an already-counted output changes no
+        // balance AMOUNT, so observeBalance never re-emitted and the gate
+        // stayed stale until the user left and re-entered the screen. The
+        // settling-state poll must re-read the preflight and clear the gate
+        // in place.
+        assetLockEligibleDuffs.value = 1_449L
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
+        val viewModel = viewModel()
+        viewModel.checkUsernameValid("alice2", de.schildbach.wallet.ui.username.UsernameType.Primary)
+        assertTrue(viewModel.uiState.value.fundsSettling)
+
+        // Finality flips on the SDK mirror; NO walletBalanceFlow emission.
+        assetLockEligibleDuffs.value = 99_400_000L
+        dispatcher.scheduler.advanceTimeBy(RequestUserNameViewModel.SETTLING_ELIGIBILITY_POLL_MS + 1)
+        dispatcher.scheduler.runCurrent()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.enoughBalance)
+        assertFalse(state.fundsSettling)
+    }
+
+    @Test
+    fun checkUsernameValid_dashSource_settlingPoll_stopsOnceTheGateClears() = runTest(dispatcher) {
+        // The poll exists only while the settling row shows — once the gate
+        // resolves, ticks must stop (no idle background DB reads).
+        assetLockEligibleDuffs.value = 1_449L
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
+        val viewModel = viewModel()
+        viewModel.checkUsernameValid("alice2", de.schildbach.wallet.ui.username.UsernameType.Primary)
+        assertTrue(viewModel.uiState.value.fundsSettling)
+
+        assetLockEligibleDuffs.value = 99_400_000L
+        dispatcher.scheduler.advanceTimeBy(RequestUserNameViewModel.SETTLING_ELIGIBILITY_POLL_MS + 1)
+        dispatcher.scheduler.runCurrent()
+        assertFalse(viewModel.uiState.value.fundsSettling)
+
+        val readsAfterClear = eligibilityReads
+        dispatcher.scheduler.advanceTimeBy(10 * RequestUserNameViewModel.SETTLING_ELIGIBILITY_POLL_MS)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(readsAfterClear, eligibilityReads)
     }
 
     @Test
