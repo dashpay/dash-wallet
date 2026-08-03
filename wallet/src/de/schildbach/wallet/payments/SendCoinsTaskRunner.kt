@@ -929,7 +929,7 @@ class SendCoinsTaskRunner @Inject constructor(
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
         val recipients = extractBip70Recipients(paymentIntent, de.schildbach.wallet.Constants.ADDRESS_NETWORK)
-            ?: throw IllegalStateException(
+            ?: throw SendNotSdkRoutableException(
                 "cutover committed: this payment request has an output the SDK builder cannot " +
                     "express (non-address script or missing amount) — not SDK-routable"
             )
