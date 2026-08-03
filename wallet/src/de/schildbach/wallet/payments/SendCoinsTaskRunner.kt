@@ -732,35 +732,29 @@ class SendCoinsTaskRunner @Inject constructor(
     }
 
     /**
-     * Sends a direct payment via BIP70/BIP270 protocol.
-     * This method signs the transaction, completes it, sends it via HTTP to the payment URL,
-     * and handles the payment acknowledgment.
+     * Sends a direct payment via BIP70/BIP270 protocol — SDK deferred
+     * build/broadcast, the ONLY implementation (the dashj leg was deleted
+     * per the replace-then-delete policy; dashj remains only as the
+     * Phase-3 foundation: wallet object/keys/persistence).
      *
-     * @param sendRequest The send request (should already be created via createSendRequest)
-     * @param paymentIntent The payment intent containing the payment URL
+     * @param paymentIntent The FINAL payment intent (fetched request)
      * @param serviceName Optional service name for transaction metadata
-     * @return The committed transaction
+     * @return The committed (bridged) transaction
      * @throws DirectPayException if the payment is not acknowledged
      * @throws IOException if the HTTP request fails
      */
     suspend fun sendDirectPayment(
-        sendRequest: SendRequest,
         paymentIntent: PaymentIntent,
         serviceName: String? = null
     ): Transaction = withContext(Dispatchers.IO) {
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
-        Context.propagate(wallet.context)
-
-        signSendRequest(sendRequest)
-        directPay(sendRequest, paymentIntent, serviceName)
+        directPayViaSdk(paymentIntent, serviceName)
     }
 
     private suspend fun createPaymentRequest(basePaymentIntent: PaymentIntent, serviceName: String?): Transaction {
         val requestUrl = basePaymentIntent.paymentRequestUrl
         if (requestUrl != null) {
             val paymentIntent = fetchPaymentRequest(basePaymentIntent)
-            val sendRequest = createRequestFromPaymentIntent(paymentIntent)
-            return sendPayment(paymentIntent, sendRequest, serviceName)
+            return directPayViaSdk(paymentIntent, serviceName)
         } else {
             val sendRequest = createRequestFromPaymentIntent(basePaymentIntent)
             val sendRequestForSigning = createSendRequest(
@@ -784,121 +778,6 @@ class SendCoinsTaskRunner @Inject constructor(
         )
 
         return sendRequest
-    }
-
-    private suspend fun sendPayment(
-        finalPaymentIntent: PaymentIntent,
-        sendRequest: SendRequest,
-        serviceName: String?
-    ): Transaction {
-        log.info("creating final sendRequest({}, ..., {})", finalPaymentIntent.paymentUrl, serviceName)
-        val finalSendRequest = createSendRequest(
-            false,
-            finalPaymentIntent,
-            true,
-            sendRequest.ensureMinRequiredFee
-        )
-        signSendRequest(finalSendRequest)
-        log.info("created final send Request")
-        return directPay(finalSendRequest, finalPaymentIntent, serviceName)
-    }
-
-    /**
-     * Completes and submits a direct payment via BIP70/BIP270 protocol.
-     * This method completes the transaction, sends it via HTTP to the payment URL,
-     * and handles the payment acknowledgment.
-     *
-     * @param sendRequest The send request (should already be created via createSendRequest)
-     * @param finalPaymentIntent The payment intent containing the payment URL
-     * @param serviceName Optional service name for transaction metadata
-     * @return The committed transaction
-     * @throws DirectPayException if the payment is not acknowledged
-     * @throws IOException if the HTTP request fails
-     */
-    private suspend fun directPay(
-        sendRequest: SendRequest,
-        finalPaymentIntent: PaymentIntent,
-        serviceName: String?
-    ): Transaction {
-        // Phase 5d / issue #1520 Phase 1B item 1: post-cutover the dashj
-        // engine is held (completeTx would build a tx nothing can
-        // broadcast), so the whole direct-pay leg runs on the SDK's
-        // deferred build/broadcast surface instead. Pre-cutover the code
-        // below is byte-identical to today.
-        if (sdkL1SendService.cutoverCommitted()) {
-            return directPayViaSdk(finalPaymentIntent, serviceName)
-        }
-        log.info("completing sendRequest transaction")
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
-        Context.propagate(wallet.context)
-        wallet.completeTx(sendRequest)
-        log.info("completed sendRequest transaction")
-        serviceName?.let {
-            metadataProvider.setTransactionService(sendRequest.tx.txId.toTxId(), serviceName)
-        }
-        val refundAddress = wallet.freshAddress(KeyChain.KeyPurpose.REFUND)
-        // The old common PaymentProtocol.createPaymentMessage verified each tx before
-        // serializing; the neutral version can't (no dashj), so verify here.
-        sendRequest.tx.verify()
-        val payment = PaymentProtocol.createPaymentMessage(
-            listOf(sendRequest.tx.unsafeBitcoinSerialize()),
-            finalPaymentIntent.amount,
-            refundAddress.toBase58(),
-            null,
-            finalPaymentIntent.payeeData
-        )
-
-        val requestUrl = finalPaymentIntent.paymentUrl
-            ?: throw InvalidPaymentRequestURL("Final payment intent URL is null")
-        log.info("trying to send tx to {}", requestUrl)
-        val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_SEND_PAYMENT)
-        val request = buildOkHttpDirectPayRequest(requestUrl, payment)
-        try {
-            val response = Constants.HTTP_CLIENT.call(request)
-            response.ensureSuccessful()
-            requestUrl.toUri().host?.let {
-                timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
-            }
-            log.info("tx sent via http")
-
-            val byteStream = response.body?.byteStream()
-                ?: throw IOException("Null response for the payment request: $requestUrl")
-
-            val paymentAck = byteStream.use { Protos.PaymentACK.parseFrom(byteStream) }
-            val acknowledged = PaymentProtocol.parsePaymentAck(paymentAck).memo != "nack"
-            log.info("received {} via http", if (acknowledged) "ack" else "nack")
-
-            if (!acknowledged) {
-                throw DirectPayException("Payment was not acknowledged by the server")
-            }
-        } catch (e: Exception) {
-            if (e !is DirectPayException) {
-                log.warn("Payment submission failed, but transaction may have been sent: ${sendRequest.tx.txId}", e)
-                val tx = sendRequest.tx
-                val delays = listOf(0L, 1000L, 3000L, 5000L)
-
-                for (delayMs in delays) {
-                    delay(delayMs)
-                    if (isTransactionOnNetwork(tx)) {
-                        log.info("Transaction found on network despite HTTP timeout: ${tx.txId}")
-                        // The BIP70 server may have broadcast the tx and our wallet may have already
-                        // picked it up via the P2P network — use maybeCommitTx to avoid throwing
-                        // "commitTx called on the same transaction twice" in that race.
-                        if (!wallet.maybeCommitTx(tx)) {
-                            log.info("tx was already in the wallet (received via network): {}", tx.txId)
-                        }
-                        return tx
-                    }
-                }
-
-                log.warn("Transaction not found on network after timeout, treating as failed: ${tx.txId}")
-                // throw exception below
-            }
-            throw e
-        }
-
-
-        return sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true)
     }
 
     /**
@@ -949,12 +828,55 @@ class SendCoinsTaskRunner @Inject constructor(
             }
         }
 
-        return sdkL1SendService.buildDeferredPayment(recipients)
+        val payment = sdkL1SendService.buildDeferredPayment(recipients)
+        // Reservation mirror — TRANSITION-ONLY, delete with Phase 2
+        // (#1521): until the dashj engine is retired, a not-yet-cut-over
+        // install still has dashj-side spenders (manual sends, the
+        // background CoinJoin mixer — the original reason lockOutput
+        // exists) with their own coin selection and no view of the SDK's
+        // reservation. Lock the same outpoints in the foundation wallet
+        // so they cannot double-select them while the user sits on the
+        // confirm screen; unlocked on release/submission. Best-effort —
+        // a lock failure must not fail the build. Once Phase 2 lands
+        // (no dashj engine constructs at all) this mirror is dead code,
+        // and Phase 3 (#1522) removes the Wallet object it locks.
+        runCatching { setReservedOutpointLocks(payment, locked = true) }
+            .onFailure { log.warn("failed to mirror the BIP70 reservation into wallet locks", it) }
+        return payment
     }
 
-    /** Pass-through: release a [buildDeferredBip70Payment] reservation (abandoned preview). */
-    suspend fun releaseDeferredPayment(payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment) =
+    /**
+     * Lock/unlock the outpoints [payment]'s signed tx spends in the
+     * foundation dashj wallet — the app-side mirror of the SDK's engine
+     * reservation. Pure bookkeeping on the Phase-3 foundation object.
+     */
+    private fun setReservedOutpointLocks(
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        locked: Boolean
+    ) {
+        val wallet = walletData.wallet ?: return
+        Context.propagate(wallet.context)
+        val tx = Transaction(NETWORK_PARAMETERS, payment.rawTxBytes)
+        for (input in tx.inputs) {
+            val outpoint = input.outpoint
+            if (locked) {
+                wallet.lockOutput(outpoint)
+            } else {
+                wallet.unlockOutput(outpoint)
+            }
+        }
+    }
+
+    /**
+     * Release a [buildDeferredBip70Payment] reservation (abandoned
+     * preview / pre-ack failure): SDK engine release + removal of the
+     * mirrored wallet locks.
+     */
+    suspend fun releaseDeferredPayment(payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment) {
+        runCatching { setReservedOutpointLocks(payment, locked = false) }
+            .onFailure { log.warn("failed to clear the mirrored BIP70 reservation locks", it) }
         sdkL1SendService.releaseDeferredPayment(payment)
+    }
 
     /**
      * Post-cutover BIP70/BIP270 direct payment: build + submit in one step
@@ -1048,10 +970,15 @@ class SendCoinsTaskRunner @Inject constructor(
             // inputs for an immediate retry (see the method KDoc for the
             // narrowed merchant-broadcast recovery window this accepts).
             withContext(NonCancellable) {
-                sdkL1SendService.releaseDeferredPayment(payment)
+                releaseDeferredPayment(payment)
             }
             throw t
         }
+
+        // Acked: the reservation is being consumed — the mirrored locks
+        // have done their job (the inputs are spent from here on).
+        runCatching { setReservedOutpointLocks(payment, locked = false) }
+            .onFailure { log.warn("failed to clear the mirrored BIP70 reservation locks post-ack", it) }
 
         // Acked: the payment IS made from the merchant's side. Broadcast
         // ourselves too (identical bytes/txid — a merchant broadcast makes
@@ -1084,23 +1011,6 @@ class SendCoinsTaskRunner @Inject constructor(
                     "failed (${bridged.reason}) — the payment IS made; the transaction appears " +
                     "after the next sync"
             )
-        }
-    }
-
-    private fun isTransactionOnNetwork(transaction: Transaction): Boolean {
-        return try {
-            val wallet = walletData.wallet ?: return false
-            val inWalletTx = wallet.getTransaction(transaction.txId)
-            val confidence = (inWalletTx ?: transaction).confidence ?: return false
-
-            // If we have the wallet’s instance, also accept network source as proof
-            (inWalletTx != null && confidence.source == TransactionConfidence.Source.NETWORK) ||
-                    confidence.isChainLocked ||
-                    confidence.isTransactionLocked ||
-                    confidence.numBroadcastPeers() > 0
-        } catch (e: Exception) {
-            log.debug("Error checking transaction network status: ${e.message}")
-            false
         }
     }
 

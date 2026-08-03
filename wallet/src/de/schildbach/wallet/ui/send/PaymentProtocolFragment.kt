@@ -37,7 +37,6 @@ import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.payments.bip70.PaymentProtocolException
 import org.dash.wallet.common.money.MonetaryFormat
-import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -135,7 +134,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     private fun initObservers() {
         viewModel.exchangeRateData.observe(viewLifecycleOwner) {
             if (viewModel.finalPaymentIntent != null && it != null) {
-                displayRequest(viewModel.finalPaymentIntent!!, null)
+                displayRequest(viewModel.finalPaymentIntent!!)
             }
         }
         viewModel.sendRequestLiveData.observe(viewLifecycleOwner) {
@@ -144,9 +143,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                     binding.viewFlipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
-                    // data is null on the post-cutover SDK path — the fee
-                    // comes from viewModel.previewFee either way.
-                    displayRequest(viewModel.finalPaymentIntent!!, it.data)
+                    displayRequest(viewModel.finalPaymentIntent!!)
                     binding.viewFlipper.displayedChild = VIEW_PAYMENT
                 }
                 Status.ERROR -> {
@@ -162,8 +159,8 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         }
                         binding.viewFlipper.displayedChild = VIEW_ERROR
                     } else {
-                        // sendRequest creating error (eg InsufficientMoneyException)
-                        displayRequest(viewModel.finalPaymentIntent!!, null)
+                        // preview build error (eg insufficient funds)
+                        displayRequest(viewModel.finalPaymentIntent!!)
                         binding.viewFlipper.displayedChild = VIEW_PAYMENT
                         if (userAuthorizedDuring && !viewModel.canSendPayment) {
                             handleSendRequestException()
@@ -261,17 +258,15 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         ).show(requireActivity())
     }
 
-    private fun displayRequest(paymentIntent: PaymentIntent, sendRequest: SendRequest?) {
+    private fun displayRequest(paymentIntent: PaymentIntent) {
         val amount = paymentIntent.amount
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
 
         val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount.toDashjCoin())
         val fiatAmountStr = fiatAmount?.toFormattedString() ?: getString(R.string.transaction_row_rate_not_available)
-        // previewFee covers both preview paths: the SDK deferred build's
-        // exact fee post-cutover, or the dashj dry-run fee pre-cutover.
-        val txFee = sendRequest?.tx?.fee
-            ?: viewModel.previewFee
-            ?: PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
+        // The SDK deferred build's exact fee; the fake fee only shows on
+        // a failed preview (send is gated off then anyway).
+        val txFee = viewModel.previewFee ?: PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
 
         binding.paymentRequest.amount.inputValue.text = amountStr
         binding.paymentRequest.amount.fiatValue.text = fiatAmountStr

@@ -82,7 +82,6 @@ class PaymentProtocolViewModelRaceTest {
             every { isExtendedBy(any(), any(), any()) } returns true
         }
         coEvery { runner.fetchPaymentRequest(any()) } returns mockk(relaxed = true)
-        coEvery { runner.isCutoverCommitted() } returns true
         coEvery { runner.buildDeferredBip70Payment(any()) } returns payment
 
         viewModel.requestPaymentRequest(baseIntent)

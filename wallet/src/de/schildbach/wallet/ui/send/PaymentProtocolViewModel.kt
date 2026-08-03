@@ -62,7 +62,6 @@ class PaymentProtocolViewModel @Inject constructor(
 
     private val log = LoggerFactory.getLogger(PaymentProtocolFragment::class.java)
 
-    var baseSendRequest: SendRequest? = null
     var finalPaymentIntent: PaymentIntent? = null
 
     /**
@@ -71,8 +70,6 @@ class PaymentProtocolViewModel @Inject constructor(
      * is the EXACT fee of the tx that will be submitted — the fee preview
      * IS the payment. Consumed by [sendPayment]; released in [onCleared]
      * when abandoned (idempotent engine-side, TTL backstop besides).
-     * Null pre-cutover — the dashj [baseSendRequest] dry-run then owns
-     * the preview exactly as before.
      */
     private val deferredPaymentRef =
         java.util.concurrent.atomic.AtomicReference<de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment?>(null)
@@ -88,13 +85,13 @@ class PaymentProtocolViewModel @Inject constructor(
      */
     private val sendingPayment = java.util.concurrent.atomic.AtomicBoolean(false)
 
-    /** The preview fee to display, from whichever path built the preview. */
+    /** The exact fee of the reserved payment the preview shows. */
     val previewFee: Coin?
-        get() = deferredPayment?.let { Coin.valueOf(it.feeDuffs) } ?: baseSendRequest?.tx?.fee
+        get() = deferredPayment?.let { Coin.valueOf(it.feeDuffs) }
 
-    /** True when a confirmed send can actually run (either path is armed). */
+    /** True when a confirmed send can actually run (the preview is armed). */
     val canSendPayment: Boolean
-        get() = baseSendRequest != null || deferredPayment != null
+        get() = deferredPayment != null
 
     private val _sendRequestLiveData = MutableLiveData<Resource<SendRequest?>>()
     val sendRequestLiveData: LiveData<Resource<SendRequest?>>
@@ -178,48 +175,25 @@ class PaymentProtocolViewModel @Inject constructor(
     }
 
     /**
-     * Creates the payment preview for the given payment intent.
-     *
-     * Post-cutover: the SDK builds + signs the REAL payment with its
-     * inputs reserved ([deferredPayment]) — the displayed fee is exact
-     * and no dashj `completeTx` dry-run runs. Pre-cutover: the dashj
-     * dry-run [baseSendRequest], byte-identical to before.
+     * Creates the payment preview: the SDK builds + signs the REAL
+     * payment with its inputs reserved ([deferredPayment]) — the
+     * displayed fee is exact and the preview IS the payment. (The dashj
+     * `completeTx` dry-run was deleted per the replace-then-delete
+     * policy; dashj remains foundation-only until Phase 3.)
      */
     private suspend fun createBaseSendRequest(paymentIntent: PaymentIntent) {
         withContext(Dispatchers.IO) {
-            if (sendCoinsTaskRunner.isCutoverCommitted()) {
-                try {
-                    // A re-preview (retry after a failed send) must not
-                    // leak the previous reservation. getAndSet keeps the
-                    // take-then-release atomic against a concurrent send.
-                    deferredPaymentRef.getAndSet(null)?.let {
-                        sendCoinsTaskRunner.releaseDeferredPayment(it)
-                    }
-                    deferredPaymentRef.set(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent))
-                    baseSendRequest = null
-                    _sendRequestLiveData.postValue(Resource.success(null))
-                } catch (x: Exception) {
-                    deferredPaymentRef.set(null)
-                    baseSendRequest = null
-                    _sendRequestLiveData.postValue(Resource.error(x))
-                }
-                return@withContext
-            }
-            Context.propagate(wallet.context)
             try {
-                val sendRequest = sendCoinsTaskRunner.createSendRequest(
-                    false,
-                    paymentIntent,
-                    signInputs = false,
-                    forceEnsureMinRequiredFee = false
-                )
-
-                wallet.completeTx(sendRequest)
-
-                baseSendRequest = sendRequest
-                _sendRequestLiveData.postValue(Resource.success(sendRequest))
+                // A re-preview (retry after a failed send) must not
+                // leak the previous reservation. getAndSet keeps the
+                // take-then-release atomic against a concurrent send.
+                deferredPaymentRef.getAndSet(null)?.let {
+                    sendCoinsTaskRunner.releaseDeferredPayment(it)
+                }
+                deferredPaymentRef.set(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent))
+                _sendRequestLiveData.postValue(Resource.success(null))
             } catch (x: Exception) {
-                baseSendRequest = null
+                deferredPaymentRef.set(null)
                 _sendRequestLiveData.postValue(Resource.error(x))
             }
         }
@@ -263,17 +237,10 @@ class PaymentProtocolViewModel @Inject constructor(
                         throw ex
                     }
                 } else {
-                    val sendRequest = sendCoinsTaskRunner.createSendRequest(
-                        basePaymentIntent.mayEditAmount(),
-                        finalPaymentIntent!!,
-                        true,
-                        baseSendRequest!!.ensureMinRequiredFee
-                    )
-
-                    sendCoinsTaskRunner.sendDirectPayment(
-                        sendRequest,
-                        finalPaymentIntent!!
-                    )
+                    // No armed reservation: the preview failed (the
+                    // fragment gates on canSendPayment, so this is a
+                    // backstop, not a fallback — the dashj leg is gone).
+                    error("no prepared payment to submit — the preview must build first")
                 }
 
                 directPaymentAckLiveData.postValue(Resource.success(transaction))
@@ -284,17 +251,6 @@ class PaymentProtocolViewModel @Inject constructor(
                 sendingPayment.set(false)
             }
         }
-    }
-
-    /**
-     * Commits and broadcasts a transaction that has already been acknowledged.
-     */
-    suspend fun commitAndBroadcast(sendRequest: SendRequest): Transaction {
-        return sendCoinsTaskRunner.sendCoins(
-            sendRequest,
-            txCompleted = true,
-            checkBalanceConditions = true
-        )
     }
 
     override fun onCleared() {
