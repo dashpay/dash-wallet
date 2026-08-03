@@ -76,6 +76,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.InfoPanel
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.scan.ScanActivity
@@ -85,6 +86,7 @@ import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
+import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import de.schildbach.wallet.service.L1SyncUiStatus
@@ -163,17 +165,19 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
         binding.infoPanel.setContent {
             if (shortcutViewModel.showShortcutInfo) {
-                InfoPanel(
-                    stringResource(R.string.customize_shortcuts),
-                    stringResource(R.string.customize_shortcuts_description),
-                    modifier = Modifier
-                        .wrapContentHeight()
-                        .fillMaxWidth()
-                        .padding(horizontal = 2.dp),
-                    leftIconRes = R.drawable.ic_shortcuts,
-                    actionIconRes = R.drawable.ic_popup_close
-                ) {
-                    shortcutViewModel.hideShortcutInfo()
+                DashWalletTheme {
+                    InfoPanel(
+                        stringResource(R.string.customize_shortcuts),
+                        stringResource(R.string.customize_shortcuts_description),
+                        modifier = Modifier
+                            .wrapContentHeight()
+                            .fillMaxWidth()
+                            .padding(horizontal = 2.dp),
+                        leftIconRes = R.drawable.ic_shortcuts,
+                        actionIconRes = R.drawable.ic_popup_close
+                    ) {
+                        shortcutViewModel.hideShortcutInfo()
+                    }
                 }
             }
         }
@@ -257,15 +261,17 @@ class WalletFragment : Fragment(R.layout.home_content) {
         )
 
         binding.shortcutsPane.setContent {
-            ShortcutsPane(
-                shortcuts = shortcutViewModel.shortcuts,
-                onClick = { shortcut ->
-                    onShortcutTap(shortcut)
-                },
-                onLongClick = { shortcut, index ->
-                    onShortcutLongTap(shortcut, index)
-                }
-            )
+            DashWalletTheme {
+                ShortcutsPane(
+                    shortcuts = shortcutViewModel.shortcuts,
+                    onClick = { shortcut ->
+                        onShortcutTap(shortcut)
+                    },
+                    onLongClick = { shortcut, index ->
+                        onShortcutLongTap(shortcut, index)
+                    }
+                )
+            }
         }
 
         refreshShortcutBar()
@@ -383,6 +389,11 @@ class WalletFragment : Fragment(R.layout.home_content) {
             ShortcutOption.BUY_SELL -> {
                 viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL)
                 safeNavigate(WalletFragmentDirections.homeToBuySell())
+            }
+            ShortcutOption.DASH_DEX -> {
+                viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_DASH_DEX)
+                viewModel.setSwapBackend(SwapBackend.SWAPKIT)
+                safeNavigate(WalletFragmentDirections.homeToMaya())
             }
             ShortcutOption.SEND_TO_ADDRESS -> {
                 handlePayToAddress()

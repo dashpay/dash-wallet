@@ -2,7 +2,7 @@ name: Code format check
 
 on:
   pull_request:
-    branches: [ master, feature-*, bugfix-*, dashpay-* ]
+    branches: [ master, feature-*, bugfix-*, feat/*, fix/* ]
 
 jobs:
   check:

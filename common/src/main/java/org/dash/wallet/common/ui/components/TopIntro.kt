@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -45,7 +46,7 @@ import androidx.compose.ui.unit.dp
 //        Text(
 //            text = heading,
 //            style = MyTheme.Typography.HeadlineMediumBold,
-//            color = MyTheme.Colors.textPrimary,
+//            color = colors.textPrimary,
 //            modifier = Modifier.fillMaxWidth()
 //        )
 //
@@ -54,7 +55,7 @@ import androidx.compose.ui.unit.dp
 //            Text(
 //                text = it,
 //                style = MyTheme.Typography.BodyMedium,
-//                color = MyTheme.Colors.textPrimary,
+//                color = colors.textPrimary,
 //                modifier = Modifier.fillMaxWidth()
 //            )
 //        }
@@ -70,6 +71,7 @@ fun TopIntro(
 //    modifier: Modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp),
     icon: @Composable () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
@@ -87,7 +89,7 @@ fun TopIntro(
             Text(
                 text = heading,
                 style = MyTheme.Typography.HeadlineMediumBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 textAlign = TextAlign.Start,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -96,7 +98,7 @@ fun TopIntro(
                 Text(
                     text = it,
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textSecondary,
+                    color = colors.textSecondary,
                     textAlign = TextAlign.Start,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -106,7 +108,7 @@ fun TopIntro(
                 Text(
                     text = it,
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textSecondary,
+                    color = colors.textSecondary,
                     textAlign = TextAlign.Start,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -116,7 +118,7 @@ fun TopIntro(
                 Text(
                     text = it,
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textSecondary,
+                    color = colors.textSecondary,
                     textAlign = TextAlign.Start,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -125,30 +127,34 @@ fun TopIntro(
     }
 }
 
+@Preview(name = "Top Intro Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Top Intro Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-@Preview
 fun TopIntroPreview() {
-    Column(
+    DashWalletTheme {
+        val colors = LocalDashColors.current
+        Column(
         modifier = Modifier
             .padding(16.dp)
-            .background(MyTheme.Colors.backgroundPrimary),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        // With heading and text
-        TopIntro(
-            heading = "Heading",
-            text = "Text"
-        )
-        
-        // Heading only
-        TopIntro(
-            heading = "Heading Only"
-        )
-        
-        // Longer examples
-        TopIntro(
-            heading = "Welcome to Dash",
-            text = "Your digital cash for everyday payments"
-        )
+            .background(colors.backgroundPrimary),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // With heading and text
+            TopIntro(
+                heading = "Heading",
+                text = "Text"
+            )
+
+            // Heading only
+            TopIntro(
+                heading = "Heading Only"
+            )
+
+            // Longer examples
+            TopIntro(
+                heading = "Welcome to Dash",
+                text = "Your digital cash for everyday payments"
+            )
+        }
     }
 }

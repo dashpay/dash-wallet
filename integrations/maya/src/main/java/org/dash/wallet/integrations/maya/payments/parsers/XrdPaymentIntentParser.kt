@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.AddressFormatException
 import org.dash.wallet.common.payments.parsers.Bech32AddressParser
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
@@ -35,8 +36,13 @@ class XrdPaymentIntentParser : MayaPaymentIntentParser("XRD", "radix", "XRD.XRD"
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
             try {
+                // A URI payload gets the same validation as a bare address before reaching
+                // the swap memo; bech32 may be scanned all-caps, lowercase is canonical.
                 val address = input.substring(uriPrefix.length + 1)
-                return@withContext createPaymentIntent(address)
+                if (!addressParser.exactMatch(address)) {
+                    throw AddressFormatException("not a valid XRD address: $address")
+                }
+                return@withContext createPaymentIntent(address.lowercase())
             } catch (ex: Exception) {
                 log.info("got invalid uri: '$input'", ex)
                 throw PaymentIntentParserException(
@@ -45,7 +51,8 @@ class XrdPaymentIntentParser : MayaPaymentIntentParser("XRD", "radix", "XRD.XRD"
                 )
             }
         } else if (addressParser.exactMatch(input)) {
-            return@withContext createPaymentIntent(input)
+            // bech32 may be scanned all-caps; lowercase is the canonical form
+            return@withContext createPaymentIntent(input.lowercase())
         }
         log.info("cannot classify: '{}'", input)
         throw PaymentIntentParserException(

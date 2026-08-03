@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
@@ -40,6 +39,7 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -129,10 +129,22 @@ class ContactsFragment : Fragment(),
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Reading hasIdentity synchronously can return false before DataStore's
-        // first emission, misrouting users who have a username to the EvoUpgrade
-        // screen — so wait for the first real emission instead. The gate lives
-        // and dies with the view (see ContactsIdentityGate).
+        // DashPayUserBottomSheet is shown on the activity's FragmentManager (via show(activity)),
+        // so listen there for its result.
+        requireActivity().supportFragmentManager.setFragmentResultListener(
+            DashPayUserBottomSheet.REQUEST_KEY,
+            viewLifecycleOwner
+        ) { _, bundle ->
+            if (bundle.getBoolean(DashPayUserBottomSheet.KEY_CHANGED, false)) {
+                searchContacts()
+            }
+        }
+        // blockchainIdentity LiveData is populated asynchronously from DataStore.
+        // Reading hasIdentity synchronously can return false before the first
+        // emission, misrouting users who have a username to the EvoUpgrade screen.
+        // The observer can fire repeatedly (BlockchainIdentityData is not deduped
+        // by distinctUntilChanged, and DataStore emits on any preference change),
+        // so identityResolved makes the routing decision one-shot.
         val identityGate = ContactsIdentityGate()
         binding.container.isVisible = false
         mainViewModel.blockchainIdentity.observe(viewLifecycleOwner) { identityData ->
@@ -357,6 +369,9 @@ class ContactsFragment : Fragment(),
         dashPayViewModel.updateDashPayState()
     }
 
+    // No onDestroyView reset needed: the identity-routing gate (ContactsIdentityGate) is
+    // created per view in onViewCreated, so a recreated view re-runs the full setup.
+
     private fun processResults(data: List<UsernameSearchResult>) {
         val results = ArrayList<ContactSearchResultsAdapter.ViewItem>()
         // process the requests
@@ -444,7 +459,7 @@ class ContactsFragment : Fragment(),
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
         when (args.mode) {
             ContactsScreenMode.SEARCH_CONTACTS, ContactsScreenMode.VIEW_REQUESTS -> {
-                startActivity(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult))
+                DashPayUserBottomSheet.newInstance(usernameSearchResult).show(requireActivity())
             }
             ContactsScreenMode.SELECT_CONTACT -> {
                 handleString(usernameSearchResult.toContactRequest!!.toUserId, true, R.string.scan_to_pay_username_dialog_message)
@@ -470,13 +485,6 @@ class ContactsFragment : Fragment(),
             getString(R.string.accept_contact_request_error_message),
             getString(R.string.button_ok)
         ).show(requireActivity())
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
-            searchContacts()
-        }
     }
 
     private fun handleString(input: String, fireAction: Boolean, errorDialogTitleResId: Int) {

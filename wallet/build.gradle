@@ -129,6 +129,7 @@ dependencies {
     ksp "com.github.bumptech.glide:compiler:$glideVersion"
     implementation 'com.github.MikeOrtiz:TouchImageView:3.6'
     implementation "io.coil-kt:coil:$coilVersion"
+    implementation "io.coil-kt:coil-compose:$coilVersion"
 
     // Compose
     implementation(platform("androidx.compose:compose-bom:$composeBom"))
@@ -285,8 +286,8 @@ android {
         minSdkVersion 29
         targetSdkVersion 35
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11080201
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.8.2"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11090002
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.9.0"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

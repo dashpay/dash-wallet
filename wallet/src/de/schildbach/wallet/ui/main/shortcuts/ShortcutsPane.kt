@@ -34,7 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import org.dash.wallet.common.ui.components.MyTheme.Colors
+import org.dash.wallet.common.ui.components.LocalDashColors
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -43,12 +43,13 @@ fun ShortcutsPane(
     onClick: (ShortcutOption) -> Unit,
     onLongClick: (ShortcutOption, Int) -> Unit
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight(unbounded = true)
             .clip(RoundedCornerShape(12.dp))
-            .background(Colors.backgroundSecondary)
+            .background(colors.backgroundSecondary)
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Row(
@@ -65,7 +66,11 @@ fun ShortcutsPane(
                         .padding(6.dp)
                         .combinedClickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = rememberRipple(color = Colors.textPrimary, bounded = false, radius = 50.dp),
+                            indication = rememberRipple(
+                                color = colors.textPrimary,
+                                bounded = false,
+                                radius = 50.dp
+                            ),
                             onClick = { onClick(shortcut) },
                             onLongClick = { onLongClick(shortcut, index) },
                         )

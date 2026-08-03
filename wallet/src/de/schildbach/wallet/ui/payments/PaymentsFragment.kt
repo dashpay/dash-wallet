@@ -47,6 +47,7 @@ import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.common.ui.viewBinding
 import androidx.core.content.edit
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
 import javax.inject.Inject
 
@@ -127,13 +128,15 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
             ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
         )
         binding.tabs.setContent {
-            SegmentedPicker(
-                options,
-                modifier = Modifier.height(32.dp),
-                selectedIndex = selectedTab
-            ) { option, index ->
-                selectedTab = index
-                binding.pager.currentItem = index
+            DashWalletTheme {
+                SegmentedPicker(
+                    options,
+                    modifier = Modifier.height(32.dp),
+                    selectedIndex = selectedTab
+                ) { option, index ->
+                    selectedTab = index
+                    binding.pager.currentItem = index
+                }
             }
         }
 

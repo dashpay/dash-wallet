@@ -421,6 +421,50 @@ SwapKitApiAggregator
 - After 60 s, `/v3/swap` will auto-refresh and may return `outputAmountDeviationTooHigh` if pricing drifted >5%.
 - After 5 min, `/v3/swap` returns `swapRouteNotFound` and the client must call `/v3/quote` again.
 
+### Deposit Address / QR Validity (the *other* clock)
+
+There are **two** independent timers, and the dangerous one is **not** the quote lifecycle
+above. For the BUY receive screen (where we show a SwapKit `inboundAddress` + QR and the user
+funds the deposit from an external wallet, possibly minutes later) the relevant question is *how
+long the deposit address stays good*. Findings (researched 2026-06-24):
+
+- **SwapKit exposes no deposit-window field.** Neither `/v3/quote` nor `/v3/swap` returns an
+  `expiresAt` / `deadline` / `validUntil` / `timeWhenInactive`. The only SwapKit-level timer is the
+  `routeId` (60 s soft / 5 min hard cache) — that governs *re-quoting*, not the deposit window.
+  The actual deposit window is the **underlying provider's**, and the two providers we route
+  through behave very differently in the failure case:
+
+- **MAYACHAIN / THORChain routes — stale address = LOSS OF FUNDS.** The `inboundAddress` is a
+  shared **vault that churns** (selected by bond-to-asset ratio, rotates unpredictably). THORChain
+  guidance: *"Do not cache inbound addresses as they change regularly"* and *"Quotes should only be
+  considered valid for 10 minutes, and sending funds to an old inbound address will result in loss
+  of funds."* THORChain's quote carries an `expiry` Unix timestamp and *"transactions delayed
+  beyond this timestamp will be refunded"* — **but SwapKit does not surface that field to us.**
+  Two distinct failure modes: deposit to the *correct* vault but confirmed after `expiry` → refund;
+  deposit to an *old/churned* vault → **lost**.
+
+- **NEAR Intents routes — safe, refund-backed.** The address is a per-swap **deposit channel** with
+  a `deadline` (quote-expiry) and a `timeWhenInactive` refund clock (**default ~1 hour**). A
+  late / under / failed deposit is **refunded to `refundTo`** — i.e. the `sourceAddress` we pass,
+  which is the refund address the user entered on the previous screen. (Chainflip, if ever routed,
+  is also a deposit-channel model with channel expiry, like NEAR.)
+
+**Implication for `DEXReceiveViewModel` / `DEXReceiveScreen`:** the deposit address must be treated
+as **short-lived and route-dependent**, not indefinite. Since SwapKit returns no expiry, the safe
+default is to bound the address to a **conservative ~5 min window** (matches SwapKit's own `routeId`
+hard cache and is *tighter* than THORChain's 10 min) and force a re-quote/refresh afterward — and on
+refresh **never silently rotate the displayed address** (a Maya vault/NEAR channel can change),
+because a user mid-send to the old address could lose funds (Maya) or hit the refund path (NEAR).
+The collected refund address only fully protects **NEAR** routes; it does **not** save a deposit to
+a churned **Maya** vault.
+
+Status today: not implemented — `createBuyOrder` / `BuyOrder` capture no expiry and the screen
+resolves the address once with no countdown or refresh. Held pending an authoritative per-provider
+deposit `deadline` from SwapKit (see Open Questions).
+
+Sources: SwapKit `/v3/swap`, `/v3/quote`, quote+swap flow, `/track` docs; THORChain dev docs
+(querying / inbound addresses); NEAR Intents 1Click API docs.
+
 ### Fees
 
 Up to six fee categories are returned per route:
@@ -445,6 +489,82 @@ Output amounts shown are already net of all fees except inbound.
 
 - Asset notation and the general routing model overlap heavily, so `model/Amount.kt`, `model/SwapQuoteRequest.kt`, and the existing fiat-rate stack can mostly be reused.
 - The biggest delta is that **SwapKit returns the transaction**, where the current Maya integration **builds the DASH transaction client-side** (vault deposit + OP_RETURN memo, no BIP69 sorting). For SwapKit-originated DASH swaps, the wallet must learn to parse and sign whatever payload SwapKit delivers (likely PSBT).
+
+---
+
+## User-Facing Error Display (per flow / screen)
+
+SwapKit failures carry a machine code in the top-level `error` field (§4 quote, §5 swap).
+`swapkit/SwapKitErrors.messageResFor()` maps the code to a localized string in
+`res/values/strings-maya.xml`; which screens use that mapping — and which show their own
+fixed copy instead — is listed below. English text as of this writing; `%1$s` is the coin
+code (e.g. "BTC"). Codes not listed fall back to `dex_error_generic`.
+
+### Buy flow (SwapKit backend only)
+
+**Enter Amount** (`DEXEnterAmountScreen`) — red text under the amount bar. Does NOT use the
+code→message table: every Continue-validation quote failure (including `noRoutesFound`) shows
+the single fixed string `dex_enter_amount_invalid`:
+
+> This amount can't be swapped right now. Try a different amount, or try again shortly.
+
+**Refund Address** (`DEXRefundAddressScreen`) — red text under the address field. The only buy
+screen using the full `SwapKitErrors` table; `createBuyOrder` calls both `/v3/quote` and
+`/v3/swap`, so every code can surface here:
+
+| Error | String id | English text |
+|---|---|---|
+| local address check (not a SwapKit code) | `not_valid_address` (common) | Not a valid %1$s Address or URL request |
+| `noRoutesFound` | `dex_error_no_route` | This amount can't be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount. |
+| `blackListAsset` | `dex_error_blacklisted` | %1$s can't be swapped at the moment. |
+| `invalidRequest`, `validation_error` | `dex_error_validation` | We couldn't set up your swap. Please check the amount and address, then try again. |
+| `apiKeyInvalid`, `unauthorized` | `dex_error_unavailable` | Swaps are temporarily unavailable. Please try again later. |
+| `swapRouteNotFound` | `dex_error_quote_expired` | This quote expired. Please go back and try again. |
+| `isSanctionedAddress` | `dex_error_sanctioned` | This address can't be used for swaps. |
+| `insufficientBalance` | `dex_error_insufficient_balance` | The amount is more than what you're sending. |
+| `insufficientAllowance` | `dex_error_allowance` | This token needs approval before it can be swapped. |
+| `unableToBuildTransaction` | `dex_error_build_failed` | We couldn't prepare this swap. Please try again. |
+| `invalidSourceAddress` | `dex_error_invalid_refund_address` | That refund address isn't a valid %1$s address. |
+| `invalidDestinationAddress` | `dex_error_invalid_destination` | We couldn't set up your deposit. Please try again. |
+| `outputAmountDeviationTooHigh` | `dex_error_price_moved` | The price moved too much. Please go back and try again. |
+| anything else (e.g. `unknownError` 500) | `dex_error_generic` | Something went wrong setting up your swap. Please try again. |
+
+**Receive** (`DEXReceiveScreen`) — purely presentational, no network calls, so no SwapKit codes
+reach it. One defensive case, shown in place of the QR content:
+
+| Error | String id | English text |
+|---|---|---|
+| blank deposit address (shouldn't happen) | `dex_error_generic` | Something went wrong setting up your swap. Please try again. |
+
+### Sell flow (SwapKit table applies only when the SwapKit backend is active; the Maya backend maps its own vocabulary in `MayaApi`/`MayaErrorResponse`)
+
+Only `/v3/quote` codes occur here — the sell flow never calls `/v3/swap` (the DASH deposit
+transaction is built locally).
+
+**Address Input** (`MayaAddressInputFragment`) — inline error under the address field:
+
+| Error | String id | English text |
+|---|---|---|
+| `noRoutesFound` | `dex_error_no_route` | This amount can't be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount. |
+| `blackListAsset` | `dex_error_blacklisted` | %1$s can't be swapped at the moment. |
+| `invalidRequest`, `validation_error` | `dex_error_validation` | We couldn't set up your swap. Please check the amount and address, then try again. |
+| `apiKeyInvalid`, `unauthorized` | `dex_error_unavailable` | Swaps are temporarily unavailable. Please try again later. |
+| anything else | `dex_error_generic` | Something went wrong setting up your swap. Please try again. |
+
+**Sell Enter Amount** (`MayaConvertCryptoFragment`) — an amount-too-low-classified error shows
+the red banner (no modal, so the user can raise the amount and retry); all other codes pop an
+`AdaptiveDialog` with the mapped message. The banner text comes from the active backend's
+`errorMessageRes`, so Maya's genuine amount-too-low keeps its minimum copy while SwapKit's
+ambiguous `noRoutesFound` gets the neutral no-route copy:
+
+| Error | Shown as | String id | English text |
+|---|---|---|---|
+| `noRoutesFound` (SwapKit backend) | banner | `dex_error_no_route` | This amount can't be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount. |
+| amount too low (Maya backend) | banner | `maya_error_below_allowed_minimum` | Entered amount is lower than the allowed minimum |
+| `blackListAsset` | dialog | `dex_error_blacklisted` | %1$s can't be swapped at the moment. |
+| `invalidRequest`, `validation_error` | dialog | `dex_error_validation` | We couldn't set up your swap. Please check the amount and address, then try again. |
+| `apiKeyInvalid`, `unauthorized` | dialog | `dex_error_unavailable` | Swaps are temporarily unavailable. Please try again later. |
+| anything else | dialog | `dex_error_generic` | Something went wrong setting up your swap. Please try again. |
 
 ---
 
@@ -549,6 +669,7 @@ These need to be answered before any client code is written:
 3. **Where does the API key live?** In-app (insecure), proxied through a backend, or fetched from remote config like the Uphold/Coinbase keys?
 4. **Affiliate fee policy.** What basis-point split, and configured at the dashboard or per request?
 5. **Does SwapKit duplicate Maya's offering enough to *replace* the direct integration, or should it be an additional swap source presented alongside Maya?**
+6. **Can SwapKit expose a per-swap deposit `deadline` / address-validity timestamp in the `/v3/swap` response?** Today there is no expiry field, so the BUY receive screen can't drive an accurate countdown or know when the `inboundAddress` goes stale (see "Deposit Address / QR Validity"). Specifically: (a) the deposit window per provider (MAYACHAIN vault vs NEAR channel); (b) confirmation that a late deposit on NEAR refunds to `sourceAddress`; (c) confirmation that a deposit to a churned MAYACHAIN vault is unrecoverable, and the recommended max address age to avoid it.
 
 ---
 

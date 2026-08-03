@@ -62,6 +62,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             iconBitmapDao = mockk<IconBitmapDao>(relaxed = true),
             walletData = mockk<WalletData>(relaxed = true),
             giftCardDao = giftCardDao,
+            swapOrderDao = mockk(relaxed = true),
             transactionMetadataChangeCacheDao = cacheDao,
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),
             dashPayConfig = mockk<DashPayConfig>(relaxed = true)
@@ -258,8 +259,8 @@ class WalletTransactionMetadataProviderGiftCardTest {
                 originalPrice = 25.0,
                 merchantUrl = "https://kept",
                 order = "order-9",
-                giftCardChallenge = null,
                 index = 0,
+                giftCardChallenge = null,
                 cacheTimestamp = any()
             )
         }

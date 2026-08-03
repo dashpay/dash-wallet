@@ -26,10 +26,12 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.model.PoolInfo
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
@@ -48,13 +50,30 @@ class MayaCryptoCurrencyPickerFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MayaCryptoCurrencyPickerScreen(
-                    viewModel = viewModel,
-                    onBackClick = { findNavController().popBackStack() },
-                    onCoinClick = ::onCoinSelected,
-                    onShowError = ::showErrorAlert
-                )
+                DashWalletTheme {
+                    MayaCryptoCurrencyPickerScreen(
+                        viewModel = viewModel,
+                        onBackClick = { findNavController().popBackStack() },
+                        onCoinClick = ::onCoinSelected,
+                        onShowError = ::showErrorAlert
+                    )
+                }
             }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // The search query lives in the nav-graph-scoped MayaViewModel, so it would
+        // otherwise persist back to the portal and into the next visit. Clear it only
+        // when the picker is popped off the back stack (returning to the portal):
+        // isRemoving is false on a configuration change and while the fragment sits on
+        // the back stack after navigating forward, so the query survives rotation and a
+        // forward-then-back trip. Resolving the navGraphViewModels lazy throws once the
+        // whole flow was popped to Home — the graph scope is gone and its state with it,
+        // so there is nothing left to clear.
+        if (isRemoving) {
+            runCatching { viewModel }.getOrNull()?.onSearchQuery("")
         }
     }
 
@@ -86,14 +105,24 @@ class MayaCryptoCurrencyPickerFragment : Fragment() {
     }
 
     private fun clickListener(pool: PoolInfo) {
-        log.info("currency picker: navigating to address input for {}", pool.asset)
-        safeNavigate(
-            MayaCryptoCurrencyPickerFragmentDirections.mayaCurrencyPickerToAddressInput(
-                pool.currencyCode,
-                pool.asset,
-                getString(R.string.maya_address_input_title, pool.currencyCode),
-                getString(R.string.maya_address_input_hint, pool.currencyCode)
+        if (viewModel.swapDirection.value == SwapDirection.SELL) {
+            log.info("currency picker: navigating to address input for {}", pool.asset)
+            safeNavigate(
+                MayaCryptoCurrencyPickerFragmentDirections.mayaCurrencyPickerToAddressInput(
+                    pool.currencyCode,
+                    pool.asset,
+                    getString(R.string.maya_address_input_title, pool.currencyCode),
+                    getString(R.string.maya_address_input_hint, pool.currencyCode)
+                )
             )
-        )
+        } else {
+            log.info("currency picker: navigating to DEX enter amount for {}", pool.asset)
+            safeNavigate(
+                MayaCryptoCurrencyPickerFragmentDirections.mayaCurrencyPickerToDexEnterAmount(
+                    asset = pool.asset,
+                    currency = pool.currencyCode
+                )
+            )
+        }
     }
 }

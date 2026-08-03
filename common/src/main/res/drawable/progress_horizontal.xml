@@ -3,15 +3,14 @@
         android:id="@android:id/background"
         android:gravity="center_vertical|fill_horizontal">
         <shape
-            android:shape="rectangle"
-            android:tint="@color/dash_light_gray">
+            android:shape="rectangle">
             <corners
                 android:bottomLeftRadius="10dp"
                 android:bottomRightRadius="10dp"
                 android:topLeftRadius="0dp"
                 android:topRightRadius="0dp" />
             <size android:height="6dp" />
-            <solid android:color="@color/dash_light_gray" />
+            <solid android:color="@color/extra_dark_gray_0.1" />
         </shape>
     </item>
     <item

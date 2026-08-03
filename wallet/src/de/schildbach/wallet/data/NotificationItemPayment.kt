@@ -35,7 +35,10 @@ data class NotificationItemPayment(
 
     override fun getId() = txId.toString()
 
-    // dashj rows keep the original `updateTime * 1000` scale; an SDK-only row derives the
-    // same-scaled value from the cache entry's epoch-millis `time`, so both sort together.
-    override fun getDate() = tx?.let { it.updateTime.time * 1000 } ?: (correctedDisplay!!.time * 1000)
+    // Both sources are ALREADY epoch milliseconds — dashj's `updateTime.time` and the cache
+    // entry's `time` — and every other NotificationItem returns millis too, so returning them
+    // unscaled keeps the sort key and the relative-time display consistent across row types.
+    // (Do not reintroduce a `* 1000` here: it would push payment rows far past contact/alert
+    // rows in the mixed-type sort and break relative-time rendering. See master's fix.)
+    override fun getDate() = tx?.updateTime?.time ?: correctedDisplay!!.time
 }

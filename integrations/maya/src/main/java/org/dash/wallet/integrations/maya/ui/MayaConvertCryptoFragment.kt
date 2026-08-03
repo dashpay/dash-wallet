@@ -16,55 +16,63 @@
  */
 package org.dash.wallet.integrations.maya.ui
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.util.TypedValue
+import android.view.LayoutInflater
 import android.view.View
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.view.isGone
-import androidx.core.view.isVisible
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.money.dashToFiat
-import org.dash.wallet.common.money.fiatValue
+import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.payments.parsers.opReturnMessage
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
-import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integrations.maya.R
-import org.dash.wallet.integrations.maya.databinding.FragmentMayaConvertCryptoBinding
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
-import org.dash.wallet.integrations.maya.model.MayaErrorType
+import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.model.getCoinBaseExchangeRateConversion
-import org.dash.wallet.integrations.maya.model.getMayaErrorString
-import org.dash.wallet.integrations.maya.model.getMayaErrorType
-import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewFragment
+import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
-import org.dash.wallet.integrations.maya.ui.convert_currency.model.ServiceWallet
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.text.DecimalFormatSymbols
 import java.util.UUID
 
+/**
+ * Maya sell "Convert Dash to <crypto>" enter-amount screen (Figma node 24021:10970).
+ *
+ * Hosts the Compose [MayaConvertCryptoScreen] while keeping the original amount anchoring,
+ * conversion and formatting logic from [ConvertViewViewModel] (previously driven by the
+ * view-based ConvertViewFragment/ConverterView pair).
+ */
 @AndroidEntryPoint
-class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto) {
-    private val binding by viewBinding(FragmentMayaConvertCryptoBinding::bind)
+class MayaConvertCryptoFragment : Fragment() {
     private val viewModel by viewModels<MayaConvertCryptoViewModel>()
     private val convertViewModel by mayaViewModels<ConvertViewViewModel>()
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
@@ -72,153 +80,82 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
     private var selectedCoinBaseAccount: AccountDataUIModel? = null
 
-    private lateinit var fragment: ConvertViewFragment
+    private var uiState by mutableStateOf(MayaConvertCryptoUIState())
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        val poolInfo = mayaViewModel.getPoolInfo(args.currency)
-        val dashPoolInfo = mayaViewModel.getPoolInfo("DASH")
+    private val decimalSeparator =
+        DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
 
-        binding.toolbar.setNavigationOnClickListener {
-            convertViewModel.reset()
-            findNavController().popBackStack()
-        }
-        binding.convertView.isSellSwapEnabled = true
-        convertViewModel.setOnSwapDashFromToCryptoClicked(true)
+    // Amount-entry state ported from the old ConvertViewFragment keyboard listener.
+    private var maxAmountSelected: Boolean = false
+    private var canContinue: Boolean = false
 
-        if (savedInstanceState == null) {
-            fragment = ConvertViewFragment.newInstance()
-            childFragmentManager.commit {
-                setReorderingAllowed(true)
-                add(R.id.enter_amount_fragment_placeholder, fragment)
-            }
-        } else {
-            fragment = childFragmentManager.findFragmentById(R.id.enter_amount_fragment_placeholder)
-                as? ConvertViewFragment
-                ?: ConvertViewFragment.newInstance().also {
-                    childFragmentManager.commit {
-                        setReorderingAllowed(true)
-                        add(R.id.enter_amount_fragment_placeholder, it)
-                    }
-                }
-        }
-        fragment.setViewDetails(getString(R.string.button_continue), null)
+    // Hard gate on Get quote independent of the entered value — false when the wallet has no
+    // DASH to convert, so the button stays disabled no matter what the user types. Derived
+    // from the ViewModel so the gate survives a configuration change.
+    private val inputEnabled: Boolean
+        get() = !convertViewModel.userDashAccountEmpty
+    private var currencyOptions: List<String> = emptyList()
+    private var pickedCurrencyIndex: Int = 0
+    private val pickedCurrencyOption: String
+        get() = currencyOptions.getOrNull(pickedCurrencyIndex) ?: ""
 
-        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
-            fragment.handleNetworkState(hasInternet)
-            binding.convertView.isEnabled = hasInternet
-        }
-        convertViewModel.destinationAddress = getArgAddress()
+    // Last crypto amount pair (value, currency code) used for the receive-amount line.
+    private var lastCryptoAmount: Pair<String, String>? = null
 
-        convertViewModel.dashToCrypto.value?.let {
-            if (it) {
-                viewModel.dashWalletBalance.value?.let { dashInput ->
-                    binding.convertView.dashInput = dashInput
-                }
-                binding.convertView.dashToCrypto = it
-            }
-        }
-        convertViewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) { account ->
-            selectedCoinBaseAccount = account
-        }
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        setupState()
+        setupObservers()
 
-        convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { request ->
-            proceedWithSwap(request)
-        }
-
-        // While the quote is being fetched, block all amount input on the enter-amount
-        // screen so a late key press can't alter the value carried to the preview.
-        viewModel.showLoading.observe(viewLifecycleOwner) { loading ->
-            fragment.setProcessing(loading == true)
-        }
-
-        binding.authLimitBanner.warningLimitInfo.setOnClickListener {
-            AdaptiveDialog.custom(R.layout.dialog_withdrawal_limit_info).show(requireActivity())
-        }
-
-        viewModel.swapTradeOrder.observe(viewLifecycleOwner) { swapTrade ->
-            lifecycleScope.launch {
-                val dashInbound = try {
-                    mayaViewModel.refreshInboundAddresses()
-                    mayaViewModel.isTradingActive()
-                } catch (e: Exception) {
-                    AdaptiveDialog.create(
-                        R.drawable.ic_error,
-                        getString(R.string.error),
-                        getString(R.string.something_wrong_title),
-                        getString(R.string.button_close)
-                    ).show(requireActivity())
-                    return@launch
-                }
-
-                if (!dashInbound) {
-                    AdaptiveDialog.create(
-                        R.drawable.ic_error,
-                        getString(R.string.error),
-                        getString(R.string.maya_error_trading_halted, "DASH"),
-                        getString(R.string.button_close)
-                    ).show(requireActivity())
-                    return@launch
-                }
-
-                val paymentIntent = try {
-                    viewModel.getUpdatedPaymentIntent(
-                        convertViewModel.enteredConvertDashAmount.value!!,
-                        swapTrade.vaultAddress
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                DashWalletTheme {
+                    MayaConvertCryptoScreen(
+                        state = uiState,
+                        onBackClick = {
+                            convertViewModel.reset()
+                            findNavController().popBackStack()
+                        },
+                        onMaxClick = ::onMaxClick,
+                        onCurrencySelected = ::onCurrencySelected,
+                        onKeyInput = ::onKeyInput,
+                        onContinueClick = {
+                            if (!uiState.isProcessing) {
+                                convertViewModel.continueSwap(pickedCurrencyOption)
+                            }
+                        }
                     )
-                } catch (e: Exception) {
-                    AdaptiveDialog.create(
-                        R.drawable.ic_error,
-                        getString(R.string.error),
-                        getString(R.string.something_wrong_title),
-                        getString(R.string.button_close)
-                    ).show(requireActivity())
-                    return@launch
-                } ?: return@launch
-
-                safeNavigate(
-                    MayaConvertCryptoFragmentDirections
-                        .mayaConvertCryptoFragmentToMayaConversionPreviewFragment(
-                            swapTrade,
-                            convertViewModel.destinationCurrency!!,
-                            paymentIntent
-                        )
-                )
+                }
             }
         }
+    }
 
-        viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
-            // SwapKit's `noRoutesFound` (and Maya's "amount too low") shouldn't pop a modal —
-            // surface them in the same red banner the local min-amount check uses, so the
-            // user can simply raise the amount and retry without dismissing a dialog.
-            if (!it.isNullOrBlank() && getMayaErrorType(it) == MayaErrorType.AMOUNT_TOO_LOW) {
-                showAmountTooLowBanner()
-                return@observe
-            }
+    private fun setupState() {
+        val poolInfo = mayaViewModel.getPoolInfo(args.currency)
+        val dashPoolInfo = mayaViewModel.getPoolInfo(Constants.DASH_CURRENCY)
+        val currencyMapper = MayaCurrencyMapper(requireContext())
 
-            val message: String = if (it.isNullOrBlank()) {
-                requireContext().getString(R.string.something_wrong_title)
-            } else {
-                // get localized error
-                getMayaErrorString(it)?.let { id -> getString(id, args.currency) } ?: it
-            }
+        // Tokens are qualified with their host network ("USDT (Ethereum)"); native L1 coins
+        // (BTC.BTC, …) show just the code.
+        val network = MayaCurrencyList.networkName(args.asset)
+        val displayCode = if (network != null) "${args.currency} ($network)" else args.currency
 
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.error),
-                message,
-                getString(R.string.button_close)
-            ).show(requireActivity())
-        }
+        uiState = uiState.copy(
+            // "Convert DASH to <code>" per design, e.g. "Convert DASH to USDT (Ethereum)".
+            title = getString(R.string.maya_address_input_title, displayCode),
+            toCurrencyName = currencyMapper.getCurrencyName(args.currency),
+            toAddress = getArgAddress(),
+            toIconUrls = GenericUtils.getCoinIconUrls(args.currency.lowercase(), args.asset),
+            // Restores the inline error shown before a configuration change.
+            errorMessage = viewModel.inlineErrorMessage
+        )
 
-        convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.dont_have_any_dash),
-                "",
-                getString(R.string.button_close)
-            ).show(requireActivity())
-        }
+        convertViewModel.setOnSwapDashFromToCryptoClicked(true)
+        convertViewModel.destinationAddress = getArgAddress()
 
         convertViewModel.setSelectedCryptoCurrency(
             AccountDataUIModel(
@@ -243,75 +180,419 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
         convertViewModel.destinationCurrency = args.currency
         viewModel.paymentIntent = args.paymentIntent
+        convertViewModel.setSelectedAsset(args.asset)
+    }
 
-        convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
-            binding.convertView.exchangeRate = it?.fiatValue
-            setConvertViewInput()
+    private fun setupObservers() {
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
+            uiState = uiState.copy(isOnline = hasInternet == true)
         }
 
-        convertViewModel.enteredAmount.observe(viewLifecycleOwner) { amount ->
-            // convertViewModel.setAmount(amount, convertViewModel.selectedPickerCurrencyCode)
+        convertViewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) { account ->
+            selectedCoinBaseAccount = account
+            maxAmountSelected = false
+            resetViewSelection(account)
         }
 
-        convertViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner) { amount ->
-            val hasAmount = !amount.isZero
-            binding.youWillReceiveLabel.isVisible = hasAmount
-            binding.youWillReceiveValue.isVisible = hasAmount
-            updateReceiveNetwork(hasAmount)
-            binding.convertView.dashInput = amount
+        convertViewModel.dashToCrypto.observe(viewLifecycleOwner) {
+            convertViewModel.selectedCryptoCurrencyAccount.value?.let { account ->
+                resetViewSelection(account)
+            }
         }
 
-        convertViewModel.enteredConvertFiatAmount.observe(viewLifecycleOwner) { amount ->
-            val hasAmount = !amount.isZero
-            binding.youWillReceiveLabel.isVisible = hasAmount
-            binding.youWillReceiveValue.isVisible = hasAmount
-            updateReceiveNetwork(hasAmount)
-            binding.convertView.fiatInput = amount
+        convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { request ->
+            proceedWithSwap(request)
         }
 
-        convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { amount ->
-            binding.youWillReceiveLabel.isVisible = amount.second.isNotEmpty()
-            binding.youWillReceiveValue.isVisible = amount.second.isNotEmpty()
-            updateReceiveNetwork(amount.second.isNotEmpty())
+        // While the quote is being fetched, block all amount input so a late key press
+        // can't alter the value carried to the preview.
+        viewModel.showLoading.observe(viewLifecycleOwner) { loading ->
+            uiState = uiState.copy(isProcessing = loading == true)
+            updateContinueEnabled()
+        }
 
-            if (binding.convertView.dashToCrypto) {
-                binding.youWillReceiveValue.text = getString(
-                    R.string.fiat_balance_with_currency,
-                    amount.first,
-                    GenericUtils.currencySymbol(amount.second)
+        viewModel.swapTradeOrder.observe(viewLifecycleOwner) { swapTrade ->
+            lifecycleScope.launch {
+                // The quote succeeded: the ViewModel just dropped showLoading, but this handler
+                // still refreshes inbound addresses and builds the payment intent before
+                // navigating. Keep Get quote disabled for that whole stretch (it happens in the
+                // same frame as the showLoading=false observer, so the button never flashes
+                // enabled); re-enable only on the error paths that keep the user on this screen.
+                uiState = uiState.copy(isProcessing = true)
+                updateContinueEnabled()
+                fun failToRetry() {
+                    uiState = uiState.copy(isProcessing = false)
+                    updateContinueEnabled()
+                }
+
+                val dashInbound = try {
+                    mayaViewModel.refreshInboundAddresses()
+                    mayaViewModel.isTradingActive()
+                } catch (e: Exception) {
+                    failToRetry()
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.error),
+                        getString(R.string.something_wrong_title),
+                        getString(R.string.button_close)
+                    ).show(requireActivity())
+                    return@launch
+                }
+
+                if (!dashInbound) {
+                    failToRetry()
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.error),
+                        getString(R.string.maya_error_trading_halted, "DASH"),
+                        getString(R.string.button_close)
+                    ).show(requireActivity())
+                    return@launch
+                }
+
+                val paymentIntent = try {
+                    viewModel.getUpdatedPaymentIntent(
+                        convertViewModel.enteredConvertDashAmount.value!!,
+                        swapTrade.vaultAddress
+                    )
+                } catch (e: Exception) {
+                    failToRetry()
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.error),
+                        getString(R.string.something_wrong_title),
+                        getString(R.string.button_close)
+                    ).show(requireActivity())
+                    return@launch
+                } ?: run {
+                    failToRetry()
+                    return@launch
+                }
+
+                safeNavigate(
+                    MayaConvertCryptoFragmentDirections
+                        .mayaConvertCryptoFragmentToMayaConversionPreviewFragment(
+                            swapTrade,
+                            convertViewModel.destinationCurrency!!,
+                            paymentIntent
+                        )
                 )
             }
         }
 
-        viewModel.dashWalletBalance.observe(
-            viewLifecycleOwner
-        ) {
-//            binding.convertView.dashInput = it
+        viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
+            // An amount-too-low error (SwapKit's `noRoutesFound`, Maya's "amount too low")
+            // shouldn't pop a modal — surface it in the same inline red error the local
+            // min-amount check uses, so the user can simply raise the amount and retry without
+            // dismissing a dialog. The active backend's aggregator classifies and localizes the
+            // error (see SwapProvider): Maya's amount-too-low keeps its "below the allowed
+            // minimum" copy, while SwapKit's noRoutesFound — which can also mean the route is
+            // briefly unavailable — gets the same neutral no-route message the DEX buy screens show.
+            if (!it.isNullOrBlank() && viewModel.isAmountTooLowError(it)) {
+                setInlineError(getString(viewModel.errorMessageRes(it)))
+                return@observe
+            }
+
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.error),
+                getString(viewModel.errorMessageRes(it), args.currency),
+                getString(R.string.button_close)
+            ).show(requireActivity())
+        }
+
+        convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
+            // No DASH to convert: surface it as a toast (not a blocking dialog); the disabled
+            // Get quote gate itself is derived from the ViewModel (see inputEnabled).
+            Toast.makeText(requireContext(), R.string.dont_have_any_dash, Toast.LENGTH_LONG).show()
+            updateContinueEnabled()
+        }
+
+        convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
+            updateBalanceDisplay()
+        }
+
+        convertViewModel.enteredConvertDashAmount.observe(viewLifecycleOwner) {
+            updateReceiveAmount()
+        }
+
+        convertViewModel.enteredConvertFiatAmount.observe(viewLifecycleOwner) {
+            updateReceiveAmount()
+        }
+
+        convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { amount ->
+            lastCryptoAmount = amount
+            updateReceiveAmount()
+        }
+
+        viewModel.dashWalletBalance.observe(viewLifecycleOwner) {
+            updateBalanceDisplay()
         }
 
         convertViewModel.validSwapValue.observe(viewLifecycleOwner) {
-            binding.limitDesc.isGone = true
-            binding.authLimitBanner.root.isGone = true
-            setGuidelinePercent(true)
+            setInlineError(null)
+        }
+    }
+
+    /** Shows/clears the inline amount error, mirroring it into the ViewModel so it survives rotation. */
+    private fun setInlineError(message: String?) {
+        viewModel.inlineErrorMessage = message
+        uiState = uiState.copy(errorMessage = message)
+    }
+
+    // ── Amount display (ported from ConvertViewFragment / ConverterView) ──────────
+
+    /**
+     * Re-derives the picker options and the displayed amount from the anchored value.
+     * Options are anchored in the fixed order DASH / fiat / crypto for the sell direction.
+     */
+    private fun resetViewSelection(account: AccountDataUIModel?) {
+        account?.coinbaseAccount?.currency?.let { currencyCode ->
+            currencyOptions = if (convertViewModel.dashToCrypto.value == true) {
+                listOf(Constants.DASH_CURRENCY, convertViewModel.selectedLocalCurrencyCode, currencyCode)
+            } else {
+                listOf(currencyCode, convertViewModel.selectedLocalCurrencyCode, Constants.DASH_CURRENCY)
+            }
+            convertViewModel.enteredConvertAmount = GenericUtils.toLocalizedString(
+                convertViewModel.amount.anchoredValue,
+                convertViewModel.amount.anchoredType != CurrencyInputType.Fiat,
+                convertViewModel.amount.anchoredCurrencyCode
+            )
+            convertViewModel.selectedPickerCurrencyCode = convertViewModel.amount.anchoredCurrencyCode
+            pickedCurrencyIndex = when (convertViewModel.amount.anchoredType) {
+                CurrencyInputType.Dash -> 0
+                CurrencyInputType.Fiat -> 1
+                CurrencyInputType.Crypto -> 2
+            }
+            uiState = uiState.copy(
+                currencyOptions = currencyOptions,
+                selectedCurrencyIndex = pickedCurrencyIndex
+            )
+            applyNewValue(convertViewModel.enteredConvertAmount, pickedCurrencyOption, isLocalized = true)
+        }
+    }
+
+    private fun onCurrencySelected(index: Int) {
+        if (uiState.isProcessing) return
+        pickedCurrencyIndex = index
+        uiState = uiState.copy(selectedCurrencyIndex = index)
+        val option = pickedCurrencyOption
+        setAmountValue(option)
+        convertViewModel.selectedPickerCurrencyCode = option
+    }
+
+    private fun setAmountValue(option: String) {
+        val value = convertViewModel.getAmountValue(option)
+        convertViewModel.amount.setAnchoredType(option)
+        val display = formatAmountForDisplay(option, value, isLocalized = false, isEditing = false)
+        convertViewModel.enteredConvertAmount = display
+        uiState = uiState.copy(displayAmount = display)
+    }
+
+    private fun onMaxClick() {
+        if (uiState.isProcessing) return
+        convertViewModel.selectedCryptoCurrencyAccount.value?.let { userAccountData ->
+            convertViewModel.getMaxAmount()?.let { maxAmount ->
+                val cryptoCurrency = userAccountData.coinbaseAccount.currency
+
+                if (convertViewModel.selectedPickerCurrencyCode == cryptoCurrency) {
+                    applyNewValue(
+                        maxAmount.crypto.toString(),
+                        convertViewModel.selectedPickerCurrencyCode,
+                        isLocalized = false
+                    )
+                } else {
+                    val cleanedValue =
+                        if (convertViewModel.selectedPickerCurrencyCode ==
+                            convertViewModel.selectedLocalCurrencyCode
+                        ) {
+                            maxAmount.fiat
+                        } else {
+                            maxAmount.dash
+                        }.toString()
+
+                    applyNewValue(cleanedValue, convertViewModel.selectedPickerCurrencyCode, isLocalized = false)
+                }
+
+                maxAmountSelected = true
+            }
+        }
+    }
+
+    // ── Keypad input (ported from the old NumericKeyboardView listener) ───────────
+
+    private fun onKeyInput(key: String) {
+        if (uiState.isProcessing || !uiState.isOnline) return
+        when (key) {
+            "back" -> onBackspace(longClick = false)
+            "back_long" -> onBackspace(longClick = true)
+            "." -> onDecimalSeparatorKey()
+            else -> key.toIntOrNull()?.let { onDigit(it) }
+        }
+    }
+
+    /** The raw value currently displayed; empty when the display shows the "0" placeholder. */
+    private fun currentValue(): StringBuilder {
+        val value = StringBuilder()
+        if (uiState.displayAmount != "0") {
+            value.append(uiState.displayAmount)
+        }
+        return value
+    }
+
+    private fun onDigit(number: Int) {
+        val value = currentValue()
+        val isFraction = value.toString().indexOf(decimalSeparator) > -1
+
+        if (isFraction) {
+            val lengthOfDecimalPart = value.toString().length - value.toString().indexOf(decimalSeparator)
+            val decimalsThreshold =
+                if (convertViewModel.selectedLocalCurrencyCode == pickedCurrencyOption) {
+                    GenericUtils.getCurrencyDigits()
+                } else {
+                    8
+                }
+
+            if (lengthOfDecimalPart > decimalsThreshold) {
+                return
+            }
         }
 
-        convertViewModel.setSelectedAsset(args.asset)
+        if (!maxAmountSelected) {
+            try {
+                appendIfValidAfter(value, number.toString())
+                applyNewValue(value.toString(), pickedCurrencyOption, isLocalized = true, isEditing = true)
+            } catch (x: Exception) {
+                value.deleteCharAt(value.length - 1)
+                applyNewValue(value.toString(), pickedCurrencyOption, isLocalized = true, isEditing = true)
+            }
+        }
+    }
+
+    private fun appendIfValidAfter(value: StringBuilder, number: String) {
+        try {
+            value.append(number)
+            val formattedValue = GenericUtils.formatFiatWithoutComma(value.toString())
+            Coin.parseCoin(formattedValue)
+        } catch (e: Exception) {
+            value.deleteCharAt(value.length - 1)
+        }
+    }
+
+    private fun onBackspace(longClick: Boolean) {
+        val value = currentValue()
+        if (longClick || maxAmountSelected) {
+            value.clear()
+        } else if (value.isNotEmpty()) {
+            value.deleteCharAt(value.length - 1)
+            convertViewModel.resetSwapValueError()
+        }
+        applyNewValue(value.toString(), pickedCurrencyOption, isLocalized = true, isEditing = true)
+        maxAmountSelected = false
+    }
+
+    private fun onDecimalSeparatorKey() {
+        if (maxAmountSelected) {
+            return
+        }
+        val value = currentValue()
+        if (value.indexOf(decimalSeparator.toString()) == -1) {
+            if (value.isEmpty()) {
+                value.append("0")
+            }
+            value.append(decimalSeparator)
+        }
+        applyNewValue(value.toString(), pickedCurrencyOption, isLocalized = true, isEditing = true)
+    }
+
+    private fun applyNewValue(value: String, currencyCode: String, isLocalized: Boolean, isEditing: Boolean = false) {
+        val newValue = value.ifEmpty { "0" }
+        convertViewModel.setEnteredAmount(newValue, isLocalized)
+
+        val display = formatAmountForDisplay(currencyCode, newValue, isLocalized, isEditing)
+        convertViewModel.enteredConvertAmount = display
+        uiState = uiState.copy(displayAmount = display)
+
+        val isNonZero = newValue.isNotEmpty() &&
+            (newValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
+        convertViewModel.updateAmounts()
+        canContinue = isNonZero
+        updateContinueEnabled()
     }
 
     /**
-     * Shows the route-provider line ("using <Maya/NEAR> network") under the receive amount.
-     * Hidden when there's no amount, or when the selected asset's route isn't a single known
-     * provider (mirrors the currency picker's route label).
+     * Formats the amount for display in the picked currency — same rules the old
+     * ConvertViewFragment.setAmountViewInfo applied: raw string while typing; otherwise
+     * [ConvertViewViewModel.cryptoFormat] for DASH/crypto and [ConvertViewViewModel.fiatFormat]
+     * (at the fiat's digit count) for fiat.
      */
-    private fun updateReceiveNetwork(visible: Boolean) {
-        val routeResId = mayaViewModel.getRouteLabelResId(args.asset)
-        if (visible && routeResId != null) {
-            binding.usingNetwork.text = getString(R.string.maya_receive_using_network, getString(routeResId))
-            binding.usingNetwork.isVisible = true
-        } else {
-            binding.usingNetwork.isVisible = false
+    private fun formatAmountForDisplay(
+        currencyCode: String,
+        value: String,
+        isLocalized: Boolean,
+        isEditing: Boolean
+    ): String {
+        if (isEditing) {
+            return value
+        }
+        val amountBG = GenericUtils.toScaledBigDecimal(value, isLocalized)
+        return when (currencyCode) {
+            Constants.DASH_CURRENCY -> convertViewModel.cryptoFormat.format(amountBG)
+            convertViewModel.selectedLocalCurrencyCode -> {
+                val digits = GenericUtils.getCurrencyDigits()
+                convertViewModel.fiatFormat.format(amountBG.setScale(digits, RoundingMode.HALF_UP))
+            }
+            else -> convertViewModel.cryptoFormat.format(amountBG)
         }
     }
+
+    private fun updateContinueEnabled() {
+        uiState = uiState.copy(
+            continueEnabled = canContinue && inputEnabled && !uiState.isProcessing
+        )
+    }
+
+    // ── Derived display blocks ────────────────────────────────────────────────────
+
+    /** Dash wallet balance row of the direction card: "Balance: 0.05 (Dash logo)" + fiat equivalent. */
+    private fun updateBalanceDisplay() {
+        val balance = viewModel.dashWalletBalance.value ?: Dash.ZERO
+        val rate = convertViewModel.selectedLocalExchangeRate.value
+        val fiatBalance = rate?.dashToFiat(balance)?.toFormattedString()
+        uiState = uiState.copy(
+            dashBalance = GenericUtils.dashFormat.format(balance.toCoin()).toString(),
+            fiatBalance = fiatBalance
+        )
+    }
+
+    /**
+     * "Receive amount / ~ 0.0053 BTC / using NEAR network" block. Shown once a non-zero DASH
+     * amount has been entered; the route line mirrors the currency picker's route label and is
+     * hidden when the selected asset's route isn't a single known provider.
+     */
+    private fun updateReceiveAmount() {
+        val cryptoAmount = lastCryptoAmount
+        val hasAmount = convertViewModel.enteredConvertDashAmount.value?.isZero == false &&
+            cryptoAmount != null && cryptoAmount.second.isNotEmpty()
+
+        if (!hasAmount || cryptoAmount == null) {
+            uiState = uiState.copy(receiveAmount = null, networkLabel = null)
+            return
+        }
+
+        val receiveAmount = Constants.PREFIX_ALMOST_EQUAL_TO + getString(
+            R.string.fiat_balance_with_currency,
+            cryptoAmount.first,
+            GenericUtils.currencySymbol(cryptoAmount.second)
+        )
+        val routeResId = mayaViewModel.getRouteLabelResId(args.asset)
+        val networkLabel = routeResId?.let {
+            getString(R.string.maya_receive_using_network, getString(it))
+        }
+        uiState = uiState.copy(receiveAmount = receiveAmount, networkLabel = networkLabel)
+    }
+
+    // ── Swap flow (unchanged from the view-based implementation) ─────────────────
 
     private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {
         if (request.cryptoAmount == null && request.amount != null) {
@@ -341,34 +622,20 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         }
     }
 
-    private fun setGuidelinePercent(isErrorHidden: Boolean) {
-        val guideLine = binding.amountViewGuide
-        val params = guideLine.layoutParams as ConstraintLayout.LayoutParams
-        if (isErrorHidden) {
-            params.guidePercent = 0.15f // 45% // range: 0 <-> 1
-        } else {
-            params.guidePercent = 0.22f
-        }
-        guideLine.layoutParams = params
-    }
-
     private fun showSwapValueErrorView(swapValueErrorType: SwapValueErrorType) {
-        binding.limitDesc.isGone = swapValueErrorType == SwapValueErrorType.NOError
-        binding.authLimitBanner.root.isVisible = swapValueErrorType == SwapValueErrorType.UnAuthorizedValue
-        setGuidelinePercent(binding.limitDesc.isGone && binding.authLimitBanner.root.isGone)
-        when (swapValueErrorType) {
-            SwapValueErrorType.LessThanMin -> setMinAmountErrorMessage()
-            SwapValueErrorType.MoreThanMax -> setMaxAmountError()
-            SwapValueErrorType.NotEnoughBalance -> setNoEnoughBalanceError()
-            SwapValueErrorType.SendingConditionsUnmet -> showMinimumBalanceWarning()
-            SwapValueErrorType.ExchangeRateMissing -> showExchangeRateMissing()
-            else -> { }
+        val errorMessage = when (swapValueErrorType) {
+            SwapValueErrorType.LessThanMin -> minAmountErrorMessage()
+            SwapValueErrorType.MoreThanMax -> maxAmountErrorMessage()
+            SwapValueErrorType.NotEnoughBalance -> getString(R.string.you_dont_have_enough_balance)
+            SwapValueErrorType.UnAuthorizedValue -> getString(R.string.auth_limit_description)
+            SwapValueErrorType.ExchangeRateMissing -> getString(R.string.exchange_rate_not_found)
+            SwapValueErrorType.SendingConditionsUnmet -> {
+                showMinimumBalanceWarning()
+                null
+            }
+            else -> null
         }
-    }
-
-    @SuppressLint("SetTextI18n")
-    private fun setNoEnoughBalanceError() {
-        binding.limitDesc.setText(R.string.you_dont_have_enough_balance)
+        setInlineError(errorMessage)
     }
 
     private fun showMinimumBalanceWarning() {
@@ -381,70 +648,32 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         }
     }
 
-    @SuppressLint("SetTextI18n")
-    private fun setMaxAmountError() {
+    private fun maxAmountErrorMessage(): String? {
         if (convertViewModel.dashToCrypto.value == true) {
             viewModel.dashWalletBalance.value?.let { dash ->
                 convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
                     val fiatAmount = rate.dashToFiat(dash).toFormattedString()
-                    binding.limitDesc.text = "${getString(R.string.entered_amount_is_too_high)} $fiatAmount"
+                    return "${getString(R.string.entered_amount_is_too_high)} $fiatAmount"
                 }
             }
         } else {
             convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
                 selectedCoinBaseAccount?.getCoinBaseExchangeRateConversion(rate)?.first?.let {
-                    binding.limitDesc.text = "${getString(R.string.entered_amount_is_too_high)} $it"
+                    return "${getString(R.string.entered_amount_is_too_high)} $it"
                 }
             }
         }
+        return getString(R.string.entered_amount_is_too_high)
     }
 
-    @SuppressLint("SetTextI18n")
-    private fun setMinAmountErrorMessage() {
+    private fun minAmountErrorMessage(): String? {
         convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
-            selectedCoinBaseAccount?.currencyToDashExchangeRate?.let { currencyToDashExchangeRate ->
+            selectedCoinBaseAccount?.currencyToDashExchangeRate?.let { _ ->
                 val fiatAmount = FiatValue.parseFiat(rate.currencyCode, convertViewModel.minAllowedSwapAmount)
-                binding.limitDesc.text = "${getString(
-                    R.string.entered_amount_is_too_low
-                )} ${fiatAmount.toFormattedString()}"
+                return "${getString(R.string.entered_amount_is_too_low)} ${fiatAmount.toFormattedString()}"
             }
         }
-    }
-
-    private fun showExchangeRateMissing() {
-        binding.limitDesc.text = getString(R.string.exchange_rate_not_found)
-    }
-
-    private fun showAmountTooLowBanner() {
-        binding.authLimitBanner.root.isGone = true
-        binding.limitDesc.isVisible = true
-        binding.limitDesc.setText(R.string.maya_error_below_allowed_minimum)
-        setGuidelinePercent(false)
-    }
-
-    private fun setConvertViewInput() {
-        convertViewModel.selectedCryptoCurrencyAccount.value?.let { it ->
-            val accountData = it.coinbaseAccount
-            val currency = accountData.currency.lowercase()
-            val iconUrl = if (accountData.currency.isNotEmpty()) {
-                GenericUtils.getCoinIcon(currency, accountData.asset)
-            } else {
-                null
-            }
-
-            val address = getArgAddress()
-            binding.convertView.input = ServiceWallet(
-                it.coinbaseAccount.name,
-                address,
-                it.coinbaseAccount.availableBalance.value,
-                it.coinbaseAccount.currency,
-                convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
-                    it.getCoinBaseExchangeRateConversion(rate).first
-                } ?: "",
-                iconUrl
-            )
-            setConvertViewTopMargin(convertViewModel.selectedCryptoCurrencyAccount.value == null)
-        }
+        return getString(R.string.entered_amount_is_too_low)
     }
 
     private fun getArgAddress(): String {
@@ -454,17 +683,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             memo = memo.substring(index + 1)
             memo
         }
-    }
-
-    private fun setConvertViewTopMargin(isInputEmpty: Boolean) {
-        val topMargin = if (isInputEmpty) 18f else 106f
-        val params = binding.convertView.layoutParams as ConstraintLayout.LayoutParams
-        params.topMargin = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            topMargin,
-            requireContext().resources.displayMetrics
-        ).toInt()
-        binding.convertView.layoutParams = params
     }
 
     private fun showNoAssetsError() {
@@ -490,6 +708,14 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
     override fun onDestroy() {
         super.onDestroy()
-        convertViewModel.clear()
+        // Clear the entered amounts only when this screen is popped off the back stack:
+        // isRemoving is false on a configuration change, where clear() would wipe the
+        // saved-state amount the recreated fragment is about to restore. Resolving the
+        // navGraphViewModels lazy throws once the whole flow was popped to Home — the
+        // graph scope is gone and its ViewModel state with it, so there is nothing left
+        // to clear.
+        if (isRemoving) {
+            runCatching { convertViewModel }.getOrNull()?.clear()
+        }
     }
 }

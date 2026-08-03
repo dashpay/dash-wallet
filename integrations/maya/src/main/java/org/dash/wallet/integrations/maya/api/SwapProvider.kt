@@ -18,17 +18,21 @@
 package org.dash.wallet.integrations.maya.api
 
 import android.content.Intent
+import androidx.annotation.StringRes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 
 /**
  * Backend-agnostic surface for cross-chain swaps.
@@ -46,6 +50,12 @@ private val EMPTY_PREFERRED_ROUTE_PROVIDERS: StateFlow<Map<String, RouteProvider
     MutableStateFlow(emptyMap())
 
 interface SwapProvider {
+    companion object {
+        // Default indicative-quote size: 10 DASH in duffs. Bumped from 1 DASH so the
+        // bootstrap quote clears route minimums on low-liquidity assets.
+        const val DEFAULT_QUOTE_DUFFS = 10_0000_0000L
+    }
+
     val poolInfoList: StateFlow<List<PoolInfo>>
     val apiError: StateFlow<Exception?>
     var notificationIntent: Intent?
@@ -63,6 +73,14 @@ interface SwapProvider {
 
     suspend fun reset()
 
+    /**
+     * Tell the provider which swap direction the user is in, so backend refresh can skip work
+     * that only applies to the other direction. For BUY (crypto -> DASH) the SwapKit backend
+     * excludes Maya-only assets and routes everything via NEAR, so it skips the mayanode halt
+     * query and the Maya-vs-NEAR preferred-route quotes. Default no-op (Maya backend ignores it).
+     */
+    fun setSwapDirection(direction: SwapDirection) {}
+
     fun observePoolList(fiatExchangeRate: FiatValue): Flow<List<PoolInfo>>
 
     /**
@@ -74,10 +92,14 @@ interface SwapProvider {
     suspend fun getInboundAddresses(): List<InboundAddress>
 
     /** Indicative quote against a chain's example address — used to bootstrap the input screen. */
-    suspend fun getDefaultSwapQuote(toAsset: String, value: Long = 10_0000_0000): SwapQuote?
+    suspend fun getDefaultSwapQuote(toAsset: String, value: Long = DEFAULT_QUOTE_DUFFS): SwapQuote?
 
     /** Indicative quote against a user-specified destination address. */
-    suspend fun getDefaultSwapQuote(toAsset: String, destinationAddress: String, value: Long = 1_0000_0000): SwapQuote?
+    suspend fun getDefaultSwapQuote(
+        toAsset: String,
+        destinationAddress: String,
+        value: Long = DEFAULT_QUOTE_DUFFS
+    ): SwapQuote?
 
     /**
      * Resolves a [SwapQuoteRequest] into a fully-specified [SwapTradeUIModel] with vault
@@ -97,8 +119,68 @@ interface SwapProvider {
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel>
 
+    /**
+     * Creates a BUY order (crypto -> DASH). SwapKit only: runs `/v3/quote` + `/v3/swap` with
+     * sellAsset = [sellAsset] (the chosen crypto, e.g. "BTC.BTC"), buyAsset = DASH, and returns
+     * the inbound deposit [BuyOrder.depositAddress] the user must send [sellAmount] (a human-unit
+     * decimal of the crypto) to. [destinationAddress] is the user's DASH receive address (where the
+     * converted DASH lands); [refundAddress] is reported to SwapKit as the source address and is
+     * where NEAR-route refunds are returned. The native Maya backend doesn't implement buys and
+     * returns a failure via the default below.
+     */
+    suspend fun createBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        destinationAddress: String,
+        refundAddress: String
+    ): ResponseResource<BuyOrder> = ResponseResource.Failure(
+        UnsupportedOperationException("buy not supported by this provider"),
+        false,
+        0,
+        null
+    )
+
+    /**
+     * Checks that a BUY order (crypto -> DASH) for [sellAmount] of [sellAsset] is routable, without
+     * committing a swap. Runs the same NEAR-pinned `/v3/quote` [createBuyOrder] would, reporting
+     * [refundAddress] as the source address. Used by the enter-amount screen to validate the typed
+     * amount against the route's minimum before the user has supplied a real refund address — the
+     * caller passes the asset's example address. Returns Success when a route exists; Failure with
+     * the provider's error message otherwise. The native Maya backend doesn't support buys and
+     * returns the unsupported failure below.
+     */
+    suspend fun validateBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        refundAddress: String
+    ): ResponseResource<Unit> = ResponseResource.Failure(
+        UnsupportedOperationException("buy not supported by this provider"),
+        false,
+        0,
+        null
+    )
+
     /** Stub-friendly user-accounts probe; today only Maya returns a single placeholder. */
     suspend fun getUserAccounts(currency: String): List<AccountDataUIModel>
 
     fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: FiatValue)
+
+    /**
+     * Map a raw provider error (the message from a failed quote/swap) to a friendly, localized
+     * message resource. Each backend owns its own error vocabulary and mapping — Maya via
+     * [org.dash.wallet.integrations.maya.model.getMayaErrorString], SwapKit via
+     * [org.dash.wallet.integrations.maya.swapkit.SwapKitErrors] — so callers can render
+     * provider-agnostic error copy without knowing which backend produced it. The returned string
+     * may take the coin/currency code as its single format argument; messages without a placeholder
+     * simply ignore it. Defaults to a generic "something went wrong".
+     */
+    @StringRes
+    fun errorMessageRes(error: String?): Int = R.string.something_wrong_title
+
+    /**
+     * True when [error] means the entered amount is below the route's/pool's minimum — the one case
+     * the UI surfaces inline (a red banner the user can fix by raising the amount) rather than as a
+     * modal. Backend-specific: Maya's "not enough asset to pay for fees", SwapKit's `noRoutesFound`.
+     */
+    fun isAmountTooLowError(error: String?): Boolean = false
 }

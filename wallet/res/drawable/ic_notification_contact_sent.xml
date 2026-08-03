@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Blue contact-status badge used in the DashPay user bottom sheet's Activity list
+  for outgoing (sent) contact rows.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="30dp"
+    android:height="30dp"
+    android:viewportWidth="26"
+    android:viewportHeight="26">
+    <path
+        android:pathData="M13,0a13,13 0,1 0,0 26 13,13 0,0 0,0 -26z"
+        android:fillColor="#008DE4" />
+    <!-- Head -->
+    <path
+        android:pathData="M13,6.5a3.5,3.5 0,1 0,0 7 3.5,3.5 0,0 0,0 -7z"
+        android:fillColor="#FFFFFF" />
+    <!-- Shoulders / body -->
+    <path
+        android:pathData="M13,15c-3.5,0 -6,2.5 -6,5.5c0,0.5 0.4,1 1,1l10,0c0.6,0 1,-0.5 1,-1c0,-3 -2.5,-5.5 -6,-5.5z"
+        android:fillColor="#FFFFFF" />
+</vector>

@@ -25,6 +25,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:textAlignment="gravity"
+            android:textColor="@color/content_primary"
             android:text="@string/about_contact_support" />
 
         <TextView
@@ -33,6 +34,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/space_medium"
             android:layout_marginTop="6dp"
+            android:textColor="@color/content_primary"
             style="@style/Overline"/>
 
         <EditText
@@ -42,6 +44,7 @@
             android:layout_marginBottom="@dimen/list_entry_padding_vertical"
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:hint="@string/report_issue_dialog_description"
+            android:textColor="@color/content_primary"
             android:inputType="text|textCapSentences|textMultiLine"
             style="@style/Overline"/>
 
@@ -53,6 +56,7 @@
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:checked="true"
             android:text="@string/report_issue_dialog_collect_device_info"
+            android:textColor="@color/content_primary"
             style="@style/OldCheckBox"/>
 
         <de.schildbach.wallet.ui.widget.StyledCheckBox
@@ -63,6 +67,7 @@
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:checked="true"
             android:text="@string/report_issue_dialog_collect_application_log"
+            android:textColor="@color/content_primary"
             style="@style/OldCheckBox"/>
 
         <de.schildbach.wallet.ui.widget.StyledCheckBox
@@ -73,6 +78,7 @@
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:checked="false"
             android:text="@string/report_issue_dialog_collect_wallet_dump"
+            android:textColor="@color/content_primary"
             style="@style/OldCheckBox"/>
 
         <de.schildbach.wallet.ui.widget.StyledCheckBox
@@ -83,6 +89,7 @@
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:checked="false"
             android:text="@string/report_issue_dialog_collect_installed_packages"
+            android:textColor="@color/content_primary"
             style="@style/OldCheckBox"/>
 
         <LinearLayout
@@ -136,6 +143,7 @@
                 android:layout_marginStart="5dp"
                 android:layout_gravity="center_vertical"
                 android:text="@string/report_issue_dialog_generating_report"
+                android:textColor="@color/content_primary"
                 />
         </LinearLayout>
         <TextView
@@ -144,6 +152,7 @@
             android:layout_height="wrap_content"
             android:textAlignment="center"
             android:maxLines="1"
+            android:textColor="@color/content_primary"
             tools:text="wallet dump"
             />
     </LinearLayout>

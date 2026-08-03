@@ -38,6 +38,8 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.segmented_picker.PickerDisplayMode
@@ -131,24 +133,27 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
 
         binding.currencyOptions.setContent {
-            SegmentedPicker(
-                currencyOptions,
-                modifier = Modifier
-                    .height(48.dp)
-                    .width(40.dp),
-                selectedIndex = pickedCurrencyIndex,
-                style = SegmentedPickerStyle(
-                    displayMode = PickerDisplayMode.Vertical,
-                    cornerRadius = 8f,
-                    backgroundColor = Color.Transparent,
-                    thumbColor = MyTheme.Colors.primary5,
-                    textStyle = MyTheme.Micro,
-                    shadowElevation = 0
-                )
-            ) { value, index ->
-                pickedCurrencyIndex = index
-                setAmountValue(value.title, viewModel.enteredConvertAmount)
-                viewModel.selectedPickerCurrencyCode = value.title
+            DashWalletTheme {
+                val colors = LocalDashColors.current
+                SegmentedPicker(
+                    currencyOptions,
+                    modifier = Modifier
+                        .height(48.dp)
+                        .width(40.dp),
+                    selectedIndex = pickedCurrencyIndex,
+                    style = SegmentedPickerStyle(
+                        displayMode = PickerDisplayMode.Vertical,
+                        cornerRadius = 8f,
+                        backgroundColor = Color.Transparent,
+                        thumbColor = colors.primary5,
+                        textStyle = MyTheme.Micro,
+                        shadowElevation = 0
+                    )
+                ) { value, index ->
+                    pickedCurrencyIndex = index
+                    setAmountValue(value.title, viewModel.enteredConvertAmount)
+                    viewModel.selectedPickerCurrencyCode = value.title
+                }
             }
         }
     }

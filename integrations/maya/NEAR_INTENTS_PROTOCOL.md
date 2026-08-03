@@ -1,4 +1,4 @@
-v# NEAR Intents (1Click API) Protocol Integration Documentation
+# NEAR Intents (1Click API) Protocol Integration Documentation
 
 This document describes the **NEAR Intents 1Click API** — a candidate cross-chain swap backend for the Dash Wallet, evaluated alongside the existing Maya integration and the SwapKit aggregator POC (see `MAYA_PROTOCOL.md` and `SWAPKIT_PROTOCOL.md` in this directory).
 

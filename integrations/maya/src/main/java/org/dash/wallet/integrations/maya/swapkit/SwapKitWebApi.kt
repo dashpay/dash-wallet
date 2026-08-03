@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.maya.swapkit
 
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import kotlinx.coroutines.CancellationException
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitPriceItem
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitPriceRequest
@@ -28,6 +29,8 @@ import org.dash.wallet.integrations.maya.swapkit.model.SwapKitQuoteResponse
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitSwapRequest
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitSwapResponse
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitToken
+import org.dash.wallet.integrations.maya.swapkit.model.SwapKitTrackRequest
+import org.dash.wallet.integrations.maya.swapkit.model.SwapKitTrackResponse
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import javax.inject.Inject
@@ -127,9 +130,31 @@ open class SwapKitWebApi @Inject constructor(
         }
     }
 
+    suspend fun track(request: SwapKitTrackRequest): SwapKitTrackResponse? {
+        return safeCall("track(${request.hash ?: request.depositAddress})", null) {
+            val response = endpoint.postTrack(request)
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                // e.g. {"message":"Internal Server Error","error":"internalServerError",
+                // "data":{"code":"..."}} — log the code so stuck swaps are diagnosable
+                // without verbose OkHttp logging; the tracker retries on the next tick.
+                log.warn(
+                    "swapkit track({}) HTTP {}: {}",
+                    request.hash ?: request.depositAddress,
+                    response.code(),
+                    response.errorBody()?.string()
+                )
+                null
+            }
+        }
+    }
+
     private inline fun <T> safeCall(label: String, fallback: T, block: () -> T): T {
         return try {
             block()
+        } catch (ex: CancellationException) {
+            throw ex
         } catch (ex: Exception) {
             log.error("swapkit $label: $ex")
             if (ex !is IOException) {

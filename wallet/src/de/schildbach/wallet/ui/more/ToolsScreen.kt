@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import android.content.res.Configuration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,6 +48,8 @@ import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet.service.DashjDiagnosticSyncState
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.ButtonData
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.ModalDialog
@@ -246,10 +249,11 @@ private fun ToolsScreenContent(
     onCreditsInfoClick: () -> Unit = {},
     onBuyCredits: () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         // Top Navigation
         NavBarBack(onBackClick = onBackClick)
@@ -308,7 +312,10 @@ private fun ToolsScreenContent(
                     icon = R.drawable.ic_menu_csv_export,
                     action = onCsvExportClick
                 )
-                if (uiState.hasUsername) {
+            }
+
+            if (uiState.hasUsername) {
+                Menu {
                     // Credits (only shown when user has a username)
                     MenuItem(
                         title = stringResource(R.string.tools_credits_title),
@@ -388,7 +395,10 @@ private fun dashjDiagnosticReadout(state: DashjDiagnosticUIState): Pair<String, 
 private val DiagnosticPurple = Color(0xFF9C27B0)
 
 @Composable
-@Preview
+@Preview(name = "Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 fun ToolsScreenPreview() {
-    ToolsScreenContent(uiState = ToolsUIState(false, false, true))
+    DashWalletTheme {
+        ToolsScreenContent(uiState = ToolsUIState(false, false, true))
+    }
 }

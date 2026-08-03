@@ -43,17 +43,20 @@ class MayaCryptoCurrencyTest {
 
     @Test
     fun everyExampleAddressIsFoundByItsOwnAddressParser() {
-        // The address embedded in a larger string should be located by findAll().
+        // The address embedded in a larger string should be located by findAll() and the located
+        // text must equal the exampleAddress exactly — not just any non-empty substring — so an
+        // overbroad parser regex or a match against the wrapper text is caught.
         val failures = MayaCurrencyList.all
             .filterNot { currency ->
+                val input = "send to ${currency.exampleAddress} please"
                 currency.addressParser
-                    .findAll("send to ${currency.exampleAddress} please")
-                    .isNotEmpty()
+                    .findAll(input)
+                    .any { range -> input.substring(range.first, range.last) == currency.exampleAddress }
             }
             .map { "${it.asset} (code=${it.code}): exampleAddress='${it.exampleAddress}'" }
 
         assertTrue(
-            "The following currencies' exampleAddress was not found by findAll():\n" +
+            "The following currencies' exampleAddress was not located exactly by findAll():\n" +
                 failures.joinToString("\n"),
             failures.isEmpty()
         )
@@ -76,6 +79,23 @@ class MayaCryptoCurrencyTest {
             "These assets are not reachable via MayaCurrencyList[asset]:\n" +
                 unreachable.joinToString("\n"),
             unreachable.isEmpty()
+        )
+    }
+
+    @Test
+    fun noDuplicateAssetKeys() {
+        // A duplicate asset would be silently collapsed by associateBy, so the lookup test above
+        // can't catch it (it iterates the already-deduplicated values). Check the raw list instead.
+        val duplicates = MayaCurrencyList.registeredCurrencies
+            .groupingBy { it.asset }
+            .eachCount()
+            .filter { it.value > 1 }
+            .map { "${it.key} (x${it.value})" }
+
+        assertTrue(
+            "These asset keys are registered more than once and would be silently dropped:\n" +
+                duplicates.joinToString("\n"),
+            duplicates.isEmpty()
         )
     }
 }

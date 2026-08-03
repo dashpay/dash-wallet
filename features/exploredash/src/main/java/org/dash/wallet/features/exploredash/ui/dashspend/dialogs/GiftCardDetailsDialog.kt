@@ -79,6 +79,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashList
 import org.dash.wallet.common.ui.components.ListItem
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackClose
 import org.dash.wallet.common.ui.components.Style
@@ -260,6 +261,7 @@ internal fun GiftCardDetailsView(
     onCopyOrder: (String) -> Unit = {},
     onRefresh: () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     var showHowToUse by remember { mutableStateOf(false) }
 
     val hasExceededWaitLimit = uiState.queries >= waitLimitForError
@@ -337,7 +339,7 @@ internal fun GiftCardDetailsView(
                 Text(
                     text = stringResource(R.string.purchase_powered_by),
                     style = MyTheme.Typography.LabelMedium,
-                    color = MyTheme.Colors.textTertiary,
+                    color = colors.textTertiary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -359,6 +361,7 @@ internal fun GiftCardDetailsView(
 
 @Composable
 private fun MerchantHeader(uiState: GiftCardUIState) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -374,7 +377,7 @@ private fun MerchantHeader(uiState: GiftCardUIState) {
             Text(
                 text = uiState.giftCard?.merchantName ?: "",
                 style = MyTheme.Typography.BodyMediumMedium,
-                color = MyTheme.Colors.textPrimary
+                color = colors.textPrimary
             )
             uiState.date?.let { date ->
                 val datePart = date.format(DateTimeFormatter.ofPattern("MMMM dd, yyyy"))
@@ -382,7 +385,7 @@ private fun MerchantHeader(uiState: GiftCardUIState) {
                 Text(
                     text = stringResource(R.string.purchase_gift_card_date_format, datePart, timePart),
                     style = MyTheme.Typography.LabelMedium,
-                    color = MyTheme.Colors.textTertiary
+                    color = colors.textTertiary
                 )
             }
         }
@@ -404,6 +407,7 @@ private fun GiftCardItemCard(
     onCopyOrder: (String) -> Unit,
     onRefresh: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     val currencyFormat = remember {
         (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {
             currency = Currency.getInstance(Constants.USD_CURRENCY)
@@ -549,7 +553,7 @@ private fun GiftCardItemCard(
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
-                    color = MyTheme.Colors.dashBlue,
+                    color = colors.dashBlue,
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -563,6 +567,7 @@ private fun BarcodeSection(
     onMaxBrightness: (Boolean) -> Unit
 ) {
     val density = LocalDensity.current
+    val colors = LocalDashColors.current
     var barcodeBitmap by remember(barcode) { mutableStateOf<Bitmap?>(null) }
     var barcodeError by remember(barcode) { mutableStateOf(false) }
     var isQrCode by remember(barcode) { mutableStateOf(false) }
@@ -603,7 +608,7 @@ private fun BarcodeSection(
                     Text(
                         text = stringResource(R.string.gift_card_barcode_failed),
                         style = MyTheme.Typography.BodySmall,
-                        color = MyTheme.Colors.red,
+                        color = colors.red,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -630,7 +635,7 @@ private fun BarcodeSection(
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
-                        color = MyTheme.Colors.dashBlue,
+                        color = colors.dashBlue,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -642,7 +647,7 @@ private fun BarcodeSection(
                     Text(
                         text = stringResource(R.string.barcode_placeholder),
                         style = MyTheme.Typography.BodySmall,
-                        color = MyTheme.Colors.textSecondary,
+                        color = colors.textSecondary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -656,10 +661,11 @@ private fun PlaceholderBox(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
             .padding(vertical = 24.dp, horizontal = 16.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -669,6 +675,7 @@ private fun PlaceholderBox(
 
 @Composable
 private fun NavigationRow(label: String, onClick: () -> Unit) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -680,12 +687,12 @@ private fun NavigationRow(label: String, onClick: () -> Unit) {
         Text(
             text = label,
             style = MyTheme.Typography.TitleSmallMedium,
-            color = MyTheme.Colors.textPrimary
+            color = colors.textPrimary
         )
         Icon(
             painter = painterResource(R.drawable.ic_light_gray_arrow_right),
             contentDescription = null,
-            tint = MyTheme.Colors.gray,
+            tint = colors.gray,
             modifier = Modifier.size(16.dp)
         )
     }
@@ -693,17 +700,18 @@ private fun NavigationRow(label: String, onClick: () -> Unit) {
 
 @Composable
 private fun HowToUseCard() {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(MyTheme.Colors.backgroundSecondary)
+            .background(colors.backgroundSecondary)
             .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 20.dp)
     ) {
         Text(
             text = stringResource(R.string.purchase_how_to_use_gift_card),
             style = MyTheme.Typography.LabelMediumMedium,
-            color = MyTheme.Colors.textTertiary,
+            color = colors.textTertiary,
             maxLines = 1,
             modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
         )
@@ -730,6 +738,7 @@ private fun HowToUseCard() {
 
 @Composable
 private fun HowToUseItem(iconRes: Int, title: String, description: String) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -748,14 +757,14 @@ private fun HowToUseItem(iconRes: Int, title: String, description: String) {
             Text(
                 text = title,
                 style = MyTheme.Typography.TitleSmallSemibold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 maxLines = 1
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = description,
                 style = MyTheme.Typography.BodySmall,
-                color = MyTheme.Colors.textTertiary
+                color = colors.textTertiary
             )
         }
     }

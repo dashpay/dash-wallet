@@ -1090,8 +1090,8 @@ class TxDisplayCacheService @Inject constructor(
      * yet when the fast-startup cache is first rendered).
      */
     private suspend fun iconBitmapForEntryCold(entry: TxDisplayCacheEntry): Bitmap? {
-        val iconId = entry.customIconId ?: return null
         iconBitmapForEntry(entry)?.let { return it }
+        val iconId = entry.customIconId ?: return null
         return try {
             metadataProvider.getIcon(TxId.wrap(iconId))
         } catch (e: IllegalArgumentException) {

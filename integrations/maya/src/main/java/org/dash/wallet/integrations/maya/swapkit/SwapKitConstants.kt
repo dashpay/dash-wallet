@@ -24,6 +24,9 @@ object SwapKitConstants {
 
     const val DASH_ASSET = "DASH.DASH"
 
+    /** `chainId` accepted by `/track` for DASH transactions. */
+    const val DASH_CHAIN_ID = "dash"
+
     /** Default slippage (percent) for indicative quotes. */
     const val DEFAULT_SLIPPAGE_PERCENT = 2
 

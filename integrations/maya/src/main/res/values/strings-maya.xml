@@ -21,8 +21,20 @@
     <string name="maya_portal_convert_to_title">Convert Dash to</string>
     <string name="maya_portal_convert_subtitle">From Dash Wallet to any crypto</string>
     <string name="maya_portal_subtitle">Convert Dash from Dash Wallet to any crypto that is supported on Maya and send it to any wallet</string>
+    <string name="dash_dex_title" translatable="false">Dash DEX</string>
+    <string name="dash_dex_subtitle">Convert Dash to or from Dash Wallet with any crypto that is on the supported networks</string>
+    <string name="dash_dex_buy_title">Buy Dash</string>
+    <string name="dash_dex_buy_subtitle">From any crypto to Dash Wallet</string>
+    <string name="dash_dex_sell_title">Sell Dash</string>
+    <string name="dash_dex_sell_subtitle">From Dash Wallet to any crypto</string>
     <string name="maya_address_input_hint">%s Address</string>
     <string name="maya_address_input_title">Convert DASH to %s</string>
+    <!-- Title of the address input screen (Figma 24007:13081) -->
+    <string name="maya_enter_address_title">Enter Address</string>
+    <!-- Header of the address-sources card on the address input screen (Figma 24007:13081) -->
+    <string name="maya_paste_address_from">Paste address from</string>
+    <!-- Title of the clipboard row in the address-sources card -->
+    <string name="maya_clipboard">Clipboard</string>
     <string name="maya_crypto_convert_title">Convert Dash</string>
     <string name="maya_crypto_convert_order_preview_title">Order Preview</string>
 
@@ -330,20 +342,76 @@
     <string name="total">Total</string>
     <string name="to_external_address">to %s</string>
 
+    <!-- DashDEX sell: order preview quote expiry countdown & network explorer link -->
+    <string name="button_refresh">Refresh</string>
+    <!-- Confirm button label with the quote-expiry countdown, e.g. "Confirm (10s)" -->
+    <string name="maya_confirm_countdown">Confirm (%1$ds)</string>
+    <string name="maya_quote_expires_in">Quote expires in %1$s sec</string>
+    <string name="maya_quote_expired">Quote expired</string>
+    <string name="maya_explorer_view_maya">View MayaChain explorer</string>
+    <string name="maya_explorer_url_maya" translatable="false">https://www.mayascan.org/</string>
+    <string name="maya_explorer_tx_url_maya" translatable="false">https://www.mayascan.org/tx/%1$s</string>
+    <!-- NEAR explorer description copy is placeholder until QA provides the final wording (was TBC) -->
+    <string name="maya_explorer_view_near">View NEAR Intents explorer</string>
+    <string name="maya_explorer_url_near" translatable="false">https://explorer.near-intents.org/</string>
+    <!-- Despite the /transactions/ path, this route accepts a deposit address as well as a tx
+         hash (the explorer's search filters by "wallet address, deposit address or tx hash");
+         the app substitutes the swap's one-time deposit address here. -->
+    <string name="maya_explorer_tx_url_near" translatable="false">https://explorer.near-intents.org/transactions/%1$s</string>
+
     <string name="maya_error_information">%s%nCryptocurrency: %s</string>
     <string name="maya_error_invalid_destination_address">Invalid destination address</string>
     <string name="maya_error_below_recommended_minimum">Entered amount is lower than the recommended minimum</string>
     <string name="maya_error_trading_halted">Trading has been halted on %s.</string>
     <string name="maya_error_below_allowed_minimum">Entered amount is lower than the allowed minimum</string>
+    <string name="maya_error_below_allowed_maximum">Entered amount is higher than the allowed maximum</string>
     <string name="maya_error_quote">Could not obtain quote from Maya for this conversion</string>
     <string name="maya_halted_label">Halted</string>
     <string name="maya_halted_coins_toast">Some coins are temporarily halted and unavailable for trading</string>
     <string name="maya_select_coin_title">Select coin</string>
+    <string name="dex_enter_amount_title">Convert %s to Dash</string>
+    <string name="dex_enter_amount_checking">Checking amount…</string>
+    <string name="dex_enter_amount_invalid">This amount can\'t be swapped right now. Try a different amount, or try again shortly.</string>
     <string name="maya_route_label_maya" translatable="false">Maya</string>
     <string name="maya_route_label_near" translatable="false">NEAR</string>
     <string name="maya_route_label_multiple">Multiple networks</string>
     <string name="maya_no_available_coins">No available coins</string>
+    <string name="maya_no_search_results">No coins match your search</string>
     <string name="maya_no_connection_toast">Check your connection and try again to see available coins</string>
 
+    <!-- DashDEX buy: enter refund address screen -->
+    <!-- Slippage disclosure on the conversion preview (%1$d = slippage percent, e.g. 2) -->
+    <string name="maya_slippage_notice">The final amount you receive may differ from this estimate by up to %1$d%% due to price slippage.</string>
+    <string name="dex_refund_address_heading">Enter refund address</string>
+    <string name="dex_refund_address_description">If the swap fails, your %s will be returned to this address. Make sure it\'s a %s address from a wallet you control.\n\nYour swap cannot be processed without a refund address.</string>
+    <string name="dex_refund_address_field_label">Refund address</string>
+    <string name="dex_refund_address_placeholder">Long press to paste</string>
+
+    <!-- DashDEX buy: send crypto to deposit address screen -->
+    <string name="dex_receive_heading">Send %1$s to this address</string>
+    <string name="dex_receive_description">Once the network confirms your transfer, we\'ll convert it to Dash and deposit it in your DashPay wallet</string>
+    <string name="dex_receive_uri_label">URI</string>
+    <string name="dex_receive_memo_label">Memo / Tag</string>
+    <string name="dex_receive_memo_warning">Your transfer must include this memo. Funds sent without it cannot be matched to your swap and will be lost.</string>
+    <string name="dex_receive_expiry_title">This address expires in 10 minutes</string>
+    <string name="dex_receive_expiry_message">Send your %1$s before the timer runs out. If you send after the address expires, your funds will be refunded — not converted.</string>
+    <string name="dex_receive_back_home">Back home</string>
+
+    <!-- DashDEX buy: user-facing swap error messages (mapped from SwapKit error codes by SwapKitErrors).
+         %1$s is the coin code (e.g. "BTC"); messages that don't need it simply ignore the argument. -->
+    <string name="dex_error_generic">Something went wrong setting up your swap. Please try again.</string>
+    <string name="dex_error_missing_details">Swap details are missing. Please go back and enter an amount.</string>
+    <string name="dex_error_no_route">This amount can\'t be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount.</string>
+    <string name="dex_error_blacklisted">%1$s can\'t be swapped at the moment.</string>
+    <string name="dex_error_validation">We couldn\'t set up your swap. Please check the amount and address, then try again.</string>
+    <string name="dex_error_unavailable">Swaps are temporarily unavailable. Please try again later.</string>
+    <string name="dex_error_quote_expired">This quote expired. Please go back and try again.</string>
+    <string name="dex_error_sanctioned">This address can\'t be used for swaps.</string>
+    <string name="dex_error_insufficient_balance">The amount is more than what you\'re sending.</string>
+    <string name="dex_error_allowance">This token needs approval before it can be swapped.</string>
+    <string name="dex_error_build_failed">We couldn\'t prepare this swap. Please try again.</string>
+    <string name="dex_error_invalid_refund_address">That refund address isn\'t a valid %1$s address.</string>
+    <string name="dex_error_invalid_destination">We couldn\'t set up your deposit. Please try again.</string>
+    <string name="dex_error_price_moved">The price moved too much. Please go back and try again.</string>
 
 </resources>

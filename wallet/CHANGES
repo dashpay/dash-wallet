@@ -1,4 +1,48 @@
 DashPay Wallet
+v11.9.0
+  New features & redesigns
+  - Dash DEX: new decentralized exchange integration powered by SwapKit (#1489, #1493)
+  - Dash DEX: buy crypto with DASH — enter amount, refund address and deposit screens with a BIP-21 QR code
+  - Dash DEX: track sell swaps and show their status on the home screen
+  - Dash DEX: swap icon and provider explorer link in transaction details
+  - Dash DEX: shortcut on the home screen
+  - Maya: redesigned the convert, address input, order preview and conversion result screens in Compose
+  - Maya: conversion result shown as a full-height bottom sheet with a settlement explorer link
+  - Maya: disclose the slippage tolerance on the conversion preview
+  - DashPay: updated the "about me" / contact details dialog and activity list to new designs (#1486, #1500, #1505)
+  - New shared components: TextField, AddressField with Paste button, SearchField and CoinSelect
+
+  Dash DEX
+  - Route memo-bearing swaps through the OP_RETURN builder to prevent fund loss
+  - Verify address checksums for XRP, TRON, Cardano and TON
+  - Buy swaps route exclusively via NEAR; include NEAR fees and cap slippage at 2%
+  - Show backend-mapped swap errors inline with friendlier copy
+  - Persist entered data and handle being offline in the buy flow
+  - Surface the buy-order deposit memo on the receive screen
+  - Age out swap orders unresolved after 24 hours
+  - Round swap amounts to the asset's on-chain decimals
+
+  Maya
+  - Use the Maya API to determine if Maya-only coins are halted
+  - Keep inline errors and the zero-balance gate across configuration changes
+  - Hide the native Maya entry point on the Buy and Sell screen
+
+  DashPay
+  - Tolerate legacy identity-cache CBOR failures on v4.x contacts
+
+  Stability & performance fixes
+  - Fixed the time-skew dialog to report minutes correctly
+  - Remove stale encryption fallbacks when changing the PIN
+  - Fixed gift-card metadata being overwritten with empty values during Platform sync
+  - Fixed a failure to process the coin cache on release builds
+  - Fixed a ViewModel crash when leaving the Dash DEX buy flow
+  - Persist entered addresses across process death
+
+  Maintenance
+  - Test fixes (MainViewModel, voting-delay and CSV-export tests)
+  - ktlint formatting and CodeRabbit review feedback
+  - Documentation for SwapKit behavior and Maya liquidity providers
+
 v11.8.2
   New features & redesigns
   - Redesigned the About screen (#1498)

@@ -1,5 +1,6 @@
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -20,6 +21,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
+import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.MyTheme.Typography
+
 /**
  * Custom radio button component with text and optional helper text
  * Matches the design system from Figma
@@ -44,10 +48,11 @@ fun DashRadioButton(
     enabled: Boolean = true,
     onlyOption: Boolean = false
 ) {
-    val primaryTextColor = MyTheme.Colors.textPrimary
-    val secondaryTextColor = MyTheme.Colors.textSecondary
-    val radioButtonColor = MyTheme.Colors.dashBlue
-    val borderColor = if (selected) radioButtonColor else Color(0xFFCED2D5)  // #CED2D5 from Figma
+    val colors = LocalDashColors.current
+    val primaryTextColor = colors.textPrimary
+    val secondaryTextColor = colors.textSecondary
+    val radioButtonColor = colors.dashBlue
+    val borderColor = if (selected) radioButtonColor else colors.lightGray //Color(0xFFCED2D5)  // #CED2D5 from Figma
 
     val contentAlpha = if (enabled) 1f else 0.6f
 
@@ -174,9 +179,17 @@ private fun TextContent(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Radio Button Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Radio Button Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun RadioButtonPreview() {
+    DashWalletTheme {
+        RadioButtonPreviewContent()
+    }
+}
+
+@Composable
+private fun RadioButtonPreviewContent() {
     var selectedOption by remember { mutableIntStateOf(1) }
 
     Column(modifier = Modifier.padding(16.dp)) {
@@ -221,7 +234,7 @@ fun RadioButtonPreview() {
         // Text on the left, radio button on the right
 
         HorizontalDivider()
-        Text("RadioGroup (simple)", style = MyTheme.OverlineSemibold)
+        Text("RadioGroup (simple)", style = Typography.LabelMediumSemibold)
         HorizontalDivider()
         val selectedFrequency = remember { mutableStateOf("Once per month") }
         RadioGroup(
@@ -230,7 +243,7 @@ fun RadioButtonPreview() {
             { selectedFrequency.value = it }
         )
         HorizontalDivider()
-        Text("RadioGroup (local currencies)", style = MyTheme.OverlineSemibold)
+        Text("RadioGroup (local currencies)", style = Typography.LabelMediumSemibold)
         HorizontalDivider()
         val selectedCurrency = remember { mutableIntStateOf(1) }
         RadioGroup(

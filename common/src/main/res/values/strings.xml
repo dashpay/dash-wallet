@@ -27,6 +27,8 @@
     <string name="dash_address">Dash Address</string>
     <string name="username">Username</string>
     <string name="balance">Balance:</string>
+    <string name="hide_balance">Hide balance</string>
+    <string name="show_balance">Show balance</string>
     <string name="nothing_here">Nothing here</string>
 
     <!-- Local Currency List: GGP -->
@@ -56,6 +58,7 @@
     <string name="button_close">Close</string>
     <string name="button_cancel">Cancel</string>
     <string name="button_clear">Clear</string>
+    <string name="button_paste">Paste</string>
     <string name="button_confirm">Confirm</string>
     <string name="button_retry">Retry</string>
     <string name="button_send_report">Send Report</string>

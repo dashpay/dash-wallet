@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.payments
 
+import kotlinx.coroutines.CancellationException
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -242,6 +243,15 @@ class MayaBlockchainApiImpl @Inject constructor(
             // rethrown as the neutral exception so the maya module can detect it without dashj
             val neutral = InsufficientFundsException(e.message, e)
             return ResponseResource.Failure(neutral, false, 0, e.message)
+        } catch (e: CancellationException) {
+            // Never convert cancellation into Failure: if the coroutine is cancelled after
+            // sendTransaction() has broadcast the swap tx, a Failure would tell the caller the
+            // swap failed and invite a retry — a double swap. Propagate so the caller's scope
+            // handles it as a cancellation, not a result.
+            throw e
+        } catch (e: Exception) {
+            log.error("failed to build/send maya swap transaction", e)
+            return ResponseResource.Failure(e, false, 0, e.message)
         }
     }
 }

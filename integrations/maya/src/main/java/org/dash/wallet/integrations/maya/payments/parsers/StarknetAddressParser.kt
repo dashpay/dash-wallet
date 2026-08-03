@@ -18,5 +18,17 @@ package org.dash.wallet.integrations.maya.payments.parsers
 
 import org.dash.wallet.common.payments.parsers.AddressParser
 
-/** Starknet address parser — 0x followed by 1-64 hex characters (a 252-bit felt). */
-class StarknetAddressParser : AddressParser("0x[a-fA-F0-9]{1,64}", null)
+/**
+ * Starknet address parser — 0x followed by 50-64 hex characters (a 252-bit felt, with or
+ * without leading-zero padding). Felts have no checksum, so length is the only structural
+ * gate: short values like `0x0` or `0xdeadbeef` are syntactically legal felts but never
+ * real account addresses (key-derived addresses have ~252 bits of entropy), and funds sent
+ * to one are burned. The all-zero felt is rejected outright.
+ */
+class StarknetAddressParser : AddressParser("0x[a-fA-F0-9]{50,64}", null) {
+    override fun verifyAddress(addressCandidate: String) {
+        require(addressCandidate.drop(2).any { it != '0' }) {
+            "the zero felt is not a valid Starknet address"
+        }
+    }
+}
