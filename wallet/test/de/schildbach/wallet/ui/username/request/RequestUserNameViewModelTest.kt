@@ -46,11 +46,13 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -199,10 +201,39 @@ class RequestUserNameViewModelTest {
         Dispatchers.resetMain()
     }
 
+    /**
+     * [runTest] wrapper that cancels every created ViewModel's
+     * [viewModelScope] the moment the test body finishes — BEFORE [runTest]
+     * drains the scheduler.
+     *
+     * Why this exists: the VM's settling-eligibility poll is an infinite
+     * `while (true) { delay(...); emit(Unit) }` loop collected on
+     * `Dispatchers.Main`, which [setup] points at the shared
+     * [TestCoroutineScheduler][kotlinx.coroutines.test.TestCoroutineScheduler].
+     * Under `runTest` virtual time every `delay` is skipped instantly, so a
+     * test that returns while `fundsSettling` is still true leaves a
+     * scheduler that NEVER goes idle — `runTest`'s own advance-until-idle
+     * spins forever and the whole suite hangs (observed as the full
+     * `test_testNet3DebugUnitTest` run parking indefinitely in
+     * `checkUsernameValid_dashSource_settlingFunds_gateTheCreation`). The
+     * [tearDown] cleanup can't help: JUnit never reaches `@After` because
+     * `runTest` never returns. Cancelling the VM scopes inside the test
+     * coroutine's `finally` unschedules the poll, the scheduler goes idle,
+     * and `runTest` completes; [tearDown] then still runs the full
+     * lifecycle clear + join.
+     */
+    private fun runVmTest(testBody: suspend TestScope.() -> Unit) = runTest(dispatcher) {
+        try {
+            testBody()
+        } finally {
+            createdViewModels.forEach { it.viewModelScope.cancel() }
+        }
+    }
+
     // ── paymentSource routing ───────────────────────────────────────────────
 
     @Test
-    fun submit_shieldedSource_routesToTheShieldedService_neverTheL1Service() = runTest(dispatcher) {
+    fun submit_shieldedSource_routesToTheShieldedService_neverTheL1Service() = runVmTest {
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice2"
         viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
@@ -219,7 +250,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun submit_dashSource_keepsTheLegacyL1PathUntouched() = runTest(dispatcher) {
+    fun submit_dashSource_keepsTheLegacyL1PathUntouched() = runVmTest {
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice2"
         // DASH_BALANCE is the default paymentSource.
@@ -231,7 +262,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun l1Creation_terminalState_clearsTheProcessingDialog() = runTest(dispatcher) {
+    fun l1Creation_terminalState_clearsTheProcessingDialog() = runVmTest {
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice2"
         viewModel.submit() // L1 path: sets usernameRequestSubmitting = true
@@ -246,7 +277,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun l1Creation_terminalState_withNoSubmitInFlight_isIgnored() = runTest(dispatcher) {
+    fun l1Creation_terminalState_withNoSubmitInFlight_isIgnored() = runVmTest {
         val viewModel = viewModel()
         // No submit() — a pre-existing DONE state (e.g. re-entering the screen)
         // must not fabricate a "submitted" completion.
@@ -257,7 +288,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun submit_reuseTransaction_staysLegacyEvenWithShieldedSource() = runTest(dispatcher) {
+    fun submit_reuseTransaction_staysLegacyEvenWithShieldedSource() = runVmTest {
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice2"
         viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
@@ -282,7 +313,7 @@ class RequestUserNameViewModelTest {
     // ── Submit-state mirroring ──────────────────────────────────────────────
 
     @Test
-    fun shieldedProving_mirrorsAsSubmitting() = runTest(dispatcher) {
+    fun shieldedProving_mirrorsAsSubmitting() = runVmTest {
         val viewModel = viewModel()
 
         shieldedSubmitState.value = ShieldedUsernameSubmitState.Proving
@@ -292,7 +323,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun shieldedCreated_mirrorsAsSubmitted_andAcknowledges() = runTest(dispatcher) {
+    fun shieldedCreated_mirrorsAsSubmitted_andAcknowledges() = runVmTest {
         val viewModel = viewModel()
 
         shieldedSubmitState.value = ShieldedUsernameSubmitState.Proving
@@ -310,7 +341,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun shieldedNotSent_mirrorsAsError_andAcknowledgesForRetry() = runTest(dispatcher) {
+    fun shieldedNotSent_mirrorsAsError_andAcknowledgesForRetry() = runVmTest {
         val viewModel = viewModel()
 
         shieldedSubmitState.value = ShieldedUsernameSubmitState.Proving
@@ -325,7 +356,7 @@ class RequestUserNameViewModelTest {
 
     @Test
     fun shieldedNotSent_poolStillSyncing_surfacesCalmSyncingState_notTheRedError() =
-        runTest(dispatcher) {
+        runVmTest {
             // The live incident: the pool dropped back to SYNCING after a
             // service teardown and the submit reached the SDK, which refused
             // with "shielded pool still syncing". That must surface the calm
@@ -346,7 +377,7 @@ class RequestUserNameViewModelTest {
         }
 
     @Test
-    fun shieldedNotSent_runtimeNotReady_alsoSurfacesTheCalmSyncingState() = runTest(dispatcher) {
+    fun shieldedNotSent_runtimeNotReady_alsoSurfacesTheCalmSyncingState() = runVmTest {
         val viewModel = viewModel()
 
         shieldedSubmitState.value = ShieldedUsernameSubmitState.Proving
@@ -360,7 +391,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun shieldedAmbiguous_mirrorsAsAmbiguous_neverTheRetryableError() = runTest(dispatcher) {
+    fun shieldedAmbiguous_mirrorsAsAmbiguous_neverTheRetryableError() = runVmTest {
         val viewModel = viewModel()
 
         shieldedSubmitState.value = ShieldedUsernameSubmitState.Proving
@@ -380,7 +411,7 @@ class RequestUserNameViewModelTest {
 
     @Test
     fun checkUsernameValid_shieldedSource_nonContestedName_passesWithZeroL1Balance() =
-        runTest(dispatcher) {
+        runVmTest {
             val viewModel = viewModel()
             viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
 
@@ -391,7 +422,7 @@ class RequestUserNameViewModelTest {
         }
 
     @Test
-    fun checkUsernameValid_dashSource_nonContestedName_staysL1Gated() = runTest(dispatcher) {
+    fun checkUsernameValid_dashSource_nonContestedName_staysL1Gated() = runVmTest {
         val viewModel = viewModel()
         // Default DASH_BALANCE; the L1 balance is zero.
 
@@ -403,7 +434,7 @@ class RequestUserNameViewModelTest {
     // ── asset-lock funding preflight (the S22 settling-funds gate) ──────────
 
     @Test
-    fun checkUsernameValid_dashSource_settlingFunds_gateTheCreation() = runTest(dispatcher) {
+    fun checkUsernameValid_dashSource_settlingFunds_gateTheCreation() = runVmTest {
         // The S22 repro: display balance ~0.994 DASH covers the 0.03 fee,
         // but the funds the asset-lock build can actually select (final
         // BIP44 coins) are 1449 duffs of dust — the old gate let the user
@@ -421,7 +452,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun checkUsernameValid_dashSource_eligibleFunds_pass() = runTest(dispatcher) {
+    fun checkUsernameValid_dashSource_eligibleFunds_pass() = runVmTest {
         // Eligible sum covers fee + headroom → the gate opens normally.
         assetLockEligibleDuffs.value = 99_400_000L
         walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
@@ -435,7 +466,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun checkUsernameValid_dashSource_noPreflightEvidence_failsOpen() = runTest(dispatcher) {
+    fun checkUsernameValid_dashSource_noPreflightEvidence_failsOpen() = runVmTest {
         // Preflight has no evidence (pre-cutover / SDK unavailable) — the
         // display-balance gate alone decides; the flow must never be
         // blocked on an unrelated hiccup.
@@ -451,7 +482,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun checkUsernameValid_dashSource_gateRecomputes_whenFundsSettle() = runTest(dispatcher) {
+    fun checkUsernameValid_dashSource_gateRecomputes_whenFundsSettle() = runVmTest {
         // Settling funds become final (IS-lock/confirmation lands): the
         // balance emission re-reads the eligibility and the gate must
         // self-correct without retyping — the same async-input recompute
@@ -471,7 +502,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun checkUsernameValid_dashSource_settlingGate_clearsByPoll_withoutABalanceEmission() = runTest(dispatcher) {
+    fun checkUsernameValid_dashSource_settlingGate_clearsByPoll_withoutABalanceEmission() = runVmTest {
         // The S21 staleness repro (build 11.10.46): the settling row was
         // showing, the change output then CONFIRMED on the SDK mirror at
         // 10:38:41 — but confirming an already-counted output changes no
@@ -496,7 +527,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun checkUsernameValid_dashSource_settlingPoll_stopsOnceTheGateClears() = runTest(dispatcher) {
+    fun checkUsernameValid_dashSource_settlingPoll_stopsOnceTheGateClears() = runVmTest {
         // The poll exists only while the settling row shows — once the gate
         // resolves, ticks must stop (no idle background DB reads).
         assetLockEligibleDuffs.value = 1_449L
@@ -518,7 +549,7 @@ class RequestUserNameViewModelTest {
 
     @Test
     fun checkUsernameValid_shieldedSource_contestedName_gatedOnTheContestedDenomination() =
-        runTest(dispatcher) {
+        runVmTest {
             // Contested via shielded needs the 0.3 exit denomination in the
             // pool (0.25 contested fee → smallest covering denomination); a
             // pool that could fund a non-contested name (0.1) must not
@@ -537,7 +568,7 @@ class RequestUserNameViewModelTest {
 
     @Test
     fun checkUsernameValid_shieldedSource_contestedName_passesWhenThePoolCoversTheDenomination() =
-        runTest(dispatcher) {
+        runVmTest {
             shieldedSyncStatusFlow.value = ShieldedSyncStatus.READY
             shieldedBalanceFlow.value = Dash(30_000_000L) // 0.3 DASH
             val viewModel = viewModel()
@@ -552,7 +583,7 @@ class RequestUserNameViewModelTest {
 
     @Test
     fun checkUsernameValid_shieldedSource_contestedName_midSyncBalanceNeverUnlocks() =
-        runTest(dispatcher) {
+        runVmTest {
             // A mid-sync balance is a placeholder, not evidence — even a
             // covering amount must not unlock while the pool isn't READY.
             shieldedSyncStatusFlow.value = ShieldedSyncStatus.NOT_READY
@@ -567,7 +598,7 @@ class RequestUserNameViewModelTest {
 
     @Test
     fun checkUsernameValid_shieldedSource_contestedName_gateRecomputesWhenTheSyncCompletes() =
-        runTest(dispatcher) {
+        runVmTest {
             // The live silent-swallow: the user typed the contested name
             // while the pool was still syncing (gate false), the sync
             // reached READY seconds later — and nothing ever recomputed
@@ -589,7 +620,7 @@ class RequestUserNameViewModelTest {
 
     @Test
     fun checkUsernameValid_shieldedSource_contestedName_gateFailureNamesTheDenomination() =
-        runTest(dispatcher) {
+        runVmTest {
             // The insufficient-balance row must name the 0.3 funding
             // denomination the contested creation actually needs, not the
             // 0.25 fee (or a hardcoded L1 amount).
@@ -608,7 +639,7 @@ class RequestUserNameViewModelTest {
     // ── Never-silent submits ────────────────────────────────────────────────
 
     @Test
-    fun submit_shieldedRefused_surfacesTheErrorState_neverSilent() = runTest(dispatcher) {
+    fun submit_shieldedRefused_surfacesTheErrorState_neverSilent() = runVmTest {
         // The executor refusing a submit (no scope / busy) used to be
         // swallowed: no dialog, no state change — the user saw nothing.
         every { shieldedUsernameCreation.submit(any(), any()) } returns false
@@ -627,7 +658,7 @@ class RequestUserNameViewModelTest {
 
     @Test
     fun submit_shieldedRefusedWhileAmbiguous_surfacesAmbiguous_neverTheRetryableError() =
-        runTest(dispatcher) {
+        runVmTest {
             // A refusal caused by the sticky may-have-gone-through state
             // must re-surface the funds-safety dialog, not the "try again
             // at no extra cost" error.
@@ -649,7 +680,7 @@ class RequestUserNameViewModelTest {
     // ── Fail-closed availability check ──────────────────────────────────────
 
     @Test
-    fun checkUsername_lookupFailure_failsClosed_neverReadsAsAvailable() = runTest(dispatcher) {
+    fun checkUsername_lookupFailure_failsClosed_neverReadsAsAvailable() = runVmTest {
         // The live bug: a failed getUsername (network error, DAPI timeout)
         // defaulted to usernameExists=false with usernameCheckSuccess=true —
         // an already-registered name showed as available on-device.
@@ -670,7 +701,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun checkUsername_contendersFailure_failsClosed_neverReadsAsNotContested() = runTest(dispatcher) {
+    fun checkUsername_contendersFailure_failsClosed_neverReadsAsNotContested() = runVmTest {
         val platformRepo = mockk<PlatformRepo>(relaxed = true) {
             every { getUsername("alice") } returns Resource.success(null)
             every { getVoteContendersOrThrow("alice") } throws IllegalStateException("DPNS read failed")
@@ -686,7 +717,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun checkUsername_retriggerAfterFailure_clearsTheFailedStateAndCompletes() = runTest(dispatcher) {
+    fun checkUsername_retriggerAfterFailure_clearsTheFailedStateAndCompletes() = runVmTest {
         val platformRepo = mockk<PlatformRepo>(relaxed = true) {
             every { getUsername("alice") } returns
                 Resource.error("DAPI timeout", null) andThen Resource.success(null)
@@ -714,7 +745,7 @@ class RequestUserNameViewModelTest {
     // ── Advisory network-health warning ─────────────────────────────────────
 
     @Test
-    fun checkNetworkHealth_degraded_setsNetworkSlow_neverGatesTheButtonInputs() = runTest(dispatcher) {
+    fun checkNetworkHealth_degraded_setsNetworkSlow_neverGatesTheButtonInputs() = runVmTest {
         coEvery { platformHealthProbe.probe() } returns PlatformHealth.DEGRADED
         val viewModel = viewModel()
 
@@ -729,7 +760,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun checkNetworkHealth_unknown_showsNoWarning() = runTest(dispatcher) {
+    fun checkNetworkHealth_unknown_showsNoWarning() = runVmTest {
         coEvery { platformHealthProbe.probe() } returns PlatformHealth.UNKNOWN
         val viewModel = viewModel()
 
@@ -739,7 +770,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun reset_preservesTheNetworkSlowAdvisory() = runTest(dispatcher) {
+    fun reset_preservesTheNetworkSlowAdvisory() = runVmTest {
         // Clearing the input resets the per-username state — the
         // screen-entry-scoped health advisory must survive it.
         coEvery { platformHealthProbe.probe() } returns PlatformHealth.DEGRADED
@@ -753,7 +784,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun submit_dashSource_showsAProcessingStatus() = runTest(dispatcher) {
+    fun submit_dashSource_showsAProcessingStatus() = runVmTest {
         // The L1/asset-lock path hands off to CreateIdentityService with a
         // feedback gap until the identity state machine flips — the submit
         // must still show a processing status immediately.
