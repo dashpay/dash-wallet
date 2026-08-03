@@ -96,17 +96,23 @@ allprojects {
         // otherwise turn unrelated lookups into hard resolution failures.
         // Declared only when credentials exist so a credential-less checkout keeps
         // building against ~/.m2.
-        if (githubPackagesUser && githubPackagesToken) {
-            maven {
-                name 'GitHubPackagesDashPlatform'
-                url 'https://maven.pkg.github.com/dashpay/platform'
+        // The pre-release SDK AAR is published to THIS repo's own package
+        // registry (publishing needs write on the destination repo, which
+        // fork-based contributors do not have on dashpay/platform). The
+        // package is public, so no credentials are required to read it —
+        // CI resolves it with nothing configured. Credentials are still
+        // honoured when present, for private-package scenarios.
+        maven {
+            name 'GitHubPackagesDashSdk'
+            url 'https://maven.pkg.github.com/dashpay/dash-wallet'
+            if (githubPackagesUser && githubPackagesToken) {
                 credentials {
                     username = githubPackagesUser
                     password = githubPackagesToken
                 }
-                content {
-                    includeModule('org.dashj', 'dash-sdk-android')
-                }
+            }
+            content {
+                includeModule('org.dashj', 'dash-sdk-android')
             }
         }
         google()

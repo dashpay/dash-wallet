@@ -51,18 +51,21 @@ class L1SyncStatusServiceTest {
     private fun dashjState(
         percentageSync: Int,
         replaying: Boolean = false,
-        impediments: Set<Impediment> = emptySet()
+        impediments: Set<Impediment> = emptySet(),
+        bestChainHeight: Int = 1_500_000,
+        chainlockHeight: Int = 0,
+        mnlistHeight: Int = 0
     ) = BlockchainState(
         Date(1_000_000_000L),
-        1_500_000,
+        bestChainHeight,
         replaying,
         if (impediments.isEmpty()) {
             EnumSet.noneOf(Impediment::class.java)
         } else {
             EnumSet.copyOf(impediments)
         },
-        0,
-        0,
+        chainlockHeight,
+        mnlistHeight,
         percentageSync
     )
 
@@ -137,6 +140,131 @@ class L1SyncStatusServiceTest {
         assertFalse(status.isSynced)
         assertEquals(0, status.percentage)
         assertFalse(status.isFailed)
+    }
+
+    // ── The detail merge (Tools → Network Monitor) ────────────────────
+
+    @Test
+    fun detail_sdkRegime_readsTheLiveScanPositions() {
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            progress = progress(phase = ShadowSyncPhase.FILTERS),
+            sessionChainLockHeight = 0,
+            state = null
+        )
+        assertEquals(L1SyncStage.FILTERS, detail.stage)
+        assertEquals(1_514_660L, detail.headerHeight)
+        assertEquals(1_514_660L, detail.headerTarget)
+        assertEquals(1_400_000L, detail.filterHeight)
+        assertEquals(1_514_660L, detail.filterTarget)
+        assertFalse(detail.isSynced)
+        // Mid-scan the combined percent is capped below 100.
+        assertTrue(detail.percentage in 1..99)
+    }
+
+    @Test
+    fun detail_sdkRegime_caughtUpScanReadsSyncedLikeTheHeaderDoes() {
+        // Stage label, isSynced, and percentage must agree on the SAME
+        // caught-up predicate the home header uses (sdkL1ScanCaughtUp).
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            progress = progress(phase = ShadowSyncPhase.FILTERS, filterHeight = 1_514_659),
+            sessionChainLockHeight = 0,
+            state = null
+        )
+        assertEquals(L1SyncStage.SYNCED, detail.stage)
+        assertTrue(detail.isSynced)
+        assertEquals(100, detail.percentage)
+    }
+
+    @Test
+    fun detail_sdkRegime_errorPhaseShowsError_evenWithCaughtUpHeights() {
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            progress = progress(phase = ShadowSyncPhase.ERROR, filterHeight = 1_514_660),
+            sessionChainLockHeight = 0,
+            state = null
+        )
+        assertEquals(L1SyncStage.ERROR, detail.stage)
+    }
+
+    @Test
+    fun detail_sdkRegime_restartWindowFallsBackToThePersistedRow() {
+        // After a process restart the engine sits in IDLE/CONNECTING with
+        // all-zero heights for minutes; the SDK-written row still carries
+        // the last known chain knowledge, so the readout must not collapse
+        // to zeros (the restart sawtooth).
+        val row = dashjState(
+            percentageSync = 100,
+            bestChainHeight = 1_514_000,
+            chainlockHeight = 1_513_990,
+            mnlistHeight = 1_513_900
+        )
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            progress = ShadowSyncProgress.IDLE.copy(phase = ShadowSyncPhase.CONNECTING),
+            sessionChainLockHeight = 0,
+            state = row
+        )
+        assertEquals(L1SyncStage.CONNECTING, detail.stage)
+        assertEquals(100, detail.percentage)
+        assertEquals(1_514_000L, detail.headerHeight)
+        assertEquals(1_513_990, detail.chainLockHeight)
+        assertEquals(1_513_900L, detail.mnListHeight)
+    }
+
+    @Test
+    fun detail_sdkRegime_chainLockIsTheMaxOfSessionFeedAndRow() {
+        fun detailWith(session: Int, row: Int) = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            progress = progress(),
+            sessionChainLockHeight = session,
+            state = dashjState(percentageSync = 100, chainlockHeight = row)
+        ).chainLockHeight
+        // The row survives restarts; the session feed leads within one.
+        assertEquals(1_514_500, detailWith(session = 1_514_500, row = 1_514_400))
+        assertEquals(1_514_400, detailWith(session = 0, row = 1_514_400))
+    }
+
+    @Test
+    fun detail_dashjRegime_readsTheRowOnly_withNoFilterPipeline() {
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = false,
+            // A caught-up SDK shadow running alongside must not leak in.
+            progress = progress(phase = ShadowSyncPhase.SYNCED),
+            sessionChainLockHeight = 999_999,
+            state = dashjState(
+                percentageSync = 42,
+                bestChainHeight = 1_100_000,
+                chainlockHeight = 1_099_000,
+                mnlistHeight = 1_098_000
+            )
+        )
+        assertEquals(L1SyncStage.HEADERS, detail.stage)
+        assertEquals(42, detail.percentage)
+        assertFalse(detail.isSynced)
+        assertEquals(1_100_000L, detail.headerHeight)
+        assertEquals(0L, detail.headerTarget)
+        assertEquals(0L, detail.filterHeight)
+        assertEquals(0L, detail.filterTarget)
+        assertEquals(1_099_000, detail.chainLockHeight)
+        assertEquals(1_098_000L, detail.mnListHeight)
+    }
+
+    @Test
+    fun detail_dashjRegime_stageFollowsTheRowVerdicts() {
+        fun stageFor(state: BlockchainState?) = mergeL1SyncDetail(
+            sdkOwnsL1 = false,
+            progress = progress(),
+            sessionChainLockHeight = 0,
+            state = state
+        ).stage
+        assertEquals(L1SyncStage.IDLE, stageFor(null))
+        assertEquals(L1SyncStage.SYNCED, stageFor(dashjState(percentageSync = 100)))
+        assertEquals(
+            L1SyncStage.ERROR,
+            stageFor(dashjState(percentageSync = 50, impediments = setOf(Impediment.NETWORK)))
+        )
     }
 
     @Test
