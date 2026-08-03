@@ -199,9 +199,10 @@ class BuyCreditsFragment : SendCoinsFragment() {
                 if (maxSelected) {
                     viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
                 }
-                // buy do an asset lock transaction or we do this in the worker?
-                val topUpKey = viewModel.getNextKey()
-                val tx = viewModel.signAndSendAssetLock(editedAmount.toDashjCoin(), exchangeRate, checkBalance, topUpKey, maxSelected)
+                // The topup key is issued inside signAndSendAssetLock's dashj
+                // branch only — the SDK route derives its own key, and issuing
+                // one here would burn an unused dashj chain index per SDK top-up.
+                val tx = viewModel.signAndSendAssetLock(editedAmount.toDashjCoin(), exchangeRate, checkBalance, maxSelected)
                 buyCreditsViewModel.topUpTransaction = tx
 
                 onSignAndSendPaymentSuccess(tx)

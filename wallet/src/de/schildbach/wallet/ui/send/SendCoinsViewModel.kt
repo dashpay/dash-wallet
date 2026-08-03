@@ -315,11 +315,16 @@ class SendCoinsViewModel @Inject constructor(
         transaction
     }
 
+    /**
+     * The PRE-CUTOVER dashj top-up build+broadcast. Post-cutover this is
+     * never reached: BuyCreditsFragment routes through
+     * [de.schildbach.wallet.service.platform.sdk.SdkTransparentTopUp]
+     * (the SDK's resume-gated, fused topUpFromCore) instead.
+     */
     suspend fun signAndSendAssetLock(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
         checkBalance: Boolean,
-        key: ECKey,
         emptyWallet: Boolean
     ): Transaction = withContext(Dispatchers.IO) {
         _state.postValue(State.SENDING)
@@ -328,6 +333,7 @@ class SendCoinsViewModel @Inject constructor(
         }
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
 
+        val key = getNextKey()
         val transaction = try {
             var finalSendRequest = sendCoinsTaskRunner.createAssetLockSendRequest(
                 basePaymentIntent.mayEditAmount(),
