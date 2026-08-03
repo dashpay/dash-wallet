@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service
 
+import de.schildbach.wallet.service.platform.sdk.ParityReport
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,13 +47,37 @@ class DashjDiagnosticSyncState @Inject constructor() {
     /**
      * The SDK-vs-dashj parity verdict, meaningful only once dashj has caught
      * up (percent == 100). While dashj is still syncing it stays [UNKNOWN].
+     *
+     * [BALANCE_MATCH] is the in-between verdict: both balance comparisons
+     * (estimated AND confirmed, sdk == dashj) agree exactly but the two
+     * stacks' transaction counts differ — usually a bookkeeping difference
+     * (e.g. self-transfers counted differently), not missing funds.
      */
-    enum class Parity { UNKNOWN, MATCH, MISMATCH }
+    enum class Parity { UNKNOWN, MATCH, BALANCE_MATCH, MISMATCH }
+
+    /**
+     * One entry of the recent parity history kept for the support-log bundle:
+     * a new [ParityReport] from the shadow harness or a verdict transition.
+     *
+     * @property recordedAtMs when this entry was recorded (wall clock).
+     * @property percent dashj's diagnostic sync percentage at the time.
+     * @property verdict the verdict derived from [report] (or [Parity.UNKNOWN]).
+     * @property report the parity numbers, or null when none existed yet.
+     */
+    data class ParityHistoryEntry(
+        val recordedAtMs: Long,
+        val percent: Int,
+        val verdict: Parity,
+        val report: ParityReport?
+    )
 
     /**
      * @property percent dashj's own sync percentage, 0..100.
      * @property parity SDK-vs-dashj parity once caught up ([UNKNOWN] while syncing).
      * @property stageName dashj's neutral sync-stage name, for the readout/log.
+     * @property verifying dashj itself has caught up but the fresh
+     *   post-catch-up parity report has not landed yet — the readout shows a
+     *   neutral "Verifying" instead of a percentage during this window.
      * @property active whether the diagnostic engine is currently feeding this
      *   holder (dashj un-held by the toggle); false = inert default.
      */
@@ -60,6 +85,7 @@ class DashjDiagnosticSyncState @Inject constructor() {
         val percent: Int = 0,
         val parity: Parity = Parity.UNKNOWN,
         val stageName: String? = null,
+        val verifying: Boolean = false,
         val active: Boolean = false
     )
 
@@ -69,11 +95,12 @@ class DashjDiagnosticSyncState @Inject constructor() {
     val state: StateFlow<Snapshot> = _state.asStateFlow()
 
     /** Push one dashj progress sample (from [BlockchainServiceImpl]). */
-    fun update(percent: Int, parity: Parity, stageName: String?) {
+    fun update(percent: Int, parity: Parity, stageName: String?, verifying: Boolean = false) {
         _state.value = Snapshot(
             percent = percent.coerceIn(0, 100),
             parity = parity,
             stageName = stageName,
+            verifying = verifying,
             active = true
         )
     }
@@ -81,5 +108,42 @@ class DashjDiagnosticSyncState @Inject constructor() {
     /** Back to the inert default (diagnostic turned off / not running). */
     fun reset() {
         _state.value = Snapshot()
+    }
+
+    // ── Recent parity history (for the support-log bundle) ────────────
+
+    private val history = ArrayDeque<ParityHistoryEntry>()
+    private var lastRecordedReportTimestampMs: Long? = null
+    private var lastRecordedVerdict: Parity? = null
+
+    /**
+     * Record one parity sample (from [BlockchainServiceImpl]) into the small
+     * in-memory ring buffer the support-log's `dashJ-kotlin-parity-log.txt`
+     * is built from. Deduplicated: an entry lands only when the harness
+     * produced a NEW [ParityReport] (by its own timestamp) or the derived
+     * verdict changed, so the per-progress-sample call rate never floods it.
+     */
+    @Synchronized
+    fun recordParity(percent: Int, verdict: Parity, report: ParityReport?) {
+        val newReport = report != null && report.timestampMs != lastRecordedReportTimestampMs
+        val newVerdict = verdict != lastRecordedVerdict
+        if (!newReport && !newVerdict) return
+        if (report != null) {
+            lastRecordedReportTimestampMs = report.timestampMs
+        }
+        lastRecordedVerdict = verdict
+        history.addLast(ParityHistoryEntry(System.currentTimeMillis(), percent, verdict, report))
+        while (history.size > HISTORY_CAPACITY) {
+            history.removeFirst()
+        }
+    }
+
+    /** The recorded parity history, oldest first. Empty when the diagnostic never ran. */
+    @Synchronized
+    fun parityHistory(): List<ParityHistoryEntry> = history.toList()
+
+    companion object {
+        /** Ring-buffer capacity for [parityHistory]. */
+        private const val HISTORY_CAPACITY = 50
     }
 }

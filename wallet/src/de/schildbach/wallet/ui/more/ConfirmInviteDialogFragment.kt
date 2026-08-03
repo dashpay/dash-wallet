@@ -86,6 +86,24 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                             setCreatingUi(false)
                             return@launch
                         }
+                        // PRE-FLIGHT funding eligibility (post-cutover SDK
+                        // path only): the display balance covers the amount,
+                        // but the asset-lock build can only select FINAL
+                        // (confirmed/IS-locked) BIP44 coins — refuse HERE,
+                        // before auth and the ~30s creation spend, when the
+                        // selectable funds cannot cover it (fail-open on any
+                        // preflight hiccup; the real build stays authoritative).
+                        if (invitationFragmentViewModel.shouldRouteL1ToSdk() &&
+                            !invitationFragmentViewModel.canFundL1Invite(inviteAmount.value)
+                        ) {
+                            binding.confirmMessage.text = getString(
+                                R.string.invitation_funds_settling_message,
+                                inviteAmount.toFriendlyString()
+                            )
+                            binding.confirmMessage.isVisible = true
+                            setCreatingUi(false)
+                            return@launch
+                        }
                     }
                     // Authenticate right before the spend — the amount has been
                     // confirmed on this screen (standard order; the fee screen no

@@ -185,6 +185,47 @@ class CutoverUiDataServiceTest {
         assertEquals(0, plan.filterFlags)
     }
 
+    @Test
+    fun rowPlan_shieldAndUnshieldCarryTransferIcon() {
+        // Shield: an INTERNAL asset lock classified SHIELD — "Shielded" title,
+        // the double-arrows transfer icon, still in the Sent filter bucket.
+        val shield = planL1TxRow(
+            record(net = -300_000, context = 1, direction = 2),
+            AssetLockKind.SHIELD
+        )
+        assertEquals(R.string.transaction_row_shielded, shield.titleRes)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, shield.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, shield.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, shield.filterFlags)
+        assertFalse(shield.isIncoming)
+
+        // Unshield: the INCOMING AssetUnlock — "Unshielded" title, the same
+        // transfer treatment, positive value in the Received filter bucket,
+        // and NON-incoming so it can never fire a coins-received notification.
+        val unshield = planL1TxRow(
+            record(net = 300_000, context = 1, direction = 0),
+            AssetLockKind.UNSHIELD
+        )
+        assertEquals(R.string.transaction_row_unshielded, unshield.titleRes)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, unshield.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, unshield.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, unshield.filterFlags)
+        assertEquals(300_000L, unshield.valueDuffs)
+        assertFalse(unshield.isIncoming)
+    }
+
+    @Test
+    fun rowPlan_feeKindsKeepSentArrow() {
+        val upgrade = planL1TxRow(
+            record(net = -500_000, context = 1, direction = 2),
+            AssetLockKind.UPGRADE
+        )
+        assertEquals(R.string.dashpay_upgrade_fee, upgrade.titleRes)
+        assertEquals(TxDisplayCacheEntry.ICON_SENT, upgrade.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, upgrade.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, upgrade.filterFlags)
+    }
+
     // ── planL1DisplaySync ─────────────────────────────────────────────
 
     @Test
@@ -258,11 +299,17 @@ class CutoverUiDataServiceTest {
 
     @Test
     fun syncPlan_processingClearedOnLockAndOnPlainBlock() {
+        // Consistent with the SDK record below (a +1000 receive) so the test
+        // isolates the status rule: only statusText may change.
         val existing = cacheEntry(
             rowId = displayHex(5),
             title = resolve(R.string.transaction_row_status_received),
             statusText = resolve(R.string.transaction_row_status_processing),
             filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+        ).copy(
+            valueSatoshis = 1000L,
+            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+            iconBgType = TxDisplayCacheEntry.BG_RECEIVED
         )
         val lockedPlan = planL1DisplaySync(
             listOf(record(firstByte = 5, net = 1000, context = 1, direction = 0)),
@@ -289,6 +336,10 @@ class CutoverUiDataServiceTest {
             title = resolve(R.string.transaction_row_status_received),
             statusText = resolve(R.string.transaction_row_status_confirming),
             filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+        ).copy(
+            valueSatoshis = 1000L,
+            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+            iconBgType = TxDisplayCacheEntry.BG_RECEIVED
         )
         val lockedPlan = planL1DisplaySync(
             listOf(record(firstByte = 5, net = 1000, context = 3, direction = 0)),
@@ -324,6 +375,298 @@ class CutoverUiDataServiceTest {
             assertTrue(plan.inserts.isEmpty())
             assertTrue(plan.updates.isEmpty())
         }
+    }
+
+    @Test
+    fun syncPlan_cachedShieldRowRestampedToTransferIcon() {
+        // A shield row cached under the old spec: "Shielded" title but the
+        // SENT arrow — the kind re-stamp corrects icon/background/flags while
+        // preserving value/time/memo/rate.
+        val r = record(firstByte = 5, net = -300_000, context = 3, direction = 2)
+        val existing = cacheEntry(
+            rowId = displayHex(5),
+            title = resolve(R.string.transaction_row_shielded)
+        ) // helper defaults: ICON_SENT / BG_SENT / FLAG_SENT
+        val plan = planL1DisplaySync(
+            listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now,
+            kindByTxid = mapOf(displayHex(5) to AssetLockKind.SHIELD)
+        )
+        assertEquals(1, plan.updates.size)
+        val row = plan.updates.first()
+        assertEquals(resolve(R.string.transaction_row_shielded), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, row.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, row.filterFlags)
+        assertEquals(existing.valueSatoshis, row.valueSatoshis)
+        assertEquals(existing.time, row.time)
+        assertEquals(existing.comment, row.comment)
+        assertEquals(existing.exchangeRateFiatCode, row.exchangeRateFiatCode)
+        assertTrue(plan.notifyIncoming.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_unshieldCachedAsReceivedIsRestampedAndNeverNotifies() {
+        // An unshield row cached "Received" + green arrow before its UNSHIELD
+        // classification resolved (the verified on-device S22 state) — the
+        // kind re-stamp rewrites title/icon/background while keeping the
+        // positive value and the Received filter bucket, and never notifies.
+        val r = record(firstByte = 6, net = 300_000, context = 3, direction = 0)
+        val existing = cacheEntry(
+            rowId = displayHex(6),
+            title = resolve(R.string.transaction_row_status_received),
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+        ).copy(
+            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+            iconBgType = TxDisplayCacheEntry.BG_RECEIVED,
+            valueSatoshis = 300_000L
+        )
+        val plan = planL1DisplaySync(
+            listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now,
+            kindByTxid = mapOf(displayHex(6) to AssetLockKind.UNSHIELD)
+        )
+        assertEquals(1, plan.updates.size)
+        val row = plan.updates.first()
+        assertEquals(resolve(R.string.transaction_row_unshielded), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, row.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, row.filterFlags)
+        assertEquals(300_000L, row.valueSatoshis)
+        assertTrue(plan.notifyIncoming.isEmpty())
+
+        // Idempotent: the corrected row produces no further writes.
+        val second = planL1DisplaySync(
+            listOf(r), mapOf(row.rowId to row), emptySet(), resolve, now,
+            kindByTxid = mapOf(displayHex(6) to AssetLockKind.UNSHIELD)
+        )
+        assertTrue(second.inserts.isEmpty())
+        assertTrue(second.updates.isEmpty())
+        assertTrue(second.notifyIncoming.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_internalRowRelabeledOnceKindKnown() {
+        // The pre-existing relabel race: an asset lock cached "Internal"
+        // before its kind resolved is re-stamped to the Platform action.
+        val r = record(firstByte = 8, net = -500_000, context = 3, direction = 2)
+        val existing = cacheEntry(
+            rowId = displayHex(8),
+            title = resolve(R.string.transaction_row_status_sent_internally),
+            filterFlags = 0
+        ).copy(iconType = TxDisplayCacheEntry.ICON_INTERNAL)
+        val plan = planL1DisplaySync(
+            listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now,
+            kindByTxid = mapOf(displayHex(8) to AssetLockKind.UPGRADE)
+        )
+        assertEquals(1, plan.updates.size)
+        val row = plan.updates.first()
+        assertEquals(resolve(R.string.dashpay_upgrade_fee), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_SENT, row.iconType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, row.filterFlags)
+    }
+
+    @Test
+    fun syncPlan_unshieldFreshInsertNeverNotifies() {
+        // A brand-new unshield discovered within the notify window must insert
+        // with the transfer treatment and WITHOUT a coins-received notification.
+        val r = record(firstByte = 4, net = 250_000, context = 1, direction = 0)
+        val plan = planL1DisplaySync(
+            listOf(r), emptyMap(), emptySet(), resolve, now,
+            kindByTxid = mapOf(displayHex(4) to AssetLockKind.UNSHIELD)
+        )
+        assertEquals(1, plan.inserts.size)
+        val row = plan.inserts.first()
+        assertEquals(resolve(R.string.transaction_row_unshielded), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, row.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, row.filterFlags)
+        assertEquals(250_000L, row.valueSatoshis)
+        assertTrue(plan.notifyIncoming.isEmpty())
+    }
+
+    // ── The SDK-definitive re-stamp of PLAIN (non-contact) rows ───────
+
+    /** The exact broken row observed on-device (S22, 11.10.42) for a confirmed max-send. */
+    private fun dashjMisreadSendRow(rowId: String) = cacheEntry(
+        rowId = rowId,
+        // dashj values an SDK-authored send at net 0 (inputs unconnected), so
+        // TransactionRowView renders a green RECEIVED icon titled "Sending" and
+        // TxResourceMapper stamps the PENDING secondary status "Processing".
+        title = resolve(R.string.transaction_row_status_sending),
+        statusText = resolve(R.string.transaction_row_status_processing),
+        filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+    ).copy(
+        valueSatoshis = 0L,
+        iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+        iconBgType = TxDisplayCacheEntry.BG_RECEIVED
+    )
+
+    @Test
+    fun syncPlan_plainOutgoingRowIsRestampedFromTheSdkRecord() {
+        // Confirmed −0.96450513 send, no contact, no asset-lock kind.
+        val r = record(firstByte = 9, net = -96_450_513, context = 3, direction = 1)
+        val existing = dashjMisreadSendRow(displayHex(9))
+        val plan = planL1DisplaySync(
+            listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now
+        )
+        assertEquals(1, plan.updates.size)
+        val row = plan.updates.first()
+        assertEquals(resolve(R.string.transaction_row_status_sent), row.title)
+        assertEquals(-96_450_513L, row.valueSatoshis)
+        assertEquals(TxDisplayCacheEntry.ICON_SENT, row.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, row.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, row.filterFlags)
+        assertEquals("", row.statusText)
+        // Memo / rate / time / contact columns survive the correction.
+        assertEquals(existing.comment, row.comment)
+        assertEquals(existing.time, row.time)
+        assertEquals(existing.exchangeRateFiatCode, row.exchangeRateFiatCode)
+        assertNull(row.contactUserId)
+        // The row is claimed for the dashj-writer preserve-guard.
+        assertTrue(displayHex(9) in plan.sdkAuthoritative)
+
+        // Idempotent: replanning the corrected row writes nothing.
+        val second = planL1DisplaySync(
+            listOf(r), mapOf(row.rowId to row), emptySet(), resolve, now
+        )
+        assertTrue(second.inserts.isEmpty())
+        assertTrue(second.updates.isEmpty())
+        assertTrue(displayHex(9) in second.sdkAuthoritative)
+    }
+
+    @Test
+    fun syncPlan_plainSendWithWrongNonZeroValueIsCorrected() {
+        // dashj's other misread class: a non-degenerate but WRONG amount (fee-only).
+        // The value-0 repair cannot see this one — only the definitive-record re-stamp.
+        val r = record(firstByte = 9, net = -40_000_000, context = 2, direction = 1)
+        val existing = cacheEntry(
+            rowId = displayHex(9),
+            title = resolve(R.string.transaction_row_status_sent)
+        ).copy(valueSatoshis = -260L)
+        val plan = planL1DisplaySync(
+            listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now
+        )
+        assertEquals(1, plan.updates.size)
+        assertEquals(-40_000_000L, plan.updates.first().valueSatoshis)
+        assertEquals(TxDisplayCacheEntry.ICON_SENT, plan.updates.first().iconType)
+    }
+
+    @Test
+    fun syncPlan_definitiveRestampSkipsEveryRicherRow() {
+        // A definitive OUTGOING record whose amount disagrees with every cached row
+        // below — none of them may be re-stamped by the plain path.
+        val r = record(firstByte = 9, net = -40_000_000, context = 3, direction = 1)
+        val richTitles = listOf(
+            R.string.transaction_row_shielded,
+            R.string.transaction_row_unshielded,
+            R.string.transaction_row_invitation,
+            R.string.dashpay_upgrade_fee,
+            R.string.dashpay_topup_fee,
+            R.string.transaction_row_status_sent_internally,
+            R.string.transaction_row_status_coinjoin_mixing,
+            R.string.transaction_row_status_coinjoin_mixing_fee,
+            R.string.transaction_row_status_masternode_registration,
+            R.string.transaction_row_status_mining_reward
+        )
+        for (titleRes in richTitles) {
+            val existing = cacheEntry(rowId = displayHex(9), title = resolve(titleRes))
+            val plan = planL1DisplaySync(
+                listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now
+            )
+            assertTrue("re-stamped ${resolve(titleRes)}", plan.updates.isEmpty())
+        }
+        // The service / gift-card / error / CoinJoin-flag carve-outs stay untouchable
+        // AND are never claimed as SDK-authoritative.
+        val sendingTitle = resolve(R.string.transaction_row_status_sending)
+        val carved = listOf(
+            cacheEntry(
+                rowId = displayHex(9), title = sendingTitle,
+                filterFlags = TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
+            ),
+            cacheEntry(rowId = displayHex(9), title = sendingTitle, service = "CrowdNode"),
+            cacheEntry(rowId = displayHex(9), title = sendingTitle, hasErrors = true),
+            cacheEntry(
+                rowId = displayHex(9), title = sendingTitle,
+                filterFlags = TxDisplayCacheEntry.FLAG_COINJOIN
+            )
+        )
+        for (entry in carved) {
+            val plan = planL1DisplaySync(
+                listOf(r), mapOf(entry.rowId to entry), emptySet(), resolve, now
+            )
+            assertTrue(plan.updates.isEmpty())
+            assertTrue(plan.sdkAuthoritative.isEmpty())
+        }
+    }
+
+    @Test
+    fun syncPlan_definitiveRestampNeverTouchesAContactRow() {
+        // The SDK record's own net is the wrong +change for a friendship send, so a row
+        // carrying a contact identity must never be re-shaped from it — even when this
+        // pass could not re-resolve the contact (contactByTxid empty).
+        val r = record(firstByte = 9, net = 3_830_000, context = 3, direction = 0)
+        val existing = cacheEntry(
+            rowId = displayHex(9),
+            title = resolve(R.string.transaction_row_status_sent)
+        ).copy(
+            valueSatoshis = -100_000L,
+            contactUsername = "alice",
+            contactUserId = "id-alice"
+        )
+        val plan = planL1DisplaySync(
+            listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now
+        )
+        assertTrue(plan.updates.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_definitiveRestampIgnoresNonDefinitiveRecords() {
+        // A NON-degenerate cached send row (so the separate value-0 repair cannot
+        // fire) that disagrees with each record below. None of these records is
+        // "definitive" for a plain row, so its direction/value must survive.
+        val existing = cacheEntry(
+            rowId = displayHex(9),
+            title = resolve(R.string.transaction_row_status_sent)
+        ) // helper defaults: −1_000_000, ICON_SENT, FLAG_SENT
+        val nonDefinitive = listOf(
+            // Internal / CoinJoin self-moves are not plain sends.
+            record(firstByte = 9, net = -5_000_000, context = 3, direction = 2),
+            record(firstByte = 9, net = -5_000_000, context = 3, direction = 3),
+            // A zero-net record (e.g. a 2-participant testnet mixing round claims nothing).
+            record(firstByte = 9, net = 0, context = 3, direction = 1)
+        )
+        for (r in nonDefinitive) {
+            val plan = planL1DisplaySync(
+                listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now
+            )
+            assertTrue("re-stamped from direction=${r.direction} net=${r.netAmountDuffs}", plan.updates.isEmpty())
+        }
+        // Same for a DEFINITIVE record arriving on the engine's per-account event feed:
+        // one self-spend emits both an OUTGOING and an INCOMING event for the same txid,
+        // so an event may never re-shape an existing row.
+        val eventPlan = planL1DisplaySync(
+            listOf(record(firstByte = 9, net = 900_000, context = 0, direction = 0)),
+            mapOf(existing.rowId to existing), emptySet(), resolve, now,
+            restampFromDefinitiveRecord = false
+        )
+        assertTrue(eventPlan.updates.isEmpty())
+    }
+
+    @Test
+    fun groupCacheRow_onlyMultiTxWrappersCountAsGroupRows() {
+        // THE root cause: a plain single-tx wrapper's groupId is the BASE58 txid while
+        // the row/txId columns are hex, so the old `groupId != txId` test classified every
+        // ordinary send/receive as a group row and excluded it from all SDK repair.
+        val hexTxId = displayHex(9)
+        val single = TxGroupCacheEntry(
+            groupId = "kfQvADvv5vb5vSykXnjpAUpJjJwABFRyseY86QucMc9",
+            txId = hexTxId,
+            wrapperType = TxGroupCacheEntry.TYPE_SINGLE,
+            groupDate = "2026-07-31",
+            sortOrder = 0
+        )
+        assertFalse(single.isMultiTxGroupRow)
+        assertTrue(single.copy(wrapperType = TxGroupCacheEntry.TYPE_COINJOIN).isMultiTxGroupRow)
+        assertTrue(single.copy(wrapperType = TxGroupCacheEntry.TYPE_CROWDNODE).isMultiTxGroupRow)
     }
 
     @Test
@@ -364,6 +707,11 @@ class CutoverUiDataServiceTest {
 
         var currentBalanceReads = 0
 
+        /** The SDK's live unspent-output count (null = read unavailable). */
+        var utxoCount: Int? = 0
+
+        override suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = utxoCount
+
         override suspend fun currentTotalDuffs(walletIdHex: String): Long =
             currentBalanceSplitDuffs(walletIdHex).total
 
@@ -393,7 +741,8 @@ class CutoverUiDataServiceTest {
         groupDao: TxGroupCacheDao = mockk(relaxed = true),
         walletUIConfig: WalletUIConfig = mockk(relaxed = true),
         notify: (Long) -> Unit = {},
-        txEvents: Flow<L1TxEvent> = kotlinx.coroutines.flow.emptyFlow()
+        txEvents: Flow<L1TxEvent> = kotlinx.coroutines.flow.emptyFlow(),
+        l1Synced: Flow<Boolean> = flowOf(true)
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -404,6 +753,7 @@ class CutoverUiDataServiceTest {
         resolveString = resolve,
         notifyCoinsReceived = notify,
         txEvents = txEvents,
+        l1Synced = l1Synced,
         nowMs = { now }
     )
 
@@ -461,6 +811,108 @@ class CutoverUiDataServiceTest {
         source.balanceDuffs.value = 200_000L
         runCurrent()
         assertEquals(Coin.valueOf(200_000), service.sdkBalanceOrNull())
+    }
+
+    @Test
+    fun postCutover_midScan_holdsLastKnownBalanceAndDoesNotPersist() = runTest {
+        // The SDK's from-scratch filter scan has only found part of the wallet
+        // so far; the last launch knew the real figure.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 900_000L
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(false)
+        )
+        service.start()
+        runCurrent()
+
+        // The header shows the LAST KNOWN figure, not the climbing partial…
+        assertEquals(
+            Coin.valueOf(900_000),
+            service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first()
+        )
+        // …while the live SDK figure itself is still tracked underneath.
+        assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
+        // And the partial is NEVER written back over the seed (the
+        // compounding bug: it would poison the next launch's last-known).
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_midScan_withNoLastKnownBalance_showsLiveFigure() = runTest {
+        // First ever run: there is nothing to hold, so the live figure wins.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns null
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(false)
+        )
+        service.start()
+        runCurrent()
+
+        assertEquals(
+            Coin.valueOf(123_456),
+            service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first()
+        )
+    }
+
+    // ── Spendable-UTXO-count overlay (shielded max-fee reserve) ───────
+
+    @Test
+    fun preCutover_spendableUtxoCountKeepsTheDashjValue() = runTest {
+        val source = FakeSource().apply { utxoCount = 11 }
+        val service = buildService(source, configWithState("DUAL_RUNNING"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertNull(
+            "pre-cutover the overlay must not engage at all",
+            service.sdkSpendableUtxoCountOrNull()
+        )
+    }
+
+    @Test
+    fun postCutover_spendableUtxoCountServedFromSdk() = runTest {
+        // FIX-pin: this count was never overlaid, so post-cutover it reported
+        // the HELD dashj wallet's frozen UTXO set — and the shielded max-fee
+        // reserve sizes itself at ~148 bytes per input from it.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L)).apply { utxoCount = 11 }
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertEquals(11, service.sdkSpendableUtxoCountOrNull())
+    }
+
+    @Test
+    fun postCutover_midScan_spendableUtxoCountFallsBackToDashj() = runTest {
+        // A mid-scan partial UNDER-counts, and under-reserving is the failing
+        // direction — so unlike the balance this does not hold a last-known
+        // value, it simply does not engage until the scan has caught up.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L)).apply { utxoCount = 3 }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope, l1Synced = flowOf(false)
+        )
+        service.start()
+        runCurrent()
+
+        assertNull(service.sdkSpendableUtxoCountOrNull())
+        // …while the live count itself is still tracked underneath.
+        assertEquals(3, service.sdkSpendableUtxoCount.value)
+    }
+
+    @Test
+    fun postCutover_spendableUtxoCountUnavailableFallsBackToDashj() = runTest {
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L)).apply { utxoCount = null }
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertNull(service.sdkSpendableUtxoCountOrNull())
     }
 
     @Test

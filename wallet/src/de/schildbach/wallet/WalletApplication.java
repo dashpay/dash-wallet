@@ -557,8 +557,16 @@ public class WalletApplication extends MultiDexApplication
         // the restore-from-FILE caller invokes setWallet on the MAIN thread, so
         // this must NOT block on DataStore I/O. The commit self-gates on the SDK
         // L1 flag and is a no-op if already committed; the home screen reads
-        // cutover state reactively. Upgrade installs skip this and flip later via
-        // CutoverAutoCommitObserver.
+        // cutover state reactively.
+        //
+        // An UPGRADE install never reaches here (it loads via
+        // loadWalletFromProtobuf) — it commits at the finalizeInitialization
+        // seam below instead. But the converse is NOT true: a fresh
+        // create/restore reaches BOTH seams, because onboarding's PIN step calls
+        // saveWalletAndFinalizeInitialization() -> finalizeInitialization()
+        // afterwards. That is why this call also latches
+        // "freshWalletSetupThisLaunch" inside the coordinator, which suppresses
+        // the one-time UPGRADE sync explainer the other seam would otherwise arm.
         cutoverCoordinator.commitForFreshWalletSetupAsync();
     }
 
@@ -685,6 +693,14 @@ public class WalletApplication extends MultiDexApplication
                 R.string.notification_dashpay_channel_name,
                 R.string.notification_dashpay_channel_description,
                 NotificationManager.IMPORTANCE_LOW);
+
+        // Incoming contact requests. Separate from the DashPay channel above on purpose: that one
+        // is IMPORTANCE_LOW for the identity-creation progress notification, and a channel's
+        // importance cannot be changed once the system has created it.
+        createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_CONTACTS,
+                R.string.notification_contacts_channel_name,
+                R.string.notification_contacts_channel_description,
+                NotificationManager.IMPORTANCE_HIGH);
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -752,7 +768,28 @@ public class WalletApplication extends MultiDexApplication
         // Idempotent (no-op once CUT_OVER) and self-gated on USE_KOTLIN_SDK_L1_SHADOW, so
         // it stays inert when the SDK L1 engine is off; once committed the
         // CutoverAutoCommitObserver parity path never runs (it stands down when CUT_OVER).
-        cutoverCoordinator.commitForFreshWalletSetupAsync();
+        //
+        // The UPGRADE variant: identical commit, but it also arms the one-time
+        // sync explainer when this launch is the one that actually flips the
+        // state AND the previous version was pre-11.10 (see
+        // CutoverCoordinator.commitForUpgradedWalletAsync).
+        //
+        // NOTE this seam is NOT upgrade-only. It runs on every launch that
+        // loads the wallet from the protobuf (WalletApplication:936) AND at the
+        // end of onboarding, because SetPinViewModel.initWallet() calls
+        // saveWalletAndFinalizeInitialization() -> finalizeInitialization()
+        // right after setWallet() created/restored the wallet. So a fresh
+        // create/restore DOES reach here; the coordinator suppresses the
+        // explainer for it via the freshWalletSetupThisLaunch latch that
+        // setWallet's commit sets synchronously.
+        //
+        // config.lastVersionCode is the versionCode recorded by the PREVIOUS
+        // launch (0 on a never-run install). It is a final field captured when
+        // Configuration was constructed, so it still holds the pre-upgrade
+        // value here even though finalizeInitialization already persisted this
+        // launch's code via config.updateLastVersionCode() — and it is stable
+        // no matter which of the two afterLoadWallet() call paths runs first.
+        cutoverCoordinator.commitForUpgradedWalletAsync(config.lastVersionCode);
     }
 
     private void deleteBlockchainFiles() {
@@ -1401,6 +1438,23 @@ public class WalletApplication extends MultiDexApplication
 
     @Override
     public int spendableUtxoCount() {
+        // Post-cutover the dashj wallet is HELD, so its UTXO set is frozen at
+        // the cutover snapshot (or empty on a fresh restore) — and unlike the
+        // balance this count was never overlaid. Its consumer is the shielded
+        // max-fee reserve, which sizes itself at ~148 bytes per input, so a
+        // stale count under-reserves (the max-shield retry fails again) or
+        // over-reserves (the user cannot shield their full balance). Serve the
+        // SDK's live count instead. Null = keep dashj: pre-cutover always, and
+        // post-cutover until the SDK scan has caught up — see
+        // CutoverUiDataService.sdkSpendableUtxoCountOrNull for why this one
+        // deliberately does NOT hold a last-known value the way the balance does.
+        final Integer sdkCount = cutoverUiDataService != null
+                ? cutoverUiDataService.sdkSpendableUtxoCountOrNull()
+                : null;
+        if (sdkCount != null) {
+            return sdkCount;
+        }
+
         final Wallet wallet = this.wallet;
         if (wallet == null) {
             return 0;
@@ -1468,16 +1522,20 @@ public class WalletApplication extends MultiDexApplication
         // max-output-coin-selector balance (ESTIMATED total minus the fee to spend
         // it all) is a selector-based stream, so the plain observeBalance() overlay
         // deliberately skips it. Post-cutover the held dashj wallet has no coins, so
-        // this freezes at 0; the SDK's live total (the correct spendable figure
-        // post-cutover) wins via the SAME overlay observeTotalBalance() uses —
-        // pre-cutover the SDK side is permanently null and the dashj max-output value
-        // passes through unchanged. This feeds only the DISPLAYED available balance /
-        // max-amount cap; the real send's coin selection is owned independently by
-        // SendCoinsTaskRunner and is untouched.
+        // this freezes at 0; the SDK's ACCOUNT-AWARE max-sendable figure (BIP44
+        // spendable + DashPay receival confirmed net of per-sweep fee headroom —
+        // what the send-all's sweep-then-drain actually delivers) wins via
+        // overlayMaxSendableBalance, which itself falls back to the SDK's live
+        // total when the account-level snapshot is unavailable — pre-cutover both
+        // SDK sides are permanently null and the dashj max-output value passes
+        // through unchanged. This feeds only the DISPLAYED available balance /
+        // max-amount cap (and the send-all detection keyed off it); the real
+        // send's coin selection is owned independently by SendCoinsTaskRunner
+        // and is untouched.
         final Flow<Coin> maxOutput =
                 walletBalanceObserver.observe(Wallet.BalanceType.ESTIMATED, new MaxOutputAmountCoinSelector());
         if (cutoverUiDataService != null) {
-            return cutoverUiDataService.overlayTotalBalance(maxOutput);
+            return cutoverUiDataService.overlayMaxSendableBalance(maxOutput);
         }
         return maxOutput;
     }

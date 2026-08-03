@@ -40,6 +40,10 @@
     <string name="invitation_preview_close">Close</string>
     <string name="invitation_cant_afford_title">Insufficient Wallet Balance</string>
     <string name="invitation_cant_afford_message">You need at least %s Dash to create an invitation</string>
+    <!-- Settling variant of the affordability refusal: the display balance
+         covers the invitation but the funds the asset-lock build can actually
+         select (final, confirmed/InstantSend-locked coins) do not. -->
+    <string name="invitation_funds_settling_message">You need at least %s spendable Dash to create an invitation. Recently received or transferred funds may still be settling.</string>
     <string name="invitation_creating_error_title">Error Creating Invitation</string>
     <string name="invitation_creating_error_message">There was a problem creating your invitation. Please try again.</string>
     <string name="invitation_creating_error_message_not_synced">Wait for syncing to complete and try again.</string>
@@ -148,6 +152,8 @@
     <string name="notifications_you_have_accepted">You have accepted the contact request from %s</string>
     <string name="notifications_you_sent">You sent a contact request to %s</string>
     <string name="notifications_you_received">%s has sent you a contact request</string>
+    <!-- system notification posted when a contact request arrives and the sender's profile isn't known yet -->
+    <string name="notification_new_contact_request">You have a new contact request</string>
     <string name="send_contact_request_error_title">Contact request not sent</string>
     <string name="send_contact_request_error_message">There was an error sending the contact request. Please try again.</string>
     <string name="accept_contact_request_error_title">Contact request not accepted</string>
@@ -441,6 +447,10 @@
     <string name="credit_balance_insufficient_error_message">You don’t have enough funds to buy credits</string>
     <string name="buy_credits_estimated_items">%s - %d contacts / %d profile updates</string>
     <string name="buy_credits_topup_unconfirmed">Your top-up may have gone through. Please don’t try again — check your credit balance in a few minutes.</string>
+    <!-- Pre-flight refusal: the display balance covers the top-up but the funds
+         the asset-lock build can actually select (final, confirmed/InstantSend-
+         locked coins) do not. -->
+    <string name="buy_credits_funds_settling">You need at least %s spendable Dash for this top-up. Recently received or transferred funds may still be settling.</string>
 
     <string name="request_username_username_voting_message">+ what is username voting?</string>
     <string name="request_username_character_requirement">Letters, numbers and hyphens only</string>
@@ -479,6 +489,11 @@
          payment source × contested-ness (L1 0.03/0.25, shielded denomination
          0.1/0.3, identity credits 0.01/0.2). -->
     <string name="request_username_balance_requirement_amount">You need to have %s DASH to create this username</string>
+    <!-- Shown instead of the plain requirement when the DISPLAY balance covers
+         the fee but the funds the asset-lock build can actually select (final,
+         confirmed/InstantSend-locked coins) do not — e.g. right after a credit
+         withdrawal or an incoming transfer that has not settled yet. -->
+    <string name="request_username_balance_settling">You need at least %s spendable Dash to create a username. Recently received or transferred funds may still be settling.</string>
     <!-- Source label under the amount on the username confirm sheet when the
          creation is funded from the shielded pool (the amount is the exit
          denomination actually leaving that balance). -->
@@ -714,19 +729,42 @@
     <string name="mixed_funds_migration_title">Move your mixed funds</string>
     <!-- Intro line shown at the top of the sheet body: states plainly why the
          prompt exists. -->
-    <string name="mixed_funds_migration_coinjoin_removed">The CoinJoin feature has been removed from the wallet.</string>
-    <string name="mixed_funds_migration_message">This wallet still holds %s from the mixing feature, which is no longer part of the app. Choose where you would like to keep it.</string>
+    <string name="mixed_funds_migration_coinjoin_removed">The CoinJoin feature has been removed from the app.</string>
+    <string name="mixed_funds_migration_message">This wallet currently holds %s mixed DASH. Choose where you would like to keep it.</string>
     <string name="mixed_funds_migration_shield_action">Move to shielded balance</string>
-    <string name="mixed_funds_migration_shield_note">Keeps these funds private. You can spend them from your shielded balance.</string>
+    <string name="mixed_funds_migration_shield_note">Keeps these funds private. You can transfer them out of your shielded balance at any time.</string>
     <string name="mixed_funds_migration_combine_action">Keep it spendable in Dash</string>
     <string name="mixed_funds_migration_combine_note">Adds these funds back to your regular balance. This undoes the mixing, so these funds will no longer be private.</string>
-    <!-- Deliberately not "Not now": tapping this stops the prompt for good,
-         so the label has to say so. Swiping the sheet away instead only
-         defers it to the next launch. -->
-    <string name="mixed_funds_migration_not_now_action">Leave it and don\'t ask again</string>
     <string name="mixed_funds_migration_in_progress">Moving your funds. Please keep the app open.</string>
     <string name="mixed_funds_migration_started">Your funds are on the way. The balance updates once the transaction confirms.</string>
-    <string name="mixed_funds_migration_failed">Your funds could not be moved and nothing was spent. You can try again next time you open the app.</string>
+    <string name="mixed_funds_migration_shield_failed">There was a problem moving your funds. Please restart the app to try again or you can move them to your un-mixed balance.</string>
+    <string name="mixed_funds_migration_combine_failed">There was a problem moving your funds. Please restart the app to try again.</string>
+    <string name="mixed_funds_migration_restart_action">Restart</string>
+    <string name="mixed_funds_migration_transfer_unmixed_action">Transfer to un-mixed balance</string>
     <string name="mixed_funds_migration_unconfirmed">We could not confirm the result. Check your balance before trying again.</string>
+
+    <!-- SAFETY-NET message for the narrow race where an invitation is checked
+         just as the sync state flips (the invite tile's own join_dashpay_wait
+         text is the primary surface). INFORMATIONAL only — the invite is kept
+         and re-checked automatically once the sync finishes, so the copy must
+         not read as an error. Modelled on the shielded screen's calm sync
+         messaging (username_shielded_pool_syncing). -->
+    <string name="invitation_not_synced_message">Your wallet is still syncing, so we cannot check this invitation yet. It has been saved — we will check it as soon as the sync finishes.</string>
+
+    <!-- One-time explainer shown on the FIRST launch after upgrading into the
+         build where the Dash Kotlin SDK takes over the L1 chain. That handover
+         needs a full from-scratch sync, during which the balance is held at its
+         last known value and sending is unavailable. Deliberately: no promised
+         duration, an explicit "your funds are safe", and an explicit "only
+         once". Shown exactly once (persisted marker) and only on the upgrade
+         path — a fresh install or a restore already expects to sync. -->
+    <string name="cutover_sync_notice_title">A one-time sync is needed</string>
+    <string name="cutover_sync_notice_message">DashPay needs to complete a full sync before you can send any funds.</string>
+    <string name="cutover_sync_notice_funds_safe">Your funds are safe. Your balance stays at its last known amount until the sync finishes.</string>
+    <string name="cutover_sync_notice_one_time">This happens only once, after this update. You can keep using the rest of the app while it runs.</string>
+    <string name="cutover_sync_notice_progress_starting">Starting sync…</string>
+    <string name="cutover_sync_notice_progress">Syncing %d%%</string>
+    <string name="cutover_sync_notice_complete">Sync complete. You can send funds again.</string>
+    <string name="cutover_sync_notice_action">Got it</string>
 
 </resources>

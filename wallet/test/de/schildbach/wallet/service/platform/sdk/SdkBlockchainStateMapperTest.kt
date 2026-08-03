@@ -49,8 +49,9 @@ class SdkBlockchainStateMapperTest {
     private fun snapshot(
         p: ShadowSyncProgress = progress(),
         tip: Long = 0,
-        stalled: Boolean = false
-    ) = SdkChainSnapshot(p, tip, stalled)
+        stalled: Boolean = false,
+        chainLockHeight: Int = 0
+    ) = SdkChainSnapshot(p, tip, stalled, chainLockHeight)
 
     // ── sdkSyncStage ──────────────────────────────────────────────────
 
@@ -253,5 +254,23 @@ class SdkBlockchainStateMapperTest {
         )
         assertEquals(190L, toShadowSyncProgress(data).mnListHeight)
         assertEquals(0L, toShadowSyncProgress(SpvSyncProgressData.EMPTY).mnListHeight)
+    }
+
+    // ── chainlockHeight (post-cutover replacement for dashj's feed) ────
+
+    @Test
+    fun derive_carriesTheObservedChainlockHeight_andPreservesWhenNoneSeen() {
+        // FIX-pin: the derivation used to have NO chainlockHeight field at
+        // all, so the persisted row froze at whatever dashj last wrote (0 on a
+        // fresh restore) for the entire life of the install.
+        assertEquals(
+            "an observed chainlock is carried into the row update",
+            1_514_600,
+            deriveBlockchainStateUpdate(snapshot(chainLockHeight = 1_514_600), now).chainlockHeight
+        )
+        assertNull(
+            "no chainlock observed yet must PRESERVE, never claim height 0",
+            deriveBlockchainStateUpdate(snapshot(chainLockHeight = 0), now).chainlockHeight
+        )
     }
 }

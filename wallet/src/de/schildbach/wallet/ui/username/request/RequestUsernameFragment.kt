@@ -277,10 +277,22 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 if ((!requestUserNameViewModel.isUsingInvite() || isInviteContested) && usernameType != UsernameType.Secondary) {
                     binding.walletBalanceContainer.isVisible = !it.enoughBalance && !shieldedPreparing
                     if (it.requiredAmount.isNotEmpty()) {
-                        binding.balanceRequirementText.text = getString(
-                            R.string.request_username_balance_requirement_amount,
-                            it.requiredAmount
-                        )
+                        // The settling variant explains the non-obvious case:
+                        // the DISPLAY balance covers the fee but the funds the
+                        // asset-lock build can actually select (final BIP44
+                        // coins) do not — the plain "you need X DASH" copy
+                        // would contradict the balance the user can see.
+                        binding.balanceRequirementText.text = if (it.fundsSettling) {
+                            getString(
+                                R.string.request_username_balance_settling,
+                                it.requiredAmount
+                            )
+                        } else {
+                            getString(
+                                R.string.request_username_balance_requirement_amount,
+                                it.requiredAmount
+                            )
+                        }
                     }
 
                     if (it.usernameContestable || it.usernameContested) {

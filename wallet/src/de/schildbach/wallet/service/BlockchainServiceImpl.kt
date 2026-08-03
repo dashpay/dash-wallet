@@ -211,15 +211,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     companion object {
         private const val MINIMUM_PEER_COUNT = 16
-        private const val MIN_COLLECT_HISTORY = 2
-        private const val IDLE_HEADER_TIMEOUT_MIN = 2
-        private const val IDLE_MNLIST_TIMEOUT_MIN = 2
-        private const val IDLE_BLOCK_TIMEOUT_MIN = 2
-        private const val IDLE_TRANSACTION_TIMEOUT_MIN = 9
-        private val MAX_HISTORY_SIZE = max(
-            IDLE_TRANSACTION_TIMEOUT_MIN.toDouble(),
-            IDLE_BLOCK_TIMEOUT_MIN.toDouble()
-        ).toInt()
+        // The idle thresholds, the history ring size and the idle RULE now
+        // live in SyncActivityIdleDetector.kt (same package) so they are
+        // host-JVM testable and shared by both engines' sample sources.
         private const val APPWIDGET_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS
         private const val BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS
         private val TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(180)
@@ -312,6 +306,25 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     /** Last parity verdict published to the diagnostic holder — de-dupes the 100% log. */
     @Volatile
     private var lastDiagnosticParity: DashjDiagnosticSyncState.Parity? = null
+
+    /**
+     * Wall-clock moment dashj's diagnostic percent first reached 100 this
+     * stretch (null while below 100). The displayed 100% and the verdict are
+     * WITHHELD until the shadow harness produces a parity report stamped
+     * at/after this moment — i.e. a comparison provably computed against the
+     * caught-up dashj state (owner's spec: no red/purple/green until the
+     * status reaches 100, and no 100 until the parity check is complete).
+     * Same `System.currentTimeMillis` clock as `ParityReport.timestampMs`.
+     */
+    @Volatile
+    private var dashjCaughtUpAtMs: Long? = null
+
+    /** Last args passed to [publishDashjDiagnostic] — lets a new parity report re-publish. */
+    @Volatile
+    private var lastDiagnosticRawPercent = 0
+
+    @Volatile
+    private var lastDiagnosticStage: PeerGroup.SyncStage? = null
 
     /**
      * FIX 1 guard: the post-cutover identity/contacts discovery hook
@@ -1359,6 +1372,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         if (!enabled) {
                             dashjDiagnosticSyncState.reset()
                             lastDiagnosticParity = null
+                            dashjCaughtUpAtMs = null
                         }
 
                         if (!changed) return@withLock
@@ -1375,8 +1389,16 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         }
 
                         if (dashjEngineMayStart && peerGroup == null) {
-                            // Un-hold: start dashj as a backup / parity check. Reuse
-                            // the normal start path (starts only if impediments empty).
+                            // Un-hold: start dashj as a backup / parity check.
+                            // First honor the tester-chosen "sync from date"
+                            // (diagnostic path only — we are here exactly when
+                            // dashjSyncDiagnostic && dashjHeldByCutover): the
+                            // peergroup is down and checkMutex is held, so the
+                            // stores/chains can be swapped safely. Then reuse the
+                            // normal start path (starts only if impediments empty).
+                            val fromSecs = runCatching { dashPayConfig.getDashjSyncDiagnosticFromSecs() }
+                                .getOrDefault(0L)
+                            application.wallet?.let { maybeRecheckpointDiagnosticStores(fromSecs, it) }
                             checkService()
                         } else if (!dashjEngineMayStart && peerGroup != null) {
                             // Re-hold: stop the diagnostic dashj engine.
@@ -1390,90 +1412,94 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
-    private class ActivityHistoryEntry(
-        val numTransactionsReceived: Int, val numBlocksDownloaded: Int,
-        val numHeadersDownloaded: Int, val numMnListDiffsDownloaded: Int
-    ) {
-        override fun toString(): String {
-            return "$numTransactionsReceived/$numBlocksDownloaded/$numHeadersDownloaded/$numMnListDiffsDownloaded"
-        }
-    }
+    /**
+     * SDK L1 wallet-events observed since the last idle-detector tick — the
+     * post-cutover analogue of [transactionsReceived] (which only the dashj
+     * wallet listener ever increments). Fed by the tap started in
+     * [onCreate]; read-and-cleared by [tickReceiver].
+     */
+    private val sdkTxEventsReceived = AtomicInteger(0)
 
     private var tickRecieverRegistered = false
     private val tickReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         private var lastChainHeight = 0
         private var lastHeaderHeight = 0
-        private val activityHistory = arrayListOf<ActivityHistoryEntry> ()
+        private var lastSdkProgress: de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress? = null
+        private var sdkSampled = false
+        private val activityHistory = arrayListOf<SyncActivitySample>()
+
         override fun onReceive(context: Context, intent: Intent) {
-            val chainHeight = blockChain!!.bestChainHeight
-            val headerHeight = headerChain!!.bestChainHeight
-            if (lastChainHeight > 0 || lastHeaderHeight > 0) {
-                val numBlocksDownloaded = chainHeight - lastChainHeight
-                val numTransactionsReceived = transactionsReceived.getAndSet(0)
-                // instead of counting headers, count header messages which contain up to 2000 headers
-                val numHeadersDownloaded = headerHeight - lastHeaderHeight
-                val numMnListDiffsDownloaded = mnListDiffsReceived.getAndSet(0)
+            // WHICH ENGINE'S ACTIVITY COUNTS. The detector exists to stop a
+            // genuinely idle service, and its four counters were all dashj-fed.
+            // Post-cutover the dashj peergroup is HELD, so every one of them is
+            // permanently 0 and the detector trips ~2 minutes after EVERY start,
+            // killing the service mid-SDK-scan. Sample the engine that actually
+            // owns L1 instead — same idle rule, honest inputs (see
+            // SyncActivityIdleDetector.kt). Pre-cutover [dashjHeldByCutover] is
+            // false and this is byte-for-byte the original dashj path.
+            val sample = if (dashjHeldByCutover) sdkSample() else dashjSample()
+            if (sample != null) {
+                pushAndEvaluate(sample)
+            }
+        }
 
-                // push history
-                activityHistory.add(
-                    0,
-                    ActivityHistoryEntry(
-                        numTransactionsReceived,
-                        numBlocksDownloaded,
-                        numHeadersDownloaded,
-                        numMnListDiffsDownloaded
-                    )
+        /** The original dashj counters; null until a first reference height exists. */
+        private fun dashjSample(): SyncActivitySample? {
+            val chainHeight = blockChain?.bestChainHeight ?: 0
+            val headerHeight = headerChain?.bestChainHeight ?: 0
+            val sample = if (lastChainHeight > 0 || lastHeaderHeight > 0) {
+                SyncActivitySample(
+                    transactionsReceived = transactionsReceived.getAndSet(0),
+                    blocksDownloaded = chainHeight - lastChainHeight,
+                    // instead of counting headers, count header messages which contain up to 2000 headers
+                    headersDownloaded = headerHeight - lastHeaderHeight,
+                    mnListDiffsDownloaded = mnListDiffsReceived.getAndSet(0)
                 )
-
-                // trim
-                while (activityHistory.size > MAX_HISTORY_SIZE) {
-                    activityHistory.removeAt(
-                        activityHistory.size - 1
-                    )
-                }
-
-                // print
-                val builder = StringBuilder()
-                for (entry in activityHistory) {
-                    if (builder.isNotEmpty()) {
-                        builder.append(", ")
-                    }
-                    builder.append(entry)
-                }
-                log.info("History of transactions/blocks/headers/mnlistdiff: $builder")
-
-                // determine if block and transaction activity is idling
-                var isIdle = false
-                if (activityHistory.size >= MIN_COLLECT_HISTORY) {
-                    isIdle = true
-                    for (i in activityHistory.indices) {
-                        val entry = activityHistory[i]
-                        val blocksActive =
-                            entry.numBlocksDownloaded > 0 && i <= IDLE_BLOCK_TIMEOUT_MIN
-                        val transactionsActive = (entry.numTransactionsReceived > 0
-                                && i <= IDLE_TRANSACTION_TIMEOUT_MIN)
-                        val headersActive =
-                            entry.numHeadersDownloaded > 0 && i <= IDLE_HEADER_TIMEOUT_MIN
-                        val mnListDiffsActive =
-                            entry.numMnListDiffsDownloaded > 0 && i <= IDLE_MNLIST_TIMEOUT_MIN
-                        if (blocksActive || transactionsActive || headersActive || mnListDiffsActive) {
-                            isIdle = false
-                            break
-                        }
-                    }
-                }
-
-                // if idling, shutdown service
-                if (isIdle) {
-                    log.info("idling detected, stopping service")
-                    if (blockchainState?.replaying == true) {
-                        rescheduleService()
-                    }
-                    stopSelf()
-                }
+            } else {
+                null
             }
             lastChainHeight = chainHeight
             lastHeaderHeight = headerHeight
+            return sample
+        }
+
+        /** The SDK L1 engine's equivalent counters (see [sdkActivitySample]). */
+        private fun sdkSample(): SyncActivitySample? {
+            val current = l1ShadowSyncService.progress.value
+            val txEvents = sdkTxEventsReceived.getAndSet(0)
+            val sample = if (sdkSampled) {
+                sdkActivitySample(lastSdkProgress, current, txEvents)
+            } else {
+                null // first tick: no reference snapshot yet (mirrors dashj above)
+            }
+            lastSdkProgress = current
+            sdkSampled = true
+            return sample
+        }
+
+        private fun pushAndEvaluate(sample: SyncActivitySample) {
+            // push history (newest first)
+            activityHistory.add(0, sample)
+
+            // trim
+            while (activityHistory.size > MAX_HISTORY_SIZE) {
+                activityHistory.removeAt(activityHistory.size - 1)
+            }
+
+            log.info(
+                "History of transactions/blocks/headers/mnlistdiff ({}): {}",
+                if (dashjHeldByCutover) "sdk" else "dashj",
+                activityHistory.joinToString(", ")
+            )
+
+            // if idling, shutdown service
+            if (isSyncIdle(activityHistory)) {
+                log.info("idling detected, stopping service")
+                if (blockchainState?.replaying == true) {
+                    rescheduleService()
+                }
+                stopSelf()
+            }
         }
     }
 
@@ -1513,6 +1539,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         // Register for app lifecycle events to detect background/foreground transitions
         ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
+
+        // DIAGNOSTIC (Tools toggle): while the readout is holding at 99%
+        // waiting for a fresh post-catchup parity report (see
+        // publishDashjDiagnostic's freshness gate), progress callbacks alone
+        // can't flip it — once caught up they only fire on new blocks (minutes
+        // apart). Re-publish whenever the shadow harness produces a report so
+        // the 100% + verdict lands within one probe interval (~10s).
+        serviceScope.launch {
+            l1ShadowSyncService.latestParity.collect { report ->
+                if (report != null && dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
+                    publishDashjDiagnostic(lastDiagnosticRawPercent, lastDiagnosticStage)
+                }
+            }
+        }
+
+        // Idle detector, SDK side: the post-cutover analogue of the dashj
+        // wallet's transactionsReceived counter (see SyncActivityIdleDetector).
+        // Counting only — the tick receiver reads and clears it.
+        serviceScope.launch {
+            l1ShadowSyncService.txEvents.collect { sdkTxEventsReceived.incrementAndGet() }
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundAndCatch(createNetworkSyncNotification())
@@ -1558,6 +1605,37 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.error("onCreate: wallet is null after cleanup, service cannot continue")
                     return@launch
                 }
+                // Phase 5d: resolve the cutover engine gate ONCE, before we
+                // release onCreateCompleted — checkService() awaits that latch,
+                // so the gate is always settled by the time it decides whether
+                // to start the peergroup. Failure defaults to true (start dashj).
+                //
+                // Resolved HERE, at the very top of the init, rather than after
+                // the block-store setup below: the missing-blockstore
+                // `wallet.reset()` a few lines down must know whether the SDK
+                // owns L1 (see mayResetDashjWalletForMissingBlockstore), and the
+                // idle detector's tick receiver — registered further down — picks
+                // its sample source from the same flags.
+                val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
+                    .getOrDefault(true)
+                // DIAGNOSTIC un-hold (Tools toggle): when the cutover has committed
+                // (SDK owns L1) but the tester turned on DASHJ_SYNC_DIAGNOSTIC, let the
+                // dashj peergroup start anyway so it syncs as a backup / parity check.
+                // This ONLY relaxes the LOCAL engine-start gate — it does NOT touch the
+                // cutover state or CutoverCoordinator.sdkOwnsL1Flow(), so sdkOwnsL1 stays
+                // true and the home header keeps reading the SDK's L1 sync. Flag off ⇒
+                // dashjEngineMayStart == coordinatorAllowsDashj, byte-for-byte as before.
+                dashjSyncDiagnostic = runCatching { dashPayConfig.getDashjSyncDiagnostic() }
+                    .getOrDefault(false)
+                dashjHeldByCutover = !coordinatorAllowsDashj
+                dashjEngineMayStart = coordinatorAllowsDashj || dashjSyncDiagnostic
+                if (!dashjSyncDiagnostic) dashjDiagnosticSyncState.reset()
+                log.info(
+                    "Phase 5d cutover gate: dashjEngineMayStart={} (coordinatorAllowsDashj={}, " +
+                        "dashjHeldByCutover={}, dashjSyncDiagnostic={})",
+                    dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover, dashjSyncDiagnostic
+                )
+
                 peerConnectivityListener = PeerConnectivityListener()
                 broadcastPeerState(0)
                 blockChainFile =
@@ -1567,9 +1645,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 mnlistinfoBootStrapStream = loadStream(Constants.Files.MNLIST_BOOTSTRAP_FILENAME)
                 qrinfoBootStrapStream = loadStream(Constants.Files.QRINFO_BOOTSTRAP_FILENAME)
                 if (!blockChainFileExists) {
-                    log.info("blockchain does not exist, resetting wallet")
                     propagateContext()
-                    wallet.reset()
+                    // wallet.reset() exists so dashj can re-download the chain
+                    // from scratch. Post-cutover that re-download never happens
+                    // (the peergroup is held) while dashj is still the wallet of
+                    // record the home-screen history is rebuilt from — so the
+                    // reset would permanently destroy history in exchange for
+                    // nothing. See mayResetDashjWalletForMissingBlockstore.
+                    val dashjTxCount = runCatching { wallet.getTransactionCount(true) }.getOrDefault(0)
+                    if (mayResetDashjWalletForMissingBlockstore(dashjHeldByCutover, dashjTxCount)) {
+                        log.info("blockchain does not exist, resetting wallet")
+                        wallet.reset()
+                    } else {
+                        log.warn(
+                            "blockchain store is missing, but the SDK owns L1 and the dashj wallet " +
+                                "still holds {} transactions — SKIPPING wallet.reset(). The held " +
+                                "peergroup would never re-download them, and the reset also wipes " +
+                                "the transaction display caches, so the history would be " +
+                                "unrecoverable",
+                            dashjTxCount
+                        )
+                    }
                     resetMNLists(false)
                     resetMNListsOnPeerGroupStart = true
                 }
@@ -1803,29 +1899,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     .onEach { updateTxConfidence() }
                     .launchIn(serviceScope)
 
-                // Phase 5d: resolve the cutover engine gate ONCE, before we
-                // release onCreateCompleted — checkService() awaits that latch,
-                // so the gate is always settled by the time it decides whether
-                // to start the peergroup. Failure defaults to true (start dashj).
-                val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
-                    .getOrDefault(true)
-                // DIAGNOSTIC un-hold (Tools toggle): when the cutover has committed
-                // (SDK owns L1) but the tester turned on DASHJ_SYNC_DIAGNOSTIC, let the
-                // dashj peergroup start anyway so it syncs as a backup / parity check.
-                // This ONLY relaxes the LOCAL engine-start gate — it does NOT touch the
-                // cutover state or CutoverCoordinator.sdkOwnsL1Flow(), so sdkOwnsL1 stays
-                // true and the home header keeps reading the SDK's L1 sync. Flag off ⇒
-                // dashjEngineMayStart == coordinatorAllowsDashj, byte-for-byte as before.
-                dashjSyncDiagnostic = runCatching { dashPayConfig.getDashjSyncDiagnostic() }
-                    .getOrDefault(false)
-                dashjHeldByCutover = !coordinatorAllowsDashj
-                dashjEngineMayStart = coordinatorAllowsDashj || dashjSyncDiagnostic
-                if (!dashjSyncDiagnostic) dashjDiagnosticSyncState.reset()
-                log.info(
-                    "Phase 5d cutover gate: dashjEngineMayStart={} (coordinatorAllowsDashj={}, " +
-                        "dashjHeldByCutover={}, dashjSyncDiagnostic={})",
-                    dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover, dashjSyncDiagnostic
-                )
+                // DIAGNOSTIC (Tools toggle) "sync from date": before the un-held
+                // dashj engine may start, fast-forward the diagnostic blockstore
+                // to the tester-chosen start date (see
+                // [maybeRecheckpointDiagnosticStores]). Runs BEFORE
+                // onCreateCompleted resolves, so checkService() cannot race it.
+                // STRICTLY scoped to the post-cutover diagnostic path — the
+                // pre-cutover primary dashj engine (dashjHeldByCutover == false)
+                // and its store handling are untouched.
+                if (dashjSyncDiagnostic && dashjHeldByCutover) {
+                    val diagnosticFromSecs = runCatching { dashPayConfig.getDashjSyncDiagnosticFromSecs() }
+                        .getOrDefault(0L)
+                    maybeRecheckpointDiagnosticStores(diagnosticFromSecs, wallet)
+                }
 
                 if (!dashjEngineMayStart && Constants.SUPPORTS_PLATFORM) {
                     // SDK-sourced quorums (Phase 5d follow-up): with the dashj
@@ -1874,6 +1960,103 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     stopSelf()
                 }
             }
+        }
+    }
+
+    /**
+     * DIAGNOSTIC-ONLY store fast-forward for the "dashj sync (diagnostic)"
+     * Tools toggle. Callers guarantee we are on the post-cutover diagnostic
+     * path ([dashjSyncDiagnostic] && [dashjHeldByCutover]) with the peergroup
+     * down — the pre-cutover primary dashj engine never reaches this and its
+     * store handling stays byte-for-byte unchanged.
+     *
+     * WHY: a post-cutover restore stamps the dashj wallet's seed with the
+     * EARLIEST_HD_SEED_CREATION_TIME sentinel (2015) and rarely persists a
+     * real creation date, so onCreate's normal fresh-store checkpointing
+     * ([CheckpointManager.checkpoint] to earliestKeyCreationTime) lands near
+     * genesis and the diagnostic run syncs the whole chain (~block 1728 of
+     * 1.5M observed on testnet). The Tools toggle now asks for a start date
+     * (restore-flow style); this applies it with the SAME CheckpointManager
+     * mechanism the normal path uses.
+     *
+     * RESUME vs RECREATE: the fresh start the chosen date would give is the
+     * last bundled checkpoint at/before [fromSecs]. If the existing store's
+     * head is already at/beyond that height, the store has real progress —
+     * leave it and resume. Only when the chosen date demands a FRESHER start
+     * (e.g. the store is a from-genesis start at a low height) are the
+     * diagnostic stores deleted and recreated checkpointed at the date. This
+     * rule is idempotent: after a recreation the head equals the checkpoint,
+     * so subsequent calls resume.
+     *
+     * PARITY VALIDITY: syncing from a date at/before the wallet's creation
+     * date still observes every wallet transaction — coins cannot predate the
+     * wallet's keys — so the SDK-vs-dashj parity verdict is unaffected; only
+     * empty pre-birth blocks are skipped. (The dialog subtext tells the tester
+     * to use the wallet's creation date.)
+     *
+     * The dashj wallet itself is deliberately NOT reset (unlike onCreate's
+     * missing-file path): dashj still owns wallet persistence, and wiping its
+     * transactions for a diagnostic is unacceptable. A low
+     * wallet.lastBlockSeenHeight merely triggers checkService()'s existing
+     * "wallet/blockchain out of sync" log line on the diagnostic run.
+     */
+    private fun maybeRecheckpointDiagnosticStores(fromSecs: Long, wallet: Wallet) {
+        if (fromSecs <= 0) return // "Sync everything" — leave the stores alone
+        try {
+            val store = blockStore ?: return
+            val currentHead: StoredBlock? = store.chainHead
+            val target: StoredBlock = assets.open(Constants.Files.CHECKPOINTS_FILENAME).use { stream ->
+                CheckpointManager(Constants.NETWORK_PARAMETERS, stream).getCheckpointBefore(fromSecs)
+            }
+            if (currentHead != null && currentHead.height >= target.height) {
+                log.info(
+                    "dashj-sync-diagnostic: store head {} at/beyond checkpoint {} for from-date {} — resuming",
+                    currentHead.height, target.height, fromSecs
+                )
+                return
+            }
+            log.info(
+                "dashj-sync-diagnostic: store head {} predates checkpoint {} for from-date {} — " +
+                    "recreating diagnostic stores checkpointed at the chosen date",
+                currentHead?.height, target.height, fromSecs
+            )
+            // The peergroup is down and (onCreate latch / checkMutex) no
+            // checkService() can run concurrently; the only live consumer of
+            // the old chain is newBestBlockListener — detach it, swap, re-attach.
+            blockChain?.removeNewBestBlockListener(newBestBlockListener)
+            blockStore?.close()
+            headerStore?.close()
+            blockChainFile?.delete()
+            headerChainFile?.delete()
+            blockStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile)
+            headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
+            // Same checkpoint mechanism as onCreate's fresh-store path: block
+            // store to the chosen date, header store to the most recent checkpoint.
+            var checkpointsInputStream = assets.open(Constants.Files.CHECKPOINTS_FILENAME)
+            CheckpointManager.checkpoint(
+                Constants.NETWORK_PARAMETERS, checkpointsInputStream, blockStore, fromSecs
+            )
+            checkpointsInputStream = assets.open(Constants.Files.CHECKPOINTS_FILENAME)
+            CheckpointManager.checkpoint(
+                Constants.NETWORK_PARAMETERS, checkpointsInputStream, headerStore,
+                System.currentTimeMillis() / 1000
+            )
+            blockChain = BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore)
+            headerChain = BlockChain(Constants.NETWORK_PARAMETERS, headerStore)
+            blockChain?.addNewBestBlockListener(newBestBlockListener)
+            // Mirror onCreate's fresh-store masternode-list handling: the MN
+            // list must re-bootstrap for the jumped-ahead height. checkService()
+            // consumes the flag on the next (diagnostic) peergroup start.
+            resetMNLists(false)
+            resetMNListsOnPeerGroupStart = true
+            log.info(
+                "dashj-sync-diagnostic: diagnostic stores recreated at checkpoint height {} ({})",
+                target.height, target.header.time
+            )
+        } catch (e: Exception) {
+            // Best-effort: a failure here only costs sync time (worst case the
+            // diagnostic syncs from its old position), never correctness.
+            log.error("dashj-sync-diagnostic: failed to re-checkpoint diagnostic stores; continuing", e)
         }
     }
 
@@ -2332,11 +2515,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * Publish one dashj progress sample to the isolated diagnostic holder
      * ([dashjDiagnosticSyncState]). Once dashj has caught up (100%) read the
      * latest SDK-vs-dashj parity verdict from the L1 shadow-sync harness
-     * ([L1ShadowSyncService.latestParity]) and colour the readout MATCH/MISMATCH;
-     * while syncing the verdict is UNKNOWN. Logs a single SDK-vs-dashj line each
-     * time the verdict changes.
+     * ([L1ShadowSyncService.latestParity]) and colour the readout
+     * MATCH/BALANCE_MATCH/MISMATCH; while syncing the verdict is UNKNOWN.
+     *
+     * FRESHNESS GATE (owner's spec): 100% and the verdict colour must land
+     * TOGETHER, and only once the parity check has actually run against the
+     * caught-up dashj state. A report captured while dashj was still
+     * downloading (or from a previous run — [L1ShadowSyncService.latestParity]
+     * is a sticky StateFlow) proves nothing about the final state, so until a
+     * report whose [ParityReport.timestampMs] is at/after the moment dashj
+     * reached 100 ([dashjCaughtUpAtMs]) exists, the snapshot is published with
+     * `verifying = true` (internal percent held at 99, verdict UNKNOWN) and
+     * the Tools readout shows a neutral "Verifying" instead of a percentage.
+     * Logs a single SDK-vs-dashj line each time the verdict changes —
+     * necessarily at/after that same moment.
      */
     private fun publishDashjDiagnostic(rawPercent: Int, stage: PeerGroup.SyncStage?) {
+        lastDiagnosticRawPercent = rawPercent
+        lastDiagnosticStage = stage
         // The shared-row percentage is TIME-weighted (block timestamps vs the
         // clock), which wobbles non-monotonically on testnet's irregular block
         // production and under-reads badly (e.g. 52% shown at ~75% of blocks
@@ -2356,32 +2552,56 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 rawPercent
             }
         }
-        val parity = if (percent >= 100) {
-            val report = l1ShadowSyncService.latestParity.value
+        // Stamp the moment dashj first reaches 100 this stretch; forget it if
+        // the chain falls behind again (new blocks arrived) so the next
+        // catch-up demands a fresh report of its own.
+        if (percent >= 100) {
+            if (dashjCaughtUpAtMs == null) {
+                dashjCaughtUpAtMs = System.currentTimeMillis()
+                log.info(
+                    "dashj-sync-diagnostic: dashj chain caught up — showing 'Verifying' " +
+                        "until a parity report computed against the caught-up state arrives"
+                )
+            }
+        } else {
+            dashjCaughtUpAtMs = null
+        }
+        val report = l1ShadowSyncService.latestParity.value
+        // Fresh = captured at/after the catch-up moment (same wall clock).
+        val caughtUpAtMs = dashjCaughtUpAtMs
+        val freshReport = report?.takeIf { caughtUpAtMs != null && it.timestampMs >= caughtUpAtMs }
+        val parity = if (percent >= 100 && freshReport != null) {
             when {
-                report == null -> DashjDiagnosticSyncState.Parity.UNKNOWN
-                report.fullMatch -> DashjDiagnosticSyncState.Parity.MATCH
+                freshReport.fullMatch -> DashjDiagnosticSyncState.Parity.MATCH
+                // Both balance comparisons agree exactly, only the tx counts
+                // differ — the funds are all accounted for on both sides.
+                freshReport.balancesMatch && freshReport.confirmedBalancesMatch ->
+                    DashjDiagnosticSyncState.Parity.BALANCE_MATCH
                 else -> DashjDiagnosticSyncState.Parity.MISMATCH
             }.also { verdict ->
                 if (verdict != lastDiagnosticParity) {
-                    if (report != null) {
-                        log.info(
-                            "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
-                                "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={}",
-                            verdict, report.sdkDuffs, report.dashjDuffs,
-                            report.sdkConfirmedDuffs, report.dashjAvailableDuffs,
-                            report.sdkTxCount, report.dashjTxCount
-                        )
-                    } else {
-                        log.info("dashj-sync-diagnostic: dashj caught up (100%) — no SDK parity report yet")
-                    }
+                    log.info(
+                        "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
+                            "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={}",
+                        verdict, freshReport.sdkDuffs, freshReport.dashjDuffs,
+                        freshReport.sdkConfirmedDuffs, freshReport.dashjAvailableDuffs,
+                        freshReport.sdkTxCount, freshReport.dashjTxCount
+                    )
                 }
             }
         } else {
             DashjDiagnosticSyncState.Parity.UNKNOWN
         }
         lastDiagnosticParity = parity
-        dashjDiagnosticSyncState.update(percent, parity, stage?.name)
+        // dashj itself is done but the fresh post-catchup report hasn't landed
+        // yet: hold the internal percent at 99 and flag the window so the
+        // readout shows "Verifying" — 100 and the verdict colour then appear
+        // together when the report arrives.
+        val verifying = percent >= 100 && parity == DashjDiagnosticSyncState.Parity.UNKNOWN
+        val displayPercent = if (verifying) 99 else percent
+        dashjDiagnosticSyncState.update(displayPercent, parity, stage?.name, verifying)
+        // Feed the support-log history buffer (deduplicated inside).
+        dashjDiagnosticSyncState.recordParity(displayPercent, parity, report)
     }
 
     override fun getConnectedPeers(): List<Peer> {

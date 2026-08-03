@@ -887,7 +887,26 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     override fun updateIdentity() {
-        _blockchainIdentity?.updateIdentity()
+        val blockchainIdentity = _blockchainIdentity ?: return
+        // dashj's BlockchainIdentity.updateIdentity() is a plain CACHED get —
+        // platform.identities.get(uniqueIdentifier) — whose fetch succeeds and
+        // is then CBOR-encoded into the in-memory identity cache
+        // (PlatformStateRepository.storeIdentity). The legacy encoder has no
+        // converter for a key's SingleContractDocumentType bound and throws
+        // IllegalArgumentException("No converter for ...", Cbor.kt:186) AFTER
+        // the fetch. Our own 6-key identities carry that bound on keys 4/5, so
+        // the un-tolerated dashj call threw on the full contact-update path
+        // (updateContactRequests(initialSync = true)) and aborted the whole
+        // sync BEFORE the contact-request fetch ever ran — observed live
+        // (S21, 2026-08-02) as an iPhone contact-request acceptance going
+        // undiscovered for ~16 minutes. Route the refresh through the tolerant
+        // fetch instead (see PlatformService.getIdentity /
+        // IdentityCacheTolerance) and assign the result ourselves —
+        // functionally identical to the dashj method, minus the fatal cache
+        // write.
+        platform.getIdentity(blockchainIdentity.uniqueIdentifier)?.let {
+            blockchainIdentity.identity = it
+        }
     }
 
     // current unused

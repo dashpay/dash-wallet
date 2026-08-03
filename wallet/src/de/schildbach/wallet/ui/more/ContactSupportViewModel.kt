@@ -26,7 +26,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
+import de.schildbach.wallet.service.DashjDiagnosticSyncState
 import de.schildbach.wallet.service.PackageInfoProvider
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.ParityReport
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.util.CrashReporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +54,9 @@ import java.io.FileWriter
 import java.io.IOException
 import java.io.OutputStreamWriter
 import java.io.Writer
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.TreeSet
 import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
@@ -73,7 +81,11 @@ class ContactSupportViewModel @Inject constructor(
     private val application: WalletApplication,
     walletDataProvider: WalletData,
     private val packageInfoProvider: PackageInfoProvider,
-    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
+    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
+    private val dashPayConfig: DashPayConfig,
+    private val dashjDiagnosticSyncState: DashjDiagnosticSyncState,
+    private val l1ShadowSyncService: L1ShadowSyncService,
+    private val sdkService: DashSdkService
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(ContactSupportViewModel::class.java)
@@ -292,6 +304,29 @@ class ContactSupportViewModel @Inject constructor(
             }
         }
 
+        // dashJ ↔ Kotlin SDK parity diagnostic: attach only when the Tools
+        // "dashj sync (diagnostic)" toggle is on, or the diagnostic ran at
+        // some point this launch (parity history exists). Fully additive —
+        // with the flag off and never used, no file is added.
+        try {
+            val diagnosticEnabled = dashPayConfig.getDashjSyncDiagnostic()
+            val parityHistory = dashjDiagnosticSyncState.parityHistory()
+            if (diagnosticEnabled || parityHistory.isNotEmpty()) {
+                val parityLogFile = File(reportDir, "dashJ-kotlin-parity-log.txt")
+                FileWriter(parityLogFile).use { writer ->
+                    writer.write(buildDashjKotlinParityLog(diagnosticEnabled, parityHistory))
+                }
+                attachments.add(
+                    FileProvider.getUriForFile(
+                        application, application.packageName + ".file_attachment",
+                        parityLogFile
+                    )
+                )
+            }
+        } catch (x: Exception) {
+            log.info("problem writing the dashJ-kotlin parity log attachment", x)
+        }
+
         text.append("\n\nPUT ADDITIONAL COMMENTS TO THE TOP. DOWN HERE NOBODY WILL NOTICE.")
         log.info("create report: {}", watch)
         _status.value = ReportGenerationStatus.Finishing
@@ -302,6 +337,84 @@ class ContactSupportViewModel @Inject constructor(
         @Suppress("ktlint:standard:wrapping")
         return (Constants.REPORT_SUBJECT_BEGIN + packageInfoProvider.versionName + " "
                 + if (isCrash) Constants.REPORT_SUBJECT_CRASH else Constants.REPORT_SUBJECT_ISSUE)
+    }
+
+    /**
+     * The content of the `dashJ-kotlin-parity-log.txt` support-log attachment:
+     * the current diagnostic state (percent + verdict), the SDK wallet's
+     * unspent/total TXO counts (500-input standard-tx cap check), the latest
+     * [ParityReport] from the L1 shadow harness, and the recent parity
+     * history recorded by [DashjDiagnosticSyncState.recordParity].
+     */
+    private fun buildDashjKotlinParityLog(
+        diagnosticEnabled: Boolean,
+        parityHistory: List<DashjDiagnosticSyncState.ParityHistoryEntry>
+    ): String {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US)
+        fun formatReport(r: ParityReport): String =
+            "reportTime=${dateFormat.format(Date(r.timestampMs))}" +
+                " estimated sdk=${r.sdkDuffs} dashj=${r.dashjDuffs}" +
+                " confirmed sdk=${r.sdkConfirmedDuffs} dashj=${r.dashjAvailableDuffs}" +
+                " tx sdk=${r.sdkTxCount} dashj=${r.dashjTxCount}" +
+                " sdkSynced=${r.sdkSynced}"
+
+        val snapshot = dashjDiagnosticSyncState.state.value
+        val latest = l1ShadowSyncService.latestParity.value
+        val text = StringBuilder()
+        text.append("=== dashJ / Kotlin SDK parity log ===\n")
+        text.append("generated: ").append(dateFormat.format(Date())).append('\n')
+        text.append("network: ").append(Constants.NETWORK_PARAMETERS.id).append('\n')
+        text.append("app version: ").append(packageInfoProvider.versionName).append('\n')
+        text.append("dashj version: ")
+            .append(de.schildbach.wallet_test.BuildConfig.DASHJ_VERSION).append('\n')
+        text.append("SDK AAR version: ")
+            .append(de.schildbach.wallet_test.BuildConfig.DASH_SDK_VERSION).append('\n')
+        text.append("diagnostic enabled now: ").append(diagnosticEnabled).append('\n')
+        text.append("diagnostic state: active=").append(snapshot.active)
+            .append(" percent=").append(snapshot.percent)
+            .append(" verdict=").append(snapshot.parity)
+            .append(" stage=").append(snapshot.stageName)
+            .append('\n')
+        // TXO counts straight from the SDK's own Room DB (dash-sdk.db).
+        // Support-relevant because a standard transaction is capped at 500
+        // inputs: a wallet whose UNSPENT-TXO count approaches/exceeds 500
+        // cannot spend its full balance in one standard tx, which this line
+        // lets support spot without any SDK change. The AAR's TxoDao has no
+        // unspent-count query, so this is a raw COUNT over the same `txos`
+        // table the DAO reads (isSpent = 0 mirrors observeUnspent). Blocking
+        // is fine — createReport runs on Dispatchers.IO. Fail-soft: the line
+        // is simply omitted when the SDK DB is not started or the query fails.
+        try {
+            sdkService.databaseOrNull()?.let { db ->
+                fun countQuery(sql: String): Long? =
+                    db.query(sql, null).use { c -> if (c.moveToFirst()) c.getLong(0) else null }
+                val unspent = countQuery("SELECT COUNT(*) FROM txos WHERE isSpent = 0")
+                val total = countQuery("SELECT COUNT(*) FROM txos")
+                if (unspent != null && total != null) {
+                    text.append("unspent TXOs: ").append(unspent)
+                        .append(" (total: ").append(total).append(")\n")
+                }
+            }
+        } catch (x: Exception) {
+            log.info("problem reading the SDK TXO counts for the parity log", x)
+        }
+
+        text.append("\n--- latest parity report ---\n")
+        text.append(latest?.let { formatReport(it) } ?: "none").append('\n')
+
+        text.append("\n--- parity history (oldest first, up to 50 entries) ---\n")
+        if (parityHistory.isEmpty()) {
+            text.append("none\n")
+        } else {
+            parityHistory.forEach { entry ->
+                text.append(dateFormat.format(Date(entry.recordedAtMs)))
+                    .append(" percent=").append(entry.percent)
+                    .append(" verdict=").append(entry.verdict)
+                entry.report?.let { text.append(' ').append(formatReport(it)) }
+                text.append('\n')
+            }
+        }
+        return text.toString()
     }
 
     @Throws(IOException::class)

@@ -224,6 +224,24 @@ class BuyCreditsFragment : SendCoinsFragment() {
      * the user is told NOT to retry.
      */
     private suspend fun handleSdkTopUp(amountDuffs: Long) {
+        // PRE-FLIGHT funding eligibility: the asset-lock build only selects
+        // FINAL (confirmed/IS-locked) BIP44 coins — refuse HERE, before the
+        // spend attempt, when a display balance backed by non-final or
+        // out-of-account outputs cannot fund the lock (fail-open on any
+        // preflight hiccup; the real build stays authoritative).
+        if (!buyCreditsViewModel.canFundTopUp(amountDuffs)) {
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.credit_balance_button_buy),
+                getString(
+                    R.string.buy_credits_funds_settling,
+                    Coin.valueOf(amountDuffs).toFriendlyString()
+                ),
+                getString(R.string.button_dismiss),
+                null
+            ).showAsync(requireActivity())
+            return
+        }
         val progress = AdaptiveDialog.progress(getString(R.string.send_coins_sending_msg))
         progress.show(parentFragmentManager, "buy_credits_sdk_topup")
         val result = try {

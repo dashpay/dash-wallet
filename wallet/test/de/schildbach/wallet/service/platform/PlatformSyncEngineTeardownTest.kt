@@ -78,7 +78,8 @@ class PlatformSyncEngineTeardownTest {
         sdkBlockchainStateService = mockk(relaxed = true),
         cutoverTxSeamService = mockk(relaxed = true),
         cutoverAutoCommitObserver = mockk(relaxed = true),
-        shieldedTransferExecutor = mockk(relaxed = true)
+        shieldedTransferExecutor = mockk(relaxed = true),
+        contactRequestNotificationService = mockk(relaxed = true)
     )
 
     @Test

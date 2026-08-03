@@ -56,13 +56,108 @@ private const val FUNDING_TYPE_TOPUP_B = 2
 private const val FUNDING_TYPE_INVITATION = 3
 private const val FUNDING_TYPE_SHIELD = 5
 
+/** Table for the allocation-free hex encoders below (lowercase, the app-wide convention). */
+private val HEX_DIGITS = "0123456789abcdef".toCharArray()
+
+/**
+ * Allocation-lean lowercase hex of [bytes] in WIRE order — a table-driven
+ * single pass replacing the former per-byte `"%02x".format(it)` lambda
+ * (which allocated a Formatter + String per byte; measured as a top cost
+ * of the 10s parity probe's full-table hex keying on large wallets).
+ */
+internal fun wireHexOf(bytes: ByteArray): String {
+    val out = CharArray(bytes.size * 2)
+    var i = 0
+    for (b in bytes) {
+        val v = b.toInt() and 0xff
+        out[i++] = HEX_DIGITS[v ushr 4]
+        out[i++] = HEX_DIGITS[v and 0x0f]
+    }
+    return String(out)
+}
+
 /**
  * Convert a 32-byte WIRE-order txid (e.g. [org.dashfoundation.dashsdk.wallet.TrackedAssetLock.outpointTxid])
  * to DISPLAY-order (byte-reversed) lowercase hex — the `Sha256Hash.toString()`
  * / `tx_display_cache` rowId / `ASSET_LOCK_TXID` convention the resolver keys on.
+ * Table-driven reverse iteration: no `reversedArray()` copy, no per-byte format.
  */
-internal fun displayHexOf(wireTxid: ByteArray): String =
-    wireTxid.reversedArray().joinToString("") { "%02x".format(it) }
+internal fun displayHexOf(wireTxid: ByteArray): String {
+    val out = CharArray(wireTxid.size * 2)
+    var i = 0
+    for (j in wireTxid.indices.reversed()) {
+        val v = wireTxid[j].toInt() and 0xff
+        out[i++] = HEX_DIGITS[v ushr 4]
+        out[i++] = HEX_DIGITS[v and 0x0f]
+    }
+    return String(out)
+}
+
+/**
+ * Parse lowercase/uppercase hex into bytes, or null when malformed. The inverse
+ * of [wireHexOf]; callers reverse for display→wire conversion.
+ */
+internal fun hexToBytesOrNull(hex: String): ByteArray? {
+    if (hex.length % 2 != 0) return null
+    val out = ByteArray(hex.length / 2)
+    for (i in out.indices) {
+        val hi = Character.digit(hex[2 * i], 16)
+        val lo = Character.digit(hex[2 * i + 1], 16)
+        if (hi < 0 || lo < 0) return null
+        out[i] = ((hi shl 4) or lo).toByte()
+    }
+    return out
+}
+
+/**
+ * Bounded, TTL'd NEGATIVE resolution cache keyed by display txid hex — the
+ * fix for the resolver N+1 on the 60s display-sync tick: a row that resolved
+ * to "no match" was re-probed (Room/DataStore reads) on EVERY tick, so a
+ * large wallet paid thousands of queries a minute forever. A negative entry
+ * suppresses the re-probe until it is explicitly removed ([remove]/[clear] —
+ * the authoring/seed and contact re-resolution busting paths) or its TTL
+ * lapses (the conservative belt: even a missed busting signal self-heals in
+ * [ttlMs], so a post-restore state can never be pinned wrong permanently).
+ * Access-ordered LRU capped at [maxSize]. Thread-safe.
+ */
+internal class NegativeTxidCache(
+    private val maxSize: Int = DEFAULT_MAX_SIZE,
+    private val ttlMs: Long = DEFAULT_TTL_MS,
+    private val nowMs: () -> Long = System::currentTimeMillis
+) {
+    private val entries = object : LinkedHashMap<String, Long>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>): Boolean =
+            size > maxSize
+    }
+
+    @Synchronized
+    fun isNegative(key: String): Boolean {
+        val at = entries[key] ?: return false
+        if (nowMs() - at > ttlMs) {
+            entries.remove(key)
+            return false
+        }
+        return true
+    }
+
+    @Synchronized
+    fun markNegative(key: String) {
+        entries[key] = nowMs()
+    }
+
+    @Synchronized
+    fun remove(key: String) {
+        entries.remove(key)
+    }
+
+    @Synchronized
+    fun clear() = entries.clear()
+
+    companion object {
+        internal const val DEFAULT_MAX_SIZE = 2048
+        internal const val DEFAULT_TTL_MS = 10 * 60_000L
+    }
+}
 
 /**
  * Classifies an L1 txid as a Platform-funding asset lock the app-side
@@ -110,13 +205,28 @@ class AssetLockKindResolver @Inject constructor(
     private val seeded = ConcurrentHashMap<String, AssetLockKind>()
 
     /**
+     * Bounded/TTL'd negative cache: txids the FULL probe chain (including the
+     * SDK-DB probes) classified as "not a known asset lock". Without it every
+     * 60s display-sync tick re-ran the DataStore + up to four Room probes per
+     * internal/incoming row forever (the resolver N+1). Entries are only
+     * written when the SDK DB was available (all probes actually ran) and are
+     * busted by [seed] (the authoring path learning the kind) or the TTL
+     * (post-restore rows that gain an app-side record later re-probe within
+     * [NegativeTxidCache.DEFAULT_TTL_MS]).
+     */
+    private val negative = NegativeTxidCache()
+
+    /**
      * Seed the [kind] for [displayHex] (DISPLAY-order txid hex, any case) so
      * the very first [kindFor] on it returns [kind] without waiting for the
      * DataStore/Room persist to land. Idempotent; keyed lowercase to match
-     * [kindFor]'s normalization.
+     * [kindFor]'s normalization. Also busts any stale negative-cache entry
+     * (belt only — [seeded] is consulted before the negative cache anyway).
      */
     fun seed(displayHex: String, kind: AssetLockKind) {
-        seeded[displayHex.lowercase()] = kind
+        val hex = displayHex.lowercase()
+        seeded[hex] = kind
+        negative.remove(hex)
     }
 
     /**
@@ -130,6 +240,9 @@ class AssetLockKindResolver @Inject constructor(
         // synchronously, so this beats the DataStore/Room persist race that
         // otherwise mislabels the first insert "Internal".
         seeded[hex]?.let { return it }
+        // A recent full-probe "not an asset lock" verdict: skip the DataStore
+        // + Room probe chain this pass (see [negative]).
+        if (negative.isNegative(hex)) return null
         return try {
             // The SDK Room DB snapshot (null until the SDK has started) — the
             // durable transaction-kind / funding-type probes read from it.
@@ -155,13 +268,20 @@ class AssetLockKindResolver @Inject constructor(
 
             // Durable fallback — the SDK's own asset_locks funding type, for a
             // lock the app-side records never captured (e.g. after a restore).
-            when (db?.assetLockDao()?.fundingTypeForTxid(hex)) {
+            val kind = when (db?.assetLockDao()?.fundingTypeForTxid(hex)) {
                 FUNDING_TYPE_SHIELD -> AssetLockKind.SHIELD
                 FUNDING_TYPE_INVITATION -> AssetLockKind.INVITE
                 FUNDING_TYPE_TOPUP_A, FUNDING_TYPE_TOPUP_B -> AssetLockKind.TOPUP
                 FUNDING_TYPE_UPGRADE -> AssetLockKind.UPGRADE
                 else -> null
             }
+            // Negative-cache ONLY a verdict every probe could weigh in on: with
+            // the SDK DB up, all probes ran and null means "genuinely not a
+            // known asset lock" (until seeded or TTL re-probe). With the DB
+            // still down the verdict is partial — never cached, so the next
+            // pass re-probes (the pre-existing retry semantics).
+            if (kind == null && db != null) negative.markNegative(hex)
+            kind
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {

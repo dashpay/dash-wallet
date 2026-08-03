@@ -300,4 +300,146 @@ class CutoverCoordinatorTest {
 
         assertEquals(CutoverState.CUT_OVER.name, current)
     }
+
+    // ── One-time UPGRADE sync explainer (armed only on a real upgrade) ─
+
+    /**
+     * A coordinator over stateful CUTOVER_STATE + a captured
+     * CUTOVER_UPGRADE_NOTICE_PENDING write, on an Unconfined scope so the
+     * fire-and-forget seams run inline. Third element reports whether the
+     * explainer was armed.
+     */
+    private fun noticeCoordinator(
+        stored: String? = null,
+        flag: Boolean? = true
+    ): Triple<CutoverCoordinator, () -> String?, () -> Boolean> {
+        var current = stored
+        var noticeArmed = false
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns flag
+        coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
+            current = secondArg()
+            Unit
+        }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, any<Boolean>()) } answers {
+            noticeArmed = secondArg()
+            Unit
+        }
+        val collector = mockk<CutoverEvidenceCollector>()
+        val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined))
+        return Triple(coordinator, { current }, { noticeArmed })
+    }
+
+    /** A previous-launch versionCode from BELOW the 11.10 cutover line (v11.9.0). */
+    private val pre1110VersionCode = 11090002
+
+    /** A previous-launch versionCode already ON the 11.10 line (11.10.1). */
+    private val on1110VersionCode = 11100100
+
+    @Test
+    fun upgradeNotice_armed_onAGenuineUpgradeFromPre1110ThatFlipsTheState() = runBlocking {
+        val (coordinator, stored, armed) = noticeCoordinator(stored = null)
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertTrue("an upgrade from below 11.10 arriving pre-commit is exactly the case worth explaining", armed())
+    }
+
+    @Test
+    fun upgradeNotice_notArmed_onALaterLaunchOfAnAlreadyCommittedInstall() = runBlocking {
+        val (coordinator, _, armed) = noticeCoordinator(stored = CutoverState.CUT_OVER.name)
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertFalse("nothing flipped, so there is nothing to explain", armed())
+    }
+
+    @Test
+    fun upgradeNotice_notArmed_whenPreviousVersionIsAlready1110() = runBlocking {
+        // 11.10.x -> 11.10.y update: the state still flips here (e.g. the SDK
+        // L1 flag was off on the earlier 11.10.x launches), but the user is not
+        // crossing the pre-cutover boundary — no explainer.
+        val (coordinator, stored, armed) = noticeCoordinator(stored = null)
+        coordinator.commitForUpgradedWalletAsync(on1110VersionCode)
+        assertEquals("the commit itself must be unaffected by the notice gate", CutoverState.CUT_OVER.name, stored())
+        assertFalse("an 11.10.x -> 11.10.y update must not re-explain the resync", armed())
+    }
+
+    @Test
+    fun upgradeNotice_notArmed_onAFreshInstallWithNoPreviousVersion() = runBlocking {
+        // lastVersionCode == 0 means the app never ran before (fresh install).
+        // The fresh-setup latch also suppresses this case when setWallet ran,
+        // but the version gate must hold on its own (belt AND suspenders —
+        // e.g. any future path reaching this seam without setWallet).
+        val (coordinator, stored, armed) = noticeCoordinator(stored = null)
+        coordinator.commitForUpgradedWalletAsync(0)
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertFalse("a fresh install has nothing to explain", armed())
+    }
+
+    @Test
+    fun upgradeNotice_armed_atTheLastPre1110Code_andNotAtTheBoundaryItself() = runBlocking {
+        // Boundary pin: FIRST_CUTOVER_VERSION_CODE (11.10.0 = 11100000) is the
+        // first code that does NOT arm; one below it still does.
+        val below = CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE - 1
+        val (armedCoordinator, _, armedBelow) = noticeCoordinator(stored = null)
+        armedCoordinator.commitForUpgradedWalletAsync(below)
+        assertTrue("previous code $below is pre-11.10 — must arm", armedBelow())
+
+        val (boundaryCoordinator, _, armedAt) = noticeCoordinator(stored = null)
+        boundaryCoordinator.commitForUpgradedWalletAsync(CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE)
+        assertFalse("previous code 11100000 is already 11.10 — must not arm", armedAt())
+    }
+
+    @Test
+    fun upgradeNotice_notArmed_whenAFreshWalletSetupRanOnThisLaunch() = runBlocking {
+        // FIX-pin: a fresh create/restore reaches BOTH seams — setWallet fires
+        // commitForFreshWalletSetupAsync, and onboarding's PIN step then calls
+        // finalizeInitialization -> commitForUpgradedWalletAsync. Whoever writes
+        // first, the other observes a DUAL_RUNNING -> CUT_OVER move and used to
+        // arm the UPGRADE explainer for a user who had just restored. Passing a
+        // pre-11.10 previous code on purpose: the LATCH must suppress even when
+        // the version gate alone would arm (a restore onto a device that
+        // previously ran a pre-11.10 install).
+        val (coordinator, stored, armed) = noticeCoordinator(stored = null)
+
+        coordinator.commitForFreshWalletSetupAsync()
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertFalse("a restore's sync wait is already expected — do not explain it", armed())
+    }
+
+    @Test
+    fun upgradeNotice_notArmed_whenTheUPGRADESeamIsTheOneThatFlipsTheState() = runBlocking {
+        // The ORDERING-INDEPENDENT half of the same fix. Both commits are
+        // fire-and-forget, so on a fresh restore either can land first, and the
+        // loser sees a DUAL_RUNNING -> CUT_OVER move. Here the FRESH commit
+        // no-ops (SDK L1 flag momentarily off) and the UPGRADE seam performs
+        // the flip — the case a "did the state move?" test alone gets wrong.
+        // The latch is set SYNCHRONOUSLY by commitForFreshWalletSetupAsync, so
+        // suppression does not depend on which write won.
+        var current: String? = null
+        var noticeArmed = false
+        var sdkL1Enabled = false
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } answers { sdkL1Enabled }
+        coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
+            current = secondArg()
+            Unit
+        }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, any<Boolean>()) } answers {
+            noticeArmed = secondArg()
+            Unit
+        }
+        val coordinator = CutoverCoordinator(config, mockk(), CoroutineScope(Dispatchers.Unconfined))
+
+        coordinator.commitForFreshWalletSetupAsync()
+        assertEquals("the fresh commit no-opped, as intended for this case", null, current)
+
+        sdkL1Enabled = true
+        coordinator.commitForUpgradedWalletAsync(11090002)
+
+        assertEquals("the UPGRADE seam is the one that wrote CUT_OVER", CutoverState.CUT_OVER.name, current)
+        assertFalse("…but a fresh setup ran this launch, so no upgrade explainer", noticeArmed)
+    }
 }

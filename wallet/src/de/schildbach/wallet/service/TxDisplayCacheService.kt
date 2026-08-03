@@ -361,7 +361,12 @@ class TxDisplayCacheService @Inject constructor(
                         // value/icon/title/status/filter bucket across the rebuild. For a
                         // pre-cutover contact tx the existing row was built from the same dashj
                         // computation, so this copy is a no-op — behavior is byte-for-byte unchanged.
+                        // The SDK-authority register covers NON-contact rows (a plain
+                        // SDK-authored send has no contact identity and its dashj
+                        // rebuild is not always degenerate), closing the hole that let
+                        // a memo/tax edit revert a corrected plain send.
                         val existingIsSdkStamped = existing.contactUserId != null ||
+                            displayCacheRefreshBus.isSdkAuthoritative(entry.rowId) ||
                             (entry.valueSatoshis == 0L && existing.valueSatoshis != 0L)
                         if (existingIsSdkStamped) {
                             result = result.copy(
@@ -1123,77 +1128,18 @@ class TxDisplayCacheService @Inject constructor(
     private fun mergePreservingSdkStamped(
         entry: TxDisplayCacheEntry,
         existing: TxDisplayCacheEntry?
-    ): TxDisplayCacheEntry {
-        existing ?: return entry
-        var result = entry
-        if (existing.service != null && result.service == null) {
-            result = result.copy(
-                service      = existing.service,
-                iconType     = existing.iconType,
-                iconBgType   = existing.iconBgType,
-                customIconId = result.customIconId ?: existing.customIconId
-            )
-        }
-        val degenerateRebuild = entry.valueSatoshis == 0L && existing.valueSatoshis != 0L
-        if (degenerateRebuild) {
-            result = result.copy(valueSatoshis = existing.valueSatoshis)
-        }
-        if (result.exchangeRateFiatCode == null && existing.exchangeRateFiatCode != null) {
-            result = result.copy(
-                exchangeRateFiatCode  = existing.exchangeRateFiatCode,
-                exchangeRateFiatValue = existing.exchangeRateFiatValue
-            )
-        }
-        if (result.contactUserId == null && existing.contactUserId != null) {
-            result = result.copy(
-                contactUsername    = existing.contactUsername,
-                contactDisplayName = existing.contactDisplayName,
-                contactAvatarUrl   = existing.contactAvatarUrl,
-                contactUserId      = existing.contactUserId
-            )
-        }
-        // FULL shape freeze for contact/SDK-stamped rows. The previous guard only
-        // froze on a SENT↔RECEIVED direction flip or a value-0 rebuild — verified
-        // on-device to be full of holes: a contact send of −0.4 was rewritten by
-        // this dashj-side path to −260 (fee-only: dashj counts the friendship
-        // payment output as watched-own, so its net degenerates to −fee) with the
-        // direction UNCHANGED and the value non-zero, so no rule fired and the
-        // wrong value persisted. The dashj wrapper can never recompute the
-        // authoritative value/direction of a contact tx (only the SDK's signed
-        // wallet net can), so when the existing row carries a contact identity
-        // (or the rebuild is degenerate) NOTHING display-shaping from the rebuild
-        // is trusted: value, icon, title, status and filter bucket all stay as
-        // cached. The ONLY refresh allowed through is same-direction status
-        // PROGRESS — dashj's legitimate job: flipping a "Sending" title to
-        // "Sent", and clearing a stale secondary status ("Processing"/
-        // "Confirming" → none). dashj may never (re)introduce a secondary
-        // status or relabel an SDK-authored title ("Shielded", "Invitation").
-        // Pre-cutover a contact row is rebuilt from the SAME dashj computation
-        // that produced it, so the freeze is value-identical there (the one
-        // deliberate exception: a contact row's "Processing"→"Confirming" text
-        // swap no longer flows through these writers — cosmetic only).
-        // Rows without contact data (and non-degenerate) are untouched: byte-
-        // for-byte pre-cutover behavior.
-        val sdkStamped = existing.contactUserId != null
-        if (sdkStamped || degenerateRebuild) {
-            val sameDirection = entry.iconType == existing.iconType
-            val allowStatusProgress = sameDirection && !degenerateRebuild
-            val sendingToSent = allowStatusProgress &&
-                existing.title == walletApplication.getString(R.string.transaction_row_status_sending) &&
-                entry.title == walletApplication.getString(R.string.transaction_row_status_sent)
-            val statusCleared = allowStatusProgress &&
-                entry.statusText.isEmpty() && existing.statusText.isNotEmpty()
-            result = result.copy(
-                valueSatoshis = existing.valueSatoshis,
-                iconType      = existing.iconType,
-                iconBgType    = existing.iconBgType,
-                title         = if (sendingToSent) entry.title else existing.title,
-                statusText    = if (statusCleared) entry.statusText else existing.statusText,
-                filterFlags   = existing.filterFlags
-            )
-        }
-        return result
-    }
+    ): TxDisplayCacheEntry = mergeDisplayEntryPreservingSdkStamped(
+        entry = entry,
+        existing = existing,
+        sendingTitle = walletApplication.getString(R.string.transaction_row_status_sending),
+        sentTitle = walletApplication.getString(R.string.transaction_row_status_sent),
+        // NON-contact SDK-stamped rows: the row carries no contact identity to
+        // recognise it by, so the SDK sync pipeline registers every rowId it planned
+        // or verified ([DisplayCacheRefreshBus.markSdkAuthoritative]) and this rebuild
+        // consults that register. Pre-cutover nothing registers, so the flag is always
+        // false and behaviour is byte-for-byte unchanged.
+        sdkAuthoritative = displayCacheRefreshBus.isSdkAuthoritative(entry.rowId)
+    )
 
     /** Batch [mergePreservingSdkStamped] over [entries] with one Room read for the existing rows. */
     private suspend fun mergeAllPreservingSdkStamped(
@@ -1239,4 +1185,96 @@ class TxDisplayCacheService @Inject constructor(
     fun close() {
         serviceScope.cancel()
     }
+}
+
+/**
+ * PURE merge of a dashj-rebuilt display [entry] over the [existing] cached row —
+ * the host-testable core of [TxDisplayCacheService.mergePreservingSdkStamped]
+ * (see that method's KDoc for the full rationale). Kept free of Android/Room so
+ * the guard's carve-outs can be unit-tested directly.
+ *
+ * @param sdkAuthoritative whether the SDK sync pipeline has claimed authority over
+ *        this rowId ([DisplayCacheRefreshBus.markSdkAuthoritative]) — the signal
+ *        that identifies a NON-contact SDK-stamped row. Always false pre-cutover.
+ */
+internal fun mergeDisplayEntryPreservingSdkStamped(
+    entry: TxDisplayCacheEntry,
+    existing: TxDisplayCacheEntry?,
+    sendingTitle: String,
+    sentTitle: String,
+    sdkAuthoritative: Boolean
+): TxDisplayCacheEntry {
+    existing ?: return entry
+    var result = entry
+    if (existing.service != null && result.service == null) {
+        result = result.copy(
+            service      = existing.service,
+            iconType     = existing.iconType,
+            iconBgType   = existing.iconBgType,
+            customIconId = result.customIconId ?: existing.customIconId
+        )
+    }
+    val degenerateRebuild = entry.valueSatoshis == 0L && existing.valueSatoshis != 0L
+    if (degenerateRebuild) {
+        result = result.copy(valueSatoshis = existing.valueSatoshis)
+    }
+    if (result.exchangeRateFiatCode == null && existing.exchangeRateFiatCode != null) {
+        result = result.copy(
+            exchangeRateFiatCode  = existing.exchangeRateFiatCode,
+            exchangeRateFiatValue = existing.exchangeRateFiatValue
+        )
+    }
+    if (result.contactUserId == null && existing.contactUserId != null) {
+        result = result.copy(
+            contactUsername    = existing.contactUsername,
+            contactDisplayName = existing.contactDisplayName,
+            contactAvatarUrl   = existing.contactAvatarUrl,
+            contactUserId      = existing.contactUserId
+        )
+    }
+    // FULL shape freeze for contact/SDK-stamped rows. The previous guard only
+    // froze on a SENT↔RECEIVED direction flip or a value-0 rebuild — verified
+    // on-device to be full of holes: a contact send of −0.4 was rewritten by
+    // this dashj-side path to −260 (fee-only: dashj counts the friendship
+    // payment output as watched-own, so its net degenerates to −fee) with the
+    // direction UNCHANGED and the value non-zero, so no rule fired and the
+    // wrong value persisted. The dashj wrapper can never recompute the
+    // authoritative value/direction of an SDK-authored tx (only the SDK's signed
+    // wallet net can), so when the existing row carries a contact identity, is
+    // registered as SDK-AUTHORITATIVE, or the rebuild is degenerate, NOTHING
+    // display-shaping from the rebuild is trusted: value, icon, title, status and
+    // filter bucket all stay as cached. The ONLY refresh allowed through is
+    // same-direction status PROGRESS — dashj's legitimate job: flipping a
+    // "Sending" title to "Sent", and clearing a stale secondary status
+    // ("Processing"/"Confirming" → none). dashj may never (re)introduce a
+    // secondary status or relabel an SDK-authored title ("Shielded", "Invitation").
+    // Pre-cutover a contact row is rebuilt from the SAME dashj computation
+    // that produced it, so the freeze is value-identical there (the one
+    // deliberate exception: a contact row's "Processing"→"Confirming" text
+    // swap no longer flows through these writers — cosmetic only).
+    // Rows without contact data, not SDK-registered and non-degenerate are
+    // untouched: byte-for-byte pre-cutover behavior.
+    // dashj stays AUTHORITATIVE for transaction ERRORS (dead / conflicting /
+    // double-spent): the SDK display path has no error concept and the planner carves
+    // error rows out of every re-stamp, so a rebuild that newly reports hasErrors must
+    // pass through whole — otherwise a failed tx would keep its "Sent" icon and title.
+    val newlyErrored = entry.hasErrors && !existing.hasErrors
+    val sdkStamped = existing.contactUserId != null || sdkAuthoritative
+    if (!newlyErrored && (sdkStamped || degenerateRebuild)) {
+        val sameDirection = entry.iconType == existing.iconType
+        val allowStatusProgress = sameDirection && !degenerateRebuild
+        val sendingToSent = allowStatusProgress &&
+            existing.title == sendingTitle && entry.title == sentTitle
+        val statusCleared = allowStatusProgress &&
+            entry.statusText.isEmpty() && existing.statusText.isNotEmpty()
+        result = result.copy(
+            valueSatoshis = existing.valueSatoshis,
+            iconType      = existing.iconType,
+            iconBgType    = existing.iconBgType,
+            title         = if (sendingToSent) entry.title else existing.title,
+            statusText    = if (statusCleared) entry.statusText else existing.statusText,
+            filterFlags   = existing.filterFlags
+        )
+    }
+    return result
 }

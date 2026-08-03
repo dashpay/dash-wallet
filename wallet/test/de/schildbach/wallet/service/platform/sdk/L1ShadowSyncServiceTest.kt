@@ -159,9 +159,16 @@ class L1ShadowSyncServiceTest {
     private fun config(
         flag: Boolean?,
         lastResetMs: Long? = null,
-        markerWrites: MutableList<Long> = mutableListOf()
+        markerWrites: MutableList<Long> = mutableListOf(),
+        cutoverState: String? = null,
+        dashjDiagnostic: Boolean = false
     ): DashPayConfig = mockk<DashPayConfig>().also {
         coEvery { it.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns flag
+        // The parity POLICY inputs (see parityProbePolicy): a null stored
+        // state is DUAL_RUNNING, i.e. the pre-cutover default every existing
+        // test expects.
+        coEvery { it.get(DashPayConfig.CUTOVER_STATE) } returns cutoverState
+        coEvery { it.getDashjSyncDiagnostic() } returns dashjDiagnostic
         coEvery { it.get(DashPayConfig.L1_SHADOW_LAST_RESET) } answers {
             markerWrites.lastOrNull() ?: lastResetMs
         }
@@ -217,10 +224,12 @@ class L1ShadowSyncServiceTest {
         parityIntervalMs: Long = L1ShadowSyncService.PARITY_INTERVAL_MS,
         watchdogIntervalMs: Long = L1ShadowSyncService.WATCHDOG_INTERVAL_MS,
         probeStallThresholdMs: Long = L1ShadowSyncService.PROBE_STALL_THRESHOLD_MS,
-        recreator: ShadowWalletRecreator? = null
+        recreator: ShadowWalletRecreator? = null,
+        cutoverState: String? = null,
+        dashjDiagnostic: Boolean = false
     ) = L1ShadowSyncService(
         source = source,
-        dashPayConfig = config(flag, lastResetMs, markerWrites),
+        dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic),
         scope = scope,
         spvDataDirPath = { dataDir.resolve("spv").absolutePath },
         nowMs = nowMs,
@@ -1876,5 +1885,133 @@ class L1ShadowSyncServiceTest {
         } finally {
             collector.cancel()
         }
+    }
+
+    // ── parseL1ChainLockHeight (the SDK's chainlock-height feed) ──────
+
+    /** Realistic `WalletEvent::ChainLockProcessed` Debug string. */
+    private fun chainLockProcessedDebug(height: Int): String =
+        "ChainLockProcessed { wallet_id: WalletId([205, 205, 205]), " +
+            "chain_lock: ChainLock { block_height: $height, " +
+            "block_hash: 0x${"aa".repeat(32)}, signature: BLSSignature([1, 2, 3]) }, " +
+            "locked_transactions: {Standard { index: 0, standard_account_type: BIP44 }: " +
+            "[0x$recordTxid]} }"
+
+    /** Realistic `WalletEvent::BlockProcessed` Debug string (chainlocked or not). */
+    private fun blockProcessedDebug(height: Int, chainLockHeight: Int?): String {
+        val chainLock = chainLockHeight?.let {
+            "Some(ChainLock { block_height: $it, block_hash: 0x${"bb".repeat(32)}, " +
+                "signature: BLSSignature([1, 2, 3]) })"
+        } ?: "None"
+        return "BlockProcessed { wallet_id: WalletId([205, 205, 205]), height: $height, " +
+            "chain_lock: $chainLock, inserted: [], updated: [], matured: [], " +
+            "balance: WalletCoreBalance { confirmed: 0, unconfirmed: 0, immature: 0, locked: 0 }, " +
+            "account_balances: {}, addresses_derived: [] }"
+    }
+
+    @Test
+    fun parseChainLockHeight_readsBothCarryingEventVariants() {
+        assertEquals(1_514_600, parseL1ChainLockHeight(chainLockProcessedDebug(1_514_600)))
+        assertEquals(
+            1_514_601,
+            parseL1ChainLockHeight(blockProcessedDebug(height = 1_514_602, chainLockHeight = 1_514_601))
+        )
+    }
+
+    @Test
+    fun parseChainLockHeight_nullForEventsCarryingNoChainlock() {
+        // A block with no chainlock, a tx event (whose OWN block height is a
+        // `BlockInfo { height: .. }`, deliberately NOT `block_height`), and
+        // noise must all read as "no chainlock knowledge" — never as a height.
+        assertNull(parseL1ChainLockHeight(blockProcessedDebug(height = 1_514_602, chainLockHeight = null)))
+        assertNull(parseL1ChainLockHeight(detectedDebug(context = "InChainLockedBlock")))
+        assertNull(parseL1ChainLockHeight(instantLockedDebug()))
+        assertNull(parseL1ChainLockHeight("SyncHeightAdvanced { wallet_id: WalletId([1]), height: 1200001 }"))
+        assertNull(parseL1ChainLockHeight("not an event at all"))
+    }
+
+    @Test
+    fun chainLockHeight_advancesMonotonicallyFromTheEventTap() = runBlocking {
+        // FIX-pin: post-cutover dashj's chainLockHandler never runs, so
+        // BlockchainState.chainlockHeight froze (0 on a fresh restore) and
+        // ChainLockedCoinSelector permanently took its depth fallback. The
+        // engine's own chainlock events are the replacement feed.
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        assertEquals(0, service.chainLockHeight.value)
+
+        source.eventStrings.emit(chainLockProcessedDebug(1_514_600))
+        assertEquals(1_514_600, service.chainLockHeight.value)
+
+        // Out-of-order / replayed events must never lower it.
+        source.eventStrings.emit(chainLockProcessedDebug(1_514_500))
+        assertEquals(1_514_600, service.chainLockHeight.value)
+
+        source.eventStrings.emit(blockProcessedDebug(height = 1_514_602, chainLockHeight = 1_514_601))
+        assertEquals(1_514_601, service.chainLockHeight.value)
+        service.stop()
+    }
+
+    // ── parityProbePolicy (when parity means anything at all) ─────────
+
+    @Test
+    fun parityPolicy_dualRunAllowsEverything() {
+        val policy = parityProbePolicy(cutoverCommitted = false, dashjDiagnosticEnabled = false)
+        assertTrue(policy.probe)
+        assertTrue(policy.driveVerification)
+        assertTrue(policy.allowSelfHeal)
+    }
+
+    @Test
+    fun parityPolicy_committedWithDiagnosticProbesButCannotAct() {
+        val policy = parityProbePolicy(cutoverCommitted = true, dashjDiagnosticEnabled = true)
+        assertTrue("the tester un-held dashj, so the comparison is real", policy.probe)
+        assertFalse("a catching-up backup must not move the user-facing verdict", policy.driveVerification)
+        assertFalse("…nor destroy the authoritative SDK ledger", policy.allowSelfHeal)
+    }
+
+    @Test
+    fun parityPolicy_committedWithoutDiagnosticDoesNotProbe() {
+        val policy = parityProbePolicy(cutoverCommitted = true, dashjDiagnosticEnabled = false)
+        assertFalse("dashj is HELD — its frozen balance guarantees MISMATCH", policy.probe)
+        assertFalse(policy.driveVerification)
+        assertFalse(policy.allowSelfHeal)
+    }
+
+    @Test
+    fun postCutover_heldDashj_doesNotProbeAndDoesNotPinVerificationAtProbing() = runBlocking {
+        // FIX-pin: with dashj held its balance is frozen at the cutover
+        // snapshot, so the first receive after the flip made every probe a
+        // MISMATCH → verificationStatus stuck at PROBING → the shielded
+        // screen's "Almost done" toast forever.
+        var probes = 0
+        val source = FakeSource(boundWalletId = walletIdHex).apply {
+            sdkConfirmed = 100_000
+            // The frozen dashj snapshot: it never saw the receive.
+            dashjBalances = 0L to 0L
+            onProbe = { probes++ }
+        }
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        assertTrue(service.startIfEnabled())
+
+        // Re-drive the progress monitor until the parity loop's first
+        // (immediate) iteration has resolved the policy — there is no other
+        // observable edge to await on.
+        withTimeout(5_000) {
+            while (service.verificationStatus.value != L1VerificationStatus.VERIFIED) {
+                source.progressFlow.value = SpvSyncProgressData.EMPTY
+                source.progressFlow.value = synced
+                delay(10)
+            }
+        }
+
+        assertEquals(
+            "no meaningful comparison exists, so the chain state IS the verdict",
+            L1VerificationStatus.VERIFIED,
+            service.verificationStatus.value
+        )
+        assertEquals("the probe must not run against a frozen engine", 0, probes)
+        service.stop()
     }
 }

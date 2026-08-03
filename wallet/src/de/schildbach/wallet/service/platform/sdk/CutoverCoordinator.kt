@@ -188,13 +188,128 @@ class CutoverCoordinator @Inject constructor(
      * commit has not landed by the time the blockchain service starts.
      */
     fun commitForFreshWalletSetupAsync() {
+        // Set SYNCHRONOUSLY, before any coroutine is dispatched: `setWallet`
+        // (the only caller) happens-before `finalizeInitialization` on the
+        // same launch, so the upgrade seam is guaranteed to observe this even
+        // though the commit itself is fire-and-forget. See
+        // [freshWalletSetupThisLaunch].
+        freshWalletSetupThisLaunch = true
         scope.launch { commitForFreshWalletSetup() }
     }
 
+    /**
+     * Whether a FRESH wallet setup (create or restore) happened on this
+     * launch — i.e. [commitForFreshWalletSetupAsync] was called.
+     *
+     * This exists because "did the state move to CUT_OVER on this launch?"
+     * is NOT a usable test for "is this an upgrade". A fresh create/restore
+     * reaches BOTH seams: `WalletApplication.setWallet` fires the fresh
+     * commit, and the onboarding PIN step then calls
+     * `saveWalletAndFinalizeInitialization` → `finalizeInitialization` →
+     * [commitForUpgradedWalletAsync]. Whichever of the two lands the write
+     * first, the other sees a DUAL_RUNNING → CUT_OVER transition and would
+     * arm the one-time UPGRADE explainer for a user who just restored.
+     * Ordering alone cannot fix that (both commits are async and either can
+     * win), so the fresh path SUPPRESSES the notice positively.
+     *
+     * Process-scoped by design: it only has to survive from `setWallet` to
+     * `finalizeInitialization` within one onboarding. A later launch loads
+     * from the protobuf, never calls `setWallet`, and by then the state is
+     * already CUT_OVER — so the transition test correctly reports "no move"
+     * and nothing is armed.
+     */
+    @Volatile
+    private var freshWalletSetupThisLaunch = false
+
+    /**
+     * The UPGRADE seam's counterpart to [commitForFreshWalletSetupAsync]:
+     * same commit, but it additionally arms the one-time sync explainer
+     * ([DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING]) when — and only when —
+     * the state ACTUALLY moves to CUT_OVER on this launch.
+     *
+     * THREE conditions must hold, and all are required:
+     * - the state ACTUALLY moved to CUT_OVER on this launch — read and
+     *   decided INSIDE [mutex] alongside the write itself ([commitLocked]),
+     *   so a concurrent commit cannot slip between the "before" read and the
+     *   write and make an already-committed install look like it just
+     *   flipped;
+     * - no FRESH wallet setup happened on this launch
+     *   ([freshWalletSetupThisLaunch]) — a create/restore reaches this seam
+     *   too (via `finalizeInitialization`), and it must keep its own
+     *   already-expected post-restore sync wait rather than being told its
+     *   wallet was "upgraded"; and
+     * - [previousVersionCode] says the app REALLY upgraded across the cutover
+     *   boundary: the launch before this one ran a PRE-11.10 build
+     *   (`0 < previousVersionCode < ` [FIRST_CUTOVER_VERSION_CODE]). The
+     *   product requirement is "explain the one-time resync only to users
+     *   coming from below 11.10". A previous code of 0 means the app was
+     *   never run before (fresh install — belt to the fresh-setup latch's
+     *   suspenders), and a previous code already at/above 11.10 means an
+     *   11.10.x → 11.10.y update, whose user has already lived through (or
+     *   never needed) the explainer.
+     *
+     * So: an app UPGRADE from a pre-11.10 build arriving in a pre-commit
+     * state flips here and arms; an 11.10.x → 11.10.y update never arms;
+     * every later launch of the same install is already CUT_OVER and no-ops;
+     * a fresh create/restore is positively suppressed twice over (version
+     * code 0 AND the latch).
+     *
+     * @param previousVersionCode the versionCode recorded by the PREVIOUS
+     *   launch (`Configuration.lastVersionCode` — a final field captured at
+     *   construction, so still the pre-upgrade value even after this launch
+     *   persists its own code), or 0 if the app never ran before.
+     *
+     * Fire-and-forget on the injected scope for the same reason as
+     * [commitForFreshWalletSetupAsync] — the caller is on the main thread and
+     * must not block on DataStore I/O. Never throws.
+     */
+    fun commitForUpgradedWalletAsync(previousVersionCode: Int) {
+        scope.launch {
+            val (_, justCutOver) = mutex.withLock { commitLocked("upgraded-wallet launch") }
+            if (!justCutOver) return@launch
+            if (freshWalletSetupThisLaunch) {
+                log.info(
+                    "upgrade seam committed the cutover, but a fresh wallet setup ran on this " +
+                        "launch — suppressing the one-time UPGRADE sync explainer (a restore's " +
+                        "sync wait is already expected)"
+                )
+                return@launch
+            }
+            if (previousVersionCode <= 0 || previousVersionCode >= FIRST_CUTOVER_VERSION_CODE) {
+                log.info(
+                    "upgrade seam committed the cutover, but the previous version code {} is not " +
+                        "a pre-11.10 upgrade (0 = fresh install, >= {} = already on 11.10+) — " +
+                        "suppressing the one-time UPGRADE sync explainer",
+                    previousVersionCode, FIRST_CUTOVER_VERSION_CODE
+                )
+                return@launch
+            }
+            runCatching { dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, true) }
+                .onSuccess { log.info("upgrade cutover: one-time sync explainer armed") }
+                .onFailure {
+                    if (it is CancellationException) throw it
+                    // Non-fatal: the cutover itself already committed; the
+                    // user simply does not get the explainer.
+                    log.warn("failed to arm the upgrade sync explainer", it)
+                }
+        }
+    }
+
     suspend fun commitForFreshWalletSetup(): CutoverStatus = mutex.withLock {
+        commitLocked("fresh-wallet setup (restore/new)").first
+    }
+
+    /**
+     * The immediate (non-readiness) commit, plus whether THIS call is the
+     * one that moved the state to CUT_OVER. Both halves are computed under
+     * [mutex] from a single state read, so the transition verdict cannot be
+     * corrupted by a racing commit — the property the one-time upgrade
+     * explainer depends on. Must be called under [mutex].
+     */
+    private suspend fun commitLocked(reason: String): Pair<CutoverStatus, Boolean> {
         val current = currentState()
         if (current == CutoverState.CUT_OVER || current == CutoverState.SETTLED) {
-            return@withLock CutoverStatus(current, READY_VERDICT)
+            return CutoverStatus(current, READY_VERDICT) to false
         }
         if (!sdkL1EngineEnabled()) {
             log.info(
@@ -202,9 +317,12 @@ class CutoverCoordinator @Inject constructor(
                     "engine is inactive, so dashj must keep owning L1 (staying {})",
                 current
             )
-            return@withLock CutoverStatus(current, READY_VERDICT)
+            return CutoverStatus(current, READY_VERDICT) to false
         }
-        writeState(current, CutoverState.CUT_OVER, "fresh-wallet setup (restore/new)")
+        val status = writeState(current, CutoverState.CUT_OVER, reason)
+        // A failed persist reports the OLD state (writeState's contract), so
+        // this is false — never a phantom "just cut over".
+        return status to (status.state == CutoverState.CUT_OVER)
     }
 
     /**
@@ -280,6 +398,18 @@ class CutoverCoordinator @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(CutoverCoordinator::class.java)
+
+        /**
+         * The first versionCode of the 11.10 line — the release that ships the
+         * SDK cutover. The store versionCode scheme is MMmmppbb
+         * (`wallet/build.gradle`: 11.8.2 = 11080201), so EVERY pre-11.10 build
+         * (11.9.x = 1109xxxx, 11.8.x = 1108xxxx, …) is numerically below
+         * 11.10.0 = 11100000, and every 11.10+ build (including the
+         * monotonic-decoupled QA codes, all >= 11100001) is at/above it. The
+         * one-time upgrade sync explainer arms only for upgrades crossing
+         * this boundary.
+         */
+        const val FIRST_CUTOVER_VERSION_CODE = 11100000
 
         /**
          * The verdict reported by the DIRECT (non-readiness) state moves

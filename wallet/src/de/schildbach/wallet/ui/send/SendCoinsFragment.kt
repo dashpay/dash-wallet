@@ -477,10 +477,22 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         if (!isAdded) {
             return
         }
+        // Type-precise mapping (classifySendFailure): only the SDK engine's
+        // closed funding gate may be blamed on syncing — the 11.10.44 on-device
+        // bug showed "wallet is not fully synced" for a self-send that failed
+        // for ROUTABILITY on a fully-synced wallet. Post-cutover internal
+        // exception text is machinery and is never rendered verbatim; every
+        // other exception keeps the original verbatim rendering.
+        val message = when (classifySendFailure(exception)) {
+            SendFailureKind.NOT_SYNCED -> getString(R.string.send_coins_fragment_hint_replaying)
+            SendFailureKind.NOT_SUPPORTED -> getString(R.string.send_coins_error_not_supported)
+            SendFailureKind.GENERIC_INTERNAL -> getString(R.string.send_coins_error_generic)
+            SendFailureKind.VERBATIM -> exception.toString()
+        }
         AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(R.string.send_coins_error_msg),
-            exception.toString(),
+            message,
             getString(R.string.button_dismiss),
             null
         ).showAsync(requireActivity())

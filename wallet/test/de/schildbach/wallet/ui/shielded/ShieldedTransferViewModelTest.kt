@@ -120,6 +120,8 @@ class ShieldedTransferViewModelTest {
     private val cutoverUiDataService = mockk<CutoverUiDataService> {
         every { sdkTotalBalance } returns MutableStateFlow<Coin?>(null)
         every { sdkConfirmedBalance } returns MutableStateFlow<Coin?>(null)
+        // The EXPLICIT cutover gate (was inferred from sdkTotalBalance != null).
+        every { cutoverActive } returns MutableStateFlow(false)
     }
 
     private fun blockchainState(

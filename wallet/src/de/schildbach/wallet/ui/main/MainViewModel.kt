@@ -41,17 +41,16 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.DeviceInfoProvider
+import de.schildbach.wallet.service.platform.ContactRequestNotificationService
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.TxDisplayCacheService
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
-import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
-import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
-import de.schildbach.wallet.service.platform.sdk.shadowSyncPercent
+import de.schildbach.wallet.service.L1SyncStatusService
+import de.schildbach.wallet.service.L1SyncUiStatus
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.BaseContactsViewModel
-import de.schildbach.wallet.ui.dashpay.NotificationCountLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
@@ -133,41 +132,22 @@ class MainViewModel @Inject constructor(
     private val txDisplayCacheService: TxDisplayCacheService,
     private val crowdNodeApi: CrowdNodeApi,
     private val coinJoinFundsMigrationService: CoinJoinFundsMigrationService,
-    l1ShadowSyncService: L1ShadowSyncService,
-    cutoverCoordinator: CutoverCoordinator,
+    l1SyncStatusService: L1SyncStatusService,
+    private val contactRequestNotificationService: ContactRequestNotificationService,
     private val swapProvider: DispatchingSwapProvider
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false
 
     /**
-     * Phase 5d: has the cutover flipped so the SDK owns L1 this launch
-     * (state CUT_OVER/SETTLED)? Resolved once, mirroring the per-launch
-     * engine gate in BlockchainServiceImpl, so the home "Syncing N%" header
-     * reads from whichever engine actually drives L1 this launch — the SDK
-     * L1 scan post-cutover ([sdkSyncPercentage]/[sdkL1Synced]), dashj before
-     * ([blockchainSyncPercentage]/[isBlockchainSynced]). false (dashj) for
-     * every install until a deliberate cutover commit.
+     * The L1 chain-sync state every sync-aware home screen renders —
+     * "is it synced", "what percent", "did it fail" — with NO indication of
+     * which engine produced it ([L1SyncStatusService] makes that choice at
+     * the seam). Replaces the old `sdkOwnsL1` UI flag and the two parallel
+     * SDK/dashj feed pairs the Fragments used to select between.
      */
-    val sdkOwnsL1: StateFlow<Boolean> =
-        flow { emit(runCatching { !cutoverCoordinator.dashjEngineMayStart() }.getOrDefault(false)) }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-
-    /** SDK L1 scan progress as a single 0..100 percent, for the header when [sdkOwnsL1]. */
-    val sdkSyncPercentage: StateFlow<Int> =
-        l1ShadowSyncService.progress
-            .map { shadowSyncPercent(it) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    /**
-     * Whether the SDK L1 scan is caught up — hides the header when [sdkOwnsL1].
-     * Uses [ShadowSyncProgress.scanCaughtUpToTip] (not the SDK's never-latching
-     * `synced`/phase==SYNCED) so the header clears for a live shadow SPV that
-     * has reached the tip within tolerance; SYNCED still counts.
-     */
-    val sdkL1Synced: StateFlow<Boolean> =
-        l1ShadowSyncService.progress
-            .map { it.synced || it.scanCaughtUpToTip }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val syncStatus: StateFlow<L1SyncUiStatus> =
+        l1SyncStatusService.status
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), L1SyncUiStatus())
 
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
@@ -276,16 +256,49 @@ class MainViewModel @Inject constructor(
     /**
      * Post-upgrade MIXED-FUNDS prompt: this wallet still holds coins on the
      * CoinJoin keychain that the app can no longer spend, and the user has
-     * not yet chosen what to do with them. Fires at most once per launch and
-     * only after the L1 view is current enough to trust the balance — see
-     * [CoinJoinFundsMigrationService.shouldPrompt].
+     * not yet chosen what to do with them. Fires only after the L1 view is
+     * current enough to trust the balance — see
+     * [CoinJoinFundsMigrationService.shouldPrompt] — and re-fires after
+     * activity/ViewModel recreation or lock-unlock until a choice is made
+     * (see [recheckMixedFundsMigrationPrompt]).
      */
     val showMixedFundsMigration = SingleLiveEvent<Unit>()
+
+    /**
+     * In-memory throttle for [showMixedFundsMigration]: stops the
+     * blockchain-state flow re-firing while the sheet is (presumably) up.
+     * Deliberately NOT persisted in [savedStateHandle] — a recreated
+     * activity/ViewModel must re-offer the forced choice until the permanent
+     * latch ([DashPayConfig.MIXED_FUNDS_MIGRATION_DONE]) is set by an actual
+     * migration.
+     */
+    private var mixedFundsPromptShownThisSession = false
+
+    /**
+     * One-time post-UPGRADE sync explainer
+     * ([de.schildbach.wallet.ui.cutover.CutoverSyncNoticeDialogFragment]).
+     * Fires while the persisted marker
+     * ([DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING], armed only on the
+     * upgrade seam) is set; the sheet clears the marker when the user
+     * acknowledges it, which is what makes it once-ever.
+     */
+    val showCutoverUpgradeNotice = SingleLiveEvent<Unit>()
+
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
     var processingSeriousError = false
 
-    val notificationCountData = NotificationCountLiveData(identityRepository, platformRepo, platformSyncService, dashPayConfig, viewModelScope)
+    /**
+     * The home-screen bell badge. Sourced from the application-scoped
+     * [ContactRequestNotificationService] rather than recomputed inside a
+     * `ContactsBasedLiveData`: that class registers its contacts-updated listener
+     * only while something observes it, so a contact request that arrived while the
+     * user was on another screen never triggered a recount. The service keeps the
+     * value current regardless of what is on screen; this LiveData just republishes
+     * whatever it holds the moment an observer attaches.
+     */
+    val notificationCountData: LiveData<Int> =
+        contactRequestNotificationService.unseenNotificationCount.asLiveData()
     val notificationCount: Int
         get() = notificationCountData.value ?: 0
 
@@ -335,25 +348,54 @@ class MainViewModel @Inject constructor(
             .catch { e -> log.error("crowdnode withdrawal reminder flow error", e) }
             .launchIn(viewModelScope)
 
-        // Post-upgrade MIXED-FUNDS prompt: at most once per launch, and only
-        // once the L1 view is current enough that a zero/non-zero CoinJoin
-        // balance means something (the service owns that predicate — it also
-        // covers the "already synced, percentageSync restarted at 0" case
-        // that a strict isSynced() gate would stall on). Never blocks
-        // startup: this is a background collector, and a wallet with no
-        // mixed funds never emits.
+        // Post-upgrade MIXED-FUNDS prompt: fired once the L1 view is current
+        // enough that a zero/non-zero CoinJoin balance means something — the
+        // service owns that predicate, and it now requires TRUE sync
+        // completion (BlockchainState.isSynced()), so the forced prompt can
+        // never land on top of a still-wrong mid-scan balance. Never blocks
+        // startup: this is a background collector, and a wallet with no mixed
+        // funds never emits.
+        //
+        // The latch here is deliberately IN-MEMORY (not SavedStateHandle): it
+        // only throttles the flow re-firing while the sheet is already up.
+        // If the activity is recreated before the user chose — e.g. the lock
+        // screen engaged and tore the sheet down — the fresh ViewModel starts
+        // unlatched and the prompt re-shows, because the only thing that may
+        // silence it for good is the permanent latch the service sets when
+        // shield/keep-spendable actually runs
+        // ([DashPayConfig.MIXED_FUNDS_MIGRATION_DONE], via `shouldPrompt()`).
         blockchainStateProvider.observeState()
             .filterNotNull()
             .onEach {
-                val alreadyShown: Boolean = savedStateHandle[MIXED_FUNDS_PROMPT_SHOWN_KEY] ?: false
-                if (alreadyShown) return@onEach
-                if (coinJoinFundsMigrationService.shouldPrompt()) {
-                    savedStateHandle[MIXED_FUNDS_PROMPT_SHOWN_KEY] = true
+                if (mixedFundsPromptShownThisSession) return@onEach
+                // A persisted IN-FLIGHT marker re-shows the sheet in its
+                // post-choice PROCESSING presentation (a broadcast whose
+                // result is not user-visible yet — e.g. the lock screen tore
+                // the sheet down during the confirmation window); otherwise
+                // the service decides whether the forced choice is due.
+                if (coinJoinFundsMigrationService.inFlightMigration() != null ||
+                    coinJoinFundsMigrationService.shouldPrompt()
+                ) {
+                    mixedFundsPromptShownThisSession = true
                     showMixedFundsMigration.postCall()
                 }
             }
             .catch { e -> log.error("mixed-funds migration prompt flow error", e) }
             .launchIn(viewModelScope)
+
+        // One-time post-UPGRADE sync explainer. Observed (not read once)
+        // because the marker is armed asynchronously during wallet load, which
+        // can land after this ViewModel is constructed.
+        dashPayConfig.observe(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING)
+            .distinctUntilChanged()
+            .onEach { pending -> if (pending == true) showCutoverUpgradeNotice.postCall() }
+            .catch { e -> log.error("cutover upgrade-notice flow error", e) }
+            .launchIn(viewModelScope)
+
+        // Re-arm the in-flight completion watcher after a process restart:
+        // it clears the marker once the migration's result becomes visible
+        // (no-op when nothing is in flight).
+        coinJoinFundsMigrationService.startInFlightWatcherIfNeeded()
 
         // Phase 5d: the displayed balance follows whichever engine owns L1
         // this launch. observeTotalBalance() is cutover-aware at the
@@ -389,6 +431,11 @@ class MainViewModel @Inject constructor(
 
         // DashPay
         startContactRequestTimer()
+
+        // Prime the bell badge for this launch. The service holds the count across
+        // screens, but on a cold start nothing has computed it yet and the periodic
+        // contact sync may be minutes away.
+        contactRequestNotificationService.refreshCountInBackground()
 
         dashPayConfig.observe(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME)
             .filterNotNull()
@@ -610,7 +657,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun forceUpdateNotificationCount() {
-        notificationCountData.onContactsUpdated()
+        contactRequestNotificationService.refreshCountInBackground()
         viewModelScope.launch(Dispatchers.IO) {
             platformSyncService.updateContactRequests()
         }
@@ -791,16 +838,38 @@ class MainViewModel @Inject constructor(
         swapProvider.setBackend(backend)
     }
 
+    /**
+     * Re-evaluate the mixed-funds prompt after the lock screen is dismissed:
+     * if it engaged while the sheet was up (dismissing it) and no choice has
+     * been recorded yet, `shouldPrompt()` is still true and the prompt is
+     * re-fired. If a migration DID broadcast but its result is not visible
+     * yet (the persisted in-flight marker), the sheet is re-fired too — it
+     * opens straight in its processing presentation, so the confirmation
+     * window is never an unexplained near-zero balance. Once the result
+     * lands (marker cleared) this is a no-op.
+     */
+    fun recheckMixedFundsMigrationPrompt() {
+        viewModelScope.launch {
+            try {
+                // The in-flight marker re-shows the PROCESSING presentation
+                // (a broadcast migration whose result is not visible yet);
+                // shouldPrompt() covers the pre-decision forced choice.
+                if (coinJoinFundsMigrationService.inFlightMigration() != null ||
+                    coinJoinFundsMigrationService.shouldPrompt()
+                ) {
+                    mixedFundsPromptShownThisSession = true
+                    showMixedFundsMigration.postCall()
+                }
+            } catch (e: Exception) {
+                log.error("mixed-funds migration prompt recheck error", e)
+            }
+        }
+    }
+
     companion object {
         private const val DIRECTION_KEY = "tx_direction"
         private const val CROWDNODE_REMINDER_SHOWN_KEY = "crowdnode_withdrawal_reminder_shown"
 
-        /**
-         * Per-launch latch for the mixed-funds prompt. The PERMANENT latch is
-         * [DashPayConfig.MIXED_FUNDS_MIGRATION_DONE]; this one only stops the
-         * blockchain-state flow re-firing it within a single launch.
-         */
-        private const val MIXED_FUNDS_PROMPT_SHOWN_KEY = "mixed_funds_migration_prompt_shown"
         private const val TIME_SKEW_TOLERANCE = 3600000L // 1 hour
         /** Retry cadence for the self-healing Platform-availability poll (see init). */
         private const val PLATFORM_AVAILABILITY_RETRY_MS = 30_000L

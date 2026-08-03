@@ -155,10 +155,11 @@ class TransactionResultViewModel @Inject constructor(
                     // Bug A: post-cutover the held dashj wallet can misread an
                     // SDK-authored send (value==0 → "Received +0.00"). When the
                     // cutover is active, load the authoritative SDK row and expose
-                    // it as a direction/amount override the binder reads. Pre-cutover
-                    // the SDK balance is permanently null, so this is a no-op and the
-                    // dashj-driven display is byte-identical.
-                    if (cutoverUiDataService.sdkBalanceOrNull() != null) {
+                    // it as a direction/amount override the binder reads.
+                    // Reads the EXPLICIT cutover gate — this used to test
+                    // `sdkBalanceOrNull() != null`, which is equivalent only by
+                    // accident of that flow being pinned to null pre-cutover.
+                    if (cutoverUiDataService.isCutoverActive()) {
                         val override = withContext(Dispatchers.IO) { loadSdkDetailOrNull(txId) }
                         if (override != null) {
                             _sdkDirectionOverride.value = override

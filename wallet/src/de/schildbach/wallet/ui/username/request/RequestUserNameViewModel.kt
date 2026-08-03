@@ -35,6 +35,8 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.platform.PlatformHealth
 import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.service.platform.sdk.ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS
+import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
@@ -131,6 +133,16 @@ data class RequestUserNameUIState(
      * identity credits 0.01/0.2). Empty until a name has been checked.
      */
     val requiredAmount: String = "",
+    /**
+     * The DISPLAY balance covers the fee but the funds the asset-lock
+     * build can actually select (final — confirmed/IS-locked — BIP44
+     * coins; see [SdkAssetLockFundingPreflight]) do not. Renders the
+     * "recently received funds may still be settling" variant of the
+     * insufficient-balance row instead of the plain requirement (the
+     * plain copy would gaslight a user whose balance LOOKS sufficient).
+     * Only ever true together with `enoughBalance = false`.
+     */
+    val fundsSettling: Boolean = false,
     val usernameNonContestedChars: Boolean = false,
     val usernameNonContestedLength: Boolean = false,
     val votingPeriodStart: Long = System.currentTimeMillis(),
@@ -293,7 +305,8 @@ class RequestUserNameViewModel @Inject constructor(
     private val transparentUsernameCreation: SdkTransparentUsernameCreation,
     private val shieldedBalanceService: ShieldedBalanceService,
     private val platformHealthProbe: PlatformHealthProbe,
-    private val identityCreationStatus: IdentityCreationStatusHolder
+    private val identityCreationStatus: IdentityCreationStatusHolder,
+    private val assetLockFundingPreflight: SdkAssetLockFundingPreflight
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
@@ -462,6 +475,60 @@ class RequestUserNameViewModel @Inject constructor(
     private val _walletBalance = MutableStateFlow(Coin.ZERO)
     val walletBalance: StateFlow<Coin>
         get() = _walletBalance
+
+    /**
+     * PRE-FLIGHT funding-eligibility snapshot: the duffs the SDK's
+     * asset-lock coin selection could actually fund an identity with
+     * (final BIP44-account-0 coins — see [SdkAssetLockFundingPreflight]),
+     * or null when the preflight does not apply (pre-cutover / no
+     * evidence — fail OPEN, the display-balance gate alone decides).
+     * Refreshed asynchronously on entry and on every balance change;
+     * [recomputeBalanceGate] re-resolves the gate when it lands — the
+     * same async-gate-input pattern the shielded sync status uses.
+     * Prevents the observed S22 failure mode: display balance ~0.994
+     * (a non-final/out-of-account output) passed the old gate, then the
+     * real build bounced "Insufficient funds: available 1449" after the
+     * user had already picked a name and sat through the ~30s dialog.
+     */
+    private val _assetLockEligibleDuffs = MutableStateFlow<Long?>(null)
+
+    /** One refresh in flight at a time (entry + every balance emission would stack). */
+    private var assetLockEligibilityRefreshing = false
+
+    private fun refreshAssetLockFundingEligibility() {
+        synchronized(this) {
+            if (assetLockEligibilityRefreshing) return
+            assetLockEligibilityRefreshing = true
+        }
+        viewModelScope.launch {
+            try {
+                // No explicit IO hop here: the preflight dispatches its own
+                // DB read to Dispatchers.IO internally, and keeping this
+                // call in the caller's context makes the refresh
+                // deterministic under the host-JVM tests' unconfined main.
+                val eligible = assetLockFundingPreflight.eligibleAssetLockFundingDuffsOrNull()
+                if (_assetLockEligibleDuffs.value != eligible) {
+                    _assetLockEligibleDuffs.value = eligible
+                    recomputeBalanceGate()
+                }
+            } finally {
+                synchronized(this@RequestUserNameViewModel) {
+                    assetLockEligibilityRefreshing = false
+                }
+            }
+        }
+    }
+
+    /**
+     * Whether a fresh asset lock for [fee] would find enough ELIGIBLE
+     * funds ([_assetLockEligibleDuffs] + the shared fee headroom). True
+     * when the preflight has no evidence (fail open) — the real build
+     * stays the authority; only a computed shortfall gates.
+     */
+    private fun assetLockFundingEligible(fee: Coin): Boolean {
+        val eligible = _assetLockEligibleDuffs.value ?: return true
+        return eligible >= fee.value + ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS
+    }
 
     private var createUsernameArgs: CreateUsernameArgs? = null
     private val inviteAssetLockTx = MutableStateFlow<AssetLockTransaction?>(null)
@@ -666,8 +733,15 @@ class RequestUserNameViewModel @Inject constructor(
         walletData.observeBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
             .onEach {
                 _walletBalance.value = it
+                // A balance change is when funds land/settle — re-read the
+                // asset-lock funding eligibility so the settling gate clears
+                // the moment the funds become final.
+                refreshAssetLockFundingEligibility()
             }
             .launchIn(viewModelScope)
+        // Entry kick: the balance flow may not emit until a change, but the
+        // eligibility snapshot must exist before the first gate compute.
+        refreshAssetLockFundingEligibility()
 
         inviteAssetLockTx.onEach {
             _inviteBalance.value = getInvitationAmount()
@@ -1121,14 +1195,32 @@ class RequestUserNameViewModel @Inject constructor(
      */
     private var lastGateUsername: String? = null
 
+    /** The resolved balance gate: button enablement + row copy inputs. */
+    private data class BalanceGateResult(
+        val enoughBalance: Boolean,
+        val requiredAmount: String,
+        /** See [RequestUserNameUIState.fundsSettling]. */
+        val fundsSettling: Boolean
+    )
+
     /**
      * `enoughBalance` + the DASH amount the insufficient-balance row must
      * name, resolved for the chosen payment source. Every failed gate is
      * logged at info level — a submit attempt that bounces must always
      * leave a forensic trail (Brian: the contested attempts left ZERO log
      * lines).
+     *
+     * The `identityBalance == 0` (fresh identity, Dash-balance) arms gate
+     * on BOTH the display balance AND the asset-lock funding PREFLIGHT
+     * ([assetLockFundingEligible]): post-cutover the identity is funded by
+     * an SDK asset lock whose coin selection only accepts FINAL
+     * (confirmed/IS-locked) BIP44 coins — a display balance backed by
+     * non-final or out-of-account outputs must not let the user start a
+     * creation the funding cannot complete (the S22 repro). When the
+     * display balance covers the fee but the eligibility does not, the
+     * result carries `fundsSettling` so the row explains WHY.
      */
-    private fun computeBalanceGate(username: String, contestable: Boolean): Pair<Boolean, String> {
+    private fun computeBalanceGate(username: String, contestable: Boolean): BalanceGateResult {
         val identityBalance = _identityBalance.value
         val walletBalance = _walletBalance.value
         val inviteBalance = _inviteBalance.value
@@ -1153,10 +1245,25 @@ class RequestUserNameViewModel @Inject constructor(
                 CONTEST_DOCUMENT_FEE / 1000)
             identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 NON_CONTEST_DOCUMENT_FEE / 1000)
-            identityBalance == 0L && contestable -> walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
-            identityBalance == 0L && !contestable -> walletBalance >= Constants.DASH_PAY_FEE
+            identityBalance == 0L && contestable ->
+                walletBalance >= Constants.DASH_PAY_FEE_CONTESTED &&
+                    assetLockFundingEligible(Constants.DASH_PAY_FEE_CONTESTED)
+            identityBalance == 0L && !contestable ->
+                walletBalance >= Constants.DASH_PAY_FEE &&
+                    assetLockFundingEligible(Constants.DASH_PAY_FEE)
             else -> false // how can we get here?
         }
+        // "Settling": the display balance covers the fee but the asset-lock
+        // preflight says the SELECTABLE (final, BIP44) funds do not — only
+        // meaningful on the fresh-identity Dash-balance path (the arms above
+        // that consult the preflight).
+        val fundsSettling = !isUsingInvite() &&
+            paymentSource != UsernamePaymentSource.SHIELDED_BALANCE &&
+            identityBalance == 0L &&
+            run {
+                val fee = if (contestable) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+                walletBalance >= fee && !assetLockFundingEligible(fee)
+            }
         // The same branch structure, resolved to the amount the
         // insufficient-balance row must name (the old layout hardcoded
         // 0.25 for every case).
@@ -1175,7 +1282,8 @@ class RequestUserNameViewModel @Inject constructor(
         if (!enoughBalance) {
             log.info(
                 "username balance gate failed for '{}': source={} contestable={} required={} DASH " +
-                    "(walletBalance={} identityCredits={} inviteBalance={} shieldedBalance={} shieldedSync={})",
+                    "(walletBalance={} identityCredits={} inviteBalance={} shieldedBalance={} " +
+                    "shieldedSync={} assetLockEligibleDuffs={} settling={})",
                 username,
                 paymentSource,
                 contestable,
@@ -1184,10 +1292,12 @@ class RequestUserNameViewModel @Inject constructor(
                 identityBalance,
                 inviteBalance.toPlainString(),
                 _shieldedBalance.value.toPlainString(),
-                _shieldedSyncStatus.value
+                _shieldedSyncStatus.value,
+                _assetLockEligibleDuffs.value,
+                fundsSettling
             )
         }
-        return enoughBalance to requiredAmount
+        return BalanceGateResult(enoughBalance, requiredAmount, fundsSettling)
     }
 
     /**
@@ -1204,12 +1314,19 @@ class RequestUserNameViewModel @Inject constructor(
         } catch (e: Exception) {
             return
         }
-        val (enoughBalance, requiredAmount) = computeBalanceGate(username, contestable)
+        val gate = computeBalanceGate(username, contestable)
         _uiState.update {
-            if (it.enoughBalance == enoughBalance && it.requiredAmount == requiredAmount) {
+            if (it.enoughBalance == gate.enoughBalance &&
+                it.requiredAmount == gate.requiredAmount &&
+                it.fundsSettling == gate.fundsSettling
+            ) {
                 it
             } else {
-                it.copy(enoughBalance = enoughBalance, requiredAmount = requiredAmount)
+                it.copy(
+                    enoughBalance = gate.enoughBalance,
+                    requiredAmount = gate.requiredAmount,
+                    fundsSettling = gate.fundsSettling
+                )
             }
         }
     }
@@ -1220,14 +1337,15 @@ class RequestUserNameViewModel @Inject constructor(
         val contestable = Names.isUsernameContestable(username)
 
         lastGateUsername = username
-        val (enoughBalance, requiredAmount) = computeBalanceGate(username, contestable)
+        val gate = computeBalanceGate(username, contestable)
         _uiState.update {
             it.copy(
                 usernameLengthValid = validLength,
                 usernameCharactersValid = validCharacters && !startOrEndWithHyphen,
                 usernameContestable = contestable,
-                enoughBalance = enoughBalance,
-                requiredAmount = requiredAmount,
+                enoughBalance = gate.enoughBalance,
+                requiredAmount = gate.requiredAmount,
+                fundsSettling = gate.fundsSettling,
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,

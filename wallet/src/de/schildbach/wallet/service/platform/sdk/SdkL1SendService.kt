@@ -22,6 +22,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -144,6 +145,17 @@ internal fun classifyCoreSendFailure(t: Throwable): SdkWriteResult<Nothing> = wh
  * adjust-down half of the pattern.
  */
 internal const val SEND_ALL_FEE_RESERVE_DUFFS = 10_000L
+
+/**
+ * The [SdkWriteResult.NotBroadcast] reason prefix for a CLOSED L1 funding
+ * gate — the engine is not running or its filter scan has not caught up to
+ * the chain tip yet, i.e. the one refusal that genuinely means "the wallet
+ * is not synced enough to send". [de.schildbach.wallet.payments.SendCoinsTaskRunner]
+ * keys the user-facing "not fully synced" diagnosis off this prefix; every
+ * other NotBroadcast reason (flag off, bad address, builder shortfall, …)
+ * must NOT be presented as a sync problem.
+ */
+internal const val L1_FUNDING_GATE_CLOSED_REASON = "L1 funding gate closed"
 
 /**
  * The deliver-at-least floor for a send-all: `spendable − reserve`,
@@ -272,6 +284,124 @@ internal fun pickReceivalFundingAccount(
     .filter { it.confirmedDuffs >= amountDuffs + feeHeadroomDuffs }
     .maxByOrNull { it.confirmedDuffs }
 
+// ── Multi-account consolidation (receival → own BIP44) — pure pieces ──
+
+/**
+ * `AccountTypeTagFFI::Standard` / `StandardAccountTypeTagFFI::Bip44` — the
+ * `typeTag` / `standardTag` pair the account-balance JSON reports for the
+ * unmixed BIP44 funds account (values from rs-platform-wallet-ffi
+ * `wallet_restore_types.rs`: `Standard = 0`, `Bip44 = 0`).
+ */
+internal const val ACCOUNT_TYPE_TAG_STANDARD = 0
+internal const val STANDARD_ACCOUNT_TAG_BIP44 = 0
+
+/**
+ * The BIP44 account 0 `confirmed` balance from the same account-balance
+ * JSON snapshot [parseReceivalFundingAccounts] reads — the consolidation
+ * stop-condition's baseline ("existing BIP44 balance"). Missing row or
+ * malformed input returns 0: a conservative baseline only ever sweeps MORE
+ * accounts than strictly needed, and every sweep is a self-send.
+ */
+internal fun parseBip44ConfirmedDuffs(accountBalancesJson: String?): Long {
+    if (accountBalancesJson.isNullOrEmpty()) return 0L
+    return try {
+        val rows = org.json.JSONArray(accountBalancesJson)
+        for (i in 0 until rows.length()) {
+            val row = rows.getJSONObject(i)
+            if (row.optInt("typeTag", -1) != ACCOUNT_TYPE_TAG_STANDARD) continue
+            if (row.optInt("standardTag", -1) != STANDARD_ACCOUNT_TAG_BIP44) continue
+            if (row.optInt("index", -1) != 0) continue
+            return row.optLong("confirmed", 0L)
+        }
+        0L
+    } catch (e: Exception) {
+        0L
+    }
+}
+
+/**
+ * The BIP44 account 0 SPENDABLE balance (`confirmed + unconfirmed` — the
+ * same `WalletCoreBalance.spendable()` split the native wallet-wide
+ * `balance()` read serves) from the account-balance JSON snapshot — or
+ * null when the row is missing or the input is malformed, so the caller
+ * can fall back to a coarser figure instead of showing 0.
+ */
+internal fun parseBip44SpendableDuffs(accountBalancesJson: String?): Long? {
+    if (accountBalancesJson.isNullOrEmpty()) return null
+    return try {
+        val rows = org.json.JSONArray(accountBalancesJson)
+        for (i in 0 until rows.length()) {
+            val row = rows.getJSONObject(i)
+            if (row.optInt("typeTag", -1) != ACCOUNT_TYPE_TAG_STANDARD) continue
+            if (row.optInt("standardTag", -1) != STANDARD_ACCOUNT_TAG_BIP44) continue
+            if (row.optInt("index", -1) != 0) continue
+            return row.optLong("confirmed", 0L) + row.optLong("unconfirmed", 0L)
+        }
+        null
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * The POST-CUTOVER "max sendable" figure in duffs — what a MAX (send-all)
+ * can actually DELIVER TO BIP44 before the final drain's own fee:
+ *
+ *   BIP44 account 0 spendable (confirmed + unconfirmed)
+ *   + Σ over SWEEPABLE receival accounts of (confirmed − per-sweep fee headroom)
+ *
+ * Receival terms count the SAME rows [parseReceivalFundingAccounts] reads,
+ * restricted to sweepable ones (`confirmed > `
+ * [RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS] — the JNI boundary requires a
+ * positive sweep output) and net of the per-account sweep-fee headroom, so
+ * the quote never overstates what the sweep-then-drain max send delivers:
+ * the real per-sweep fee is far below the headroom and its change routes
+ * back to BIP44, so actual delivery only ever EXCEEDS this figure (minus
+ * the final drain fee, which the drain absorbs exactly like today's
+ * quote). Receival `confirmed` only — unconfirmed receival funds are
+ * never swept. Null when the snapshot is missing/malformed or has no
+ * BIP44 row (caller falls back to the wallet-wide total).
+ */
+internal fun maxSendableDuffs(
+    accountBalancesJson: String?,
+    sweepFeeHeadroomDuffs: Long = RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS
+): Long? {
+    val bip44SpendableDuffs = parseBip44SpendableDuffs(accountBalancesJson) ?: return null
+    val receivalNetDuffs = parseReceivalFundingAccounts(accountBalancesJson)
+        .filter { it.confirmedDuffs > sweepFeeHeadroomDuffs }
+        .sumOf { it.confirmedDuffs - sweepFeeHeadroomDuffs }
+    return bip44SpendableDuffs + receivalNetDuffs
+}
+
+/**
+ * The receival accounts a consolidation may SWEEP (one self-sweep tx per
+ * account, largest confirmed first) when no single account covers
+ * `amount + feeHeadroom` — or empty when consolidation must not run:
+ *
+ * - the SUM of ALL candidates' confirmed balances is below
+ *   `amount + feeHeadroom` (consolidating could not make the send
+ *   fundable — rethrow the shortfall instead), or
+ * - no candidate is individually sweepable (a sweep's fixed output is
+ *   `confirmed − feeHeadroom`, which the JNI boundary requires positive).
+ *
+ * The returned list is the full sweepable set in sweep order; the EXECUTOR
+ * stops early once the consolidated BIP44 total covers the send (it knows
+ * the actual per-sweep change figures, this planner does not). Accounts
+ * are still NEVER unioned inside one transaction — consolidation is one
+ * single-account self-sweep per account, serially.
+ */
+internal fun planConsolidationSweeps(
+    candidates: List<ReceivalFundingAccount>,
+    amountDuffs: Long,
+    feeHeadroomDuffs: Long = RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS
+): List<ReceivalFundingAccount> {
+    val totalConfirmed = candidates.sumOf { it.confirmedDuffs }
+    if (totalConfirmed < amountDuffs + feeHeadroomDuffs) return emptyList()
+    return candidates
+        .filter { it.confirmedDuffs > feeHeadroomDuffs }
+        .sortedByDescending { it.confirmedDuffs }
+}
+
 // ── Source seam ───────────────────────────────────────────────────────
 
 /**
@@ -293,6 +423,32 @@ interface SdkL1SendSource {
      * throw proves).
      */
     suspend fun sendToAddress(walletIdHex: String, addressBase58: String, amountDuffs: Long): String
+
+    /**
+     * SWEEP-ALL mode of the receival-account consolidation, for the MAX
+     * (send-all) path: sweep EVERY DashPay receival account holding
+     * sweepable confirmed funds (`confirmed > `
+     * [RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS]) into this wallet's own BIP44
+     * account — one self-sweep tx per account via the SAME primitive the
+     * shortfall consolidation uses (accounts are NEVER unioned in a tx;
+     * each sweep goes to its OWN fresh BIP44 address) — then AWAIT the
+     * swept outputs becoming BIP44-spendable (IS-locks land in ~2s), so
+     * the caller's subsequent drain can deliver them. Unlike the
+     * shortfall consolidation there is NO stop condition: a MAX send must
+     * deliver everything, so every sweepable account is swept.
+     *
+     * Returns the total duffs credited toward BIP44 (sweep outputs +
+     * change) — 0 when no receival account holds sweepable funds (the
+     * common case: pure no-op, one balance read). THROWS on any
+     * enumeration/sweep/await failure; every failure is funds-safe — the
+     * un-swept funds stay in their receival accounts, and any sweep
+     * already broadcast is a SELF-SEND consolidating into BIP44 (the next
+     * attempt simply finds the funds there). Nothing of the caller's
+     * PAYMENT has been built or broadcast, so the caller may classify the
+     * throw NotBroadcast by construction. Default: nothing to sweep
+     * (sources without receival-account support).
+     */
+    suspend fun sweepReceivalAccountsForSendAll(walletIdHex: String): Long = 0L
 
     /**
      * The SDK wallet's spendable balance in duffs — `confirmed +
@@ -363,7 +519,22 @@ interface SdkL1SendSource {
 
 /** Production [SdkL1SendSource]: boots the SDK on demand. */
 internal class DashSdkL1SendSource(
-    private val service: DashSdkService
+    private val service: DashSdkService,
+    /**
+     * Derives a FRESH receive address of THIS wallet's unmixed BIP44
+     * account — the consolidation sweeps' destination. The pinned AAR
+     * exposes no receive-address API ([ManagedCoreWallet] /
+     * `ManagedPlatformWallet` have none), so the production wiring uses
+     * dashj's `WalletData.freshReceiveAddressString()` — safe because both
+     * stacks derive BIP44 account 0 from the same seed (the established
+     * precedent: [CoinJoinFundsMigrationService.combineIntoUnmixedBalance]).
+     * Called once per sweep so different contacts' sweeps never share an
+     * output address. A throw is contained by the consolidation's
+     * rethrow-the-original-shortfall path (default: consolidation disabled).
+     */
+    private val freshOwnBip44Address: () -> String = {
+        throw UnsupportedOperationException("no own-address provider configured")
+    }
 ) : SdkL1SendSource {
 
     /**
@@ -381,6 +552,17 @@ internal class DashSdkL1SendSource(
 
     private companion object {
         private val log = LoggerFactory.getLogger(DashSdkL1SendSource::class.java)
+
+        /**
+         * Total bound on waiting for consolidation-swept funds to become
+         * spendable on the BIP44 path (the SDK funds from `is_confirmed ||
+         * is_instantlocked`; IS-locks land in ~2s, so this covers many
+         * multiples of the expected wait).
+         */
+        private const val CONSOLIDATION_SEND_TIMEOUT_MS = 30_000L
+
+        /** Interval between normal-path retries of the consolidated send. */
+        private const val CONSOLIDATION_SEND_RETRY_INTERVAL_MS = 2_000L
 
         /**
          * Decode a lowercase/uppercase hex wallet id (the manager's map key)
@@ -478,28 +660,25 @@ internal class DashSdkL1SendSource(
         amountDuffs: Long,
         shortfall: DashSdkError.PlatformWallet.CoreInsufficientFunds
     ): String {
-        val candidates = try {
-            parseReceivalFundingAccounts(manager.accountBalances(hexToBytes(walletIdHex)))
+        val accountBalancesJson = try {
+            manager.accountBalances(hexToBytes(walletIdHex))
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("SDK l1Send fallback: account-balance read failed; rethrowing the BIP44 shortfall", t)
             shortfall.addSuppressed(t)
             throw shortfall
         }
+        val candidates = parseReceivalFundingAccounts(accountBalancesJson)
         val account = pickReceivalFundingAccount(candidates, amountDuffs)
         if (account == null) {
-            if (candidates.isNotEmpty()) {
-                log.info(
-                    "SDK l1Send fallback: receival funds split across {} contact account(s) " +
-                        "(largest confirmed {} duffs), no single account covers {} + {} duffs " +
-                        "headroom; accounts are never unioned — rethrowing the BIP44 shortfall",
-                    candidates.size,
-                    candidates.maxOf { it.confirmedDuffs },
-                    amountDuffs,
-                    RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS
-                )
-            }
-            throw shortfall
+            if (candidates.isEmpty()) throw shortfall
+            // No SINGLE receival account suffices. If the SUM across accounts
+            // does, consolidate them into BIP44 (one self-sweep per account —
+            // accounts still never share a transaction) and retry the send.
+            return consolidateReceivalAccountsAndResendOrRethrow(
+                manager, wallet, addressBase58, amountDuffs, candidates,
+                parseBip44ConfirmedDuffs(accountBalancesJson), shortfall
+            )
         }
         log.info(
             "SDK l1Send: BIP44 account 0 insufficient; spending from DashPay receival account " +
@@ -534,6 +713,358 @@ internal class DashSdkL1SendSource(
             amountDuffs, account.friendIdentityIdHex.take(16), txidHex
         )
         return txidHex
+    }
+
+    /**
+     * One broadcast receival-account self-sweep: the txid and the duffs
+     * credited toward BIP44 (sweep output + change — change routes to the
+     * unmixed BIP44 account structurally, so both count).
+     */
+    private data class ReceivalSweepResult(val txidHex: String, val creditedDuffs: Long)
+
+    /**
+     * Stage-tagged failure of one receival self-sweep — [note] is the
+     * abort note the callers attach ("own-address derivation failed",
+     * "a sweep build failed pre-broadcast", "a sweep broadcast failed").
+     * Every stage is funds-safe: nothing of the caller's PAYMENT was
+     * built, and a broadcast-stage failure concerns a SELF-SEND only.
+     */
+    private class ReceivalSweepException(val note: String, cause: Throwable) : Exception(note, cause)
+
+    /**
+     * The SHARED per-account sweep primitive (one self-sweep tx per
+     * receival account — accounts are NEVER combined in a transaction; the
+     * Rust selector enforces it, this method never asks): build and
+     * broadcast a fixed-amount payment of `confirmed − `
+     * [RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS] duffs from [account]'s own
+     * reported `fundingPath` to a FRESH own BIP44 address, via
+     * `buildSignedPaymentWithToken` → `broadcastSigned` (reservation
+     * released by `use { }` on every failure exit). Used by BOTH the
+     * shortfall consolidation ([consolidateReceivalAccountsAndResendOrRethrow])
+     * and the send-all sweep-all pass ([sweepReceivalAccountsForSendAll]).
+     * Throws [ReceivalSweepException]; [CancellationException] passes
+     * through unwrapped.
+     */
+    private suspend fun sweepReceivalAccountToOwnBip44(
+        manager: org.dashfoundation.dashsdk.wallet.PlatformWalletManager,
+        wallet: org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet,
+        account: ReceivalFundingAccount
+    ): ReceivalSweepResult {
+        val sweepAmountDuffs = account.confirmedDuffs - RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS
+        // A FRESH own address PER SWEEP: different contacts' sweeps must
+        // not share an output address (reuse would link their funds at
+        // that address even across separate transactions).
+        val destination = try {
+            freshOwnBip44Address()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK l1Send receival sweep: own-address derivation failed", t)
+            throw ReceivalSweepException("own-address derivation failed", t)
+        }
+        val payment = try {
+            wallet.buildSignedPaymentWithToken(
+                recipients = listOf(destination to sweepAmountDuffs),
+                coreSignerHandle = manager.mnemonicResolverHandle,
+                feePerKb = 0,
+                fundingPath = account.derivationPath
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // Pre-broadcast by construction (select + reserve + sign +
+            // register, no network) and no token minted — nothing to
+            // release for THIS sweep; earlier sweeps are self-sends.
+            log.warn(
+                "SDK l1Send receival sweep: build failed pre-broadcast (contact={}…)",
+                account.friendIdentityIdHex.take(16),
+                t
+            )
+            throw ReceivalSweepException("a sweep build failed pre-broadcast", t)
+        }
+        // use{} releases the reservation on EVERY failure exit, exactly
+        // like the single-account fallback (close() is a synchronous,
+        // idempotent native release — a no-op once broadcastSigned
+        // consumed the token).
+        val sweepTxid = try {
+            payment.use { wallet.broadcastSigned(payment) }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // Even an AMBIGUOUS sweep-broadcast outcome is funds-safe: the
+            // sweep pays this wallet's OWN BIP44 address, so whether or
+            // not it reached the network the funds remain the user's.
+            log.warn(
+                "SDK l1Send receival sweep: broadcast failed (contact={}…) — a SELF-SEND, funds safe either way",
+                account.friendIdentityIdHex.take(16),
+                t
+            )
+            throw ReceivalSweepException("a sweep broadcast failed", t)
+        }
+        log.info(
+            "SDK l1Send receival sweep: swept {} duffs (change {} duffs, fee {} duffs) from " +
+                "receival account (contact={}…) to a fresh own BIP44 address, txid {}",
+            sweepAmountDuffs,
+            payment.changeDuffs,
+            payment.feeDuffs,
+            account.friendIdentityIdHex.take(16),
+            sweepTxid
+        )
+        return ReceivalSweepResult(sweepTxid, sweepAmountDuffs + payment.changeDuffs)
+    }
+
+    /**
+     * Multi-contact consolidation for a BIP44 shortfall that NO single
+     * receival account covers but the SUM across receival accounts can
+     * ([planConsolidationSweeps] non-empty):
+     *
+     * 1. SWEEP — for each planned account (largest confirmed first), build
+     *    and broadcast a SEPARATE single-account self-sweep of
+     *    `confirmed − `[RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS] duffs to a
+     *    FRESH own BIP44 address, via the SAME primitive the single-account
+     *    fallback uses (`buildSignedPaymentWithToken(fundingPath = <that
+     *    account's reported path>)` → `broadcastSigned`, reservation
+     *    released by `use { }` on every failure exit). ONE tx per account —
+     *    two accounts' inputs are NEVER combined in a transaction (the Rust
+     *    selector enforces it; this loop never asks). Fixed-amount sweeps,
+     *    not a drain: the pinned AAR has no send-all variant that takes a
+     *    `fundingPath` ([CoreSendAllNative] only drains the BIP44/CoinJoin
+     *    account TYPES), so up to ~headroom duffs of dust-level residue may
+     *    stay behind per account (unselected inputs); the selected inputs'
+     *    change (`headroom − fee`) routes to BIP44 structurally, so it is
+     *    NOT residue and counts toward the consolidated total.
+     * 2. STOP sweeping once `existing BIP44 confirmed + swept output +
+     *    change` covers `amount + headroom` — never more accounts than
+     *    needed.
+     * 3. RETRY the ORIGINAL send on the NORMAL BIP44 path
+     *    (`sendToAddresses` — no recursion into this fallback) every
+     *    [CONSOLIDATION_SEND_RETRY_INTERVAL_MS], up to
+     *    [CONSOLIDATION_SEND_TIMEOUT_MS] total: the SDK funds from
+     *    `is_confirmed || is_instantlocked` outputs and IS-locks land in
+     *    ~2s, so a successful retry PROVES spendability — simpler and
+     *    self-proving versus observing IS-lock events.
+     *
+     * Failure semantics — every abort is funds-safe:
+     * - A sweep build/broadcast failure, an address-derivation failure, or
+     *   the retry timeout rethrows the ORIGINAL
+     *   [DashSdkError.PlatformWallet.CoreInsufficientFunds] (familiar UI
+     *   error; NotBroadcast classification stays provable for the PAYMENT,
+     *   which was never built) with the trigger and a partial-consolidation
+     *   note attached as suppressed. Sweeps already broadcast are
+     *   SELF-SENDS to this wallet's own BIP44 addresses — even an ambiguous
+     *   sweep outcome moves funds only into the user's main account, so the
+     *   next send attempt simply finds them there.
+     * - A NON-shortfall failure of the retried send propagates AS-IS so
+     *   [classifyCoreSendFailure] still sees it (an ambiguous broadcast
+     *   must surface as Ambiguous — never a dashj retry).
+     */
+    private suspend fun consolidateReceivalAccountsAndResendOrRethrow(
+        manager: org.dashfoundation.dashsdk.wallet.PlatformWalletManager,
+        wallet: org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet,
+        addressBase58: String,
+        amountDuffs: Long,
+        candidates: List<ReceivalFundingAccount>,
+        bip44ConfirmedDuffs: Long,
+        shortfall: DashSdkError.PlatformWallet.CoreInsufficientFunds
+    ): String {
+        val targetDuffs = amountDuffs + RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS
+        val plan = planConsolidationSweeps(candidates, amountDuffs)
+        if (plan.isEmpty()) {
+            log.info(
+                "SDK l1Send fallback: receival funds split across {} contact account(s) " +
+                    "({} duffs confirmed total, largest {}); neither one account nor the sum " +
+                    "covers {} + {} duffs headroom with sweepable accounts, and accounts are " +
+                    "never unioned in one tx — rethrowing the BIP44 shortfall",
+                candidates.size,
+                candidates.sumOf { it.confirmedDuffs },
+                candidates.maxOf { it.confirmedDuffs },
+                amountDuffs,
+                RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS
+            )
+            throw shortfall
+        }
+        log.info(
+            "SDK l1Send consolidation: no single receival account covers {} + {} duffs headroom; " +
+                "consolidating up to {} receival account(s) ({} duffs confirmed) into BIP44 " +
+                "(existing confirmed {} duffs) to cover the send",
+            amountDuffs,
+            RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS,
+            plan.size,
+            plan.sumOf { it.confirmedDuffs },
+            bip44ConfirmedDuffs
+        )
+        var consolidatedDuffs = 0L
+        val sweptTxids = ArrayList<String>(plan.size)
+        for (account in plan) {
+            if (bip44ConfirmedDuffs + consolidatedDuffs >= targetDuffs) break
+            // The ORIGINAL payment was never built or broadcast, so on a
+            // sweep failure rethrowing the original shortfall keeps its
+            // NotBroadcast classification provable.
+            val sweep = try {
+                sweepReceivalAccountToOwnBip44(manager, wallet, account)
+            } catch (e: ReceivalSweepException) {
+                rethrowShortfallAfterConsolidation(
+                    shortfall, e.cause ?: e, sweptTxids, consolidatedDuffs, e.note
+                )
+            }
+            consolidatedDuffs += sweep.creditedDuffs
+            sweptTxids.add(sweep.txidHex)
+        }
+        log.info(
+            "SDK l1Send consolidation: consolidated {} receival account(s) ({} duffs incl. change) " +
+                "toward the send of {} duffs; retrying the send for up to {} ms",
+            sweptTxids.size, consolidatedDuffs, amountDuffs, CONSOLIDATION_SEND_TIMEOUT_MS
+        )
+        // Retry-with-backoff on the NORMAL path — success proves the swept
+        // outputs became fundable. Deliberately no withTimeout: an in-flight
+        // send is never cancelled mid-broadcast; the deadline is only
+        // checked between attempts.
+        val deadlineNanos = System.nanoTime() + CONSOLIDATION_SEND_TIMEOUT_MS * 1_000_000L
+        while (true) {
+            val txidHex = try {
+                wallet.sendToAddresses(
+                    recipients = listOf(addressBase58 to amountDuffs),
+                    network = toSdkNetwork(Constants.NETWORK_PARAMETERS),
+                    coreSignerHandle = manager.mnemonicResolverHandle
+                )
+            } catch (t: DashSdkError.PlatformWallet.CoreInsufficientFunds) {
+                if (System.nanoTime() >= deadlineNanos) {
+                    log.warn(
+                        "SDK l1Send consolidation: swept funds not yet spendable after {} ms; " +
+                            "rethrowing the BIP44 shortfall — the {} duffs swept (txids {}) are " +
+                            "self-sends consolidating into BIP44, so the next attempt will succeed",
+                        CONSOLIDATION_SEND_TIMEOUT_MS, consolidatedDuffs, sweptTxids
+                    )
+                    rethrowShortfallAfterConsolidation(
+                        shortfall, t, sweptTxids, consolidatedDuffs,
+                        "the swept funds were not spendable within ${CONSOLIDATION_SEND_TIMEOUT_MS} ms"
+                    )
+                }
+                delay(CONSOLIDATION_SEND_RETRY_INTERVAL_MS)
+                continue
+            }
+            // Any NON-shortfall throwable above propagates AS-IS so the
+            // caller's classifyCoreSendFailure treats it exactly like a
+            // normal-path failure (ambiguous stays ambiguous — no dashj).
+            log.info(
+                "SDK l1Send consolidation: original send of {} duffs succeeded after consolidating " +
+                    "{} receival account(s), txid {}",
+                amountDuffs, sweptTxids.size, txidHex
+            )
+            return txidHex
+        }
+    }
+
+    /**
+     * Abort a consolidation by rethrowing the ORIGINAL BIP44 [shortfall]
+     * (so the UI shows the familiar insufficient-funds error and the
+     * NotBroadcast classification of the never-built payment stays
+     * provable), attaching [cause] and — when sweeps already broadcast — a
+     * note recording that those funds are now consolidating into BIP44
+     * (self-sends: safe, and available to the next attempt).
+     */
+    private fun rethrowShortfallAfterConsolidation(
+        shortfall: DashSdkError.PlatformWallet.CoreInsufficientFunds,
+        cause: Throwable,
+        sweptTxids: List<String>,
+        consolidatedDuffs: Long,
+        note: String
+    ): Nothing {
+        shortfall.addSuppressed(cause)
+        if (sweptTxids.isNotEmpty()) {
+            shortfall.addSuppressed(
+                IllegalStateException(
+                    "receival-account consolidation aborted ($note) after sweeping " +
+                        "$consolidatedDuffs duffs to own BIP44 addresses in ${sweptTxids.size} " +
+                        "self-send tx(s) $sweptTxids — funds safe; the next send attempt can " +
+                        "spend them via BIP44"
+                )
+            )
+        }
+        throw shortfall
+    }
+
+    /**
+     * [SdkL1SendSource.sweepReceivalAccountsForSendAll] — the MAX (send-all)
+     * completeness pass. The BIP44 drain ([CoreSendAllNative]) only ever
+     * selects BIP44-account UTXOs and CANNOT fail on invisible receival
+     * funds — it self-limits and succeeds — so unlike a plain send there
+     * is no shortfall to trigger the receival fallback: the sweeps must
+     * run UP FRONT (the on-device max-send bug: main account drained, the
+     * contact-received funds silently left behind).
+     *
+     * The await is BALANCE-based for the same reason: a drain run before
+     * the swept outputs are spendable would quietly deliver only the old
+     * BIP44 funds, not fail — so retry-the-send is no proof here. BIP44
+     * `confirmed` counts in-a-block OR IS-locked, exactly the funding
+     * predicate (`is_confirmed || is_instantlocked`), so BIP44-confirmed
+     * reaching `before + credited` PROVES the drain can select every
+     * swept output (IS-locks land in ~2s).
+     *
+     * Failure semantics: THROWS (the enumeration read included — a blind
+     * drain would repeat the silent-shortchange bug, so fail closed);
+     * every abort is funds-safe (un-swept funds stay in their receival
+     * accounts; broadcast sweeps are self-sends consolidating into BIP44,
+     * found by the next attempt). The caller's payment was never built.
+     */
+    override suspend fun sweepReceivalAccountsForSendAll(walletIdHex: String): Long {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        val accountBalancesJson = manager.accountBalances(hexToBytes(walletIdHex))
+        val sweepable = parseReceivalFundingAccounts(accountBalancesJson)
+            .filter { it.confirmedDuffs > RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS }
+            .sortedByDescending { it.confirmedDuffs }
+        if (sweepable.isEmpty()) return 0L
+        val bip44BeforeDuffs = parseBip44ConfirmedDuffs(accountBalancesJson)
+        log.info(
+            "SDK l1SendAll: sweeping ALL {} receival account(s) ({} duffs confirmed) into BIP44 " +
+                "(confirmed {} duffs) so the drain can deliver them",
+            sweepable.size,
+            sweepable.sumOf { it.confirmedDuffs },
+            bip44BeforeDuffs
+        )
+        var creditedDuffs = 0L
+        val sweptTxids = ArrayList<String>(sweepable.size)
+        for (account in sweepable) {
+            val sweep = try {
+                sweepReceivalAccountToOwnBip44(manager, wallet, account)
+            } catch (e: ReceivalSweepException) {
+                throw IllegalStateException(
+                    "send-all receival sweep aborted (${e.note}) after sweeping $creditedDuffs " +
+                        "duffs in ${sweptTxids.size} self-send tx(s) $sweptTxids — funds safe " +
+                        "(un-swept funds stay in their receival accounts; swept funds are " +
+                        "consolidating into BIP44); retry the send",
+                    e
+                )
+            }
+            creditedDuffs += sweep.creditedDuffs
+            sweptTxids.add(sweep.txidHex)
+        }
+        val targetDuffs = bip44BeforeDuffs + creditedDuffs
+        val deadlineNanos = System.nanoTime() + CONSOLIDATION_SEND_TIMEOUT_MS * 1_000_000L
+        while (true) {
+            val bip44NowDuffs = try {
+                parseBip44ConfirmedDuffs(manager.accountBalances(hexToBytes(walletIdHex)))
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("SDK l1SendAll: BIP44 balance poll failed; retrying until the deadline", t)
+                null
+            }
+            if (bip44NowDuffs != null && bip44NowDuffs >= targetDuffs) {
+                log.info(
+                    "SDK l1SendAll: all {} receival sweep(s) spendable on BIP44 ({} duffs " +
+                        "credited incl. change); proceeding to the drain",
+                    sweptTxids.size,
+                    creditedDuffs
+                )
+                return creditedDuffs
+            }
+            if (System.nanoTime() >= deadlineNanos) {
+                throw IllegalStateException(
+                    "send-all receival sweeps not yet spendable after ${CONSOLIDATION_SEND_TIMEOUT_MS} ms " +
+                        "($creditedDuffs duffs in ${sweptTxids.size} self-send tx(s) $sweptTxids — " +
+                        "funds safe, consolidating into BIP44); retry the send"
+                )
+            }
+            delay(CONSOLIDATION_SEND_RETRY_INTERVAL_MS)
+        }
     }
 
     override suspend fun spendableBalanceDuffs(walletIdHex: String): Long {
@@ -763,7 +1294,15 @@ class SdkL1SendService internal constructor(
         walletData: de.schildbach.wallet.data.WalletData,
         seamOutputLockRegistry: SeamOutputLockRegistry
     ) : this(
-        source = DashSdkL1SendSource(sdkService),
+        source = DashSdkL1SendSource(
+            sdkService,
+            // Consolidation sweeps' destination: a FRESH own BIP44 receive
+            // address. The pinned AAR exposes no receive-address API, so
+            // dashj derives it — same seed, same BIP44 account 0 (the
+            // CoinJoinFundsMigrationService precedent). Each call issues a
+            // NEW key, so per-sweep calls never reuse an address.
+            freshOwnBip44Address = { walletData.freshReceiveAddressString() }
+        ),
         dashPayConfig = dashPayConfig,
         // Lazy per call: Constants untouched until a flag-gated send runs.
         isValidAddress = { address ->
@@ -847,14 +1386,23 @@ class SdkL1SendService internal constructor(
      *   REFUSED (NotBroadcast) while the held dashj wallet tracks any
      *   app-locked spendable output OR the seam registry holds any lock —
      *   see [hasAppLockedSpendableOutputs] and [SeamOutputLockRegistry].
+     *   Before the drain, ALL DashPay receival accounts holding sweepable
+     *   confirmed funds are swept into BIP44
+     *   ([SdkL1SendSource.sweepReceivalAccountsForSendAll] — the BIP44
+     *   drain cannot see them and self-limits without failing, so the
+     *   plain-send shortfall fallback never fires on a max send); a sweep
+     *   failure aborts NotBroadcast with every fund safe.
      *   [amount] is display-typed for a send-all — the
      *   engine decides the deliverable — but must still be positive.
-     * @param beforeBroadcast invoked after ALL preflights pass and
-     *   immediately before the single broadcast attempt — the call site's
-     *   dashj-equivalent pre-send conditions (leftover-balance check,
-     *   which may throw `LeftoverBalanceException`). A throw here
-     *   propagates unclassified, exactly as it would on the dashj path;
-     *   nothing has been broadcast yet.
+     * @param beforeBroadcast invoked after ALL preflights pass and before
+     *   ANY broadcast — for a plain send that is immediately before the
+     *   single broadcast attempt; for a send-all it also precedes the
+     *   receival self-sweeps, so a throw leaves nothing broadcast at all.
+     *   The call site's dashj-equivalent pre-send conditions
+     *   (leftover-balance check, which may throw
+     *   `LeftoverBalanceException`). A throw here propagates
+     *   unclassified, exactly as it would on the dashj path; nothing has
+     *   been broadcast yet.
      */
     suspend fun sendToAddress(
         addressBase58: String,
@@ -893,13 +1441,20 @@ class SdkL1SendService internal constructor(
         // Shared with the debug settings status line via probeSendGate.
         val gate = probeSendGate()
         if (!gate.allowed) {
-            return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
+            return notBroadcast(operation, "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}", null)
         }
 
-        // Send-all floor (iOS-validated max pattern): spendable − reserve,
-        // read in PREFLIGHT so a balance-read failure is NotBroadcast by
-        // construction, never Ambiguous.
-        val sendAllFloor = if (emptyWallet) {
+        // Send-all guards, receival sweeps and floor. Order matters:
+        // 1. the app-locked-output guards (pre-everything, fail closed);
+        // 2. beforeBroadcast() — the call site's pre-send conditions may
+        //    throw (LeftoverBalanceException), and a throw must leave
+        //    NOTHING broadcast, the receival self-sweeps included;
+        // 3. sweep ALL receival accounts into BIP44 (MAX completeness);
+        // 4. the floor read — AFTER the sweeps so it covers the swept
+        //    funds. Every failure through step 4 is NotBroadcast by
+        //    construction (the payment was never built; sweeps are
+        //    self-sends), never Ambiguous.
+        if (emptyWallet) {
             // FAIL-CLOSED GUARD (funds-critical): the drain selects EVERY
             // spendable UTXO and the FFI has no exclusion API (see the
             // [hasAppLockedSpendableOutputs] KDoc) — with any app-locked
@@ -940,6 +1495,38 @@ class SdkL1SendService internal constructor(
                     null
                 )
             }
+        }
+
+        // Call-site pre-send conditions (may throw, e.g. LeftoverBalanceException) —
+        // deliberately outside the classification try: nothing broadcast yet
+        // (the receival sweeps below run only after this passes) and the dashj
+        // path surfaces the same throw the same way.
+        beforeBroadcast()
+
+        val sendAllFloor = if (emptyWallet) {
+            // MAX-SEND COMPLETENESS (funds-visible-but-stranded bug): the
+            // BIP44 drain cannot see DashPay receival-account funds and
+            // self-limits without failing, so the plain-send shortfall
+            // fallback never fires on a max send — sweep ALL sweepable
+            // receival accounts into BIP44 up front (one self-send per
+            // account, never unioned) and await their spendability; only
+            // then read the floor and drain. No-op (one balance read) when
+            // no receival account holds sweepable funds.
+            try {
+                source.sweepReceivalAccountsForSendAll(walletIdHex)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                return notBroadcast(
+                    operation,
+                    "receival-account sweep for the send-all failed — funds are safe (in their " +
+                        "receival accounts, or consolidating into BIP44 as self-sends); retry the send",
+                    t
+                )
+            }
+            // Send-all floor (iOS-validated max pattern): spendable − reserve,
+            // read AFTER the sweeps so the floor covers the swept funds —
+            // still strictly pre-broadcast of the payment, so a read failure
+            // stays NotBroadcast by construction, never Ambiguous.
             try {
                 sendAllFloorDuffs(source.spendableBalanceDuffs(walletIdHex))
             } catch (t: Throwable) {
@@ -949,11 +1536,6 @@ class SdkL1SendService internal constructor(
         } else {
             null
         }
-
-        // Call-site pre-send conditions (may throw, e.g. LeftoverBalanceException) —
-        // deliberately outside the classification try: nothing broadcast yet and
-        // the dashj path surfaces the same throw the same way.
-        beforeBroadcast()
 
         // The single broadcast attempt. (The send-all shortfall retry is not
         // a second broadcast: an [isSendAllShortfall] throw is a provably
@@ -1054,7 +1636,7 @@ class SdkL1SendService internal constructor(
 
         val gate = probeSendGate()
         if (!gate.allowed) {
-            return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
+            return notBroadcast(operation, "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}", null)
         }
 
         // Fail-closed lock guard, scoped to the account this drain touches.

@@ -158,7 +158,20 @@ class SendCoinsViewModel @Inject constructor(
         blockchainStateDao.observeState()
             .filterNotNull()
             .onEach { state ->
-                _isBlockchainReplaying.postValue(state.replaying)
+                // NOT-SYNCED is folded into the same UI signal as REPLAYING.
+                // Post-cutover the SDK does a from-scratch compact-filter scan
+                // on first launch; a send attempted inside that window failed
+                // deep in the SDK send path and surfaced the raw exception
+                // text ("…ROLLBACK_CUTOVER…") under "Problem sending coins!".
+                // Gating here reuses the existing, translated
+                // send_coins_fragment_hint_replaying hint and the existing
+                // blockContinue wiring in SendCoinsFragment.
+                //
+                // Deliberately NOT done by flipping the persisted `replaying`
+                // flag: that flag has 15+ consumers (shielded transfers,
+                // mixed-funds migration, exchange-rate stamping, DashPay
+                // contact payments) and must keep its own meaning.
+                _isBlockchainReplaying.postValue(state.replaying || !state.isSynced())
             }
             .launchIn(viewModelScope)
 
@@ -270,7 +283,31 @@ class SendCoinsViewModel @Inject constructor(
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
             Context.propagate(wallet.context)
-            sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
+            // Thread the payment intent's address — WHO the user is paying —
+            // to the send funnel. Engine-neutral: the funnel needs it to keep
+            // the payment identifiable when the recipient is one of this
+            // wallet's OWN addresses (a self-send: recipient and change are
+            // both "mine", so the request's outputs alone can't name the
+            // payment — the on-device 11.10.44 self-send failure). Null when
+            // the intent has no plain address; the funnel then applies its
+            // usual conservative rules.
+            val intendedRecipient = if (finalPaymentIntent.hasAddress()) {
+                try {
+                    Address.fromString(
+                        Constants.NETWORK_PARAMETERS,
+                        finalPaymentIntent.getAddress(Constants.ADDRESS_NETWORK)
+                    )
+                } catch (ex: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+            sendCoinsTaskRunner.sendCoins(
+                finalSendRequest,
+                checkBalanceConditions = checkBalance,
+                intendedRecipient = intendedRecipient
+            )
         } catch (ex: Exception) {
             _state.postValue(State.FAILED)
             throw ex

@@ -148,9 +148,10 @@ class BlockchainStateDataProvider @Inject constructor(
      * [updateBlockchainState], fed by
      * [de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateService]'s
      * equality-gated poll of the SDK SPV progress. Null fields preserve the
-     * row's current value (see the update class KDoc); `chainlockHeight`
-     * is always preserved — the SDK exposes no chainlock-height feed yet
-     * (documented gap), so the row keeps the last dashj-known value.
+     * row's current value (see the update class KDoc) — `chainlockHeight`
+     * included, and it is additionally clamped MONOTONICALLY so the
+     * engine's session-scoped lower bound can never regress a higher value
+     * an earlier session (or dashj, pre-cutover) already established.
      * Serialized with every other writer on [coroutineScope].
      */
     internal fun updateSdkBlockchainState(update: de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateUpdate) {
@@ -168,6 +169,16 @@ class BlockchainStateDataProvider @Inject constructor(
             }
             update.bestChainDateMs?.let { blockchainState.bestChainDate = java.util.Date(it) }
             update.mnListHeight?.let { blockchainState.mnlistHeight = it }
+            // Chainlock height: the engine only knows the chainlocks it
+            // applied THIS session (a lower bound — see
+            // SdkBlockchainStateUpdate.chainlockHeight), so take the max
+            // rather than assigning. A restart therefore never walks the
+            // row backwards past what dashj or an earlier session proved.
+            update.chainlockHeight?.let {
+                if (it > blockchainState.chainlockHeight) {
+                    blockchainState.chainlockHeight = it
+                }
+            }
             // Null percent (transient SDK ERROR) preserves the row's value —
             // a peer hiccup must not flap isSynced() consumers 100 → 0 → 100.
             update.percentageSync?.let { blockchainState.percentageSync = it }

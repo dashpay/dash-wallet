@@ -75,14 +75,16 @@ class BlockchainStateDataProviderTest {
         percentageSync: Int? = null,
         mnListHeight: Int? = null,
         syncStage: SyncStage = SyncStage.BLOCKS,
-        networkStalled: Boolean = false
+        networkStalled: Boolean = false,
+        chainlockHeight: Int? = null
     ) = SdkBlockchainStateUpdate(
         bestChainHeight = bestChainHeight,
         bestChainDateMs = bestChainDateMs,
         percentageSync = percentageSync,
         mnListHeight = mnListHeight,
         syncStage = syncStage,
-        networkStalled = networkStalled
+        networkStalled = networkStalled,
+        chainlockHeight = chainlockHeight
     )
 
     private fun awaitUntil(what: String, timeoutMs: Long = 5_000, condition: () -> Boolean) {
@@ -130,7 +132,7 @@ class BlockchainStateDataProviderTest {
         assertEquals(Date(2_000_000_000L), row.bestChainDate)
         assertEquals(90, row.percentageSync)
         assertFalse("the SDK has no replay concept — the flag must clear", row.replaying)
-        assertEquals("chainlockHeight is always preserved (no SDK feed)", 1_499_990, row.chainlockHeight)
+        assertEquals("a null chainlockHeight preserves the row's value", 1_499_990, row.chainlockHeight)
         assertEquals("null mnListHeight preserves the row's value", 1_499_000, row.mnlistHeight)
         assertEquals(
             "service impediments compose with the SDK stall NETWORK bit",
@@ -169,6 +171,44 @@ class BlockchainStateDataProviderTest {
         )
         awaitUntil("error update applied") { dao.state?.syncFailed() == true }
         assertEquals("percent preserved through the transient error", 100, dao.state!!.percentageSync)
+    }
+
+    @Test
+    fun updateSdkBlockchainState_advancesChainlockHeightMonotonically() {
+        // FIX-pin (chainlockHeight post-cutover): dashj's
+        // chainLockHandler.bestChainLockBlockHeight stops advancing the moment
+        // the peergroup is held, so the row froze at the cutover snapshot (0 on
+        // a fresh restore) forever — ChainLockedCoinSelector then permanently
+        // took its FALLBACK_CONFIRMATIONS depth branch. The SDK writer now
+        // carries the engine's applied-chainlock height into the row.
+        dao.state = BlockchainState(
+            Date(1_000_000_000L),
+            1_500_000,
+            false,
+            EnumSet.noneOf(Impediment::class.java),
+            1_499_990,
+            1_499_000,
+            100
+        )
+
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 99, chainlockHeight = 1_500_050))
+        awaitUntil("chainlock advance applied") { dao.state?.percentageSync == 99 }
+        assertEquals(
+            "an SDK-observed chainlock advances the row",
+            1_500_050,
+            dao.state!!.chainlockHeight
+        )
+
+        // A fresh session starts with no observed chainlock and the engine's
+        // first event can be BELOW what dashj (or the last session) proved.
+        // Monotonic: it must never walk the row backwards.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 98, chainlockHeight = 1_400_000))
+        awaitUntil("lower chainlock update applied") { dao.state?.percentageSync == 98 }
+        assertEquals(
+            "a lower SDK chainlock height must not regress the row",
+            1_500_050,
+            dao.state!!.chainlockHeight
+        )
     }
 
     @Test

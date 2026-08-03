@@ -24,6 +24,7 @@ import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.dao.TxGroupCacheDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
+import de.schildbach.wallet.database.entity.TxGroupCacheEntry
 import de.schildbach.wallet.service.DisplayCacheRefreshBus
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.MainActivity
@@ -42,13 +43,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
@@ -124,6 +127,13 @@ fun l1TxUiRecord(
     }
     val direction = when (directionCode) {
         0 -> L1TxUiDirection.INCOMING
+        // NOTE (investigated 2026-07-31, decision: leave as-is): 2-participant
+        // CoinJoin mixing rounds (testnet-only — mainnet pools require >=3
+        // participants) come through as Outgoing/net=0 because the SDK's Rust
+        // classifier requires >=3 inputs AND outputs to tag CoinJoin, so they
+        // display as "Sent 0" instead of v11.9's "Mixing". Accepted testnet
+        // cosmetic; the parity diagnostic's BALANCE_MATCH (purple) state covers
+        // the corresponding tx-count deltas.
         1 -> L1TxUiDirection.OUTGOING
         2 -> L1TxUiDirection.INTERNAL
         3 -> L1TxUiDirection.COINJOIN
@@ -135,7 +145,7 @@ fun l1TxUiRecord(
         else -> 0L
     }
     return L1TxUiRecord(
-        txidHex = txidWireBytes.reversedArray().joinToString("") { "%02x".format(it) },
+        txidHex = displayHexOf(txidWireBytes),
         netAmountDuffs = netAmountDuffs,
         feeDuffs = feeDuffs,
         timestampMs = timestampMs,
@@ -253,11 +263,19 @@ internal fun planL1TxRow(
     L1TxUiDirection.INTERNAL, L1TxUiDirection.COINJOIN -> if (assetLockKind != null) {
         // A Platform-funding asset lock the SDK recorded as an internal move —
         // render it as the SENT Platform action it funded, not "Internal".
+        // The shield/unshield pair are pool self-transfers, not payments, so
+        // per the product spec they carry the INTERNAL (double-arrows)
+        // transfer icon; the fee-like kinds keep the sent arrow. Both keep
+        // FLAG_SENT so the shield stays findable under the Sent filter.
         L1TxRowPlan(
             rowId = record.txidHex,
             titleRes = assetLockTitleRes(assetLockKind),
             statusRes = -1,
-            iconType = TxDisplayCacheEntry.ICON_SENT,
+            iconType = if (assetLockKind.isPoolTransfer) {
+                TxDisplayCacheEntry.ICON_INTERNAL
+            } else {
+                TxDisplayCacheEntry.ICON_SENT
+            },
             iconBgType = TxDisplayCacheEntry.BG_SENT,
             filterFlags = TxDisplayCacheEntry.FLAG_SENT,
             valueDuffs = record.netAmountDuffs,
@@ -281,8 +299,11 @@ internal fun planL1TxRow(
         // self-move, not an external receive. Relabel it "Unshielded" and
         // mark it NON-incoming so it never triggers the coins-received
         // notification (planL1DisplaySync's notify guard is keyed on
-        // isIncoming). The row still shows the received icon + positive
-        // value, since the transparent balance really does go up.
+        // isIncoming). Per the product spec the row carries the INTERNAL
+        // (double-arrows) transfer treatment — same icon+background as the
+        // "Internal"/shield rows — while keeping its positive value and
+        // FLAG_RECEIVED (the transparent balance really does go up, so it
+        // stays findable under the Received filter).
         L1TxRowPlan(
             rowId = record.txidHex,
             titleRes = assetLockTitleRes(assetLockKind),
@@ -291,8 +312,8 @@ internal fun planL1TxRow(
             } else {
                 -1
             },
-            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
-            iconBgType = TxDisplayCacheEntry.BG_RECEIVED,
+            iconType = TxDisplayCacheEntry.ICON_INTERNAL,
+            iconBgType = TxDisplayCacheEntry.BG_SENT,
             filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED,
             valueDuffs = record.netAmountDuffs,
             timestampMs = record.timestampMs,
@@ -316,6 +337,15 @@ internal fun planL1TxRow(
     }
 }
 
+/**
+ * The shield/unshield pair moves value between the wallet and its own
+ * shielded pool — a self-transfer, not a payment — so both list rows render
+ * the INTERNAL (double-arrows) transfer icon instead of the sent/received
+ * arrows (product spec; the fee-like kinds keep the sent arrow).
+ */
+internal val AssetLockKind.isPoolTransfer: Boolean
+    get() = this == AssetLockKind.SHIELD || this == AssetLockKind.UNSHIELD
+
 /** The list/detail title string for a Platform-funding asset-lock kind. */
 internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     AssetLockKind.UPGRADE -> R.string.dashpay_upgrade_fee
@@ -327,6 +357,27 @@ internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     AssetLockKind.SHIELD -> R.string.transaction_row_shielded
     AssetLockKind.UNSHIELD -> R.string.transaction_row_unshielded
 }
+
+/**
+ * Whether this group-cache row means "this tx is rendered as part of a MULTI-tx
+ * group row" — a dashj-era CoinJoin/CrowdNode set whose display rowId is the
+ * GROUP id, not the txid. Those rows are never planned/updated from an SDK
+ * record (the SDK knows individual transactions, not dashj's grouping).
+ *
+ * ROOT CAUSE FIX (verified on-device, S22): this used to be written as
+ * `groupId != txId`, which is WRONG for a plain single-tx wrapper — its
+ * [TxGroupCacheEntry.groupId] is the txid in BASE58
+ * ([de.schildbach.wallet.transactions.TransactionWrapperHelper.wrapTransactions],
+ * `txId.toStringBase58()`) while [TxGroupCacheEntry.txId] and the display rowId
+ * are the lowercase HEX txid. Every ordinary send/receive that went through a
+ * dashj cache rebuild therefore looked "grouped" and was silently EXCLUDED from
+ * every SDK sync pass, so a dashj misread (value 0 → green RECEIVED icon titled
+ * "Sending", stuck "Processing") could never be corrected. The wrapper TYPE is
+ * the exact, id-format-independent signal: [TxGroupCacheEntry.TYPE_SINGLE] is by
+ * definition one tx = one row keyed by that tx's hex id.
+ */
+internal val TxGroupCacheEntry.isMultiTxGroupRow: Boolean
+    get() = wrapperType != TxGroupCacheEntry.TYPE_SINGLE
 
 // ── Pure display-cache sync planning ──────────────────────────────────
 
@@ -345,7 +396,20 @@ internal data class L1DisplaySyncPlan(
     val inserts: List<TxDisplayCacheEntry>,
     val updates: List<TxDisplayCacheEntry>,
     /** (display txid, received duffs) per newly-discovered incoming tx. */
-    val notifyIncoming: List<Pair<String, Long>>
+    val notifyIncoming: List<Pair<String, Long>>,
+    /**
+     * Every rowId this pass placed under SDK AUTHORITY — the SDK has a definitive
+     * `transactions` record for it and the row is not one of the never-touch
+     * carve-outs (service/gift-card/error/CoinJoin group rows). Reported so the
+     * caller can tell the dashj-side display writers
+     * ([de.schildbach.wallet.service.TxDisplayCacheService]) never to rewrite these
+     * rows' direction/value/title/status — the "SDK-stamped" signal that works for
+     * NON-contact rows too (a contact row is additionally self-identifying via its
+     * `contactUserId` column). Includes rows the planner left byte-identical: they
+     * were VERIFIED against the SDK record this pass, which is exactly the same
+     * authority claim.
+     */
+    val sdkAuthoritative: Set<String> = emptySet()
 )
 
 /** Only notify receives first seen within this window (guards against re-notifying history after a cache wipe). */
@@ -395,11 +459,35 @@ internal fun planL1DisplaySync(
     // engine net was never observed; the contact row then keeps the SDK record's
     // direction/value (and, once a row is cached correctly, is never regressed —
     // the re-plan only fires when an authoritative net is present).
-    signedNetByTxid: Map<String, Long> = emptyMap()
+    signedNetByTxid: Map<String, Long> = emptyMap(),
+    // Whether [records] came from the SDK's persisted `transactions` table (the Room
+    // SNAPSHOT feed) — one wallet-wide row per txid, and therefore DEFINITIVE for a
+    // plain row's direction/amount. False for the engine's instant tx feed, whose
+    // Detected events are PER-ACCOUNT: one multi-account self-spend emits both an
+    // OUTGOING and an INCOMING event for the same txid, so an event record must never
+    // re-shape an EXISTING row (the outgoing-born "Sending" row wins — see
+    // [CutoverUiDataService.seenEventDirections]). Inserts and the surgical
+    // status/kind/contact edges still apply to both feeds.
+    restampFromDefinitiveRecord: Boolean = true
 ): L1DisplaySyncPlan {
     val inserts = mutableListOf<TxDisplayCacheEntry>()
     val updates = mutableListOf<TxDisplayCacheEntry>()
     val notify = mutableListOf<Pair<String, Long>>()
+    val sdkAuthoritative = mutableSetOf<String>()
+
+    // The three PLAIN direction titles. A cached row carrying one of them was
+    // classified by its writer as an ordinary send/receive, so the SDK record may
+    // re-author its whole display shape. Any other title means richer semantics
+    // the SDK record cannot reproduce — "Internal", the CoinJoin family
+    // ("Mixing"/"Create denominations"/"Mixing fee"/"Combine dust"), the
+    // Platform asset-lock family ("Shielded"/"Unshielded"/"Upgrade Fee"/
+    // "Invitation"/"Topup Fee"), masternode registration/update, "Mining reward"
+    // and the gift-card/error labels — and is never re-stamped by the plain path.
+    val plainDirectionTitles = setOf(
+        resolve(R.string.transaction_row_status_sending),
+        resolve(R.string.transaction_row_status_sent),
+        resolve(R.string.transaction_row_status_received)
+    )
 
     for (record in records) {
         if (record.txidHex in groupedTxIds) continue
@@ -441,6 +529,7 @@ internal fun planL1DisplaySync(
                 contactUserId = contact?.userId,
                 filterFlags = plan.filterFlags
             )
+            sdkAuthoritative += plan.rowId
             if (plan.isIncoming && record.netAmountDuffs > 0 &&
                 record.timestampMs >= nowMs - notifyWindowMs
             ) {
@@ -457,6 +546,7 @@ internal fun planL1DisplaySync(
         ) {
             continue
         }
+        sdkAuthoritative += record.txidHex
 
         var updated = existing
         if (existing.title == resolve(R.string.transaction_row_status_sending) &&
@@ -507,19 +597,89 @@ internal fun planL1DisplaySync(
                 exchangeRateFiatValue = incomingFiatValue
             )
         }
-        // Re-label an already-cached plain internal move to the Platform-funding "…Fee"
-        // once its funding kind is known. The ASSET_LOCK_TXID persist races the first
-        // tx-feed insert, so the asset-lock row is usually cached as "Internal" before
-        // resolveAssetLockKind can classify it; without this the ~60s re-resolve has
-        // nowhere to write the UPGRADE label. Only a plain sent_internally row is re-stamped.
-        if (kindByTxid[record.txidHex] != null &&
-            updated.title == resolve(R.string.transaction_row_status_sent_internally)) {
-            updated = updated.copy(
-                title = resolve(plan.titleRes),
-                iconType = plan.iconType,
-                iconBgType = plan.iconBgType,
-                filterFlags = plan.filterFlags
-            )
+        // Re-stamp an already-cached row's DISPLAY SHAPE once its Platform-funding
+        // kind is known. Covers (a) the "Internal" → "…Fee" relabel race (the
+        // ASSET_LOCK_TXID persist races the first tx-feed insert, so the asset-lock
+        // row is usually cached as "Internal" before resolveAssetLockKind can
+        // classify it — the ~60s re-resolve lands the UPGRADE label here); (b) an
+        // unshield cached "Received" before its UNSHIELD classification resolved;
+        // and (c) rows cached under an older kind treatment (e.g. shield/unshield
+        // rows stamped with sent/received arrows before the transfer-icon spec).
+        // Only title/icon/background/filter are touched — value, time, rate, memo
+        // and contact fields are preserved via copy(). Idempotent: once the shape
+        // matches the plan, nothing is written. The never-touch guards above
+        // already excluded service/gift-card/error/CoinJoin rows, and kindByTxid
+        // is only ever populated for INTERNAL/COINJOIN/INCOMING self-moves.
+        if (kindByTxid[record.txidHex] != null) {
+            val desiredTitle = resolve(plan.titleRes)
+            if (updated.title != desiredTitle ||
+                updated.iconType != plan.iconType ||
+                updated.iconBgType != plan.iconBgType ||
+                updated.filterFlags != plan.filterFlags
+            ) {
+                updated = updated.copy(
+                    title = desiredTitle,
+                    iconType = plan.iconType,
+                    iconBgType = plan.iconBgType,
+                    filterFlags = plan.filterFlags
+                )
+            }
+        }
+        // Re-stamp a PLAIN (non-contact, non-asset-lock) row whose cached display shape
+        // DISAGREES with the SDK's definitive record. Post-cutover the SDK's
+        // `transactions` row (direction + netAmount + context) is the source of truth for
+        // an ordinary send/receive, and the dashj-side writers can only MISREAD an
+        // SDK-authored send: with the funding inputs unconnected dashj values it at net 0,
+        // which `TransactionRowView.fromTransaction` renders as a GREEN RECEIVED icon
+        // titled "Sending" and stuck on "Processing" (verified on-device: a confirmed
+        // −0.9645 max-send). The older repairs only covered rows carrying a contact
+        // identity (or a value-0 row); a plain send fell through both, so nothing ever
+        // corrected it. Carve-outs, all preserved:
+        //  - service/gift-card/error/CoinJoin rows already `continue`d above;
+        //  - asset-lock kinds (Shielded/Unshielded/Upgrade Fee/Invitation/Topup Fee) are
+        //    excluded by kindByTxid and by [plainDirectionTitles];
+        //  - contact rows are excluded here (they need the ENGINE's signed net — the SDK
+        //    record's own net is the wrong +change for a friendship send) and handled by
+        //    the authoritative re-plan below; the cached contact columns are checked too,
+        //    so a pass whose contact resolution transiently failed still cannot regress an
+        //    already-attributed row;
+        //  - INTERNAL/COINJOIN records and zero-net records are not "definitive" (a
+        //    2-participant testnet mixing round arrives as Outgoing/net=0), so a row is
+        //    never re-labelled from one of those;
+        //  - memo, exchange rate, time, transactionAmount, service and contact columns are
+        //    untouched (copy() of the derived display fields only).
+        // Idempotent: once the row equals the plan nothing is written, so a settled row
+        // produces no update on any later pass.
+        val definitiveRecord = restampFromDefinitiveRecord &&
+            kindByTxid[record.txidHex] == null &&
+            contact == null &&
+            updated.contactUserId == null &&
+            updated.contactUsername == null &&
+            record.netAmountDuffs != 0L &&
+            (record.direction == L1TxUiDirection.OUTGOING || record.direction == L1TxUiDirection.INCOMING)
+        if (definitiveRecord && updated.title in plainDirectionTitles) {
+            if (updated.iconType != plan.iconType ||
+                updated.iconBgType != plan.iconBgType ||
+                updated.filterFlags != plan.filterFlags ||
+                updated.valueSatoshis != plan.valueDuffs
+            ) {
+                // A send carries no secondary status (OUTGOING plan.statusRes == -1), so
+                // this clears the stale "Processing" a mislabelled RECEIVED row had
+                // stamped. The one status the plan may NOT clear is "Confirming" on an
+                // unlocked tx: dashj keeps it while BUILDING under 6 confirmations, and
+                // the surgical rule above already owns that transition.
+                val desiredStatus = if (plan.statusRes != -1) resolve(plan.statusRes) else ""
+                val keepConfirming = !locked &&
+                    updated.statusText == resolve(R.string.transaction_row_status_confirming)
+                updated = updated.copy(
+                    title = resolve(plan.titleRes),
+                    iconType = plan.iconType,
+                    iconBgType = plan.iconBgType,
+                    filterFlags = plan.filterFlags,
+                    valueSatoshis = plan.valueDuffs,
+                    statusText = if (keepConfirming) updated.statusText else desiredStatus
+                )
+            }
         }
         if (contact != null) {
             // Always attach the contact IDENTITY the insert could not (identity/
@@ -573,7 +733,7 @@ internal fun planL1DisplaySync(
         }
         if (updated != existing) updates += updated
     }
-    return L1DisplaySyncPlan(inserts, updates, notify)
+    return L1DisplaySyncPlan(inserts, updates, notify, sdkAuthoritative)
 }
 
 // ── Engine-event → record / row-update mapping (instant receive) ──────
@@ -647,9 +807,14 @@ internal fun planL1InstantLockRowUpdate(
  *
  * @param walletRecords wallet-relevant transactions (TXO-joined), same set
  *        as [CutoverUiSource.observeWalletTxRecords].
- * @param payloadByTxid raw serialized transaction bytes for EVERY SDK-known
- *        transaction (not just wallet-relevant ones), keyed by DISPLAY-order
- *        txid hex — the lookup that resolves an input's connected output.
+ * @param payloadByTxid raw serialized transaction bytes for any SDK-known
+ *        transaction, keyed by DISPLAY-order txid hex — the lookup that
+ *        resolves an input's connected output. CONTRACT: consumers may only
+ *        `get`/`containsKey` — the production source backs this with a LAZY
+ *        per-txid Room lookup + small LRU ([DashSdkCutoverUiSource]) instead
+ *        of materializing every payload per emission (the multi-day-sync OOM
+ *        fix), so iteration/`size` see an empty view there. Test fixtures
+ *        keep passing plain maps.
  * @param mineOutpoints wallet-owned outputs as "txidHex:vout" keys (the SDK
  *        TXO set — the same output universe dashj's `isMine` covers,
  *        parity-proven by the shadow harness).
@@ -709,6 +874,31 @@ interface CutoverUiSource {
      */
     suspend fun currentBalanceSplitDuffs(walletIdHex: String): SdkBalanceSplitDuffs
 
+    /**
+     * ONE-SHOT post-cutover MAX-SENDABLE display figure in duffs
+     * ([maxSendableDuffs] over the manager's per-account balance
+     * snapshot): BIP44 spendable + Σ sweepable receival accounts'
+     * confirmed net of the per-sweep fee headroom — what the send-all
+     * (sweep-then-drain, [SdkL1SendService]) actually delivers, before
+     * the final drain's own fee. The wallet-wide total overstates this
+     * whenever a DashPay contact's receival account holds funds the
+     * BIP44 drain cannot see. Null when unavailable (no snapshot / no
+     * BIP44 row) — the caller falls back to the wallet-wide total.
+     * Default null: sources without account-level balances.
+     */
+    suspend fun currentMaxSendableDuffs(walletIdHex: String): Long? = null
+
+    /**
+     * ONE-SHOT count of the wallet's UNSPENT transaction outputs — the SDK
+     * analogue of dashj's `calculateAllSpendCandidates(false, false).size`
+     * that [org.dash.wallet.common.WalletDataProvider.spendableUtxoCount]
+     * is contracted to return, i.e. the cardinality of the same output set
+     * whose amounts the total balance sums.
+     *
+     * Null when unavailable. Default null: sources without a TXO store.
+     */
+    suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = null
+
     /** Live wallet-relevant transaction records, neutral shape. */
     fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>>
 
@@ -753,14 +943,58 @@ internal class DashSdkCutoverUiSource(
 
     override fun observeTotalDuffs(walletIdHex: String): Flow<Long> = flow {
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+        val db = database()
+        // Trigger on any txos-table change (Room re-emits the count on every
+        // invalidation, value-changed or not), but SUM in SQL — the old path
+        // materialized every unspent TXO entity per change just to add up one
+        // column (the unbounded-read class the multi-day-sync review flagged).
         emitAll(
-            database().txoDao().observeUnspentByWallet(walletId)
-                .map { rows -> rows.sumOf { it.amount } }
+            db.txoDao().countByWallet(walletId).map { queryUnspentSumDuffs(db, walletId) }
         )
+    }
+
+    private suspend fun queryUnspentSumDuffs(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        walletId: ByteArray
+    ): Long = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        db.openHelper.readableDatabase.query(
+            androidx.sqlite.db.SimpleSQLiteQuery(
+                // Same predicate as the DAO's observeUnspentByWallet (isSpent = 0).
+                "SELECT COALESCE(SUM(amount), 0) FROM txos WHERE walletId = ? AND isSpent = 0",
+                arrayOf<Any?>(walletId)
+            )
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getLong(0) else 0L }
     }
 
     override suspend fun currentTotalDuffs(walletIdHex: String): Long =
         currentBalanceSplitDuffs(walletIdHex).total
+
+    override suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        val db = database()
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            db.openHelper.readableDatabase.query(
+                androidx.sqlite.db.SimpleSQLiteQuery(
+                    // COUNT over EXACTLY the predicate queryUnspentSumDuffs sums,
+                    // so the count and the total describe the same output set —
+                    // which is the invariant dashj's calculateAllSpendCandidates
+                    // / getBalance(ESTIMATED) pair has, and what
+                    // WalletDataProvider.spendableUtxoCount is contracted to.
+                    "SELECT COUNT(*) FROM txos WHERE walletId = ? AND isSpent = 0",
+                    arrayOf<Any?>(walletId)
+                )
+            ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+        }
+    }
+
+    override suspend fun currentMaxSendableDuffs(walletIdHex: String): Long? {
+        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+        // The same per-account snapshot the send path's receival
+        // enumeration reads (PlatformWalletManager.accountBalances);
+        // maxSendableDuffs returns null on a missing/malformed snapshot
+        // and the service then falls back to the wallet-wide total.
+        return maxSendableDuffs(manager().accountBalances(walletId))
+    }
 
     override suspend fun currentBalanceSplitDuffs(walletIdHex: String): SdkBalanceSplitDuffs {
         // Native ledger read — the SAME accessor L1ShadowSyncService.sdkBalanceDuffs
@@ -777,84 +1011,266 @@ internal class DashSdkCutoverUiSource(
         val db = database()
         // Wallet membership is the TXO join (tx rows are not wallet-scoped;
         // this app binds a single wallet) — the same convention the parity
-        // probe's distinctTxCount uses.
+        // probe's distinct count uses. MULTI-DAY-SYNC FIX: the old combine
+        // materialized the FULL `transactions` table (observeAll, every
+        // payload blob included) plus the full wallet TXO table on EVERY Room
+        // change — the "too many records" failure class. Now the two tables
+        // only TRIGGER (cheap COUNT flows re-emitted per invalidation), the
+        // rebuild is sampled to at most one per [SNAPSHOT_SAMPLE_MS], and the
+        // snapshot queries fetch ONLY wallet-relevant rows without payloads.
         emitAll(
-            combine(
-                db.txoDao().observeByWallet(walletId),
-                db.transactionDao().observeAll()
-            ) { txos, txs ->
-                val walletTxids = HashSet<String>()
-                for (row in txos) {
-                    row.txid?.let { walletTxids += wireHex(it) }
-                    row.spendingTxid?.let { walletTxids += wireHex(it) }
-                }
-                txs.filter { wireHex(it.txid) in walletTxids }
-                    .map {
-                        l1TxUiRecord(
-                            txidWireBytes = it.txid,
-                            netAmountDuffs = it.netAmount,
-                            feeDuffs = it.fee,
-                            contextCode = it.context,
-                            directionCode = it.direction,
-                            firstSeenSec = it.firstSeen,
-                            blockTimestampSec = it.blockTimestamp
-                        )
-                    }
-            }
+            snapshotTriggers(db, walletId)
+                .sampleLatest(SNAPSHOT_SAMPLE_MS)
+                .map { queryWalletTxRecords(db, walletId) }
         )
     }
 
     override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> = flow {
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
         val db = database()
+        // Same trigger/sample/bounded-query discipline as
+        // observeWalletTxRecords (see there). Payloads are NOT materialized
+        // per emission at all: the snapshot's payloadByTxid is a lazy
+        // per-txid PK lookup with a small LRU (payload bytes are immutable,
+        // so a cached entry can never go stale), which drops the per-emission
+        // cost from "every payload blob in the store" to zero and the
+        // retained heap to the LRU.
         emitAll(
-            combine(
-                db.txoDao().observeByWallet(walletId),
-                db.transactionDao().observeAll()
-            ) { txos, txs ->
-                // Wallet membership via the TXO join, exactly like
-                // observeWalletTxRecords (single-wallet app convention).
-                val walletTxids = HashSet<String>()
-                val mineOutpoints = HashSet<String>()
-                val spenderByOutpoint = HashMap<String, String>()
-                for (row in txos) {
-                    val txidHex = row.txid?.let { displayHex(it) } ?: continue
-                    walletTxids += txidHex
-                    val outpointKey = "$txidHex:${row.vout}"
-                    mineOutpoints += outpointKey
-                    row.spendingTxid?.let { spender ->
-                        val spenderHex = displayHex(spender)
-                        walletTxids += spenderHex
-                        spenderByOutpoint[outpointKey] = spenderHex
-                    }
-                }
-                val payloadByTxid = HashMap<String, ByteArray>(txs.size)
-                val records = ArrayList<L1TxUiRecord>()
-                for (tx in txs) {
-                    val txidHex = displayHex(tx.txid)
-                    payloadByTxid[txidHex] = tx.transactionData
-                    if (txidHex in walletTxids) {
-                        records += l1TxUiRecord(
-                            txidWireBytes = tx.txid,
-                            netAmountDuffs = tx.netAmount,
-                            feeDuffs = tx.fee,
-                            contextCode = tx.context,
-                            directionCode = tx.direction,
-                            firstSeenSec = tx.firstSeen,
-                            blockTimestampSec = tx.blockTimestamp
-                        )
-                    }
-                }
-                SdkSeamTxSnapshot(records, payloadByTxid, mineOutpoints, spenderByOutpoint)
-            }
+            snapshotTriggers(db, walletId)
+                .sampleLatest(SNAPSHOT_SAMPLE_MS)
+                .map { querySeamSnapshot(db, walletId) }
         )
     }
 
-    private fun wireHex(bytes: ByteArray): String = bytes.joinToString("") { "%02x".format(it) }
+    /**
+     * Re-emits on every `txos`/`transactions` table invalidation (Room count
+     * flows re-run per invalidation whether or not the value changed — that
+     * non-dedup is load-bearing: a context-only UPDATE keeps the count but
+     * must still refresh the snapshot for the status/confidence consumers).
+     */
+    private fun snapshotTriggers(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        walletId: ByteArray
+    ): Flow<Unit> =
+        combine(db.txoDao().countByWallet(walletId), db.transactionDao().count()) { _, _ -> }
 
-    private fun displayHex(bytes: ByteArray): String =
-        bytes.reversedArray().joinToString("") { "%02x".format(it) }
+    /** Light projection of one wallet TXO row (refs only — no entity, no blobs beyond txids). */
+    private class TxoRef(val txid: ByteArray?, val vout: Int, val spendingTxid: ByteArray?)
+
+    /** Light projection of one wallet-relevant `transactions` row (payload deliberately excluded). */
+    private class TxRow(
+        val txid: ByteArray,
+        val netAmount: Long,
+        val fee: Long?,
+        val context: Int,
+        val direction: Int,
+        val firstSeen: Long,
+        val blockTimestamp: Int
+    )
+
+    private fun queryWalletTxoRefs(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        walletId: ByteArray
+    ): List<TxoRef> =
+        db.openHelper.readableDatabase.query(
+            androidx.sqlite.db.SimpleSQLiteQuery(
+                "SELECT txid, vout, spendingTxid FROM txos WHERE walletId = ?",
+                arrayOf<Any?>(walletId)
+            )
+        ).use { cursor ->
+            val out = ArrayList<TxoRef>(cursor.count)
+            while (cursor.moveToNext()) {
+                out += TxoRef(
+                    txid = if (cursor.isNull(0)) null else cursor.getBlob(0),
+                    vout = cursor.getInt(1),
+                    spendingTxid = if (cursor.isNull(2)) null else cursor.getBlob(2)
+                )
+            }
+            out
+        }
+
+    /**
+     * The wallet-relevant `transactions` rows (no payload column), chunked
+     * under SQLite's 999-variable cap and re-sorted to the DAO's
+     * `ORDER BY firstSeen DESC` so record order matches the old
+     * observeAll-based snapshot exactly.
+     */
+    private fun queryTxRowsByTxids(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        wireTxids: Collection<ByteArray>
+    ): List<TxRow> {
+        val out = ArrayList<TxRow>(wireTxids.size)
+        for (chunk in wireTxids.chunked(TXID_IN_CHUNK)) {
+            val placeholders = chunk.joinToString(",") { "?" }
+            db.openHelper.readableDatabase.query(
+                androidx.sqlite.db.SimpleSQLiteQuery(
+                    "SELECT txid, netAmount, fee, context, direction, firstSeen, blockTimestamp " +
+                        "FROM transactions WHERE txid IN ($placeholders)",
+                    chunk.toTypedArray<Any?>()
+                )
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    out += TxRow(
+                        txid = cursor.getBlob(0),
+                        netAmount = cursor.getLong(1),
+                        fee = if (cursor.isNull(2)) null else cursor.getLong(2),
+                        context = cursor.getInt(3),
+                        direction = cursor.getInt(4),
+                        firstSeen = cursor.getLong(5),
+                        blockTimestamp = cursor.getInt(6)
+                    )
+                }
+            }
+        }
+        out.sortByDescending { it.firstSeen }
+        return out
+    }
+
+    private suspend fun queryWalletTxRecords(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        walletId: ByteArray
+    ): List<L1TxUiRecord> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        // Same membership rule as before: every tx that funded a wallet TXO
+        // plus every tx that spent one (spendingTxid counted even when the
+        // row's txid FK is still null — the brief insert window).
+        val wireByHex = LinkedHashMap<String, ByteArray>()
+        for (ref in queryWalletTxoRefs(db, walletId)) {
+            ref.txid?.let { wireByHex[wireHexOf(it)] = it }
+            ref.spendingTxid?.let { wireByHex[wireHexOf(it)] = it }
+        }
+        queryTxRowsByTxids(db, wireByHex.values).map {
+            l1TxUiRecord(
+                txidWireBytes = it.txid,
+                netAmountDuffs = it.netAmount,
+                feeDuffs = it.fee,
+                contextCode = it.context,
+                directionCode = it.direction,
+                firstSeenSec = it.firstSeen,
+                blockTimestampSec = it.blockTimestamp
+            )
+        }
+    }
+
+    private suspend fun querySeamSnapshot(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        walletId: ByteArray
+    ): SdkSeamTxSnapshot = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        // Wallet membership via the TXO join, exactly like the old combine:
+        // rows whose txid FK is still null are skipped entirely (their
+        // outpoint key would be meaningless), matching the previous
+        // `row.txid?.let { … } ?: continue`.
+        val mineOutpoints = HashSet<String>()
+        val spenderByOutpoint = HashMap<String, String>()
+        val wireByHex = LinkedHashMap<String, ByteArray>()
+        for (ref in queryWalletTxoRefs(db, walletId)) {
+            val txid = ref.txid ?: continue
+            val txidHex = displayHexOf(txid)
+            wireByHex[txidHex] = txid
+            val outpointKey = "$txidHex:${ref.vout}"
+            mineOutpoints += outpointKey
+            ref.spendingTxid?.let { spender ->
+                val spenderHex = displayHexOf(spender)
+                wireByHex[spenderHex] = spender
+                spenderByOutpoint[outpointKey] = spenderHex
+            }
+        }
+        val records = queryTxRowsByTxids(db, wireByHex.values).map {
+            l1TxUiRecord(
+                txidWireBytes = it.txid,
+                netAmountDuffs = it.netAmount,
+                feeDuffs = it.fee,
+                contextCode = it.context,
+                directionCode = it.direction,
+                firstSeenSec = it.firstSeen,
+                blockTimestampSec = it.blockTimestamp
+            )
+        }
+        SdkSeamTxSnapshot(
+            walletRecords = records,
+            payloadByTxid = LazyPayloadMap { displayHex -> loadPayload(db, displayHex) },
+            mineOutpoints = mineOutpoints,
+            spenderByOutpoint = spenderByOutpoint
+        )
+    }
+
+    /**
+     * Read-only get/containsKey view over the lazy per-txid payload loader —
+     * see the [SdkSeamTxSnapshot.payloadByTxid] contract (consumers only ever
+     * `get`; iteration sees an empty view).
+     */
+    private class LazyPayloadMap(
+        private val lookup: (String) -> ByteArray?
+    ) : Map<String, ByteArray> by emptyMap() {
+        override fun get(key: String): ByteArray? = lookup(key)
+        override fun containsKey(key: String): Boolean = lookup(key) != null
+    }
+
+    /**
+     * LRU over lazily-loaded raw payload bytes, keyed by display txid hex.
+     * Payload bytes for a txid are immutable, so entries never go stale; a
+     * cached null ("tx not in the SDK store") CAN heal — the loader re-probes
+     * once the entry is evicted, and the seam builder's dashj fallback covers
+     * the interim, same as the old snapshot-miss behavior.
+     */
+    private val payloadLru = object : LinkedHashMap<String, ByteArray?>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ByteArray?>): Boolean =
+            size > PAYLOAD_LRU_MAX
+    }
+
+    private fun loadPayload(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        displayHex: String
+    ): ByteArray? {
+        synchronized(payloadLru) {
+            if (payloadLru.containsKey(displayHex)) return payloadLru[displayHex]
+        }
+        val wireTxid = hexToBytesOrNull(displayHex.lowercase())?.reversedArray() ?: return null
+        val payload = try {
+            db.openHelper.readableDatabase.query(
+                androidx.sqlite.db.SimpleSQLiteQuery(
+                    "SELECT transactionData FROM transactions WHERE txid = ? LIMIT 1",
+                    arrayOf<Any?>(wireTxid)
+                )
+            ).use { cursor ->
+                if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getBlob(0) else null
+            }
+        } catch (t: Throwable) {
+            log.warn("lazy payload lookup failed for {}; seam falls back to dashj", displayHex, t)
+            return null
+        }
+        synchronized(payloadLru) { payloadLru[displayHex] = payload }
+        return payload
+    }
+
+    private companion object {
+        private val log = LoggerFactory.getLogger(DashSdkCutoverUiSource::class.java)
+
+        /**
+         * Snapshot rebuild sample period: during a heavy sync the SDK store
+         * changes many times a second; one rebuild per second bounds the CPU
+         * while conflation guarantees the FINAL state always lands.
+         */
+        const val SNAPSHOT_SAMPLE_MS = 1_000L
+
+        /** Chunk size for raw `txid IN (…)` queries (SQLite's variable cap is 999). */
+        const val TXID_IN_CHUNK = 500
+
+        /** [payloadLru] cap; ~256 typical payloads is a few hundred KB at most. */
+        const val PAYLOAD_LRU_MAX = 256
+    }
 }
+
+/**
+ * Emit the first upstream value immediately, then at most one value per
+ * [periodMs] — always the LATEST (conflated). The debounce for the Room
+ * trigger→snapshot pipelines: bursts of store writes coalesce into one
+ * rebuild per period, and the final state is never dropped.
+ */
+private fun <T> Flow<T>.sampleLatest(periodMs: Long): Flow<T> =
+    conflate().transform { value ->
+        emit(value)
+        delay(periodMs)
+    }
 
 // ── The service ───────────────────────────────────────────────────────
 
@@ -951,6 +1367,13 @@ class CutoverUiDataService internal constructor(
      */
     private val resolveContact: suspend (String) -> ResolvedTxContact? = { null },
     /**
+     * Busts the contact resolver's NEGATIVE cache when
+     * [requestContactReResolution] fires — without this a "no friendship
+     * match" verdict cached pre-restore would suppress the very re-resolution
+     * the signal exists to trigger. Default no-op for the snapshot tests.
+     */
+    private val clearContactResolutionCaches: () -> Unit = {},
+    /**
      * The RESTART-SAFE signed wallet net per txid, derived from the SDK's persisted
      * TXO table ([SdkTxContactResolver.signedNetsFor], watch-only external friendship
      * TXOs excluded) — the PREFERRED authoritative direction/amount source for a
@@ -977,6 +1400,18 @@ class CutoverUiDataService internal constructor(
      * the fake-fed test constructor never warns.
      */
     private val isTxFeedTapActive: () -> Boolean = { true },
+    /**
+     * Whether the SDK L1 scan has caught up — the gate that decides whether
+     * [overlayTotalBalance] publishes the LIVE SDK figure or holds the
+     * last-known one, and whether [updateSdkBalance] is allowed to persist
+     * [WalletUIConfig.LAST_TOTAL_BALANCE]. Fed from
+     * [de.schildbach.wallet.service.L1SyncStatusService.sdkScanCaughtUp] —
+     * literally the same flow the home header's blinking "Syncing balance"
+     * label reads, so the label and the displayed figure cannot drift apart.
+     * Defaults to a constant `true` so the fake-fed tests keep exercising
+     * the live/persisting path.
+     */
+    private val l1Synced: Flow<Boolean> = flowOf(true),
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val refreshIntervalMs: Long = REFRESH_INTERVAL_MS,
     private val walletBindRetryMs: Long = WALLET_BIND_RETRY_MS,
@@ -996,6 +1431,7 @@ class CutoverUiDataService internal constructor(
         configuration: Configuration,
         notificationService: NotificationService,
         l1ShadowSyncService: L1ShadowSyncService,
+        l1SyncStatusService: de.schildbach.wallet.service.L1SyncStatusService,
         assetLockKindResolver: AssetLockKindResolver,
         sdkTxContactResolver: SdkTxContactResolver
     ) : this(
@@ -1010,8 +1446,14 @@ class CutoverUiDataService internal constructor(
         resolveAssetLockKind = { txDisplayHex -> assetLockKindResolver.kindFor(txDisplayHex) },
         resolveContact = { txDisplayHex -> sdkTxContactResolver.contactFor(txDisplayHex) },
         resolveWalletNets = { txids -> sdkTxContactResolver.signedNetsFor(txids) },
+        clearContactResolutionCaches = { sdkTxContactResolver.clearNegativeCache() },
         txEvents = l1ShadowSyncService.txEvents,
         isTxFeedTapActive = { l1ShadowSyncService.isTapActive },
+        // THE SAME SOURCE as the home header's blinking "Syncing balance"
+        // label (both read L1SyncStatusService) — see [l1Synced]. Previously
+        // this was a second hand-copied `synced || scanCaughtUpToTip`
+        // expression that had to be kept in lockstep by hand.
+        l1Synced = l1SyncStatusService.sdkScanCaughtUp,
         resolveString = { resId -> context.getString(resId) },
         notifyCoinsReceived = { duffs ->
             notificationService.showNotification(
@@ -1055,16 +1497,42 @@ class CutoverUiDataService internal constructor(
      * dashj-side cache rebuild can briefly drop event-born rows, and this
      * set keeps even that window from re-notifying an already-announced
      * txid. Only ever touched from [txPipeline]'s sequential collector.
+     * Capped at [SEEN_TX_DIRECTIONS_MAX] (eldest evicted) like the sibling
+     * maps, so a very large multi-day restore cannot grow it unboundedly;
+     * an evicted txid is >1000 notifications old, far outside any realistic
+     * re-notification window (the structural row guard still covers it).
      */
-    private val notifiedTxIds = mutableSetOf<String>()
+    private val notifiedTxIds: MutableSet<String> = boundedSet(SEEN_TX_DIRECTIONS_MAX)
 
     /**
      * Once-per-process latch for the "contact tx has no authoritative signed net"
      * WARN in [syncDisplayCache] — the pass retries every tick, so without the
      * latch an unresolvable tx would log every 60 s. Only ever touched from
-     * [txPipeline]'s sequential collector.
+     * [txPipeline]'s sequential collector. Capped like [notifiedTxIds]
+     * (worst case after eviction: one repeated WARN per >1000-tx window).
      */
-    private val noNetWarnedTxids = mutableSetOf<String>()
+    private val noNetWarnedTxids: MutableSet<String> = boundedSet(SEEN_TX_DIRECTIONS_MAX)
+
+    /**
+     * Txids whose rows are TERMINAL for resolution purposes — CHAINLOCKED and
+     * contact-ATTRIBUTED with an authoritative signed net applied (or verified
+     * consistent). The 60s sync pass skips contact/asset-lock/net re-resolution
+     * for them (the resolver N+1 fix): a settled, attributed, net-verified row
+     * has nothing left to learn. Cleared whenever a contact re-resolution is
+     * requested ([requestContactReResolution]) so the post-restore flow
+     * re-verifies everything. Only touched from [txPipeline]'s sequential
+     * collector (the request itself only flips [reResolveRequested]).
+     * Bounded, eldest-evicted (an evicted txid merely re-verifies — idempotent).
+     */
+    private val terminalResolvedTxids: MutableSet<String> = boundedSet(TERMINAL_RESOLVED_MAX)
+
+    /**
+     * Set by [requestContactReResolution] (any thread), consumed at the top of
+     * the next [syncDisplayCache] pass (the sequential collector) to clear
+     * [terminalResolvedTxids] — the negative caches themselves are cleared
+     * synchronously in the request (they are thread-safe).
+     */
+    private val reResolveRequested = AtomicBoolean(false)
 
     /**
      * Directions seen per txid across engine [L1TxEvent.Detected] events —
@@ -1131,6 +1599,11 @@ class CutoverUiDataService internal constructor(
      * writes rows whose planned fields actually differ) and inert pre-cutover.
      */
     fun requestContactReResolution() {
+        // Bust every negative/terminal cache FIRST so the re-run pass genuinely
+        // re-resolves (a stale "no match" cached while friendship keychains were
+        // still being recovered must never survive this signal).
+        clearContactResolutionCaches()
+        reResolveRequested.set(true)
         contactReResolveRequests.tryEmit(Unit)
     }
 
@@ -1155,8 +1628,109 @@ class CutoverUiDataService internal constructor(
      */
     val sdkConfirmedBalance: StateFlow<Coin?> = _sdkConfirmedBalance.asStateFlow()
 
+    private val _sdkMaxSendable = MutableStateFlow<Coin?>(null)
+
+    /**
+     * The SDK's live MAX-SENDABLE figure ([CutoverUiSource.currentMaxSendableDuffs]:
+     * BIP44 spendable + sweepable receival confirmed net of per-sweep fee
+     * headroom — what the sweep-then-drain send-all actually delivers,
+     * gross of the final drain fee), or null while the cutover UI feed is
+     * inactive OR the account-level snapshot is unavailable (in which
+     * case [overlayMaxSendableBalance] falls back to [sdkTotalBalance]).
+     * Refreshed with the native split ([refreshNativeSplit]: initial
+     * seed, engine tx events, ticker).
+     */
+    val sdkMaxSendable: StateFlow<Coin?> = _sdkMaxSendable.asStateFlow()
+
     /** Synchronous read for [de.schildbach.wallet.WalletApplication.getWalletBalance]. */
     fun sdkBalanceOrNull(): Coin? = _sdkTotalBalance.value
+
+    private val _cutoverActive = MutableStateFlow(false)
+
+    /**
+     * Whether the cutover is COMMITTED and this service's SDK pipelines are
+     * therefore the source of truth for the home screen — the EXPLICIT
+     * answer to "are we post-cutover?".
+     *
+     * It exists because callers used to infer it from `sdkBalanceOrNull()
+     * != null` / `sdkTotalBalance != null`. That happens to be equivalent
+     * today only because the balance flows are pinned to null pre-cutover;
+     * it is not what those flows MEAN, and it would silently change meaning
+     * the first time a balance is published for any other reason. Read from
+     * the same [cutoverUiActive] gate that starts the pipelines.
+     */
+    val cutoverActive: StateFlow<Boolean> = _cutoverActive.asStateFlow()
+
+    /** Synchronous [cutoverActive] read for non-reactive call sites. */
+    fun isCutoverActive(): Boolean = _cutoverActive.value
+
+    private val _sdkSpendableUtxoCount = MutableStateFlow<Int?>(null)
+
+    /**
+     * The SDK's live UNSPENT-output COUNT
+     * ([CutoverUiSource.currentSpendableUtxoCount]), or null while the
+     * cutover UI feed is inactive / the read is unavailable. Refreshed on
+     * the same cadence as the native balance split ([refreshNativeSplit]),
+     * so the count and the balance always describe the same moment.
+     */
+    val sdkSpendableUtxoCount: StateFlow<Int?> = _sdkSpendableUtxoCount.asStateFlow()
+
+    /**
+     * Synchronous cutover overlay for
+     * [de.schildbach.wallet.WalletApplication.spendableUtxoCount], or null
+     * to keep the dashj value.
+     *
+     * ## Why this needed an overlay at all
+     *
+     * Unlike the balance, this count was never overlaid, so post-cutover it
+     * reported the HELD dashj wallet's frozen UTXO set. Its only consumer is
+     * the shielded max-fee reserve
+     * ([de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve]), which
+     * sizes the reserve at ~148 bytes per input: a stale count under-reserves
+     * (the max-shield retry fails again) or over-reserves (the user cannot
+     * shield their full balance).
+     *
+     * ## Why it does NOT hold a last-known value like the balance does
+     *
+     * The balance holds because a climbing mid-scan partial reads as FUND
+     * LOSS to the user. This number is never displayed, so that reason does
+     * not apply — but the mid-scan partial is still an UNDER-count, and
+     * under-reserving is the failing direction (over-reserving merely leaves
+     * a little more transparent, which the change output returns).
+     *
+     * So instead of holding a persisted last-known count (which would need a
+     * new pref and could over-reserve indefinitely after a genuine
+     * consolidation), the overlay simply does not engage until the SDK scan
+     * has caught up — the SAME [_l1Synced] gate the balance hold uses. Until
+     * then the dashj count passes through, which on an upgrade IS the real
+     * pre-cutover count (a sound over-estimate) and on a fresh restore is 0
+     * exactly as today, where there is nothing to shield anyway because the
+     * shielded funding gate is closed for the whole of that window.
+     */
+    fun sdkSpendableUtxoCountOrNull(): Int? =
+        _sdkSpendableUtxoCount.value?.takeIf { _l1Synced.value }
+
+    /**
+     * Whether the SDK's L1 scan has caught up. Mirrors EXACTLY the predicate
+     * behind the home header's blinking "Syncing balance" label
+     * ([de.schildbach.wallet.service.sdkL1ScanCaughtUp], which the label and
+     * this hold now BOTH read) so the label and the displayed figure
+     * flip in the same instant — a "Syncing balance" label over a live,
+     * climbing figure (or a settled figure with the label still blinking)
+     * would be worse than either state alone.
+     */
+    private val _l1Synced = MutableStateFlow(false)
+
+    /**
+     * The LAST KNOWN total balance ([WalletUIConfig.LAST_TOTAL_BALANCE], the
+     * same fast-startup seed the dashj
+     * [WalletBalanceObserver][de.schildbach.wallet.transactions.WalletBalanceObserver]
+     * maintains), read ONCE at pipeline start — before any SDK figure is
+     * published — or null when the key has never been written (first ever
+     * run). This is what the header shows while the from-scratch
+     * compact-filter scan is still running; see [overlayTotalBalance].
+     */
+    private val _lastKnownTotalBalance = MutableStateFlow<Coin?>(null)
 
     /**
      * The cutover-aware total-balance feed:
@@ -1165,9 +1739,55 @@ class CutoverUiDataService internal constructor(
      * flow with this. Pre-cutover the SDK side is permanently null, so
      * dashj values pass through unchanged (flags-off regression safety);
      * post-cutover the SDK balance wins as soon as it exists.
+     *
+     * ## Mid-scan: the LAST KNOWN figure, not the climbing partial
+     *
+     * On this build every wallet — UPGRADES included — cuts over on first
+     * launch, and the SDK then does a from-scratch compact-filter scan
+     * (5-20 min). Publishing the live SDK figure through that window makes
+     * the header start near zero and climb, which on an upgrade reads as
+     * FUND LOSS. So while [_l1Synced] is false the header holds the
+     * last-known figure and the blinking "Syncing balance" label carries the
+     * "this is not live yet" meaning; the live SDK figure takes over the
+     * moment the scan catches up.
+     *
+     * Two deliberate fallbacks to the live figure:
+     * - no last-known value at all (first ever run — nothing to hold), and
+     * - a non-positive last-known value (a wallet that was empty last launch
+     *   has no balance to "lose", and holding 0 over freshly-discovered
+     *   funds would be the one case where the hold is the alarming state).
      */
     fun overlayTotalBalance(dashjBalance: Flow<Coin>): Flow<Coin> =
-        _sdkTotalBalance.combine(dashjBalance) { sdk, dashj -> sdk ?: dashj }
+        combine(
+            _sdkTotalBalance,
+            _l1Synced,
+            _lastKnownTotalBalance,
+            dashjBalance
+        ) { sdk, synced, lastKnown, dashj ->
+            when {
+                sdk == null -> dashj
+                synced -> sdk
+                lastKnown != null && lastKnown.isPositive -> lastKnown
+                else -> sdk
+            }
+        }
+
+    /**
+     * The cutover-aware MAX-SENDABLE feed for the send screen
+     * ([de.schildbach.wallet.WalletApplication.observeMaxOutputBalance]).
+     * Pre-cutover both SDK sides are permanently null, so the dashj
+     * max-output value passes through unchanged (byte-identical).
+     * Post-cutover the account-aware max-sendable figure wins — the
+     * wallet-wide total counts DashPay receival funds at face value while
+     * the send-all delivers them net of the per-account sweep-fee
+     * headroom, so the total would (slightly) overstate the true Max —
+     * with the wallet-wide total as the fallback whenever the
+     * account-level snapshot is unavailable (never a frozen dashj 0).
+     */
+    fun overlayMaxSendableBalance(dashjBalance: Flow<Coin>): Flow<Coin> =
+        combine(_sdkMaxSendable, _sdkTotalBalance, dashjBalance) { maxSendable, total, dashj ->
+            maxSendable ?: total ?: dashj
+        }
 
     /**
      * The UI cutover gate: persisted [DashPayConfig.CUTOVER_STATE] mapped
@@ -1196,9 +1816,12 @@ class CutoverUiDataService internal constructor(
             cutoverUiActive()
                 .distinctUntilChanged()
                 .collectLatest { active ->
+                    _cutoverActive.value = active
                     if (!active) {
                         _sdkTotalBalance.value = null
                         _sdkConfirmedBalance.value = null
+                        _sdkMaxSendable.value = null
+                        _sdkSpendableUtxoCount.value = null
                         return@collectLatest
                     }
                     log.info("cutover committed — serving home-screen data from the SDK")
@@ -1209,6 +1832,8 @@ class CutoverUiDataService internal constructor(
                         log.error("cutover UI pipelines failed; balance override cleared", t)
                         _sdkTotalBalance.value = null
                         _sdkConfirmedBalance.value = null
+                        _sdkMaxSendable.value = null
+                        _sdkSpendableUtxoCount.value = null
                     }
                 }
         }
@@ -1228,6 +1853,14 @@ class CutoverUiDataService internal constructor(
                     "(USE_KOTLIN_SDK_L1_SHADOW off, or L1ShadowSyncService not started) — " +
                     "instant receives degrade to the Room-snapshot/block cadence"
             )
+        }
+        // FIRST: the scan-caught-up gate the balance publication depends on,
+        // so [balancePipeline]'s very first read already sees the right value.
+        launch {
+            l1Synced
+                .distinctUntilChanged()
+                .catch { e -> log.error("SDK L1 sync-state feed failed; balance stays held", e) }
+                .collect { _l1Synced.value = it }
         }
         launch { balancePipeline(walletIdHex) }
         launch { txPipeline(walletIdHex) }
@@ -1264,6 +1897,15 @@ class CutoverUiDataService internal constructor(
     }
 
     private suspend fun balancePipeline(walletIdHex: String) = coroutineScope {
+        // Read the LAST KNOWN balance BEFORE the first SDK figure is published:
+        // it is what the header shows for the whole mid-scan window (see
+        // [overlayTotalBalance]). A read failure simply leaves it null, which
+        // degrades to the pre-fix behaviour (the live figure) rather than
+        // freezing the header on a value we could not read.
+        _lastKnownTotalBalance.value = runCatching {
+            walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE)?.let(Coin::valueOf)
+        }.onFailure { log.warn("failed to read LAST_TOTAL_BALANCE", it) }.getOrNull()
+
         // Seed the confirmed/total split once up front so the shielded screen's
         // Max (confirmed) and pending (total − confirmed) are populated before
         // the first tx event or ticker tick.
@@ -1317,12 +1959,41 @@ class CutoverUiDataService internal constructor(
         val split = source.currentBalanceSplitDuffs(walletIdHex)
         _sdkConfirmedBalance.value = Coin.valueOf(split.confirmed)
         updateSdkBalance(split.total)
+        // The max-sendable figure rides the same cadence (initial seed, tx
+        // events, ticker). Contained separately: a failed/unavailable
+        // account-level read must not undo the split above, and it drops
+        // the override to null so overlayMaxSendableBalance falls back to
+        // the wallet-wide total rather than freezing a stale max.
+        try {
+            _sdkMaxSendable.value = source.currentMaxSendableDuffs(walletIdHex)?.let(Coin::valueOf)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK max-sendable read failed; falling back to the wallet-wide total", t)
+            _sdkMaxSendable.value = null
+        }
+        // The UTXO COUNT rides the same cadence so it always describes the
+        // same moment as the split above (the shielded max-fee reserve sizes
+        // itself from the count while shielding the balance). Contained the
+        // same way: a failed read drops to null so the overlay falls back to
+        // dashj rather than freezing a stale count.
+        try {
+            _sdkSpendableUtxoCount.value = source.currentSpendableUtxoCount(walletIdHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK spendable-UTXO-count read failed; falling back to the dashj count", t)
+            _sdkSpendableUtxoCount.value = null
+        }
     }
 
     private suspend fun updateSdkBalance(duffs: Long) {
         _sdkTotalBalance.value = Coin.valueOf(duffs)
         // Keep the fast-startup seed fresh (same key the dashj
-        // WalletBalanceObserver maintains).
+        // WalletBalanceObserver maintains) — but ONLY once the scan has
+        // caught up. Persisting a mid-scan PARTIAL compounds: it poisons the
+        // very "last known" figure the next launch seeds and holds
+        // ([overlayTotalBalance]), so a single interrupted scan would make
+        // every later launch open on a wrong (too low) balance.
+        if (!_l1Synced.value) return
         runCatching { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs) }
             .onFailure { log.warn("failed to persist LAST_TOTAL_BALANCE", it) }
     }
@@ -1440,7 +2111,7 @@ class CutoverUiDataService internal constructor(
                     }
                 }
                 siblings += record.direction
-                syncDisplayCache(listOf(record))
+                syncDisplayCache(listOf(record), fromEngineEvent = true)
             }
             is L1TxEvent.InstantLocked -> applyInstantLock(event.txidHex)
         }
@@ -1449,11 +2120,12 @@ class CutoverUiDataService internal constructor(
     private suspend fun applyInstantLock(txidHex: String) {
         try {
             val grouped = txGroupCacheDao.getGroupsForTxIds(listOf(txidHex))
-                .any { it.groupId != it.txId }
+                .any { it.isMultiTxGroupRow }
             if (grouped) return
             val existing = txDisplayCacheDao.getEntriesByIds(listOf(txidHex)).firstOrNull() ?: return
             val updated = planL1InstantLockRowUpdate(existing, resolveString) ?: return
             txDisplayCacheDao.insertAll(listOf(updated))
+            displayCacheRefreshBus.markSdkAuthoritative(setOf(txidHex))
             // Force the reactive readers to refresh even if Room's tracker misses the flip.
             displayCacheRefreshBus.signalChanged()
             log.info("engine IS lock for {} — display row flipped pre-block", txidHex)
@@ -1470,16 +2142,31 @@ class CutoverUiDataService internal constructor(
         }
     }
 
-    private suspend fun syncDisplayCache(records: List<L1TxUiRecord>) {
+    /**
+     * @param fromEngineEvent true when [records] were lifted from the engine's instant
+     *        PER-ACCOUNT tx feed rather than the SDK's persisted (wallet-wide, definitive)
+     *        `transactions` snapshot — see [planL1DisplaySync]'s
+     *        `restampFromDefinitiveRecord`.
+     */
+    private suspend fun syncDisplayCache(
+        records: List<L1TxUiRecord>,
+        fromEngineEvent: Boolean = false
+    ) {
         if (records.isEmpty()) return
         try {
+            // A contact re-resolution request voids every terminal-skip verdict:
+            // the post-restore flow must re-resolve rows we previously deemed
+            // settled (the negative caches were already busted in the request).
+            if (reResolveRequested.compareAndSet(true, false)) {
+                terminalResolvedTxids.clear()
+            }
             val txids = records.map { it.txidHex }
             // Chunked: SQLite's IN-clause variable cap is 999.
             val grouped = mutableSetOf<String>()
             val existing = mutableMapOf<String, TxDisplayCacheEntry>()
             for (chunk in txids.chunked(500)) {
                 txGroupCacheDao.getGroupsForTxIds(chunk)
-                    .filter { it.groupId != it.txId }
+                    .filter { it.isMultiTxGroupRow }
                     .forEach { grouped += it.txId }
                 txDisplayCacheDao.getEntriesByIds(chunk).forEach { existing[it.rowId] = it }
             }
@@ -1501,6 +2188,10 @@ class CutoverUiDataService internal constructor(
             val kindByTxid = mutableMapOf<String, AssetLockKind>()
             for (record in records) {
                 if (record.txidHex in grouped) continue
+                // Terminal rows (CHAINLOCKED + attributed + net-verified — see
+                // [terminalResolvedTxids]) have nothing left to learn: skip
+                // every resolver probe for them.
+                if (record.txidHex in terminalResolvedTxids) continue
                 when (record.direction) {
                     L1TxUiDirection.INTERNAL, L1TxUiDirection.COINJOIN ->
                         resolveAssetLockKind(record.txidHex)?.let { kindByTxid[record.txidHex] = it }
@@ -1529,6 +2220,7 @@ class CutoverUiDataService internal constructor(
             val contactByTxid = mutableMapOf<String, ResolvedTxContact>()
             for (record in records) {
                 if (record.txidHex in grouped || record.txidHex in kindByTxid) continue
+                if (record.txidHex in terminalResolvedTxids) continue
                 // Live DIP-15 resolution first; when it fails (post-restore the
                 // friendship keychains lag behind — identity not loaded yet, tx not
                 // yet in the SDK store, keychain not re-provisioned) fall back to the
@@ -1612,8 +2304,16 @@ class CutoverUiDataService internal constructor(
                 incomingFiatValue = fiat?.value,
                 kindByTxid = kindByTxid,
                 contactByTxid = contactByTxid,
-                signedNetByTxid = signedNetByTxid
+                signedNetByTxid = signedNetByTxid,
+                restampFromDefinitiveRecord = !fromEngineEvent
             )
+            // Claim SDK AUTHORITY over every row this pass planned or verified, so the
+            // dashj-side rebuild writers ([TxDisplayCacheService]) can never rewrite their
+            // direction/value/title/status back to a dashj misread. Marked BEFORE the write
+            // so a concurrent dashj rebuild cannot slip in between. Purely in-memory and
+            // pre-cutover inert (this pass never runs); a fresh process simply re-claims
+            // each row on its first sync pass.
+            displayCacheRefreshBus.markSdkAuthoritative(plan.sdkAuthoritative)
             if (plan.inserts.isNotEmpty() || plan.updates.isNotEmpty()) {
                 txDisplayCacheDao.insertAll(plan.inserts + plan.updates)
                 // Force the reactive readers to refresh even if Room's tracker misses the write.
@@ -1629,6 +2329,19 @@ class CutoverUiDataService internal constructor(
                 runCatching { notifyCoinsReceived(duffs) }
                     .onFailure { log.warn("coins-received notification failed for {}", txidHex, it) }
             }
+
+            // Mark rows now TERMINAL for resolution: CHAINLOCKED, contact-
+            // attributed AND direction/amount verified against an authoritative
+            // signed net this pass (the re-plan block just ran for them, so the
+            // cached row equals the plan). Later passes skip their resolver
+            // probes entirely; requestContactReResolution clears the set.
+            for (record in records) {
+                if (record.status != L1TxUiStatus.CHAINLOCKED) continue
+                if (record.txidHex !in contactByTxid) continue
+                if (signedNetByTxid.containsKey(record.txidHex)) {
+                    terminalResolvedTxids += record.txidHex
+                }
+            }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.error("cutover UI display sync pass failed", t)
@@ -1642,6 +2355,19 @@ class CutoverUiDataService internal constructor(
         internal const val TX_FEED_RETRY_MS = 5_000L
         /** [seenEventDirections] cap — eldest-evicted; ~64 chars/txid keeps this a few KB. */
         internal const val SEEN_TX_DIRECTIONS_MAX = 1_000
+
+        /** [terminalResolvedTxids] cap — eldest-evicted (an evicted row just re-verifies, idempotent). */
+        internal const val TERMINAL_RESOLVED_MAX = 4_096
+
+        /** Insertion-ordered set that evicts its eldest entry beyond [maxSize]. */
+        private fun boundedSet(maxSize: Int): MutableSet<String> =
+            java.util.Collections.newSetFromMap(
+                object : LinkedHashMap<String, Boolean>() {
+                    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>): Boolean =
+                        size > maxSize
+                }
+            )
+
         private val log = LoggerFactory.getLogger(CutoverUiDataService::class.java)
     }
 }

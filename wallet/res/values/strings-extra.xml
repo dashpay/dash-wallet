@@ -201,6 +201,8 @@
     <string name="notification_explainer_message">Notifications may include alerts, sounds, and icon badges. These can be configured in phone Settings.</string>
     <string name="notification_dashpay_channel_name">DashPay</string>
     <string name="notification_dashpay_channel_description">Status of ongoing DashPay operations.</string>
+    <string name="notification_contacts_channel_name">Contact requests</string>
+    <string name="notification_contacts_channel_description">Alerts you when someone sends you a contact request.</string>
 
     <string name="net_type_indicator" />
 
