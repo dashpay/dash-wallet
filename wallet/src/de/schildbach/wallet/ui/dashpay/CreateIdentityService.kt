@@ -775,15 +775,27 @@ class CreateIdentityService : LifecycleService() {
                 sdkClaimedInviteIdentityId = result.value
                 log.info("shielded invite claimed — identity {} is on chain", result.value)
             }
+            // The terminal already-claimed outcome is recognised from the TYPED
+            // SDK error (ShieldedInviteAlreadyClaimed, native code 37) as well
+            // as the app-owned reason, so every one of rs-platform-wallet's
+            // already-claimed raise sites lands on the "Invite has already been
+            // used" surface — including the ones whose reason text carries a
+            // plain result-wait error rather than a nullifier quote, which the
+            // old reason-only match let through as a generic claim failure.
             is SdkWriteResult.NotBroadcast ->
-                if (SdkShieldedUsernameCreation.isInviteAlreadyUsedReason(result.reason)) {
+                if (SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(result)) {
                     log.warn("shielded invite has already been used")
                     throw IllegalStateException("Invite has already been used")
                 } else {
                     throw IllegalStateException("shielded invite claim failed: ${result.reason}", result.cause)
                 }
             is SdkWriteResult.Ambiguous ->
-                throw IllegalStateException("shielded invite claim outcome unconfirmed", result.cause)
+                if (SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(result)) {
+                    log.warn("shielded invite has already been used")
+                    throw IllegalStateException("Invite has already been used")
+                } else {
+                    throw IllegalStateException("shielded invite claim outcome unconfirmed", result.cause)
+                }
         }
     }
 

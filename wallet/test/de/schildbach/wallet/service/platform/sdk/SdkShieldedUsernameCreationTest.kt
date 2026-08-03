@@ -867,6 +867,168 @@ class SdkShieldedUsernameCreationTest {
         }
     }
 
+    // ── Already-claimed detection (typed code 37 + string fallback) ──────
+
+    /**
+     * rs-platform-wallet's `PlatformWalletError::ShieldedInviteAlreadyClaimed`
+     * Display, rendered with one of its four raise sites' `reason` literals.
+     * The prefix is reason-independent; only the parenthetical varies.
+     */
+    private fun alreadyClaimedDisplay(reason: String) =
+        "Shielded invitation already claimed: its note is spent on chain but this wallet " +
+            "cannot prove that this claim created an identity ($reason); the invitation " +
+            "cannot be claimed again"
+
+    /**
+     * The raise site (`operations.rs`, "broadcast accepted but result
+     * confirmation failed" arm) whose reason quotes the RESULT-WAIT error, not
+     * a nullifier — the one the old per-reason substring list missed, which
+     * made a terminal already-claimed surface as an AMBIGUOUS "outcome
+     * unconfirmed".
+     */
+    private val waitErrorReason =
+        "identity 5xK was created from this invitation's notes but does not carry the " +
+            "submitted master authentication key, so it belongs to another holder of the " +
+            "one-time key: timed out waiting for the state transition result"
+
+    @Test
+    fun claim_typedAlreadyClaimed_code37_isTerminalAndNeverDescends() = runTest {
+        val source = claimSource()
+        // Native code 37 → DashSdkError.PlatformWallet.ShieldedInviteAlreadyClaimed.
+        // The message deliberately carries NONE of the legacy substrings, so
+        // only the typed arm can classify it. The note is consumed on chain:
+        // the ladder must stop at the first rung, not descend to 0.1.
+        coEvery {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        } throws DashSdkError.PlatformWallet.ShieldedInviteAlreadyClaimed(
+            "this invitation cannot be claimed again"
+        )
+
+        // A legacy link (no `amt`) with a non-contested name has a TWO-rung
+        // ladder, so a descend would show up as a second attempt.
+        assertEquals(2, inviteClaimDenominationLadder(denominationCredits, null).size)
+
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(
+            SdkShieldedUsernameCreation.isInviteAlreadyUsedReason(
+                (result as SdkWriteResult.NotBroadcast).reason
+            )
+        )
+        assertTrue(SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(result))
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun claim_untypedAlreadyClaimedDisplay_withoutNullifierInReason_isTerminal() = runTest {
+        val source = claimSource()
+        // Pre-v41int13 AAR shape: the same outcome arrives as an untyped
+        // wallet-operation error carrying only the Display text. The
+        // reason-independent prefix must still classify it as already-used
+        // rather than letting it fall through to the Ambiguous bucket.
+        coEvery {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        } throws DashSdkError.PlatformWallet.WalletOperation(alreadyClaimedDisplay(waitErrorReason))
+
+        val result = service(source = source)
+            .createIdentityFromInvitation(oneTimeKeyHex, fundingHeight, "alice2")
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(
+            SdkShieldedUsernameCreation.isInviteAlreadyUsedReason(
+                (result as SdkWriteResult.NotBroadcast).reason
+            )
+        )
+        coVerify(exactly = 1) {
+            source.createIdentityFromOneTimeKey(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun alreadyClaimed_allFourRaiseSites_classifyAsInviteAlreadyUsed() {
+        // The four `ShieldedInviteAlreadyClaimed` raise sites in
+        // rs-platform-wallet's operations.rs, by their reason literal. Only
+        // the second and (via their `{evidence}` tail) the third and fourth
+        // ever quoted a nullifier — the first did not, so it used to escape
+        // detection entirely.
+        val reasons = listOf(
+            waitErrorReason,
+            "the note was spent by an earlier transition whose identity id cannot be " +
+                "re-derived (single-spend bundles are padded with a randomly generated dummy " +
+                "nullifier that participates in the id derivation): the selected note's " +
+                "nullifier is already spent on chain (pre-broadcast preflight)",
+            "identity 5xK owns the submitted master auth key hash but was not created by this " +
+                "claim (expected id 9tQ); the shielded spend was finalized as a chargeable " +
+                "failure and its value went to the creation-failure address: broadcast " +
+                "returned NullifierAlreadySpent",
+            "identity 9tQ was created from this invitation's notes but does not carry the " +
+                "submitted master authentication key, so it belongs to another holder of the " +
+                "one-time key: result wait returned NullifierAlreadySpent"
+        )
+        reasons.forEach { reason ->
+            assertTrue(
+                "already-claimed Display must classify as invite-already-used: $reason",
+                SdkShieldedUsernameCreation.isInviteAlreadyUsedFailure(
+                    DashSdkError.PlatformWallet.WalletOperation(alreadyClaimedDisplay(reason))
+                )
+            )
+        }
+        // And typed, regardless of message.
+        assertTrue(
+            SdkShieldedUsernameCreation.isInviteAlreadyUsedFailure(
+                DashSdkError.PlatformWallet.ShieldedInviteAlreadyClaimed("")
+            )
+        )
+        // The fail-closed denomination refusal is NOT already-used — it is the
+        // only refusal the ladder may descend on.
+        assertFalse(
+            SdkShieldedUsernameCreation.isInviteAlreadyUsedFailure(noteBelowDenominationError())
+        )
+        assertFalse(
+            SdkShieldedUsernameCreation.isNoteBelowDenominationFailure(
+                DashSdkError.PlatformWallet.ShieldedInviteAlreadyClaimed(
+                    alreadyClaimedDisplay(waitErrorReason)
+                )
+            )
+        )
+    }
+
+    @Test
+    fun alreadyUsedOutcome_typedCauseIsRecognisedOnEveryResultShape() {
+        val typed = DashSdkError.PlatformWallet.ShieldedInviteAlreadyClaimed("consumed")
+        // The app-owned reason (the normal path).
+        assertTrue(
+            SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(
+                SdkWriteResult.NotBroadcast(SdkShieldedUsernameCreation.REASON_INVITE_ALREADY_USED)
+            )
+        )
+        // A typed cause carried under any other reason, and under Ambiguous —
+        // belt and braces so code 37 can never reach the "outcome unconfirmed"
+        // surface.
+        assertTrue(
+            SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(
+                SdkWriteResult.NotBroadcast("some other reason", typed)
+            )
+        )
+        assertTrue(
+            SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(SdkWriteResult.Ambiguous(typed))
+        )
+        // An unrelated failure must NOT be promoted to "invite already used" —
+        // the loose string arm is scoped to the claim-spend catch only.
+        assertFalse(
+            SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(
+                SdkWriteResult.Ambiguous(DashSdkError.PlatformWallet.WalletOperation("Wallet already exists: ab"))
+            )
+        )
+        assertFalse(
+            SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(SdkWriteResult.Broadcast("id"))
+        )
+    }
+
     // ── Invite-claim denomination ladder (pure) ──────────────────────────
 
     @Test

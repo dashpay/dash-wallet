@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
+import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.identity.IdentityKeyPreview
 import org.dashfoundation.dashsdk.identity.RegistrationKeys
 import org.dashj.platform.dpp.identifier.Identifier
@@ -1106,6 +1107,12 @@ class SdkShieldedUsernameCreation internal constructor(
                 break
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
+                // TERMINAL, checked BEFORE the ladder's descend arm: an
+                // already-claimed invite (typed ShieldedInviteAlreadyClaimed,
+                // native code 37) means the note is consumed on chain, so no
+                // smaller denomination can ever spend it. Descending would only
+                // burn another ~30 s transient scan to reach the identical
+                // refusal.
                 if (isInviteAlreadyUsedFailure(t)) {
                     log.warn("shielded invite claim rejected — the one-time note is already spent", t)
                     return SdkWriteResult.NotBroadcast(REASON_INVITE_ALREADY_USED, t)
@@ -1282,20 +1289,78 @@ class SdkShieldedUsernameCreation internal constructor(
             reason == REASON_INVITE_ALREADY_USED
 
         /**
+         * The Display prefix rs-platform-wallet stamps on EVERY
+         * `PlatformWalletError::ShieldedInviteAlreadyClaimed` ("Shielded
+         * invitation already claimed: its note is spent on chain but this
+         * wallet cannot prove that this claim created an identity ({reason});
+         * the invitation cannot be claimed again"). Reason-independent, so it
+         * matches all four raise sites — unlike the per-reason substrings
+         * below, which only match the ones whose `reason` happens to quote a
+         * nullifier. Used ONLY by the pre-typed-error fallback in
+         * [isInviteAlreadyUsedFailure].
+         */
+        private const val ALREADY_CLAIMED_DISPLAY_MARKER = "invitation already claimed"
+
+        /**
          * Whether a native claim-spend failure is the double-claim case — the
-         * invite note's nullifier is already spent, or (L1 asset-lock parity)
-         * its outpoint already exists on chain. Message-matched until the SDK
-         * exposes typed nullifier/outpoint-collision errors; these strings are
-         * what the Orchard bundle validation and Drive surface for a re-spend.
+         * invite note is already spent, or (L1 asset-lock parity) its outpoint
+         * already exists on chain.
+         *
+         * AUTHORITATIVE PATH: the typed
+         * [DashSdkError.PlatformWallet.ShieldedInviteAlreadyClaimed]
+         * (`ErrorShieldedInviteAlreadyClaimed`, native code 37, SDK
+         * 0.1.0-v41int13+). The SDK documents it as TERMINAL and not
+         * retryable: the note is consumed, so no retry — and no smaller
+         * denomination — can spend it again.
+         *
+         * The string arm is a FALLBACK for AARs older than v41int13, which
+         * surfaced the same outcome as an untyped wallet-operation error. It
+         * leads with the reason-independent Display prefix
+         * ([ALREADY_CLAIMED_DISPLAY_MARKER]) because the per-reason
+         * substrings below miss the raise site whose `reason` carries a plain
+         * result-wait error instead of a nullifier quote (rs-platform-wallet
+         * `operations.rs` "broadcast accepted but result confirmation
+         * failed" arm) — that one used to fall through to
+         * [classifyBroadcastFailure] and surface as an AMBIGUOUS "outcome
+         * unconfirmed" instead of the terminal "invite already used". The
+         * remaining substrings still cover the L1/Drive re-spend shapes.
          */
         internal fun isInviteAlreadyUsedFailure(t: Throwable): Boolean {
+            if (t is DashSdkError.PlatformWallet.ShieldedInviteAlreadyClaimed) return true
             val m = t.message ?: return false
-            return m.contains("nullifier", ignoreCase = true) ||
+            return m.contains(ALREADY_CLAIMED_DISPLAY_MARKER, ignoreCase = true) ||
+                m.contains("nullifier", ignoreCase = true) ||
                 m.contains("already spent", ignoreCase = true) ||
                 m.contains("already exists", ignoreCase = true) ||
                 m.contains("OutPointAlreadyExists", ignoreCase = true) ||
                 m.contains("outpoint already", ignoreCase = true) ||
                 m.contains("double spend", ignoreCase = true)
+        }
+
+        /**
+         * Whether an [SdkWriteResult] carried out of
+         * [createIdentityFromInvitation] is the terminal already-claimed
+         * outcome — the app-owned [REASON_INVITE_ALREADY_USED] reason OR (belt
+         * and braces, in case a future classification change routes the
+         * throwable past [isInviteAlreadyUsedFailure]) a carried cause that is
+         * the TYPED already-claimed error. The claim call site uses this
+         * instead of matching the reason alone, so a code-37 failure can never
+         * surface as an ambiguous "outcome unconfirmed".
+         *
+         * Deliberately typed-only for the carried cause: the string fallback in
+         * [isInviteAlreadyUsedFailure] is scoped to the claim-spend catch,
+         * where every throwable came from the claim itself. Applying it to an
+         * arbitrary result cause would let an unrelated message ("Wallet
+         * already exists", …) promote a pre-broadcast or genuinely ambiguous
+         * outcome into a terminal "invite already used".
+         */
+        fun isInviteAlreadyUsedOutcome(result: SdkWriteResult<*>): Boolean = when (result) {
+            is SdkWriteResult.NotBroadcast ->
+                isInviteAlreadyUsedReason(result.reason) ||
+                    result.cause is DashSdkError.PlatformWallet.ShieldedInviteAlreadyClaimed
+            is SdkWriteResult.Ambiguous ->
+                result.cause is DashSdkError.PlatformWallet.ShieldedInviteAlreadyClaimed
+            is SdkWriteResult.Broadcast -> false
         }
 
         /**
