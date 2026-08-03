@@ -23,6 +23,7 @@ import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -44,6 +45,12 @@ import javax.inject.Singleton
  */
 internal const val PWFFI_ERROR_INVALID_PARAMETER = 2
 internal const val PWFFI_ERROR_UNKNOWN = 99
+
+// `AddressPoolTypeTagFFI` discriminant for the SDK Room `CoreAddressEntity`
+// rows: 0 = External (receive chain). The account-tag pair for BIP44
+// account 0 lives with the consolidation helpers below
+// ([ACCOUNT_TYPE_TAG_STANDARD] / [STANDARD_ACCOUNT_TAG_BIP44]).
+internal const val ADDRESS_POOL_TAG_EXTERNAL = 0
 
 /**
  * No-double-broadcast decision table for a throwable raised by the SDK's
@@ -131,6 +138,26 @@ internal fun classifyCoreSendFailure(t: Throwable): SdkWriteResult<Nothing> = wh
             "core send definitively rejected before reaching the network: ${t.message}", t
         )
     else -> classifyBroadcastFailure(t)
+}
+
+/**
+ * [classifyCoreSendFailure] specialized for the DEFERRED broadcast step of a
+ * BIP70/BIP270 payment ([SdkL1SendSource.broadcastDeferredPayment] →
+ * `ManagedPlatformWallet.broadcastSigned`). The reservation-token sibling
+ * errors are DEFINITIVE pre-network refusals by contract — the FFI rejects
+ * the token (aged out / already consumed / different wallet generation)
+ * before touching the broadcaster — so they classify NotBroadcast rather
+ * than falling through to the shared table's Ambiguous default. Everything
+ * else defers to [classifyCoreSendFailure] unchanged.
+ */
+internal fun classifyDeferredBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = when (t) {
+    is DashSdkError.PlatformWallet.StaleReservationToken,
+    is DashSdkError.PlatformWallet.ReservationTokenConsumed,
+    is DashSdkError.PlatformWallet.ReservationWalletMismatch ->
+        SdkWriteResult.NotBroadcast(
+            "deferred broadcast refused pre-network (${t.javaClass.simpleName}): ${t.message}", t
+        )
+    else -> classifyCoreSendFailure(t)
 }
 
 // ── Send-all (drain) — pure pieces of the iOS-validated max pattern ───
@@ -401,6 +428,28 @@ internal fun planConsolidationSweeps(
         .filter { it.confirmedDuffs > feeHeadroomDuffs }
         .sortedByDescending { it.confirmedDuffs }
 }
+// ── Deferred (BIP70/BIP270) payment ───────────────────────────────────
+
+/**
+ * A BIP70/BIP270 deferred payment: built and signed by the SDK with its
+ * funding inputs RESERVED engine-side, but NOT broadcast. [rawTxBytes] is
+ * what the BIP70 `Payment` message carries to the merchant; after the
+ * merchant acks, [SdkL1SendService.broadcastDeferredPayment] consumes the
+ * reservation, and a pre-ack failure releases it via
+ * [SdkL1SendService.releaseDeferredPayment]. If neither happens (process
+ * death), the engine's reservation TTL sweep reclaims the inputs.
+ *
+ * [native] is the SDK's owning reservation object
+ * (`ManagedPlatformWallet.SignedCoreTransaction` in production, whose GC
+ * backstop also releases an abandoned reservation) — opaque here so the
+ * source seam stays host-JVM testable.
+ */
+class SdkDeferredPayment internal constructor(
+    val txidHex: String,
+    val rawTxBytes: ByteArray,
+    val feeDuffs: Long,
+    internal val native: Any?
+)
 
 // ── Source seam ───────────────────────────────────────────────────────
 
@@ -500,6 +549,69 @@ interface SdkL1SendSource {
      */
     suspend fun sendAllToAddress(walletIdHex: String, addressBase58: String, floorDuffs: Long): String =
         throw UnsupportedOperationException("send-all not supported by this source")
+
+    /**
+     * Build and sign a multi-recipient Core payment from BIP44 account 0
+     * with its funding inputs RESERVED, WITHOUT broadcasting — the BIP70/
+     * BIP270 deferred-submission primitive
+     * (`ManagedPlatformWallet.buildSignedPayment`). Selection, reservation
+     * and signing commit as one atomic native operation, so a concurrent
+     * send cannot double-select the same inputs. Exactly one of
+     * [broadcastDeferredPayment] / [releaseDeferredPayment] should follow;
+     * an orphaned reservation falls to the engine's TTL sweep (and the
+     * production object's GC backstop). Default throws: only the
+     * production source (and fakes exercising BIP70) need it.
+     */
+    suspend fun buildDeferredPayment(
+        walletIdHex: String,
+        recipients: List<Pair<String, Long>>
+    ): SdkDeferredPayment =
+        throw UnsupportedOperationException("deferred (BIP70) payment not supported by this source")
+
+    /**
+     * Broadcast a payment built by [buildDeferredPayment], consuming its
+     * reservation, and return the broadcast txid as lowercase hex. Throws
+     * on failure ([classifyDeferredBroadcastFailure] decides what the
+     * throw proves — the reservation-token errors are definitively
+     * pre-network). Default throws: see [buildDeferredPayment].
+     */
+    suspend fun broadcastDeferredPayment(walletIdHex: String, payment: SdkDeferredPayment): String =
+        throw UnsupportedOperationException("deferred (BIP70) payment not supported by this source")
+
+    /**
+     * Release the reservation of a payment built by [buildDeferredPayment]
+     * WITHOUT broadcasting — the abandoned/nacked arm. Idempotent
+     * engine-side: releasing a consumed or already-released token is a
+     * harmless no-op. Default throws: see [buildDeferredPayment].
+     */
+    suspend fun releaseDeferredPayment(walletIdHex: String, payment: SdkDeferredPayment): Unit =
+        throw UnsupportedOperationException("deferred (BIP70) payment not supported by this source")
+
+    /**
+     * The LOWEST-index unused EXTERNAL (receive-chain) address of the
+     * wallet's BIP44 account 0, read from the SDK's Room mirror of the
+     * ENGINE-maintained address pool (`core_addresses`, fed by
+     * `onPersistAccountAddressPoolEntry`) — the SDK's canonical
+     * current-address pattern (KotlinExampleApp `ReceiveAddressSheet`,
+     * iOS `nextCoreReceiveAddress`), used here as the BIP70
+     * `Payment.refund_to` source with no dashj keychain involved. Null
+     * when the account or pool rows are absent (fresh install
+     * mid-first-sync, wiped DB).
+     *
+     * UPSTREAM GAP (dashpay/platform — Kotlin parity, small): the engine
+     * ALREADY exposes this as `core_wallet_next_receive_address` in
+     * rs-platform-wallet-ffi (iOS binds it directly:
+     * `SwiftDashSDKReceiveAddressReader` → `coreWallet().nextReceiveAddress`),
+     * but no rs-unified-sdk-jni/Kotlin plumbing exists. Once ported, swap
+     * this Room read for the FFI call — same answer (lowest unused by the
+     * engine's used-set, same cold-start caveat), engine-authoritative.
+     * Neither carries an issued-marker, so per-invoice
+     * (dashj-`freshReceiveAddress`-style) handout remains a separate,
+     * later ask. Default throws: only the production source (and BIP70
+     * fakes) need it.
+     */
+    suspend fun unusedExternalAddress(walletIdHex: String): String? =
+        throw UnsupportedOperationException("address-pool reads not supported by this source")
 
     /**
      * [sendAllToAddress] aimed at the DIP-9 CoinJoin account
@@ -1072,6 +1184,69 @@ internal class DashSdkL1SendSource(
         val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
         val balance = wallet.balance()
         return balance.confirmed + balance.unconfirmed
+    }
+
+    override suspend fun buildDeferredPayment(
+        walletIdHex: String,
+        recipients: List<Pair<String, Long>>
+    ): SdkDeferredPayment {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        // Same call shape as sendToAddresses (builder defaults, mnemonic-
+        // resolver signing) minus the broadcast: the SDK returns the signed
+        // bytes with the inputs reserved behind the object's token.
+        val signed = wallet.buildSignedPayment(
+            recipients = recipients,
+            network = toSdkNetwork(Constants.NETWORK_PARAMETERS),
+            coreSignerHandle = manager.mnemonicResolverHandle
+        )
+        return SdkDeferredPayment(signed.txidHex, signed.rawTxBytes, signed.feeDuffs, signed)
+    }
+
+    override suspend fun broadcastDeferredPayment(
+        walletIdHex: String,
+        payment: SdkDeferredPayment
+    ): String {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        // The object overload keeps the reservation reachable across the
+        // native call and disarms its GC backstop once consumed.
+        return wallet.broadcastSigned(sdkReservationOf(payment))
+    }
+
+    override suspend fun releaseDeferredPayment(walletIdHex: String, payment: SdkDeferredPayment) {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        wallet.releaseReservation(sdkReservationOf(payment))
+    }
+
+    private fun sdkReservationOf(
+        payment: SdkDeferredPayment
+    ): org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet.SignedCoreTransaction =
+        checkNotNull(
+            payment.native as? org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet.SignedCoreTransaction
+        ) { "deferred payment ${payment.txidHex} does not carry the SDK reservation object" }
+
+    override suspend fun unusedExternalAddress(walletIdHex: String): String? {
+        service.ensureStarted()
+        val database = service.databaseOrNull() ?: return null
+        val walletId = decodeHexOrNull(walletIdHex, walletIdHex.length / 2) ?: return null
+        val account = database.accountDao()
+            .getByKey(walletId, ACCOUNT_TYPE_TAG_STANDARD, 0)
+            .firstOrNull { it.standardTag == STANDARD_ACCOUNT_TAG_BIP44 }
+            ?: return null
+        val pool = database.coreAddressDao().observeByAccount(account.id).first()
+        // LOWEST-index unused entry — the SDK's canonical current-address
+        // pattern (KotlinExampleApp ReceiveAddressSheet / iOS
+        // nextCoreReceiveAddress: poolType external, !isUsed, balance 0,
+        // min addressIndex). NOTE: dashj's Receive screen issues from the
+        // same low end of this chain in Phase 1B, so refund_to will often
+        // equal the currently shown receive address — accepted address
+        // reuse; the pool has no issued-marker to coordinate the two.
+        return pool
+            .filter { it.poolTypeTag == ADDRESS_POOL_TAG_EXTERNAL && !it.isUsed && it.balance == 0L }
+            .minByOrNull { it.addressIndex }
+            ?.address
     }
 
     override suspend fun <T> withCoreSendLock(walletIdHex: String, block: suspend () -> T): T {
@@ -1681,6 +1856,127 @@ class SdkL1SendService internal constructor(
                 }
             }
         }
+    }
+
+    /**
+     * BIP70/BIP270, post-cutover (issue #1520 Phase 1B item 1): build and
+     * sign a multi-recipient payment with its inputs RESERVED, without
+     * broadcasting. The caller owns the route decision (it only enters
+     * this path once [cutoverCommitted] — there is no dashj fallback), so
+     * unlike [sendToAddress] this THROWS on every failure instead of
+     * returning [SdkWriteResult]: a build never broadcasts, so nothing
+     * needs Ambiguous classification and the throw is always safe to
+     * surface as "payment not made". The reservation exists only once this
+     * returns; follow with exactly one of [broadcastDeferredPayment]
+     * (merchant acked) or [releaseDeferredPayment] (abandoned/nacked).
+     */
+    suspend fun buildDeferredPayment(recipients: List<Pair<String, Long>>): SdkDeferredPayment {
+        check(recipients.isNotEmpty()) { "BIP70 payment has no outputs" }
+        val trimmed = recipients.map { (address, amountDuffs) ->
+            check(amountDuffs > 0) { "BIP70 output amount must be positive, got $amountDuffs" }
+            val clean = address.trim()
+            check(clean.isNotEmpty() && addressValidSafe(clean)) {
+                "BIP70 output address is malformed or for the wrong network"
+            }
+            clean to amountDuffs
+        }
+        val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
+            "app wallet not bound to the SDK"
+        }
+        val gate = probeSendGate()
+        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        val payment = source.buildDeferredPayment(walletIdHex, trimmed)
+        log.info(
+            "SDK l1DeferredBuild: built {} ({} recipient(s), fee {} duffs), inputs reserved",
+            payment.txidHex, trimmed.size, payment.feeDuffs
+        )
+        return payment
+    }
+
+    /**
+     * Broadcast [payment]'s already-signed tx, consuming its reservation —
+     * the "merchant acked" arm of a BIP70 flow. One attempt, classified by
+     * [classifyDeferredBroadcastFailure]; the token-error refusals (stale /
+     * consumed / wallet mismatch) are definitively pre-network →
+     * [SdkWriteResult.NotBroadcast]. Fires the self-spend parity marker on
+     * success like every other SDK broadcast. Deliberately NO bridge hook
+     * here — the BIP70 caller bridges synchronously with the raw bytes it
+     * already holds.
+     */
+    suspend fun broadcastDeferredPayment(payment: SdkDeferredPayment): SdkWriteResult<String> {
+        val operation = "l1DeferredBroadcast"
+        val walletIdHex = try {
+            source.boundWalletIdOrNull()
+                ?: return notBroadcast(operation, "app wallet not bound to the SDK", null)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast(operation, "SDK bootstrap/bind lookup failed", t)
+        }
+        return try {
+            val txidHex = source.broadcastDeferredPayment(walletIdHex, payment)
+            log.info("SDK {}: broadcast deferred tx {}", operation, txidHex)
+            runCatching { onSelfSpendBroadcast() }
+                .onFailure { log.warn("failed to record the self-spend marker", it) }
+            SdkWriteResult.Broadcast(txidHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            val classified = classifyDeferredBroadcastFailure(t)
+            when (classified) {
+                is SdkWriteResult.NotBroadcast ->
+                    log.warn("SDK {} refused pre-network for {}", operation, payment.txidHex, t)
+                is SdkWriteResult.Ambiguous ->
+                    log.error(
+                        "SDK {} outcome unconfirmed for {} — the tx MAY be on the network",
+                        operation, payment.txidHex, t
+                    )
+                is SdkWriteResult.Broadcast -> Unit // unreachable
+            }
+            classified
+        }
+    }
+
+    /**
+     * Release [payment]'s reservation without broadcasting — the
+     * abandoned/nacked arm of a BIP70 flow. Best-effort and contained: a
+     * release failure only means the inputs stay reserved until the
+     * engine's TTL sweep (or the reservation object's GC backstop)
+     * reclaims them, so it is logged, never thrown.
+     */
+    suspend fun releaseDeferredPayment(payment: SdkDeferredPayment) {
+        try {
+            val walletIdHex = source.boundWalletIdOrNull()
+            if (walletIdHex == null) {
+                log.warn(
+                    "SDK l1DeferredRelease: wallet not bound; reservation for {} falls to the TTL sweep",
+                    payment.txidHex
+                )
+                return
+            }
+            source.releaseDeferredPayment(walletIdHex, payment)
+            log.info("SDK l1DeferredRelease: released the reservation for {}", payment.txidHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn(
+                "SDK l1DeferredRelease failed for {} — the engine's TTL sweep reclaims the inputs",
+                payment.txidHex, t
+            )
+        }
+    }
+
+    /**
+     * The BIP70 `Payment.refund_to` source, post-cutover: the lowest
+     * unused external address from the SDK's persisted address pool
+     * ([SdkL1SendSource.unusedExternalAddress]) — no dashj keychain read.
+     * Contained: null (⇒ the caller omits refund_to, which BIP70 makes
+     * optional) when the wallet is unbound, the pool rows are missing, or
+     * the read fails.
+     */
+    suspend fun refundAddressOrNull(): String? = try {
+        source.boundWalletIdOrNull()?.let { source.unusedExternalAddress(it) }
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("SDK refund-address read failed; the Payment message will omit refund_to", t)
+        null
     }
 
     /** [isValidAddress] with failures contained (a throw must not escape a preflight). */
