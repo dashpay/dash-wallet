@@ -226,6 +226,15 @@ class PlatformSynchronizationService @Inject constructor(
         private val random = Random(System.currentTimeMillis())
 
         val UPDATE_TIMER_DELAY = 15.seconds
+
+        /**
+         * Delay before re-running [updateContactRequests] after a FAILED run
+         * (see [ContactUpdateRetryPolicy]): long enough not to hammer a broken
+         * platform connection, short enough that a single transient crash
+         * doesn't silence contact discovery until the next app-lifecycle
+         * trigger (observed live: 16 minutes).
+         */
+        val CONTACT_UPDATE_RETRY_DELAY = 45.seconds
         val PUSH_PERIOD = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 3.minutes else 3.hours
         val WEEKLY_PUSH_PERIOD = 7.days.inWholeMilliseconds
         val CUTOFF_MIN = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 3.minutes else 3.hours
@@ -237,6 +246,16 @@ class PlatformSynchronizationService @Inject constructor(
 
     private var platformSyncJob: Job? = null
     private var txMetadataJob: Job? = null
+
+    /**
+     * Bounded retry after a FAILED [updateContactRequests] run — see
+     * [ContactUpdateRetryPolicy] for the live incident this fixes. The policy
+     * is the pure decision seam; [contactUpdateRetryJob] is the one pending
+     * delayed re-run (child of [syncScope], so it dies with the scope on
+     * shutdown/reset).
+     */
+    private val contactUpdateRetryPolicy = ContactUpdateRetryPolicy()
+    private var contactUpdateRetryJob: Job? = null
     private val updatingContacts = AtomicBoolean(false)
     private val preDownloadBlocks = AtomicBoolean(false)
     private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
@@ -628,8 +647,23 @@ class PlatformSynchronizationService @Inject constructor(
                 checkDatabaseIntegrity(userId)
                 updateSyncStatus(PreBlockStage.FixMissingProfiles)
             } else {
-                // update the
-                identityRepository.updateIdentity()
+                // Refresh our own identity (revision/keys/balance) before the
+                // full update. Non-fatal: this is a freshness optimization only,
+                // and letting a failure here propagate previously aborted the
+                // ENTIRE contact sync before the contact-request fetch below
+                // ever ran (observed live, S21 2026-08-02: the legacy CBOR
+                // identity-cache failure on our own contract-bound keys left an
+                // iPhone acceptance undiscovered for ~16 minutes). The
+                // repository call is itself cache-tolerant now (see
+                // IdentityRepository.updateIdentity), so this guard only has to
+                // absorb genuinely unexpected failures.
+                try {
+                    identityRepository.updateIdentity()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("could not refresh own identity before contact sync; continuing", e)
+                }
             }
 
             // Get all out our contact requests
@@ -791,11 +825,20 @@ class PlatformSynchronizationService @Inject constructor(
 
             updateSyncStatus(PreBlockStage.Complete)
 
+            // A successful pass resets the failed-update retry budget and marks
+            // any still-pending retry as redundant (it will no-op).
+            contactUpdateRetryPolicy.onSuccess()
+
             log.info("updating contacts and profiles took $watch")
         } catch (_: CancellationException) {
             log.info("updating contacts canceled")
         } catch (e: Exception) {
             log.error(platformRepo.formatExceptionMessage("error updating contacts", e))
+            // Don't go silent on failure: without this, a single crashed run
+            // left contact discovery waiting for the next app-lifecycle
+            // trigger (observed live: an acceptance undiscovered for ~16
+            // minutes). Bounded — see scheduleContactUpdateRetry.
+            scheduleContactUpdateRetry(initialSync)
         } finally {
             updatingContacts.set(false)
 
@@ -809,6 +852,50 @@ class PlatformSynchronizationService @Inject constructor(
         // This block used to be the above finally block, but was moved here to fix some issues
         if (preDownloadBlocks.get()) {
             finishPreBlockDownload()
+        }
+    }
+
+    /**
+     * Schedule one bounded retry of a FAILED [updateContactRequests] run (see
+     * [ContactUpdateRetryPolicy] for the incident and the budget semantics).
+     * Scope-local — deliberately no WorkManager: the retry only matters while
+     * this process (and [syncScope]) is alive, because a fresh process re-runs
+     * the update from its own startup triggers anyway.
+     *
+     * Re-entrancy: a retry that fails again lands back here and consumes the
+     * next unit of budget, so a persistent failure retries at most
+     * [ContactUpdateRetryPolicy.DEFAULT_MAX_CONSECUTIVE_RETRIES] times
+     * (~[CONTACT_UPDATE_RETRY_DELAY] apart) and then waits for an external
+     * trigger. A success anywhere (including a concurrent ticker/resume run)
+     * resets the budget and turns a pending retry into a no-op.
+     */
+    private fun scheduleContactUpdateRetry(initialSync: Boolean) {
+        if (!contactUpdateRetryPolicy.onFailureShouldRetry()) {
+            log.warn(
+                "contact update failed {} consecutive times — retry budget exhausted; waiting for " +
+                    "the next external trigger (ticker/resume/contacts screen)",
+                contactUpdateRetryPolicy.failureCount
+            )
+            return
+        }
+        if (contactUpdateRetryJob?.isActive == true) {
+            return
+        }
+        log.info(
+            "contact update failed (consecutive failure {}) — retrying in {}",
+            contactUpdateRetryPolicy.failureCount,
+            CONTACT_UPDATE_RETRY_DELAY
+        )
+        contactUpdateRetryJob = syncScope.launch {
+            delay(CONTACT_UPDATE_RETRY_DELAY)
+            // A regular run (ticker / resume / contacts screen) may have
+            // succeeded while this retry was pending — skip the redundant pass.
+            if (!contactUpdateRetryPolicy.retryStillWarranted) {
+                log.info("skipping contact-update retry: a later run already succeeded")
+                return@launch
+            }
+            log.info("retrying contact update after earlier failure")
+            updateContactRequests(initialSync)
         }
     }
 
