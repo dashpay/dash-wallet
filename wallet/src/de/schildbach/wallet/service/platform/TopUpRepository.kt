@@ -31,6 +31,8 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.platform.sdk.SdkTopUpRecoveryService
+import de.schildbach.wallet.service.platform.work.ResumeTopUpsOperation
 import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.BuildConfig
@@ -86,6 +88,19 @@ import androidx.core.net.toUri
  * 2. [TopupIdentityWorker] to topup an identity
  * 3. [SendInviteWorker] to create Invitations (dynamic link)
  */
+/**
+ * Whether a legacy top-up's asset-lock tx looks NEVER-BROADCAST and should
+ * be re-announced: our own send (SELF), still building/pending, and no
+ * peer has ever reported it. Deliberately conservative — a tx any peer
+ * has seen propagates on dashj's own rebroadcast machinery; a confirmed
+ * or dead tx must not be touched. Pure for host tests.
+ */
+internal fun shouldReannounceLegacyTopUp(confidence: TransactionConfidence?): Boolean =
+    confidence != null &&
+        confidence.confidenceType == TransactionConfidence.ConfidenceType.PENDING &&
+        confidence.source == TransactionConfidence.Source.SELF &&
+        confidence.numBroadcastPeers() == 0
+
 interface TopUpRepository {
     suspend fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
@@ -174,7 +189,8 @@ class TopUpRepositoryImpl @Inject constructor(
     private val dashPayProfileDao: DashPayProfileDao,
     private val invitationsDao: InvitationsDao,
     private val dashPayConfig: DashPayConfig,
-    private val dashSystemService: DashSystemService
+    private val dashSystemService: DashSystemService,
+    private val sdkTopUpRecoveryService: SdkTopUpRecoveryService
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
@@ -531,6 +547,20 @@ class TopUpRepositoryImpl @Inject constructor(
     private var checkedPreviousTopUps = false
 
     override suspend fun checkTopUps(aesKeyParameter: KeyParameter?) {
+        // Phase B (#1520 item 3 / MO-998): SDK-created top-up locks retry
+        // through the payload-free drain worker — the SDK's tracked-lock
+        // table is the queue, so this sweep only needs to notice it is
+        // non-empty and enqueue (KEEP: an existing run wins). Contained;
+        // the dashj legacy scan below is unaffected and keeps covering
+        // pre-SDK top-ups.
+        try {
+            if (sdkTopUpRecoveryService.hasPendingTopUpLocks()) {
+                ResumeTopUpsOperation(walletApplication).enqueue()
+            }
+        } catch (e: Exception) {
+            log.warn("failed to check/enqueue the SDK top-up drain", e)
+        }
+
         val topUps = topUpsDao.getUnused()
         topUps.forEach { topUp ->
             try {
@@ -543,9 +573,35 @@ class TopUpRepositoryImpl @Inject constructor(
             }
         }
         // only check once per app start
+        //
+        // Phase D scoping invariant (#1520 item 3 / MO-998): this legacy
+        // scan serves DASHJ-created top-ups only, by construction — an SDK
+        // top-up's credit output pays a key on the SDK's own derivation
+        // (m/9'/coin'/5'/2'/identity'/index), which is NOT in the dashj
+        // BLOCKCHAIN_IDENTITY_TOPUP chain, so the auth extension never
+        // classifies the bridged tx into [topupFundingTransactions]; nor
+        // does the SDK route write a `topup_table` row. SDK top-ups retry
+        // exclusively through [ResumeTopUpsWorker]. This whole body is the
+        // part that retires with the dashj engine once the last legacy
+        // pending top-up drains (or an SDK lock-adoption import lands).
         if (!checkedPreviousTopUps) {
             log.info("checking all topup transactions")
             authExtension.topupFundingTransactions.forEach { assetLockTx ->
+                // A legacy top-up whose L1 tx never reached the network sits
+                // stuck forever (observed in the field with P2P port 9999
+                // blocked): dashj shows it pending but no peer ever saw it,
+                // and the platform transition below can only fail. Re-announce
+                // it while dashj still owns the peergroup — idempotent for
+                // anything already propagating, contained on failure.
+                try {
+                    if (shouldReannounceLegacyTopUp(assetLockTx.confidence)) {
+                        log.info("re-announcing unbroadcast legacy topup tx {}", assetLockTx.txId)
+                        walletApplication.broadcastTransaction(assetLockTx)
+                    }
+                } catch (e: Exception) {
+                    log.warn("failed to re-announce legacy topup tx ${assetLockTx.txId}", e)
+                }
+
                 val topUp = topUpsDao.getByTxId(assetLockTx.txId)
                 if (topUp == null || topUp.notUsed()) {
                     val identity = topUp?.toUserId ?: identityRepository.blockchainIdentity!!.uniqueIdentifier.toString()

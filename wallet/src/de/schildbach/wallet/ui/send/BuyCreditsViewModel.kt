@@ -9,6 +9,7 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentTopUp
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.work.ResumeTopUpsOperation
 import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -87,7 +88,16 @@ class BuyCreditsViewModel @Inject constructor(
     suspend fun topUpViaSdk(amountDuffs: Long): SdkWriteResult<Long> = withContext(Dispatchers.IO) {
         val identityId = identity.get(BlockchainIdentityConfig.IDENTITY_ID)
             ?: return@withContext SdkWriteResult.NotBroadcast("no identity to top up")
-        sdkTransparentTopUp.topUp(identityId, amountDuffs)
+        val result = sdkTransparentTopUp.topUp(identityId, amountDuffs)
+        if (result is SdkWriteResult.Ambiguous) {
+            // If the fused top-up DID reach the L1 broadcast, the asset lock
+            // is Rust-tracked and resumable — the restart-surviving drain
+            // worker completes it in the background (idempotent no-op when
+            // nothing was actually broadcast). The executor's in-process
+            // sticky refusal still prevents a user-driven double attempt.
+            ResumeTopUpsOperation(walletApplication).enqueue()
+        }
+        result
     }
 
     /**
