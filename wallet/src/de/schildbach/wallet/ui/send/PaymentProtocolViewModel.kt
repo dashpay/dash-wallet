@@ -74,8 +74,19 @@ class PaymentProtocolViewModel @Inject constructor(
      * Null pre-cutover — the dashj [baseSendRequest] dry-run then owns
      * the preview exactly as before.
      */
-    var deferredPayment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment? = null
-        private set
+    private val deferredPaymentRef =
+        java.util.concurrent.atomic.AtomicReference<de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment?>(null)
+    val deferredPayment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment?
+        get() = deferredPaymentRef.get()
+
+    /**
+     * In-flight guard for [sendPayment]: a second confirm while one is
+     * running is dropped instead of racing it. Covers BOTH paths — on the
+     * deferred path a duplicate could double-submit/rebuild the
+     * reservation; on the dashj path it would build a genuinely second
+     * transaction (a pre-existing double-pay hazard this guard closes).
+     */
+    private val sendingPayment = java.util.concurrent.atomic.AtomicBoolean(false)
 
     /** The preview fee to display, from whichever path built the preview. */
     val previewFee: Coin?
@@ -179,13 +190,16 @@ class PaymentProtocolViewModel @Inject constructor(
             if (sendCoinsTaskRunner.isCutoverCommitted()) {
                 try {
                     // A re-preview (retry after a failed send) must not
-                    // leak the previous reservation.
-                    deferredPayment?.let { sendCoinsTaskRunner.releaseDeferredPayment(it) }
-                    deferredPayment = sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent)
+                    // leak the previous reservation. getAndSet keeps the
+                    // take-then-release atomic against a concurrent send.
+                    deferredPaymentRef.getAndSet(null)?.let {
+                        sendCoinsTaskRunner.releaseDeferredPayment(it)
+                    }
+                    deferredPaymentRef.set(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent))
                     baseSendRequest = null
                     _sendRequestLiveData.postValue(Resource.success(null))
                 } catch (x: Exception) {
-                    deferredPayment = null
+                    deferredPaymentRef.set(null)
                     baseSendRequest = null
                     _sendRequestLiveData.postValue(Resource.error(x))
                 }
@@ -216,17 +230,25 @@ class PaymentProtocolViewModel @Inject constructor(
      * Updates [directPaymentAckLiveData] with the result.
      */
     fun sendPayment() {
+        // Single-flight: a confirm while a send is already running is
+        // dropped, not queued — a duplicate would race the atomic take
+        // below and, on the dashj path, build a second transaction.
+        if (!sendingPayment.compareAndSet(false, true)) {
+            log.warn("sendPayment ignored: a payment submission is already in flight")
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 directPaymentAckLiveData.postValue(Resource.loading(null))
 
-                val prebuilt = deferredPayment
+                // Atomic take: whoever wins this getAndSet owns the
+                // reservation; any concurrent reader sees null.
+                val prebuilt = deferredPaymentRef.getAndSet(null)
                 val transaction = if (prebuilt != null) {
                     // Post-cutover: submit the EXACT tx the preview showed.
                     // The reservation is consumed (ack → broadcast) or
                     // released (pre-ack failure) inside the runner either
                     // way — this reference is dead after the call.
-                    deferredPayment = null
                     try {
                         sendCoinsTaskRunner.sendPrebuiltDirectPayment(prebuilt, finalPaymentIntent!!)
                     } catch (ex: Exception) {
@@ -258,6 +280,8 @@ class PaymentProtocolViewModel @Inject constructor(
             } catch (ex: Exception) {
                 log.error("Failed to send direct payment", ex)
                 directPaymentAckLiveData.postValue(Resource.error(ex, ex.message ?: "Payment failed"))
+            } finally {
+                sendingPayment.set(false)
             }
         }
     }
@@ -279,8 +303,7 @@ class PaymentProtocolViewModel @Inject constructor(
         // ViewModel scope is already dead here, the release is idempotent,
         // and the engine's reservation TTL is the backstop if the process
         // dies first.
-        deferredPayment?.let { payment ->
-            deferredPayment = null
+        deferredPaymentRef.getAndSet(null)?.let { payment ->
             @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
             kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
                 sendCoinsTaskRunner.releaseDeferredPayment(payment)

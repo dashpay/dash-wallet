@@ -913,7 +913,10 @@ class SendCoinsTaskRunnerBIP70Test {
             sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent)
             fail("Expected DirectPayException for NACK")
         } catch (e: org.dash.wallet.common.services.DirectPayException) {
-            // expected
+            assertTrue(
+                "nack should surface as not-acknowledged: ${e.message}",
+                e.message!!.contains("not acknowledged")
+            )
         }
 
         io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
