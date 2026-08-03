@@ -702,7 +702,7 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
-    fun `directPay releases the reservation on transport failure when no IS-lock appears`() = runTest {
+    fun `directPay releases the reservation on transport failure when the tx is never observed`() = runTest {
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
         val testAmount = Coin.parseCoin("1.0")
         val paymentIntent =
@@ -725,7 +725,7 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
-    fun `directPay completes as paid when the server broadcast the tx (IS-lock rescue)`() = runTest {
+    fun `directPay completes as paid when the engine observes the server broadcast`() = runTest {
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
         val testAmount = Coin.parseCoin("1.0")
         val paymentIntent =
@@ -736,9 +736,13 @@ class SendCoinsTaskRunnerBIP70Test {
         coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
         // The POST fails at the transport layer…
         mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
-        // …but the engine then observes the tx IS-LOCKED on the network —
-        // the BIP70 server broadcast it despite the failed response.
-        coEvery { l1SendProbeService.observedTxContext(deferredTxidHex) } returns 1
+        // …but the engine then OBSERVES the tx on the network at mempool
+        // context — the BIP70 server broadcast it despite the failed
+        // response. Context 0 is the field-observed arrival state (the
+        // pinned engine never surfaces an InstantSend context), and a row
+        // can only exist for a tx that reached the network: our own build
+        // persists nothing.
+        coEvery { l1SendProbeService.observedTxContext(deferredTxidHex) } returns 0
         coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
         coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, payment.rawTxBytes) } returns

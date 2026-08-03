@@ -139,16 +139,18 @@ class PaymentProtocolViewModelRaceTest {
     }
 
     @Test
-    fun `retryable failure releases the guard and rebuilds the preview for a clean retry`() {
+    fun `definitive nack releases the guard and rebuilds the preview for a clean retry`() {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
         val payment = SdkDeferredPayment(deferredTxid, byteArrayOf(1, 2, 3), 260L, null)
         val viewModel = buildViewModel(runner)
         armDeferredPreview(viewModel, runner, payment)
 
-        // First submission fails pre-ack (retryable). The rebuild returns a
-        // fresh reservation.
+        // A definitive nack (server refused; nothing on the network) is
+        // the ONE failure that re-arms the preview — an ambiguous
+        // transport failure must not, or a retry could double-pay.
         val retryPayment = SdkDeferredPayment("cc".repeat(32), byteArrayOf(4, 5), 300L, null)
-        coEvery { runner.sendPrebuiltDirectPayment(any(), any()) } throws okio.IOException("transport down")
+        coEvery { runner.sendPrebuiltDirectPayment(any(), any()) } throws
+            org.dash.wallet.common.services.DirectPayException("Payment was not acknowledged by the server")
         coEvery { runner.buildDeferredBip70Payment(any()) } returns retryPayment
 
         viewModel.sendPayment()
@@ -168,5 +170,28 @@ class PaymentProtocolViewModelRaceTest {
             coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(retryPayment, any()) }
         }
         assertTrue(viewModel.deferredPayment == null)
+    }
+
+    @Test
+    fun `ambiguous transport failure does NOT re-arm the preview`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        val payment = SdkDeferredPayment(deferredTxid, byteArrayOf(1, 2, 3), 260L, null)
+        val viewModel = buildViewModel(runner)
+        armDeferredPreview(viewModel, runner, payment)
+
+        // The runner already ran (and lost) its network-observation
+        // rescue; the outcome is genuinely unknown, so the flow must NOT
+        // hand the user a fresh reservation to retry with.
+        coEvery { runner.sendPrebuiltDirectPayment(any(), any()) } throws okio.IOException("transport down")
+
+        viewModel.sendPayment()
+        awaitCondition("failure surfaced") { viewModel.directPaymentAckLiveData.value?.exception != null }
+
+        assertTrue("preview must stay un-armed", viewModel.deferredPayment == null)
+        assertTrue("send must be gated off", !viewModel.canSendPayment)
+        runBlocking {
+            // Exactly the preview build — no rebuild after the ambiguity.
+            coVerify(exactly = 1) { runner.buildDeferredBip70Payment(any()) }
+        }
     }
 }
