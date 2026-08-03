@@ -147,6 +147,17 @@ internal fun classifyCoreSendFailure(t: Throwable): SdkWriteResult<Nothing> = wh
 internal const val SEND_ALL_FEE_RESERVE_DUFFS = 10_000L
 
 /**
+ * The [SdkWriteResult.NotBroadcast] reason prefix for a CLOSED L1 funding
+ * gate — the engine is not running or its filter scan has not caught up to
+ * the chain tip yet, i.e. the one refusal that genuinely means "the wallet
+ * is not synced enough to send". [de.schildbach.wallet.payments.SendCoinsTaskRunner]
+ * keys the user-facing "not fully synced" diagnosis off this prefix; every
+ * other NotBroadcast reason (flag off, bad address, builder shortfall, …)
+ * must NOT be presented as a sync problem.
+ */
+internal const val L1_FUNDING_GATE_CLOSED_REASON = "L1 funding gate closed"
+
+/**
  * The deliver-at-least floor for a send-all: `spendable − reserve`,
  * clamped to 1 (the JNI boundary rejects a non-positive output amount).
  * iOS-validated pattern: this is also the max amount a UI should show for
@@ -1430,7 +1441,7 @@ class SdkL1SendService internal constructor(
         // Shared with the debug settings status line via probeSendGate.
         val gate = probeSendGate()
         if (!gate.allowed) {
-            return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
+            return notBroadcast(operation, "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}", null)
         }
 
         // Send-all guards, receival sweeps and floor. Order matters:
@@ -1625,7 +1636,7 @@ class SdkL1SendService internal constructor(
 
         val gate = probeSendGate()
         if (!gate.allowed) {
-            return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
+            return notBroadcast(operation, "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}", null)
         }
 
         // Fail-closed lock guard, scoped to the account this drain touches.

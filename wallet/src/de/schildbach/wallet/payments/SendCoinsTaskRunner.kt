@@ -119,6 +119,49 @@ import de.schildbach.wallet.util.toSha256Hash
  */
 enum class CutoverSendRoute { DASHJ, SDK_BRIDGED, FAIL_CLOSED }
 
+/**
+ * Phase 5d fail-closed error: the cutover is committed but this send needs
+ * dashj-only machinery the SDK send surface cannot reproduce (custom coin
+ * selection, locked-output predicates, multi-recipient/BIP70 payments,
+ * typed-overload send-all). Nothing was built or broadcast. The send UI maps
+ * this TYPE to its own honest "payment type not supported" copy
+ * ([de.schildbach.wallet.ui.send.classifySendFailure]) — the message here is
+ * for logs only and must never be shown verbatim to a user.
+ */
+class SendNotSdkRoutableException(message: String) : IllegalStateException(message)
+
+/**
+ * Phase 5d fail-closed error: the cutover is committed but the SDK engine
+ * refused to attempt the send because its L1 funding gate is closed — the
+ * engine is not running or its compact-filter scan has not caught up to the
+ * chain tip ([de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON]).
+ * This is the ONE send failure that genuinely means "not synced yet", and the
+ * only one the UI may present as such. Nothing was broadcast.
+ */
+class SendEngineNotSyncedException(message: String) : IllegalStateException(message)
+
+/**
+ * Phase 5d: the exception for a post-cutover [SdkWriteResult.NotBroadcast] —
+ * the SDK send was refused pre-broadcast and there is no dashj fallback (the
+ * held engine would queue-not-send). Typed by REASON so the UI can map it
+ * honestly: a closed funding gate (the engine's scan not caught up — see
+ * [de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON])
+ * is the not-synced case; anything else is a plain [IllegalStateException]
+ * the UI renders as a generic failure, never as "not synced" and never
+ * verbatim. Pure — host-testable.
+ */
+fun sdkSendNotAttemptedException(reason: String): IllegalStateException =
+    if (reason.contains(de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON)) {
+        SendEngineNotSyncedException(
+            "cutover committed but the SDK engine cannot fund a send yet ($reason)"
+        )
+    } else {
+        IllegalStateException(
+            "cutover committed but the SDK send was not attempted ($reason) — " +
+                "dashj cannot broadcast while held"
+        )
+    }
+
 /** The pure routing decision — see [CutoverSendRoute]. */
 fun cutoverSendRoute(
     cutoverCommitted: Boolean,
@@ -168,21 +211,38 @@ data class SdkRoutablePayment(val address: Address, val amount: Coin, val sendAl
  * - a custom [CoinSelector] (anything but the default zero-conf one):
  *   CrowdNode-style selection the SDK can't honor;
  * - locked-output predicates: dashj-only machinery;
- * - any non-standard output script, zero or multiple foreign recipients
- *   (BIP70 multi-output, send-to-self): the payment cannot be identified
- *   unambiguously.
+ * - any non-standard output script, or multiple foreign recipients
+ *   (BIP70 multi-output): the payment cannot be identified unambiguously.
+ *
+ * SELF-sends (observed on-device, 11.10.44: a plain send to the wallet's
+ * OWN receive address threw the fail-closed backstop): the recipient and
+ * the change output are BOTH "mine", so there are zero foreign outputs and
+ * the outputs alone cannot name the payment. Resolution, strictest first:
+ * - [intendedRecipient] (the send UI's payment-intent address, threaded
+ *   through the funnel) names it: the output(s) paying that address ARE the
+ *   payment — summed when the change lands on the same address — and any
+ *   other own output is change. An intent NO output pays proves a mismatch
+ *   and refuses.
+ * - no intent, exactly ONE output: unambiguous (a raw single-output
+ *   self-send, or a send-all-to-self) — that output is the payment;
+ *   `emptyWallet` carries through as [SdkRoutablePayment.sendAll] exactly
+ *   like the foreign case, NEVER forced (a forced drain would spend the
+ *   whole wallet on a small self-send).
+ * - no intent, several own outputs: recipient vs change cannot be told
+ *   apart — never guess, fail closed.
  *
  * Pure given [isMine] — host-testable without a wallet.
  */
 fun extractSdkRoutablePayment(
     sendRequest: SendRequest,
     params: NetworkParameters,
+    intendedRecipient: Address? = null,
     isMine: (Address) -> Boolean
 ): SdkRoutablePayment? {
     val selector = sendRequest.coinSelector
     if (selector != null && selector !is ZeroConfCoinSelector) return null
     if (sendRequest.canUseLockedOutputPredicate != null) return null
-    val foreignOutputs = ArrayList<Pair<Address, Coin>>(1)
+    val resolvedOutputs = ArrayList<Pair<Address, Coin>>(sendRequest.tx.outputs.size)
     for (output in sendRequest.tx.outputs) {
         // A script we can't resolve to an address (OP_RETURN payloads,
         // exotic types) makes the payment unidentifiable — not routable.
@@ -191,12 +251,28 @@ fun extractSdkRoutablePayment(
         } catch (e: Exception) {
             return null
         }
-        if (!isMine(address)) {
-            foreignOutputs += address to output.value
-        }
+        resolvedOutputs += address to output.value
     }
-    val payment = foreignOutputs.singleOrNull() ?: return null
-    return SdkRoutablePayment(payment.first, payment.second, sendAll = sendRequest.emptyWallet)
+    val foreignOutputs = resolvedOutputs.filter { (address, _) -> !isMine(address) }
+    // The common case: exactly one output NOT ours is THE payment (any own
+    // outputs are change). Unchanged behavior, intent or not.
+    foreignOutputs.singleOrNull()?.let { (address, amount) ->
+        return SdkRoutablePayment(address, amount, sendAll = sendRequest.emptyWallet)
+    }
+    // Multiple foreign recipients (BIP70 multi-output): ambiguous, refuse.
+    if (foreignOutputs.isNotEmpty()) return null
+    // Zero foreign outputs: a SELF-send. The UI's intent names the payment.
+    if (intendedRecipient != null) {
+        val paidToIntent = resolvedOutputs.filter { (address, _) -> address == intendedRecipient }
+        if (paidToIntent.isEmpty()) return null // the request doesn't match the stated intent
+        val amount = paidToIntent.fold(Coin.ZERO) { sum, (_, value) -> sum.add(value) }
+        return SdkRoutablePayment(intendedRecipient, amount, sendAll = sendRequest.emptyWallet)
+    }
+    // No intent: only a single-output self-send is unambiguous.
+    resolvedOutputs.singleOrNull()?.let { (address, amount) ->
+        return SdkRoutablePayment(address, amount, sendAll = sendRequest.emptyWallet)
+    }
+    return null
 }
 
 class SendCoinsTaskRunner @Inject constructor(
@@ -252,10 +328,10 @@ class SendCoinsTaskRunner @Inject constructor(
         ) {
             CutoverSendRoute.DASHJ -> Unit // unchanged path below
             CutoverSendRoute.SDK_BRIDGED -> return sendViaSdkBridged(address, amount, beforeSending, emptyWallet)
-            CutoverSendRoute.FAIL_CLOSED -> throw IllegalStateException(
+            CutoverSendRoute.FAIL_CLOSED -> throw SendNotSdkRoutableException(
                 "cutover committed: this send type (custom coin selection, locked-output " +
                     "predicate, or typed-overload send-all) is not SDK-routable and dashj cannot " +
-                    "broadcast while held — ROLLBACK_CUTOVER restores it"
+                    "broadcast while held"
             )
         }
 
@@ -308,10 +384,7 @@ class SendCoinsTaskRunner @Inject constructor(
             }
             is SdkWriteResult.Ambiguous ->
                 throw (result.cause as? Exception ?: RuntimeException(result.cause))
-            is SdkWriteResult.NotBroadcast -> throw IllegalStateException(
-                "cutover committed but the SDK send was not attempted (${result.reason}) — " +
-                    "dashj cannot broadcast while held; ROLLBACK_CUTOVER restores sends"
-            )
+            is SdkWriteResult.NotBroadcast -> throw sdkSendNotAttemptedException(result.reason)
         }
     }
 
@@ -388,10 +461,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 // engine would queue-not-send (see cutoverSendRoute). Pre-cutover
                 // this is the unchanged fall-through to the dashj path below.
                 if (sdkL1SendService.cutoverCommitted()) {
-                    throw IllegalStateException(
-                        "cutover committed but the SDK send was not attempted (${sdkResult.reason}) — " +
-                            "dashj cannot broadcast while held; ROLLBACK_CUTOVER restores sends"
-                    )
+                    throw sdkSendNotAttemptedException(sdkResult.reason)
                 }
         }
 
@@ -880,7 +950,8 @@ class SendCoinsTaskRunner @Inject constructor(
         txCompleted: Boolean = false,
         checkBalanceConditions: Boolean = true,
         beforeSending: Consumer<Transaction>? = null,
-        serviceName: String? = null
+        serviceName: String? = null,
+        intendedRecipient: Address? = null
     ): Transaction = withContext(Dispatchers.IO) {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
@@ -896,7 +967,11 @@ class SendCoinsTaskRunner @Inject constructor(
         // anything the SDK can't reproduce (BIP70 multi-output, CrowdNode
         // selectors/locked outputs).
         if (sdkL1SendService.cutoverCommitted()) {
-            val payment = extractSdkRoutablePayment(sendRequest, walletData.networkParameters) { address ->
+            val payment = extractSdkRoutablePayment(
+                sendRequest,
+                walletData.networkParameters,
+                intendedRecipient
+            ) { address ->
                 try {
                     wallet.isAddressMine(address)
                 } catch (e: Exception) {
@@ -915,10 +990,9 @@ class SendCoinsTaskRunner @Inject constructor(
                     payment.address, payment.amount, beforeSending, payment.sendAll
                 )
             }
-            throw IllegalStateException(
-                "cutover committed: this send is not SDK-routable (multi-recipient or custom " +
-                    "selection) and dashj cannot broadcast while held — " +
-                    "ROLLBACK_CUTOVER restores it"
+            throw SendNotSdkRoutableException(
+                "cutover committed: this send is not SDK-routable (multi-recipient, unresolved " +
+                    "self-send, or custom selection) and dashj cannot broadcast while held"
             )
         }
         val watch = Stopwatch.createStarted()
