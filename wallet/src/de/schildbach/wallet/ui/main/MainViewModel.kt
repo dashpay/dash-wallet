@@ -68,6 +68,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -75,6 +76,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.money.MonetaryFormat
@@ -178,8 +180,15 @@ class MainViewModel @Inject constructor(
     private val _blockchainSyncPercentage = MutableLiveData<Int>()
     val blockchainSyncPercentage: LiveData<Int>
         get() = _blockchainSyncPercentage
-    private var chainHeight: Int = walletData.wallet?.lastBlockSeenHeight ?: 0
-    private var headersHeight: Int = walletData.wallet?.lastBlockSeenHeight ?: 0
+    // Diagnostic bookkeeping for the blockchain-state collector below; both are
+    // overwritten by its first emission and are never read before that, so they seed
+    // at 0. They deliberately do NOT seed from `walletData.wallet.lastBlockSeenHeight`
+    // any more: MainViewModel is constructed from MainActivity.onCreate (on the main
+    // thread, while the lock screen is drawing), and that accessor takes dashj's fair
+    // wallet read lock — which on a large wallet mid-sync can be held by the autosave
+    // serializer for seconds. See the ANR note on the collector.
+    private var chainHeight: Int = 0
+    private var headersHeight: Int = 0
     private val _syncStage = MutableStateFlow(SyncStage.OFFLINE)
     val syncStage: StateFlow<SyncStage>
         get() = _syncStage
@@ -313,6 +322,33 @@ class MainViewModel @Inject constructor(
         txDisplayCacheService.setFilter(savedDirection)
         log.info("STARTUP MainViewModel init at {}", System.currentTimeMillis())
 
+        // ANR FIX — this collector MUST NOT run on the main thread.
+        //
+        // The blockchain_state row is rewritten roughly once a SECOND for the whole
+        // duration of a sync (SdkBlockchainStateService polls the L1 progress feed at
+        // 1 Hz and BlockchainStateDataProvider.updateSdkBlockchainState saves the row),
+        // so this body executes ~1 Hz while syncing. `launchIn(viewModelScope)` runs it
+        // on Dispatchers.Main.immediate, and the body reads
+        // `walletData.wallet.lastBlockSeenHeight` — a dashj accessor that takes the
+        // wallet's lock. That lock is a FAIR ReentrantReadWriteLock
+        // (org.bitcoinj.utils.Threading.readWriteLock passes fair=true), so a reader is
+        // queued strictly FIFO behind every pending writer. During a sync of a large
+        // wallet the write lock is held for many seconds at a time by
+        // Wallet.saveToFileStream (the 5s autosave serializes the ENTIRE wallet
+        // protobuf — every transaction and every CoinJoin keychain key) and by
+        // receiveFromBlock. The result on a ~100k-transaction CoinJoin wallet is a
+        // main-thread stall that exceeds the 5s ANR threshold, once per emission, for
+        // the whole sync window — and that stops the moment the sync does.
+        //
+        // Post-cutover this got strictly worse: BlockchainState.replaying is hardcoded
+        // false, so the `if (!state.replaying)` guard below — which used to suppress
+        // this log for exactly the duration of a replay — is now always true.
+        //
+        // flowOn() applies to everything UPSTREAM of it, i.e. to this onEach, so the
+        // body now runs on Dispatchers.IO. Everything it touches is safe there:
+        // updateSyncStatus/updatePercentage only call LiveData.postValue (designed for
+        // background threads), and headersHeight/chainHeight are confined to this one
+        // sequential collector.
         blockchainStateProvider.observeState()
             .filterNotNull()
             .onEach { state ->
@@ -321,9 +357,15 @@ class MainViewModel @Inject constructor(
                 headersHeight = state.mnlistHeight
                 chainHeight = state.bestChainHeight
                 if (!state.replaying) {
-                    log.info("blockchain state update: {}; {}; {} -> {}", headersHeight, chainHeight, walletData.wallet?.lastBlockSeenHeight)
+                    log.info(
+                        "blockchain state update: mnlist={}; chain={}; wallet={}",
+                        headersHeight,
+                        chainHeight,
+                        walletData.wallet?.lastBlockSeenHeight
+                    )
                 }
             }
+            .flowOn(Dispatchers.IO)
             .catch { e -> log.error("blockchain state flow error", e) }
             .launchIn(viewModelScope)
 
@@ -798,10 +840,13 @@ class MainViewModel @Inject constructor(
                 // have there been 10 transactions since the last update?
                 val installedDate = dashPayConfig.getMetadataFeatureInstalled()
                 walletData.wallet?.let { wallet: Wallet ->
-                    var count = 0
-                    wallet.getTransactions(true).forEach { tx ->
-                        if (tx.updateTime.time > installedDate) {
-                            count++
+                    // O(transaction count) under dashj's wallet read lock — must never
+                    // run on Dispatchers.Main.immediate, which is what a bare
+                    // viewModelScope.launch gives you. On a large CoinJoin wallet this
+                    // is a multi-second main-thread stall (i.e. a guaranteed ANR).
+                    val count = withContext(Dispatchers.IO) {
+                        wallet.getTransactions(true).count { tx ->
+                            tx.updateTime.time > installedDate
                         }
                     }
                     if (count >= 10) {

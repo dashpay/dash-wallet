@@ -54,6 +54,7 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -89,6 +90,9 @@ import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.math.BigInteger
+import java.util.Collections
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainCoroutineRule(
@@ -390,5 +394,98 @@ class MainViewModelTest {
             assertEquals(true, viewModel.isBlockchainSynced.value)
             assertEquals(false, viewModel.isBlockchainSyncFailed.value)
         }
+    }
+
+    /**
+     * ANR regression guard.
+     *
+     * A mainnet tester restoring a large CoinJoin wallet hit the system ANR dialog
+     * repeatedly — about every 8 seconds, for the whole sync, stopping only when the
+     * sync finished.
+     *
+     * The `blockchain_state` row is rewritten roughly once a SECOND for the whole
+     * duration of a sync (`SdkBlockchainStateService` polls the L1 progress feed at 1 Hz
+     * and `BlockchainStateDataProvider.updateSdkBlockchainState` saves the row), so
+     * every collector of `BlockchainStateProvider.observeState()` runs at ~1 Hz while
+     * syncing. `launchIn(viewModelScope)` collects on `Dispatchers.Main.immediate`, and
+     * the collector used to read `walletData.wallet.lastBlockSeenHeight` there.
+     *
+     * That dashj accessor takes the wallet lock, which is a FAIR
+     * `ReentrantReadWriteLock` (`org.bitcoinj.utils.Threading.readWriteLock` builds it
+     * with `fair = true`), so a reader queues strictly FIFO behind every pending writer.
+     * During a sync the write lock is held for many seconds at a time by
+     * `Wallet.saveToFileStream` — the 5s autosave serializes the entire wallet protobuf,
+     * every transaction and every CoinJoin keychain key. On a ~100k-transaction wallet
+     * the main thread therefore parked past the 5s ANR threshold once per emission.
+     *
+     * So: the dashj wallet must never be touched on the main dispatcher's thread, either
+     * from the 1 Hz collector or from a property initializer (the ViewModel is
+     * constructed on the main thread from `MainActivity.onCreate`, while the lock screen
+     * is drawing). `MainCoroutineRule` installs an `UnconfinedTestDispatcher` as Main,
+     * which runs on this JUnit thread — so any access recorded on this thread is an
+     * access that would happen on the real main thread in production.
+     */
+    @Test(timeout = 10_000)
+    fun `dashj wallet is never accessed on the main dispatcher thread`() {
+        val mainThread = Thread.currentThread()
+        val accessThreads = Collections.synchronizedList(mutableListOf<Thread>())
+        val accessed = CountDownLatch(1)
+
+        // Re-stub the `wallet` getter to record which thread reads it. Returning null
+        // keeps every existing collector on its null-safe path.
+        every { walletDataMock.wallet } answers {
+            accessThreads.add(Thread.currentThread())
+            accessed.countDown()
+            null
+        }
+
+        val state = BlockchainState().apply { replaying = false; percentageSync = 42 }
+        every { blockchainStateMock.observeState() } returns MutableStateFlow(state)
+
+        MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            crowdNodeApi,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider
+        )
+
+        // The collector is expected to reach the wallet on a background dispatcher.
+        // If it never does at all the assertion below still holds, so a timeout here is
+        // not a failure — it just means nothing read the wallet.
+        accessed.await(5, TimeUnit.SECONDS)
+
+        val onMain = accessThreads.filter { it === mainThread }
+        assertTrue(
+            "walletData.wallet was read ${onMain.size} time(s) on the main dispatcher " +
+                "thread (${mainThread.name}). Every dashj wallet accessor takes the fair " +
+                "wallet lock, which during a sync is held for seconds at a time by the " +
+                "autosave protobuf serializer — on a large CoinJoin wallet that is a " +
+                "repeating ANR. Keep the blockchain-state collector on flowOn(" +
+                "Dispatchers.IO) and keep property initializers off the wallet.",
+            onMain.isEmpty()
+        )
     }
 }

@@ -1793,7 +1793,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                             }
                         }
                     }
-                    withContext(Dispatchers.Main) { verifyBlockStores() }
+                    // Runs on serviceScope (Dispatchers.IO) — deliberately NOT hopped to
+                    // Dispatchers.Main. verifyBlockStores() blocks the calling thread on
+                    // two `future[1, TimeUnit.SECONDS]` gets plus the SPV store reads
+                    // behind them, so on Main it is a ~2s+ stall right in the startup
+                    // window. Nothing in it touches the UI; the Main hop was an artifact
+                    // of the Java→Kotlin conversion (#1336).
+                    verifyBlockStores()
 //                    if (blockStore is TestingSPVBlockStore) {
 //                        (blockStore as TestingSPVBlockStore).setBlockGetMethod(true)
 //                    }
