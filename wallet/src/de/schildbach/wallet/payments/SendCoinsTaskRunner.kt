@@ -329,6 +329,14 @@ class SendCoinsTaskRunner @Inject constructor(
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
         private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
+
+        /**
+         * Poll cadence for the BIP70 IS-lock timeout rescue (~12s total)
+         * — the successor of the dashj rescue's 0/1/3/5s loop, widened
+         * because an InstantSend lock takes a moment longer to observe
+         * than raw bloom relay did.
+         */
+        private val IS_LOCK_RESCUE_DELAYS_MS = listOf(1_000L, 2_000L, 3_000L, 3_000L, 3_000L)
     }
     private val paymentIntentParser = DashPaymentIntentParser(org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(NETWORK_PARAMETERS.id))
 
@@ -966,21 +974,74 @@ class SendCoinsTaskRunner @Inject constructor(
                 throw DirectPayException("Payment was not acknowledged by the server")
             }
         } catch (t: Throwable) {
-            // Pre-ack: the merchant never accepted the payment — free the
-            // inputs for an immediate retry (see the method KDoc for the
-            // narrowed merchant-broadcast recovery window this accepts).
+            // A nack is a definitive refusal. A transport/parse failure is
+            // AMBIGUOUS: the server may have received the Payment and
+            // broadcast the tx itself (CTX does). Before abandoning, wait
+            // a bounded window for the engine to observe the tx WITH an
+            // InstantSend lock — an IS-lock only exists for a genuinely
+            // broadcast transaction, so it is positive proof the BIP70
+            // server put it on the network (the SDK-side rebuild of the
+            // old dashj isTransactionOnNetwork rescue, on a stronger
+            // signal than bloom relay).
+            if (t !is DirectPayException && t !is CancellationException &&
+                awaitServerBroadcastByInstantSendLock(payment)
+            ) {
+                log.warn(
+                    "Payment POST for {} failed but the tx is IS-locked on the network — " +
+                        "the BIP70 server broadcast it; completing as paid",
+                    payment.txidHex, t
+                )
+                return completeAckedPayment(payment)
+            }
+            // Definitively refused, or never observed on the network:
+            // free the inputs for an immediate retry.
             withContext(NonCancellable) {
                 releaseDeferredPayment(payment)
             }
             throw t
         }
 
-        // Acked: the reservation is being consumed — the mirrored locks
-        // have done their job (the inputs are spent from here on).
+        return completeAckedPayment(payment)
+    }
+
+    /**
+     * The bounded IS-lock watch behind the timeout rescue: poll the SDK
+     * Room row's `TransactionContext` for [payment]'s txid on the old
+     * dashj rescue's cadence (~12s total). True only once the engine has
+     * observed the tx at [de.schildbach.wallet.service.platform.sdk.TX_CONTEXT_INSTANT_SEND]
+     * or beyond — mempool-only (context 0) deliberately does NOT count,
+     * because a build-time row could exist without any broadcast.
+     */
+    private suspend fun awaitServerBroadcastByInstantSendLock(
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
+    ): Boolean {
+        for (delayMs in IS_LOCK_RESCUE_DELAYS_MS) {
+            delay(delayMs)
+            val context = l1SendProbeService.observedTxContext(payment.txidHex)
+            if (context != null &&
+                context >= de.schildbach.wallet.service.platform.sdk.TX_CONTEXT_INSTANT_SEND
+            ) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * The acked tail of a BIP70 submission (also the IS-lock rescue's
+     * completion): clear the mirrored locks, broadcast (tolerated — the
+     * merchant's own broadcast covers delivery), bridge into the wallet
+     * record, return the live transaction.
+     */
+    private suspend fun completeAckedPayment(
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
+    ): Transaction {
+        // The reservation is being consumed — the mirrored locks have
+        // done their job (the inputs are spent from here on).
         runCatching { setReservedOutpointLocks(payment, locked = false) }
             .onFailure { log.warn("failed to clear the mirrored BIP70 reservation locks post-ack", it) }
 
-        // Acked: the payment IS made from the merchant's side. Broadcast
+        // The payment IS made from the merchant's side. Broadcast
         // ourselves too (identical bytes/txid — a merchant broadcast makes
         // this a harmless duplicate announce), but never release.
         when (val result = sdkL1SendService.broadcastDeferredPayment(payment)) {

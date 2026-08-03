@@ -89,6 +89,7 @@ class SendCoinsTaskRunnerBIP70Test {
     private lateinit var platformRepo: PlatformRepo
     private lateinit var metadataProvider: TransactionMetadataProvider
     private lateinit var sdkL1SendService: de.schildbach.wallet.service.platform.sdk.SdkL1SendService
+    private lateinit var l1SendProbeService: de.schildbach.wallet.service.platform.sdk.L1SendProbeService
     private lateinit var bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
     private lateinit var wallet: Wallet
 
@@ -111,6 +112,10 @@ class SendCoinsTaskRunnerBIP70Test {
         platformRepo = mockk(relaxed = true)
         metadataProvider = mockk(relaxed = true)
         sdkL1SendService = mockk(relaxed = true)
+        l1SendProbeService = mockk(relaxed = true)
+        // No SDK row observed by default: the IS-lock rescue finds
+        // nothing unless a test says otherwise.
+        coEvery { l1SendProbeService.observedTxContext(any()) } returns null
         // The relaxed default for a String?-returning suspend fun is "",
         // which is not a decodable address — default to "no refund address"
         // (omitted refund_to); tests that exercise refund_to override this.
@@ -156,9 +161,9 @@ class SendCoinsTaskRunnerBIP70Test {
                 // Self-spend grace arming is exercised in
                 // SendCoinsTaskRunnerSelfSpendGraceTest.
                 mockk(relaxed = true),
-                // 5c.0/5c.1 debug probes (L1SendProbeServiceTest): these
-                // BIP70 flows never touch the neutral overload.
-                mockk(relaxed = true),
+                // Row-context reads drive the BIP70 IS-lock timeout
+                // rescue; the rescue tests program this named mock.
+                l1SendProbeService,
                 // Phase 5d bridge factory: reached only under a committed
                 // cutover — programmed by the post-cutover BIP70 tests.
                 bridgedTransactionFactory
@@ -697,7 +702,7 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
-    fun `directPay releases the reservation on transport failure`() = runTest {
+    fun `directPay releases the reservation on transport failure when no IS-lock appears`() = runTest {
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
         val testAmount = Coin.parseCoin("1.0")
         val paymentIntent =
@@ -717,6 +722,37 @@ class SendCoinsTaskRunnerBIP70Test {
 
         io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+    }
+
+    @Test
+    fun `directPay completes as paid when the server broadcast the tx (IS-lock rescue)`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("1.0")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, testAmount, mockWebServer.url("/payment").toString())
+
+        val payment = deferredPayment()
+        val liveTx = mockk<org.bitcoinj.core.Transaction>(relaxed = true)
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        // The POST fails at the transport layer…
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
+        // …but the engine then observes the tx IS-LOCKED on the network —
+        // the BIP70 server broadcast it despite the failed response.
+        coEvery { l1SendProbeService.observedTxContext(deferredTxidHex) } returns 1
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, payment.rawTxBytes) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
+                liveTx, adoptedWalletInstance = false
+            )
+
+        val result = sendCoinsTaskRunner.sendDirectPayment(paymentIntent)
+
+        // Completed as PAID: the reservation was never released, the tx
+        // was bridged, and the caller got the live instance.
+        assertEquals(liveTx, result)
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment) }
     }
 
     @Test

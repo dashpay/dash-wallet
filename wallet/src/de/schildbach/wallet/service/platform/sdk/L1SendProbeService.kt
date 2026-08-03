@@ -324,8 +324,23 @@ internal data class SdkTxRow(
     /** The row's `fee` column (duffs), null until/unless the SDK populates it. */
     val feeDuffs: Long?,
     /** The row's consensus-encoded `transactionData` bytes. */
-    val rawTxBytes: ByteArray
+    val rawTxBytes: ByteArray,
+    /**
+     * The row's `TransactionContext` discriminant — the engine's observed
+     * network state for this tx: 0 mempool, 1 instantSend, 2 inBlock,
+     * 3 inChainLockedBlock ([TX_CONTEXT_INSTANT_SEND]). Null when the
+     * reading source predates the column.
+     */
+    val context: Int? = null
 )
+
+/**
+ * `TransactionContext` discriminants (SDK `TransactionEntity.context`).
+ * INSTANT_SEND and above prove the tx is genuinely on the network — an
+ * IS-lock only ever exists for a broadcast transaction, which is what the
+ * BIP70 timeout rescue keys on.
+ */
+internal const val TX_CONTEXT_INSTANT_SEND = 1
 
 /**
  * Seam over the SDK Room `transactions`-row read, shared by the 5c.0/5c.1
@@ -380,7 +395,7 @@ internal class DashSdkTxRowSource(
         // boot it.
         val db = service.databaseOrNull() ?: return null
         val row = db.transactionDao().getByTxid(txidWireBytes) ?: return null
-        return SdkTxRow(feeDuffs = row.fee, rawTxBytes = row.transactionData)
+        return SdkTxRow(feeDuffs = row.fee, rawTxBytes = row.transactionData, context = row.context)
     }
 }
 
@@ -503,6 +518,22 @@ class L1SendProbeService internal constructor(
         source = DashSdkL1SendProbeSource(sdkService, walletData),
         scope = scope
     )
+
+    /**
+     * The engine's observed `TransactionContext` for [txidHex] (0 mempool,
+     * 1 instantSend, 2 inBlock, 3 inChainLockedBlock), or null while no
+     * SDK Room row exists / the read fails. NOT debug-gated: the BIP70
+     * timeout rescue uses this to detect a merchant-broadcast tx — an
+     * observed context >= [TX_CONTEXT_INSTANT_SEND] proves the tx is on
+     * the network (IS-locks only exist for broadcast transactions).
+     * Read-only, never boots the SDK, contained.
+     */
+    suspend fun observedTxContext(txidHex: String): Int? = try {
+        wireTxidBytesOrNull(txidHex)?.let { source.sdkTxRow(it)?.context }
+    } catch (t: Throwable) {
+        if (t is kotlinx.coroutines.CancellationException) throw t
+        null
+    }
 
     /**
      * Fire-and-forget 5c.0 + 5c.1 probe pass for an SDK-routed broadcast.
