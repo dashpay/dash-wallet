@@ -162,6 +162,7 @@ import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.security.PinRetryController;
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.AnrSupervisor;
+import de.schildbach.wallet.util.AtomicFileWriter;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
@@ -950,7 +951,7 @@ public class WalletApplication extends MultiDexApplication
 
         wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
 
-        if (!wallet.isConsistent()) {
+        if (!isWalletConsistent(wallet)) {
             Toast.makeText(WalletApplication.this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
 
             wallet = restoreWalletFromBackup();
@@ -966,6 +967,33 @@ public class WalletApplication extends MultiDexApplication
         finalizeInitialization();
     }
 
+    /**
+     * Consistency check that is SAFE on a very large wallet.
+     *
+     * <p>dashj's {@link Wallet#isConsistent()} swallows the {@link IllegalStateException} from
+     * {@code isConsistentOrThrow()} and then logs {@code this.toString()} — a full textual dump of
+     * EVERY transaction and EVERY key in the wallet, built as a single String. On a large mainnet
+     * CoinJoin wallet (100k+ mixing transactions) that dump is a multi-hundred-megabyte allocation
+     * on top of an already fully-inflated wallet, and it is emitted on the main thread from inside
+     * {@code Application.onCreate}. The result is process death (heap exhaustion, or an LMK reap
+     * once RSS balloons) before the app can reach its own recovery path — and because the wallet
+     * file is unchanged, it repeats on every launch: a crash-loop that only a reinstall escapes.
+     *
+     * <p>Calling {@code isConsistentOrThrow()} directly gives the identical verdict and keeps the
+     * diagnostic (the exception message names the offending transaction) without ever building the
+     * dump. Returns false exactly where {@code isConsistent()} would have.
+     */
+    private boolean isWalletConsistent(final Wallet walletToCheck) {
+        try {
+            walletToCheck.isConsistentOrThrow();
+            return true;
+        } catch (final IllegalStateException x) {
+            // Deliberately NOT logging walletToCheck.toString() — see the javadoc above.
+            log.error("inconsistent wallet: {}", x.getMessage());
+            return false;
+        }
+    }
+
     private Wallet restoreWalletFromBackup() {
         InputStream is = null;
 
@@ -973,7 +1001,7 @@ public class WalletApplication extends MultiDexApplication
             is = openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
             final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
 
-            if (!wallet.isConsistent())
+            if (!isWalletConsistent(wallet))
                 throw new Error("inconsistent backup");
 
             wallet.addKeyChain(Constants.BIP44_PATH);
@@ -990,10 +1018,15 @@ public class WalletApplication extends MultiDexApplication
         } catch (final UnreadableWalletException x) {
             throw new Error("cannot read backup", x);
         } finally {
-            try {
-                is.close();
-            } catch (final IOException x) {
-                // swallow
+            // `is` is still null when openFileInput() itself threw (no backup file at all).
+            // Without this guard the finally block raises a NullPointerException that REPLACES
+            // the real "cannot read backup" Error, destroying the only diagnostic we have.
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (final IOException x) {
+                    // swallow
+                }
             }
         }
     }
@@ -1025,21 +1058,19 @@ public class WalletApplication extends MultiDexApplication
         builder.clearLastSeenBlockTimeSecs();
         final Protos.Wallet walletProto = builder.build();
 
-        OutputStream os = null;
-
+        // Write atomically (temp -> fsync -> rename). This backup is the ONLY fallback
+        // loadWalletFromProtobuf() has when the primary wallet fails to parse, and dashj keeps no
+        // backup of its own. Writing it in place (the previous behaviour) meant a kill mid-write
+        // left a TRUNCATED backup, so a later primary-wallet failure would hit
+        // restoreWalletFromBackup() -> Error("cannot read backup") thrown straight out of
+        // Application.onCreate — an unrecoverable crash-loop with both copies unusable.
+        // dashj already writes the primary wallet this way (Wallet.saveToFile temp+rename).
         try {
-            os = openFileOutput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, Context.MODE_PRIVATE);
-            walletProto.writeTo(os);
+            AtomicFileWriter.write(this, Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, walletProto::writeTo);
             watch.stop();
             log.info("wallet backed up to: '{}', took {}", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, watch);
         } catch (final IOException x) {
             log.error("problem writing wallet backup", x);
-        } finally {
-            try {
-                os.close();
-            } catch (final IOException x) {
-                // swallow
-            }
         }
     }
 
