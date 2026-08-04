@@ -5,99 +5,43 @@ import androidx.lifecycle.ViewModel
 import androidx.work.WorkInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
-import de.schildbach.wallet.service.platform.sdk.SdkTransparentTopUp
-import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
-import de.schildbach.wallet.service.platform.work.ResumeTopUpsOperation
-import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.service.platform.work.PerformTopUpOperation
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import de.schildbach.wallet.data.WalletData
-import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
+/**
+ * Buy Credits is SDK-only (Phase 2/3, MO-998): the dashj purchase path and
+ * its TopupIdentityWorker/topup-counter plumbing are deleted. The purchase
+ * runs as UNIQUE background work ([startTopUp] →
+ * [de.schildbach.wallet.service.platform.work.PerformTopUpWorker]) so a
+ * lock screen / rotation / process death cannot cancel it mid-flight;
+ * interrupted attempts are completed by
+ * [de.schildbach.wallet.service.platform.work.ResumeTopUpsWorker].
+ */
 @HiltViewModel
 class BuyCreditsViewModel @Inject constructor(
-    val walletApplication: WalletApplication,
-    val platformRepo: PlatformRepo,
-    val identity: BlockchainIdentityConfig,
-    val walletDataProvider: WalletData,
-    val analytics: AnalyticsService,
-    val dashPayConfig: DashPayConfig,
-    private val sdkTransparentTopUp: SdkTransparentTopUp,
+    private val walletApplication: WalletApplication,
     private val assetLockFundingPreflight: SdkAssetLockFundingPreflight
 ) : ViewModel() {
-    var identityId: String? = null
-    var topUpTransaction: Transaction? = null
-    private val _currentWorkId = MutableStateFlow("")
-    val currentWorkId: StateFlow<String>
-        get() = _currentWorkId
-
-    private suspend fun getNextWorkId() = withContext(Dispatchers.IO) {
-        dashPayConfig.getTopupCounter().toString(16)
-    }
-
-    private val topupIdentityOperation = TopupIdentityOperation(walletApplication)
-
-    fun topWorkStatus(workId: String): LiveData<Resource<WorkInfo>> {
-        return TopupIdentityOperation.operationStatus(walletApplication, workId, analytics)
-    }
-
-    suspend fun topUpOnPlatform() = withContext(Dispatchers.IO) {
-        identity.get(BlockchainIdentityConfig.IDENTITY_ID)?.let { identityId ->
-            val workId = getNextWorkId()
-            topupIdentityOperation
-                .create(workId, topUpTransaction?.txId!!)
-                .enqueue()
-            _currentWorkId.value = workId
-        }
-    }
-
-    suspend fun getTransaction(txId: Sha256Hash?) = withContext(Dispatchers.IO) {
-        walletDataProvider.wallet!!.getTransaction(txId)
-    }
 
     /**
-     * Whether the cutover is committed. Post-cutover the dashj L1 engine is
-     * HELD (0 UTXOs), so building the top-up asset lock with dashj fails —
-     * the funds live in the SDK, and the go handler routes funding through
-     * [topUpViaSdk] instead of the dashj asset-lock + [TopupIdentityWorker]
-     * chain. Pre-cutover this is false and the existing dashj path is used
-     * byte-for-byte.
+     * Start the purchase as unique background work. A tap while one runs
+     * attaches to the existing run (no double buy). The screen drives its
+     * UI from [topUpWorkStatus].
      */
-    suspend fun isCutoverCommitted(): Boolean = sdkTransparentTopUp.isCutoverCommitted()
+    fun startTopUp(amountDuffs: Long) {
+        PerformTopUpOperation(walletApplication).enqueue(amountDuffs)
+    }
 
-    /**
-     * Post-cutover top-up: fund the EXISTING identity's credit balance by
-     * [amountDuffs] Core duffs (the user-entered amount) directly through the
-     * SDK's resume-gated `topUpFromCore` (which FUSES the asset-lock build with
-     * the Platform top-up registration — no dashj tx/txid). Returns the
-     * three-valued outcome the go handler observes directly: Broadcast(new
-     * credit balance) / NotBroadcast (nothing spent, retry-safe) / Ambiguous
-     * (unconfirmed — never retried). Returns NotBroadcast when no identity id
-     * is on record.
-     */
-    suspend fun topUpViaSdk(amountDuffs: Long): SdkWriteResult<Long> = withContext(Dispatchers.IO) {
-        val identityId = identity.get(BlockchainIdentityConfig.IDENTITY_ID)
-            ?: return@withContext SdkWriteResult.NotBroadcast("no identity to top up")
-        val result = sdkTransparentTopUp.topUp(identityId, amountDuffs)
-        if (result is SdkWriteResult.Ambiguous) {
-            // If the fused top-up DID reach the L1 broadcast, the asset lock
-            // is Rust-tracked and resumable — the restart-surviving drain
-            // worker completes it in the background (idempotent no-op when
-            // nothing was actually broadcast). The executor's in-process
-            // sticky refusal still prevents a user-driven double attempt.
-            ResumeTopUpsOperation(walletApplication).enqueue()
-        }
-        result
+    /** Live status of the unique purchase work (empty until first use). */
+    fun topUpWorkStatus(): LiveData<List<WorkInfo>> =
+        PerformTopUpOperation.status(walletApplication)
+
+    /** Forget finished runs so an old outcome cannot re-fire on re-entry. */
+    fun pruneTopUpWork() {
+        PerformTopUpOperation(walletApplication).prune()
     }
 
     /**
