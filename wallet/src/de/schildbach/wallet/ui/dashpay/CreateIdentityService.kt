@@ -134,6 +134,20 @@ internal fun resolveSdkInviteIdentityId(
  * A legitimate dual record can never have identical names: the dual flow
  * exists only for a CONTESTED primary plus a non-contested instant, and the
  * two tiers have disjoint character rules.
+ *
+ * KNOWN LIMITATION (accepted, 2026-08-03): this check runs INSIDE the
+ * primary registration pass, which sits behind the state-based per-type
+ * completion guard — so it only protects records whose primary stage is
+ * still PENDING. A record damaged by the pre-11.10.52 clobber that ALSO had
+ * its primary STATUS stamped CONFIRMED can be marched to DONE/
+ * DONE_AND_DISMISS by the status-driven completion surfaces before any
+ * registration pass consults this check (observed on the S22: the record
+ * completed holding only the instant name). Such records are not repaired
+ * retroactively — the lost primary is filed through the normal Request
+ * Username flow instead. Post-11.10.52 the clobber cannot occur (the routed
+ * arm no longer adopts wrapper names), so this check is purely a backstop.
+ * Its ONLY production consumer is registerUsername's primary SDK branch —
+ * healthy records (distinct names, single-name, empty) never trip it.
  */
 internal fun isDualPrimaryClobbered(primary: String?, secondary: String?): Boolean =
     primary != null && secondary != null && primary == secondary

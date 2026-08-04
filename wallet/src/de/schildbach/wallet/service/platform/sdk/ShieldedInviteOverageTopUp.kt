@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.shielded.shieldedMaxFeeAdjustment
 import kotlinx.coroutines.CancellationException
@@ -52,6 +54,50 @@ internal fun packOverageInputs(candidates: List<FundingInput>, targetCredits: Lo
         remaining -= spend
     }
     return picked
+}
+
+/**
+ * The provable, un-topped overage of an ALREADY-COMPLETED shielded invite
+ * claim, derived entirely from persisted state — or null when nothing may be
+ * reconciled. This is the retro-fit path for claims whose overage record was
+ * never written (observed live: the S22's 0.05 overage produced zero worker
+ * activity after a successful resume-path claim), and it must be safe to call
+ * on EVERY app launch:
+ *
+ * - [identityIdBase58]/[creationState] prove the claim COMPLETED — the
+ *   persisted record carries the on-chain identity id and a state at or past
+ *   IDENTITY_REGISTERED;
+ * - [usingInvite]/[inviteIsShielded] scope it to shielded invite claims;
+ * - [fundingCreditsFromLink] is the persisted INVITE_LINK's `amt`, believed
+ *   under the same rule as the claim path (a real invite note value) — the
+ *   overage is `amt − largestExitDenominationAtOrBelow(amt)`, the clamped
+ *   first-rung spend. Unlike the claim path, the actually-spent denomination
+ *   is not persisted, so a descended (lied-amt) claim cannot be excluded
+ *   here; the worker's give-up rule is the backstop (an overage that never
+ *   existed finds an empty pool and clears itself);
+ * - [hasPendingRecord]/[alreadyReconciledIdentity] make it ONE-SHOT: a
+ *   pending record is already being drained, and the reconciled-identity
+ *   marker (set by every record persist AND every record clear) stops a
+ *   drained record from being re-minted forever after.
+ */
+internal fun reconcilableOverageCredits(
+    identityIdBase58: String?,
+    creationState: IdentityCreationState,
+    usingInvite: Boolean,
+    inviteIsShielded: Boolean,
+    fundingCreditsFromLink: Long?,
+    hasPendingRecord: Boolean,
+    alreadyReconciledIdentity: String?
+): Long? {
+    if (identityIdBase58 == null) return null
+    if (creationState < IdentityCreationState.IDENTITY_REGISTERED) return null
+    if (!usingInvite || !inviteIsShielded) return null
+    if (hasPendingRecord) return null
+    if (alreadyReconciledIdentity == identityIdBase58) return null
+    val believed = fundingCreditsFromLink?.takeIf { it in SHIELDED_INVITE_NOTE_VALUES_CREDITS }
+        ?: return null
+    val clampedSpend = largestExitDenominationAtOrBelow(believed) ?: return null
+    return (believed - clampedSpend).takeIf { it > 0 }
 }
 
 /** One durable pending invite-claim overage (see [ShieldedInviteOverageTopUp]). */
@@ -202,17 +248,25 @@ internal class DashSdkInviteOverageSource(
 class ShieldedInviteOverageTopUp internal constructor(
     private val dashPayConfig: DashPayConfig,
     private val shieldedBalanceService: ShieldedBalanceService,
-    private val source: InviteOverageSource
+    private val source: InviteOverageSource,
+    /**
+     * The persisted identity record the completed-claim RECONCILE reads
+     * ([reconcileCompletedClaim]). Null (host-test default) disables the
+     * reconcile only — the drain pipeline is unaffected.
+     */
+    private val identityConfig: BlockchainIdentityConfig? = null
 ) {
     @Inject
     constructor(
         dashPayConfig: DashPayConfig,
         shieldedBalanceService: ShieldedBalanceService,
-        sdkService: DashSdkService
+        sdkService: DashSdkService,
+        identityConfig: BlockchainIdentityConfig
     ) : this(
         dashPayConfig = dashPayConfig,
         shieldedBalanceService = shieldedBalanceService,
-        source = DashSdkInviteOverageSource(sdkService)
+        source = DashSdkInviteOverageSource(sdkService),
+        identityConfig = identityConfig
     )
 
     companion object {
@@ -238,6 +292,10 @@ class ShieldedInviteOverageTopUp internal constructor(
             // IDENTITY_ID last: its presence is the "record exists" marker, so
             // a crash mid-write can never yield a record without an amount.
             dashPayConfig.set(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID, identityIdBase58)
+            // One-shot reconcile guard: this identity's overage now has (or
+            // has had) a record — the completed-claim reconcile must never
+            // re-mint it (see reconcilableOverageCredits).
+            dashPayConfig.set(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY, identityIdBase58)
         }
     }
 
@@ -261,7 +319,53 @@ class ShieldedInviteOverageTopUp internal constructor(
     /** Whether a pending overage record exists (the launch re-enqueue gate). */
     suspend fun hasPending(): Boolean = pendingRecord() != null
 
+    /**
+     * ONE-SHOT retro-fit for a COMPLETED shielded invite claim whose overage
+     * was never recorded (observed live: the S22's legacy-0.3 claim at 0.25
+     * produced no worker activity): re-derive the provable overage entirely
+     * from persisted state (the identity record's state + id, the persisted
+     * INVITE_LINK's `amt` — see [reconcilableOverageCredits]) and mint the
+     * pending record the drain pipeline expects. Idempotent per identity via
+     * the reconciled-identity marker; safe to call on every launch. Returns
+     * true when a record was minted (the caller enqueues the worker).
+     */
+    suspend fun reconcileCompletedClaim(): Boolean {
+        val config = identityConfig ?: return false
+        val base = try {
+            config.loadBase()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("invite overage reconcile: identity record unavailable", t)
+            return false
+        }
+        val overage = reconcilableOverageCredits(
+            identityIdBase58 = base.userId,
+            creationState = base.creationState,
+            usingInvite = base.usingInvite,
+            inviteIsShielded = base.invite?.isShielded == true,
+            fundingCreditsFromLink = base.invite?.shieldedFundingCredits,
+            hasPendingRecord = hasPending(),
+            alreadyReconciledIdentity = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY)
+        ) ?: return false
+        log.info(
+            "invite overage reconcile: completed claim for {}… has a provable un-topped overage of " +
+                "{} credits — minting the pending record",
+            base.userId?.take(8),
+            overage
+        )
+        persistPendingRecord(dashPayConfig, checkNotNull(base.userId), overage)
+        return true
+    }
+
     private suspend fun clearRecord() {
+        // Stamp the reconcile guard BEFORE removing the record: a drained
+        // record must never be re-minted by the completed-claim reconcile
+        // (and records minted before the marker key existed get their marker
+        // here). A crash between the stamp and the removes leaves the record
+        // pending — retried, never duplicated.
+        dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID)?.let {
+            dashPayConfig.set(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY, it)
+        }
         dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID)
         dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_CREDITS)
         dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_NET_CREDITS)

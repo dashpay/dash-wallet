@@ -207,8 +207,16 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         // resumes it — WorkManager KEEP makes the re-enqueue idempotent.
         lifecycleScope.launch {
             try {
-                if (shieldedInviteOverageTopUp.hasPending()) {
-                    log.info("pending invite overage top-up found at launch — enqueueing its worker")
+                // Retro-fit first: a COMPLETED claim whose overage was never
+                // recorded (the S22 gap) gets its record minted from persisted
+                // state — one-shot, marker-guarded. Then the normal pending
+                // check drains whatever record exists.
+                val reconciled = shieldedInviteOverageTopUp.reconcileCompletedClaim()
+                if (reconciled || shieldedInviteOverageTopUp.hasPending()) {
+                    log.info(
+                        "invite overage work found at launch (reconciled={}) — enqueueing its worker",
+                        reconciled
+                    )
                     ShieldedInviteOverageWorker.enqueue(application)
                 }
             } catch (e: Exception) {

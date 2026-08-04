@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import androidx.datastore.preferences.core.Preferences
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -54,6 +55,19 @@ class ShieldedInviteOverageTopUpTest {
     private val netCredits = overageCredits - unshieldFeeCredits
 
     private val addressHash = ByteArray(20) { 3 }
+
+    /**
+     * A drained/abandoned record: the four record keys are gone, and the
+     * reconcile marker is stamped so the completed-claim retro-fit can never
+     * re-mint it.
+     */
+    private fun assertRecordClearedWithMarker(backing: Map<Preferences.Key<*>, Any>) {
+        assertFalse(backing.containsKey(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID))
+        assertFalse(backing.containsKey(DashPayConfig.INVITE_OVERAGE_CREDITS))
+        assertFalse(backing.containsKey(DashPayConfig.INVITE_OVERAGE_NET_CREDITS))
+        assertFalse(backing.containsKey(DashPayConfig.INVITE_OVERAGE_TOPUP_STARTED))
+        assertEquals(identityId, backing[DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY])
+    }
 
     // ── Fakes ─────────────────────────────────────────────────────────────
 
@@ -198,8 +212,7 @@ class ShieldedInviteOverageTopUpTest {
                 listOf(FundingInput(0, addressHash, netCredits))
             )
         }
-        // The record is gone — nothing left to resume.
-        assertTrue(backing.isEmpty())
+        assertRecordClearedWithMarker(backing)
     }
 
     @Test
@@ -210,7 +223,8 @@ class ShieldedInviteOverageTopUpTest {
 
         assertEquals(InviteOverageOutcome.IDLE, service(backing, balance, source).runPending())
         // No unshield, no top-up — mockk without stubs would have thrown on
-        // any call; also assert the store stayed empty.
+        // any call; also assert the store stayed COMPLETELY empty (an idle
+        // pass must not even stamp the reconcile marker).
         assertTrue(backing.isEmpty())
     }
 
@@ -230,7 +244,7 @@ class ShieldedInviteOverageTopUpTest {
 
         assertEquals(InviteOverageOutcome.DONE, service(backing, balance, source).runPending())
         coVerify(exactly = 1) { source.topUpFromAddresses(any(), any()) }
-        assertTrue(backing.isEmpty())
+        assertRecordClearedWithMarker(backing)
     }
 
     @Test
@@ -251,7 +265,7 @@ class ShieldedInviteOverageTopUpTest {
 
         assertEquals(InviteOverageOutcome.DONE, service(backing, balance, source).runPending())
         coVerify(exactly = 1) { source.topUpFromAddresses(any(), any()) }
-        assertTrue(backing.isEmpty())
+        assertRecordClearedWithMarker(backing)
     }
 
     @Test
@@ -267,7 +281,7 @@ class ShieldedInviteOverageTopUpTest {
 
         assertEquals(InviteOverageOutcome.DONE, service(backing, balance, source).runPending())
         coVerify(exactly = 0) { source.topUpFromAddresses(any(), any()) }
-        assertTrue(backing.isEmpty())
+        assertRecordClearedWithMarker(backing)
     }
 
     @Test
@@ -304,7 +318,7 @@ class ShieldedInviteOverageTopUpTest {
         }
 
         assertEquals(InviteOverageOutcome.DONE, service(backing, balance, source).runPending())
-        assertTrue(backing.isEmpty())
+        assertRecordClearedWithMarker(backing)
     }
 
     @Test
@@ -351,5 +365,127 @@ class ShieldedInviteOverageTopUpTest {
         assertEquals(overageCredits, backing[DashPayConfig.INVITE_OVERAGE_CREDITS])
         assertFalse(backing.containsKey(DashPayConfig.INVITE_OVERAGE_NET_CREDITS))
         assertFalse(backing.containsKey(DashPayConfig.INVITE_OVERAGE_TOPUP_STARTED))
+        // Every persist stamps the one-shot reconcile guard.
+        assertEquals(identityId, backing[DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY])
+    }
+
+    // ── Completed-claim reconcile (the S22 retro-fit) ────────────────────
+
+    /**
+     * THE S22 SHAPE: claim completed (identity on chain, state past
+     * IDENTITY_REGISTERED), persisted link carries amt=0.3, no record, no
+     * marker → the provable un-topped overage is 0.05.
+     */
+    @Test
+    fun reconcile_completedLegacyClaim_yieldsTheClampedOverage() {
+        assertEquals(
+            overageCredits,
+            reconcilableOverageCredits(
+                identityIdBase58 = identityId,
+                creationState = IdentityCreationState.DONE_AND_DISMISS,
+                usingInvite = true,
+                inviteIsShielded = true,
+                fundingCreditsFromLink = 30_000_000_000L,
+                hasPendingRecord = false,
+                alreadyReconciledIdentity = null
+            )
+        )
+        // Any completed state from IDENTITY_REGISTERED on qualifies.
+        assertEquals(
+            overageCredits,
+            reconcilableOverageCredits(
+                identityId, IdentityCreationState.USERNAME_REGISTERING,
+                usingInvite = true, inviteIsShielded = true,
+                fundingCreditsFromLink = 30_000_000_000L,
+                hasPendingRecord = false, alreadyReconciledIdentity = null
+            )
+        )
+    }
+
+    @Test
+    fun reconcile_isOneShot_perIdentity() {
+        // The marker (stamped by every persist and every clear) suppresses it…
+        assertNull(
+            reconcilableOverageCredits(
+                identityId, IdentityCreationState.DONE_AND_DISMISS,
+                usingInvite = true, inviteIsShielded = true,
+                fundingCreditsFromLink = 30_000_000_000L,
+                hasPendingRecord = false, alreadyReconciledIdentity = identityId
+            )
+        )
+        // …as does an already-pending record being drained.
+        assertNull(
+            reconcilableOverageCredits(
+                identityId, IdentityCreationState.DONE_AND_DISMISS,
+                usingInvite = true, inviteIsShielded = true,
+                fundingCreditsFromLink = 30_000_000_000L,
+                hasPendingRecord = true, alreadyReconciledIdentity = null
+            )
+        )
+        // A DIFFERENT identity's marker does not suppress this one.
+        assertEquals(
+            overageCredits,
+            reconcilableOverageCredits(
+                identityId, IdentityCreationState.DONE_AND_DISMISS,
+                usingInvite = true, inviteIsShielded = true,
+                fundingCreditsFromLink = 30_000_000_000L,
+                hasPendingRecord = false, alreadyReconciledIdentity = "someoneElse"
+            )
+        )
+    }
+
+    @Test
+    fun reconcile_nonProvableShapes_neverMintARecord() {
+        fun probe(
+            id: String? = identityId,
+            state: IdentityCreationState = IdentityCreationState.DONE_AND_DISMISS,
+            usingInvite: Boolean = true,
+            shielded: Boolean = true,
+            amt: Long? = 30_000_000_000L
+        ) = reconcilableOverageCredits(id, state, usingInvite, shielded, amt, false, null)
+
+        // No claimed identity / claim not completed.
+        assertNull(probe(id = null))
+        assertNull(probe(state = IdentityCreationState.CREDIT_FUNDING_TX_CREATING))
+        assertNull(probe(state = IdentityCreationState.IDENTITY_REGISTERING))
+        // Not an invite / not a shielded invite.
+        assertNull(probe(usingInvite = false))
+        assertNull(probe(shielded = false))
+        // No amt (legacy link), junk amt, non-note-value amt.
+        assertNull(probe(amt = null))
+        assertNull(probe(amt = 12_345L))
+        assertNull(probe(amt = 50_000_000_000L))
+        // Exact-denomination mints have no overage.
+        assertNull(probe(amt = 25_000_000_000L))
+        assertNull(probe(amt = 3_000_000_000L))
+        assertNull(probe(amt = 10_000_000_000L))
+    }
+
+    @Test
+    fun drainedRecord_staysDrained_reconcileNeverRemintsIt() = runTest {
+        // Complete the pipeline, then verify the cleared record left the
+        // marker behind — the exact state the reconcile checks against.
+        val backing = pendingRecordBacking(net = netCredits)
+        val balance = mockk<ShieldedBalanceService>()
+        val source = mockk<InviteOverageSource> {
+            coEvery { addressesWithBalances() } returns
+                listOf(FundingInput(0, addressHash, netCredits))
+            coEvery { topUpFromAddresses(any(), any()) } returns netCredits
+        }
+        assertEquals(InviteOverageOutcome.DONE, service(backing, balance, source).runPending())
+
+        // Record gone, marker present…
+        assertFalse(backing.containsKey(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID))
+        assertEquals(identityId, backing[DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY])
+        // …and the reconcile decision for the same identity stays suppressed.
+        assertNull(
+            reconcilableOverageCredits(
+                identityId, IdentityCreationState.DONE_AND_DISMISS,
+                usingInvite = true, inviteIsShielded = true,
+                fundingCreditsFromLink = 30_000_000_000L,
+                hasPendingRecord = false,
+                alreadyReconciledIdentity = backing[DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY] as String?
+            )
+        )
     }
 }

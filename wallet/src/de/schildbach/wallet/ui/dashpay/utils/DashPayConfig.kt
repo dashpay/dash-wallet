@@ -159,6 +159,18 @@ open class DashPayConfig @Inject constructor(
         val INVITE_OVERAGE_TOPUP_STARTED = booleanPreferencesKey("invite_overage_topup_started")
 
         /**
+         * The identity (base58) whose invite-claim overage has EVER had a
+         * pending record created — set by every record persist and by every
+         * record clear (completion or give-up). This is the one-shot guard for
+         * the completed-claim RECONCILE
+         * ([de.schildbach.wallet.service.platform.sdk.ShieldedInviteOverageTopUp.reconcileCompletedClaim]):
+         * without it, a drained record would look identical to a claim whose
+         * overage was never recorded, and the reconcile would re-mint the
+         * record after every completion — a repeated top-up.
+         */
+        val INVITE_OVERAGE_RECONCILED_IDENTITY = stringPreferencesKey("invite_overage_reconciled_identity")
+
+        /**
          * Whether the "Transfers take different times" sheet (Figma
          * 1740:16412) has been shown on the shielded internal-transfer
          * screen. It auto-opens once on the user's first visit and is set
