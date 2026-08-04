@@ -31,23 +31,52 @@ import java.io.File
  * dies, the file's last line names the dying stage. On the next launch,
  * [init]:
  *  1. preserves the previous launch's trail to `startup.breadcrumbs.prev`
- *     when that launch never reached [STAGE_MAIN_UI_SHOWN] (so the evidence
- *     of the LAST DEATH always survives exactly one more launch, and rides
- *     along in the support report — see [reportText]);
- *  2. maintains a consecutive-incomplete-launch counter, and advises
- *     SAFE MODE ([isSafeModeAdvised]) after [SAFE_MODE_THRESHOLD]
- *     consecutive launches died before showing the main UI. A safe-mode
- *     launch skips the wallet load and every engine start so the app is
- *     guaranteed to OPEN and offer the crash report
- *     (`OnboardingActivity` shows the support dialog). The counter decays by
- *     one when safe mode fires, so the launch AFTER a safe-mode launch
- *     retries a full normal start — the loop alternates
- *     crash → SAFE (report offered) → retry, never a permanent lock-out.
+ *     when that launch died BEFORE the launch-complete milestone (so the
+ *     evidence of the LAST DEATH always survives exactly one more launch, and
+ *     rides along in the support report — see [reportText]);
+ *  2. maintains a consecutive-failed-launch counter, and advises SAFE MODE
+ *     ([isSafeModeAdvised]) after [SAFE_MODE_THRESHOLD] consecutive launches
+ *     died before that milestone. A safe-mode launch skips the wallet load and
+ *     every engine start so the app is guaranteed to OPEN and offer the crash
+ *     report (`OnboardingActivity` shows the support dialog).
  *
- * The survival marker ([markLaunchSurvived]) fires [SURVIVAL_DELAY_MS] after
- * the main UI comes up rather than immediately, so a native (Rust/JNI) crash
- * a few seconds into the session — one that leaves NO Java stack trace —
- * still counts as an incomplete launch and eventually trips safe mode.
+ * ## What counts as a launch FAILURE (and what emphatically does not)
+ *
+ * The milestone is [STAGE_LAUNCH_COMPLETE] — `Application.onCreate` returning.
+ * Once a launch reaches it, the launch SUCCEEDED, full stop, and the counter
+ * is reset ON THE SPOT ([markLaunchComplete]) rather than inferred later from
+ * a survival timer.
+ *
+ * This is deliberate and load-bearing. The earlier design required the DELAYED
+ * survival marker (30 s after the main UI) before it would call a launch
+ * complete, which made every ordinary process death look like a launch death:
+ * a QA device ran the app to completion (trail through
+ * `23 CUTOVER_SERVICES_STARTED`), Android's lowmemorykiller reclaimed the
+ * BACKGROUNDED process hours later, and that reclaim was counted as a launch
+ * failure — two of them latched safe mode and the user was handed the
+ * crash-report screen with no access to their wallet. A process death AFTER
+ * the milestone (LMK reclaim, swipe-away, system kill, battery, reboot) is not
+ * a launch failure and must never be counted as one.
+ *
+ * The UI markers ([STAGE_MAIN_UI_SHOWN], written the moment the UI is on
+ * screen, and [STAGE_LAUNCH_SURVIVED], written [SURVIVAL_DELAY_MS] later) are
+ * kept as extra evidence in the report and as a belt-and-braces counter reset,
+ * but they are no longer what makes a launch "complete".
+ *
+ * ## Never trapping the user
+ *
+ * Safe mode is self-clearing at three independent levels:
+ *  - a safe-mode launch is NEUTRAL for the next launch, which always retries a
+ *    full normal start (crash → SAFE + report → normal retry → …);
+ *  - any launch that reaches the milestone resets the counter to zero;
+ *  - a HARD CAP ([MAX_SAFE_MODE_RUNS]) limits how many times safe mode may
+ *    engage without a completed launch in between; past the cap the app tries
+ *    a normal load regardless of the strike count.
+ * On top of that, `WalletApplication.retryWalletLoadAfterSafeMode()` lets a
+ * safe-mode launch escape IN PROCESS (see [clearSafeModeLatch]) — without it,
+ * re-opening the app while the safe-mode process was still alive re-showed the
+ * degraded screen forever, because `Application.onCreate` (and therefore this
+ * verdict) does not re-run on a warm start.
  *
  * All methods are safe to call before [init] (they no-op) and never throw:
  * this is a diagnostic channel and must never itself take the app down.
@@ -66,9 +95,23 @@ object StartupBreadcrumbs {
     const val STAGE_INIT_DASH_DONE = 8
     const val STAGE_AFTER_LOAD_WALLET_DONE = 9
     const val STAGE_PLATFORM_INIT_KICKED = 10
-    const val STAGE_ONCREATE_COMPLETE = 11
-    /** The SURVIVAL marker — written [SURVIVAL_DELAY_MS] after the main UI shows. */
+
+    /**
+     * THE LAUNCH-COMPLETE MILESTONE: `Application.onCreate` returned. Reaching
+     * it means the launch succeeded — everything that can crash-loop the app
+     * (the wallet load above all) is behind us. Written by [markLaunchComplete],
+     * which also clears the failure counter on the spot.
+     */
+    const val STAGE_LAUNCH_COMPLETE = 11
+
+    /** Historical alias — the milestone marker used to be named for onCreate. */
+    const val STAGE_ONCREATE_COMPLETE = STAGE_LAUNCH_COMPLETE
+
+    /** The UI is on screen. Written IMMEDIATELY (no delay). */
     const val STAGE_MAIN_UI_SHOWN = 12
+
+    /** The UI has been up for [SURVIVAL_DELAY_MS] — the strongest health signal. */
+    const val STAGE_LAUNCH_SURVIVED = 13
 
     // Async engine lane (20-39) — may interleave with or follow the UI lane:
     const val STAGE_SDK_BIND_KICKED = 20
@@ -96,15 +139,30 @@ object StartupBreadcrumbs {
      */
     const val STAGE_WALLET_LOAD_OVERBUDGET = 97
 
-    /** Consecutive pre-UI deaths before a safe-mode launch is advised. */
+    /** A safe-mode launch is retrying the normal wallet load IN PROCESS. */
+    const val STAGE_SAFE_MODE_RETRY = 98
+
+    /** …and that retry SUCCEEDED: safe mode was a false alarm, the latch is cleared. */
+    const val STAGE_SAFE_MODE_RETRY_OK = 99
+
+    /** Consecutive pre-milestone deaths before a safe-mode launch is advised. */
     const val SAFE_MODE_THRESHOLD = 2
 
-    /** How long after the main UI shows before the launch counts as survived. */
+    /**
+     * HARD CAP: how many times safe mode may engage without a completed launch
+     * in between. Past the cap the app attempts a normal load regardless of the
+     * strike count and the run counter restarts — so no history, however
+     * pathological, can leave a user stuck on the degraded screen.
+     */
+    const val MAX_SAFE_MODE_RUNS = 2
+
+    /** How long after the UI shows before [STAGE_LAUNCH_SURVIVED] is written. */
     const val SURVIVAL_DELAY_MS = 30_000L
 
     private const val FILE_NAME = "startup.breadcrumbs"
     private const val PREV_FILE_NAME = "startup.breadcrumbs.prev"
     private const val COUNTER_FILE_NAME = "startup.failures"
+    private const val SAFE_MODE_RUNS_FILE_NAME = "startup.safemoderuns"
 
     private val log = LoggerFactory.getLogger(StartupBreadcrumbs::class.java)
 
@@ -115,9 +173,14 @@ object StartupBreadcrumbs {
     @Volatile
     private var counterFile: File? = null
     @Volatile
+    private var safeModeRunsFile: File? = null
+    @Volatile
     private var safeModeAdvised = false
     @Volatile
     private var initTimeMs = 0L
+    /** How the PREVIOUS launch was classified — for the support report. */
+    @Volatile
+    private var previousVerdict: PreviousLaunch = PreviousLaunch.NONE
     private val lock = Any()
 
     /**
@@ -133,28 +196,36 @@ object StartupBreadcrumbs {
                 val f = File(filesDir, FILE_NAME)
                 val prev = File(filesDir, PREV_FILE_NAME)
                 val counterFile = File(filesDir, COUNTER_FILE_NAME)
+                val runsFile = File(filesDir, SAFE_MODE_RUNS_FILE_NAME)
                 file = f
                 prevFile = prev
                 this.counterFile = counterFile
+                this.safeModeRunsFile = runsFile
 
                 val previousContent = if (f.exists()) runCatching { f.readText() }.getOrNull() else null
                 val previous = classifyPrevious(previousContent)
-                if (previous == PreviousLaunch.INCOMPLETE) {
+                previousVerdict = previous
+                val previousLastStage = previousContent?.let { lastStage(it) }
+                if (previous == PreviousLaunch.INCOMPLETE_PRE_MILESTONE) {
                     // Preserve the DYING launch's trail for the support report.
                     // A safe-mode trail is deliberately NOT preserved — it would
                     // overwrite the crashed launch's evidence with a boring one.
                     runCatching { prev.delete(); f.renameTo(prev) }
                 }
 
-                val storedCounter = runCatching { counterFile.readText().trim().toInt() }.getOrDefault(0)
-                val (counterToStore, advise) = nextCounterAndSafeMode(previous, storedCounter)
-                safeModeAdvised = advise
-                runCatching { counterFile.writeText(counterToStore.toString()) }
+                val storedCounter = readCount(counterFile)
+                val storedSafeModeRuns = readCount(runsFile)
+                val next = nextLaunchState(previous, storedCounter, storedSafeModeRuns)
+                safeModeAdvised = next.safeMode
+                runCatching { counterFile.writeText(next.failures.toString()) }
+                runCatching { runsFile.writeText(next.safeModeRuns.toString()) }
 
                 runCatching {
                     f.writeText(
                         "# launch ${java.util.Date(initTimeMs)} " +
-                            "(previous=$previous failures=$counterToStore safeMode=$advise)\n"
+                            "(previous=$previous prevLastStage=${previousLastStage ?: "none"} " +
+                            "failures=${next.failures} safeModeRuns=${next.safeModeRuns} " +
+                            "safeMode=${next.safeMode})\n"
                     )
                 }
             }
@@ -197,18 +268,42 @@ object StartupBreadcrumbs {
     }
 
     /**
-     * ESCALATE the crash-loop breaker: if THIS launch dies before the main UI,
-     * the very NEXT launch runs in safe mode — instead of needing
-     * [SAFE_MODE_THRESHOLD] deaths first.
+     * THE LAUNCH-COMPLETE MILESTONE — call at the end of
+     * `Application.onCreate`. Writes [STAGE_LAUNCH_COMPLETE] and, unless this
+     * launch is itself a safe-mode launch (which proves nothing about the
+     * wallet load it skipped), clears the consecutive-failure state RIGHT HERE.
+     *
+     * Persisting the verdict at the milestone — rather than inferring it later
+     * from a survival timer — is what keeps a process death hours later (LMK
+     * reclaim, swipe-away, reboot) from being misread as a launch failure.
+     */
+    @JvmStatic
+    fun markLaunchComplete() {
+        mark(STAGE_LAUNCH_COMPLETE, "ONCREATE_COMPLETE")
+        if (!safeModeAdvised) {
+            clearLaunchFailureState()
+        }
+    }
+
+    /** The UI is on screen. Written immediately — no delay, no inference. */
+    @JvmStatic
+    @JvmOverloads
+    fun markMainUiShown(name: String = "MAIN_UI_SHOWN") {
+        mark(STAGE_MAIN_UI_SHOWN, name)
+    }
+
+    /**
+     * ESCALATE the crash-loop breaker: if THIS launch dies before the
+     * launch-complete milestone, the very NEXT launch runs in safe mode —
+     * instead of needing [SAFE_MODE_THRESHOLD] deaths first.
      *
      * Used when a launch is observably in trouble but has not died yet (the
      * wallet load blowing its time budget — see [WalletLoadBudget]). It only
      * pre-loads the strike counter to [SAFE_MODE_THRESHOLD] - 1; the next
-     * [init] still requires this launch to have actually died
-     * ([PreviousLaunch.INCOMPLETE]) to advise safe mode. A launch that goes
-     * over budget and then SURVIVES writes the survival marker, and the next
-     * [init] resets the counter to 0 — so this can never cause a spurious
-     * safe-mode launch.
+     * [init] still requires this launch to have actually died before the
+     * milestone to advise safe mode. A launch that goes over budget and then
+     * COMPLETES clears the counter in [markLaunchComplete] — so this can never
+     * cause a spurious safe-mode launch.
      *
      * Never throws.
      */
@@ -229,14 +324,43 @@ object StartupBreadcrumbs {
     }
 
     /**
-     * The launch survived: the main UI has been up for [SURVIVAL_DELAY_MS].
-     * Resets the consecutive-failure counter (via the next [init] seeing the
-     * complete trail) by writing the [STAGE_MAIN_UI_SHOWN] marker.
+     * The launch has been on screen for [SURVIVAL_DELAY_MS]. Belt and braces
+     * on top of [markLaunchComplete]: the strongest possible health signal,
+     * recorded in the trail and mirrored into the counter files so the latch is
+     * clear even if the trail file itself is later lost.
      */
     @JvmStatic
     fun markLaunchSurvived() {
-        mark(STAGE_MAIN_UI_SHOWN, "MAIN_UI_SHOWN")
+        mark(STAGE_LAUNCH_SURVIVED, "LAUNCH_SURVIVED")
+        clearLaunchFailureState()
     }
+
+    /**
+     * SAFE-MODE ESCAPE: this safe-mode launch retried the wallet load and it
+     * SUCCEEDED, so the strikes that engaged safe mode were a false alarm.
+     * Clears the latch for this process AND on disk, so no later launch engages
+     * safe mode off that history. Never throws.
+     */
+    @JvmStatic
+    fun clearSafeModeLatch() {
+        safeModeAdvised = false
+        clearLaunchFailureState()
+        mark(STAGE_SAFE_MODE_RETRY_OK, "SAFE_MODE_RETRY_OK")
+    }
+
+    /** Zero both persisted counters. Never throws. */
+    private fun clearLaunchFailureState() {
+        try {
+            synchronized(lock) {
+                counterFile?.let { runCatching { it.writeText("0") } }
+                safeModeRunsFile?.let { runCatching { it.writeText("0") } }
+            }
+        } catch (t: Throwable) {
+            // best-effort only
+        }
+    }
+
+    private fun readCount(f: File): Int = runCatching { f.readText().trim().toInt() }.getOrDefault(0)
 
     /**
      * The current + previous launch trails, for inlining into the support
@@ -250,7 +374,8 @@ object StartupBreadcrumbs {
                 append(file?.takeIf { it.exists() }?.readText() ?: "(no breadcrumb file)\n")
                 val prev = prevFile?.takeIf { it.exists() }
                 if (prev != null) {
-                    append("\n--- previous INCOMPLETE launch (died before the main UI) ---\n")
+                    append("\n--- previous INCOMPLETE launch ($previousVerdict — ")
+                    append("died before the launch-complete milestone) ---\n")
                     append(prev.readText())
                 }
             }
@@ -265,33 +390,67 @@ object StartupBreadcrumbs {
     internal enum class PreviousLaunch {
         /** No trail at all — first run (or the file was cleared). */
         NONE,
-        /** The survival marker is present — a full healthy launch. */
+        /** The launch-complete milestone is present — a launch that SUCCEEDED. */
         COMPLETE,
         /**
-         * A SAFE-MODE launch (header says so). It never shows the main UI by
-         * design, so it must not count as a death — but it also proves
-         * nothing about the wallet load, so it must not reset the strike
-         * counter either. Neutral.
+         * A SAFE-MODE launch (header says so). It skips the wallet load by
+         * design, so it must not count as a death — but it also proves nothing
+         * about the wallet load, so it must not reset the strike counter
+         * either. Neutral: the next launch always retries a NORMAL start.
          */
         SAFE_MODE,
-        /** Died before the survival marker — a launch death (crash/kill/OOM/native). */
-        INCOMPLETE
+        /**
+         * Died BEFORE the launch-complete milestone: a genuine launch failure
+         * (crash / OOM-kill / native death / ANR-kill during startup). This is
+         * the ONLY classification that counts as a strike.
+         */
+        INCOMPLETE_PRE_MILESTONE,
+        /**
+         * A trail exists but carries no stage markers at all — the file was
+         * truncated/clobbered, or the write channel failed. We cannot prove a
+         * pre-milestone death, so this is NEUTRAL rather than a strike: a
+         * filesystem hiccup must never be able to latch safe mode.
+         */
+        INCOMPLETE_UNKNOWN
     }
 
     @JvmStatic
     internal fun classifyPrevious(content: String?): PreviousLaunch = when {
-        content == null -> PreviousLaunch.NONE
+        content == null || content.isBlank() -> PreviousLaunch.NONE
+        // Header check FIRST: a safe-mode launch is neutral whatever it reached
+        // — unless its in-process retry proved the wallet load actually works.
+        isSafeModeTrail(content) ->
+            if (hasStage(content, STAGE_SAFE_MODE_RETRY_OK)) PreviousLaunch.COMPLETE else PreviousLaunch.SAFE_MODE
         isLaunchComplete(content) -> PreviousLaunch.COMPLETE
-        content.lineSequence().firstOrNull()?.contains("safeMode=true") == true -> PreviousLaunch.SAFE_MODE
-        else -> PreviousLaunch.INCOMPLETE
+        lastStage(content) == null -> PreviousLaunch.INCOMPLETE_UNKNOWN
+        else -> PreviousLaunch.INCOMPLETE_PRE_MILESTONE
     }
 
-    /** Whether a launch trail contains the survival marker. */
+    private fun isSafeModeTrail(content: String): Boolean =
+        content.lineSequence().firstOrNull()?.contains("safeMode=true") == true
+
+    private fun hasStage(content: String, stage: Int): Boolean =
+        content.lineSequence().any { parseStage(it) == stage }
+
+    /**
+     * Whether a trail proves the launch REACHED COMPLETION.
+     *
+     * The milestone marker is the primary evidence; the UI markers and the
+     * async engine lane are accepted as independent corroboration, so a trail
+     * that lost the milestone line but plainly shows a running app is never
+     * misread as a death.
+     */
     @JvmStatic
     internal fun isLaunchComplete(content: String): Boolean =
-        content.lineSequence().any { line ->
-            parseStage(line) == STAGE_MAIN_UI_SHOWN
-        }
+        content.lineSequence().mapNotNull { parseStage(it) }.any { isLaunchCompleteStage(it) }
+
+    /** Whether reaching this stage proves the launch completed. */
+    @JvmStatic
+    internal fun isLaunchCompleteStage(stage: Int): Boolean =
+        stage == STAGE_LAUNCH_COMPLETE ||
+            stage == STAGE_MAIN_UI_SHOWN ||
+            stage == STAGE_LAUNCH_SURVIVED ||
+            stage in STAGE_SDK_BIND_KICKED..STAGE_CUTOVER_SERVICES_STARTED
 
     /** The stage number of a breadcrumb line, or null for headers/garbage. */
     @JvmStatic
@@ -306,29 +465,52 @@ object StartupBreadcrumbs {
     internal fun lastStage(content: String): Int? =
         content.lineSequence().mapNotNull { parseStage(it) }.lastOrNull()
 
+    /** The persisted crash-loop-breaker state a launch starts with. */
+    internal data class LaunchState(
+        /** Consecutive pre-milestone deaths to carry forward. */
+        val failures: Int,
+        /** Safe-mode launches since the last COMPLETE launch (the hard cap). */
+        val safeModeRuns: Int,
+        /** Whether THIS launch runs in safe mode. */
+        val safeMode: Boolean
+    )
+
     /**
      * Counter/safe-mode transition:
-     * - previous launch COMPLETE (or first run) → counter resets, no safe mode;
-     * - previous launch SAFE_MODE → neutral: keep the counter, run NORMALLY —
+     * - previous launch COMPLETE (or first run) → everything resets, no safe mode;
+     * - previous launch SAFE_MODE → neutral: keep the counters, run NORMALLY —
      *   this is what makes the loop alternate crash → SAFE (report offered) →
-     *   normal retry → … instead of locking into safe mode forever;
-     * - previous launch INCOMPLETE → counter increments; at
+     *   normal retry → … instead of locking into safe mode;
+     * - previous launch INCOMPLETE_UNKNOWN → neutral: an unreadable trail is
+     *   not evidence of a death, so it must not push a user toward safe mode;
+     * - previous launch INCOMPLETE_PRE_MILESTONE → strike; at
      *   [SAFE_MODE_THRESHOLD] safe mode is advised and the stored counter
      *   decays by one (the retry after the safe-mode launch needs only ONE
-     *   more death to re-trip, not two).
+     *   more death to re-trip, not two) — UNLESS the [MAX_SAFE_MODE_RUNS] hard
+     *   cap is already reached, in which case the app tries a normal load
+     *   regardless and the run counter restarts.
      */
     @JvmStatic
-    internal fun nextCounterAndSafeMode(previous: PreviousLaunch, storedCounter: Int): Pair<Int, Boolean> =
-        when (previous) {
-            PreviousLaunch.NONE, PreviousLaunch.COMPLETE -> 0 to false
-            PreviousLaunch.SAFE_MODE -> storedCounter to false
-            PreviousLaunch.INCOMPLETE -> {
-                val incremented = storedCounter + 1
-                if (incremented >= SAFE_MODE_THRESHOLD) {
-                    (incremented - 1) to true
-                } else {
-                    incremented to false
-                }
+    internal fun nextLaunchState(
+        previous: PreviousLaunch,
+        storedCounter: Int,
+        storedSafeModeRuns: Int
+    ): LaunchState = when (previous) {
+        PreviousLaunch.NONE, PreviousLaunch.COMPLETE -> LaunchState(0, 0, false)
+        PreviousLaunch.SAFE_MODE, PreviousLaunch.INCOMPLETE_UNKNOWN ->
+            LaunchState(storedCounter, storedSafeModeRuns, false)
+        PreviousLaunch.INCOMPLETE_PRE_MILESTONE -> {
+            val incremented = storedCounter + 1
+            when {
+                incremented < SAFE_MODE_THRESHOLD -> LaunchState(incremented, storedSafeModeRuns, false)
+                // HARD CAP: too many safe-mode launches with no completed launch
+                // in between. Try a NORMAL load — a user must never be able to
+                // reach a state where repeated opens only ever show the
+                // degraded screen. The run counter restarts, so the breaker can
+                // arm again if the app keeps dying.
+                storedSafeModeRuns >= MAX_SAFE_MODE_RUNS -> LaunchState(incremented - 1, 0, false)
+                else -> LaunchState(incremented - 1, storedSafeModeRuns + 1, true)
             }
         }
+    }
 }

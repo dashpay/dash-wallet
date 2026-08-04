@@ -325,6 +325,7 @@
     <string name="report_issue_dialog_description">issue description</string>
     <string name="report_issue_dialog_report">Report</string>
     <string name="wallet_recovery_from_seed_message">Your wallet file could not be read and no automatic backup was usable. Your funds are safe on the network — restore your wallet with your recovery phrase to continue.</string>
+    <string name="safe_mode_startup_message">The app did not finish starting up the last few times, so this start skipped loading your wallet. Nothing has been changed or deleted. Send us a report, or try opening your wallet again.</string>
     <string name="report_issue_dialog_collect_device_info">Append device information</string>
     <string name="report_issue_dialog_collect_installed_packages">Append list of installed packages</string>
     <string name="report_issue_dialog_collect_application_log">Append application log</string>

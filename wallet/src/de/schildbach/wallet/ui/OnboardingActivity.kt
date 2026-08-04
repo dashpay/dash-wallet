@@ -90,6 +90,18 @@ class OnboardingActivity : RestoreFromFileActivity() {
         private const val EXTRA_ONBOARDING_PATH = "onboarding_path"
         private val log = LoggerFactory.getLogger(OnboardingActivity::class.java)
 
+        /**
+         * Whether the degraded / safe-mode screen has already been shown in
+         * THIS process.
+         *
+         * The safe-mode verdict is taken once, in `Application.onCreate`, which
+         * does NOT re-run on a warm start — so re-opening the app while the
+         * safe-mode process is still alive used to land straight back on the
+         * degraded screen, over and over, until the process happened to die.
+         * A re-entry is the signal to retry the skipped load instead.
+         */
+        private var degradedScreenShownInProcess = false
+
         @JvmStatic
         @JvmOverloads
         fun createIntent(context: Context, upgrade: Boolean = false): Intent {
@@ -180,9 +192,21 @@ class OnboardingActivity : RestoreFromFileActivity() {
         // this launch is to surface the crash report — never route into
         // onboarding (whose create/restore flows would overwrite the wallet
         // file) and never touch `wallet!!`.
-        if (walletApplication.isWalletLoadDegraded ||
+        var degraded = walletApplication.isWalletLoadDegraded ||
             (walletApplication.walletFileExists() && walletApplication.wallet == null)
-        ) {
+
+        // NEVER TRAP THE USER. Safe mode is decided once per PROCESS, in
+        // Application.onCreate; a warm start (home + re-open, activity
+        // re-creation) does not re-decide it. So a second entry into this
+        // screen within the same safe-mode process is not new evidence of
+        // anything — it means the user is trying again. Retry the skipped load
+        // instead of showing the same dead end.
+        if (degraded && walletApplication.isSafeModeLaunch && degradedScreenShownInProcess) {
+            log.warn("safe mode: degraded screen re-entered in the same process — retrying the wallet load")
+            degraded = !walletApplication.retryWalletLoadAfterSafeMode()
+        }
+
+        if (degraded) {
             log.warn(
                 "degraded startup: walletFileExists={}, walletLoadDegraded={}, safeMode={} — " +
                     "showing the crash-report path",
@@ -349,6 +373,11 @@ class OnboardingActivity : RestoreFromFileActivity() {
      */
     private fun showDegradedStartupScreen() {
         val recoveryFromSeedNeeded = walletApplication.isWalletRecoveryFromSeedNeeded
+        val safeMode = walletApplication.isSafeModeLaunch
+        // Only the FIRST show pops the report dialog — a retry that fails must
+        // not re-open it on top of the screen the user just came back to.
+        val firstShow = !degradedScreenShownInProcess
+        degradedScreenShownInProcess = true
         binding.composeContainer.setContent {
             Column(
                 modifier = Modifier
@@ -356,6 +385,23 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     .padding(20.dp, 10.dp, 20.dp, 10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                if (safeMode && !recoveryFromSeedNeeded) {
+                    // Safe mode SKIPPED the load — nothing is known to be
+                    // broken, so say so and offer the way back in.
+                    Text(
+                        text = stringResource(R.string.safe_mode_startup_message),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DashButton(
+                        onClick = { retryNormalStartAfterSafeMode() },
+                        modifier = Modifier.fillMaxWidth(),
+                        text = stringResource(R.string.try_again),
+                        style = Style.FilledWhiteBlue,
+                        size = Size.Large
+                    )
+                }
                 if (recoveryFromSeedNeeded) {
                     // Both the primary wallet file AND the key backup are
                     // unusable — say so, and offer the ONLY remaining path.
@@ -377,11 +423,11 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     onClick = { showDegradedStartupReportDialog() },
                     modifier = Modifier.fillMaxWidth(),
                     text = stringResource(R.string.report_issue_dialog_report),
-                    style = if (recoveryFromSeedNeeded) Style.TintedWhite else Style.FilledWhiteBlue,
+                    style = if (recoveryFromSeedNeeded || safeMode) Style.TintedWhite else Style.FilledWhiteBlue,
                     size = Size.Large
                 )
                 DashButton(
-                    onClick = { finishAffinity() },
+                    onClick = { closeAppFromDegradedScreen() },
                     modifier = Modifier.fillMaxWidth(),
                     text = stringResource(R.string.perm_lock_close_app),
                     style = Style.TintedWhite,
@@ -389,13 +435,46 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 )
             }
         }
-        showDegradedStartupReportDialog()
-        // A degraded launch that OPENED is a SURVIVED launch: the safe-mode
-        // breaker exists for the app failing to open at all, not for the
-        // deliberate recovery screen. Without this, two degraded (but
-        // perfectly functional) launches would trip safe mode — which would
-        // then SKIP the load and thereby hide the Recover Wallet CTA.
-        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_MAIN_UI_SHOWN, "DEGRADED_UI_SHOWN")
+        if (firstShow) {
+            showDegradedStartupReportDialog()
+        }
+        // A degraded launch that OPENED is a launch that reached its UI: the
+        // safe-mode breaker exists for the app failing to open at all, not for
+        // the deliberate recovery screen. (The launch was already declared
+        // COMPLETE at the end of Application.onCreate.)
+        StartupBreadcrumbs.markMainUiShown("DEGRADED_UI_SHOWN")
+    }
+
+    /**
+     * The user asked to open the wallet anyway after a safe-mode start (or
+     * came back to this screen in the same process). Runs the wallet load that
+     * safe mode skipped — the SAME load a normal launch performs, nothing is
+     * wiped — and, when it succeeds, re-enters the activity so the normal
+     * routing takes over and the safe-mode latch is cleared for good.
+     */
+    private fun retryNormalStartAfterSafeMode() {
+        if (walletApplication.retryWalletLoadAfterSafeMode()) {
+            log.info("safe mode: the retried wallet load SUCCEEDED — continuing into the normal flow")
+            degradedScreenShownInProcess = false
+            recreate()
+        } else {
+            log.warn("safe mode: the retried wallet load FAILED — staying on the crash-report screen")
+            showDegradedStartupScreen()
+        }
+    }
+
+    /**
+     * Close from the degraded screen. Finishing the activities alone leaves the
+     * PROCESS alive, and with it this launch's safe-mode verdict — the next
+     * open would be a warm start straight back onto this screen. Ending the
+     * process guarantees the next open is a COLD start that re-evaluates from
+     * scratch. Safe by construction: on this screen no wallet is loaded, so
+     * there is no state to flush.
+     */
+    private fun closeAppFromDegradedScreen() {
+        log.info("degraded startup: closing — ending the process so the next open starts cold")
+        finishAffinity()
+        Runtime.getRuntime().exit(0)
     }
 
     /**

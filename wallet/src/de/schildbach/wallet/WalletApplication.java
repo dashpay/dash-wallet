@@ -444,7 +444,59 @@ public class WalletApplication extends MultiDexApplication
             Security.insertProviderAt(Conscrypt.newProvider(), 1);
         }
 
-        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_ONCREATE_COMPLETE, "ONCREATE_COMPLETE");
+        // THE LAUNCH-COMPLETE MILESTONE. Everything that can crash-loop the app
+        // is behind us, so this launch counts as a SUCCESS right now and the
+        // crash-loop strike counter is cleared here — NOT inferred later from a
+        // survival timer. A process death after this point (lowmemorykiller
+        // reclaiming a backgrounded app, a swipe-away, a reboot) is not a launch
+        // failure and must never latch safe mode.
+        StartupBreadcrumbs.markLaunchComplete();
+    }
+
+    /**
+     * SAFE-MODE ESCAPE HATCH — retry the wallet load that safe mode skipped,
+     * in this same process, at the user's request (or automatically when the
+     * degraded screen is re-entered on a warm start).
+     *
+     * This exists because the safe-mode verdict is taken ONCE, in
+     * {@link #onCreate()}. Re-opening the app while the safe-mode process is
+     * still alive does not re-run onCreate, so without this the user saw the
+     * degraded screen on every open until the process happened to die — which
+     * is exactly what a QA device hit. NOTHING is wiped: this is the same load
+     * a normal launch performs.
+     *
+     * @return true when the wallet is loaded and normal routing may proceed.
+     */
+    public boolean retryWalletLoadAfterSafeMode() {
+        if (!walletLoadSkippedSafeMode) {
+            return wallet != null;
+        }
+        log.warn("SAFE MODE ESCAPE: retrying the skipped wallet load in-process");
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SAFE_MODE_RETRY, "SAFE_MODE_RETRY");
+        walletLoadSkippedSafeMode = false;
+        try {
+            fullInitialization();
+        } catch (final Throwable t) {
+            // Same handling as the onCreate load: open degraded for crash
+            // reporting, never crash and never touch the wallet file.
+            walletLoadFailed = true;
+            log.error("safe-mode retry FAILED — staying degraded", t);
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_FAILED,
+                    "WALLET_LOAD_FAILED", t.getClass().getName() + ": " + t.getMessage());
+            try {
+                CrashReporter.saveBackgroundTrace(t, packageInfoProvider.getPackageInfo());
+            } catch (final Throwable ignored) {
+            }
+            return false;
+        }
+        if (wallet != null) {
+            // The load works: the strikes that engaged safe mode were a false
+            // alarm (a killed background process, not a failing launch). Clear
+            // the latch on disk so no later launch engages off that history.
+            StartupBreadcrumbs.clearSafeModeLatch();
+            return true;
+        }
+        return false;
     }
 
     /**
