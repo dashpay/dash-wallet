@@ -80,6 +80,14 @@ object StartupBreadcrumbs {
     const val STAGE_WALLET_LOAD_FAILED = 90
     const val STAGE_WALLET_LOAD_SKIPPED_SAFE_MODE = 91
     const val STAGE_DEGRADED = 92
+    /** HARD size guard: the wallet file is ≥2GB — unparseable by construction, parse skipped. */
+    const val STAGE_WALLET_FILE_OVERSIZE = 93
+    /** SOFT size guard: a risky-size parse OOMed and routed to the key-backup recovery. */
+    const val STAGE_WALLET_PARSE_OOM_RECOVERED = 94
+    /** The key backup itself was missing/unreadable — wallet needs a restore from seed. */
+    const val STAGE_WALLET_BACKUP_UNUSABLE = 95
+    /** The key-backup recovery SUCCEEDED — small wallet restored, blockchain reset for rescan. */
+    const val STAGE_WALLET_RECOVERED_FROM_BACKUP = 96
 
     /** Consecutive pre-UI deaths before a safe-mode launch is advised. */
     const val SAFE_MODE_THRESHOLD = 2

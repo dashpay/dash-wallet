@@ -131,4 +131,48 @@ object WalletApplicationExt {
     fun WalletApplication.clearCachedAddresses(): Unit = runBlocking {
         exchangeIntegrationProvider.clearCachedAddresses()
     }
+
+    /**
+     * POST-RECOVERY guard (called from [WalletApplication.restoreWalletFromBackup]
+     * after a successful key-backup restore): if the Tools "dashj sync
+     * (diagnostic)" toggle is ON, force it OFF, breadcrumb it, and show a
+     * one-line notice. Rationale: with the toggle on, the un-held dashj
+     * peergroup dirties the wallet continuously and the 5s autosave rewrites
+     * an ever-growing file — the growth engine that can balloon a wallet past
+     * the 2GB parse wall. A freshly recovered wallet must not immediately
+     * start down the same path.
+     *
+     * Fire-and-forget on a background thread (the caller is on the MAIN
+     * thread inside Application.onCreate and must not block on DataStore
+     * I/O); the Toast is posted back to the main looper. Never throws.
+     */
+    fun WalletApplication.disableDashjSyncDiagnosticAfterRecovery() {
+        Thread({
+            try {
+                runBlocking {
+                    if (dashPayConfig.getDashjSyncDiagnostic()) {
+                        dashPayConfig.setDashjSyncDiagnostic(false)
+                        log.warn(
+                            "post-recovery: dashj sync (diagnostic) was ON — forced OFF so the " +
+                                "recovered wallet's autosave does not immediately re-balloon the file"
+                        )
+                        de.schildbach.wallet.util.StartupBreadcrumbs.mark(
+                            de.schildbach.wallet.util.StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
+                            "DASHJ_DIAGNOSTIC_FORCED_OFF"
+                        )
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            android.widget.Toast.makeText(
+                                this@disableDashjSyncDiagnosticAfterRecovery,
+                                "dashj sync (diagnostic) was turned off during wallet recovery",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            } catch (t: Throwable) {
+                rethrowCancellation(t)
+                log.warn("failed to check/disable the dashj sync diagnostic after recovery", t)
+            }
+        }, "post-recovery-diagnostic-off").start()
+    }
 }

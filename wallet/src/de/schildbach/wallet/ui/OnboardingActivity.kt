@@ -32,8 +32,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
@@ -345,6 +348,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
      * create/restore flows would overwrite the existing wallet file.
      */
     private fun showDegradedStartupScreen() {
+        val recoveryFromSeedNeeded = walletApplication.isWalletRecoveryFromSeedNeeded
         binding.composeContainer.setContent {
             Column(
                 modifier = Modifier
@@ -352,11 +356,28 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     .padding(20.dp, 10.dp, 20.dp, 10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                if (recoveryFromSeedNeeded) {
+                    // Both the primary wallet file AND the key backup are
+                    // unusable — say so, and offer the ONLY remaining path.
+                    Text(
+                        text = stringResource(R.string.wallet_recovery_from_seed_message),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DashButton(
+                        onClick = { recoverFromSeedAfterFailedLoad() },
+                        modifier = Modifier.fillMaxWidth(),
+                        text = stringResource(R.string.onboarding_recover_wallet),
+                        style = Style.FilledWhiteBlue,
+                        size = Size.Large
+                    )
+                }
                 DashButton(
                     onClick = { showDegradedStartupReportDialog() },
                     modifier = Modifier.fillMaxWidth(),
                     text = stringResource(R.string.report_issue_dialog_report),
-                    style = Style.FilledWhiteBlue,
+                    style = if (recoveryFromSeedNeeded) Style.TintedWhite else Style.FilledWhiteBlue,
                     size = Size.Large
                 )
                 DashButton(
@@ -369,6 +390,18 @@ class OnboardingActivity : RestoreFromFileActivity() {
             }
         }
         showDegradedStartupReportDialog()
+    }
+
+    /**
+     * The recovery-from-seed path out of a fully failed load (primary wallet
+     * AND key backup unusable): preserve whatever is left of the old wallet
+     * file aside (NEVER overwrite — the oversize guard may already have
+     * renamed it), then run the standard restore-from-seed flow.
+     */
+    private fun recoverFromSeedAfterFailedLoad() {
+        log.warn("degraded startup: user chose restore-from-seed; preserving any existing wallet file aside")
+        walletApplication.preserveWalletFileForRecovery()
+        recoverWalletFromSeedPhrase()
     }
 
     private fun showDegradedStartupReportDialog() {

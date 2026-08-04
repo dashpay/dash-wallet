@@ -324,6 +324,7 @@
     <string name="report_issue_dialog_message_crash">Would you like to send a crash report, helping to fix this issue in the future?</string>
     <string name="report_issue_dialog_description">issue description</string>
     <string name="report_issue_dialog_report">Report</string>
+    <string name="wallet_recovery_from_seed_message">Your wallet file could not be read and no automatic backup was usable. Your funds are safe on the network — restore your wallet with your recovery phrase to continue.</string>
     <string name="report_issue_dialog_collect_device_info">Append device information</string>
     <string name="report_issue_dialog_collect_installed_packages">Append list of installed packages</string>
     <string name="report_issue_dialog_collect_application_log">Append application log</string>

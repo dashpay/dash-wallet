@@ -167,6 +167,7 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
+import de.schildbach.wallet.util.WalletFileSizeGuard;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 import kotlin.Deprecated;
@@ -216,6 +217,12 @@ public class WalletApplication extends MultiDexApplication
     private volatile boolean walletLoadSkippedSafeMode = false;
     /** An optional startup stage failed and was skipped (catch-degrade). */
     private volatile boolean startupDegraded = false;
+    /**
+     * Both the primary wallet file AND the key backup are unusable — the only
+     * remaining recovery is a restore from the user's recovery phrase.
+     * OnboardingActivity surfaces that state explicitly.
+     */
+    private volatile boolean walletRecoveryFromSeedNeeded = false;
 
     private AutoLogout autoLogout;
     private AnrSupervisor anrSupervisor;
@@ -296,6 +303,27 @@ public class WalletApplication extends MultiDexApplication
     /** Whether safe mode (crash-loop breaker) skipped the wallet load this launch. */
     public boolean isSafeModeLaunch() {
         return walletLoadSkippedSafeMode;
+    }
+
+    /**
+     * Both the primary wallet AND the key backup are unusable — only a restore
+     * from the recovery phrase can bring this wallet back.
+     */
+    public boolean isWalletRecoveryFromSeedNeeded() {
+        return walletRecoveryFromSeedNeeded;
+    }
+
+    /**
+     * Preserve any existing (unusable) wallet file aside before a
+     * restore-from-seed writes a fresh one at the same path — the degraded
+     * recovery flow calls this so NOTHING is ever overwritten. Safe to call
+     * when the file no longer exists (the oversize guard may already have
+     * renamed it).
+     */
+    public void preserveWalletFileForRecovery() {
+        if (walletFile != null && walletFile.exists()) {
+            WalletFileSizeGuard.preserveAside(walletFile, "pre-seed-restore");
+        }
     }
 
     @Override
@@ -1032,63 +1060,120 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void loadWalletFromProtobuf() {
-        FileInputStream walletStream = null;
+        // PRE-PARSE SIZE GUARD (empirically grounded — see WalletFileSizeGuard):
+        // the parse peaks at ~8x the file size in heap, and a >=2GB file is
+        // unparseable at ANY heap size (protobuf's 2GiB CodedInputStream wall;
+        // the WRITE side streams past it silently). Decide BEFORE touching the
+        // parser whether this file can possibly load.
+        final long fileSize = walletFile.length();
+        final int largeMemoryClassMb = largeMemoryClassMb();
+        final WalletFileSizeGuard.Verdict sizeVerdict = WalletFileSizeGuard.verdict(fileSize, largeMemoryClassMb);
+        if (sizeVerdict != WalletFileSizeGuard.Verdict.NORMAL) {
+            log.warn("wallet file size guard: {} bytes, largeHeap {}MB, soft limit {} bytes -> {}",
+                    fileSize, largeMemoryClassMb, WalletFileSizeGuard.softLimitBytes(largeMemoryClassMb), sizeVerdict);
+        }
 
-        try {
-            final Stopwatch watch = Stopwatch.createStarted();
-            walletStream = new FileInputStream(walletFile);
-            wallet = new WalletProtobufSerializer().readWallet(walletStream, false, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
-
-            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
-            if (authenticationGroupExtension != null) {
-                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
-            }
-            if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
-                throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
-
-            log.info("wallet loaded from: '{}', took {}", walletFile, watch);
-            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_PROTOBUF_PARSED,
-                    "WALLET_PROTOBUF_PARSED", "took=" + watch);
-        } catch (final FileNotFoundException x) {
-            log.error("problem loading wallet", x);
-
-            Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
-
+        if (sizeVerdict == WalletFileSizeGuard.Verdict.UNPARSEABLE) {
+            // The file is beyond the point of no return by construction — do
+            // NOT attempt the parse (the attempt OOM-crash-loops the launch on
+            // any real device and can never succeed). Preserve the file
+            // untouched under a timestamped name (forensics + safety, never
+            // delete) and go straight to the deliberate key-backup recovery.
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_FILE_OVERSIZE, "WALLET_FILE_OVERSIZE",
+                    "size=" + fileSize + " hardLimit=" + WalletFileSizeGuard.HARD_LIMIT_BYTES);
+            final File preserved = WalletFileSizeGuard.preserveAside(walletFile, "oversize");
+            log.error("wallet file is {} bytes (>= {} hard limit) — unparseable by construction; "
+                    + "preserved as '{}', recovering from the key backup", fileSize,
+                    WalletFileSizeGuard.HARD_LIMIT_BYTES, preserved != null ? preserved.getName() : "(rename failed)");
             wallet = restoreWalletFromBackup();
-            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
-            if (authenticationGroupExtension != null) {
-                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
-            }
-        } catch (final UnreadableWalletException x) {
-            log.error("problem loading wallet", x);
+            adoptAuthenticationGroupExtension();
+        } else {
+            FileInputStream walletStream = null;
+            try {
+                final Stopwatch watch = Stopwatch.createStarted();
+                walletStream = new FileInputStream(walletFile);
+                wallet = new WalletProtobufSerializer().readWallet(walletStream, false, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
 
-            Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+                adoptAuthenticationGroupExtension();
+                if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
+                    throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
 
-            wallet = restoreWalletFromBackup();
-            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
-            if (authenticationGroupExtension != null) {
-                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
-            }
-        } finally {
-            if (walletStream != null) {
-                try {
-                    walletStream.close();
-                } catch (final IOException x) {
-                    // swallow
+                log.info("wallet loaded from: '{}', took {}", walletFile, watch);
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_PROTOBUF_PARSED,
+                        "WALLET_PROTOBUF_PARSED", "took=" + watch);
+            } catch (final FileNotFoundException x) {
+                log.error("problem loading wallet", x);
+
+                Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+
+                wallet = restoreWalletFromBackup();
+                adoptAuthenticationGroupExtension();
+            } catch (final UnreadableWalletException x) {
+                log.error("problem loading wallet", x);
+
+                Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+
+                wallet = restoreWalletFromBackup();
+                adoptAuthenticationGroupExtension();
+            } catch (final OutOfMemoryError oom) {
+                if (sizeVerdict == WalletFileSizeGuard.Verdict.RISKY) {
+                    // EXPECTED failure mode of a risky-size file (>= min(heap/10,
+                    // 100MB) — the measured 8x parse multiplier leaves no
+                    // headroom): route to the same deliberate recovery as the
+                    // hard guard instead of crash-looping. Preserve the file
+                    // aside first so the next launch cannot re-trip the OOM.
+                    log.error("OOM parsing a RISKY-size wallet file ({} bytes, largeHeap {}MB) — "
+                            + "preserving the file and recovering from the key backup", fileSize, largeMemoryClassMb);
+                    StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_PARSE_OOM_RECOVERED,
+                            "WALLET_PARSE_OOM_RECOVERED", "size=" + fileSize);
+                    try {
+                        CrashReporter.saveBackgroundTrace(oom, packageInfoProvider.getPackageInfo());
+                    } catch (final Throwable ignored) {
+                    }
+                    WalletFileSizeGuard.preserveAside(walletFile, "oomed");
+                    wallet = restoreWalletFromBackup();
+                    adoptAuthenticationGroupExtension();
+                } else {
+                    // A NORMAL-size file OOMing is anomalous (not provably the
+                    // file's fault) — do NOT wipe anything; let the onCreate
+                    // catch-degrade open the app for crash reporting with the
+                    // wallet file untouched.
+                    throw oom;
+                }
+            } finally {
+                if (walletStream != null) {
+                    try {
+                        walletStream.close();
+                    } catch (final IOException x) {
+                        // swallow
+                    }
                 }
             }
         }
 
-        wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
+        if (wallet != null) {
+            wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
 
-        if (!isWalletConsistent(wallet)) {
-            Toast.makeText(WalletApplication.this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
+            if (!isWalletConsistent(wallet)) {
+                Toast.makeText(WalletApplication.this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
 
-            wallet = restoreWalletFromBackup();
-            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
-            if (authenticationGroupExtension != null) {
-                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
+                wallet = restoreWalletFromBackup();
+                adoptAuthenticationGroupExtension();
             }
+        }
+
+        if (wallet == null) {
+            // Every recovery avenue is exhausted (primary unusable AND the key
+            // backup missing/unreadable — restoreWalletFromBackup() already set
+            // walletRecoveryFromSeedNeeded). Open DEGRADED instead of throwing:
+            // OnboardingActivity shows the "restore from your recovery phrase"
+            // state plus the crash report. NOTHING is wiped or overwritten.
+            walletLoadFailed = true;
+            log.error("wallet load AND key-backup recovery both failed — opening degraded "
+                    + "(restore from seed required)");
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_FAILED, "WALLET_LOAD_FAILED",
+                    "recovery exhausted; restore from seed required");
+            return;
         }
 
         if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
@@ -1096,6 +1181,33 @@ public class WalletApplication extends MultiDexApplication
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_CONSISTENCY_CHECKED, "WALLET_CONSISTENCY_CHECKED");
         walletStateFlow.setValue(wallet);
         finalizeInitialization();
+    }
+
+    /** The device's largeHeap limit in MB (the manifest sets largeHeap="true"), conservative fallback. */
+    private int largeMemoryClassMb() {
+        try {
+            final ActivityManager am = activityManager != null ? activityManager
+                    : (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+            if (am != null) {
+                return am.getLargeMemoryClass();
+            }
+        } catch (final Throwable t) {
+            log.warn("failed to read largeMemoryClass", t);
+        }
+        // Conservative: a small assumed heap only lowers the RISKY threshold,
+        // which still ATTEMPTS the parse — it only changes OOM routing.
+        return 256;
+    }
+
+    /** Adopt the (re)loaded wallet's AuthenticationGroupExtension; no-op when no wallet. */
+    private void adoptAuthenticationGroupExtension() {
+        if (wallet == null) {
+            return;
+        }
+        final WalletExtension extension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
+        if (extension != null) {
+            this.authenticationGroupExtension = (AuthenticationGroupExtension) extension;
+        }
     }
 
     /**
@@ -1125,6 +1237,16 @@ public class WalletApplication extends MultiDexApplication
         }
     }
 
+    /**
+     * Restore the transaction-stripped KEY backup ({@code key-backup-protobuf})
+     * — the deliberate recovery for an unusable primary wallet file. Returns
+     * {@code null} (and latches {@link #walletRecoveryFromSeedNeeded}) when the
+     * backup itself is missing, unreadable or inconsistent: this method must
+     * NEVER throw out of {@code Application.onCreate} — the old
+     * {@code Error("cannot read backup")} was itself a guaranteed crash loop.
+     * The caller degrades into the safe-mode/report path instead.
+     */
+    @Nullable
     private Wallet restoreWalletFromBackup() {
         InputStream is = null;
 
@@ -1133,7 +1255,7 @@ public class WalletApplication extends MultiDexApplication
             final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
 
             if (!isWalletConsistent(wallet))
-                throw new Error("inconsistent backup");
+                throw new UnreadableWalletException("inconsistent backup");
 
             wallet.addKeyChain(Constants.BIP44_PATH);
 
@@ -1142,16 +1264,46 @@ public class WalletApplication extends MultiDexApplication
             Toast.makeText(this, R.string.toast_wallet_reset, Toast.LENGTH_LONG).show();
 
             log.info("wallet restored from backup: '{}'", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
+                    "WALLET_RECOVERED_FROM_BACKUP");
+
+            // POST-RECOVERY GUARD: if the Tools "dashj sync (diagnostic)"
+            // toggle is ON, force it OFF. With the toggle on, the un-held dashj
+            // peergroup dirties the wallet continuously and the 5s autosave
+            // rewrites an ever-growing file — the exact growth engine that can
+            // balloon a wallet past the 2GB point of no return. The freshly
+            // recovered small wallet must not start re-ballooning on its first
+            // session. One-line user notice via Toast when it was actually on.
+            // TODO(autosave-cap PR): the real fix is a size-aware autosave
+            // policy (prune/cap, longer delay above a size threshold) — a
+            // separate PR; this recovery-time toggle-off is the stopgap.
+            WalletApplicationExt.INSTANCE.disableDashjSyncDiagnosticAfterRecovery(this);
 
             return wallet;
         } catch (final IOException x) {
-            throw new Error("cannot read backup", x);
+            log.error("cannot read backup — wallet needs a restore from seed", x);
+            walletRecoveryFromSeedNeeded = true;
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_BACKUP_UNUSABLE,
+                    "WALLET_BACKUP_UNUSABLE", x.getClass().getName() + ": " + x.getMessage());
+            try {
+                CrashReporter.saveBackgroundTrace(x, packageInfoProvider.getPackageInfo());
+            } catch (final Throwable ignored) {
+            }
+            return null;
         } catch (final UnreadableWalletException x) {
-            throw new Error("cannot read backup", x);
+            log.error("cannot read backup — wallet needs a restore from seed", x);
+            walletRecoveryFromSeedNeeded = true;
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_BACKUP_UNUSABLE,
+                    "WALLET_BACKUP_UNUSABLE", x.getClass().getName() + ": " + x.getMessage());
+            try {
+                CrashReporter.saveBackgroundTrace(x, packageInfoProvider.getPackageInfo());
+            } catch (final Throwable ignored) {
+            }
+            return null;
         } finally {
             // `is` is still null when openFileInput() itself threw (no backup file at all).
             // Without this guard the finally block raises a NullPointerException that REPLACES
-            // the real "cannot read backup" Error, destroying the only diagnostic we have.
+            // the real "cannot read backup" failure, destroying the only diagnostic we have.
             if (is != null) {
                 try {
                     is.close();
