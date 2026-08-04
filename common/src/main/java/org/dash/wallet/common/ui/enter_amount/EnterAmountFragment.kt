@@ -173,6 +173,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.setOnClickListener {
+            if (binding.continueProgress.isVisible) return@setOnClickListener
             val dashAmount = binding.amountView.dashAmount
             val fiatAmount = binding.amountView.fiatAmount
             viewModel.onContinueEvent.value = Pair(dashAmount, fiatAmount)
@@ -211,6 +212,17 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         lifecycleScope.launchWhenStarted {
             binding.errorLabel.text = errorText
             binding.errorLabel.isVisible = errorText.isNotEmpty()
+        }
+    }
+
+    /**
+     * Show a progress circle on (and swallow taps of) the continue button —
+     * for hosts whose action continues in the background after the tap.
+     */
+    fun setContinueLoading(loading: Boolean) {
+        lifecycleScope.launchWhenStarted {
+            binding.continueProgress.isVisible = loading
+            binding.continueBtn.text = if (loading) "" else getString(R.string.button_continue)
         }
     }
 
