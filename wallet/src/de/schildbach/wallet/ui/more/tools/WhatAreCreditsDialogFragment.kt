@@ -41,13 +41,13 @@ class WhatAreCreditsDialogFragment : OffsetDialogFragment(R.layout.dialog_what_a
             dismiss()
         }
         binding.homeIndicator.isVisible = !showCloseButton
-        // Mark the explainer as seen as soon as it is DISPLAYED. Writing on
-        // dismissal missed every non-button close (swipe-down, tap outside,
-        // back), which bypasses the dismiss() override — the flag was never
-        // persisted and the dialog re-appeared on every Buy Credits tap.
-        lifecycleScope.launch {
-            viewModel.setCreditsExplained()
-        }
+        // Mark the explainer as seen as soon as it is DISPLAYED, from a scope
+        // that OUTLIVES this sheet. Writing on dismissal missed every
+        // non-button close (swipe-down, tap outside, back); writing in this
+        // fragment's own scope then lost the race when the sheet was
+        // dismissed immediately (the write was cancelled mid-flight, so the
+        // explainer still re-appeared).
+        viewModel.markCreditsExplained()
     }
 
     override fun dismiss() {

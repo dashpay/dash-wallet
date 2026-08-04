@@ -190,6 +190,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
 
         viewModel.canContinue.observe(viewLifecycleOwner) { canContinue ->
+            if (continueLoading) return@observe
             binding.continueBtn.isEnabled = if (!didAuthorize && requirePinForBalance && !viewModel.blockContinue) {
                 viewModel.amount.value?.isPositive == true
             } else {
@@ -216,15 +217,25 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
     }
 
     /**
-     * Show a progress circle on (and swallow taps of) the continue button —
-     * for hosts whose action continues in the background after the tap.
+     * Show a progress circle on the continue button and DISABLE it — for
+     * hosts whose action runs asynchronously after the tap. The disabled
+     * state is sticky: [canContinue] emissions cannot re-enable the button
+     * while loading (that observer would otherwise flip it back on within
+     * milliseconds).
      */
     fun setContinueLoading(loading: Boolean) {
+        continueLoading = loading
         lifecycleScope.launchWhenStarted {
             binding.continueProgress.isVisible = loading
             binding.continueBtn.text = if (loading) "" else getString(R.string.button_continue)
+            // isEnabled alone gives the app's standard disabled look: the
+            // button theme already maps it to `disabledBackgroundColor`.
+            binding.continueBtn.isEnabled = !loading
         }
     }
+
+    /** True while [setContinueLoading] holds the button in its busy state. */
+    private var continueLoading = false
 
     fun applyMaxAmount() {
         lifecycleScope.launchWhenStarted {
@@ -306,7 +317,18 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
     }
 
+    /**
+     * Optional host veto for the Max button, checked BEFORE anything else
+     * (no PIN prompt, no amount change) — for screens whose action cannot
+     * send a whole balance. Return true to swallow the tap; the host shows
+     * its own explanation.
+     */
+    var onMaxVetoed: (() -> Boolean)? = null
+
     private suspend fun onMaxAmountButtonClick() {
+        if (onMaxVetoed?.invoke() == true) {
+            return
+        }
         if (!didAuthorize && requirePinForBalance) {
             authManager.authenticate(requireActivity(), false) ?: return
             didAuthorize = true

@@ -27,6 +27,9 @@ import de.schildbach.wallet.util.toDashjCoin
 class BuyCreditsFragment : SendCoinsFragment() {
     companion object {
         private val log = LoggerFactory.getLogger(BuyCreditsFragment::class.java)
+
+        /** The smallest top-up this screen accepts (exclusive bound). */
+        private val MIN_TOP_UP = org.dash.wallet.common.money.Coin.valueOf(50_000)
     }
 
     private val buyCreditsViewModel by viewModels<BuyCreditsViewModel>()
@@ -34,7 +37,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.paymentHeader.setTitle(getString(R.string.credit_balance_button_buy))
-        enterAmountViewModel.setMinAmount(org.dash.wallet.common.money.Coin.valueOf(50_000))
+        enterAmountViewModel.setMinAmount(MIN_TOP_UP)
         binding.paymentHeader.setPreposition("")
         viewModel.isAssetLock = true
 
@@ -58,6 +61,12 @@ class BuyCreditsFragment : SendCoinsFragment() {
                 }
             }
         }
+        // Refuse Max at the TAP, before the PIN prompt or any amount change:
+        // top-ups cannot send a whole balance (see handleGo).
+        enterAmountFragment?.onMaxVetoed = {
+            lifecycleScope.launch { showMaxNotSupportedDialog() }
+            true
+        }
     }
 
     override fun updateView() {
@@ -75,9 +84,30 @@ class BuyCreditsFragment : SendCoinsFragment() {
             }
         }
 
+        // Below the top-up minimum the Continue button greys out; say WHY
+        // instead of leaving the user guessing (the amount must exceed the
+        // minimum — the button enables above it, not at it).
+        val entered = enterAmountViewModel.amount.value?.toDashjCoin()
+        val minimum = MIN_TOP_UP.toDashjCoin()
+        if (entered != null && entered.isPositive && entered <= minimum) {
+            enterAmountFragment?.setError(
+                getString(R.string.buy_credits_below_minimum, minimum.toFriendlyString())
+            )
+            return
+        }
+
+        // Whole-balance top-ups are not supported, whether reached with the
+        // MAX button or typed by hand — the amount must leave room for the
+        // L1 fee (see handleGo).
+        if (entered != null && isWholeBalance(entered)) {
+            enterAmountFragment?.setError(getString(R.string.buy_credits_max_not_supported))
+            return
+        }
+        enterAmountFragment?.setError("")
+
         // if there is no value (null) or it is zero, then display the message in the
         // enter amount fragment using 0.01 DASH
-        val amount = enterAmountViewModel.amount.value?.toDashjCoin() ?: Coin.CENT
+        val amount = entered ?: Coin.CENT
         val operations = if (amount.isZero) {
             Coin.CENT.value
         } else {
@@ -111,12 +141,19 @@ class BuyCreditsFragment : SendCoinsFragment() {
         val dryRunRequest = viewModel.dryrunSendRequest ?: return
         //val address = viewModel.basePaymentIntent.address?.toBase58() ?: return
 
-        val txFee = dryRunRequest.tx.fee
+        // Post-cutover the dry run does NOT complete the tx (no inputs are
+        // attached), so `tx.fee` is null and the ViewModel's deterministic
+        // display estimate is the only fee figure — an unguarded
+        // `amount.minus(txFee)` here crashed the send-max confirmation.
+        val txFee = dryRunRequest.tx.fee ?: viewModel.dryRunFeeEstimate
         val amount: Coin?
         val total: String?
 
         if (dryRunRequest.emptyWallet) {
-            amount = enterAmountViewModel.amount.value?.toDashjCoin()?.minus(txFee)
+            // Send-max delivers amount − fee; with no fee figure at all, show
+            // the entered amount rather than crashing.
+            amount = enterAmountViewModel.amount.value?.toDashjCoin()
+                ?.let { entered -> txFee?.let { entered.minus(it) } ?: entered }
             total = enterAmountViewModel.amount.value?.toPlainString()
         } else {
             amount = enterAmountViewModel.amount.value?.toDashjCoin()
@@ -158,12 +195,41 @@ class BuyCreditsFragment : SendCoinsFragment() {
      * [de.schildbach.wallet.service.platform.sdk.SdkTransparentTopUp]'s
      * fail-closed gate refuses with NotBroadcast and nothing is spent.
      */
+    /**
+     * Whether [amount] would spend the wallet's whole spendable balance —
+     * the same rule the plain-send screen uses to detect a send-all, keyed
+     * off the SDK-overlaid balance (dashj's is held at 0 post-cutover).
+     */
+    private fun isWholeBalance(amount: Coin): Boolean {
+        val available = viewModel.maxOutputAmount.value ?: return false
+        return available.isPositive && amount >= available
+    }
+
     private suspend fun handleGo() {
-        val editedAmount = enterAmountViewModel.amount.value
-        if (editedAmount != null) {
-            handleSdkTopUp(editedAmount.toDashjCoin().value)
+        val editedAmount = enterAmountViewModel.amount.value ?: return
+        // Max ("use my whole balance") is NOT supported for top-ups: the SDK's
+        // top-up call takes an exact amount and its send-all mode is not
+        // reachable through the FFI yet (rust-dashcore #915 has the builder
+        // work; the key-wallet entry point still pins drain = false — see
+        // MO-998). Refuse up front rather than spend an approximated amount.
+        if (enterAmountFragment?.maxSelected == true || isWholeBalance(editedAmount.toDashjCoin())) {
+            showMaxNotSupportedDialog()
             viewModel.resetState()
+            return
         }
+        handleSdkTopUp(editedAmount.toDashjCoin().value)
+        viewModel.resetState()
+    }
+
+    private suspend fun showMaxNotSupportedDialog() {
+        if (!isAdded) return
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.credit_balance_button_buy),
+            getString(R.string.buy_credits_max_not_supported),
+            getString(R.string.button_dismiss),
+            null
+        ).showAsync(requireActivity())
     }
 
     /**
@@ -203,15 +269,18 @@ class BuyCreditsFragment : SendCoinsFragment() {
             val work = infos.lastOrNull() ?: return@observe
             when (work.state) {
                 WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> {
-                    // Progress circle on the Send button ONLY until the worker
-                    // has started and handed the purchase to the SDK — from
-                    // that marker on, the outcome no longer needs this screen.
-                    val sdkCallStarted =
-                        work.progress.getBoolean(PerformTopUpWorker.KEY_SDK_CALL_STARTED, false)
-                    enterAmountFragment?.setContinueLoading(!sdkCallStarted)
+                    // Progress circle on the Send button for as long as the
+                    // purchase is actually running. (The "handed to the SDK"
+                    // marker fires ~20ms after the tap while the purchase
+                    // takes seconds, so gating on it made the spinner
+                    // invisible — the screen must stay busy until the work
+                    // reaches a terminal state.)
+                    enterAmountFragment?.setContinueLoading(true)
                 }
                 WorkInfo.State.SUCCEEDED -> {
-                    enterAmountFragment?.setContinueLoading(false)
+                    // Deliberately do NOT clear the loading state: the screen
+                    // is about to finish, and re-enabling the button first
+                    // leaves a brief window where it looks tappable again.
                     buyCreditsViewModel.pruneTopUpWork()
                     log.info(
                         "SDK top-up credited; new balance {}",
