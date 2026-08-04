@@ -91,6 +91,24 @@ internal const val ADDRESS_POOL_TAG_EXTERNAL = 0
  *    the typed Display prefix `"Transaction broadcast failed: …"` — matched
  *    on code AND prefix because 99 is also the generic fallthrough code.
  *
+ * TYPED SUPERSESSION (v41int14, dashpay/platform#4247/#4256): the failures
+ * rules 1–3 message-match arrive from the v41int14 AAR as DEDICATED Kotlin
+ * types instead of WalletOperation/Generic(99) + message prefix —
+ * [DashSdkError.PlatformWallet.TransactionBuild] (code 32, the request is
+ * at fault: bad fundingPath, monetary-bound breach, malformed recipients),
+ * [DashSdkError.PlatformWallet.TransactionSigning] (code 33, the request is
+ * FINE: only the signatures failed, reservation released natively —
+ * retryable once the signer is unlocked, keyed by
+ * [L1_SIGNER_LOCKED_REASON]) and
+ * [DashSdkError.PlatformWallet.TransactionBroadcastRejected] (code 26, the
+ * DEFINITIVE counterpart of code 20: not on the network, never will be,
+ * reservation released). All three are definitively pre-network by the SDK
+ * contract, so they classify NotBroadcast by TYPE — without these arms they
+ * would fall through the message-prefix rules to [classifyBroadcastFailure]
+ * and come back Ambiguous (a plain build refusal shown as "may be on the
+ * network", blocking the safe dashj fallback). The message-prefix rules
+ * below stay for the transition window.
+ *
  * Everything else defers to [classifyBroadcastFailure]; notably
  * [DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed] (code 20 —
  * the SDK's own "may already be on the network, inputs stay reserved, do
@@ -123,6 +141,34 @@ internal fun classifyCoreSendFailure(t: Throwable): SdkWriteResult<Nothing> = wh
     t is DashSdkError.PlatformWallet.CoreInsufficientFunds ->
         SdkWriteResult.NotBroadcast(
             "core send failed pre-broadcast (funding-account shortfall): ${t.message}", t
+        )
+    // Typed build refusal (code 32, v41int14). Every `buildSignedPayment` /
+    // builder rejection that is neither a shortfall nor a signing failure:
+    // the REQUEST is at fault (a verbatim retry fails identically) and the
+    // rejection is strictly pre-broadcast — the tx was never assembled or
+    // never left the builder. Supersedes the WalletOperation message-prefix
+    // rule below for new AARs.
+    t is DashSdkError.PlatformWallet.TransactionBuild ->
+        SdkWriteResult.NotBroadcast("core send failed pre-broadcast (transaction build): ${t.message}", t)
+    // Typed signing failure (code 33, v41int14). The request was VALID and
+    // the tx fully assembled — only the input signatures could not be
+    // produced (Keystore/Keychain mnemonic locked or missing). The native
+    // layer released the build's input reservation before returning, so
+    // nothing reached the wire and the IDENTICAL send may be resubmitted
+    // once the signer is unlocked. Keyed by [L1_SIGNER_LOCKED_REASON] so the
+    // send UI surfaces "unlock to continue", never a hard payment failure
+    // (dashpay/platform#4256).
+    t is DashSdkError.PlatformWallet.TransactionSigning ->
+        SdkWriteResult.NotBroadcast("$L1_SIGNER_LOCKED_REASON — retryable after unlock: ${t.message}", t)
+    // Typed definitive broadcast rejection (code 26, v41int14) — the
+    // DEFINITIVE counterpart of TransactionBroadcastUnconfirmed (20): Core
+    // provably rejected the tx, it is not on the network and will not get
+    // there, and the UTXO reservation (and any deferred token) was already
+    // released. Safe to re-plan or fall back. Supersedes the Generic(99) +
+    // "Transaction broadcast failed" prefix rule below for new AARs.
+    t is DashSdkError.PlatformWallet.TransactionBroadcastRejected ->
+        SdkWriteResult.NotBroadcast(
+            "core send definitively rejected before reaching the network: ${t.message}", t
         )
     t is DashSdkError.PlatformWallet.WalletOperation &&
         (t.message?.startsWith("set_funding failed") == true ||
@@ -183,6 +229,23 @@ internal const val SEND_ALL_FEE_RESERVE_DUFFS = 10_000L
  * must NOT be presented as a sync problem.
  */
 internal const val L1_FUNDING_GATE_CLOSED_REASON = "L1 funding gate closed"
+
+/**
+ * The [SdkWriteResult.NotBroadcast] reason prefix for a signing failure of a
+ * fully-assembled Core transaction
+ * ([DashSdkError.PlatformWallet.TransactionSigning], native code 33): the
+ * REQUEST was valid and the inputs were reserved and released again natively —
+ * only the signatures could not be produced, typically because the
+ * Keystore/Keychain mnemonic is locked. Retryable-after-unlock by SDK
+ * contract ("Surface this as 'unlock to continue', never as 'this payment is
+ * invalid'" — dashpay/platform#4256): the caller may resubmit the IDENTICAL
+ * send once the signer is usable. [de.schildbach.wallet.payments.sdkSendNotAttemptedException]
+ * keys the typed [de.schildbach.wallet.payments.SendSignerLockedException]
+ * off this prefix, exactly like [L1_FUNDING_GATE_CLOSED_REASON] keys the
+ * not-synced diagnosis — so the UI can say "unlock and try again" instead of
+ * a hard payment failure.
+ */
+internal const val L1_SIGNER_LOCKED_REASON = "L1 signer locked"
 
 /**
  * The deliver-at-least floor for a send-all: `spendable − reserve`,

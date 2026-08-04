@@ -486,6 +486,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val message = when (classifySendFailure(exception)) {
             SendFailureKind.NOT_SYNCED -> getString(R.string.send_coins_fragment_hint_replaying)
             SendFailureKind.NOT_SUPPORTED -> getString(R.string.send_coins_error_not_supported)
+            SendFailureKind.SIGNER_LOCKED -> getString(R.string.send_coins_error_signer_locked)
             SendFailureKind.GENERIC_INTERNAL -> getString(R.string.send_coins_error_generic)
             SendFailureKind.VERBATIM -> exception.toString()
         }

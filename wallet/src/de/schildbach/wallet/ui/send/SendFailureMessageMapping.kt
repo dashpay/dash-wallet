@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.send
 
 import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
+import de.schildbach.wallet.payments.SendSignerLockedException
 
 /**
  * How [SendCoinsFragment.showFailureDialog] renders a failed send. Pure
@@ -36,6 +37,14 @@ enum class SendFailureKind {
     NOT_SUPPORTED,
 
     /**
+     * The SDK engine could not SIGN the assembled transaction (Keystore
+     * mnemonic locked / auth window expired). Nothing was broadcast and the
+     * reservation was released — the identical send works after an unlock,
+     * so the copy says "unlock and try again", never "payment failed".
+     */
+    SIGNER_LOCKED,
+
+    /**
      * Any other [IllegalStateException] from the send path: internal
      * machinery — show a generic failure, NEVER the raw exception text.
      */
@@ -49,6 +58,9 @@ enum class SendFailureKind {
 fun classifySendFailure(exception: Exception): SendFailureKind = when (exception) {
     is SendEngineNotSyncedException -> SendFailureKind.NOT_SYNCED
     is SendNotSdkRoutableException -> SendFailureKind.NOT_SUPPORTED
+    // Before the generic IllegalStateException arm: SendSignerLockedException
+    // IS an IllegalStateException and must keep its own honest copy.
+    is SendSignerLockedException -> SendFailureKind.SIGNER_LOCKED
     is IllegalStateException -> SendFailureKind.GENERIC_INTERNAL
     else -> SendFailureKind.VERBATIM
 }

@@ -212,6 +212,80 @@ class SdkL1SendServiceTest {
     }
 
     @Test
+    fun classify_typedTransactionBuild_isNotBroadcast() {
+        // v41int14: code 32 replaces the WalletOperation message-prefix shape
+        // for builder rejections. The message deliberately matches NO prefix
+        // rule — the TYPE alone must prove pre-broadcast, or this regresses
+        // to Ambiguous and blocks the safe fallback.
+        val error = DashSdkError.PlatformWallet.TransactionBuild(
+            "funding path m/44'/1'/0' matches no spendable funds account"
+        )
+        val result = classifyCoreSendFailure(error)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertSame(error, (result as SdkWriteResult.NotBroadcast).cause)
+    }
+
+    @Test
+    fun classify_typedTransactionSigning_isNotBroadcast_keyedRetryableAfterUnlock() {
+        // v41int14: code 33 — request valid, tx assembled, only the
+        // signatures failed (Keystore locked); the native layer released the
+        // reservation. Must be NotBroadcast AND carry the signer-locked
+        // reason key so the UI surfaces "unlock to continue", never a hard
+        // payment failure (dashpay/platform#4256).
+        val error = DashSdkError.PlatformWallet.TransactionSigning(
+            "mnemonic unavailable: keystore locked"
+        )
+        val result = classifyCoreSendFailure(error)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        result as SdkWriteResult.NotBroadcast
+        assertSame(error, result.cause)
+        assertTrue(
+            "signing refusals must be keyed retryable-after-unlock, got '${result.reason}'",
+            result.reason.contains(L1_SIGNER_LOCKED_REASON)
+        )
+    }
+
+    @Test
+    fun classify_typedBroadcastRejected_isNotBroadcast_unlikeUnconfirmed() {
+        // v41int14: code 26 is the DEFINITIVE counterpart of code 20 — Core
+        // provably rejected the tx and the reservation was released. It must
+        // classify NotBroadcast while its ambiguous sibling (20) stays
+        // Ambiguous.
+        val rejected = DashSdkError.PlatformWallet.TransactionBroadcastRejected(
+            "rejected by core: dust output"
+        )
+        val result = classifyCoreSendFailure(rejected)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertSame(rejected, (result as SdkWriteResult.NotBroadcast).cause)
+        // The ambiguous sibling keeps its classification — the pair must
+        // never collapse into one rule.
+        assertTrue(
+            classifyCoreSendFailure(
+                DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed("timeout after send")
+            ) is SdkWriteResult.Ambiguous
+        )
+    }
+
+    @Test
+    fun classify_typedArms_reachTheDeferredTableToo() {
+        // classifyDeferredBroadcastFailure defers to classifyCoreSendFailure,
+        // so the typed trio must classify identically on the BIP70 deferred
+        // broadcast path.
+        for (
+            error in listOf<Throwable>(
+                DashSdkError.PlatformWallet.TransactionBuild("bad recipients blob"),
+                DashSdkError.PlatformWallet.TransactionSigning("keystore locked"),
+                DashSdkError.PlatformWallet.TransactionBroadcastRejected("rejected by core")
+            )
+        ) {
+            assertTrue(
+                "${error.javaClass.simpleName} must be NotBroadcast on the deferred path",
+                classifyDeferredBroadcastFailure(error) is SdkWriteResult.NotBroadcast
+            )
+        }
+    }
+
+    @Test
     fun classify_otherWalletOperationMessages_stayAmbiguous() {
         // The bare type is NOT enough — only the two provably pre-broadcast
         // FFI message prefixes may downgrade a WalletOperation.

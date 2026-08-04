@@ -144,19 +144,38 @@ class SendNotSdkRoutableException(message: String) : IllegalStateException(messa
 class SendEngineNotSyncedException(message: String) : IllegalStateException(message)
 
 /**
+ * The SDK engine assembled the transaction but could not SIGN it — the
+ * Keystore/Keychain mnemonic is locked or its auth window expired
+ * ([de.schildbach.wallet.service.platform.sdk.L1_SIGNER_LOCKED_REASON], the
+ * typed `TransactionSigning` refusal). The REQUEST is valid, the input
+ * reservation was released natively and nothing was broadcast: the identical
+ * send may be resubmitted once the wallet is unlocked. The send UI maps this
+ * TYPE to "unlock and try again" copy — never a hard payment failure
+ * (dashpay/platform#4256).
+ */
+class SendSignerLockedException(message: String) : IllegalStateException(message)
+
+/**
  * Phase 5d: the exception for a post-cutover [SdkWriteResult.NotBroadcast] —
  * the SDK send was refused pre-broadcast and there is no dashj fallback (the
  * held engine would queue-not-send). Typed by REASON so the UI can map it
  * honestly: a closed funding gate (the engine's scan not caught up — see
  * [de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON])
- * is the not-synced case; anything else is a plain [IllegalStateException]
- * the UI renders as a generic failure, never as "not synced" and never
- * verbatim. Pure — host-testable.
+ * is the not-synced case; a locked signer
+ * ([de.schildbach.wallet.service.platform.sdk.L1_SIGNER_LOCKED_REASON]) is
+ * the retryable unlock-and-retry case; anything else is a plain
+ * [IllegalStateException] the UI renders as a generic failure, never as
+ * "not synced" and never verbatim. Pure — host-testable.
  */
 fun sdkSendNotAttemptedException(reason: String): IllegalStateException =
     if (reason.contains(de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON)) {
         SendEngineNotSyncedException(
             "cutover committed but the SDK engine cannot fund a send yet ($reason)"
+        )
+    } else if (reason.contains(de.schildbach.wallet.service.platform.sdk.L1_SIGNER_LOCKED_REASON)) {
+        SendSignerLockedException(
+            "cutover committed but the SDK signer is locked ($reason) — " +
+                "nothing was broadcast; the identical send can be retried after unlock"
         )
     } else {
         IllegalStateException(

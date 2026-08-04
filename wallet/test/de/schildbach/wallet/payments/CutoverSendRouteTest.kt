@@ -26,6 +26,7 @@ import org.bitcoinj.script.ScriptBuilder
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 import de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON
+import de.schildbach.wallet.service.platform.sdk.L1_SIGNER_LOCKED_REASON
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -393,15 +394,33 @@ class SdkSendNotAttemptedExceptionTest {
     }
 
     @Test
-    fun anyOtherReason_isNeitherNotSyncedNorNotSupported() {
+    fun signerLockedReason_isTheSignerLockedType() {
+        // The typed TransactionSigning refusal (v41int14, code 33): the
+        // request is valid and retryable after unlock — it must surface as
+        // its own type, never as not-synced and never as a generic hard
+        // failure.
+        val ex = sdkSendNotAttemptedException(
+            "$L1_SIGNER_LOCKED_REASON — retryable after unlock: keystore locked"
+        )
+        assertTrue(
+            "a locked signer must get the unlock-and-retry type, got ${ex::class.simpleName}",
+            ex is SendSignerLockedException
+        )
+        assertFalse(ex is SendEngineNotSyncedException)
+    }
+
+    @Test
+    fun anyOtherReason_isNeitherNotSyncedNorNotSupportedNorSignerLocked() {
         for (reason in listOf(
             "flag off",
             "app wallet not bound to the SDK",
-            "core send failed pre-broadcast (build/funding): transaction build failed"
+            "core send failed pre-broadcast (build/funding): transaction build failed",
+            "core send failed pre-broadcast (transaction build): funding path matches no account"
         )) {
             val ex = sdkSendNotAttemptedException(reason)
             assertFalse("'$reason' must not read as not-synced", ex is SendEngineNotSyncedException)
             assertFalse("'$reason' must not read as not-routable", ex is SendNotSdkRoutableException)
+            assertFalse("'$reason' must not read as signer-locked", ex is SendSignerLockedException)
         }
     }
 

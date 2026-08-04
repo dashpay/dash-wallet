@@ -79,6 +79,8 @@
     <string name="send_coins_error_not_supported">This payment type isn\'t supported yet. No funds have left your wallet.</string>
     <!-- Generic fallback when a send fails for an internal reason; the raw error text is never shown to the user. -->
     <string name="send_coins_error_generic">The payment could not be sent.</string>
+    <!-- Shown when the send engine could not sign because the wallet's secure key store is locked. No funds were sent; the same payment works after unlocking. -->
+    <string name="send_coins_error_signer_locked">Your wallet couldn\'t sign this payment because it is locked. No funds have left your wallet — unlock your wallet and try again.</string>
     <string name="send_coins_options_fee_category">Fee</string>
     <string name="send_coins_options_fee_category_economic">Economic</string>
     <string name="send_coins_options_fee_category_priority">Priority</string>

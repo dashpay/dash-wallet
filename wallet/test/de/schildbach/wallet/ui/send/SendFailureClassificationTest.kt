@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.send
 
 import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
+import de.schildbach.wallet.payments.SendSignerLockedException
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -45,6 +46,18 @@ class SendFailureClassificationTest {
         assertEquals(
             SendFailureKind.NOT_SUPPORTED,
             classifySendFailure(SendNotSdkRoutableException("cutover committed: this send is not SDK-routable"))
+        )
+    }
+
+    @Test
+    fun signerLocked_mapsToItsOwnUnlockCopy_notGenericInternal() {
+        // SendSignerLockedException IS an IllegalStateException — the
+        // type-precise arm must win over the generic-internal fallthrough so
+        // a locked Keystore reads as "unlock and try again", never as a hard
+        // payment failure (dashpay/platform#4256).
+        assertEquals(
+            SendFailureKind.SIGNER_LOCKED,
+            classifySendFailure(SendSignerLockedException("SDK signer locked — retry after unlock"))
         )
     }
 
