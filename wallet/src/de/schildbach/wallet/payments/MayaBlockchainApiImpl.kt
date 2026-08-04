@@ -18,60 +18,67 @@
 package de.schildbach.wallet.payments
 
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.service.platform.sdk.BridgedTxResult
+import de.schildbach.wallet.service.platform.sdk.ReservationLockMirror
 import de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
-import de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
-import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.service.platform.sdk.toSdkNetwork
 import kotlinx.coroutines.CancellationException
-import org.bitcoinj.core.Context
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.Utils
-import org.bitcoinj.script.ScriptPattern
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.InsufficientFundsException
-import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaException
 import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dashfoundation.dashsdk.keywallet.DecodedTransaction
+import org.dashfoundation.dashsdk.keywallet.TransactionDecoder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.RoundingMode
 import javax.inject.Inject
 
 /**
+ * The exact scriptPubKey a MAYACHAIN memo output must carry: `OP_RETURN`
+ * (0x6a) followed by the minimal push of [memo] — a direct-length push up
+ * to 75 bytes, `OP_PUSHDATA1` (0x4c) beyond (the 80-byte relay ceiling
+ * keeps anything larger out). Pure, so the verifier can compare the SDK's
+ * output byte-for-byte instead of pattern-matching.
+ */
+internal fun expectedOpReturnScript(memo: ByteArray): ByteArray {
+    require(memo.isNotEmpty()) { "memo must not be empty" }
+    require(memo.size <= SdkL1SendService.MAX_MAYA_MEMO_BYTES) { "memo exceeds the OP_RETURN limit" }
+    return if (memo.size <= 75) {
+        byteArrayOf(0x6a, memo.size.toByte()) + memo
+    } else {
+        byteArrayOf(0x6a, 0x4c, memo.size.toByte()) + memo
+    }
+}
+
+/**
  * Pre-broadcast verification of the MAYACHAIN UTXO deposit shape
  * (https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/sending-transactions,
- * "UTXO Chains") against the SDK-built signed bytes:
+ * "UTXO Chains") against the SDK-decoded signed transaction:
  *
  * - `VOUT0` pays [vaultAddressBase58] exactly [vaultDuffs];
- * - `VOUT1` is a zero-value OP_RETURN carrying exactly [memo];
+ * - `VOUT1` is a zero-value output whose script is byte-for-byte the
+ *   OP_RETURN push of [memo] ([expectedOpReturnScript]);
  * - at most one further output, and when present it is P2PKH change paying
  *   the FIRST input's own address (MAYAChain identifies the depositor by
  *   VIN0 and sends refunds there — change anywhere else strands a refund).
  *
  * Returns null when the shape holds, otherwise a human-readable reason.
  * Nothing has been broadcast when this runs, so a non-null result is always
- * recoverable: release the reservation and surface the error. Pure over its
- * inputs — host-testable without a wallet.
+ * recoverable: release the reservation and surface the error. Pure over the
+ * decoded transaction — host-testable without a wallet or native library.
  */
 internal fun verifyMayaDepositShape(
-    rawTxBytes: ByteArray,
-    params: NetworkParameters,
+    tx: DecodedTransaction,
     vaultAddressBase58: String,
     vaultDuffs: Long,
     memo: ByteArray
 ): String? {
-    val tx = try {
-        Transaction(params, rawTxBytes)
-    } catch (e: Exception) {
-        return "unparseable transaction: ${e.message}"
-    }
     if (tx.inputs.isEmpty()) {
         return "transaction has no inputs"
     }
@@ -80,45 +87,41 @@ internal fun verifyMayaDepositShape(
     }
 
     val vaultOutput = tx.outputs[0]
-    val vaultPaysTo = try {
-        vaultOutput.scriptPubKey.getToAddress(params).toBase58()
-    } catch (e: Exception) {
+    if (vaultOutput.address == null) {
         return "VOUT0 is not a plain address output"
     }
-    if (vaultPaysTo != vaultAddressBase58) {
-        return "VOUT0 pays $vaultPaysTo, expected the Asgard vault $vaultAddressBase58"
+    if (vaultOutput.address != vaultAddressBase58) {
+        return "VOUT0 pays ${vaultOutput.address}, expected the Asgard vault $vaultAddressBase58"
     }
-    if (vaultOutput.value.value != vaultDuffs) {
-        return "VOUT0 carries ${vaultOutput.value.value} duffs, expected $vaultDuffs"
+    if (vaultOutput.valueDuffs != vaultDuffs) {
+        return "VOUT0 carries ${vaultOutput.valueDuffs} duffs, expected $vaultDuffs"
     }
 
     val memoOutput = tx.outputs[1]
-    if (!ScriptPattern.isOpReturn(memoOutput.scriptPubKey)) {
-        return "VOUT1 is not an OP_RETURN"
+    if (memoOutput.valueDuffs != 0L) {
+        return "VOUT1 OP_RETURN must be zero-value, carries ${memoOutput.valueDuffs} duffs"
     }
-    if (memoOutput.value.value != 0L) {
-        return "VOUT1 OP_RETURN must be zero-value, carries ${memoOutput.value.value} duffs"
-    }
-    val payload = memoOutput.scriptPubKey.chunks.getOrNull(1)?.data
-    if (payload == null || !payload.contentEquals(memo)) {
-        return "VOUT1 memo does not match the swap memo"
+    if (!memoOutput.scriptPubkey.contentEquals(expectedOpReturnScript(memo))) {
+        return "VOUT1 is not the OP_RETURN of the swap memo"
     }
 
     if (tx.outputs.size == 3) {
         val change = tx.outputs[2]
-        if (!ScriptPattern.isP2PKH(change.scriptPubKey)) {
+        // P2PKH shape: OP_DUP OP_HASH160 <20-byte hash> OP_EQUALVERIFY OP_CHECKSIG.
+        val script = change.scriptPubkey
+        val isP2pkh = script.size == 25 &&
+            script[0] == 0x76.toByte() && script[1] == 0xa9.toByte() && script[2] == 0x14.toByte() &&
+            script[23] == 0x88.toByte() && script[24] == 0xac.toByte()
+        if (!isP2pkh || change.address == null) {
             return "VOUT2 change is not P2PKH"
         }
-        // change-to-VIN0: a signed P2PKH input's scriptSig is <sig> <pubkey>,
-        // so VIN0's address hash is HASH160 of its second chunk. Only
-        // checkable when the input really is P2PKH-signed; a missing pubkey
-        // chunk is left to the engine's own change_to_first_input contract.
-        val vin0PubKey = tx.getInput(0).scriptSig.chunks.getOrNull(1)?.data
-        if (vin0PubKey != null) {
-            val changeHash = ScriptPattern.extractHashFromP2PKH(change.scriptPubKey)
-            if (!Utils.sha256hash160(vin0PubKey).contentEquals(changeHash)) {
-                return "VOUT2 change does not pay VIN0's address"
-            }
+        // change-to-VIN0: the decoder recovers VIN0's address from a
+        // P2PKH-shaped scriptSig (`<sig> <pubkey>`). Only checkable when
+        // that recovery succeeded; otherwise the engine's own
+        // change_to_first_input contract is the guarantee.
+        val vin0Address = tx.inputs[0].address
+        if (vin0Address != null && change.address != vin0Address) {
+            return "VOUT2 change does not pay VIN0's address"
         }
     }
     return null
@@ -130,15 +133,14 @@ internal fun verifyMayaDepositShape(
  * surface ([SdkL1SendService.buildDeferredMayaDeposit] — vault VOUT0,
  * OP_RETURN memo VOUT1, change back to VIN0's address VOUT2, no BIP-69
  * reordering), verifies the shape from the signed bytes BEFORE anything
- * reaches the network ([verifyMayaDepositShape]), then broadcasts. Lives
- * here so integrations/maya stays free of wallet-engine types.
+ * reaches the network ([verifyMayaDepositShape], over the SDK's own
+ * [TransactionDecoder]), then broadcasts. Lives here so integrations/maya
+ * stays free of wallet-engine types.
  *
- * The dashj transaction-construction leg (manual `SendRequest`, output
- * clearing/re-signing, the fresh-Transaction confidence workaround) is
- * DELETED per the replace-then-delete policy — the same treatment BIP70
- * got. The dashj foundation wallet is still used for two bounded jobs:
- * the transition-only reservation mirror (below) and parsing the signed
- * bytes in [verifyMayaDepositShape].
+ * DASHJ-FREE: building, signing, decoding, verifying and broadcasting all
+ * run on the SDK. The only dashj left on this flow is inside the
+ * transition-only [ReservationLockMirror] (which dies with Phase 2) and
+ * the shared display bridge.
  *
  * Failure semantics (funds-critical):
  * - build/verify failure → reservation released, recoverable error, no
@@ -152,7 +154,7 @@ internal fun verifyMayaDepositShape(
 class MayaBlockchainApiImpl @Inject constructor(
     private val sdkL1SendService: SdkL1SendService,
     private val mayaWebApi: MayaWebApi,
-    private val walletData: WalletData,
+    private val reservationLockMirror: ReservationLockMirror,
     private val bridgedTransactionFactory: SdkBridgedTransactionFactory
 ) : MayaBlockchainApi {
     companion object {
@@ -169,6 +171,9 @@ class MayaBlockchainApiImpl @Inject constructor(
          * returns as VOUT2 change.
          */
         private const val MAX_SELL_FEE_RESERVE_DUFFS = 10_000L
+
+        /** Duffs per DASH as a decimal shift (1 DASH = 1e8 duffs). */
+        private const val DUFFS_DECIMAL_SHIFT = 8
     }
 
     override suspend fun commitSwapTransaction(
@@ -196,7 +201,6 @@ class MayaBlockchainApiImpl @Inject constructor(
     override suspend fun buildAndSendSwapTx(
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel> {
-        val params = Constants.NETWORK_PARAMETERS
         try {
             // memo documentation:
             //   https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/transaction-memos#swap
@@ -229,11 +233,15 @@ class MayaBlockchainApiImpl @Inject constructor(
             // the swap fee rides on top of the sell amount for a normal
             // sell; a MAX sell was quoted against the whole spendable
             // balance, so the fee comes out of the quoted amount itself.
+            // BigDecimal DASH → duffs by decimal shift; longValueExact is
+            // safe because the scale is pinned to 8 first.
             val quotedDuffs = if (!swapTradeUIModel.maximum) {
                 swapTradeUIModel.amount.dash + swapTradeUIModel.feeAmount.dash
             } else {
                 swapTradeUIModel.amount.dash
-            }.setScale(8, RoundingMode.HALF_UP).toCoin().toDashjCoin().value
+            }.setScale(DUFFS_DECIMAL_SHIFT, RoundingMode.HALF_UP)
+                .movePointRight(DUFFS_DECIMAL_SHIFT)
+                .longValueExact()
 
             // Build + sign with the funding inputs RESERVED, no broadcast.
             // Any throw here is pre-broadcast by construction, so the MAX
@@ -261,11 +269,21 @@ class MayaBlockchainApiImpl @Inject constructor(
 
             // Assert the deposit shape from the signed bytes BEFORE any
             // broadcast decision — a mis-shaped deposit to a Maya vault
-            // strands funds, so this replaces (and strengthens) the old
-            // post-completeTx output checks.
-            val shapeError = verifyMayaDepositShape(
-                payment.rawTxBytes, params, swapTradeUIModel.vaultAddress, vaultDuffs, memoBytes
-            )
+            // strands funds. Decoded with the SDK's own consensus decoder;
+            // a decode failure counts as a failed shape check (released,
+            // recoverable), never as a broadcastable pass.
+            val shapeError = try {
+                verifyMayaDepositShape(
+                    TransactionDecoder.decode(payment.rawTxBytes, toSdkNetwork(Constants.NETWORK_PARAMETERS)),
+                    swapTradeUIModel.vaultAddress,
+                    vaultDuffs,
+                    memoBytes
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                "signed bytes failed to decode: ${t.message}"
+            }
             if (shapeError != null) {
                 log.error("maya swap deposit {} failed shape verification: {}", payment.txidHex, shapeError)
                 sdkL1SendService.releaseDeferredPayment(payment)
@@ -278,11 +296,11 @@ class MayaBlockchainApiImpl @Inject constructor(
             }
 
             // Reservation mirror — TRANSITION-ONLY, same rationale and
-            // lifetime as the BIP70 mirror in SendCoinsTaskRunner: dashj-side
-            // spenders (manual sends, the background CoinJoin mixer) have
-            // their own coin selection and no view of the SDK reservation.
-            // Best-effort; a lock failure must not fail the swap.
-            runCatching { setReservedOutpointLocks(payment, locked = true) }
+            // lifetime as the BIP70 mirror: dashj-side spenders (manual
+            // sends, the background CoinJoin mixer) have their own coin
+            // selection and no view of the SDK reservation. Best-effort; a
+            // lock failure must not fail the swap.
+            runCatching { reservationLockMirror.setLocks(payment, locked = true) }
                 .onFailure { log.warn("failed to mirror the maya reservation into wallet locks", it) }
 
             log.info("maya swap deposit {}: broadcasting ({} duffs to the vault)", payment.txidHex, vaultDuffs)
@@ -306,7 +324,7 @@ class MayaBlockchainApiImpl @Inject constructor(
                 is SdkWriteResult.NotBroadcast -> {
                     // Provably never reached the network: free the inputs so a
                     // retry can rebuild cleanly.
-                    runCatching { setReservedOutpointLocks(payment, locked = false) }
+                    runCatching { reservationLockMirror.setLocks(payment, locked = false) }
                         .onFailure { log.warn("failed to clear the mirrored maya reservation locks", it) }
                     sdkL1SendService.releaseDeferredPayment(payment)
                     ResponseResource.Failure(
@@ -344,8 +362,7 @@ class MayaBlockchainApiImpl @Inject constructor(
         } catch (t: Throwable) {
             if (isInsufficientFunds(t)) {
                 // Neutral exception so the maya module can detect it without
-                // wallet-engine types — the same contract the dashj path kept
-                // by converting InsufficientMoneyException.
+                // wallet-engine types.
                 return ResponseResource.Failure(InsufficientFundsException(t.message, t), false, 0, t.message)
             }
             log.error("failed to build/send maya swap deposit", t)
@@ -368,24 +385,4 @@ class MayaBlockchainApiImpl @Inject constructor(
         generateSequence(t) { it.cause?.takeIf { cause -> cause !== it } }
             .take(5)
             .any { it.message?.contains("insufficient funds", ignoreCase = true) == true }
-
-    /**
-     * Lock/unlock the outpoints [payment]'s signed tx spends in the
-     * foundation dashj wallet — the app-side mirror of the SDK's engine
-     * reservation, identical to the BIP70 mirror (TRANSITION-ONLY, dies
-     * with Phase 2). Pure bookkeeping on the Phase-3 foundation object.
-     */
-    private fun setReservedOutpointLocks(payment: SdkDeferredPayment, locked: Boolean) {
-        val wallet = walletData.wallet ?: return
-        Context.propagate(wallet.context)
-        val tx = Transaction(Constants.NETWORK_PARAMETERS, payment.rawTxBytes)
-        for (input in tx.inputs) {
-            val outpoint = input.outpoint
-            if (locked) {
-                wallet.lockOutput(outpoint)
-            } else {
-                wallet.unlockOutput(outpoint)
-            }
-        }
-    }
 }

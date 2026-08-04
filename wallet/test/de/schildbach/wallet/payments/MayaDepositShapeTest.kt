@@ -17,15 +17,7 @@
 
 package de.schildbach.wallet.payments
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.ECKey
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.TransactionOutPoint
-import org.bitcoinj.core.TransactionOutput
-import org.bitcoinj.params.TestNet3Params
-import org.bitcoinj.script.ScriptBuilder
+import org.dashfoundation.dashsdk.keywallet.DecodedTransaction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -35,119 +27,109 @@ import org.junit.Test
 /**
  * Host coverage for [verifyMayaDepositShape] — the pre-broadcast gate that
  * keeps a mis-shaped deposit (which MAYAChain would strand or mis-refund)
- * from ever reaching the network. Fixtures are hand-built with dashj, the
- * same library the verifier parses with.
+ * from ever reaching the network. Fixtures are hand-built
+ * [DecodedTransaction]s — the decoder itself is pinned against the Rust
+ * fixture in `TransactionDecoderTest`, so this suite only owns the shape
+ * rules, with no wallet, native library, or dashj involved.
  */
 class MayaDepositShapeTest {
 
-    private val params = TestNet3Params.get()
-    private val vaultKey = ECKey()
-    private val vaultAddress = Address.fromKey(params, vaultKey)
-    private val senderKey = ECKey()
+    private val vaultAddress = "yMqShkrgjTRuReBGFpQr7FozEF1QcNBBYA"
+    private val senderAddress = "yNDj28QBMm5sY6bLjFcNdWRNef24KLQNuQ"
     private val memo = "=:ETH.ETH:0x1c7b17362c84287bd1184447e6dfeaf920c31bbe".toByteArray()
     private val vaultDuffs = 1_000_000L
 
-    /**
-     * A Maya-shaped deposit: vault at VOUT0, OP_RETURN memo at VOUT1,
-     * optional change at VOUT2, one input carrying a P2PKH-style scriptSig
-     * (`<sig> <pubkey>`) so the change-to-VIN0 check has a pubkey to hash.
-     */
-    private fun buildDeposit(
+    private fun p2pkhScript(seed: Byte): ByteArray =
+        byteArrayOf(0x76, 0xa9.toByte(), 0x14) + ByteArray(20) { seed } + byteArrayOf(0x88.toByte(), 0xac.toByte())
+
+    private fun addressOutput(address: String, duffs: Long, scriptSeed: Byte) =
+        DecodedTransaction.Output(address, duffs, p2pkhScript(scriptSeed))
+
+    private fun memoOutput(memoBytes: ByteArray = memo, duffs: Long = 0L) =
+        DecodedTransaction.Output(null, duffs, expectedOpReturnScript(memoBytes))
+
+    private fun input(senderAddr: String? = senderAddress) =
+        DecodedTransaction.Input(ByteArray(32), 0, senderAddr)
+
+    private fun deposit(
         vaultValue: Long = vaultDuffs,
+        withChange: Boolean = true,
+        changeAddress: String = senderAddress,
+        vin0Address: String? = senderAddress,
         memoBytes: ByteArray = memo,
-        changeKey: ECKey? = senderKey,
         memoValue: Long = 0L
-    ): Transaction {
-        val tx = Transaction(params)
-        tx.addOutput(Coin.valueOf(vaultValue), vaultAddress)
-        tx.addOutput(
-            TransactionOutput(
-                params,
-                tx,
-                Coin.valueOf(memoValue),
-                ScriptBuilder.createOpReturnScript(memoBytes).program
-            )
+    ): DecodedTransaction {
+        val outputs = mutableListOf(
+            addressOutput(vaultAddress, vaultValue, scriptSeed = 1),
+            memoOutput(memoBytes, memoValue)
         )
-        if (changeKey != null) {
-            tx.addOutput(Coin.valueOf(50_000), Address.fromKey(params, changeKey))
+        if (withChange) {
+            outputs += addressOutput(changeAddress, 50_000, scriptSeed = 2)
         }
-        // A fake signed P2PKH input: 71 zero bytes stand in for the DER
-        // signature; the pubkey chunk is real so HASH160 comparisons work.
-        val scriptSig = ScriptBuilder()
-            .data(ByteArray(71))
-            .data(senderKey.pubKey)
-            .build()
-        tx.addInput(
-            org.bitcoinj.core.TransactionInput(
-                params,
-                tx,
-                scriptSig.program,
-                TransactionOutPoint(params, 0, Sha256Hash.ZERO_HASH)
-            )
-        )
-        return tx
+        return DecodedTransaction(ByteArray(32), listOf(input(vin0Address)), outputs)
     }
 
-    private fun verify(tx: Transaction, expectedVaultDuffs: Long = vaultDuffs, memoBytes: ByteArray = memo): String? =
-        verifyMayaDepositShape(tx.bitcoinSerialize(), params, vaultAddress.toBase58(), expectedVaultDuffs, memoBytes)
+    private fun verify(tx: DecodedTransaction): String? =
+        verifyMayaDepositShape(tx, vaultAddress, vaultDuffs, memo)
 
     @Test
     fun wellFormedDepositPasses() {
-        assertNull(verify(buildDeposit()))
+        assertNull(verify(deposit()))
     }
 
     @Test
     fun wellFormedDepositWithoutChangePasses() {
-        assertNull(verify(buildDeposit(changeKey = null)))
+        assertNull(verify(deposit(withChange = false)))
+    }
+
+    @Test
+    fun longMemoUsesPushdata1AndPasses() {
+        // 76..80 bytes crosses the OP_PUSHDATA1 boundary in the expected script.
+        val longMemo = ByteArray(80) { 0x41 }
+        val tx = deposit(memoBytes = longMemo)
+        assertNull(verifyMayaDepositShape(tx, vaultAddress, vaultDuffs, longMemo))
+        assertEquals(0x4c.toByte(), tx.outputs[1].scriptPubkey[1])
     }
 
     @Test
     fun wrongVaultAmountFails() {
-        val error = verify(buildDeposit(vaultValue = vaultDuffs + 1))
+        val error = verify(deposit(vaultValue = vaultDuffs + 1))
         assertNotNull(error)
         assertTrue(error!!.contains("VOUT0"))
     }
 
     @Test
     fun wrongVaultAddressFails() {
-        val otherVault = Address.fromKey(params, ECKey())
-        val tx = buildDeposit()
-        val error = verifyMayaDepositShape(
-            tx.bitcoinSerialize(), params, otherVault.toBase58(), vaultDuffs, memo
-        )
+        val tx = deposit()
+        val error = verifyMayaDepositShape(tx, senderAddress, vaultDuffs, memo)
         assertNotNull(error)
         assertTrue(error!!.contains("expected the Asgard vault"))
     }
 
     @Test
     fun wrongMemoFails() {
-        val error = verify(buildDeposit(memoBytes = "=:ETH.ETH:0xWRONG".toByteArray()))
+        val error = verify(deposit(memoBytes = "=:ETH.ETH:0xWRONG".toByteArray()))
         assertNotNull(error)
-        assertTrue(error!!.contains("memo"))
+        assertTrue(error!!.contains("VOUT1"))
     }
 
     @Test
     fun valueCarryingOpReturnFails() {
-        val error = verify(buildDeposit(memoValue = 546L))
+        val error = verify(deposit(memoValue = 546L))
         assertNotNull(error)
         assertTrue(error!!.contains("zero-value"))
     }
 
     @Test
     fun memoNotAtVout1Fails() {
-        // vault, change, memo — memo displaced to VOUT2 (what BIP-69
-        // sorting would do to a zero-value OP_RETURN is the opposite, but
-        // any displacement must fail).
-        val tx = Transaction(params)
-        tx.addOutput(Coin.valueOf(vaultDuffs), vaultAddress)
-        tx.addOutput(Coin.valueOf(50_000), Address.fromKey(params, senderKey))
-        tx.addOutput(
-            TransactionOutput(params, tx, Coin.ZERO, ScriptBuilder.createOpReturnScript(memo).program)
-        )
-        val scriptSig = ScriptBuilder().data(ByteArray(71)).data(senderKey.pubKey).build()
-        tx.addInput(
-            org.bitcoinj.core.TransactionInput(
-                params, tx, scriptSig.program, TransactionOutPoint(params, 0, Sha256Hash.ZERO_HASH)
+        // vault, change, memo — memo displaced to VOUT2 must fail.
+        val tx = DecodedTransaction(
+            ByteArray(32),
+            listOf(input()),
+            listOf(
+                addressOutput(vaultAddress, vaultDuffs, scriptSeed = 1),
+                addressOutput(senderAddress, 50_000, scriptSeed = 2),
+                memoOutput()
             )
         )
         val error = verify(tx)
@@ -157,26 +139,65 @@ class MayaDepositShapeTest {
 
     @Test
     fun changeToForeignAddressFails() {
-        val error = verify(buildDeposit(changeKey = ECKey()))
+        val error = verify(deposit(changeAddress = "yTForeignAddressXXXXXXXXXXXXXXXXXX"))
         assertNotNull(error)
         assertEquals("VOUT2 change does not pay VIN0's address", error)
     }
 
     @Test
+    fun unknownVin0AddressSkipsChangeOwnershipCheck() {
+        // A non-P2PKH scriptSig gives the decoder no sender address; the
+        // engine's change_to_first_input contract is the remaining guarantee.
+        assertNull(verify(deposit(vin0Address = null, changeAddress = "yTForeignAddressXXXXXXXXXXXXXXXXXX")))
+    }
+
+    @Test
+    fun nonP2pkhChangeFails() {
+        val tx = DecodedTransaction(
+            ByteArray(32),
+            listOf(input()),
+            listOf(
+                addressOutput(vaultAddress, vaultDuffs, scriptSeed = 1),
+                memoOutput(),
+                // P2SH-shaped change (a9 14 <20B> 87) must be rejected.
+                DecodedTransaction.Output(
+                    senderAddress,
+                    50_000,
+                    byteArrayOf(0xa9.toByte(), 0x14) + ByteArray(20) { 3 } + byteArrayOf(0x87.toByte())
+                )
+            )
+        )
+        val error = verify(tx)
+        assertNotNull(error)
+        assertTrue(error!!.contains("not P2PKH"))
+    }
+
+    @Test
     fun extraOutputFails() {
-        val tx = buildDeposit()
-        tx.addOutput(Coin.valueOf(1_000), Address.fromKey(params, ECKey()))
+        val tx = DecodedTransaction(
+            ByteArray(32),
+            listOf(input()),
+            listOf(
+                addressOutput(vaultAddress, vaultDuffs, scriptSeed = 1),
+                memoOutput(),
+                addressOutput(senderAddress, 50_000, scriptSeed = 2),
+                addressOutput(senderAddress, 1_000, scriptSeed = 4)
+            )
+        )
         val error = verify(tx)
         assertNotNull(error)
         assertTrue(error!!.contains("expected 2 or 3 outputs"))
     }
 
     @Test
-    fun garbageBytesFail() {
-        val error = verifyMayaDepositShape(
-            ByteArray(32) { 0x42 }, params, vaultAddress.toBase58(), vaultDuffs, memo
+    fun noInputsFails() {
+        val tx = DecodedTransaction(
+            ByteArray(32),
+            emptyList(),
+            listOf(addressOutput(vaultAddress, vaultDuffs, scriptSeed = 1), memoOutput())
         )
+        val error = verify(tx)
         assertNotNull(error)
-        assertTrue(error!!.contains("unparseable"))
+        assertTrue(error!!.contains("no inputs"))
     }
 }
