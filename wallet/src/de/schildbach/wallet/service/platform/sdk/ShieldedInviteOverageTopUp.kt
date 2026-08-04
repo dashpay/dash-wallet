@@ -338,15 +338,40 @@ class ShieldedInviteOverageTopUp internal constructor(
             log.warn("invite overage reconcile: identity record unavailable", t)
             return false
         }
+        val marker = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY)
+        val pending = hasPending()
         val overage = reconcilableOverageCredits(
             identityIdBase58 = base.userId,
             creationState = base.creationState,
             usingInvite = base.usingInvite,
             inviteIsShielded = base.invite?.isShielded == true,
             fundingCreditsFromLink = base.invite?.shieldedFundingCredits,
-            hasPendingRecord = hasPending(),
-            alreadyReconciledIdentity = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY)
-        ) ?: return false
+            hasPendingRecord = pending,
+            alreadyReconciledIdentity = marker
+        )
+        val claimedIdentity = base.userId
+        if (overage == null) {
+            // ONE-LINE DIAGNOSTIC (observed live: the S22 retro-fit was a
+            // silent no-op and cost an hour of on-device forensics): a
+            // COMPLETED invite claim that was never recorded/reconciled but
+            // whose amt source is unreadable — the persisted link is gone or
+            // carries no note value — can never be reconciled. Say so once
+            // per launch instead of declining silently.
+            val invite = base.invite
+            if (claimedIdentity != null &&
+                base.creationState >= IdentityCreationState.IDENTITY_REGISTERED &&
+                base.usingInvite && !pending && marker != claimedIdentity &&
+                (invite == null || (invite.isShielded && invite.shieldedFundingCredits == null))
+            ) {
+                log.warn(
+                    "completed invite claim for {}… has no reconcilable overage source " +
+                        "(persisted link {}); any claim overage is not recoverable",
+                    claimedIdentity.take(8),
+                    if (invite == null) "is gone" else "carries no note value (amt)"
+                )
+            }
+            return false
+        }
         log.info(
             "invite overage reconcile: completed claim for {}… has a provable un-topped overage of " +
                 "{} credits — minting the pending record",

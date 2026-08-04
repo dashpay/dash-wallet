@@ -1206,6 +1206,17 @@ class CreateIdentityService : LifecycleService() {
             identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
+        // ORDERING DEPENDENCY — invite link cleared AFTER the overage record:
+        // this is the FIRST point on any entry point (fresh, resumed,
+        // recovered) where an invite-link copy is cleared, and it must stay
+        // strictly after claimShieldedInvitation returned: the overage record
+        // is persisted (awaited) INSIDE the claim call's success tail, and
+        // the caller is suspended on that call, so the record provably lands
+        // before this line can run. The record's own link copy
+        // (BlockchainIdentityConfig.INVITE_LINK) is never cleared on
+        // completion — it is the completed-claim reconcile's amt source.
+        // Guarded by SdkShieldedUsernameCreationTest
+        // .claim_overageRecordPersists_beforeAnyCallerSideLinkClear.
         topUpRepository.clearInvitation()
 
         finishRegistration(blockchainIdentity, encryptionKey, usernameSecondary)

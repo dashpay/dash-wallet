@@ -912,6 +912,54 @@ class SdkShieldedUsernameCreationTest {
         )
     }
 
+    /**
+     * ORDERING GUARD (the S22 link-clear lesson): the overage record must be
+     * PERSISTED before the claim call returns — i.e., before ANY caller-side
+     * completion step can possibly run. CreateIdentityService clears the
+     * invite-link copy (topUpRepository.clearInvitation) only after
+     * claimShieldedInvitation returned, and the caller is suspended on this
+     * call for its whole duration, so "record persisted before return"
+     * IS "record persisted before any link clear" under structured
+     * concurrency. The sequenced events pin exactly that: the first moment a
+     * caller-side clear can execute is after the call returns, and by then
+     * the record event has already been appended — this test fails if the
+     * recording is ever moved after the return, made fire-and-forget
+     * (launched instead of awaited), or dropped from the success tail.
+     */
+    @Test
+    fun claim_overageRecordPersists_beforeAnyCallerSideLinkClear() = runTest {
+        val source = claimSource()
+        val events = mutableListOf<String>()
+        val overages = object {
+            @Suppress("UNUSED_PARAMETER")
+            suspend fun invoke(identityIdBase58: String, overageCredits: Long) {
+                events.add("overage-record-persisted")
+            }
+        }
+
+        val result = SdkShieldedUsernameCreation(
+            source = source,
+            dashPayConfig = config(true),
+            shieldedBalanceService = balanceService(),
+            feeCredits = { contested -> if (contested) contestedFeeCredits else feeCredits },
+            displayHrp = { "tdash" },
+            handOffToLegacy = {},
+            recordInviteOverage = overages::invoke,
+            executorScope = null
+        ).createIdentityFromInvitation(
+            oneTimeKeyHex, fundingHeight, "alice2", fundingCredits = legacyContestedNoteCredits
+        )
+        // The earliest instant ANY caller-side completion step (the invite
+        // link clear) can run — strictly after the suspend call returned.
+        events.add("caller-side-link-clear")
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(
+            listOf("overage-record-persisted", "caller-side-link-clear"),
+            events
+        )
+    }
+
     @Test
     fun claim_exactDenominationInvite_recordsNoOverage() = runTest {
         val source = claimSource()

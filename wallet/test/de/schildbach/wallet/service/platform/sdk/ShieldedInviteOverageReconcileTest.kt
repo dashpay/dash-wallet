@@ -144,6 +144,27 @@ class ShieldedInviteOverageReconcileTest {
         assertTrue(backing.isEmpty())
     }
 
+    /**
+     * THE S22 END-STATE: claim completed but the persisted link is GONE (the
+     * completion path cleared the handler copy and the record carried no
+     * usable link) — the reconcile must decline WITHOUT crashing and mint
+     * nothing. (The production path also emits the one-line WARN diagnostic
+     * for exactly this shape, so a silent no-op can never again cost an hour
+     * of on-device forensics.)
+     */
+    @Test
+    fun reconcile_completedClaimWithMissingLink_declinesAndMintsNothing() = runTest {
+        val backing = mutableMapOf<Preferences.Key<*>, Any>()
+        val service = service(backing, completedClaimRecord(invite = null))
+
+        assertFalse(service.reconcileCompletedClaim())
+        assertTrue(backing.isEmpty())
+        // Repeated launches stay clean too (the WARN is one line per launch,
+        // never a record or marker mutation).
+        assertFalse(service.reconcileCompletedClaim())
+        assertTrue(backing.isEmpty())
+    }
+
     @Test
     fun reconcile_withoutIdentityConfig_isInert() = runTest {
         val backing = mutableMapOf<Preferences.Key<*>, Any>()
