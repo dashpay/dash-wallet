@@ -390,6 +390,12 @@ class OnboardingActivity : RestoreFromFileActivity() {
             }
         }
         showDegradedStartupReportDialog()
+        // A degraded launch that OPENED is a SURVIVED launch: the safe-mode
+        // breaker exists for the app failing to open at all, not for the
+        // deliberate recovery screen. Without this, two degraded (but
+        // perfectly functional) launches would trip safe mode — which would
+        // then SKIP the load and thereby hide the Recover Wallet CTA.
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_MAIN_UI_SHOWN, "DEGRADED_UI_SHOWN")
     }
 
     /**
