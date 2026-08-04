@@ -30,6 +30,33 @@ import javax.inject.Singleton
 /** Wire-order (little-endian) txid bytes → the display-order hex logs/UI use. */
 internal fun ByteArray.toTxidHex(): String = Utils.HEX.encode(reversedArray())
 
+/**
+ * Whether a failed resume proves the lock's credits ALREADY landed — a
+ * terminal outcome that must never be retried (WorkManager would otherwise
+ * back off forever on a lock nothing can advance).
+ *
+ * Two shapes, because Platform's own rejection does NOT arrive as the SDK's
+ * typed error: the local tombstone check throws
+ * [DashSdkError.PlatformWallet.AssetLockAlreadyConsumed], while a lock
+ * consumed Platform-side but not yet marked locally comes back as a Generic
+ * protocol error reading "…output N already completely used" (observed live
+ * 2026-08-04 after a mid-top-up process death; the same wording the legacy
+ * dashj path matched on). Message-matched until the SDK reconciles the
+ * local row (platform ask on MO-998), and matched down the cause chain
+ * because the JNI wraps it.
+ */
+internal fun isAlreadyConsumed(t: Throwable): Boolean {
+    if (t is DashSdkError.PlatformWallet.AssetLockAlreadyConsumed) return true
+    var cause: Throwable? = t
+    var hops = 0
+    while (cause != null && hops < 8) {
+        if (cause.message?.contains("already completely used", ignoreCase = true) == true) return true
+        cause = cause.cause
+        hops++
+    }
+    return false
+}
+
 // ── Source seam ───────────────────────────────────────────────────────
 
 /**
@@ -224,7 +251,7 @@ class SdkTopUpRecoveryService internal constructor(
                 )
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
-                if (t is DashSdkError.PlatformWallet.AssetLockAlreadyConsumed) {
+                if (isAlreadyConsumed(t)) {
                     // Terminal: the lock was burned by an earlier successful
                     // top-up; retrying can never help.
                     alreadyConsumed++
