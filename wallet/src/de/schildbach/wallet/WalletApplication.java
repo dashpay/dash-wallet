@@ -164,10 +164,12 @@ import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.AnrSupervisor;
 import de.schildbach.wallet.util.AtomicFileWriter;
 import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.FriendKeyChainLookahead;
 import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
 import de.schildbach.wallet.util.WalletFileSizeGuard;
+import de.schildbach.wallet.util.WalletLoadBudget;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 import kotlin.Deprecated;
@@ -1089,18 +1091,48 @@ public class WalletApplication extends MultiDexApplication
             adoptAuthenticationGroupExtension();
         } else {
             FileInputStream walletStream = null;
+            boolean parsed = false;
+            // TIME guard, the companion to the size guard above. The DashPay
+            // friend-key-chain crash loop was a 2.5MB wallet that took MINUTES
+            // to parse: the parse cannot be interrupted safely, so the watchdog
+            // records the over-budget launch and arms the crash-loop breaker so
+            // the NEXT launch opens in safe mode if this one dies.
+            final WalletLoadBudget.Watchdog budget = WalletLoadBudget.arm(WalletLoadBudget.DEFAULT_BUDGET_MS, () -> {
+                log.error("wallet load exceeded its {}ms budget ({} DashPay friend chains still deriving) — "
+                                + "arming safe mode for the next launch",
+                        WalletLoadBudget.DEFAULT_BUDGET_MS, FriendKeyChainLookahead.pendingCount());
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_OVERBUDGET, "WALLET_LOAD_OVERBUDGET",
+                        "budgetMs=" + WalletLoadBudget.DEFAULT_BUDGET_MS
+                                + " pendingFriendChains=" + FriendKeyChainLookahead.pendingCount());
+                StartupBreadcrumbs.armSafeModeOnNextDeath();
+            });
             try {
                 final Stopwatch watch = Stopwatch.createStarted();
                 walletStream = new FileInputStream(walletFile);
-                wallet = new WalletProtobufSerializer().readWallet(walletStream, false, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
+                // Keep the DashPay friend-key-chain lookahead OFF the parse:
+                // 100+33 keys per CONTACT chain is ~1.2s each on a real device
+                // and blocks Application.onCreate for minutes on a wallet with
+                // many contacts. The identical derivations run on a background
+                // pool right after this, and the blockchain service waits for
+                // them before the wallet is attached to the peer group — so the
+                // watched-key set is unchanged. See FriendKeyChainLookahead.
+                FriendKeyChainLookahead.reset();
+                final WalletProtobufSerializer serializer = new WalletProtobufSerializer();
+                serializer.setKeyChainFactory(FriendKeyChainLookahead.deferringFactory());
+                wallet = serializer.readWallet(walletStream, false, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
 
                 adoptAuthenticationGroupExtension();
                 if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
                     throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
 
-                log.info("wallet loaded from: '{}', took {}", walletFile, watch);
+                log.info("wallet loaded from: '{}', took {} ({} DashPay friend chains deferred)", walletFile, watch,
+                        FriendKeyChainLookahead.deferredCount());
                 StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_PROTOBUF_PARSED,
-                        "WALLET_PROTOBUF_PARSED", "took=" + watch);
+                        "WALLET_PROTOBUF_PARSED", "took=" + watch
+                                + " deferredFriendChains=" + FriendKeyChainLookahead.deferredCount());
+                // Overlap the deferred derivations with the rest of startup.
+                parsed = true;
+                FriendKeyChainLookahead.completeAsync();
             } catch (final FileNotFoundException x) {
                 log.error("problem loading wallet", x);
 
@@ -1141,6 +1173,17 @@ public class WalletApplication extends MultiDexApplication
                     throw oom;
                 }
             } finally {
+                final long loadMs = budget.disarm();
+                if (WalletLoadBudget.isOverBudget(loadMs, WalletLoadBudget.DEFAULT_BUDGET_MS)) {
+                    log.warn("wallet load finished OVER budget: {}ms (budget {}ms)",
+                            loadMs, WalletLoadBudget.DEFAULT_BUDGET_MS);
+                }
+                if (!parsed) {
+                    // The parse was abandoned (recovery path took over): its
+                    // deferred chains belong to a wallet nobody holds, so drop
+                    // them instead of deriving keys for an orphan object graph.
+                    FriendKeyChainLookahead.reset();
+                }
                 if (walletStream != null) {
                     try {
                         walletStream.close();

@@ -73,6 +73,7 @@ import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis.OfflineAnalyzer
 import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet.util.BlockchainStateUtils
 import de.schildbach.wallet.util.CrashReporter
+import de.schildbach.wallet.util.FriendKeyChainLookahead
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CompletableDeferred
@@ -1129,6 +1130,26 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     resetMNLists(true)
                 }
                 peerGroup!!.setDownloadTxDependencies(0) // recursive implementation causes StackOverflowError
+                // FUNDS GATE: the DashPay friend-key-chain lookahead is derived
+                // off the wallet-load critical path (FriendKeyChainLookahead —
+                // it is what made a 2.5MB wallet take minutes to open). The
+                // bloom filter / watched-script set peers ever see is computed
+                // from `addWallet` onwards, so the deferred keys must all exist
+                // BEFORE this line: that makes received-funds detection
+                // identical to deriving them inside the parse. This runs on the
+                // service's background check() thread, never the main thread.
+                if (!FriendKeyChainLookahead.awaitComplete()) {
+                    log.error(
+                        "starting the peergroup with the DashPay friend key chain lookahead incomplete " +
+                            "({} of {} chains) — a contact payment beyond the derived window may need a rescan",
+                        FriendKeyChainLookahead.completedCount(), FriendKeyChainLookahead.deferredCount()
+                    )
+                } else if (FriendKeyChainLookahead.deferredCount() > 0) {
+                    log.info(
+                        "DashPay friend key chain lookahead complete before peergroup start: {} chains in {}ms",
+                        FriendKeyChainLookahead.completedCount(), FriendKeyChainLookahead.completionMs()
+                    )
+                }
                 peerGroup!!.addWallet(wallet)
                 dashSystemService.system.addWallet(wallet)
                 peerGroup!!.setUserAgent(Constants.USER_AGENT, packageInfoProvider.versionName)

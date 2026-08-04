@@ -89,6 +89,13 @@ object StartupBreadcrumbs {
     /** The key-backup recovery SUCCEEDED — small wallet restored, blockchain reset for rescan. */
     const val STAGE_WALLET_RECOVERED_FROM_BACKUP = 96
 
+    /**
+     * TIME guard: the wallet load blew its budget (see [WalletLoadBudget]).
+     * Written from a watchdog thread WHILE the load is still running, so it
+     * survives a kill that leaves no Java stack.
+     */
+    const val STAGE_WALLET_LOAD_OVERBUDGET = 97
+
     /** Consecutive pre-UI deaths before a safe-mode launch is advised. */
     const val SAFE_MODE_THRESHOLD = 2
 
@@ -105,6 +112,8 @@ object StartupBreadcrumbs {
     private var file: File? = null
     @Volatile
     private var prevFile: File? = null
+    @Volatile
+    private var counterFile: File? = null
     @Volatile
     private var safeModeAdvised = false
     @Volatile
@@ -126,6 +135,7 @@ object StartupBreadcrumbs {
                 val counterFile = File(filesDir, COUNTER_FILE_NAME)
                 file = f
                 prevFile = prev
+                this.counterFile = counterFile
 
                 val previousContent = if (f.exists()) runCatching { f.readText() }.getOrNull() else null
                 val previous = classifyPrevious(previousContent)
@@ -180,6 +190,38 @@ object StartupBreadcrumbs {
         try {
             synchronized(lock) {
                 file?.appendText(line + "\n")
+            }
+        } catch (t: Throwable) {
+            // best-effort only
+        }
+    }
+
+    /**
+     * ESCALATE the crash-loop breaker: if THIS launch dies before the main UI,
+     * the very NEXT launch runs in safe mode — instead of needing
+     * [SAFE_MODE_THRESHOLD] deaths first.
+     *
+     * Used when a launch is observably in trouble but has not died yet (the
+     * wallet load blowing its time budget — see [WalletLoadBudget]). It only
+     * pre-loads the strike counter to [SAFE_MODE_THRESHOLD] - 1; the next
+     * [init] still requires this launch to have actually died
+     * ([PreviousLaunch.INCOMPLETE]) to advise safe mode. A launch that goes
+     * over budget and then SURVIVES writes the survival marker, and the next
+     * [init] resets the counter to 0 — so this can never cause a spurious
+     * safe-mode launch.
+     *
+     * Never throws.
+     */
+    @JvmStatic
+    fun armSafeModeOnNextDeath() {
+        try {
+            synchronized(lock) {
+                val f = counterFile ?: return
+                val stored = runCatching { f.readText().trim().toInt() }.getOrDefault(0)
+                val armed = maxOf(stored, SAFE_MODE_THRESHOLD - 1)
+                if (armed != stored) {
+                    runCatching { f.writeText(armed.toString()) }
+                }
             }
         } catch (t: Throwable) {
             // best-effort only
