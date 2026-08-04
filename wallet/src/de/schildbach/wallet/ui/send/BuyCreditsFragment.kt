@@ -177,20 +177,20 @@ class BuyCreditsFragment : SendCoinsFragment() {
         observeTopUpWork()
     }
 
-    private var topUpProgressDialog: AdaptiveDialog? = null
-
     private fun observeTopUpWork() {
         buyCreditsViewModel.topUpWorkStatus().observe(viewLifecycleOwner) { infos ->
             val work = infos.lastOrNull() ?: return@observe
             when (work.state) {
                 WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> {
-                    if (topUpProgressDialog == null) {
-                        topUpProgressDialog = AdaptiveDialog.progress(getString(R.string.send_coins_sending_msg))
-                            .also { it.show(parentFragmentManager, "buy_credits_sdk_topup") }
-                    }
+                    // Progress circle on the Send button ONLY until the worker
+                    // has started and handed the purchase to the SDK — from
+                    // that marker on, the outcome no longer needs this screen.
+                    val sdkCallStarted =
+                        work.progress.getBoolean(PerformTopUpWorker.KEY_SDK_CALL_STARTED, false)
+                    enterAmountFragment?.setContinueLoading(!sdkCallStarted)
                 }
                 WorkInfo.State.SUCCEEDED -> {
-                    dismissTopUpProgress()
+                    enterAmountFragment?.setContinueLoading(false)
                     buyCreditsViewModel.pruneTopUpWork()
                     log.info(
                         "SDK top-up credited; new balance {}",
@@ -199,7 +199,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
                     onSdkTopUpSuccess()
                 }
                 WorkInfo.State.FAILED -> {
-                    dismissTopUpProgress()
+                    enterAmountFragment?.setContinueLoading(false)
                     buyCreditsViewModel.pruneTopUpWork()
                     val ambiguous = work.outputData.getBoolean(PerformTopUpWorker.KEY_AMBIGUOUS, false)
                     val reason = work.outputData.getString(BaseWorker.KEY_ERROR_MESSAGE) ?: "top-up failed"
@@ -208,14 +208,9 @@ class BuyCreditsFragment : SendCoinsFragment() {
                         if (ambiguous) showSdkTopUpAmbiguousDialog() else showFailureDialog(Exception(reason))
                     }
                 }
-                WorkInfo.State.CANCELLED -> dismissTopUpProgress()
+                WorkInfo.State.CANCELLED -> enterAmountFragment?.setContinueLoading(false)
             }
         }
-    }
-
-    private fun dismissTopUpProgress() {
-        topUpProgressDialog?.dismissAllowingStateLoss()
-        topUpProgressDialog = null
     }
 
     private fun onSdkTopUpSuccess() {

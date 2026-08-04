@@ -110,8 +110,8 @@ class ToolsFragment : Fragment() {
             }
         } else {
             SendCoinsActivity.startBuyCredits(requireActivity())
+        }
     }
-            }
 
     private fun onTransactionExport() {
         if (viewModel.uiState.value.isSyncing) {

@@ -59,6 +59,9 @@ class PerformTopUpWorker @AssistedInject constructor(
         const val KEY_AMOUNT_DUFFS = "PerformTopUpWorker.AMOUNT_DUFFS"
         const val KEY_NEW_BALANCE = "PerformTopUpWorker.NEW_BALANCE"
         const val KEY_AMBIGUOUS = "PerformTopUpWorker.AMBIGUOUS"
+
+        /** Progress marker: the SDK call that does the actual work has begun. */
+        const val KEY_SDK_CALL_STARTED = "PerformTopUpWorker.SDK_CALL_STARTED"
     }
 
     override suspend fun doWorkWithBaseProgress(): Result {
@@ -72,6 +75,9 @@ class PerformTopUpWorker @AssistedInject constructor(
         }
 
         val result = try {
+            // Tell the UI the hand-off is complete: the purchase is now the
+            // SDK's (and this worker's) responsibility, not the screen's.
+            setProgress(workDataOf(KEY_SDK_CALL_STARTED to true))
             sdkTransparentTopUp.topUp(identityId, amountDuffs)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
