@@ -66,6 +66,7 @@ import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.Nfc
+import de.schildbach.wallet.util.StartupBreadcrumbs
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
@@ -172,6 +173,16 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         this.setupBottomNavigation(viewModel)
+
+        // Launch-survival marker, DELAYED: a native (Rust/JNI) crash a few
+        // seconds into the session leaves no Java trace — waiting before
+        // declaring the launch survived means such a death still counts as an
+        // incomplete launch and eventually trips the safe-mode crash-loop
+        // breaker (see StartupBreadcrumbs).
+        binding.root.postDelayed(
+            { StartupBreadcrumbs.markLaunchSurvived() },
+            StartupBreadcrumbs.SURVIVAL_DELAY_MS
+        )
 
         initViewModel()
 

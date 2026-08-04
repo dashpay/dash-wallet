@@ -166,6 +166,7 @@ import de.schildbach.wallet.util.AtomicFileWriter;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
+import de.schildbach.wallet.util.StartupBreadcrumbs;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 import kotlin.Deprecated;
@@ -208,6 +209,13 @@ public class WalletApplication extends MultiDexApplication
     private static final int BLOCKCHAIN_SYNC_JOB_ID = 1;
 
     public boolean myPackageReplaced = false;
+
+    /** The wallet protobuf load threw past the internal recovery (e.g. OOM on a huge wallet). */
+    private volatile boolean walletLoadFailed = false;
+    /** Safe mode skipped the wallet load after consecutive launch deaths (see StartupBreadcrumbs). */
+    private volatile boolean walletLoadSkippedSafeMode = false;
+    /** An optional startup stage failed and was skipped (catch-degrade). */
+    private volatile boolean startupDegraded = false;
 
     private AutoLogout autoLogout;
     private AnrSupervisor anrSupervisor;
@@ -275,24 +283,53 @@ public class WalletApplication extends MultiDexApplication
         return walletFile.exists();
     }
 
+    /**
+     * True when the wallet file exists but NO wallet object is loaded — the
+     * launch is running degraded (load failure caught, or safe mode skipped
+     * the load after consecutive launch deaths). OnboardingActivity must show
+     * the crash-report path instead of onboarding/`wallet!!` routing.
+     */
+    public boolean isWalletLoadDegraded() {
+        return walletLoadFailed || walletLoadSkippedSafeMode;
+    }
+
+    /** Whether safe mode (crash-loop breaker) skipped the wallet load this launch. */
+    public boolean isSafeModeLaunch() {
+        return walletLoadSkippedSafeMode;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
-        initLogging();
-        FirebaseApp.initializeApp(this);
-        if (FirebaseApp.getApps(this).isEmpty()) {
-            // Built without google-services.json (the Firebase config is intentionally optional,
-            // see gradle/google-services.gradle). Initialize a placeholder app so DI-provided
-            // Firebase services (auth, analytics) can be constructed; their network calls fail
-            // soft inside existing error handling instead of crashing the process.
-            log.warn("no Firebase config in this build; initializing placeholder FirebaseApp");
-            FirebaseApp.initializeApp(this, new com.google.firebase.FirebaseOptions.Builder()
-                    .setApplicationId("1:000000000000:android:0000000000000000000000")
-                    .setProjectId("dash-wallet-local-build")
-                    // must match Firebase's AIza[0-9A-Za-z\-_]{35} API-key format check
-                    .setApiKey("AIzaSyPlaceholderLocalBuild000000000000")
-                    .build());
-        }
+        // CRASH-TRACE HANDLING FIRST — before the wallet load, the SDK engines,
+        // logging, Firebase, everything that can die on a large wallet. Any
+        // launch crash from here on is persisted to cache/crash.trace and the
+        // NEXT launch offers the report dialog even with no adb and no
+        // Crashlytics (the app itself is the diagnostic channel).
+        CrashReporter.init(getCacheDir());
+        // Numbered, PERSISTED launch-stage markers. Also decides whether this
+        // launch runs in SAFE MODE (two consecutive launches died before the
+        // main UI → skip the wallet load + engine starts so the app opens and
+        // offers the crash report — see StartupBreadcrumbs).
+        StartupBreadcrumbs.init(getFilesDir());
+
+        runStartupStage(StartupBreadcrumbs.STAGE_LOGGING_INITIALIZED, "LOGGING_INITIALIZED", this::initLogging);
+        runStartupStage(StartupBreadcrumbs.STAGE_FIREBASE_INITIALIZED, "FIREBASE_INITIALIZED", () -> {
+            FirebaseApp.initializeApp(this);
+            if (FirebaseApp.getApps(this).isEmpty()) {
+                // Built without google-services.json (the Firebase config is intentionally optional,
+                // see gradle/google-services.gradle). Initialize a placeholder app so DI-provided
+                // Firebase services (auth, analytics) can be constructed; their network calls fail
+                // soft inside existing error handling instead of crashing the process.
+                log.warn("no Firebase config in this build; initializing placeholder FirebaseApp");
+                FirebaseApp.initializeApp(this, new com.google.firebase.FirebaseOptions.Builder()
+                        .setApplicationId("1:000000000000:android:0000000000000000000000")
+                        .setProjectId("dash-wallet-local-build")
+                        // must match Firebase's AIza[0-9A-Za-z\-_]{35} API-key format check
+                        .setApiKey("AIzaSyPlaceholderLocalBuild000000000000")
+                        .build());
+            }
+        });
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("STARTUP WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
@@ -301,11 +338,44 @@ public class WalletApplication extends MultiDexApplication
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_CONFIG_LOADED, "CONFIG_LOADED");
         if (walletFileExists()) {
-            fullInitialization();
+            if (StartupBreadcrumbs.isSafeModeAdvised()) {
+                // Crash-loop breaker: the last two launches died before the
+                // main UI. Skip the wallet load and every engine start so the
+                // app OPENS and OnboardingActivity offers the crash report;
+                // the launch after this one retries a normal start.
+                walletLoadSkippedSafeMode = true;
+                log.warn("SAFE MODE: {} consecutive launches died before the main UI — "
+                        + "skipping the wallet load so the app can open and offer a crash report",
+                        StartupBreadcrumbs.SAFE_MODE_THRESHOLD);
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_SKIPPED_SAFE_MODE,
+                        "WALLET_LOAD_SKIPPED_SAFE_MODE");
+            } else {
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_BEGIN, "WALLET_LOAD_BEGIN",
+                        "size=" + walletFile.length());
+                try {
+                    fullInitialization();
+                } catch (final Throwable t) {
+                    // The un-degradable stage failed in a way the internal
+                    // recovery (restore-from-backup) did not handle: an
+                    // OutOfMemoryError parsing a huge protobuf, an
+                    // Error("cannot read backup"), anything unforeseen. DO NOT
+                    // crash the launch and DO NOT touch the wallet file — open
+                    // degraded so OnboardingActivity can offer the crash
+                    // report instead of looping.
+                    walletLoadFailed = true;
+                    log.error("wallet load FAILED — opening degraded for crash reporting", t);
+                    StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_FAILED,
+                            "WALLET_LOAD_FAILED", t.getClass().getName() + ": " + t.getMessage());
+                    try {
+                        CrashReporter.saveBackgroundTrace(t, packageInfoProvider.getPackageInfo());
+                    } catch (final Throwable ignored) {
+                    }
+                }
+            }
         }
 
-        CrashReporter.init(getCacheDir());
         // enable deadlock warnings to try to catch the cause of the stuck at "Syncing 31%"
         Threading.setUseDefaultAndroidPolicy(false);
         Threading.warnOnLockCycles();
@@ -326,15 +396,17 @@ public class WalletApplication extends MultiDexApplication
         anrSupervisor = new AnrSupervisor();
         anrSupervisor.start();
 
-        // DEBUG-only adb trigger for an L1 shadow hard reset; provably a
-        // no-op in release builds (the method returns before registering).
-        L1ShadowDebugReset.registerIfDebug(this, l1ShadowSyncService);
-        // DEBUG-only adb trigger for a one-shot Phase 5d cutover readiness
-        // readout (advisory only — can never commit a cutover).
-        CutoverDebugReadout.registerIfDebug(this, cutoverCoordinator, cutoverEvidenceCollector);
+        runStartupStage(-1, "DEBUG_RECEIVERS", () -> {
+            // DEBUG-only adb trigger for an L1 shadow hard reset; provably a
+            // no-op in release builds (the method returns before registering).
+            L1ShadowDebugReset.registerIfDebug(this, l1ShadowSyncService);
+            // DEBUG-only adb trigger for a one-shot Phase 5d cutover readiness
+            // readout (advisory only — can never commit a cutover).
+            CutoverDebugReadout.registerIfDebug(this, cutoverCoordinator, cutoverEvidenceCollector);
+        });
 
         // resume status polling for any DEX swaps still in flight
-        swapTrackingService.start();
+        runStartupStage(-1, "SWAP_TRACKING", swapTrackingService::start);
 
         // enable TLS 1.3 support on Android 9 and lower
         // Android 10 and above support TLS 1.3 by default
@@ -342,7 +414,31 @@ public class WalletApplication extends MultiDexApplication
             Security.insertProviderAt(Conscrypt.newProvider(), 1);
         }
 
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_ONCREATE_COMPLETE, "ONCREATE_COMPLETE");
+    }
 
+    /**
+     * Catch-degrade wrapper for OPTIONAL launch stages: a failure logs, records
+     * a non-fatal trace (rides along in the support report) and sets the
+     * degraded latch — the app still OPENS. Never used for the wallet load
+     * itself, which has its own dedicated failure handling.
+     */
+    private void runStartupStage(final int breadcrumbStage, final String name, final Runnable stage) {
+        try {
+            stage.run();
+            if (breadcrumbStage >= 0) {
+                StartupBreadcrumbs.mark(breadcrumbStage, name);
+            }
+        } catch (final Throwable t) {
+            startupDegraded = true;
+            log.error("startup stage {} FAILED — continuing degraded", name, t);
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_DEGRADED, "DEGRADED:" + name,
+                    t.getClass().getName() + ": " + t.getMessage());
+            try {
+                CrashReporter.saveBackgroundTrace(t, packageInfoProvider.getPackageInfo());
+            } catch (final Throwable ignored) {
+            }
+        }
     }
 
     // Initialize AppsFlyer
@@ -582,6 +678,7 @@ public class WalletApplication extends MultiDexApplication
 
     public void finalizeInitialization() {
         long _t = System.currentTimeMillis();
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_FINALIZE_INIT_BEGIN, "FINALIZE_INIT_BEGIN");
         // TODO, put this in a different place. maybe SecurityInitilizer
         // TODO, can we remove this?
         try {
@@ -603,6 +700,7 @@ public class WalletApplication extends MultiDexApplication
 
         dashSystemService.getSystem().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
         log.info("STARTUP finalizeInit: initDash done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_INIT_DASH_DONE, "INIT_DASH_DONE");
 
         if (config.versionCodeCrossed((int)packageInfoProvider.getVersionCode(), VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
@@ -618,6 +716,7 @@ public class WalletApplication extends MultiDexApplication
 
         afterLoadWallet();
         log.info("STARTUP finalizeInit: afterLoadWallet done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_AFTER_LOAD_WALLET_DONE, "AFTER_LOAD_WALLET_DONE");
 
         cleanupFiles();
 
@@ -626,13 +725,21 @@ public class WalletApplication extends MultiDexApplication
         }
 
         if (Constants.SUPPORTS_PLATFORM) {
-            initPlatform();
+            // Catch-degrade: initPlatform kicks the SDK bind + L1 engine +
+            // cutover services. A failure here must not stop the app from
+            // opening — the wallet UI still works from the display cache.
+            runStartupStage(StartupBreadcrumbs.STAGE_PLATFORM_INIT_KICKED, "PLATFORM_INIT_KICKED",
+                    this::initPlatform);
         }
         log.info("STARTUP finalizeInit: initPlatform+channels done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
-        initUphold();
-        initCoinbase();
-        initDashSpend();
-        WalletApplicationExt.INSTANCE.clearCachedAddresses(this);
+        // Catch-degrade: third-party integration setup must never block the
+        // wallet from opening.
+        runStartupStage(-1, "INTEGRATIONS", () -> {
+            initUphold();
+            initCoinbase();
+            initDashSpend();
+            WalletApplicationExt.INSTANCE.clearCachedAddresses(this);
+        });
         log.info("STARTUP finalizeInit: integrations done in {}ms", System.currentTimeMillis() - _t);
     }
 
@@ -733,18 +840,7 @@ public class WalletApplication extends MultiDexApplication
     private void afterLoadWallet() {
         wallet.setSaveOnNextBlock(false);
         wallet.autosaveToFile(walletFile, Constants.Files.WALLET_AUTOSAVE_DELAY_MS, TimeUnit.MILLISECONDS, null);
-
-        // clean up spam
-        try {
-            wallet.cleanup();
-        } catch (IllegalStateException x) {
-            // Catch an inconsistent exception here and reset the blockchain.  This is for loading older wallets that had
-            // txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
-            // the fees were fixed, then those stuck transactions became inconsistent and the exception is thrown.
-            if (x.getMessage().contains("Inconsistent spent tx:")) {
-                deleteBlockchainFiles();
-            } else throw x;
-        }
+        final Wallet walletForMaintenance = wallet;
 
         // did blockchain rescan fail
         if (config.isResetBlockchainPending()) {
@@ -755,9 +851,41 @@ public class WalletApplication extends MultiDexApplication
             config.clearResetBlockchainPending();
         }
 
-        // make sure there is at least one recent backup
-        if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists())
-            backupWallet();
+        // DEFERRED O(wallet) maintenance — off the critical launch path. Both
+        // walks scale with wallet size (cleanup iterates transactions under the
+        // wallet lock; backupWallet builds the FULL Protos.Wallet tree — a
+        // multi-hundred-MB transient on a very large CoinJoin wallet — before
+        // stripping transactions). Neither is needed for the UI to come up, and
+        // on a huge wallet doing them synchronously inside Application.onCreate
+        // risks the exact startup ANR/OOM crash-loop this launch path is being
+        // hardened against. Failures degrade (log + non-fatal trace), never crash.
+        new Thread(() -> {
+            try {
+                // clean up spam
+                try {
+                    walletForMaintenance.cleanup();
+                } catch (IllegalStateException x) {
+                    // Catch an inconsistent exception here and reset the blockchain.  This is for loading older wallets that had
+                    // txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
+                    // the fees were fixed, then those stuck transactions became inconsistent and the exception is thrown.
+                    if (x.getMessage() != null && x.getMessage().contains("Inconsistent spent tx:")) {
+                        deleteBlockchainFiles();
+                    } else {
+                        throw x;
+                    }
+                }
+
+                // make sure there is at least one recent backup
+                if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists())
+                    backupWallet();
+            } catch (final Throwable t) {
+                log.error("deferred wallet maintenance failed — continuing degraded", t);
+                try {
+                    CrashReporter.saveBackgroundTrace(t, packageInfoProvider.getPackageInfo());
+                } catch (final Throwable ignored) {
+                }
+            }
+        }, "wallet-startup-maintenance").start();
 
         // setup WalletBalanceObserver
         walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig);
@@ -919,6 +1047,8 @@ public class WalletApplication extends MultiDexApplication
                 throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
 
             log.info("wallet loaded from: '{}', took {}", walletFile, watch);
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_PROTOBUF_PARSED,
+                    "WALLET_PROTOBUF_PARSED", "took=" + watch);
         } catch (final FileNotFoundException x) {
             log.error("problem loading wallet", x);
 
@@ -963,6 +1093,7 @@ public class WalletApplication extends MultiDexApplication
 
         if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
             throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_CONSISTENCY_CHECKED, "WALLET_CONSISTENCY_CHECKED");
         walletStateFlow.setValue(wallet);
         finalizeInitialization();
     }

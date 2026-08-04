@@ -33,6 +33,7 @@ import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.ParityReport
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.util.CrashReporter
+import de.schildbach.wallet.util.StartupBreadcrumbs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -325,6 +326,18 @@ class ContactSupportViewModel @Inject constructor(
             }
         } catch (x: Exception) {
             log.info("problem writing the dashJ-kotlin parity log attachment", x)
+        }
+
+        // Launch-stage breadcrumbs: which numbered startup stage the current —
+        // and, crucially, the previous CRASHED — launch reached. This is the
+        // launch-crash diagnostic for installs with no adb and no usable
+        // Crashlytics stack (e.g. a native crash or an LMK kill leaves no Java
+        // trace at all). Tiny text, inlined into the report body.
+        try {
+            text.append("\n\n\n=== launch breadcrumbs ===\n\n")
+            text.append(StartupBreadcrumbs.reportText())
+        } catch (x: Exception) {
+            text.append(x.toString()).append('\n')
         }
 
         text.append("\n\nPUT ADDITIONAL COMMENTS TO THE TOP. DOWN HERE NOBODY WILL NOTICE.")

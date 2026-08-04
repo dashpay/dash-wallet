@@ -47,7 +47,11 @@ import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.onboarding.SelectSecurityLevelActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
+import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.onboarding.WelcomePagerAdapter
+import de.schildbach.wallet.util.CrashReporter
+import de.schildbach.wallet.util.StartupBreadcrumbs
+import java.io.IOException
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardingBinding
 import de.schildbach.wallet_test.databinding.ActivityOnboardingPermLockBinding
@@ -166,6 +170,26 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
         OnboardingState.init(walletApplication.configuration)
         OnboardingState.clear()
+
+        // Degraded launch (wallet file exists but no wallet object): either the
+        // load itself failed past recovery (e.g. OOM on a very large wallet) or
+        // safe mode skipped it after consecutive launch deaths. The ONLY job of
+        // this launch is to surface the crash report — never route into
+        // onboarding (whose create/restore flows would overwrite the wallet
+        // file) and never touch `wallet!!`.
+        if (walletApplication.isWalletLoadDegraded ||
+            (walletApplication.walletFileExists() && walletApplication.wallet == null)
+        ) {
+            log.warn(
+                "degraded startup: walletFileExists={}, walletLoadDegraded={}, safeMode={} — " +
+                    "showing the crash-report path",
+                walletApplication.walletFileExists(),
+                walletApplication.isWalletLoadDegraded,
+                walletApplication.isSafeModeLaunch
+            )
+            showDegradedStartupScreen()
+            return
+        }
 
         // TODO: we should decouple the logic from view interactions
         // and move some of this to the viewModel, wrapping it in tests.
@@ -311,6 +335,60 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private fun onboarding() {
         initViewModel()
+    }
+
+    /**
+     * Degraded-launch UI: the wallet could not be (or was deliberately not)
+     * loaded. Offers the crash report IMMEDIATELY — the attachments include
+     * crash.trace/background.trace, the rolling app logs and the launch
+     * breadcrumbs — plus a single Close button. No onboarding CTAs: the
+     * create/restore flows would overwrite the existing wallet file.
+     */
+    private fun showDegradedStartupScreen() {
+        binding.composeContainer.setContent {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp, 10.dp, 20.dp, 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                DashButton(
+                    onClick = { showDegradedStartupReportDialog() },
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(R.string.report_issue_dialog_report),
+                    style = Style.FilledWhiteBlue,
+                    size = Size.Large
+                )
+                DashButton(
+                    onClick = { finishAffinity() },
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(R.string.perm_lock_close_app),
+                    style = Style.TintedWhite,
+                    size = Size.Large
+                )
+            }
+        }
+        showDegradedStartupReportDialog()
+    }
+
+    private fun showDegradedStartupReportDialog() {
+        val stackTrace = StringBuilder()
+        if (CrashReporter.hasSavedCrashTrace()) {
+            try {
+                // NOTE: consumes (deletes) cache/crash.trace — from here on the
+                // trace lives in the dialog args / outgoing report.
+                CrashReporter.appendSavedCrashTrace(stackTrace)
+            } catch (x: IOException) {
+                log.info("problem appending crash info", x)
+            }
+        }
+        ContactSupportDialogFragment.newInstance(
+            getString(R.string.report_issue_dialog_title_crash),
+            getString(R.string.report_issue_dialog_message_crash),
+            contextualData = StartupBreadcrumbs.reportText(),
+            stackTrace = stackTrace.toString().ifEmpty { null },
+            isCrash = true
+        ).show(this)
     }
 
     private fun createNewWallet() {

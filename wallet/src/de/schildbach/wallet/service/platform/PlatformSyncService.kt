@@ -112,6 +112,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import de.schildbach.wallet.util.StartupBreadcrumbs
 import de.schildbach.wallet.util.format
 import de.schildbach.wallet.util.setAmount
 import de.schildbach.wallet.util.setFiatAmount
@@ -304,10 +305,18 @@ class PlatformSynchronizationService @Inject constructor(
     // logged+swallowed inside startIfEnabled(). Bind is single-flight and
     // startIfEnabled() is idempotent, so re-running the recipe is safe.
     private fun kickSdkEngines() {
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_BIND_KICKED, "SDK_BIND_KICKED")
         val bindJob = sdkWalletBinder.bindInBackground(nonInteractiveWalletUnlock::unlockOrNull)
         syncScope.launch {
             bindJob.join()
+            // Async-lane breadcrumbs around the NATIVE engine start: a
+            // deterministic Rust/JNI crash on resume leaves no Java trace, so a
+            // crash-looped install whose previous-launch trail repeatedly ends
+            // at SDK_L1_ENGINE_STARTING is the fingerprint that convicts the
+            // native engine (see StartupBreadcrumbs).
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTING, "SDK_L1_ENGINE_STARTING")
             l1ShadowSyncService.startIfEnabled()
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTED, "SDK_L1_ENGINE_STARTED")
             // Phase 5d follow-up: the post-cutover UI data source (balance
             // header / tx list / coins-received detection served from the
             // SDK once the cutover is committed). Idempotent once-per-process
@@ -347,6 +356,7 @@ class PlatformSynchronizationService @Inject constructor(
             // completes here, in the background, with no screen open — the
             // user was promised it "will finish automatically" and nothing
             // ever told them it had. Idempotent, once per process.
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_CUTOVER_SERVICES_STARTED, "CUTOVER_SERVICES_STARTED")
             shieldedTransferExecutor.startObservingBackgroundShields()
             launch {
                 runCatching {
