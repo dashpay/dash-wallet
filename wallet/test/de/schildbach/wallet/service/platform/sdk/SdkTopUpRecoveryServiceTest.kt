@@ -160,6 +160,31 @@ class SdkTopUpRecoveryServiceTest {
     }
 
     @Test
+    fun drain_platformAlreadyUsedMessage_isTerminal_notRetryable() {
+        // Platform's own rejection is NOT the SDK's typed error: it arrives as
+        // a Generic protocol error reading "output N already completely used"
+        // (observed live). Treating it as retryable made WorkManager back off
+        // forever on a lock whose credits had already landed.
+        val wrapped = RuntimeException(
+            "SDK error",
+            DashSdkError.PlatformWallet.Generic(
+                99,
+                "SDK error: Protocol error: Asset lock transaction " +
+                    "8012039dc8500f0899171365986cdfd5982dc2967843236c0e8467ca566945ef " +
+                    "output 0 already completely used"
+            )
+        )
+        val source = FakeSource(
+            boundWalletId = { walletId },
+            recoveryLocks = { listOf(lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP)) },
+            onResume = { throw wrapped }
+        )
+        val report = runBlocking { service(source).drainPendingTopUps() }
+        assertEquals(TopUpDrainReport(pending = 1, resumed = 0, alreadyConsumed = 1, failed = 0), report)
+        assertFalse(report.retryNeeded)
+    }
+
+    @Test
     fun drain_oneFailure_doesNotStopTheRest_andRequestsRetry() {
         val failing = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP, firstByte = 2)
         val fine = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, firstByte = 3)
