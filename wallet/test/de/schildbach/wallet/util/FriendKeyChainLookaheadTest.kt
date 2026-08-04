@@ -18,8 +18,10 @@
 package de.schildbach.wallet.util
 
 import com.google.common.collect.ImmutableList
+import java.math.BigInteger
 import org.bitcoinj.core.Utils
 import org.bitcoinj.crypto.ChildNumber
+import org.bitcoinj.crypto.ExtendedChildNumber
 import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.DerivationPathFactory
 import org.bitcoinj.wallet.DeterministicKeyChain
@@ -209,17 +211,21 @@ class FriendKeyChainLookaheadTest {
         assertEquals(1, FriendKeyChainLookahead.completedCount())
         assertEquals(0, FriendKeyChainLookahead.pendingCount())
 
+        // The watched-key SET must be identical — only its timing moves.
+        // (Compared through the chains' IN-MEMORY key ownership: the deferred
+        // chain deliberately serializes a smaller protobuf — see the
+        // serialization-strip tests — so the file is no longer the probe.)
         assertEquals(
-            "the watched-key SET must be identical — only its timing moves",
-            eagerKeys, publicKeys(deferred)
+            "the in-memory key count must match the eager chain",
+            eager.numKeys(), deferred.numKeys()
         )
 
         // The funds-detection primitive itself: every address the eager chain
         // would have recognised, the completed deferred chain recognises.
-        eager.serializeToProtobuf().filter { it.hasPublicKey() }.forEach {
+        eagerKeys.forEach {
             assertNotNull(
                 "a completed deferred chain must own every eager key",
-                deferred.findKeyFromPubKey(it.publicKey.toByteArray())
+                deferred.findKeyFromPubKey(it.toByteArray())
             )
         }
     }
@@ -301,6 +307,196 @@ class FriendKeyChainLookaheadTest {
             )
         }
         assertEquals(3, deferred.issuedExternalKeys)
+    }
+
+    // ── the serialization strip: lookahead keys do NOT round-trip ─────────
+
+    /** Serialized DETERMINISTIC_KEY entry count (excludes the mnemonic entry). */
+    private fun serializedKeyCount(chain: DeterministicKeyChain): Int =
+        chain.serializeToProtobuf().count { it.type == Protos.Key.Type.DETERMINISTIC_KEY }
+
+    /** Serialized LEAF entries (depth accountPath+1, either path representation). */
+    private fun serializedLeafCount(chain: DeterministicKeyChain): Int {
+        val leafDepth = chain.accountPath.size + 1
+        return chain.serializeToProtobuf().count {
+            it.type == Protos.Key.Type.DETERMINISTIC_KEY &&
+                (it.deterministicKey.pathCount == leafDepth || it.deterministicKey.extendedPathCount == leafDepth)
+        }
+    }
+
+    @Test
+    fun completedDeferredChain_serializesTheSmallShape_notThe131KeyWindow() {
+        val deferred = receivingChain(dashPayPath()) as FriendKeyChain
+        // pre-completion = what the file held: a fresh friend chain already
+        // carries exactly its two metadata-carrier leaves (the "2 children"
+        // of the tester's log arithmetic)
+        val baseline = serializedKeyCount(deferred)
+        assertEquals(FriendKeyChainLookahead.METADATA_CARRIER_LEAVES, serializedLeafCount(deferred))
+        assertTrue(FriendKeyChainLookahead.awaitComplete(60_000L))
+        assertTrue("sanity: completion derived the window in memory", deferred.numKeys() > EXPECTED_DERIVED_KEYS)
+
+        // The tester's regression: this used to be baseline + 131 (2.5MB -> 6.5MB
+        // across the whole wallet). The unissued window must not round-trip.
+        assertEquals(
+            "unissued lookahead keys must not be serialized",
+            baseline, serializedKeyCount(deferred)
+        )
+        assertEquals(
+            "exactly the two metadata-carrier leaves persist",
+            FriendKeyChainLookahead.METADATA_CARRIER_LEAVES, serializedLeafCount(deferred)
+        )
+
+        // The eager dashj chain still serializes fatly — the strip is scoped to
+        // the deferred subclasses, nothing else's serialization is touched.
+        val eager = FriendKeyChain(seed(), null, dashPayPath())
+        eager.maybeLookAhead()
+        assertTrue(serializedKeyCount(eager) > EXPECTED_DERIVED_KEYS)
+    }
+
+    @Test
+    fun issuedKeys_alwaysSurviveTheStrip_byteIdentical() {
+        val deferred = receivingChain(dashPayPath()) as FriendKeyChain
+        assertTrue(FriendKeyChainLookahead.awaitComplete(60_000L))
+
+        val issued = deferred.getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, 4)
+        assertEquals(4, deferred.issuedExternalKeys)
+
+        val serializedPubKeys = deferred.serializeToProtobuf()
+            .filter { it.hasPublicKey() }
+            .map { it.publicKey.toByteArray().toList() }
+        issued.forEach { key ->
+            assertTrue(
+                "issued key ${key.path} must persist in the wallet file",
+                serializedPubKeys.contains(key.pubKey.toList())
+            )
+        }
+    }
+
+    /**
+     * THE load-bearing round trip for the strip: save (stripped) → load →
+     * complete, and the watched-key set is byte-identical to the original.
+     * This is the production cycle every wallet goes through on each launch,
+     * and the proof the strip can never cost a watched address.
+     */
+    /**
+     * A REALISTIC friend path: the user-id components are 256-bit
+     * [ExtendedChildNumber]s, which is both what production chains carry and
+     * what dashj's `fromProtobuf` keys its friend-chain factory dispatch on.
+     */
+    private fun extendedDashPayPath(): ImmutableList<ChildNumber> = ImmutableList.of(
+        ChildNumber.NINE_HARDENED,
+        ChildNumber(5, true),
+        DerivationPathFactory.FEATURE_PURPOSE_DASHPAY,
+        ChildNumber(0, true),
+        ExtendedChildNumber(BigInteger(1, ByteArray(32) { 0x11 })),
+        ExtendedChildNumber(BigInteger(1, ByteArray(32) { 0x77 }))
+    )
+
+    @Test
+    fun strippedFile_reloadsAndReconverges_toTheIdenticalKeySet() {
+        val path = extendedDashPayPath()
+        val original = receivingChain(path) as FriendKeyChain
+        assertTrue(FriendKeyChainLookahead.awaitComplete(60_000L))
+        original.getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, 3)
+        assertEquals(3, original.issuedExternalKeys)
+
+        // Every key (including the full lookahead window) the original owns.
+        val originalKeyCount = original.numKeys()
+        val eager = FriendKeyChain(seed(), null, path)
+        eager.maybeLookAhead()
+        eager.getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, 3)
+        val fullWindow = publicKeys(eager)
+
+        // SAVE: the stripped protobuf...
+        val stripped = original.serializeToProtobuf()
+        assertTrue(
+            "the saved file must hold the small shape",
+            stripped.count { it.type == Protos.Key.Type.DETERMINISTIC_KEY } < EXPECTED_DERIVED_KEYS
+        )
+
+        // ...LOAD it back through dashj's own deserializer with the deferring
+        // factory (exactly the wallet-load path), then complete.
+        FriendKeyChainLookahead.reset()
+        val reloaded = DeterministicKeyChain.fromProtobuf(stripped, null, FriendKeyChainLookahead.deferringFactory())
+            .single() as FriendKeyChain
+        assertEquals("the issued count must survive the round trip", 3, reloaded.issuedExternalKeys)
+        assertTrue(FriendKeyChainLookahead.awaitComplete(60_000L))
+
+        // The reloaded chain re-derives its window RELATIVE TO the issued
+        // count, so it may extend a few keys further than the original — a
+        // SUPERSET is funds-safe; a missing key would not be.
+        assertTrue(
+            "the reloaded chain must own at least every original key",
+            reloaded.numKeys() >= originalKeyCount
+        )
+        fullWindow.forEach {
+            assertNotNull(
+                "every watched key must be re-derived byte-identically after the round trip",
+                reloaded.findKeyFromPubKey(it.toByteArray())
+            )
+        }
+    }
+
+    // ── the pure strip filter ────────────────────────────────────────────
+
+    private fun leafKey(index: Int, depth: Int = 7, extended: Boolean = true, simple: Boolean = true): Protos.Key {
+        val dk = Protos.DeterministicKey.newBuilder()
+            .setChainCode(com.google.protobuf.ByteString.copyFrom(ByteArray(32)))
+        if (extended) {
+            repeat(depth - 1) { i ->
+                dk.addExtendedPath(
+                    Protos.ExtendedChildNumber.newBuilder().setSimple(true).setI(i or -0x80000000).build()
+                )
+            }
+            dk.addExtendedPath(
+                if (simple) {
+                    Protos.ExtendedChildNumber.newBuilder().setSimple(true).setI(index).build()
+                } else {
+                    Protos.ExtendedChildNumber.newBuilder().setSimple(false)
+                        .setBi(com.google.protobuf.ByteString.copyFrom(ByteArray(32) { 1 })).setSize(32).build()
+                }
+            )
+        } else {
+            repeat(depth - 1) { i -> dk.addPath(i or -0x80000000) }
+            dk.addPath(index)
+        }
+        return Protos.Key.newBuilder()
+            .setType(Protos.Key.Type.DETERMINISTIC_KEY)
+            .setPublicKey(com.google.protobuf.ByteString.copyFrom(ByteArray(33)))
+            .setDeterministicKey(dk)
+            .build()
+    }
+
+    @Test
+    fun stripFilter_table() {
+        val leafDepth = 7
+        // unissued lookahead leaves (>= keepBelow) are strippable, plain or extended path
+        assertTrue(FriendKeyChainLookahead.isStrippableLookaheadLeaf(leafKey(5), leafDepth, 2))
+        assertTrue(FriendKeyChainLookahead.isStrippableLookaheadLeaf(leafKey(5, extended = false), leafDepth, 2))
+        assertTrue(FriendKeyChainLookahead.isStrippableLookaheadLeaf(leafKey(132), leafDepth, 2))
+        // the metadata-carrier leaves 0 and 1 are never strippable
+        assertFalse(FriendKeyChainLookahead.isStrippableLookaheadLeaf(leafKey(0), leafDepth, 2))
+        assertFalse(FriendKeyChainLookahead.isStrippableLookaheadLeaf(leafKey(1), leafDepth, 2))
+        // issued leaves are never strippable (issued 5 -> keepBelow 5)
+        assertFalse(FriendKeyChainLookahead.isStrippableLookaheadLeaf(leafKey(4), leafDepth, 5))
+        assertTrue(FriendKeyChainLookahead.isStrippableLookaheadLeaf(leafKey(5), leafDepth, 5))
+        // wrong depth (account/ancestor nodes) — never strippable
+        assertFalse(FriendKeyChainLookahead.isStrippableLookaheadLeaf(leafKey(5, depth = 6), leafDepth, 2))
+        // hardened child — not a lookahead leaf
+        assertFalse(FriendKeyChainLookahead.isStrippableLookaheadLeaf(leafKey(5 or -0x80000000), leafDepth, 2))
+        // extended (user-id) child number — never strippable
+        assertFalse(FriendKeyChainLookahead.isStrippableLookaheadLeaf(leafKey(5, simple = false), leafDepth, 2))
+        // non-deterministic entries (the mnemonic) — never strippable
+        val mnemonic = Protos.Key.newBuilder().setType(Protos.Key.Type.DETERMINISTIC_MNEMONIC)
+            .setSecretBytes(com.google.protobuf.ByteString.copyFrom(ByteArray(16))).build()
+        assertFalse(FriendKeyChainLookahead.isStrippableLookaheadLeaf(mnemonic, leafDepth, 2))
+    }
+
+    @Test
+    fun stripFilter_keepsOrderAndEverythingElse() {
+        val keys = listOf(leafKey(0), leafKey(1), leafKey(2), leafKey(3), leafKey(2, depth = 6))
+        val kept = FriendKeyChainLookahead.stripUnissuedLookaheadLeaves(keys, accountPathSize = 6, issuedExternalKeys = 0)
+        assertEquals(listOf(keys[0], keys[1], keys[4]), kept)
     }
 
     @Test

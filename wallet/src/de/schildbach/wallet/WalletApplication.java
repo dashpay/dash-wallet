@@ -1077,6 +1077,13 @@ public class WalletApplication extends MultiDexApplication
         log.addAppender(fileAppender);
         log.addAppender(logcatAppender);
         log.setLevel(Level.INFO);
+
+        // dashj's peer-timeout diagnostic WARN-logs a full thread dump on
+        // EVERY peer timeout (96 dumps = 118k log lines in one flapping
+        // session, starving I/O). Keep at most one dump per interval; all
+        // other lines on that logger (Timed out / TIMEOUT CAUSE / CRITICAL)
+        // pass untouched. See PeerTimeoutDumpThrottle.
+        context.addTurboFilter(new de.schildbach.wallet.util.PeerTimeoutDumpThrottle());
     }
 
     @Deprecated(message = "Inject Configuration instead")

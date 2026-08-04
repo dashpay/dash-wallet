@@ -94,6 +94,40 @@ import java.util.concurrent.atomic.AtomicReference
  * chain that window IS the gap limit for payments a contact sends you while you
  * are offline; narrowing it would narrow received-funds detection, which is not
  * a trade this fix is allowed to make.
+ *
+ * ## The serialization side: lookahead keys do NOT round-trip (11.10.58)
+ *
+ * Deferring the derivation exposed the mirror problem: once [completeAsync]
+ * has derived the 100+33 window IN MEMORY, dashj's
+ * `DeterministicKeyChain.serializeMyselfToProtobuf` wrote every one of those
+ * keys back into the wallet protobuf. Measured on the mainnet tester's wallet:
+ * 2,535,811 → 6,489,706 bytes after one completion pass (15,510 receiving +
+ * 14,070 sending friend keys), autosaves stretching 34 s → 114 s, and the next
+ * launch choking on the sheer deserialization size.
+ *
+ * Persisting those keys buys NOTHING: they are unissued, deterministically
+ * re-derivable (same seed/xpub, same paths → byte-identical keys), and this
+ * class already re-derives them off the critical path on every load. So the
+ * deferred chains override `serializeMyselfToProtobuf` and STRIP the unissued
+ * lookahead leaves ([stripUnissuedLookaheadLeaves]) before the protobuf is
+ * written:
+ *
+ *  * ISSUED leaves always persist — nothing the wallet has handed out or
+ *    marked used is touched, so their bytes in the file are unchanged.
+ *  * Leaves 0 and 1 always persist even when unissued: dashj's `fromProtobuf`
+ *    treats leaf 0 as the carrier of `issued_subkeys`/`lookahead_size` (it
+ *    becomes `externalParentKey` on load) and leaf 1 as the internal-counter
+ *    carrier — exactly the 2-keys-per-chain shape every pre-11.10.54 wallet
+ *    file already had, proving the load path handles it.
+ *  * Anything not provably an unissued plain-indexed lookahead leaf is KEPT
+ *    (default-keep filter): account/ancestor nodes, hardened children,
+ *    extended (user-id) child numbers, other key types.
+ *
+ * The system therefore CONVERGES to small files: load defers → completion
+ * derives in memory → every save strips → the file returns to (and stays at)
+ * the 2-keys-per-chain baseline. Chains created at runtime for brand-new
+ * contacts still serialize their window fatly until the next load rebuilds
+ * them through [deferringFactory] — one restart converges them too.
  */
 object FriendKeyChainLookahead {
     private val log = LoggerFactory.getLogger(FriendKeyChainLookahead::class.java)
@@ -153,6 +187,11 @@ object FriendKeyChainLookahead {
             deferred = false
             maybeLookAhead()
         }
+
+        override fun serializeMyselfToProtobuf(): MutableList<Protos.Key> =
+            stripUnissuedLookaheadLeaves(
+                super.serializeMyselfToProtobuf(), getAccountPath().size, issuedExternalKeys
+            )
     }
 
     /**
@@ -174,6 +213,11 @@ object FriendKeyChainLookahead {
             deferred = false
             maybeLookAhead()
         }
+
+        override fun serializeMyselfToProtobuf(): MutableList<Protos.Key> =
+            stripUnissuedLookaheadLeaves(
+                super.serializeMyselfToProtobuf(), getAccountPath().size, issuedExternalKeys
+            )
     }
 
     /**
@@ -189,6 +233,73 @@ object FriendKeyChainLookahead {
         if (accountPath == null || accountPath.size < 3) return false
         return accountPath[0] == ChildNumber.NINE_HARDENED &&
             accountPath[2] == DerivationPathFactory.FEATURE_PURPOSE_DASHPAY
+    }
+
+    /**
+     * dashj's `fromProtobuf` reads a friend/external chain's counters off its
+     * first leaves: leaf 0 becomes `externalParentKey` and carries
+     * `issued_subkeys`/`lookahead_size`/`sigs_required`, leaf 1 becomes
+     * `internalParentKey` and carries the internal issued count. They must
+     * ALWAYS round-trip — which is exactly the 2-keys-per-chain file shape
+     * every pre-lookahead wallet file already had.
+     */
+    const val METADATA_CARRIER_LEAVES = 2
+
+    private const val HARDENED_BIT = -0x80000000 // 0x80000000 as an Int
+
+    /**
+     * Serialization-side companion of the deferred lookahead: drop the
+     * UNISSUED lookahead leaves from a friend chain's serialized key list so
+     * they never round-trip through the wallet protobuf (they are re-derived
+     * byte-identically by [completeAsync] on the next load). DEFAULT-KEEP:
+     * only entries provably matching the unissued-plain-leaf shape are
+     * removed. Pure — unit-tested directly.
+     *
+     * @param keys the chain's `serializeMyselfToProtobuf()` output
+     * @param accountPathSize leaf depth is `accountPathSize + 1`
+     * @param issuedExternalKeys leaves `0 until issuedExternalKeys` are issued
+     */
+    @JvmStatic
+    internal fun stripUnissuedLookaheadLeaves(
+        keys: List<Protos.Key>,
+        accountPathSize: Int,
+        issuedExternalKeys: Int
+    ): MutableList<Protos.Key> {
+        val leafDepth = accountPathSize + 1
+        val keepBelow = maxOf(issuedExternalKeys, METADATA_CARRIER_LEAVES)
+        val kept = ArrayList<Protos.Key>(keys.size)
+        for (key in keys) {
+            if (!isStrippableLookaheadLeaf(key, leafDepth, keepBelow)) {
+                kept.add(key)
+            }
+        }
+        return kept
+    }
+
+    /**
+     * Whether [key] is PROVABLY an unissued lookahead leaf: a deterministic
+     * key at exactly the leaf depth whose final child number is plain
+     * (non-hardened, non-extended) with index >= [keepBelow]. Anything
+     * ambiguous is NOT strippable.
+     */
+    @JvmStatic
+    internal fun isStrippableLookaheadLeaf(key: Protos.Key, leafDepth: Int, keepBelow: Int): Boolean {
+        if (key.type != Protos.Key.Type.DETERMINISTIC_KEY || !key.hasDeterministicKey()) return false
+        val dk = key.deterministicKey
+        val leafIndex: Int
+        if (dk.extendedPathCount > 0) {
+            // Friend chains serialize the EXTENDED path (their account path
+            // contains 256-bit user-id child numbers).
+            if (dk.extendedPathCount != leafDepth) return false
+            val last = dk.getExtendedPath(dk.extendedPathCount - 1)
+            if (!last.simple) return false
+            leafIndex = last.i
+        } else {
+            if (dk.pathCount != leafDepth) return false
+            leafIndex = dk.getPath(dk.pathCount - 1)
+        }
+        if (leafIndex and HARDENED_BIT != 0) return false // hardened — not a lookahead leaf
+        return leafIndex >= keepBelow
     }
 
     /** Threads to complete [chains] deferred chains on a [cores]-core device. */

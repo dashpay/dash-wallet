@@ -243,6 +243,21 @@ class PlatformSynchronizationService @Inject constructor(
         private val PUBLISH = MarkerFactory.getMarker("PUBLISH")
         val NON_CONTACTS_UPDATE_PERIOD = 1.minutes.inWholeMilliseconds
         val STOP_SYNC_JOIN_TIMEOUT = 5.seconds
+
+        /**
+         * Whether the dashpay DATA CONTRACT itself is loaded — a strictly
+         * stronger condition than `hasApp("dashpay")`, which only checks the
+         * app REGISTRATION (contract id) is configured. Rebuilding a
+         * [org.dashj.platform.dashpay.ContactRequest] goes through
+         * `Documents.create` -> `Contracts.get`, which returns the app
+         * definition's cached contract — null until the contract document has
+         * actually been fetched, and `Documents.create` NPEs on that null.
+         * Guard any code that BUILDS dashpay documents with this, not with
+         * hasApp.
+         */
+        @JvmStatic
+        internal fun isDashPayContractLoaded(platform: org.dashj.platform.sdk.platform.Platform): Boolean =
+            runCatching { platform.apps["dashpay"]?.contract != null }.getOrDefault(false)
     }
 
     private var platformSyncJob: Job? = null
@@ -1179,6 +1194,17 @@ class PlatformSynchronizationService @Inject constructor(
     private suspend fun checkDatabaseIntegrity(userId: String) {
         val watch = Stopwatch.createStarted()
         log.info("check database integrity: starting")
+
+        // The reconciliation below REBUILDS ContactRequest documents from the
+        // database rows (toContactRequest -> Documents.create), which needs the
+        // dashpay data contract to be LOADED — hasApp("dashpay") upstream only
+        // proves the app registration exists. Running before the contract
+        // fetch completed NPEd out of Contracts.get and aborted the integrity
+        // pass every cycle. Skip this round; the next sync cycle retries.
+        if (!isDashPayContractLoaded(platform.platform)) {
+            log.warn("check database integrity: skipped — the dashpay data contract is not loaded yet")
+            return
+        }
 
         try {
             val userIdList = HashSet<String>()

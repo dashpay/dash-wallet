@@ -37,8 +37,10 @@ import android.net.Uri
 import android.os.Binder
 import android.os.Build
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.SystemClock
 import android.text.format.DateUtils
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
@@ -74,6 +76,7 @@ import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet.util.BlockchainStateUtils
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.FriendKeyChainLookahead
+import de.schildbach.wallet.util.ThrottledRunner
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CompletableDeferred
@@ -217,6 +220,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // host-JVM testable and shared by both engines' sample sources.
         private const val APPWIDGET_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS
         private const val BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS
+        /** Peer connect/disconnect bursts collapse to one notification update per second. */
+        private const val NOTIFICATION_UPDATE_MIN_INTERVAL_MS = DateUtils.SECOND_IN_MILLIS
         private val TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(180)
         private val log = LoggerFactory.getLogger(BlockchainServiceImpl::class.java)
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
@@ -368,6 +373,22 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var peerGroup: PeerGroup? = null
     private val handler = Handler()
     private val delayHandler = Handler()
+
+    /**
+     * NOTIFICATION LANE — a dedicated background thread for every
+     * NotificationManager binder call this service makes repeatedly.
+     *
+     * WHY: NotificationManager.notify/cancel are synchronous binder IPCs into
+     * system_server. On a loaded device that call can BLOCK for seconds — the
+     * mainnet tester's session had all 7 ANR stacks parked inside
+     * NotificationManager.cancel on the MAIN thread, driven by 233
+     * peer-disconnect events. Nothing about a status-bar notification needs
+     * the main thread, so all repeated notification traffic goes through this
+     * single background lane instead (one thread also serializes notify/cancel
+     * ordering better than mixed main/coroutine callers ever did).
+     */
+    private val notificationHandlerThread = HandlerThread("notification-lane").apply { start() }
+    private val notificationHandler = Handler(notificationHandlerThread.looper)
     private var wakeLock: PowerManager.WakeLock? = null
     private var peerConnectivityListener: PeerConnectivityListener? = null
     private var nm: NotificationManager? = null
@@ -502,7 +523,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         ) {
                             apiConfirmationHandler!!.handle(tx.toTxInfo(wallet, Constants.NETWORK_PARAMETERS))
                         } else if (passFilters(tx, wallet)) {
-                            notifyCoinsReceived(address, amount, tx.exchangeRate)
+                            // resolveLabel is a ContentProvider query and
+                            // nm.notify a binder IPC — notification lane, not
+                            // main. All coins-received notification state is
+                            // mutated on that single lane (see the cancel
+                            // action in onStartCommand).
+                            notificationHandler.post { notifyCoinsReceived(address, amount, tx.exchangeRate) }
                         }
                     }
                 }
@@ -697,6 +723,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private var peerCount = 0
         val stopped = AtomicBoolean(false)
 
+        /** The latest peer count — whatever it is when the throttled update runs, wins. */
+        private val latestPeerCount = AtomicInteger(0)
+
+        /**
+         * OFF-MAIN + COALESCED notification updates. The old code posted one
+         * MAIN-thread NotificationManager call per peer event; a flapping
+         * network delivered 233 of them and the blocked binder call
+         * (system_server under load) was the parked frame in all 7 of the
+         * mainnet tester's ANR stacks. The status bar does not need 233
+         * updates: at most one per second, on the notification lane, reading
+         * whatever the peer count is by then.
+         */
+        private val throttledUpdate = ThrottledRunner(
+            NOTIFICATION_UPDATE_MIN_INTERVAL_MS,
+            { runnable, delayMs -> notificationHandler.postDelayed(runnable, delayMs) },
+            { SystemClock.uptimeMillis() }
+        ) { updateNotificationAndBroadcast() }
+
         init {
             config.registerOnSharedPreferenceChangeListener(this)
         }
@@ -704,7 +748,16 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         fun stop() {
             stopped.set(true)
             config.unregisterOnSharedPreferenceChangeListener(this)
-            nm!!.cancel(Constants.NOTIFICATION_ID_CONNECTED)
+            // The final cancel is a binder call too — keep it off the caller
+            // (onDestroy runs on main) and behind any in-flight notify, so the
+            // notification cannot be resurrected after the cancel.
+            notificationHandler.post {
+                try {
+                    nm!!.cancel(Constants.NOTIFICATION_ID_CONNECTED)
+                } catch (t: Throwable) {
+                    log.warn("failed to cancel connectivity notification on stop", t)
+                }
+            }
         }
 
         override fun onPeerConnected(peer: Peer, peerCount: Int) {
@@ -721,16 +774,26 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             if (Configuration.PREFS_KEY_CONNECTIVITY_NOTIFICATION == key) changed(peerCount)
         }
 
-        @SuppressLint("WrongConstant")
         private fun changed(numPeers: Int) {
             if (stopped.get()) return
+            // The network-status flip is cheap in-memory state — keep it
+            // immediate and per-event.
             val networkStatus = blockchainStateDataProvider.getNetworkStatus()
             if (numPeers > 0 && networkStatus == NetworkStatus.CONNECTING) blockchainStateDataProvider.setNetworkStatus(
                 NetworkStatus.CONNECTED
             ) else if (numPeers == 0 && networkStatus == NetworkStatus.DISCONNECTING) blockchainStateDataProvider.setNetworkStatus(
                 NetworkStatus.DISCONNECTED
             )
-            handler.post {
+            latestPeerCount.set(numPeers)
+            throttledUpdate.schedule()
+        }
+
+        /** Runs on the notification lane, at most once per interval. */
+        @SuppressLint("WrongConstant")
+        private fun updateNotificationAndBroadcast() {
+            if (stopped.get()) return
+            val numPeers = latestPeerCount.get()
+            try {
                 val connectivityNotificationEnabled = config.connectivityNotificationEnabled
                 if (!connectivityNotificationEnabled || numPeers == 0) {
                     nm!!.cancel(Constants.NOTIFICATION_ID_CONNECTED)
@@ -757,10 +820,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     notification.setOngoing(true)
                     nm!!.notify(Constants.NOTIFICATION_ID_CONNECTED, notification.build())
                 }
-
-                // send broadcast
-                broadcastPeerState(numPeers)
+            } catch (t: Throwable) {
+                // A notification must never take the peer machinery down.
+                log.warn("connectivity notification update failed", t)
             }
+
+            // send broadcast (LocalBroadcastManager delivers on its own
+            // executor — safe from this thread)
+            broadcastPeerState(numPeers)
         }
     }
 
@@ -1168,7 +1235,18 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerGroup!!.setStallThreshold(30, 5 * Block.HEADER_SIZE)
                 peerGroup!!.setConnectTimeoutMillis(Constants.PEER_TIMEOUT_MS)
                 peerGroup!!.setPeerDiscoveryTimeoutMillis(Constants.PEER_DISCOVERY_TIMEOUT_MS.toLong())
-                peerGroup!!.isUseCompressedHeaders = true
+                // REVERTED to dashj's own default (false) in 11.10.58 — this was
+                // true since 11.10.x. The tester's session hit a repeated
+                // Peer.processHeaders:800 IllegalStateException → peer-close
+                // cascade: a pre-existing dashj headers-download state-machine
+                // bug (a STALE headersDownloadedFuture flips vDownloadHeaders
+                // while a getheaders2 request is still in flight; reported
+                // upstream as dashj PR #132 in 2020, no fix in 22.0.4 or
+                // master). Compressed headers don't CAUSE the race, but they
+                // enlarge its window 4x (MAX_HEADERS 8000 vs 2000) and add the
+                // processHeaders2 entry path. false removes that path entirely
+                // and restores the 11.9-and-earlier configuration.
+                peerGroup!!.isUseCompressedHeaders = false
                 peerGroup!!.addPeerDiscovery(object : PeerDiscovery {
                     //Keep Original code here for now
                     //private final PeerDiscovery normalPeerDiscovery = MultiplexingDiscovery
@@ -2119,10 +2197,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 )
                 val action = intent.action
                 if (BlockchainService.ACTION_CANCEL_COINS_RECEIVED == action) {
-                    notificationCount = 0
-                    notificationAccumulatedAmount = Coin.ZERO
-                    notificationAddresses.clear()
-                    nm!!.cancel(Constants.NOTIFICATION_ID_COINS_RECEIVED)
+                    // Same lane as notifyCoinsReceived, so reset-vs-notify can
+                    // never interleave and the cancel binder call stays off
+                    // this coroutine.
+                    notificationHandler.post {
+                        notificationCount = 0
+                        notificationAccumulatedAmount = Coin.ZERO
+                        notificationAddresses.clear()
+                        nm!!.cancel(Constants.NOTIFICATION_ID_COINS_RECEIVED)
+                    }
                 } else if (BlockchainService.ACTION_RESET_BLOCKCHAIN == action) {
                     log.info("will remove blockchain on service shutdown")
                     resetBlockchainOnShutdown = true
@@ -2343,6 +2426,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerConnectivityListener?.stop()
                 log.info("CLEANUP STEP 5: peerConnectivityListener stopped")
                 delayHandler.removeCallbacksAndMessages(null)
+                // Drain-and-quit the notification lane: processes anything
+                // already posted (including the listener's final cancel above),
+                // then lets the thread exit.
+                notificationHandlerThread.quitSafely()
                 log.info("CLEANUP STEP 6: delayHandler callbacks cleared")
                 try {
                     log.info("closing blockchain stores")
@@ -2666,19 +2753,25 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             //Handle Ongoing notification state
             val syncing =
                 blockchainState.bestChainDate!!.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
-            try {
-                if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver) {
-                    //Remove ongoing notification if blockchain sync finished
-                    stopForeground(true)
-                    foregroundService = ForegroundService.NONE
-                    nm!!.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC)
-                } else if (blockchainState.replaying || syncing) {
-                    //Shows ongoing notification when synchronizing the blockchain
-                    val notification = createNetworkSyncNotification(blockchainState)
-                    nm!!.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
+            // NotificationManager calls are synchronous binder IPC and this
+            // observer runs on MAIN for every blockchain-state DB write — same
+            // blocked-binder ANR shape as the peer-connectivity listener. Ship
+            // the notification work to the notification lane.
+            notificationHandler.post {
+                try {
+                    if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver) {
+                        //Remove ongoing notification if blockchain sync finished
+                        stopForeground(true)
+                        foregroundService = ForegroundService.NONE
+                        nm!!.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC)
+                    } else if (blockchainState.replaying || syncing) {
+                        //Shows ongoing notification when synchronizing the blockchain
+                        val notification = createNetworkSyncNotification(blockchainState)
+                        nm!!.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
+                    }
+                } catch (e: RuntimeException) {
+                    log.warn("notification manager call failed, system may be shutting down", e)
                 }
-            } catch (e: RuntimeException) {
-                log.warn("notification manager call failed, system may be shutting down", e)
             }
         }
         this.blockchainState = blockchainState

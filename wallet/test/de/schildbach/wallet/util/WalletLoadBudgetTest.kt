@@ -107,6 +107,30 @@ class WalletLoadBudgetTest {
     }
 
     @Test
+    fun overBudgetLaunchThatCOMPLETES_neverTripsSafeMode() {
+        // The 6.5MB-wallet shape: the parse blows the 20s budget (arming the
+        // breaker) but the launch still reaches the milestone. The armed strike
+        // must be cleared ON THE SPOT — a later process kill is not a launch
+        // failure (see StartupBreadcrumbs.markLaunchComplete).
+        val dir = Files.createTempDirectory("budget-test").toFile()
+        try {
+            StartupBreadcrumbs.init(dir)
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_BEGIN, "WALLET_LOAD_BEGIN", "size=6489706")
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_OVERBUDGET, "WALLET_LOAD_OVERBUDGET")
+            StartupBreadcrumbs.armSafeModeOnNextDeath()
+            StartupBreadcrumbs.markLaunchComplete()
+            assertEquals("0", File(dir, "startup.failures").readText().trim())
+            // (killed by the lowmemorykiller hours later — no survival marker)
+
+            StartupBreadcrumbs.init(dir)
+            assertFalse("a slow-but-completed launch must not open safe mode",
+                StartupBreadcrumbs.isSafeModeAdvised())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun overBudgetLaunchThatSURVIVES_neverTripsSafeMode() {
         val dir = Files.createTempDirectory("budget-test").toFile()
         try {
