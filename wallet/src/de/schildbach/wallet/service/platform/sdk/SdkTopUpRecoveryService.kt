@@ -261,6 +261,30 @@ class SdkTopUpRecoveryService internal constructor(
         false
     }
 
+    /**
+     * Whether the SDK top-up funded by the transaction with [txDisplayHex]
+     * is still PENDING (its lock sits in the recovery surface awaiting the
+     * credit transfer). False = no such pending lock — for a transaction
+     * known to be an SDK top-up that means CREDITED. Null when unknowable
+     * (SDK not running / surface unreadable). No-boot, read-only — safe
+     * from UI screens.
+     */
+    suspend fun isTopUpPending(txDisplayHex: String): Boolean? = try {
+        if (!sdkIsStarted()) {
+            null
+        } else {
+            val walletIdHex = source.boundWalletIdOrNull() ?: return null
+            val wanted = txDisplayHex.lowercase()
+            source.trackedRecoveryLocks(walletIdHex).any {
+                it.isResumableTopUp() && it.outpointTxid.toTxidHex() == wanted
+            }
+        }
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("failed to check pending state for top-up {}", txDisplayHex, t)
+        null
+    }
+
     private fun TrackedAssetLock.isResumableTopUp(): Boolean =
         fundingType == TrackedAssetLock.FundingType.IDENTITY_TOP_UP ||
             fundingType == TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND

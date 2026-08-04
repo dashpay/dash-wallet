@@ -26,11 +26,13 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.AssetLockKind
+import de.schildbach.wallet.service.platform.sdk.AssetLockKindResolver
 import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
+import de.schildbach.wallet.service.platform.sdk.SdkTopUpRecoveryService
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetailProvider
 import de.schildbach.wallet.service.platform.sdk.toDefaultMetadata
-import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.bitcoinj.core.Sha256Hash
@@ -72,6 +74,8 @@ class TransactionResultViewModel @Inject constructor(
     private val platformRepo: PlatformRepo,
     private val sdkTxDetailProvider: SdkTxDetailProvider,
     private val cutoverUiDataService: CutoverUiDataService,
+    private val assetLockKindResolver: AssetLockKindResolver,
+    private val sdkTopUpRecoveryService: SdkTopUpRecoveryService,
     val analytics: AnalyticsService,
     val walletApplication: WalletApplication
 ) : ViewModel() {
@@ -293,6 +297,17 @@ class TransactionResultViewModel @Inject constructor(
     }
 
     fun topUpStatus(txId: Sha256Hash): Flow<TopUp?> = topUpsDao.observe(txId)
-    fun topUpWork(txId: Sha256Hash): LiveData<Resource<WorkInfo>> =
-        TopupIdentityOperation.operationStatus(walletApplication, txId, analytics)
+
+    /**
+     * Credited state for an SDK-era top-up (which has no `topups`-table
+     * row): true = credited, false = still pending (its lock awaits the
+     * credit transfer in the SDK's recovery queue), null = not an SDK
+     * top-up or state unknowable (SDK down). Read-only and no-boot.
+     */
+    suspend fun sdkTopUpCredited(txId: Sha256Hash): Boolean? {
+        val txHex = txId.toString()
+        if (assetLockKindResolver.kindFor(txHex) != AssetLockKind.TOPUP) return null
+        val pending = sdkTopUpRecoveryService.isTopUpPending(txHex) ?: return null
+        return !pending
+    }
 }
