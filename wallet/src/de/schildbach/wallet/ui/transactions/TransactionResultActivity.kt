@@ -26,6 +26,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import de.schildbach.wallet.ui.main.MainActivity
 
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -33,7 +35,6 @@ import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.DashPayProfile
-import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
@@ -204,6 +205,14 @@ class TransactionResultActivity : LockScreenActivity() {
         // private memo) is txid-keyed and works unchanged.
         viewModel.sdkTxDetail.filterNotNull().observe(this) { detail ->
             transactionResultViewBinder.bindSdkDetail(detail)
+
+            // SDK top-up: swap the OP_RETURN row's pending label for
+            // "Platform credits" once the credits have landed.
+            lifecycleScope.launch {
+                viewModel.sdkTopUpCredited(txId)?.let { credited ->
+                    transactionResultViewBinder.setSdkTopUpState(error = false, completed = credited)
+                }
+            }
             contentBinding.openExplorerCard.setOnClickListener {
                 viewOnExplorerByTxId(detail.txIdDisplayHex)
             }
@@ -221,48 +230,21 @@ class TransactionResultActivity : LockScreenActivity() {
             }
         }
 
-        viewModel.topUpWork(txId).observe(this) { workData ->
-            log.info("topup work data: {}", workData)
-            try {
-                val txIdString = workData.data?.outputData?.getString(TopupIdentityWorker.KEY_TOPUP_TX)
-                log.info("txId from work matches viewModel: {} ==? {}", txIdString, txId)
-
-                when (workData.status) {
-                    Status.LOADING -> {
-                        log.info("  loading: {}", workData.data?.outputData)
-                    }
-
-                    Status.SUCCESS -> {
-                        log.info("  success: {}", workData.data?.outputData)
-                    }
-
-                    Status.ERROR -> {
-                        log.info("  error: {}", workData.data?.outputData)
-                        viewModel.topUpError = true
-                        transactionResultViewBinder.setSentToReturn(
-                            viewModel.transaction.value?.versionShort ?: Transaction.SPECIAL_VERSION,
-                            viewModel.transaction.value?.type ?:Transaction.Type.TRANSACTION_ASSET_LOCK,
-                            viewModel.topUpError,
-                            viewModel.topUpComplete
-                        )                    }
-
-                    Status.CANCELED -> {
-                        log.info("  cancel: {}", workData.data?.outputData)
-                    }
-                }
-            } catch (e: Exception) {
-                log.error("error processing topup information", e)
-            }
-        }
 
         viewModel.topUpStatus(txId).observe(this) { topUp ->
-            viewModel.topUpComplete = topUp?.used() == true
-            transactionResultViewBinder.setSentToReturn(
-                viewModel.transaction.value?.versionShort ?: Transaction.SPECIAL_VERSION,
-                viewModel.transaction.value?.type ?: Transaction.Type.TRANSACTION_ASSET_LOCK,
-                viewModel.topUpError,
-                viewModel.topUpComplete
-            )
+            lifecycleScope.launch {
+                // Legacy top-ups have a `topups` row; SDK top-ups don't —
+                // their credited state comes from the SDK's recovery queue
+                // (lock still queued = pending, gone = credited).
+                viewModel.topUpComplete = topUp?.used() == true ||
+                    (topUp == null && viewModel.sdkTopUpCredited(txId) == true)
+                transactionResultViewBinder.setSentToReturn(
+                    viewModel.transaction.value?.versionShort ?: Transaction.SPECIAL_VERSION,
+                    viewModel.transaction.value?.type ?: Transaction.Type.TRANSACTION_ASSET_LOCK,
+                    viewModel.topUpError,
+                    viewModel.topUpComplete
+                )
+            }
         }
     }
 
