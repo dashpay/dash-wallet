@@ -171,6 +171,28 @@ open class DashPayConfig @Inject constructor(
         val INVITE_OVERAGE_RECONCILED_IDENTITY = stringPreferencesKey("invite_overage_reconciled_identity")
 
         /**
+         * When the pending record was minted (epoch ms) — the settle-aware
+         * give-up rule's age input: absence of the overage may only be
+         * believed once the record is old enough for the shielded scan to
+         * have provably caught up (observed live: the worker ran seconds
+         * after the claim, before the claim's change note was scanned, and
+         * abandoned a real 0.05).
+         */
+        val INVITE_OVERAGE_CREATED_AT_MS = longPreferencesKey("invite_overage_created_at_ms")
+
+        /**
+         * v2 outcome markers — the clear-kind provenance the v1 marker
+         * lacked. SUCCESS (top-up landed / provably consumed) suppresses the
+         * reconcile permanently; ABANDONED (provable-absence give-up) allows
+         * a re-mint ONLY when the pool actually holds the derivable overage
+         * (the note appeared after the abandon). The v1 key above cannot
+         * distinguish the two, so a v1-only stamp is treated like ABANDONED
+         * — one guarded re-mint — and is erased when superseded.
+         */
+        val INVITE_OVERAGE_OUTCOME_SUCCESS = stringPreferencesKey("invite_overage_outcome_success")
+        val INVITE_OVERAGE_OUTCOME_ABANDONED = stringPreferencesKey("invite_overage_outcome_abandoned")
+
+        /**
          * Whether the "Transfers take different times" sheet (Figma
          * 1740:16412) has been shown on the shielded internal-transfer
          * screen. It auto-opens once on the user's first visit and is set

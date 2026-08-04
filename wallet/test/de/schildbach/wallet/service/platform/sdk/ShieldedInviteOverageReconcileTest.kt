@@ -84,14 +84,19 @@ class ShieldedInviteOverageReconcileTest {
 
     private fun service(
         backing: MutableMap<Preferences.Key<*>, Any>,
-        base: BlockchainIdentityBaseData?
+        base: BlockchainIdentityBaseData?,
+        poolCredits: Long = 0L
     ): ShieldedInviteOverageTopUp {
         val identityConfig = mockk<BlockchainIdentityConfig> {
             coEvery { loadBase() } returns (base ?: completedClaimRecord(null))
         }
+        val balance = mockk<ShieldedBalanceService> {
+            coEvery { observeShieldedBalance() } returns
+                kotlinx.coroutines.flow.MutableStateFlow(creditsToDash(poolCredits))
+        }
         return ShieldedInviteOverageTopUp(
             configFake(backing),
-            mockk<ShieldedBalanceService>(),
+            balance,
             mockk<InviteOverageSource>(),
             identityConfig
         )
@@ -122,15 +127,15 @@ class ShieldedInviteOverageReconcileTest {
         assertTrue(service.reconcileCompletedClaim())
         assertEquals(identityId, backing[DashPayConfig.INVITE_OVERAGE_IDENTITY_ID])
         assertEquals(OVERAGE, backing[DashPayConfig.INVITE_OVERAGE_CREDITS])
-        assertEquals(identityId, backing[DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY])
 
         // Second launch while the record is pending: suppressed.
         assertFalse(service.reconcileCompletedClaim())
 
-        // After the drain (record keys cleared, marker retained): still
-        // suppressed — the reconcile can never re-mint a drained record.
+        // After a SUCCESS drain (record keys cleared, success outcome stamped
+        // — what the pipeline's clear writes): permanently suppressed.
         backing.remove(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID)
         backing.remove(DashPayConfig.INVITE_OVERAGE_CREDITS)
+        backing[DashPayConfig.INVITE_OVERAGE_OUTCOME_SUCCESS] = identityId
         assertFalse(service.reconcileCompletedClaim())
     }
 
@@ -175,5 +180,52 @@ class ShieldedInviteOverageReconcileTest {
         )
         assertFalse(service.reconcileCompletedClaim())
         assertTrue(backing.isEmpty())
+    }
+
+    /**
+     * THE LIVE S22 UN-STRAND, end to end at the service level: the v1 marker
+     * was stamped by the premature .54 abandon; the change note has since
+     * been scanned (pool holds the overage). The fixed build's reconcile
+     * must re-mint EXACTLY once — superseding the v1 stamp — and a later
+     * SUCCESS clear suppresses it permanently.
+     */
+    @Test
+    fun reconcile_v1StampedAbandon_remintsOncePoolHoldsTheOverage() = runTest {
+        val backing = mutableMapOf<Preferences.Key<*>, Any>()
+        // The stranded state: v1 marker only, no record, no v2 outcomes.
+        backing[DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY] = identityId
+
+        // Pool still empty (note not scanned yet): stays suppressed.
+        assertFalse(
+            service(backing, completedClaimRecord(shieldedLinkWithAmt()), poolCredits = 0L)
+                .reconcileCompletedClaim()
+        )
+        assertFalse(backing.containsKey(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID))
+
+        // Note scanned — pool holds the overage: re-mint, superseding v1.
+        assertTrue(
+            service(backing, completedClaimRecord(shieldedLinkWithAmt()), poolCredits = OVERAGE)
+                .reconcileCompletedClaim()
+        )
+        assertEquals(identityId, backing[DashPayConfig.INVITE_OVERAGE_IDENTITY_ID])
+        assertEquals(OVERAGE, backing[DashPayConfig.INVITE_OVERAGE_CREDITS])
+        assertFalse(backing.containsKey(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY))
+
+        // While the re-minted record is pending: suppressed.
+        assertFalse(
+            service(backing, completedClaimRecord(shieldedLinkWithAmt()), poolCredits = OVERAGE)
+                .reconcileCompletedClaim()
+        )
+
+        // After a SUCCESS clear (simulated: record keys drained, success
+        // outcome stamped — what the pipeline's clear writes): permanently
+        // suppressed, even with a full pool.
+        backing.remove(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID)
+        backing.remove(DashPayConfig.INVITE_OVERAGE_CREDITS)
+        backing[DashPayConfig.INVITE_OVERAGE_OUTCOME_SUCCESS] = identityId
+        assertFalse(
+            service(backing, completedClaimRecord(shieldedLinkWithAmt()), poolCredits = OVERAGE)
+                .reconcileCompletedClaim()
+        )
     }
 }

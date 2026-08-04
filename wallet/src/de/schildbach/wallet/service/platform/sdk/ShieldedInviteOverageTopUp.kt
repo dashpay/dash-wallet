@@ -87,17 +87,43 @@ internal fun reconcilableOverageCredits(
     inviteIsShielded: Boolean,
     fundingCreditsFromLink: Long?,
     hasPendingRecord: Boolean,
-    alreadyReconciledIdentity: String?
+    /** v2 SUCCESS outcome (top-up landed / provably consumed) — permanent. */
+    successOutcomeIdentity: String?,
+    /**
+     * v2 ABANDONED outcome (provable-absence give-up): a re-mint is allowed
+     * ONLY when [poolCredits] shows the pool actually holds the derivable
+     * overage now — the note appeared after the abandon (the S22 shape:
+     * the give-up outran the shielded scan).
+     */
+    abandonedOutcomeIdentity: String?,
+    /**
+     * The v1 marker, whose clear-kind is UNKNOWN (stamped by both success
+     * and abandon before v2 existed) — treated like ABANDONED: one re-mint,
+     * pool-guarded.
+     */
+    legacyMarkerIdentity: String?,
+    /** Last-known pool balance in credits; null = unreadable (no re-mint). */
+    poolCredits: Long?
 ): Long? {
     if (identityIdBase58 == null) return null
     if (creationState < IdentityCreationState.IDENTITY_REGISTERED) return null
     if (!usingInvite || !inviteIsShielded) return null
     if (hasPendingRecord) return null
-    if (alreadyReconciledIdentity == identityIdBase58) return null
     val believed = fundingCreditsFromLink?.takeIf { it in SHIELDED_INVITE_NOTE_VALUES_CREDITS }
         ?: return null
     val clampedSpend = largestExitDenominationAtOrBelow(believed) ?: return null
-    return (believed - clampedSpend).takeIf { it > 0 }
+    val overage = (believed - clampedSpend).takeIf { it > 0 } ?: return null
+    // Suppression, in trust order: success is permanent; an abandon (or the
+    // kind-unknown v1 stamp) is overridden ONLY by positive evidence the
+    // overage exists NOW — the pool holding at least it. This makes the
+    // re-mint self-limiting: a genuine absence can never satisfy the guard,
+    // and a satisfied guard feeds a pipeline whose success stamps v2
+    // permanently.
+    if (successOutcomeIdentity == identityIdBase58) return null
+    if (abandonedOutcomeIdentity == identityIdBase58 || legacyMarkerIdentity == identityIdBase58) {
+        if (poolCredits == null || poolCredits < overage) return null
+    }
+    return overage
 }
 
 /** One durable pending invite-claim overage (see [ShieldedInviteOverageTopUp]). */
@@ -113,7 +139,13 @@ internal data class PendingInviteOverage(
      */
     val netCredits: Long?,
     /** True once a top-up broadcast has been ATTEMPTED (set just before it). */
-    val topUpStarted: Boolean
+    val topUpStarted: Boolean,
+    /**
+     * When the record was minted (epoch ms) — the settle-aware give-up's age
+     * input. Null for records minted before the key existed; backfilled to
+     * "now" on the first pass (conservative: treated as young).
+     */
+    val createdAtMs: Long? = null
 )
 
 /** Outcome of one [ShieldedInviteOverageTopUp.runPending] pass. */
@@ -254,7 +286,9 @@ class ShieldedInviteOverageTopUp internal constructor(
      * ([reconcileCompletedClaim]). Null (host-test default) disables the
      * reconcile only — the drain pipeline is unaffected.
      */
-    private val identityConfig: BlockchainIdentityConfig? = null
+    private val identityConfig: BlockchainIdentityConfig? = null,
+    /** Clock seam for the settle-aware give-up's record-age check. */
+    private val now: () -> Long = System::currentTimeMillis
 ) {
     @Inject
     constructor(
@@ -283,20 +317,34 @@ class ShieldedInviteOverageTopUp internal constructor(
         suspend fun persistPendingRecord(
             dashPayConfig: DashPayConfig,
             identityIdBase58: String,
-            overageCredits: Long
+            overageCredits: Long,
+            createdAtMs: Long = System.currentTimeMillis()
         ) {
             require(overageCredits > 0) { "overage must be positive, got $overageCredits" }
             dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_NET_CREDITS)
             dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_TOPUP_STARTED)
             dashPayConfig.set(DashPayConfig.INVITE_OVERAGE_CREDITS, overageCredits)
+            // The settle-aware give-up's age input: absence may only be
+            // believed once the record has outlived the scan-lag budget.
+            dashPayConfig.set(DashPayConfig.INVITE_OVERAGE_CREATED_AT_MS, createdAtMs)
             // IDENTITY_ID last: its presence is the "record exists" marker, so
             // a crash mid-write can never yield a record without an amount.
             dashPayConfig.set(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID, identityIdBase58)
-            // One-shot reconcile guard: this identity's overage now has (or
-            // has had) a record — the completed-claim reconcile must never
-            // re-mint it (see reconcilableOverageCredits).
-            dashPayConfig.set(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY, identityIdBase58)
+            // NOTE: no reconcile marker is stamped at mint time (v2 change) —
+            // a pending record already suppresses the reconcile, and the
+            // marker's provenance (success vs abandon) is only knowable at
+            // CLEAR time (see clearRecord).
         }
+
+        /**
+         * How old a pending record must be — with the shielded sync READY —
+         * before an empty pool + empty address is believed as PROVABLE
+         * absence rather than scan lag. Observed live (S22): the worker ran
+         * seconds after the claim and abandoned a real 0.05 whose change
+         * note simply had not been scanned yet; the scan settles within a
+         * couple of minutes, so 30 min is a generous provability budget.
+         */
+        internal const val MIN_ABANDON_AGE_MS: Long = 30L * 60L * 1000L
     }
 
     /** The pending record, or null when there is none (or it is malformed). */
@@ -305,14 +353,15 @@ class ShieldedInviteOverageTopUp internal constructor(
         val overage = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_CREDITS)
         if (overage == null || overage <= 0) {
             log.warn("invite overage record for {}… has no amount — clearing", identityId.take(8))
-            clearRecord()
+            clearRecord(ClearOutcome.ABANDONED)
             return null
         }
         return PendingInviteOverage(
             identityIdBase58 = identityId,
             overageCredits = overage,
             netCredits = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_NET_CREDITS),
-            topUpStarted = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_TOPUP_STARTED) == true
+            topUpStarted = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_TOPUP_STARTED) == true,
+            createdAtMs = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_CREATED_AT_MS)
         )
     }
 
@@ -338,8 +387,19 @@ class ShieldedInviteOverageTopUp internal constructor(
             log.warn("invite overage reconcile: identity record unavailable", t)
             return false
         }
-        val marker = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY)
+        val legacyMarker = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY)
+        val successOutcome = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_OUTCOME_SUCCESS)
+        val abandonedOutcome = dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_OUTCOME_ABANDONED)
         val pending = hasPending()
+        // Last-known pool balance — the positive-evidence input for the
+        // abandoned/legacy re-mint guard. Unreadable = no re-mint this pass
+        // (the reconcile runs on every launch; a later pass reads it).
+        val poolCredits = try {
+            dashToCredits(shieldedBalanceService.observeShieldedBalance().first())
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            null
+        }
         val overage = reconcilableOverageCredits(
             identityIdBase58 = base.userId,
             creationState = base.creationState,
@@ -347,9 +407,13 @@ class ShieldedInviteOverageTopUp internal constructor(
             inviteIsShielded = base.invite?.isShielded == true,
             fundingCreditsFromLink = base.invite?.shieldedFundingCredits,
             hasPendingRecord = pending,
-            alreadyReconciledIdentity = marker
+            successOutcomeIdentity = successOutcome,
+            abandonedOutcomeIdentity = abandonedOutcome,
+            legacyMarkerIdentity = legacyMarker,
+            poolCredits = poolCredits
         )
         val claimedIdentity = base.userId
+        val marker = successOutcome ?: abandonedOutcome ?: legacyMarker
         if (overage == null) {
             // ONE-LINE DIAGNOSTIC (observed live: the S22 retro-fit was a
             // silent no-op and cost an hour of on-device forensics): a
@@ -378,23 +442,46 @@ class ShieldedInviteOverageTopUp internal constructor(
             base.userId?.take(8),
             overage
         )
-        persistPendingRecord(dashPayConfig, checkNotNull(base.userId), overage)
+        // A re-mint over an abandon (or the kind-unknown v1 stamp) supersedes
+        // it: erase the stale stamps so the fresh pipeline's own clear writes
+        // the authoritative v2 outcome.
+        if (legacyMarker == claimedIdentity) {
+            dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY)
+        }
+        if (abandonedOutcome == claimedIdentity) {
+            dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_OUTCOME_ABANDONED)
+        }
+        persistPendingRecord(dashPayConfig, checkNotNull(base.userId), overage, now())
         return true
     }
 
-    private suspend fun clearRecord() {
-        // Stamp the reconcile guard BEFORE removing the record: a drained
-        // record must never be re-minted by the completed-claim reconcile
-        // (and records minted before the marker key existed get their marker
-        // here). A crash between the stamp and the removes leaves the record
-        // pending — retried, never duplicated.
-        dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID)?.let {
-            dashPayConfig.set(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY, it)
+    /** Clear-kind provenance — what the v1 marker could not express. */
+    internal enum class ClearOutcome {
+        /** Top-up landed (or provably consumed): suppresses reconcile forever. */
+        SUCCESS,
+
+        /** Provable-absence give-up: the reconcile may re-mint under the pool guard. */
+        ABANDONED
+    }
+
+    private suspend fun clearRecord(outcome: ClearOutcome) {
+        // Stamp the outcome BEFORE removing the record: a crash between the
+        // stamp and the removes leaves the record pending — retried, never
+        // duplicated. Every clear also supersedes the kind-unknown v1 marker.
+        dashPayConfig.get(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID)?.let { id ->
+            when (outcome) {
+                ClearOutcome.SUCCESS ->
+                    dashPayConfig.set(DashPayConfig.INVITE_OVERAGE_OUTCOME_SUCCESS, id)
+                ClearOutcome.ABANDONED ->
+                    dashPayConfig.set(DashPayConfig.INVITE_OVERAGE_OUTCOME_ABANDONED, id)
+            }
+            dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_RECONCILED_IDENTITY)
         }
         dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_IDENTITY_ID)
         dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_CREDITS)
         dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_NET_CREDITS)
         dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_TOPUP_STARTED)
+        dashPayConfig.remove(DashPayConfig.INVITE_OVERAGE_CREATED_AT_MS)
     }
 
     /**
@@ -403,7 +490,15 @@ class ShieldedInviteOverageTopUp internal constructor(
      * failures are [InviteOverageOutcome.RETRY] for the worker's backoff.
      */
     suspend fun runPending(): InviteOverageOutcome {
-        val record = pendingRecord() ?: return InviteOverageOutcome.IDLE
+        var record = pendingRecord() ?: return InviteOverageOutcome.IDLE
+        if (record.createdAtMs == null) {
+            // A record minted before the created-at key existed: backfill NOW
+            // — conservative (treated as young), so the settle-aware give-up
+            // gets a full provability budget rather than abandoning it.
+            val backfill = now()
+            dashPayConfig.set(DashPayConfig.INVITE_OVERAGE_CREATED_AT_MS, backfill)
+            record = record.copy(createdAtMs = backfill)
+        }
 
         var netCredits = record.netCredits
         if (netCredits == null) {
@@ -414,12 +509,14 @@ class ShieldedInviteOverageTopUp internal constructor(
                 }
                 UnshieldStep.GiveUp -> {
                     log.error(
-                        "invite overage of {} credits for {}… is not present anywhere " +
-                            "(pool empty, no address balance) — abandoning the top-up",
+                        "invite overage of {} credits for {}… is provably absent " +
+                            "(pool settled + record aged {} ms, pool empty, no address balance) " +
+                            "— abandoning the top-up",
                         record.overageCredits,
-                        record.identityIdBase58.take(8)
+                        record.identityIdBase58.take(8),
+                        record.createdAtMs?.let { now() - it }
                     )
-                    clearRecord()
+                    clearRecord(ClearOutcome.ABANDONED)
                     return InviteOverageOutcome.DONE
                 }
                 UnshieldStep.Retry -> return InviteOverageOutcome.RETRY
@@ -468,10 +565,10 @@ class ShieldedInviteOverageTopUp internal constructor(
                             log.warn("invite overage unshield (fee-adjusted) unconfirmed — deferring")
                             return UnshieldStep.Retry
                         }
-                        is SdkWriteResult.NotBroadcast -> return classifyUnshieldRefusal(second)
+                        is SdkWriteResult.NotBroadcast -> return classifyUnshieldRefusal(record, second)
                     }
                 }
-                return classifyUnshieldRefusal(first)
+                return classifyUnshieldRefusal(record, first)
             }
         }
     }
@@ -484,7 +581,10 @@ class ShieldedInviteOverageTopUp internal constructor(
      * (a lying link value that slipped the claim-side guard, or funds moved
      * manually), in which case retrying forever helps no one: give up.
      */
-    private suspend fun classifyUnshieldRefusal(failure: SdkWriteResult.NotBroadcast): UnshieldStep {
+    private suspend fun classifyUnshieldRefusal(
+        record: PendingInviteOverage,
+        failure: SdkWriteResult.NotBroadcast
+    ): UnshieldStep {
         val poolCredits = try {
             dashToCredits(shieldedBalanceService.observeShieldedBalance().first())
         } catch (t: Throwable) {
@@ -507,16 +607,36 @@ class ShieldedInviteOverageTopUp internal constructor(
             log.warn("invite overage: address balances unavailable after unshield refusal — retrying", t)
             return UnshieldStep.Retry
         }
-        return if (addressCredits > 0) {
+        if (addressCredits > 0) {
             log.info(
                 "invite overage: pool empty but {} credits on the wallet's Platform address — " +
                     "a prior unshield landed; advancing to the top-up",
                 addressCredits
             )
-            UnshieldStep.Landed(minOf(addressCredits, currentOverageOrMax()))
-        } else {
-            UnshieldStep.GiveUp
+            return UnshieldStep.Landed(minOf(addressCredits, currentOverageOrMax()))
         }
+        // SETTLE-AWARE GIVE-UP (observed live, S22): the worker ran seconds
+        // after the claim and the claim's Orchard change note had not been
+        // SCANNED into the pool yet — an empty pool then is scan lag, not
+        // absence. Abandoning is only allowed when absence is PROVABLE:
+        // the shielded sync reports READY (settled) AND the record has
+        // outlived the provability budget. Anything younger, or any
+        // non-settled pool, RETRIES on the worker's backoff — which is also
+        // the positive watcher: once the change note is scanned, the pool
+        // covers the overage and the next unshield attempt simply succeeds.
+        val settled = shieldedBalanceService.shieldedSyncStatus.value == ShieldedSyncStatus.READY
+        val ageMs = record.createdAtMs?.let { now() - it }
+        if (!settled || ageMs == null || ageMs < MIN_ABANDON_AGE_MS) {
+            log.info(
+                "invite overage: pool and address empty but absence is NOT yet provable " +
+                    "(settled={}, record age {} ms / budget {} ms) — retrying, not abandoning",
+                settled,
+                ageMs,
+                MIN_ABANDON_AGE_MS
+            )
+            return UnshieldStep.Retry
+        }
+        return UnshieldStep.GiveUp
     }
 
     private suspend fun currentOverageOrMax(): Long =
@@ -546,7 +666,7 @@ class ShieldedInviteOverageTopUp internal constructor(
                     netCredits,
                     record.identityIdBase58.take(8)
                 )
-                clearRecord()
+                clearRecord(ClearOutcome.SUCCESS)
                 InviteOverageOutcome.DONE
             } else {
                 // The unshield broadcast landed but the SDK's address cache
@@ -561,7 +681,7 @@ class ShieldedInviteOverageTopUp internal constructor(
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.error("invite overage record carries a malformed identity id — clearing", t)
-            clearRecord()
+            clearRecord(ClearOutcome.ABANDONED)
             return InviteOverageOutcome.DONE
         }
 
@@ -576,7 +696,7 @@ class ShieldedInviteOverageTopUp internal constructor(
                 inputs.sumOf { it.credits },
                 newBalance
             )
-            clearRecord()
+            clearRecord(ClearOutcome.SUCCESS)
             InviteOverageOutcome.DONE
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
