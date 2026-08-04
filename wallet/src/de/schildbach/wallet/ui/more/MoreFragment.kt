@@ -576,6 +576,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     private fun retry(errorMessage: String) {
         val needsNewName = errorMessage.contains("Document transitions with duplicate unique properties") ||
                 errorMessage.contains("DuplicateUniqueIndexError") ||
+                // Pre-11.10.52 wrapper-adoption clobber (S22): the requested
+                // primary is gone from the record — route to re-entry.
+                errorMessage.contains("primary username was lost") ||
                 errorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll") ||
                 errorMessage.contains(Regex("does not have .* as a contender")) ||
                 errorMessage.contains("missing domain document for ")

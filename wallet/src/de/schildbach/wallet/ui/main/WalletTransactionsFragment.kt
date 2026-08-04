@@ -680,7 +680,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                 blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) &&
                                 (errorMessage?.contains("Document transitions with duplicate unique properties") == true ||
                                         errorMessage?.contains("missing domain document for") == true ||
-                                errorMessage?.contains("DuplicateUniqueIndexError") == true)
+                                errorMessage?.contains("DuplicateUniqueIndexError") == true ||
+                                // The requested primary was lost to the pre-11.10.52
+                                // wrapper-adoption clobber (S22): the user must re-enter
+                                // it; the claimed-invite retry arm repairs the record.
+                                errorMessage?.contains("primary username was lost") == true)
                     if (needsNewUsername ||
                         // do we need this, cause the error could be due to a stale node
                         blockchainIdentityData.creationState == IdentityCreationState.REQUESTED_NAME_CHECKING &&

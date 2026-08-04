@@ -125,6 +125,62 @@ internal fun resolveSdkInviteIdentityId(
     wrapperUniqueId: String?
 ): String? = inFlightClaimId ?: persistedIdentityId ?: wrapperUniqueId
 
+/**
+ * Whether a DUAL-username record's primary was overwritten with its own
+ * instant secondary — the pre-11.10.52 clobber: mid-creation
+ * `recoverUsernames` adopted the just-registered instant name into
+ * `wrapper.primaryUsername`, and the wrapper-adoption persist copied it over
+ * the record's requested primary (observed live on the S22: fhjf → fhjf-2).
+ * A legitimate dual record can never have identical names: the dual flow
+ * exists only for a CONTESTED primary plus a non-contested instant, and the
+ * two tiers have disjoint character rules.
+ */
+internal fun isDualPrimaryClobbered(primary: String?, secondary: String?): Boolean =
+    primary != null && secondary != null && primary == secondary
+
+/**
+ * The record mutation for one SDK invite-DPNS Broadcast, with NO wrapper
+ * adoption: only the per-type STATUS advances — the record's username fields
+ * are the REQUESTED names and stay untouched (the invariant the S22 11.10.51
+ * clobber broke). A CONTESTED primary is left unstamped: its request status
+ * is owned by the voting tail (REQUESTED_NAME_* → VOTING), not CONFIRMED.
+ */
+internal fun advanceRecordForSdkDpnsBroadcast(
+    record: BlockchainIdentityData,
+    usernameType: UsernameType,
+    contestable: Boolean
+) {
+    when (usernameType) {
+        UsernameType.Primary -> if (!contestable) {
+            record.usernameStatus = UsernameStatus.CONFIRMED
+        }
+        UsernameType.Secondary -> record.usernameSecondaryStatus = UsernameStatus.CONFIRMED
+    }
+}
+
+/**
+ * Repair a CLAIMED invite record's requested names on a retry-with-new-
+ * username, without ever resetting the record (the identity is on chain; a
+ * reset would re-claim a consumed invitation at the wrong identity index):
+ * - the PRIMARY is replaced by the user's re-entry — the recovery path for a
+ *   record whose primary was clobbered to its own instant name (S22);
+ * - the SECONDARY is only ever FILLED when absent, never overwritten: once
+ *   the instant name is registered, its stages sit behind the per-type
+ *   completion guard and the on-chain name cannot be renamed here.
+ */
+internal fun repairClaimedInviteRecordNames(
+    record: BlockchainIdentityData,
+    newPrimary: String?,
+    newSecondary: String?
+) {
+    if (newPrimary != null && newPrimary != record.username) {
+        record.username = newPrimary
+    }
+    if (newSecondary != null && record.usernameSecondary == null) {
+        record.usernameSecondary = newSecondary
+    }
+}
+
 @AndroidEntryPoint
 class CreateIdentityService : LifecycleService() {
     companion object {
@@ -930,6 +986,27 @@ class CreateIdentityService : LifecycleService() {
                     throw IllegalStateException()
                 }
             }
+            // Retry-with-new-username on a CLAIMED invite (identity already on
+            // chain): NEVER reset the record — the old reset path rebuilt a
+            // NONE record without the invite link and would try to re-claim a
+            // consumed invitation (and re-derive keys at the wrong identity
+            // index). Keep the claimed record and repair only the requested
+            // names: the primary is the user's re-entry (this is also the
+            // recovery path for a record whose primary was clobbered by the
+            // pre-11.10.52 wrapper-adoption bug); the secondary is only ever
+            // FILLED, never overwritten — its registration is already behind
+            // the per-type completion guard when it landed on chain.
+            (blockchainIdentityDataTmp != null && retryWithNewUserName && blockchainIdentityDataTmp.userId != null) -> {
+                blockchainIdentityData = blockchainIdentityDataTmp
+                if (username != null && username != blockchainIdentityData.username) {
+                    log.info(
+                        "claimed-invite retry: repairing requested primary '{}' -> '{}'",
+                        blockchainIdentityData.username,
+                        username
+                    )
+                }
+                repairClaimedInviteRecordNames(blockchainIdentityData, username, usernameSecondary)
+            }
             (username != null) -> {
                 blockchainIdentityData = BlockchainIdentityData(IdentityCreationState.NONE,
                         null, username, usernameSecondary, null, false,
@@ -1147,12 +1224,27 @@ class CreateIdentityService : LifecycleService() {
         }
         val timerStep3 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_3)
 
-        if (usernameSecondary != null || blockchainIdentityData.usernameSecondary != null) {
-            blockchainIdentity.primaryUsername = blockchainIdentityData.username
-            blockchainIdentity.secondaryUsername = blockchainIdentityData.usernameSecondary
-            registerUsername(blockchainIdentity, encryptionKey, UsernameType.Secondary)
+        // Capture BOTH requested names ONCE, before any registration pass:
+        // registerUsername now receives its name EXPLICITLY per type instead
+        // of re-reading the mutable record mid-flow. On the S22 (11.10.51)
+        // the secondary pass's wrapper-adoption persist overwrote the
+        // record's primary with the just-registered instant name, and the
+        // primary stage then re-registered the secondary. The adoption is
+        // also fixed at its source (see the routed branch), but the explicit
+        // hand-off makes the name immune to any future record mutation.
+        val requestedPrimary = blockchainIdentityData.username
+        val requestedSecondary = usernameSecondary ?: blockchainIdentityData.usernameSecondary
+        if (requestedSecondary != null) {
+            blockchainIdentity.primaryUsername = requestedPrimary
+            blockchainIdentity.secondaryUsername = requestedSecondary
+            registerUsername(blockchainIdentity, encryptionKey, UsernameType.Secondary, requestedSecondary)
         }
-        registerUsername(blockchainIdentity, encryptionKey, UsernameType.Primary)
+        registerUsername(
+            blockchainIdentity,
+            encryptionKey,
+            UsernameType.Primary,
+            requestedPrimary ?: error("no primary username on the identity record")
+        )
 
         addInviteUserAlert()
 
@@ -1276,19 +1368,21 @@ class CreateIdentityService : LifecycleService() {
     private suspend fun registerUsername(
         blockchainIdentity: BlockchainIdentity,
         encryptionKey: KeyParameter,
-        usernameType: UsernameType
+        usernameType: UsernameType,
+        /**
+         * The name to register, captured by [finishRegistration] BEFORE any
+         * registration pass runs — never re-read from the mutable record
+         * mid-flow. On the S22 (11.10.51) the record's primary was
+         * overwritten during the secondary pass, and the primary stage then
+         * re-registered the secondary name.
+         */
+        username: String
     ) {
         val states = usernameRegistrationStates(usernameType)
         val preorderRegistering = states.preorderRegistering
         val preorderRegistered = states.preorderRegistered
         val domainRegistering = states.domainRegistering
         val domainRegistered = states.domainRegistered
-
-
-        val username = when (usernameType) {
-            UsernameType.Primary -> blockchainIdentityData.username
-            UsernameType.Secondary -> blockchainIdentityData.usernameSecondary
-        }!!
 
         if (!blockchainIdentity.getUsernames().contains(username)) {
             blockchainIdentity.addUsername(username)
@@ -1334,6 +1428,24 @@ class CreateIdentityService : LifecycleService() {
                 )
                 return
             }
+            // Corrupted-dual repair gate: a record whose primary EQUALS its
+            // instant secondary lost the real primary (the pre-11.10.52
+            // wrapper-adoption clobber, observed live on the S22 — the record
+            // held fhjf-2/fhjf-2 after the secondary pass). Registering it
+            // would re-submit the already-owned instant name. Fail with the
+            // distinctive retryable message the home/More retry surfaces match
+            // (needsNewUsername), which routes the user to re-enter the
+            // primary; the resume then repairs the record (see
+            // createIdentityFromInvitation's claimed-record retry arm) and
+            // completes without a reset.
+            if (usernameType == UsernameType.Primary &&
+                isDualPrimaryClobbered(username, blockchainIdentityData.usernameSecondary)
+            ) {
+                error(
+                    "invite primary username was lost — an earlier build overwrote it with the " +
+                        "instant username '$username'; request the primary username again"
+                )
+            }
             if (blockchainIdentityData.creationState <= preorderRegistering) {
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, preorderRegistering)
             }
@@ -1354,15 +1466,30 @@ class CreateIdentityService : LifecycleService() {
             when (val result = transparentUsernameCreation.registerDpnsNameForExistingIdentity(identityId, username)) {
                 is SdkWriteResult.Broadcast -> {
                     log.info("SDK DPNS registration of '{}' confirmed: {}", username, result.value)
-                    // Re-recover so the finishRegistration tail sees the on-chain
-                    // name (populates currentUsername; a contested name lands in
-                    // voting). Best-effort: the name is already confirmed on chain.
-                    try {
-                        platformRepo.recoverUsernames(blockchainIdentity)
-                    } catch (e: Exception) {
-                        log.warn("recoverUsernames after SDK invite DPNS registration failed (non-fatal)", e)
+                    // NO recoverUsernames + NO wrapper-adoption persist here.
+                    // Mid-creation, recoverUsernames ADOPTS whatever is already
+                    // on chain as primaryUsername/currentUsername (after the
+                    // instant name lands that is the instant name; a contested
+                    // primary in voting has nothing to recover at all), and the
+                    // two-arg updateBlockchainIdentityData then copied that
+                    // adopted value into the record — overwriting the requested
+                    // primary and making the primary stage re-register the
+                    // secondary (S22, 11.10.51). The record's username fields
+                    // ARE the requested names; only the per-type STATUS
+                    // advances here, on the record and the wrapper's own
+                    // UsernameInfo (a contested primary's status is owned by
+                    // the voting tail, not stamped CONFIRMED).
+                    advanceRecordForSdkDpnsBroadcast(
+                        blockchainIdentityData,
+                        usernameType,
+                        contestable = Names.isUsernameContestable(username)
+                    )
+                    blockchainIdentity.usernameStatuses[username]?.let { info ->
+                        if (!Names.isUsernameContestable(username)) {
+                            info.usernameStatus = UsernameStatus.CONFIRMED
+                        }
                     }
-                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                     identityRepository.updateIdentityCreationState(blockchainIdentityData, domainRegistered)
                 }
                 is SdkWriteResult.NotBroadcast ->

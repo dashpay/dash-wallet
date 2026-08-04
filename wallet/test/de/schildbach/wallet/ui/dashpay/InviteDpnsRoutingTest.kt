@@ -17,8 +17,10 @@
 
 package de.schildbach.wallet.ui.dashpay
 
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.username.UsernameType
+import org.dashj.platform.dashpay.UsernameStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -184,5 +186,102 @@ class InviteDpnsRoutingTest {
         // All sources empty → null: the caller fails retryably, never with
         // an UninitializedPropertyAccessException.
         assertNull(resolveSdkInviteIdentityId(null, null, null))
+    }
+
+    // ── In-process stage advance: the record's names are inviolable ──────
+
+    private fun dualRecord(
+        state: IdentityCreationState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING,
+        primary: String? = "fhjf",
+        secondary: String? = "fhjf-2"
+    ) = BlockchainIdentityData(
+        state, null, primary, secondary, onChainId, false, usingInvite = true
+    )
+
+    /**
+     * THE 11.10.51 IN-PROCESS DEFECT, pinned: the secondary pass's success
+     * bookkeeping must not touch the record's primary (the old path adopted
+     * the just-registered instant name from the wrapper into `username`, and
+     * the primary stage then re-registered 'fhjf-2'). Only the secondary's
+     * STATUS may advance.
+     */
+    @Test
+    fun secondaryBroadcast_advancesOnlyItsStatus_neverTheNames() {
+        val record = dualRecord()
+        advanceRecordForSdkDpnsBroadcast(record, UsernameType.Secondary, contestable = false)
+        assertEquals("fhjf", record.username)
+        assertEquals("fhjf-2", record.usernameSecondary)
+        assertEquals(UsernameStatus.CONFIRMED, record.usernameSecondaryStatus)
+        assertNull(record.usernameStatus)
+    }
+
+    @Test
+    fun primaryBroadcast_contested_leavesStatusToTheVotingTail() {
+        val record = dualRecord()
+        advanceRecordForSdkDpnsBroadcast(record, UsernameType.Primary, contestable = true)
+        assertEquals("fhjf", record.username)
+        assertNull(record.usernameStatus)
+    }
+
+    @Test
+    fun primaryBroadcast_nonContested_confirms() {
+        val record = dualRecord(primary = "alice2", secondary = null)
+        advanceRecordForSdkDpnsBroadcast(record, UsernameType.Primary, contestable = false)
+        assertEquals(UsernameStatus.CONFIRMED, record.usernameStatus)
+    }
+
+    // ── Corrupted-dual detection + claimed-record repair ─────────────────
+
+    @Test
+    fun clobberDetection_firesOnlyOnIdenticalDualNames() {
+        // The S22 record after the 11.10.51 clobber.
+        assertTrue(isDualPrimaryClobbered("fhjf-2", "fhjf-2"))
+        // Healthy dual, single-name, and empty records never fire.
+        assertFalse(isDualPrimaryClobbered("fhjf", "fhjf-2"))
+        assertFalse(isDualPrimaryClobbered("fhjf", null))
+        assertFalse(isDualPrimaryClobbered(null, "fhjf-2"))
+        assertFalse(isDualPrimaryClobbered(null, null))
+    }
+
+    /**
+     * THE S22 COMPLETION PATH: the clobbered record (fhjf-2/fhjf-2), repaired
+     * by the user re-entering 'fhjf' on the retry-with-new-username surface —
+     * the primary is restored, the registered instant name is untouched.
+     */
+    @Test
+    fun claimedRecordRepair_restoresThePrimary_keepsTheRegisteredSecondary() {
+        val record = dualRecord(
+            state = IdentityCreationState.USERNAME_REGISTERING,
+            primary = "fhjf-2",
+            secondary = "fhjf-2"
+        )
+        repairClaimedInviteRecordNames(record, newPrimary = "fhjf", newSecondary = null)
+        assertEquals("fhjf", record.username)
+        assertEquals("fhjf-2", record.usernameSecondary)
+        // The repaired shape is no longer detected as clobbered, and the
+        // stages resume exactly where they were: secondary skips, primary
+        // registers.
+        assertFalse(isDualPrimaryClobbered(record.username, record.usernameSecondary))
+        assertFalse(
+            sdkInviteDpnsShouldRegister(record.creationState, UsernameType.Secondary)
+        )
+        assertTrue(
+            sdkInviteDpnsShouldRegister(record.creationState, UsernameType.Primary)
+        )
+    }
+
+    @Test
+    fun claimedRecordRepair_neverOverwritesAnExistingSecondary() {
+        val record = dualRecord(primary = "fhjf-2", secondary = "fhjf-2")
+        repairClaimedInviteRecordNames(record, newPrimary = "fhjf", newSecondary = "other9")
+        assertEquals("fhjf-2", record.usernameSecondary)
+    }
+
+    @Test
+    fun claimedRecordRepair_fillsAMissingSecondary_andToleratesNulls() {
+        val record = dualRecord(primary = "fhjf", secondary = null)
+        repairClaimedInviteRecordNames(record, newPrimary = null, newSecondary = "fhjf-2")
+        assertEquals("fhjf", record.username)
+        assertEquals("fhjf-2", record.usernameSecondary)
     }
 }
