@@ -632,6 +632,26 @@ interface SdkL1SendSource {
         throw UnsupportedOperationException("deferred (BIP70) payment not supported by this source")
 
     /**
+     * [buildDeferredPayment] in the MAYACHAIN deposit shape
+     * (`docs.mayaprotocol.com` → "Sending Transactions", UTXO chains):
+     * one recipient output to the Asgard vault at VOUT0, the swap [memo]
+     * as a zero-value OP_RETURN at VOUT1, change routed BACK TO THE FIRST
+     * INPUT'S ADDRESS at VOUT2 (MAYAChain identifies the depositor by
+     * VIN0 and pays refunds there), no BIP-69 reordering. Same
+     * reservation contract as [buildDeferredPayment]: exactly one of
+     * [broadcastDeferredPayment] / [releaseDeferredPayment] should
+     * follow. Default throws: only the production source (and fakes
+     * exercising Maya) need it.
+     */
+    suspend fun buildDeferredMayaDeposit(
+        walletIdHex: String,
+        vaultAddressBase58: String,
+        vaultDuffs: Long,
+        memo: ByteArray
+    ): SdkDeferredPayment =
+        throw UnsupportedOperationException("Maya deposit build not supported by this source")
+
+    /**
      * Broadcast a payment built by [buildDeferredPayment], consuming its
      * reservation, and return the broadcast txid as lowercase hex. Throws
      * on failure ([classifyDeferredBroadcastFailure] decides what the
@@ -1262,6 +1282,30 @@ internal class DashSdkL1SendSource(
             recipients = recipients,
             network = toSdkNetwork(Constants.NETWORK_PARAMETERS),
             coreSignerHandle = manager.mnemonicResolverHandle
+        )
+        return SdkDeferredPayment(signed.txidHex, signed.rawTxBytes, signed.feeDuffs, signed)
+    }
+
+    override suspend fun buildDeferredMayaDeposit(
+        walletIdHex: String,
+        vaultAddressBase58: String,
+        vaultDuffs: Long,
+        memo: ByteArray
+    ): SdkDeferredPayment {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        // Same deferred-build primitive as buildDeferredPayment, plus the
+        // three MAYACHAIN builder options. The OP_RETURN is appended after
+        // the vault recipient SDK-side, so preserveOutputOrder yields the
+        // documented vault=VOUT0 / memo=VOUT1 shape; an over-long memo
+        // throws pre-reservation.
+        val signed = wallet.buildSignedPayment(
+            recipients = listOf(vaultAddressBase58 to vaultDuffs),
+            network = toSdkNetwork(Constants.NETWORK_PARAMETERS),
+            coreSignerHandle = manager.mnemonicResolverHandle,
+            opReturnData = memo,
+            preserveOutputOrder = true,
+            changeToFirstInput = true
         )
         return SdkDeferredPayment(signed.txidHex, signed.rawTxBytes, signed.feeDuffs, signed)
     }
@@ -1957,6 +2001,42 @@ class SdkL1SendService internal constructor(
     }
 
     /**
+     * [buildDeferredPayment] in the MAYACHAIN deposit shape (vault VOUT0,
+     * [memo] as a zero-value OP_RETURN VOUT1, change back to VIN0's
+     * address VOUT2, no reordering) — the Maya/SwapKit swap-send build.
+     * Same gate and reservation contract; the caller verifies the shape
+     * from [SdkDeferredPayment.rawTxBytes] and then broadcasts via
+     * [broadcastDeferredPayment] or abandons via [releaseDeferredPayment].
+     * [memo] must fit the 80-byte OP_RETURN standardness limit — checked
+     * here (and re-checked engine-side) BEFORE anything is reserved.
+     */
+    suspend fun buildDeferredMayaDeposit(
+        vaultAddressBase58: String,
+        vaultDuffs: Long,
+        memo: ByteArray
+    ): SdkDeferredPayment {
+        check(vaultDuffs > 0) { "Maya vault amount must be positive, got $vaultDuffs" }
+        val vault = vaultAddressBase58.trim()
+        check(vault.isNotEmpty() && addressValidSafe(vault)) {
+            "Maya vault address is malformed or for the wrong network"
+        }
+        check(memo.size in 1..MAX_MAYA_MEMO_BYTES) {
+            "Maya memo must be 1..$MAX_MAYA_MEMO_BYTES bytes, got ${memo.size}"
+        }
+        val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
+            "app wallet not bound to the SDK"
+        }
+        val gate = probeSendGate()
+        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        val payment = source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo)
+        log.info(
+            "SDK l1DeferredMayaBuild: built {} ({} duffs to the vault, {}-byte memo, fee {} duffs), inputs reserved",
+            payment.txidHex, vaultDuffs, memo.size, payment.feeDuffs
+        )
+        return payment
+    }
+
+    /**
      * Broadcast [payment]'s already-signed tx, consuming its reservation —
      * the "merchant acked" arm of a BIP70 flow. One attempt, classified by
      * [classifyDeferredBroadcastFailure]; the token-error refusals (stale /
@@ -2099,5 +2179,12 @@ class SdkL1SendService internal constructor(
          * the promised amount intact.
          */
         private const val COIN_JOIN_DRAIN_FLOOR_DUFFS = 1L
+
+        /**
+         * OP_RETURN relay-standardness limit — the ceiling for a Maya swap
+         * memo, matching Dash Core's `-datacarriersize` default (and the
+         * engine's `DEFAULT_MAX_OP_RETURN_BYTES`, which re-checks).
+         */
+        const val MAX_MAYA_MEMO_BYTES = 80
     }
 }

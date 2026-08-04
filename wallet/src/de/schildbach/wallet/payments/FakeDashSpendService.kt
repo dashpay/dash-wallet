@@ -119,15 +119,4 @@ class FakeDashSpendService @Inject constructor(
         )
     }
 
-    override suspend fun completeTransaction(sendRequest: SendRequest) {
-        return realService.completeTransaction(sendRequest)
-    }
-
-    override suspend fun signTransaction(sendRequest: SendRequest) {
-        return realService.signTransaction(sendRequest)
-    }
-
-    override suspend fun sendTransaction(sendRequest: SendRequest): Transaction {
-        return realService.sendTransaction(sendRequest)
-    }
 }

@@ -59,9 +59,4 @@ interface WalletSendPaymentService : SendPaymentService {
 
     /** The dashj-typed twin of the neutral `payWithDashUrl` (returns the live transaction). */
     suspend fun payWithDashUrlTx(dashUri: String, serviceName: String?): Transaction
-
-    /** support manual tx creation */
-    suspend fun completeTransaction(sendRequest: SendRequest)
-    suspend fun signTransaction(sendRequest: SendRequest)
-    suspend fun sendTransaction(sendRequest: SendRequest): Transaction
 }

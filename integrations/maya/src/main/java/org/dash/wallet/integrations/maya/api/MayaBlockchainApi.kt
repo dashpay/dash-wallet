@@ -24,7 +24,9 @@ import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
  * Builds, signs and broadcasts the Maya swap transaction for a quoted trade.
  *
  * Implemented in the wallet module (de.schildbach.wallet.payments.MayaBlockchainApiImpl),
- * which owns the dashj transaction machinery; this module stays dashj-free.
+ * which builds the deposit on the Kotlin SDK's deferred build/broadcast surface and
+ * verifies the MAYACHAIN deposit shape before broadcasting; this module stays free
+ * of wallet-engine types.
  */
 interface MayaBlockchainApi {
     /**
