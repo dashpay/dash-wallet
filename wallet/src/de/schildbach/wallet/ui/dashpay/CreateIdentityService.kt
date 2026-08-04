@@ -21,6 +21,7 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.uniqueIdStringOrNull
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
@@ -66,6 +67,63 @@ import org.dashj.platform.wallet.IdentityVerify
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+
+/**
+ * The per-username-type creation-state quartet [registerUsername] marches
+ * through. Extracted so the SDK invite-DPNS routing decisions over these
+ * states are host-JVM testable against real resumed-record shapes.
+ */
+internal data class UsernameRegistrationStates(
+    val preorderRegistering: IdentityCreationState,
+    val preorderRegistered: IdentityCreationState,
+    val domainRegistering: IdentityCreationState,
+    val domainRegistered: IdentityCreationState
+)
+
+internal fun usernameRegistrationStates(usernameType: UsernameType): UsernameRegistrationStates =
+    when (usernameType) {
+        UsernameType.Primary -> UsernameRegistrationStates(
+            preorderRegistering = IdentityCreationState.PREORDER_REGISTERING,
+            preorderRegistered = IdentityCreationState.PREORDER_REGISTERED,
+            domainRegistering = IdentityCreationState.USERNAME_REGISTERING,
+            domainRegistered = IdentityCreationState.USERNAME_REGISTERED
+        )
+        UsernameType.Secondary -> UsernameRegistrationStates(
+            preorderRegistering = IdentityCreationState.PREORDER_SECONDARY_REGISTERING,
+            preorderRegistered = IdentityCreationState.PREORDER_SECONDARY_REGISTERED,
+            domainRegistering = IdentityCreationState.USERNAME_SECONDARY_REGISTERING,
+            domainRegistered = IdentityCreationState.USERNAME_SECONDARY_REGISTERED
+        )
+    }
+
+/**
+ * Whether the SDK invite-DPNS branch must still REGISTER [usernameType]'s
+ * name at [creationState], or skip it as already registered. Mirrors the
+ * legacy tail's `<=` gate semantics per name: everything at or past that
+ * name's domainRegistered state (including every later state — the OTHER
+ * name's stages, profile, voting, DONE) is complete for this name. The
+ * dual-name state machine runs SECONDARY (instant) first, so a record
+ * resumed on the primary stages must skip the secondary re-register.
+ */
+internal fun sdkInviteDpnsShouldRegister(
+    creationState: IdentityCreationState,
+    usernameType: UsernameType
+): Boolean = creationState < usernameRegistrationStates(usernameType).domainRegistered
+
+/**
+ * Resolve the SDK-claimed invite identity id for a DPNS registration, in
+ * trust order: the in-flight claim result (set only when the claim ran in
+ * THIS process), then the PERSISTED record's identityId (authoritative on a
+ * resume after interruption/process death), then the rehydrated dashj
+ * wrapper's uniqueId (may legitimately be null — it is a lateinit that
+ * rehydration can leave unset). Null means no source knows the id — the
+ * caller must fail retryably, never crash.
+ */
+internal fun resolveSdkInviteIdentityId(
+    inFlightClaimId: String?,
+    persistedIdentityId: String?,
+    wrapperUniqueId: String?
+): String? = inFlightClaimId ?: persistedIdentityId ?: wrapperUniqueId
 
 @AndroidEntryPoint
 class CreateIdentityService : LifecycleService() {
@@ -1220,25 +1278,11 @@ class CreateIdentityService : LifecycleService() {
         encryptionKey: KeyParameter,
         usernameType: UsernameType
     ) {
-        val preorderRegistering: IdentityCreationState
-        val preorderRegistered: IdentityCreationState
-        val domainRegistering: IdentityCreationState
-        val domainRegistered: IdentityCreationState
-
-        when (usernameType) {
-            UsernameType.Primary -> {
-                preorderRegistering = IdentityCreationState.PREORDER_REGISTERING
-                preorderRegistered = IdentityCreationState.PREORDER_REGISTERED
-                domainRegistering = IdentityCreationState.USERNAME_REGISTERING
-                domainRegistered = IdentityCreationState.USERNAME_REGISTERED
-            }
-            UsernameType.Secondary -> {
-                preorderRegistering = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
-                preorderRegistered = IdentityCreationState.PREORDER_SECONDARY_REGISTERED
-                domainRegistering = IdentityCreationState.USERNAME_SECONDARY_REGISTERING
-                domainRegistered = IdentityCreationState.USERNAME_SECONDARY_REGISTERED
-            }
-        }
+        val states = usernameRegistrationStates(usernameType)
+        val preorderRegistering = states.preorderRegistering
+        val preorderRegistered = states.preorderRegistered
+        val domainRegistering = states.domainRegistering
+        val domainRegistered = states.domainRegistered
 
 
         val username = when (usernameType) {
@@ -1265,19 +1309,47 @@ class CreateIdentityService : LifecycleService() {
         // (registerDpnsNameForExistingIdentity — no funding, no re-fund, and no
         // shielded-flag coupling), mirroring RestoreIdentityWorker's completion
         // step; then let the normal finishRegistration tail (contested check /
-        // DONE / profile) run. Invites are single-username, so only the primary is
-        // routed; a NotBroadcast/Ambiguous leaves the state at USERNAME_REGISTERING
-        // for a retryable tile / RestoreIdentityWorker reconcile (never a re-fund).
-        val sdkClaimedInvite = usernameType == UsernameType.Primary &&
-            blockchainIdentityData.invite?.let {
-                (it.isShielded && isShieldedEnabled()) || (!it.isShielded && isL1InviteSdkRoutable())
-            } == true
+        // DONE / profile) run. EVERY username type routes here: the dual-name
+        // invite flow registers the instant SECONDARY first, and the original
+        // "invites are single-username, route only the primary" scoping sent
+        // that branch into the legacy dashj signer, which died with "signer
+        // callback returned 0" (observed live on the S22, 11.10.50, state
+        // PREORDER_SECONDARY_REGISTERING). A NotBroadcast/Ambiguous leaves the
+        // state at the type's registering state for a retryable tile /
+        // RestoreIdentityWorker reconcile (never a re-fund).
+        val sdkClaimedInvite = blockchainIdentityData.invite?.let {
+            (it.isShielded && isShieldedEnabled()) || (!it.isShielded && isL1InviteSdkRoutable())
+        } == true
         if (sdkClaimedInvite) {
+            // Per-type completion guard, mirroring the legacy tail's `<=` gates:
+            // finishRegistration calls this for BOTH names on every resume, and
+            // the SDK primitive has no internal name pre-check — without this a
+            // record resumed past this name's registration would re-register it
+            // and transiently REGRESS the persisted state.
+            if (!sdkInviteDpnsShouldRegister(blockchainIdentityData.creationState, usernameType)) {
+                log.info(
+                    "skipping SDK DPNS registration of '{}' — already registered (state {})",
+                    username,
+                    blockchainIdentityData.creationState
+                )
+                return
+            }
             if (blockchainIdentityData.creationState <= preorderRegistering) {
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, preorderRegistering)
             }
             identityRepository.updateIdentityCreationState(blockchainIdentityData, domainRegistering)
-            val identityId = sdkClaimedInviteIdentityId ?: blockchainIdentity.uniqueIdString
+            // The id must resolve from PERSISTED state on a resume:
+            // sdkClaimedInviteIdentityId is an in-memory var set only when the
+            // claim ran in THIS process — after an interruption it is null and
+            // the record's persisted identityId (userId) is authoritative. The
+            // wrapper's uniqueId is the last resort, read SAFELY: it is a
+            // lateinit that rehydration can leave unset (observed live as
+            // UninitializedPropertyAccessException on the S22 resume).
+            val identityId = resolveSdkInviteIdentityId(
+                inFlightClaimId = sdkClaimedInviteIdentityId,
+                persistedIdentityId = blockchainIdentityData.userId,
+                wrapperUniqueId = blockchainIdentity.uniqueIdStringOrNull()
+            ) ?: error("invite username registration cannot resolve the claimed identity id (retryable)")
             log.info("registering DPNS name '{}' for SDK-claimed invite identity {} via the SDK", username, identityId)
             when (val result = transparentUsernameCreation.registerDpnsNameForExistingIdentity(identityId, username)) {
                 is SdkWriteResult.Broadcast -> {
@@ -1555,7 +1627,7 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
                 blockchainIdentityData.creationState = IdentityCreationState.USERNAME_REGISTERING
                 blockchainIdentityData.restoring = false
-                error("missing domain document for ${blockchainIdentity.uniqueId}")
+                error("missing domain document for ${blockchainIdentity.uniqueIdStringOrNull()}")
             }
 
             //

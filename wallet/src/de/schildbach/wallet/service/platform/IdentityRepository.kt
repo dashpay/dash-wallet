@@ -98,6 +98,28 @@ internal fun isResurrectingClearedIdentity(
     return persistedCreationState == null || persistedCreationState == IdentityCreationState.NONE.name
 }
 
+/**
+ * [BlockchainIdentity.uniqueIdString] without the lateinit landmine.
+ *
+ * dashj's `BlockchainIdentity.uniqueId` is a `lateinit var` that the legacy
+ * dashj creation flow always initializes — but an SDK-KEYSTORE-claimed
+ * identity (shielded/L1 invite claim, transparent SDK create) reaches the
+ * wrapper by rehydration, and any wrapper built while the persisted record
+ * had no identityId yet (state below IDENTITY_REGISTERED at process start,
+ * with the id persisted later by the in-process claim) is cached with the
+ * lateinit UNSET. Reading `uniqueIdString` on such a wrapper throws
+ * `UninitializedPropertyAccessException` — observed live on the S22 (11.10.50)
+ * when an invite-claim resume crashed in [IdentityRepositoryImpl.initBlockchainIdentity]'s
+ * logging of the stale cached wrapper. Every read that can meet a rehydrated
+ * or stale-cached wrapper must go through this and fall back to the persisted
+ * identityId.
+ */
+internal fun BlockchainIdentity.uniqueIdStringOrNull(): String? = try {
+    uniqueIdString
+} catch (e: UninitializedPropertyAccessException) {
+    null
+}
+
 interface IdentityRepository {
     val blockchainIdentity: BlockchainIdentity?
     val blockchainIdentityFlow: StateFlow<BlockchainIdentity?>
@@ -228,12 +250,12 @@ class IdentityRepositoryImpl @Inject constructor(
 
     @Throws(IllegalStateException::class)
     suspend fun getIdentity(): String {
-        return if (_blockchainIdentity != null) {
-            _blockchainIdentity!!.uniqueIdString
-        } else {
-            blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)
-                ?: throw IllegalStateException("IdentityId not found")
-        }
+        // The cached wrapper can be rehydrated/stale with its lateinit
+        // uniqueId UNSET (SDK-claimed identity persisted after the cache was
+        // built) — read it safely and fall back to the persisted identityId.
+        return _blockchainIdentity?.uniqueIdStringOrNull()
+            ?: blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)
+            ?: throw IllegalStateException("IdentityId not found")
     }
 
     override suspend fun getIdentityBalance(): CreditBalanceInfo? = withContext(Dispatchers.IO) {
@@ -271,7 +293,7 @@ class IdentityRepositoryImpl @Inject constructor(
                 }
                 identity = blockchainIdentityData.identity
             }
-            log.info("loading identity ${blockchainIdentityData.userId} == ${_blockchainIdentity?.uniqueIdString}: {}", watch)
+            log.info("loading identity ${blockchainIdentityData.userId} == ${_blockchainIdentity?.uniqueIdStringOrNull()}: {}", watch)
         } else {
             log.info("loading identity: {}", watch)
             return blockchainIdentity
@@ -279,7 +301,7 @@ class IdentityRepositoryImpl @Inject constructor(
 
         // TODO: needs to check against Platform to see if values exist.  Check after
         // Syncing complete
-        log.info("loading identity ${blockchainIdentityData.userId} == ${_blockchainIdentity?.uniqueIdString}: {}", watch)
+        log.info("loading identity ${blockchainIdentityData.userId} == ${_blockchainIdentity?.uniqueIdStringOrNull()}: {}", watch)
         return blockchainIdentity.apply {
             primaryUsername = blockchainIdentityData.username
             secondaryUsername = blockchainIdentityData.usernameSecondary
@@ -383,7 +405,10 @@ class IdentityRepositoryImpl @Inject constructor(
         blockchainIdentityData.apply {
             creditFundingTxId = blockchainIdentity.assetLockTransaction?.txId
             userId = if (blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED)
-                blockchainIdentity.uniqueIdString
+                // Safe read: an SDK-claimed identity's rehydrated wrapper can
+                // have the lateinit unset while the record already carries the
+                // on-chain id — keep the persisted value, never crash or wipe.
+                blockchainIdentity.uniqueIdStringOrNull() ?: userId
             else null
             identity = blockchainIdentity.identity
             registrationStatus = blockchainIdentity.registrationStatus
@@ -915,7 +940,7 @@ class IdentityRepositoryImpl @Inject constructor(
         val profiles = dashPayProfileDao.loadAll()
         val profilesById = profiles.associateBy({ it.userId }, { it })
         report.append("Contact Requests (Sent) -----------------\n")
-        dashPayContactRequestDao.loadToOthers(_blockchainIdentity?.uniqueIdString ?: return "").forEach {
+        dashPayContactRequestDao.loadToOthers(_blockchainIdentity?.uniqueIdStringOrNull() ?: return "").forEach {
             val fromProfile = profilesById[it.userId]
             report.append(it.userId)
             if (fromProfile != null) {
@@ -929,7 +954,7 @@ class IdentityRepositoryImpl @Inject constructor(
             report.append("\n")
         }
         report.append("Contact Requests (Received) -----------------\n")
-        dashPayContactRequestDao.loadFromOthers(_blockchainIdentity?.uniqueIdString ?: return "").forEach {
+        dashPayContactRequestDao.loadFromOthers(_blockchainIdentity?.uniqueIdStringOrNull() ?: return "").forEach {
             val fromProfile = profilesById[it.userId]
             report.append(it.userId)
             if (fromProfile != null) {
