@@ -1,14 +1,10 @@
 package de.schildbach.wallet.ui.send
 
-import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.data.CreditBalanceInfo
-import de.schildbach.wallet.integration.android.BitcoinIntegration
-import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import androidx.work.WorkInfo
 import de.schildbach.wallet.service.platform.work.PerformTopUpOperation
 import de.schildbach.wallet.service.platform.work.PerformTopUpWorker
@@ -18,25 +14,12 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.money.MonetaryFormat
-import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.slf4j.LoggerFactory
 import de.schildbach.wallet.util.format
-import de.schildbach.wallet.util.setAmount
-import de.schildbach.wallet.util.setFiatAmount
-import de.schildbach.wallet.util.toDashjFiat
 import de.schildbach.wallet.util.toDashjCoin
-import de.schildbach.wallet.util.toNeutralCoin
-import de.schildbach.wallet.util.toNeutralFiat
-import de.schildbach.wallet.util.toTxId
-import de.schildbach.wallet.util.toSha256Hash
 
 class BuyCreditsFragment : SendCoinsFragment() {
     companion object {
