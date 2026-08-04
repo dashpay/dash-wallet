@@ -33,7 +33,6 @@ import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.sdk.SdkTopUpRecoveryService
 import de.schildbach.wallet.service.platform.work.ResumeTopUpsOperation
-import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.BuildConfig
 import org.bitcoinj.core.Coin
@@ -85,7 +84,7 @@ import androidx.core.net.toUri
 /**
  * contains topup related functions that are used by:
  * 1. [CreateIdentityService] to create an identity
- * 2. [TopupIdentityWorker] to topup an identity
+ * 2. [checkTopUps] to retry/complete legacy top-ups
  * 3. [SendInviteWorker] to create Invitations (dynamic link)
  */
 /**
