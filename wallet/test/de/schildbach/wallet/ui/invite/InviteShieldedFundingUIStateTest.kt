@@ -16,7 +16,11 @@
  */
 package de.schildbach.wallet.ui.invite
 
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
+import de.schildbach.wallet.service.platform.sdk.creditsToDash
+import de.schildbach.wallet.service.platform.sdk.dashToCredits
+import de.schildbach.wallet.service.platform.sdk.shieldedInviteDenominationCredits
 import org.dash.wallet.common.money.Dash
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -66,10 +70,50 @@ class InviteShieldedFundingUIStateTest {
             nonContestedFee = nonContestedFee,
             contestedFee = contestedFee
         )
-        // The sheet asks for the amount to SHIELD: 0.15 / 0.35 (the 0.1/0.3
-        // exit denomination padded for the shielded-spend fee), not 0.1/0.3.
-        assertEquals(Dash(15_000_000L), state.nonContestedShieldedCost)
-        assertEquals(Dash(35_000_000L), state.contestedShieldedCost)
+        // The sheet asks for the amount to SHIELD: 0.08 / 0.30 (the v13
+        // 0.03/0.25 exit denomination padded 0.05 for the shielded-spend
+        // fee), not the bare 0.03/0.25.
+        assertEquals(Dash(8_000_000L), state.nonContestedShieldedCost)
+        assertEquals(Dash(30_000_000L), state.contestedShieldedCost)
+    }
+
+    @Test
+    fun `withdrawn amounts match the minted denominations`() {
+        // MINT PARITY PIN (the v13 UI/mint split, T-2): the sheet's Private
+        // withdrawn figures must equal what the mint actually funds
+        // (shieldedInviteDenominationCredits for the tier's fee). A future
+        // platform-version change to the exit-denomination set fails here
+        // instead of silently splitting the UI from the mint again.
+        val state = InviteShieldedFundingUIState()
+        assertEquals(
+            creditsToDash(
+                shieldedInviteDenominationCredits(dashToCredits(Dash(Constants.DASH_PAY_FEE.value)))!!
+            ),
+            state.nonContestedPrivateWithdrawn
+        )
+        assertEquals(
+            creditsToDash(
+                shieldedInviteDenominationCredits(dashToCredits(Dash(Constants.DASH_PAY_FEE_CONTESTED.value)))!!
+            ),
+            state.contestedPrivateWithdrawn
+        )
+    }
+
+    @Test
+    fun `fund-minimums are the minted denominations plus the shield-fee pad`() {
+        // The padded shield-IN guidance must track the SAME minted
+        // denominations: denomination + 0.05 DASH pad (the pad the pre-v13
+        // 0.15/0.35 figures encoded over 0.1/0.3).
+        val padDuffs = 5_000_000L // 0.05 DASH
+        val state = InviteShieldedFundingUIState()
+        assertEquals(
+            Dash(state.nonContestedPrivateWithdrawn.duffs + padDuffs),
+            state.nonContestedShieldedCost
+        )
+        assertEquals(
+            Dash(state.contestedPrivateWithdrawn.duffs + padDuffs),
+            state.contestedShieldedCost
+        )
     }
 
     @Test
@@ -80,33 +124,35 @@ class InviteShieldedFundingUIStateTest {
             nonContestedFee = Dash.ZERO,
             contestedFee = Dash.ZERO
         )
-        assertEquals(Dash(15_000_000L), state.nonContestedShieldedCost)
-        assertEquals(Dash(35_000_000L), state.contestedShieldedCost)
+        assertEquals(Dash(8_000_000L), state.nonContestedShieldedCost)
+        assertEquals(Dash(30_000_000L), state.contestedShieldedCost)
     }
 
-    // ── canCreatePrivateInvite gates on the WITHDRAWN cost (0.1), not the
-    //    padded shield-IN fund-minimum (0.15) — no Constants touched ─────────
+    // ── canCreatePrivateInvite gates on the WITHDRAWN cost (0.03), not the
+    //    padded shield-IN fund-minimum (0.08) ─────────────────────────────────
 
     @Test
-    fun `canCreatePrivateInvite true once the pool holds the 0-1 withdrawn cost`() {
+    fun `canCreatePrivateInvite true once the pool holds the withdrawn cost`() {
         val state = InviteShieldedFundingUIState(
             shieldedEnabled = true,
             resolved = true,
             syncStatus = ShieldedSyncStatus.READY,
-            shieldedBalance = Dash(10_000_000L) // exactly 0.1 DASH — the withdrawn denomination
+            shieldedBalance = Dash(3_000_000L) // exactly 0.03 DASH — the withdrawn denomination
         )
         assertTrue(state.canCreatePrivateInvite)
     }
 
     @Test
-    fun `canCreatePrivateInvite true for a pool between the withdrawn cost and the old 0-15 gate`() {
-        // A pool holding 0.12 (>= 0.1 withdrawn, < 0.15 shield-IN minimum) can
-        // fund a non-contested private invite — the old gate wrongly hid it.
+    fun `canCreatePrivateInvite true for a pool between the withdrawn cost and the padded gate`() {
+        // A pool holding 0.05 (>= 0.03 withdrawn, < 0.08 shield-IN minimum) can
+        // fund a non-contested private invite — gating on the padded minimum
+        // wrongly hid it (the shield-IN pad is irrelevant once funds are
+        // already shielded).
         val state = InviteShieldedFundingUIState(
             shieldedEnabled = true,
             resolved = true,
             syncStatus = ShieldedSyncStatus.READY,
-            shieldedBalance = Dash(12_000_000L) // 0.12 DASH
+            shieldedBalance = Dash(5_000_000L) // 0.05 DASH
         )
         assertTrue(state.canCreatePrivateInvite)
     }
@@ -117,7 +163,7 @@ class InviteShieldedFundingUIStateTest {
             shieldedEnabled = true,
             resolved = true,
             syncStatus = ShieldedSyncStatus.READY,
-            shieldedBalance = Dash(9_999_999L) // just under 0.1 DASH
+            shieldedBalance = Dash(2_999_999L) // just under 0.03 DASH
         )
         assertFalse(state.canCreatePrivateInvite)
     }

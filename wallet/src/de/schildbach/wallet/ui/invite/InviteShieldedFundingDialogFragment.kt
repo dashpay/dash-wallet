@@ -91,8 +91,8 @@ class InviteShieldedFundingDialogFragment :
 
                 InviteShieldedFundingSheet(
                     // Fix G1: show BOTH costs actually withdrawn — Private
-                    // (shielded exit denomination 0.1/0.3) vs Standard (L1 fee
-                    // 0.03/0.25) — so the user compares before deciding.
+                    // (v13 shielded exit denomination 0.03/0.25) vs Standard
+                    // (L1 fee 0.03/0.25) — so the user compares before deciding.
                     nonContestedPrivateCost = state.nonContestedPrivateWithdrawn.toPlainString(),
                     contestedPrivateCost = state.contestedPrivateWithdrawn.toPlainString(),
                     nonContestedStandardCost = state.nonContestedFee.toPlainString(),

@@ -91,8 +91,8 @@ data class UsernamePaymentUIState(
 
     /**
      * The shielded pool balance actually required to fund the username:
-     * the smallest fixed Type-20 exit denomination (0.1/0.3/0.5/1.0 DASH)
-     * covering [usernameFee] — NOT the bare fee. The identity is created
+     * the smallest fixed Type-20 exit denomination (0.03/0.1/0.25/0.5/1.0
+     * DASH, the v13 set) covering [usernameFee] — NOT the bare fee. The identity is created
      * by spending a whole denomination from the pool (fee metered out of
      * it, change back to the pool), so a pool holding more than the fee
      * but less than the denomination cannot fund the creation. Null when
@@ -127,7 +127,7 @@ data class UsernamePaymentUIState(
     /**
      * "Shield your funds first" is only useful when the wallet holds at
      * least the SHIELD-guidance amount ([Constants.SHIELDED_USERNAME_FUND_MIN],
-     * 0.15 DASH — the 0.1 pool denomination padded for the Shield
+     * 0.08 DASH — the 0.03 v13 pool denomination padded for the Shield
      * operation's fee, which is deducted from the locked amount) — below
      * it the sheet disables the button and offers only "Continue without
      * privacy".

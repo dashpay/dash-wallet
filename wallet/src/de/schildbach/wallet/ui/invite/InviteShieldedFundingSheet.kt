@@ -53,11 +53,14 @@ import org.dash.wallet.common.ui.components.TopNavBase
  * adapted to invitations, and surfaces BOTH the Private (shielded) and the
  * Standard (non-private) cost of each username kind so the user can compare
  * before deciding (Fix G1). The amounts are the ones actually WITHDRAWN
- * (consistent with the fee/confirm screens): Private 0.1 / 0.3, Standard the
- * L1 fees 0.03 / 0.25 — all resolved by the ViewModel, never hardcoded here.
+ * (consistent with the fee/confirm screens): Private the v13 exit
+ * denominations 0.03 / 0.25, Standard the L1 fees 0.03 / 0.25 — under v13
+ * the two columns show EQUAL numbers (the comparison stays; privacy is the
+ * differentiator, not price) — all resolved by the ViewModel, never
+ * hardcoded here.
  *
- * The four cost params are plain DASH strings (e.g. "0.1" / "0.3" / "0.03" /
- * "0.25"); [canShieldMinimum] disables the shield-first button when the
+ * The four cost params are plain DASH strings (e.g. "0.03" / "0.25");
+ * [canShieldMinimum] disables the shield-first button when the
  * wallet holds less than the shield-guidance minimum.
  */
 @Composable
@@ -279,8 +282,8 @@ private fun SheetIntro(title: String, description: String) {
 @Composable
 private fun InviteShieldedFundingPreview() {
     InviteShieldedFundingSheet(
-        nonContestedPrivateCost = "0.1",
-        contestedPrivateCost = "0.3",
+        nonContestedPrivateCost = "0.03",
+        contestedPrivateCost = "0.25",
         nonContestedStandardCost = "0.03",
         contestedStandardCost = "0.25",
         canShieldMinimum = true,
@@ -297,8 +300,8 @@ private fun InviteShieldedFundingPreview() {
 @Composable
 private fun InviteShieldedFundingBelowMinimumPreview() {
     InviteShieldedFundingSheet(
-        nonContestedPrivateCost = "0.1",
-        contestedPrivateCost = "0.3",
+        nonContestedPrivateCost = "0.03",
+        contestedPrivateCost = "0.25",
         nonContestedStandardCost = "0.03",
         contestedStandardCost = "0.25",
         canShieldMinimum = false,
@@ -315,8 +318,8 @@ private fun InviteShieldedFundingBelowMinimumPreview() {
 @Composable
 private fun InviteShieldedFundingCreatePrivatePreview() {
     InviteShieldedFundingSheet(
-        nonContestedPrivateCost = "0.1",
-        contestedPrivateCost = "0.3",
+        nonContestedPrivateCost = "0.03",
+        contestedPrivateCost = "0.25",
         nonContestedStandardCost = "0.03",
         contestedStandardCost = "0.25",
         canShieldMinimum = true,

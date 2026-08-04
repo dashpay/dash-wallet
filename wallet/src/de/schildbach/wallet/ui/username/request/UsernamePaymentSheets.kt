@@ -130,7 +130,8 @@ fun SelectPaymentOptionSheet(
  * first" (primary) and "Continue without privacy" (tinted).
  *
  * [minShieldAmount] is the private-username funding bar as a plain DASH
- * string ("0.1" — the smallest Type-20 exit denomination); it drives both
+ * string (`Constants.SHIELDED_USERNAME_FUND_MIN`, "0.08" — the smallest v13
+ * Type-20 exit denomination 0.03 plus the Shield-fee padding); it drives both
  * the "You need to shield at least…" line (with its ⓘ → username-cost
  * explainer) and, via [canShieldMinimum], the shield-first button: below
  * the bar the button is disabled with an explanatory message and the user
@@ -401,7 +402,7 @@ private fun SelectPaymentOptionSelectedPreview() {
 @Composable
 private fun MakeUsernamePrivatePreview() {
     MakeUsernamePrivateSheet(
-        minShieldAmount = "0.1",
+        minShieldAmount = "0.08",
         canShieldMinimum = true,
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},
@@ -413,7 +414,7 @@ private fun MakeUsernamePrivatePreview() {
 @Composable
 private fun MakeUsernamePrivateBelowMinimumPreview() {
     MakeUsernamePrivateSheet(
-        minShieldAmount = "0.1",
+        minShieldAmount = "0.08",
         canShieldMinimum = false,
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},

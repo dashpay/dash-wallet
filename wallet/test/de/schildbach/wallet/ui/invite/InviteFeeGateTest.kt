@@ -17,7 +17,11 @@
 package de.schildbach.wallet.ui.invite
 
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.creditsToDash
+import de.schildbach.wallet.service.platform.sdk.dashToCredits
+import de.schildbach.wallet.service.platform.sdk.shieldedInviteDenominationCredits
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.money.Dash
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -47,10 +51,30 @@ class InviteFeeGateTest {
 
     @Test
     fun `requirement is the withdrawn Type-20 denomination for a private invite`() {
-        // Matches the amount shown on the tiles / confirm screen (0.1 / 0.3),
-        // not the padded pool fund-minimum.
-        assertEquals(Coin.parseCoin("0.1"), inviteFeeRequirement(shielded = true, contestedSelected = false))
-        assertEquals(Coin.parseCoin("0.3"), inviteFeeRequirement(shielded = true, contestedSelected = true))
+        // Matches the amount shown on the tiles / confirm screen (0.03 / 0.25,
+        // the v13 mint mapping), not the padded pool fund-minimum.
+        assertEquals(Coin.parseCoin("0.03"), inviteFeeRequirement(shielded = true, contestedSelected = false))
+        assertEquals(Coin.parseCoin("0.25"), inviteFeeRequirement(shielded = true, contestedSelected = true))
+    }
+
+    @Test
+    fun `shielded requirements match the minted denominations`() {
+        // MINT PARITY PIN (the v13 UI/mint split, T-2): the UI's shielded
+        // requirement constants must equal what the mint actually funds —
+        // shieldedInviteDenominationCredits for the tier's fee. If a platform
+        // version revises the exit-denomination set again, this fails the
+        // build instead of letting the UI advertise/gate amounts the mint no
+        // longer produces (the 0.1/0.3-vs-0.03/0.25 regression).
+        for (contested in listOf(false, true)) {
+            val fee = if (contested) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+            val mintedCredits = shieldedInviteDenominationCredits(dashToCredits(Dash(fee.value)))
+            val minted = Coin.valueOf(creditsToDash(mintedCredits!!).duffs)
+            assertEquals(
+                "UI requirement (contested=$contested) diverged from the minted denomination",
+                minted,
+                inviteFeeRequirement(shielded = true, contestedSelected = contested)
+            )
+        }
     }
 
     // ---- L1 invite (args.shielded == false) ----
@@ -91,7 +115,7 @@ class InviteFeeGateTest {
                 shielded = true,
                 l1Balance = Coin.ZERO,
                 shieldedReady = true,
-                shieldedBalance = Coin.parseCoin("0.3"), // the withdrawn contested amount
+                shieldedBalance = Coin.parseCoin("0.25"), // the withdrawn contested amount (v13)
                 contestedSelected = true
             )
         )
@@ -99,13 +123,13 @@ class InviteFeeGateTest {
 
     @Test
     fun `shielded ready between the two minimums allows only the non-contested selection`() {
-        val balance = Coin.parseCoin("0.20") // 0.1 <= balance < 0.3
+        val balance = Coin.parseCoin("0.20") // 0.03 <= balance < 0.25
         assertFalse(
-            "contested needs 0.3",
+            "contested needs 0.25",
             inviteFeeGate(true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance, contestedSelected = true)
         )
         assertTrue(
-            "non-contested needs only 0.1",
+            "non-contested needs only 0.03",
             inviteFeeGate(true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance, contestedSelected = false)
         )
     }

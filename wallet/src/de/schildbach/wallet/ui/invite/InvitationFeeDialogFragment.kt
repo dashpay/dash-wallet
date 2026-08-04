@@ -49,11 +49,13 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     private var shieldedReady = false
 
     // The Type-20 exit denominations that actually LEAVE the pool for a
-    // private invite (0.1 non-contested / 0.3 contested) — the amount the
-    // user "pays". Distinct from the 0.15/0.35 fund-minimum the pool must
-    // HOLD (that is the gate threshold, see inviteFeeGate).
-    private val shieldedNonContestedFee = Coin.parseCoin("0.1")
-    private val shieldedContestedFee = Coin.parseCoin("0.3")
+    // private invite (0.03 non-contested / 0.25 contested — the v13 mint
+    // mapping, shieldedInviteDenominationCredits) — the amount the user
+    // "pays". Distinct from the 0.08/0.30 fund-minimum the pool must
+    // HOLD (that is the gate threshold, see inviteFeeGate). Pinned to the
+    // mint via inviteFeeRequirement (InviteFeeGateTest).
+    private val shieldedNonContestedFee = Coin.parseCoin("0.03")
+    private val shieldedContestedFee = Coin.parseCoin("0.25")
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val viewModel by activityViewModels<InvitationFragmentViewModel>()
@@ -71,7 +73,7 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
             // ran before the amount was even shown and discarded its result.
             //
             // Pass the amount that is ACTUALLY withdrawn (Fix G3): for a
-            // private invite the Type-20 exit denomination (0.1 / 0.3), for a
+            // private invite the Type-20 exit denomination (0.03 / 0.25), for a
             // standard invite the L1 fee (0.03 / 0.25). The shielded spend
             // uses createShieldedInvite(contested) with its own internal
             // denomination, so this value is display-only there; the L1 spend

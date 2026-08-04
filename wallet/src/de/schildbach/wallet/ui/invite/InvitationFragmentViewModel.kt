@@ -72,9 +72,10 @@ import javax.inject.Inject
  * and the insufficiency message.
  *
  * - Private invite ([shielded] == true): the Type-20 exit denomination the
- *   invite withdraws from the pool — 0.3 contested / 0.1 non-contested — so
- *   the payment validation matches the amount shown on the tiles and the
- *   confirm screen (not the padded 0.15/0.35 pool fund-minimum).
+ *   invite withdraws from the pool — 0.25 contested / 0.03 non-contested
+ *   (the v13 mint mapping, `shieldedInviteDenominationCredits`) — so the
+ *   payment validation matches the amount shown on the tiles and the
+ *   confirm screen (not the padded 0.08/0.30 pool fund-minimum).
  * - L1 invite: the L1 fee — [Constants.DASH_PAY_FEE_CONTESTED] (0.25)
  *   contested / [Constants.DASH_PAY_FEE] (0.03) non-contested.
  */
@@ -86,9 +87,17 @@ internal fun inviteFeeRequirement(shielded: Boolean, contestedSelected: Boolean)
     }
 }
 
-/** Type-20 exit denominations withdrawn from the shielded pool for an invite. */
-private val SHIELDED_INVITE_NON_CONTESTED: Coin = Coin.parseCoin("0.1")
-private val SHIELDED_INVITE_CONTESTED: Coin = Coin.parseCoin("0.3")
+/**
+ * Type-20 exit denominations withdrawn from the shielded pool for an invite —
+ * MUST equal what the mint actually funds
+ * ([de.schildbach.wallet.service.platform.sdk.shieldedInviteDenominationCredits]
+ * for the tier's fee, v13 set: 0.03 non-contested / 0.25 contested). Pinned to
+ * the mint by `InviteFeeGateTest.shielded requirements match the minted
+ * denominations` so a platform-version change fails the build instead of
+ * splitting the UI from the mint again (the pre-v13 0.1/0.3 regression).
+ */
+private val SHIELDED_INVITE_NON_CONTESTED: Coin = Coin.parseCoin("0.03")
+private val SHIELDED_INVITE_CONTESTED: Coin = Coin.parseCoin("0.25")
 
 /**
  * Pure "Confirm and pay" gate for the invitation-fee dialog (host-JVM

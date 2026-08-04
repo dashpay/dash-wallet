@@ -335,11 +335,14 @@ public final class Constants {
 
     // How much the user should SHIELD (L1 -> pool) to afford a username via
     // the shielded path. The pool must hold the whole exit denomination
-    // (0.1 non-contested / 0.3 contested), and the Shield operation's fee
-    // is deducted from the locked amount — so shielding the bare
-    // denomination lands just short. Padded guidance per Brian (2026-07-12).
-    public static final Coin SHIELDED_USERNAME_FUND_MIN = Coin.parseCoin("0.15");
-    public static final Coin SHIELDED_USERNAME_FUND_MIN_CONTESTED = Coin.parseCoin("0.35");
+    // (0.03 non-contested / 0.25 contested under the v13 allowed set —
+    // see SHIELDED_IDENTITY_DENOMINATIONS_CREDITS), and the Shield
+    // operation's fee is deducted from the locked amount — so shielding the
+    // bare denomination lands just short. Padded guidance per Brian
+    // (2026-07-12): denomination + 0.05 shielded-spend fee padding (the same
+    // 0.05 pad the pre-v13 0.15/0.35 figures encoded over 0.1/0.3).
+    public static final Coin SHIELDED_USERNAME_FUND_MIN = Coin.parseCoin("0.08");
+    public static final Coin SHIELDED_USERNAME_FUND_MIN_CONTESTED = Coin.parseCoin("0.30");
 
     // 150,000,000
     public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);

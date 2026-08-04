@@ -72,8 +72,8 @@ internal data class UsernameConfirmCost(val amount: Coin, val fromShieldedBalanc
  *   Showing a price here would wrongly imply the instant name costs
  *   something.
  * - Primary shielded-funded creation: the whole Type-20 exit denomination
- *   leaves the shielded pool (0.1 non-contested / 0.3 contested) — shown
- *   here, the conceptual "paid" step.
+ *   leaves the shielded pool (0.03 non-contested / 0.25 contested under
+ *   v13) — shown here, the conceptual "paid" step.
  * - Primary L1 paths keep the fee schedule (0.25 contested / 0.03
  *   otherwise; contested-name-only registration from identity credits
  *   keeps its own fee).
@@ -119,7 +119,7 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
      * The balance paying for the creation. The dialog always shows the
      * amount actually withdrawn from the user's wallet: on the shielded
      * path that is the whole Type-20 exit denomination leaving the pool
-     * (0.1 non-contested / 0.3 contested), not the underlying fee.
+     * (0.03 non-contested / 0.25 contested under v13), not the underlying fee.
      */
     var paymentSource: UsernamePaymentSource = UsernamePaymentSource.DASH_BALANCE
     private val _uiState = MutableStateFlow(ConfirmUserNameUIState())

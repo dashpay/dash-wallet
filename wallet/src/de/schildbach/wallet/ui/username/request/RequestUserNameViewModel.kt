@@ -136,7 +136,7 @@ data class RequestUserNameUIState(
     /**
      * What the chosen payment source actually requires for this name, as a
      * plain DASH string for the insufficient-balance row — path- and
-     * contested-dependent (L1 0.03/0.25, shielded denomination 0.1/0.3,
+     * contested-dependent (L1 0.03/0.25, v13 shielded denomination 0.03/0.25,
      * identity credits 0.01/0.2). Empty until a name has been checked.
      */
     val requiredAmount: String = "",
@@ -225,8 +225,10 @@ enum class InviteUsernameTier {
  *   link when minted by a build that includes it; older links carry nothing
  *   and are [InviteUsernameTier.UNKNOWN].
  *
- * The threshold is the same for both: the contested fee. The shielded exit
- * denominations (0.1 / 0.3 DASH) straddle it just as the L1 amounts do.
+ * The threshold is the same for both: the contested fee. The shielded note
+ * values (current v13 mints 0.03 / 0.25 DASH, legacy links 0.1 / 0.3)
+ * straddle it just as the L1 amounts do — the contested mints (0.25 / 0.3)
+ * are >= the 0.25 fee, the non-contested ones (0.03 / 0.1) below it.
  */
 fun inviteUsernameTier(invite: InvitationLinkData?, l1InviteBalance: Coin): InviteUsernameTier {
     if (invite == null) return InviteUsernameTier.UNKNOWN
@@ -447,7 +449,7 @@ class RequestUserNameViewModel @Inject constructor(
      * "Select your payment option" sheet (Figma 1856:1805). Selecting the
      * shielded balance starts observing the pool (lazily — the SDK runtime
      * is never touched on the default L1 path) so [checkUsernameValid] can
-     * gate contested names on the 0.3 funding denomination. Replaces the
+     * gate contested names on the 0.25 funding denomination. Replaces the
      * removed CoinJoin mixed/unmixed funding selection.
      */
     var paymentSource: UsernamePaymentSource = UsernamePaymentSource.DASH_BALANCE
@@ -520,10 +522,10 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     /**
-     * A contested username funded from the shielded pool needs the 0.3
+     * A contested username funded from the shielded pool needs the 0.25
      * DASH exit denomination (0.25 contested fee → smallest covering
-     * denomination), and the balance is only evidence once a sync pass
-     * completed — mid-sync zeros are placeholders.
+     * denomination in the v13 set), and the balance is only evidence once a
+     * sync pass completed — mid-sync zeros are placeholders.
      */
     private fun canShieldedFundContestedUsername(): Boolean {
         if (_shieldedSyncStatus.value != ShieldedSyncStatus.READY) return false
@@ -534,9 +536,9 @@ class RequestUserNameViewModel @Inject constructor(
 
     /**
      * The shielded funding denomination the anchor gate must cover for the
-     * last-checked username — the 0.3 DASH exit denomination for a contested
-     * name, 0.1 otherwise (Part B). Defaults to the 0.1 non-contested
-     * requirement before any name has been checked.
+     * last-checked username — the 0.25 DASH exit denomination for a contested
+     * name, 0.03 otherwise (Part B, v13 set). Defaults to the 0.03
+     * non-contested requirement before any name has been checked.
      */
     private fun requiredShieldedDenomination(): Dash {
         val contestable = lastGateUsername?.let {
@@ -1361,10 +1363,10 @@ class RequestUserNameViewModel @Inject constructor(
             isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE
             // Paying from the shielded pool: the welcome-screen decision
             // point only offers this source when the pool covers the
-            // non-contested 0.1 denomination, and the shielded service
+            // non-contested 0.03 denomination, and the shielded service
             // re-verifies balance/denomination in its preflight — the L1
             // wallet balance below is irrelevant to these submissions.
-            // Contested names need the larger 0.3 denomination, so they
+            // Contested names need the larger 0.25 denomination, so they
             // get their own pool-balance gate here.
             paymentSource == UsernamePaymentSource.SHIELDED_BALANCE && !contestable -> true
             paymentSource == UsernamePaymentSource.SHIELDED_BALANCE && contestable ->

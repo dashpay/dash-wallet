@@ -116,7 +116,8 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                     val identityId = if (args.shielded) {
                         // SHIELDED (L2) invite: fund a note directly from the
                         // shielded pool. Contested-ness follows the fee the
-                        // inviter picked (0.25 → contested → 0.3 denomination).
+                        // inviter picked (0.25 → contested → the 0.25 v13
+                        // denomination).
                         val contested = inviteAmount.value >=
                             de.schildbach.wallet.Constants.DASH_PAY_FEE_CONTESTED.value
                         when (val result = invitationFragmentViewModel.createShieldedInvite(contested)) {

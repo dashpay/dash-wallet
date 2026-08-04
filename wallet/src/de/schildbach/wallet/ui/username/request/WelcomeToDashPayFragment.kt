@@ -106,9 +106,9 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
             } else if (!requestUserNameViewModel.canAffordContestedUsername()) {
                 // The worst case across BOTH payment paths, expressed in
                 // what must leave THIS (L1) balance: a contested username
-                // via the shielded path needs 0.35 shielded from the wallet
-                // (0.3 pool denomination + Shield-fee padding; the L1
-                // path's 0.25 is below it).
+                // via the shielded path needs 0.30 shielded from the wallet
+                // (0.25 v13 pool denomination + 0.05 Shield-fee padding;
+                // the L1 path's 0.25 is below it).
                 binding.balanceRequirementDisclaimer.text = getString(
                     R.string.welcome_request_username_min_balance_disclaimer_all,
                     requestUserNameViewModel.walletBalance.value.toPlainString(),
