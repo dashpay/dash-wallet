@@ -18,13 +18,17 @@ package de.schildbach.wallet.ui.username.request
 
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * Pure-logic tests for the post-completion routing decision
- * ([usernameCompletionRoute]). A contested / in-voting username has no home
- * welcome tile, so it must land on the More screen's voting tile; everything
- * else returns to Home.
+ * ([usernameCompletionRoute]) and the usable-username signal it keys off
+ * ([hasUsableUsername]). A contested / in-voting username has no home welcome
+ * tile, so ON ITS OWN it must land on the More screen's voting tile — but once
+ * the identity owns a registered instant name the wallet is usable and the
+ * completion returns to Home; everything else returns to Home.
  */
 class UsernameCompletionRouteTest {
 
@@ -100,5 +104,79 @@ class UsernameCompletionRouteTest {
                 primaryUsernameContestable = false
             )
         )
+    }
+
+    // --- a registered INSTANT name outranks the pending contested one ---
+
+    @Test
+    fun `a usable instant username routes Home even with the contested name in voting`() {
+        // Brian, 11.10.54 (S22): contested "gffh" in VOTING + instant
+        // "gffh-2" already registered landed on More. The wallet IS usable,
+        // so the completion belongs on Home.
+        assertEquals(
+            UsernameCompletionRoute.HOME,
+            usernameCompletionRoute(
+                IdentityCreationState.VOTING,
+                usernameContestable = false,
+                primaryUsernameContestable = true,
+                usableUsernameActive = true
+            )
+        )
+    }
+
+    @Test
+    fun `a usable instant username outranks the finishing screen's own contestable flag`() {
+        assertEquals(
+            UsernameCompletionRoute.HOME,
+            usernameCompletionRoute(
+                IdentityCreationState.USERNAME_REGISTERING,
+                usernameContestable = true,
+                usableUsernameActive = true
+            )
+        )
+    }
+
+    @Test
+    fun `only a pending contested request still routes More`() {
+        assertEquals(
+            UsernameCompletionRoute.MORE,
+            usernameCompletionRoute(
+                IdentityCreationState.VOTING,
+                usernameContestable = false,
+                primaryUsernameContestable = true,
+                usableUsernameActive = false
+            )
+        )
+    }
+
+    // --- hasUsableUsername: what counts as a live instant name ---
+
+    @Test
+    fun `a registered secondary name is usable`() {
+        assertTrue(hasUsableUsername(IdentityCreationState.VOTING, "gffh-2"))
+        assertTrue(hasUsableUsername(IdentityCreationState.USERNAME_SECONDARY_REGISTERED, "gffh-2"))
+        assertTrue(hasUsableUsername(IdentityCreationState.DONE, "gffh-2"))
+    }
+
+    @Test
+    fun `a secondary name still registering is not usable yet`() {
+        // The secondary pass rewinds to REGISTERING on failure, so anything
+        // at or below it is NOT proof the instant name is on chain.
+        assertFalse(hasUsableUsername(IdentityCreationState.USERNAME_SECONDARY_REGISTERING, "gffh-2"))
+        assertFalse(hasUsableUsername(IdentityCreationState.PREORDER_SECONDARY_REGISTERING, "gffh-2"))
+        assertFalse(hasUsableUsername(IdentityCreationState.IDENTITY_REGISTERED, "gffh-2"))
+    }
+
+    @Test
+    fun `a single-name creation has no usable instant name however far the state advanced`() {
+        // A single contested creation SKIPS the secondary pass and still
+        // advances past the secondary marker — the name must be present too.
+        assertFalse(hasUsableUsername(IdentityCreationState.VOTING, null))
+        assertFalse(hasUsableUsername(IdentityCreationState.VOTING, ""))
+    }
+
+    @Test
+    fun `an unknown creation state is never treated as usable`() {
+        assertFalse(hasUsableUsername(null, "gffh-2"))
     }
 }

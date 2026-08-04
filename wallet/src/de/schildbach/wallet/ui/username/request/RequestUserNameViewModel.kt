@@ -359,12 +359,25 @@ enum class UsernameCompletionRoute {
  *   non-contestable) and whose dismiss can precede the VOTING flip — the
  *   primary's contestability must still route MORE (observed live: dual
  *   completion returned Home).
+ *
+ * [usableUsernameActive] OVERRIDES all three: once the identity owns a
+ * registered, immediately usable (instant / non-contested) name the wallet
+ * IS ready to use, so the completion belongs on Home even though a
+ * contested name is still in voting (Brian, 11.10.54: a dual creation of
+ * contested "gffh" + instant "gffh-2" landed on More — "disorienting, the
+ * wallet is ready"). The pending contested request keeps its own home tile
+ * and its More-screen voting tile; it no longer hijacks the destination.
+ * Route elsewhere only when there is nothing usable yet.
  */
 fun usernameCompletionRoute(
     creationState: IdentityCreationState?,
     usernameContestable: Boolean,
-    primaryUsernameContestable: Boolean = false
+    primaryUsernameContestable: Boolean = false,
+    usableUsernameActive: Boolean = false
 ): UsernameCompletionRoute {
+    if (usableUsernameActive) {
+        return UsernameCompletionRoute.HOME
+    }
     return if (creationState == IdentityCreationState.VOTING ||
         usernameContestable ||
         primaryUsernameContestable
@@ -373,6 +386,36 @@ fun usernameCompletionRoute(
     } else {
         UsernameCompletionRoute.HOME
     }
+}
+
+/**
+ * Whether the identity already owns a REGISTERED, immediately usable
+ * (instant / non-contested) username at completion time — the signal
+ * [usernameCompletionRoute] routes Home on.
+ *
+ * The only such name a create-username flow produces alongside a contested
+ * primary is the SECONDARY (instant) one, and
+ * [CreateIdentityService][de.schildbach.wallet.ui.dashpay.CreateIdentityService]
+ * registers it BEFORE the primary pass: the state machine only advances past
+ * [IdentityCreationState.USERNAME_SECONDARY_REGISTERED] once the secondary
+ * domain document is on chain, and a failed pass REWINDS below it. So the
+ * name being present on the record AND the state having advanced past that
+ * marker together prove the instant name is live and usable.
+ *
+ * [usernameSecondary] must come from the PERSISTED identity record, not the
+ * screen's requested-name field: the state marker alone is meaningless for a
+ * single-name creation (which skips the secondary pass entirely and still
+ * advances past the marker).
+ */
+fun hasUsableUsername(
+    creationState: IdentityCreationState?,
+    usernameSecondary: String?
+): Boolean {
+    if (usernameSecondary.isNullOrEmpty()) {
+        return false
+    }
+    val state = creationState ?: return false
+    return state.ordinal >= IdentityCreationState.USERNAME_SECONDARY_REGISTERED.ordinal
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

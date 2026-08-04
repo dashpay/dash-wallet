@@ -34,6 +34,10 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
     private val viewModel by viewModels<VerifyIdentityViewModel>()
     private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
     private val args by navArgs<VerifyIdentityFragmentArgs>()
+
+    /** Guards the post-completion route/finish — see [finishAfterCompletion]. */
+    private var completionHandled = false
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -84,7 +88,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
                                 // Same rule as RequestUsernameFragment: while
                                 // the processing dialog shows, ITS dismiss
                                 // button finishes — never this state flip.
-                                requireActivity().finish()
+                                finishAfterCompletion()
                             }
                         }
                     }
@@ -102,9 +106,23 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
         // status dialogs those submissions ran with zero feedback here.
         UsernameSubmitStatusDialogs(this, requestUserNameViewModel, authManager) {
             // Explicit user dismissal of the processing dialog: the
-            // creation keeps running app-side; leave to the home screen.
-            requireActivity().finish()
+            // creation keeps running app-side. Route exactly as
+            // RequestUsernameFragment's dismiss does — a bare finish() here
+            // dropped the user on whatever screen happened to be underneath,
+            // so the two dismissal routes of the SAME dialog disagreed.
+            finishAfterCompletion()
         }.observe()
+    }
+
+    /**
+     * Route-and-finish, shared with [RequestUsernameFragment] and guarded so
+     * the dialog dismiss and the identity-state observer (which can race it)
+     * run it exactly once.
+     */
+    private fun finishAfterCompletion() {
+        if (completionHandled) return
+        completionHandled = true
+        finishUsernameCreationToCompletionRoute(dashPayViewModel, requestUserNameViewModel)
     }
 
     private fun hideKeyboard() {

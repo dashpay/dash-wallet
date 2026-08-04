@@ -551,33 +551,16 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
      * to Home, where fix (a)'s welcome tile shows. Shared by both finish
      * sites (the L1 processing-dialog dismiss and the identity-state
      * observer) and guarded so it runs exactly once.
+     *
+     * An already-registered INSTANT name outranks the contested one: when
+     * the identity has a usable username the wallet is ready, so the
+     * completion lands on Home even with a contested request still in
+     * voting (see [usernameCompletionRoute]/[hasUsableUsername]).
      */
     private fun finishAfterCompletion() {
         if (completionHandled) return
         completionHandled = true
-        // The PRIMARY name of this creation: the persisted identity's
-        // username when available, else the shared ViewModel's requested
-        // name (both fragments of a dual flow share the activity-scoped
-        // ViewModel, so this holds the contested primary even when the
-        // SECONDARY screen is the one finishing).
-        val primaryName = dashPayViewModel.blockchainIdentity.value?.username
-            ?: requestUserNameViewModel.requestedUserName
-        val primaryContestable = try {
-            primaryName?.let { Names.isUsernameContestable(it) } == true
-        } catch (e: Exception) {
-            false
-        }
-        val route = usernameCompletionRoute(
-            creationState = dashPayViewModel.blockchainIdentity.value?.creationState,
-            usernameContestable = requestUserNameViewModel.uiState.value.usernameContestable,
-            primaryUsernameContestable = primaryContestable
-        )
-        if (route == UsernameCompletionRoute.MORE) {
-            startActivity(MainActivity.createIntent(requireContext(), R.id.moreFragment))
-        } else {
-            startActivity(MainActivity.createIntent(requireContext(), R.id.walletFragment))
-        }
-        requireActivity().finish()
+        finishUsernameCreationToCompletionRoute(dashPayViewModel, requestUserNameViewModel)
     }
 
     private suspend fun checkViewConfirmDialog() {
@@ -661,4 +644,50 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             }
         }
     }
+}
+
+/**
+ * The ONE post-completion route-and-finish for the create-username flow,
+ * shared by EVERY exit of the username processing dialog so they cannot
+ * disagree: [RequestUsernameFragment]'s explicit dismiss / back / cancel,
+ * its auto-dismiss (the identity state machine reaching a terminal state,
+ * ~30s in), and [VerifyIdentityFragment]'s two equivalents — which used to
+ * `finish()` blindly back to whatever screen happened to be underneath.
+ *
+ * The destination itself is [usernameCompletionRoute]'s pure decision.
+ */
+internal fun Fragment.finishUsernameCreationToCompletionRoute(
+    dashPayViewModel: DashPayViewModel,
+    requestUserNameViewModel: RequestUserNameViewModel
+) {
+    val identityData = dashPayViewModel.blockchainIdentity.value
+    // The PRIMARY name of this creation: the persisted identity's username
+    // when available, else the shared ViewModel's requested name (every
+    // fragment of a dual flow shares the activity-scoped ViewModel, so this
+    // holds the contested primary even when the SECONDARY screen is the one
+    // finishing).
+    val primaryName = identityData?.username
+        ?: requestUserNameViewModel.requestedUserName
+    val primaryContestable = try {
+        primaryName?.let { Names.isUsernameContestable(it) } == true
+    } catch (e: Exception) {
+        false
+    }
+    val route = usernameCompletionRoute(
+        creationState = identityData?.creationState,
+        usernameContestable = requestUserNameViewModel.uiState.value.usernameContestable,
+        primaryUsernameContestable = primaryContestable,
+        // PERSISTED secondary name only — the requested-name field would
+        // claim a usable username before the secondary pass registered it.
+        usableUsernameActive = hasUsableUsername(
+            creationState = identityData?.creationState,
+            usernameSecondary = identityData?.usernameSecondary
+        )
+    )
+    if (route == UsernameCompletionRoute.MORE) {
+        startActivity(MainActivity.createIntent(requireContext(), R.id.moreFragment))
+    } else {
+        startActivity(MainActivity.createIntent(requireContext(), R.id.walletFragment))
+    }
+    requireActivity().finish()
 }
