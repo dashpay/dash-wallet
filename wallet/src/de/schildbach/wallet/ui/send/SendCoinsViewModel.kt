@@ -90,7 +90,6 @@ class SendCoinsViewModel @Inject constructor(
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
-        private val dryRunKey = ECKey()
     }
 
     enum class State {
@@ -149,8 +148,6 @@ class SendCoinsViewModel @Inject constructor(
     val contactData: LiveData<UsernameSearchResult>
         get() = _contactData
 
-    /** the resulting transaction is an asset lock transaction (default = false) */
-    var isAssetLock = false
 
     init {
         blockchainStateDao.observeState()
@@ -254,9 +251,6 @@ class SendCoinsViewModel @Inject constructor(
     ): Transaction = withContext(Dispatchers.IO) {
         Context.propagate(wallet.context)
         _state.postValue(State.SENDING)
-        if (isAssetLock) {
-            error("isAssetLock must be false, but is true")
-        }
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
 
         val transaction = try {
@@ -315,65 +309,6 @@ class SendCoinsViewModel @Inject constructor(
         transaction
     }
 
-    /**
-     * The PRE-CUTOVER dashj top-up build+broadcast. Post-cutover this is
-     * never reached: BuyCreditsFragment routes through
-     * [de.schildbach.wallet.service.platform.sdk.SdkTransparentTopUp]
-     * (the SDK's resume-gated, fused topUpFromCore) instead.
-     */
-    suspend fun signAndSendAssetLock(
-        editedAmount: Coin,
-        exchangeRate: ExchangeRate?,
-        checkBalance: Boolean,
-        emptyWallet: Boolean
-    ): Transaction = withContext(Dispatchers.IO) {
-        _state.postValue(State.SENDING)
-        if (!isAssetLock) {
-            error("isAssetLock must be true, but is false")
-        }
-        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
-
-        val key = getNextKey()
-        val transaction = try {
-            var finalSendRequest = sendCoinsTaskRunner.createAssetLockSendRequest(
-                basePaymentIntent.mayEditAmount(),
-                finalPaymentIntent,
-                true,
-                dryrunSendRequest!!.ensureMinRequiredFee,
-                key
-            )
-            finalSendRequest.memo = basePaymentIntent.memo
-            finalSendRequest.exchangeRate = exchangeRate
-            Context.propagate(wallet.context)
-
-            if (emptyWallet) {
-                sendCoinsTaskRunner.signSendRequest(finalSendRequest)
-                wallet.completeTx(finalSendRequest)
-
-                // make sure that the asset lock payload matches the OP_RETURN output
-                val outputValue = finalSendRequest.tx.outputs.first().value
-                val assetLockedValue = (finalSendRequest.tx as AssetLockTransaction).assetLockPayload.creditOutputs.first().value
-                if (assetLockedValue != outputValue) {
-                    val newRequest = SendRequest.assetLock(wallet.params, key, outputValue, true)
-                    newRequest.coinSelector = finalSendRequest.coinSelector
-                    newRequest.returnChange = finalSendRequest.returnChange
-                    newRequest.aesKey = finalSendRequest.aesKey
-                    finalSendRequest = newRequest
-                } else {
-                    // this shouldn't happen
-                    error("The asset lock value is the same as the output though emptying the wallet")
-                }
-            }
-
-            sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
-        } catch (ex: Exception) {
-            _state.postValue(State.FAILED)
-            throw ex
-        }
-
-        _state.postValue(State.SENT)
-        transaction
-    }
 
     fun allowBiometric(): Boolean {
         val thresholdAmount = Coin.parseCoin(configuration.biometricLimit.toString())
@@ -460,7 +395,7 @@ class SendCoinsViewModel @Inject constructor(
         return isInitialized && basePaymentIntent.hasOutputs()
     }
 
-    /** creates a send request using the payment intent and [isAssetLock] */
+    /** creates a send request using the payment intent */
     private fun createSendRequest(
         mayEditAmount: Boolean,
         paymentIntent: PaymentIntent,
@@ -468,22 +403,12 @@ class SendCoinsViewModel @Inject constructor(
         forceEnsureMinRequiredFee: Boolean
         //useGreedyAlgorithm: Boolean = true
     ): SendRequest {
-        return if (!isAssetLock) {
-            sendCoinsTaskRunner.createSendRequest(
-                mayEditAmount,
-                paymentIntent,
-                signInputs,
-                forceEnsureMinRequiredFee
-            )
-        } else {
-            sendCoinsTaskRunner.createAssetLockSendRequest(
-                mayEditAmount,
-                paymentIntent,
-                signInputs,
-                forceEnsureMinRequiredFee,
-                dryRunKey
-            )
-        }
+        return sendCoinsTaskRunner.createSendRequest(
+            mayEditAmount,
+            paymentIntent,
+            signInputs,
+            forceEnsureMinRequiredFee
+        )
     }
 
     fun setAmount(amount: Coin) {
@@ -709,12 +634,4 @@ class SendCoinsViewModel @Inject constructor(
         }
     }
 
-    fun getNextKey(): ECKey {
-        val authGroup = wallet.getKeyChainExtension(
-            AuthenticationGroupExtension.EXTENSION_ID
-        ) as AuthenticationGroupExtension
-        return authGroup.freshKey(
-            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP
-        ) as ECKey
-    }
 }

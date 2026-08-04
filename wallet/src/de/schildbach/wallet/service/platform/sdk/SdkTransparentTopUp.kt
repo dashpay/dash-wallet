@@ -234,7 +234,7 @@ internal class DashSdkTransparentTopUpSource(
  * TRANSPARENT-funded identity TOP-UP ("Buy Credits") — the post-cutover
  * replacement for the dashj asset-lock funding path in
  * [de.schildbach.wallet.ui.send.BuyCreditsFragment] /
- * [de.schildbach.wallet.service.platform.work.TopupIdentityWorker]. Once the
+ * the deleted legacy TopupIdentityWorker. Once the
  * cutover is committed the dashj L1 engine is HELD (0 UTXOs), so building the
  * top-up asset lock with dashj fails `InsufficientMoneyException` — the funds
  * live in the SDK. This routes top-up funding through the SDK's
