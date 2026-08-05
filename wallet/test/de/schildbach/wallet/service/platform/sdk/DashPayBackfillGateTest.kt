@@ -72,11 +72,127 @@ class DashPayBackfillGateTest {
         val decision = decideDashPayBackfill(
             observation = BackfillObservation(1_000_000L, fingerprintA, 790_000L, 145),
             coverage = null,
-            inProgress = null
+            inProgress = null,
+            armed = null,
+            hasProvisionedInProcess = false
         )
         assertTrue(decision.shouldRun)
         assertNull(decision.coverageToWrite)
         assertNull(decision.inProgressToWrite)
+        // The pass about to run is put on record BEFORE it runs, so a later
+        // consultation can detect its rewind from the durable height alone.
+        assertEquals(BackfillArmed(1_000_000L, fingerprintA), decision.armedToWrite)
+    }
+
+    // ── the armed marker (the cross-launch rewind detector) ──────────────
+
+    @Test
+    fun armedMarker_heightBelowTarget_latchesTheWatchAndSkips() {
+        // Launch A armed at 2377092 and provisioned; the rewind persisted
+        // AFTER the process died. Launch B's observation alone proves it.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(2_302_092L, fingerprintA, 2_167_000L, 145),
+            coverage = null,
+            inProgress = null,
+            armed = BackfillArmed(2_377_092L, fingerprintA),
+            hasProvisionedInProcess = false
+        )
+        assertFalse(decision.shouldRun)
+        assertEquals(
+            BackfillInProgress(2_302_092L, 2_377_092L, fingerprintA),
+            decision.inProgressToWrite
+        )
+        assertTrue(decision.clearArmed)
+        assertNull(decision.coverageToWrite) // latch is a watch, never coverage
+    }
+
+    @Test
+    fun armedMarker_contactSetChanged_abandonsTheMarkerAndRearmsForTheNewSet() {
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(2_400_000L, fingerprintB, 2_167_000L, 146),
+            coverage = null,
+            inProgress = null,
+            armed = BackfillArmed(2_377_092L, fingerprintA),
+            hasProvisionedInProcess = false
+        )
+        assertTrue(decision.shouldRun)
+        assertNull(decision.inProgressToWrite)
+        assertEquals(BackfillArmed(2_400_000L, fingerprintB), decision.armedToWrite)
+    }
+
+    @Test
+    fun armedMarker_heightAtOrAboveTarget_freshProcess_failsTowardReRunning() {
+        // "Persist never landed", "nothing to rewind" and "completed inside
+        // the arming session" are indistinguishable here, and coverage may
+        // not be recorded without an observed climb from an observed floor —
+        // so the first pass of a fresh process re-runs and re-arms.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(2_380_000L, fingerprintA, 2_167_000L, 145),
+            coverage = null,
+            inProgress = null,
+            armed = BackfillArmed(2_377_092L, fingerprintA),
+            hasProvisionedInProcess = false
+        )
+        assertTrue(decision.shouldRun)
+        assertNull(decision.coverageToWrite) // NEVER coverage without a climb
+        assertEquals(BackfillArmed(2_380_000L, fingerprintA), decision.armedToWrite)
+    }
+
+    @Test
+    fun armedMarker_heightAtOrAboveTarget_alreadyProvisionedThisProcess_waitsWithoutReRunning() {
+        // The SDK's in-memory rescan guard makes a same-process re-run prove
+        // nothing, and the armed pass's persisted drop may still be in
+        // flight (~9-60s): keep the marker, skip, and let a later trigger
+        // (or the next launch) observe the drop.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(2_377_100L, fingerprintA, 2_167_000L, 145),
+            coverage = null,
+            inProgress = null,
+            armed = BackfillArmed(2_377_092L, fingerprintA),
+            hasProvisionedInProcess = true
+        )
+        assertFalse(decision.shouldRun)
+        assertNull(decision.coverageToWrite)
+        assertNull(decision.armedToWrite)
+        assertFalse(decision.clearArmed) // the marker must survive the wait
+    }
+
+    @Test
+    fun armedMarker_unknownObservation_runsButLeavesTheMarkerAlone() {
+        // Unknown must not be mistaken for "resolved": run (never lossy),
+        // write nothing, and let a later readable launch honour the marker.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation.UNKNOWN,
+            coverage = null,
+            inProgress = null,
+            armed = BackfillArmed(2_377_092L, fingerprintA),
+            hasProvisionedInProcess = false
+        )
+        assertTrue(decision.shouldRun)
+        assertNull(decision.armedToWrite)
+        assertFalse(decision.clearArmed)
+        assertNull(decision.coverageToWrite)
+    }
+
+    @Test
+    fun armedMarker_survivingNextToAWatch_watchWinsAndCompletionClearsBoth() {
+        // Crash between the latch's two writes can leave marker + watch
+        // together; the watch takes precedence, and completion sweeps the
+        // stale marker out.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(2_400_000L, fingerprintA, 2_167_000L, 145),
+            coverage = null,
+            inProgress = BackfillInProgress(2_302_092L, 2_377_092L, fingerprintA),
+            armed = BackfillArmed(2_377_092L, fingerprintA),
+            hasProvisionedInProcess = false
+        )
+        assertFalse(decision.shouldRun)
+        assertEquals(
+            BackfillCoverage(2_302_092L, 2_400_000L, fingerprintA),
+            decision.coverageToWrite
+        )
+        assertTrue(decision.clearInProgress)
+        assertTrue(decision.clearArmed)
     }
 
     @Test
@@ -84,7 +200,9 @@ class DashPayBackfillGateTest {
         val decision = decideDashPayBackfill(
             observation = BackfillObservation(1_010_000L, fingerprintA, 790_000L, 145),
             coverage = BackfillCoverage(790_000L, 1_000_000L, fingerprintA),
-            inProgress = null
+            inProgress = null,
+            armed = null,
+            hasProvisionedInProcess = false
         )
         assertFalse(decision.shouldRun)
         assertFalse(decision.clearCoverage)
@@ -98,7 +216,9 @@ class DashPayBackfillGateTest {
         val decision = decideDashPayBackfill(
             observation = BackfillObservation(1_010_000L, fingerprintB, 700_000L, 146),
             coverage = BackfillCoverage(790_000L, 1_000_000L, fingerprintA),
-            inProgress = null
+            inProgress = null,
+            armed = null,
+            hasProvisionedInProcess = false
         )
         assertTrue(decision.shouldRun)
         assertTrue(decision.clearCoverage)
@@ -111,7 +231,9 @@ class DashPayBackfillGateTest {
         val decision = decideDashPayBackfill(
             observation = BackfillObservation(null, fingerprintA, 790_000L, 145),
             coverage = BackfillCoverage(790_000L, 1_000_000L, fingerprintA),
-            inProgress = null
+            inProgress = null,
+            armed = null,
+            hasProvisionedInProcess = false
         )
         assertTrue(decision.shouldRun)
         assertNull(decision.coverageToWrite)
@@ -122,7 +244,9 @@ class DashPayBackfillGateTest {
         val decision = decideDashPayBackfill(
             observation = BackfillObservation(1_010_000L, null, 790_000L, 145),
             coverage = BackfillCoverage(790_000L, 1_000_000L, fingerprintA),
-            inProgress = null
+            inProgress = null,
+            armed = null,
+            hasProvisionedInProcess = false
         )
         assertTrue(decision.shouldRun)
     }
@@ -134,7 +258,9 @@ class DashPayBackfillGateTest {
         val decision = decideDashPayBackfill(
             observation = BackfillObservation(850_000L, fingerprintA, 790_000L, 145),
             coverage = null,
-            inProgress = BackfillInProgress(790_000L, 1_000_000L, fingerprintA)
+            inProgress = BackfillInProgress(790_000L, 1_000_000L, fingerprintA),
+            armed = null,
+            hasProvisionedInProcess = false
         )
         assertFalse(decision.shouldRun)
         assertNull(decision.coverageToWrite) // NOT complete yet — nothing latched
@@ -145,7 +271,9 @@ class DashPayBackfillGateTest {
         val decision = decideDashPayBackfill(
             observation = BackfillObservation(1_000_000L, fingerprintA, 790_000L, 145),
             coverage = null,
-            inProgress = BackfillInProgress(790_000L, 1_000_000L, fingerprintA)
+            inProgress = BackfillInProgress(790_000L, 1_000_000L, fingerprintA),
+            armed = null,
+            hasProvisionedInProcess = false
         )
         assertFalse(decision.shouldRun)
         assertEquals(
@@ -160,7 +288,9 @@ class DashPayBackfillGateTest {
         val decision = decideDashPayBackfill(
             observation = BackfillObservation(1_000_000L, fingerprintB, 700_000L, 146),
             coverage = null,
-            inProgress = BackfillInProgress(790_000L, 1_000_000L, fingerprintA)
+            inProgress = BackfillInProgress(790_000L, 1_000_000L, fingerprintA),
+            armed = null,
+            hasProvisionedInProcess = false
         )
         assertTrue(decision.shouldRun)
         assertTrue(decision.clearInProgress)
@@ -172,7 +302,9 @@ class DashPayBackfillGateTest {
         val decision = decideDashPayBackfill(
             observation = BackfillObservation(700_000L, fingerprintA, 700_000L, 145),
             coverage = null,
-            inProgress = BackfillInProgress(790_000L, 1_000_000L, fingerprintA)
+            inProgress = BackfillInProgress(790_000L, 1_000_000L, fingerprintA),
+            armed = null,
+            hasProvisionedInProcess = false
         )
         assertFalse(decision.shouldRun)
         assertEquals(
@@ -187,7 +319,9 @@ class DashPayBackfillGateTest {
         val decision = decideDashPayBackfill(
             observation = BackfillObservation(10_000L, fingerprintA, 790_000L, 145),
             coverage = BackfillCoverage(790_000L, 1_000_000L, fingerprintA),
-            inProgress = null
+            inProgress = null,
+            armed = null,
+            hasProvisionedInProcess = false
         )
         assertTrue(decision.shouldRun)
         assertTrue(decision.clearCoverage)
@@ -212,14 +346,25 @@ class DashPayBackfillGateTest {
     }
 
     @Test
-    fun passOutcome_rewindObservedWhileAccountsStillRegistering_latchesNothing() {
+    fun passOutcome_rewindObservedWhileAccountsStillRegistering_STILLLatches() {
+        // The settledness precondition was removed as field-proven wrong: the
+        // SDK re-enqueues every contact's account build on every launch (FFI
+        // persistence gap), so on the wallet this gate exists for
+        // pendingBefore is structurally pinned at the full contact count —
+        // the old gate made latching unreachable, and every launch re-rewound
+        // the scan ~210k blocks forever. A floor that drops further after
+        // latching is absorbed by the watch's floor-widening rule.
         val outcome = decideDashPayBackfillPassOutcome(
             before = BackfillObservation(1_000_000L, fingerprintA, 790_000L, 145),
             syncedHeightAfter = 790_000L,
-            report = settledReport(pendingBefore = 12, drainScheduled = true),
+            report = settledReport(pendingBefore = 182, drainScheduled = true),
             firstPassInProcess = true
         )
-        assertNull(outcome.inProgressToWrite)
+        assertEquals(
+            BackfillInProgress(790_000L, 1_000_000L, fingerprintA),
+            outcome.inProgressToWrite
+        )
+        assertTrue(outcome.clearArmed)
         assertNull(outcome.coverageToWrite)
     }
 
@@ -343,12 +488,115 @@ class DashPayBackfillGateTest {
         )
 
         assertTrue(gate.evaluate(walletId, identityId, userId).shouldRun)
+        // The pass was put on record BEFORE it ran.
+        assertEquals(1_000_000L, store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
+
         gate.recordPassOutcome(walletId, identityId, settledReport())
 
-        // A watch was latched; completion was NOT recorded.
+        // A watch was latched and the marker spent; completion was NOT recorded.
         assertEquals(790_000L, store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_FLOOR])
         assertEquals(1_000_000L, store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_TARGET])
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
         assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
+    }
+
+    @Test
+    fun gate_persistRaceAcrossLaunches_armedMarkerLatchesWhatTheOutcomeReadMissed() = runBlocking {
+        // The exact field sequence that defeated the direct observation: the
+        // rewind fires in SDK memory during the sweep, but the durable
+        // watermark only drops ~9-60s later, so the pass outcome's one-shot
+        // after-read sees NO drop and the old gate re-rewound every launch.
+        val store = FakeStore()
+
+        // ── Launch A: arms at 2377092, provisions; the after-read still
+        // reads the PRE-rewind height (persist in flight), then the process
+        // dies before the drop is ever observed in-process.
+        val launchA = DashPayBackfillGateImpl(
+            sdkService = sdk(
+                DashPayBackfillSignals(2_377_092L, 2_167_000L, 182), // evaluate
+                DashPayBackfillSignals(2_377_092L, 2_167_000L, 182)  // record: raced
+            ),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        assertTrue(launchA.evaluate(walletId, identityId, userId).shouldRun)
+        launchA.recordPassOutcome(
+            walletId, identityId, settledReport(pendingBefore = 182, drainScheduled = true)
+        )
+        // Nothing latched (no drop seen), but the armed marker survives.
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_FLOOR])
+        assertEquals(2_377_092L, store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
+
+        // ── Launch B: the persisted watermark now shows the rewind. The
+        // armed marker turns that into a latch, and provisioning is skipped
+        // so the scan can climb.
+        val launchB = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_302_092L, 2_167_000L, 182)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        assertFalse(launchB.evaluate(walletId, identityId, userId).shouldRun)
+        assertEquals(2_302_092L, store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_FLOOR])
+        assertEquals(2_377_092L, store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_TARGET])
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
+
+        // ── Launch C: the scan climbed back past the armed pre-rewind
+        // height — NOW completion may be recorded, and the rewind stays off.
+        val launchC = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_400_000L, 2_167_000L, 182)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        assertFalse(launchC.evaluate(walletId, identityId, userId).shouldRun)
+        assertEquals(2_302_092L, store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
+        assertEquals(2_400_000L, store.values[DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH])
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_FLOOR])
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
+    }
+
+    @Test
+    fun gate_sameProcessSecondTrigger_latchesOncePersistLands() = runBlocking {
+        // The drop can also land WITHIN the arming session (~9-60s): the
+        // next in-process trigger must latch without re-running.
+        val store = FakeStore()
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(
+                DashPayBackfillSignals(2_377_092L, 2_167_000L, 182), // evaluate #1
+                DashPayBackfillSignals(2_377_092L, 2_167_000L, 182), // record: raced
+                DashPayBackfillSignals(2_302_092L, 2_167_000L, 182)  // evaluate #2
+            ),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        assertTrue(gate.evaluate(walletId, identityId, userId).shouldRun)
+        gate.recordPassOutcome(
+            walletId, identityId, settledReport(pendingBefore = 182, drainScheduled = true)
+        )
+        assertFalse(gate.evaluate(walletId, identityId, userId).shouldRun)
+        assertEquals(2_302_092L, store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_FLOOR])
+        assertEquals(2_377_092L, store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_TARGET])
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
+    }
+
+    @Test
+    fun gate_armedMarkerFromDeadProcess_contactSetChanged_abandonsAndRearms() = runBlocking {
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET] = 2_377_092L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT] = fingerprintA
+
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_302_092L, 2_167_000L, 183)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 146, fromUs = 140, latestToUs = 1_700_500_000_000L)
+        )
+
+        // Even though the height is below the old target, the marker belongs
+        // to a DIFFERENT contact set: no latch — run, re-armed for the new set.
+        assertTrue(gate.evaluate(walletId, identityId, userId).shouldRun)
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_FLOOR])
+        assertEquals(2_302_092L, store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
+        assertEquals(fingerprintB, store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT])
     }
 
     @Test

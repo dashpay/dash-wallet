@@ -494,6 +494,24 @@ open class DashPayConfig @Inject constructor(
         val DASHPAY_BACKFILL_PENDING_FINGERPRINT = stringPreferencesKey("dashpay_backfill_pending_fingerprint")
 
         /**
+         * A provisioning pass ARMED but not yet accounted for: written by
+         * the gate BEFORE it lets a provisioning pass run, recording the
+         * pre-pass durable synced height (TARGET) and the contact set the
+         * pass was armed for (FINGERPRINT). A later gate consultation —
+         * same process or next launch — that finds the durable height
+         * BELOW the armed target has race-free proof the pass's rewind
+         * fired, and promotes the marker to the PENDING watch above.
+         * Exists because observing the rewind directly is unreliable: the
+         * SDK persists the rewound watermark asynchronously (~9–60 s after
+         * the in-memory rewind), so a one-shot read after the pass
+         * routinely reports "no rewind" even though it happened. Cleared
+         * when the pass is accounted for (watch latched, or coverage
+         * recorded) or abandoned on a contact-set change.
+         */
+        val DASHPAY_BACKFILL_ARMED_TARGET = longPreferencesKey("dashpay_backfill_armed_target")
+        val DASHPAY_BACKFILL_ARMED_FINGERPRINT = stringPreferencesKey("dashpay_backfill_armed_fingerprint")
+
+        /**
          * Last shielded balance (in duffs) persisted from a fully-synced
          * (READY) shielded runtime, so the More-screen "Shielded" card can
          * render the known balance INSTANTLY on open — even while a
