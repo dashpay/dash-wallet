@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
@@ -49,12 +50,14 @@ class MayaCryptoCurrencyPickerFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MayaCryptoCurrencyPickerScreen(
-                    viewModel = viewModel,
-                    onBackClick = { findNavController().popBackStack() },
-                    onCoinClick = ::onCoinSelected,
-                    onShowError = ::showErrorAlert
-                )
+                DashWalletTheme {
+                    MayaCryptoCurrencyPickerScreen(
+                        viewModel = viewModel,
+                        onBackClick = { findNavController().popBackStack() },
+                        onCoinClick = ::onCoinSelected,
+                        onShowError = ::showErrorAlert
+                    )
+                }
             }
         }
     }
@@ -66,9 +69,11 @@ class MayaCryptoCurrencyPickerFragment : Fragment() {
         // when the picker is popped off the back stack (returning to the portal):
         // isRemoving is false on a configuration change and while the fragment sits on
         // the back stack after navigating forward, so the query survives rotation and a
-        // forward-then-back trip.
+        // forward-then-back trip. Resolving the navGraphViewModels lazy throws once the
+        // whole flow was popped to Home — the graph scope is gone and its state with it,
+        // so there is nothing left to clear.
         if (isRemoving) {
-            viewModel.onSearchQuery("")
+            runCatching { viewModel }.getOrNull()?.onSearchQuery("")
         }
     }
 

@@ -12,8 +12,7 @@
 
     <item android:top="1dp">
         <shape android:shape="rectangle">
-            <solid android:color="@color/dash_white" />
+            <solid android:color="@color/background_secondary" />
         </shape>
     </item>
-
 </layer-list>

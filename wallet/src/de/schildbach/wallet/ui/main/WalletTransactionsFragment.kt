@@ -107,7 +107,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             viewLifecycleOwner.lifecycleScope.launch {
                 if (rowView is TransactionRowView) {
                     if (isProfileClick && rowView.contact != null) {
-                    DashPayUserBottomSheet.newInstance(rowView.contact).show(requireActivity())
+                        DashPayUserBottomSheet.newInstance(rowView.contact).show(requireActivity())
                     } else {
                         // For rows loaded from the display cache, txWrapper is null.
                         // Fall back to the live wrapper list so CoinJoin/CrowdNode groups still open.

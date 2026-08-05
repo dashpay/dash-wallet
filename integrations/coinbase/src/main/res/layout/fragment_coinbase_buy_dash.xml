@@ -14,7 +14,7 @@
         android:layout_height="?attr/actionBarSize"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        android:background="@android:color/white"
+        android:background="@color/background_primary"
         app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout

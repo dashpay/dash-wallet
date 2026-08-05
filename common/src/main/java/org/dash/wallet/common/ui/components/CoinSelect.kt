@@ -88,9 +88,10 @@ fun CoinSelect(
     haltedLabel: String = "halted",
     onClick: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     val isGreyed = state != CoinSelectState.Active
-    val nameColor = if (isGreyed) MyTheme.Colors.textTertiary else MyTheme.Colors.textPrimary
-    val symbolColor = if (isGreyed) MyTheme.Colors.textTertiary else MyTheme.Colors.textSecondary
+    val nameColor = if (isGreyed) colors.textTertiary else colors.textPrimary
+    val symbolColor = if (isGreyed) colors.textTertiary else colors.textSecondary
 
     Row(
         modifier = modifier
@@ -147,14 +148,14 @@ fun CoinSelect(
                             Text(
                                 text = it,
                                 style = MyTheme.Typography.BodyMedium,
-                                color = MyTheme.Colors.textPrimary
+                                color = colors.textPrimary
                             )
                         }
                         network?.let {
                             Text(
                                 text = it,
                                 style = MyTheme.Typography.BodySmall,
-                                color = MyTheme.Colors.textSecondary
+                                color = colors.textSecondary
                             )
                         }
                     }
@@ -168,16 +169,16 @@ fun CoinSelect(
     }
 }
 
-/** The small pill shown in the halted state (black-8% background, secondary text). */
+/** The small pill shown in the halted state (primary-8% background, secondary text). */
 @Composable
 private fun CoinSelectBadge(label: String) {
     Text(
         text = label,
         style = MyTheme.Typography.BodySmallMedium,
-        color = MyTheme.Colors.textSecondary,
+        color = LocalDashColors.current.textSecondary,
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(Color(0xFF0A0B0D).copy(alpha = 0.08f))
+            .background(LocalDashColors.current.primary8)
             .padding(horizontal = 6.dp, vertical = 2.dp)
     )
 }
@@ -189,7 +190,7 @@ fun CoinSelectPlaceholderIcon() {
         modifier = Modifier
             .size(30.dp)
             .clip(CircleShape)
-            .background(MyTheme.Colors.lightGray)
+            .background(LocalDashColors.current.lightGray)
     )
 }
 
@@ -218,7 +219,7 @@ private fun Modifier.desaturate(): Modifier = this.drawWithCache {
 private fun CoinSelectStatesPreview() {
     Column(
         modifier = Modifier
-            .background(MyTheme.Colors.backgroundSecondary)
+            .background(LocalDashColors.current.backgroundSecondary)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -268,7 +269,7 @@ private fun CoinSelectStateLabel(text: String) {
     Text(
         text = text,
         style = MyTheme.Typography.BodySmall,
-        color = MyTheme.Colors.textTertiary,
+        color = LocalDashColors.current.textTertiary,
         modifier = Modifier.padding(top = 8.dp, start = 10.dp)
     )
 }

@@ -30,6 +30,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.components.DashWalletTheme
 
 @AndroidEntryPoint
 class MasternodeKeysFragment : Fragment() {
@@ -43,19 +44,21 @@ class MasternodeKeysFragment : Fragment() {
     ): View {
         return ComposeView(requireContext()).apply {
             setContent {
-                MasternodeKeysScreen(
-                    uiStateFlow = viewModel.uiState,
-                    onBackClick = { findNavController().popBackStack() },
-                    onKeyTypeClick = { type ->
-                        findNavController().navigate(
-                            R.id.masternodeKeyChainFragment,
-                            bundleOf("type" to type),
-                            NavOptions.Builder()
-                                .setEnterAnim(R.anim.slide_in_right)
-                                .build()
-                        )
-                    }
-                )
+                DashWalletTheme {
+                    MasternodeKeysScreen(
+                        uiStateFlow = viewModel.uiState,
+                        onBackClick = { findNavController().popBackStack() },
+                        onKeyTypeClick = { type ->
+                            findNavController().navigate(
+                                R.id.masternodeKeyChainFragment,
+                                bundleOf("type" to type),
+                                NavOptions.Builder()
+                                    .setEnterAnim(R.anim.slide_in_right)
+                                    .build()
+                            )
+                        }
+                    )
+                }
             }
         }
     }

@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import org.dash.wallet.common.ui.components.CoinSelect
 import org.dash.wallet.common.ui.components.CoinSelectState
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackTitle
 import org.dash.wallet.common.ui.components.SearchField
@@ -133,7 +134,7 @@ private fun MayaCryptoCurrencyPickerScreenContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(LocalDashColors.current.backgroundPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             NavBarBackTitle(
@@ -157,7 +158,7 @@ private fun MayaCryptoCurrencyPickerScreenContent(
                             .weight(1f)
                     ) {
                         CircularProgressIndicator(
-                            color = MyTheme.Colors.dashBlue,
+                            color = LocalDashColors.current.dashBlue,
                             strokeWidth = 3.dp,
                             modifier = Modifier
                                 .align(Alignment.Center)
@@ -184,7 +185,7 @@ private fun MayaCryptoCurrencyPickerScreenContent(
                         Text(
                             text = stringResource(emptyMessage),
                             style = MyTheme.Typography.TitleSmall,
-                            color = MyTheme.Colors.textSecondary,
+                            color = LocalDashColors.current.textSecondary,
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
@@ -209,7 +210,7 @@ private fun MayaCryptoCurrencyPickerScreenContent(
                                 spotColor = CardShadowColor
                             )
                             .clip(CardShape)
-                            .background(MyTheme.Colors.backgroundSecondary)
+                            .background(LocalDashColors.current.backgroundSecondary)
                             .padding(6.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                         contentPadding = PaddingValues(bottom = 4.dp)

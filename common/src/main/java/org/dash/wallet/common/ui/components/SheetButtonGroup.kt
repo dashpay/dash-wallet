@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -144,50 +145,59 @@ enum class ButtonGroupOrientation {
 }
 
 // Preview examples
-@Preview(showBackground = true)
+@Preview(name = "Vertical Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Vertical Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun SheetButtonGroupVerticalPreview() {
-    SheetButtonGroup(
-        primaryButton = SheetButton(
-            text = "Continue",
-            style = Style.FilledBlue,
-            onClick = {}
-        ),
-        secondaryButton = SheetButton(
-            text = "Cancel",
-            style = Style.StrokeGray,
-            onClick = {}
-        ),
-        orientation = ButtonGroupOrientation.Vertical
-    )
+    DashWalletTheme {
+        SheetButtonGroup(
+            primaryButton = SheetButton(
+                text = "Continue",
+                style = Style.FilledBlue,
+                onClick = {}
+            ),
+            secondaryButton = SheetButton(
+                text = "Cancel",
+                style = Style.StrokeGray,
+                onClick = {}
+            ),
+            orientation = ButtonGroupOrientation.Vertical
+        )
+    }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Horizontal Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Horizontal Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun SheetButtonGroupHorizontalPreview() {
-    SheetButtonGroup(
-        primaryButton = SheetButton(
-            text = "Continue",
-            style = Style.FilledBlue,
-            onClick = {}
-        ),
-        secondaryButton = SheetButton(
-            text = "Cancel",
-            style = Style.StrokeGray,
-            onClick = {}
-        ),
-        orientation = ButtonGroupOrientation.Horizontal
-    )
+    DashWalletTheme {
+        SheetButtonGroup(
+            primaryButton = SheetButton(
+                text = "Continue",
+                style = Style.FilledBlue,
+                onClick = {}
+            ),
+            secondaryButton = SheetButton(
+                text = "Cancel",
+                style = Style.StrokeGray,
+                onClick = {}
+            ),
+            orientation = ButtonGroupOrientation.Horizontal
+        )
+    }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Single Button Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Single Button Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun SheetButtonGroupSingleButtonPreview() {
-    SheetButtonGroup(
-        primaryButton = SheetButton(
-            text = "Got it",
-            style = Style.FilledBlue,
-            onClick = {}
+    DashWalletTheme {
+        SheetButtonGroup(
+            primaryButton = SheetButton(
+                text = "Got it",
+                style = Style.FilledBlue,
+                onClick = {}
+            )
         )
-    )
+    }
 }

@@ -30,7 +30,9 @@ import java.util.zip.CRC32
  * CBOR-wrapped CRC32 — so a single-character typo is rejected client-side.
  */
 class CardanoAddressParser : AddressParser(
-    "(addr1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{53,98})|((Ae2|DdzFF)[1-9A-HJ-NP-Za-km-z]{50,110})",
+    // Only the Shelley alternative is case-insensitive — bech32 may be all-caps (BIP-173),
+    // while Byron Base58 is case-sensitive. Bech32.decode rejects mixed case.
+    "((?i:addr1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{53,98}))|((Ae2|DdzFF)[1-9A-HJ-NP-Za-km-z]{50,110})",
     null
 ) {
     companion object {
@@ -38,8 +40,13 @@ class CardanoAddressParser : AddressParser(
         private const val MAX_SHELLEY_LENGTH = 110
     }
 
+    // Only the Shelley bech32 form is case-insensitive; Byron Base58 keeps its case.
+    override fun isCaseInsensitiveFormat(input: String): Boolean {
+        return input.startsWith("addr1", ignoreCase = true)
+    }
+
     override fun verifyAddress(addressCandidate: String) {
-        if (addressCandidate.startsWith("addr1")) {
+        if (addressCandidate.startsWith("addr1", ignoreCase = true)) {
             val decoded = Bech32.decode(addressCandidate, MAX_SHELLEY_LENGTH)
             require(decoded.encoding == Bech32.Encoding.BECH32 && decoded.hrp == "addr") {
                 "not a mainnet Shelley address"

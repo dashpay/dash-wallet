@@ -31,6 +31,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.slf4j.LoggerFactory
 import org.dash.wallet.common.R as CommonR
 
@@ -73,18 +74,20 @@ class DEXReceiveFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                DEXReceiveScreen(
-                    viewModel = viewModel,
-                    onBackClick = { findNavController().popBackStack() },
-                    // "Back home" exits the whole buy flow to the wallet home (WalletFragment).
-                    // navController.graph is the root nav_home graph, whose start destination is
-                    // walletFragment — same "go home" pattern as MayaConvertResultFragment.
-                    onBackHomeClick = {
-                        val navController = findNavController()
-                        navController.popBackStack(navController.graph.startDestinationId, false)
-                    },
-                    onCopyClick = ::copyToClipboard
-                )
+                DashWalletTheme {
+                    DEXReceiveScreen(
+                        viewModel = viewModel,
+                        onBackClick = { findNavController().popBackStack() },
+                        // "Back home" exits the whole buy flow to the wallet home (WalletFragment).
+                        // navController.graph is the root nav_home graph, whose start destination is
+                        // walletFragment — same "go home" pattern as MayaConvertResultFragment.
+                        onBackHomeClick = {
+                            val navController = findNavController()
+                            navController.popBackStack(navController.graph.startDestinationId, false)
+                        },
+                        onCopyClick = ::copyToClipboard
+                    )
+                }
             }
         }
     }

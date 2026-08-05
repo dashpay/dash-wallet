@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
 import org.dash.wallet.common.ui.components.Size
@@ -99,7 +100,7 @@ private fun DEXEnterAmountScreenContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(LocalDashColors.current.backgroundPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             NavBarBack(
@@ -137,7 +138,7 @@ private fun DEXEnterAmountScreenContent(
                     Text(
                         text = stringResource(R.string.dex_enter_amount_invalid),
                         style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.red,
+                        color = LocalDashColors.current.red,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }

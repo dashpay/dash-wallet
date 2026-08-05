@@ -28,6 +28,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.util.toBigDecimal
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -49,11 +50,6 @@ class DEXEnterAmountFragment : Fragment() {
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private val args by navArgs<DEXEnterAmountFragmentArgs>()
 
-    // Captured while the Maya nav graph is still on the back stack (in onCreateView). onDestroy must
-    // not touch the `viewModel` lazy directly: resolving it re-runs getBackStackEntry(nav_maya), which
-    // throws once the whole flow has been popped to Home (the graph is gone by then).
-    private var resolvedViewModel: DEXEnterAmountViewModel? = null
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -69,7 +65,6 @@ class DEXEnterAmountFragment : Fragment() {
             ?: assetPool?.assetPriceFiat?.currencyCode
             ?: args.fiatCurrency
 
-        resolvedViewModel = viewModel
         viewModel.setArguments(
             asset = args.asset,
             assetCurrencyCode = args.currency,
@@ -95,10 +90,12 @@ class DEXEnterAmountFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                DEXEnterAmountScreen(
-                    viewModel = viewModel,
-                    onBackClick = { findNavController().popBackStack() }
-                )
+                DashWalletTheme {
+                    DEXEnterAmountScreen(
+                        viewModel = viewModel,
+                        onBackClick = { findNavController().popBackStack() }
+                    )
+                }
             }
         }
     }
@@ -109,10 +106,11 @@ class DEXEnterAmountFragment : Fragment() {
         // gesture) to the coin picker, or the receive screen's "Back home" popping the whole flow —
         // not on config changes or process death. The shared ViewModel outlives this fragment while
         // the picker is still on the stack, so without this it would restore the stale amount on
-        // the next entry into the buy flow. Use the instance captured in onCreateView rather than the
-        // lazy: re-resolving it here would throw once the whole flow has been popped to Home.
+        // the next entry into the buy flow. Resolving the navGraphViewModels lazy throws once the
+        // whole flow was popped to Home — the graph scope is gone and its state with it, so there
+        // is nothing left to clear.
         if (isRemoving) {
-            resolvedViewModel?.clearEnteredAmount()
+            runCatching { viewModel }.getOrNull()?.clearEnteredAmount()
         }
     }
 }

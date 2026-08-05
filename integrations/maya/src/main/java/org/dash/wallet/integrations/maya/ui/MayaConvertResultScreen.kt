@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
@@ -79,11 +80,11 @@ fun MayaConvertResultScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundSecondary)
+            .background(LocalDashColors.current.backgroundSecondary)
     ) {
         if (state.isLoading) {
             CircularProgressIndicator(
-                color = MyTheme.Colors.dashBlue,
+                color = LocalDashColors.current.dashBlue,
                 modifier = Modifier.align(Alignment.Center)
             )
         } else {
@@ -112,7 +113,7 @@ fun MayaConvertResultScreen(
                 Text(
                     text = state.title,
                     style = MyTheme.Typography.HeadlineMediumBold,
-                    color = MyTheme.Colors.textPrimary,
+                    color = LocalDashColors.current.textPrimary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -123,7 +124,7 @@ fun MayaConvertResultScreen(
                 Text(
                     text = state.message,
                     style = MyTheme.Typography.TitleMedium,
-                    color = MyTheme.Colors.textSecondary,
+                    color = LocalDashColors.current.textSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -147,7 +148,7 @@ fun MayaConvertResultScreen(
                     Text(
                         text = state.explorerLinkText,
                         style = MyTheme.CaptionMedium,
-                        color = MyTheme.Colors.dashBlue,
+                        color = LocalDashColors.current.dashBlue,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .padding(top = 5.dp)

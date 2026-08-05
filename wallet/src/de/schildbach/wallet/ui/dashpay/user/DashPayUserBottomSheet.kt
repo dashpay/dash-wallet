@@ -62,6 +62,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.os.BundleCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.setFragmentResult
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -91,6 +92,8 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarClose
 import org.dash.wallet.common.ui.components.Style
@@ -145,10 +148,9 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
 
     private fun resolveInitialUserData(args: Bundle?): UsernameSearchResult? {
         if (args == null) return null
-        @Suppress("DEPRECATION")
-        args.getParcelable<UsernameSearchResult>(ARG_USERNAME_SEARCH_RESULT)?.let { return it }
-        @Suppress("DEPRECATION")
-        args.getParcelable<DashPayProfile>(ARG_DASHPAY_PROFILE)?.let { profile ->
+        BundleCompat.getParcelable(args, ARG_USERNAME_SEARCH_RESULT, UsernameSearchResult::class.java)
+            ?.let { return it }
+        BundleCompat.getParcelable(args, ARG_DASHPAY_PROFILE, DashPayProfile::class.java)?.let { profile ->
             return UsernameSearchResult(profile.username, profile, null, null)
         }
         return null
@@ -339,13 +341,14 @@ private fun DashPayUserContent(
     onSheetDraggableChanged: (Boolean) -> Unit = {}
 ) {
     val userData = state.userData
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
             // Only fill height when the sheet has been auto-expanded to MATCH_PARENT;
             // otherwise the wrap_content sheet would balloon to full height for every contact.
             .then(if (isFullScreen) Modifier.fillMaxHeight() else Modifier)
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         NavBarClose(onCloseClick = onCloseClick)
 
@@ -399,12 +402,13 @@ private fun UserInfoCard(
     onSendOrAcceptClick: () -> Unit,
     onPayClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 10.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(MyTheme.Colors.backgroundSecondary)
+            .background(colors.backgroundSecondary)
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
@@ -430,13 +434,13 @@ private fun UserInfoCard(
                     Text(
                         text = profile.username,
                         style = MyTheme.Typography.TitleMediumMedium,
-                        color = MyTheme.Colors.textPrimary
+                        color = colors.textPrimary
                     )
                     if (profile.displayName.isNotEmpty()) {
                         Text(
                             text = profile.displayName,
                             style = MyTheme.Typography.LabelMedium,
-                            color = MyTheme.Colors.textTertiary
+                            color = colors.textTertiary
                         )
                     }
                 }
@@ -445,7 +449,7 @@ private fun UserInfoCard(
                 Text(
                     text = profile.publicMessage,
                     style = MyTheme.Typography.TitleSmall,
-                    color = MyTheme.Colors.textPrimary
+                    color = colors.textPrimary
                 )
             }
         }
@@ -469,12 +473,13 @@ private fun RequestReceivedCard(
     onIgnoreClick: () -> Unit,
     onAcceptClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 10.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(MyTheme.Colors.backgroundSecondary)
+            .background(colors.backgroundSecondary)
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
@@ -485,12 +490,12 @@ private fun RequestReceivedCard(
             Text(
                 text = stringResource(R.string.contact_request_received_card_title, username),
                 style = MyTheme.Typography.TitleMediumMedium,
-                color = MyTheme.Colors.textPrimary
+                color = colors.textPrimary
             )
             Text(
                 text = stringResource(R.string.contact_request_received_card_message, username),
                 style = MyTheme.Typography.TitleSmall,
-                color = MyTheme.Colors.textSecondary
+                color = colors.textSecondary
             )
         }
         Row(
@@ -530,6 +535,7 @@ private fun ColumnScope.ActivitySection(
     transactionValue: (Transaction) -> Coin,
     onSheetDraggableChanged: (Boolean) -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     // In full-screen mode, the section claims all remaining vertical space so the inner
     // list can scroll inside it. In wrap_content mode, the section measures to its content
     // and the LazyColumn is capped so it stays scrollable rather than ballooning the sheet.
@@ -555,7 +561,7 @@ private fun ColumnScope.ActivitySection(
             Text(
                 text = stringResource(R.string.notifications_profile_activity),
                 style = MyTheme.Typography.LabelLarge,
-                color = MyTheme.Colors.textSecondary
+                color = colors.textSecondary
             )
             FilterButton(
                 activeFilter = activeFilter,
@@ -645,11 +651,12 @@ private fun DayGroupCard(
     transactionValue: (Transaction) -> Coin,
     onNotificationClick: (NotificationItem) -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(MyTheme.Colors.backgroundSecondary)
+            .background(colors.backgroundSecondary)
             .padding(6.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -663,12 +670,12 @@ private fun DayGroupCard(
             Text(
                 text = dayLabel(group.date),
                 style = MyTheme.CaptionMedium,
-                color = MyTheme.Colors.textPrimary
+                color = colors.textPrimary
             )
             Text(
                 text = DateTimeFormatter.ofPattern("EEEE", Locale.getDefault()).format(group.date),
                 style = MyTheme.Caption,
-                color = MyTheme.Colors.textSecondary
+                color = colors.textSecondary
             )
         }
         group.items.forEach { item ->
@@ -687,6 +694,7 @@ private fun FilterButton(
     activeFilter: NotificationFilter,
     onFilterSelected: (NotificationFilter) -> Unit
 ) {
+    val colors = LocalDashColors.current
     var expanded by remember { mutableStateOf(false) }
     Box {
         Row(
@@ -701,18 +709,18 @@ private fun FilterButton(
                 painter = painterResource(R.drawable.ic_filter_icon),
                 contentDescription = null,
                 modifier = Modifier.size(13.dp),
-                tint = MyTheme.Colors.textPrimary
+                tint = colors.textPrimary
             )
             Text(
                 text = stringResource(R.string.activity_buy_and_sell_dash_filter),
                 style = MyTheme.CaptionMedium,
-                color = MyTheme.Colors.textPrimary
+                color = colors.textPrimary
             )
         }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            modifier = Modifier.background(MyTheme.Colors.backgroundSecondary)
+            modifier = Modifier.background(colors.backgroundSecondary)
         ) {
             FilterMenuItem(R.string.all_transactions, NotificationFilter.ALL, activeFilter) {
                 onFilterSelected(it); expanded = false
@@ -734,12 +742,13 @@ private fun FilterMenuItem(
     active: NotificationFilter,
     onClick: (NotificationFilter) -> Unit
 ) {
+    val colors = LocalDashColors.current
     DropdownMenuItem(
         text = {
             Text(
                 text = stringResource(labelRes),
                 style = MyTheme.Typography.BodyMedium,
-                color = if (value == active) MyTheme.Colors.dashBlue else MyTheme.Colors.textPrimary
+                color = if (value == active) colors.dashBlue else colors.textPrimary
             )
         },
         trailingIcon = if (value == active) {
@@ -747,7 +756,7 @@ private fun FilterMenuItem(
                 Icon(
                     painter = painterResource(R.drawable.ic_checkmark_blue),
                     contentDescription = null,
-                    tint = MyTheme.Colors.dashBlue,
+                    tint = colors.dashBlue,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -763,6 +772,7 @@ private fun NotificationRow(
     transactionValue: (Transaction) -> Coin,
     onClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     // The day is conveyed by the group header; rows show only the time of day (e.g. "9:40 AM"),
     // localized and honoring the system 12/24-hour setting.
     val context = LocalContext.current
@@ -826,12 +836,12 @@ private fun NotificationRow(
                     Text(
                         text = title,
                         style = MyTheme.Typography.TitleSmallMedium,
-                        color = MyTheme.Colors.textPrimary
+                        color = colors.textPrimary
                     )
                     Text(
                         text = timeText,
                         style = MyTheme.Typography.BodyMedium,
-                        color = MyTheme.Colors.textSecondary
+                        color = colors.textSecondary
                     )
                 }
             }
@@ -852,12 +862,12 @@ private fun NotificationRow(
                             else R.string.transaction_row_status_received
                         ),
                         style = MyTheme.Typography.TitleSmallMedium,
-                        color = MyTheme.Colors.textPrimary
+                        color = colors.textPrimary
                     )
                     Text(
                         text = timeText,
                         style = MyTheme.Typography.BodyMedium,
-                        color = MyTheme.Colors.textSecondary
+                        color = colors.textSecondary
                     )
                 }
                 // Use the wallet-net value (same basis as the sent/received classification) rather
@@ -871,7 +881,7 @@ private fun NotificationRow(
                     Text(
                         text = amount,
                         style = MyTheme.Typography.TitleSmallMedium,
-                        color = MyTheme.Colors.textPrimary
+                        color = colors.textPrimary
                     )
                 }
             }
@@ -879,7 +889,7 @@ private fun NotificationRow(
                 Text(
                     text = item.getId(),
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textSecondary
+                    color = colors.textSecondary
                 )
             }
         }
@@ -1086,21 +1096,30 @@ private fun PreviewFriendsTheySentFirst() {
         )
     )
 }
-
 @Preview(
-    name = "FRIENDS — I sent request first, they accepted",
+    name = "FRIENDS — I sent request first, they accepted - Light",
     showBackground = true,
     widthDp = 428,
-    heightDp = 800
+    heightDp = 800,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_NO
+)
+@Preview(
+    name = "FRIENDS — I sent request first, they accepted - Dark",
+    showBackground = true,
+    widthDp = 428,
+    heightDp = 800,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
 private fun PreviewFriendsISentFirst() {
     val profile = previewProfile()
     val notifications = previewEstablishedNotifications(profile, theirRequestFirst = false)
-    DashPayUserPreviewFrame(
-        state = DashPayUserBottomSheetUIState(
-            userData = (notifications.first() as NotificationItemContact).usernameSearchResult,
-            notifications = notifications
+    DashWalletTheme {
+        DashPayUserPreviewFrame(
+            state = DashPayUserBottomSheetUIState(
+                userData = (notifications.first() as NotificationItemContact).usernameSearchResult,
+                notifications = notifications
+            )
         )
-    )
+    }
 }

@@ -91,8 +91,8 @@ fun SearchField(
                 .clip(RoundedCornerShape(16.dp))
                 .background(SearchFieldBackground),
             singleLine = true,
-            textStyle = MyTheme.Body2Regular.copy(color = MyTheme.Colors.textPrimary),
-            cursorBrush = SolidColor(MyTheme.Colors.dashBlue),
+            textStyle = MyTheme.Body2Regular.copy(color = LocalDashColors.current.textPrimary),
+            cursorBrush = SolidColor(LocalDashColors.current.dashBlue),
             keyboardOptions = KeyboardOptions(imeAction = imeAction),
             keyboardActions = KeyboardActions(onSearch = { onSearch?.invoke() }),
             decorationBox = { innerTextField ->
@@ -106,7 +106,7 @@ fun SearchField(
                     Icon(
                         painter = painterResource(R.drawable.ic_search),
                         contentDescription = null,
-                        tint = MyTheme.Colors.textTertiary,
+                        tint = LocalDashColors.current.textTertiary,
                         modifier = Modifier.size(20.dp)
                     )
                     Box(modifier = Modifier.weight(1f)) {
@@ -140,7 +140,7 @@ fun SearchField(
             Text(
                 text = cancelText,
                 style = MyTheme.CaptionMedium,
-                color = MyTheme.Colors.textPrimary,
+                color = LocalDashColors.current.textPrimary,
                 modifier = Modifier
                     .clip(RoundedCornerShape(11.dp))
                     .clickable { onCancel() }

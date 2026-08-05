@@ -34,6 +34,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
@@ -134,19 +135,21 @@ class MayaConversionPreviewFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MayaConversionPreviewScreen(
-                    state = uiState,
-                    onBackClick = {
-                        viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_TOP_BACK)
-                        findNavController().popBackStack()
-                    },
-                    onCancelClick = ::onCancelClick,
-                    onConfirmClick = ::onConfirmClick,
-                    onFeeInfoClick = {
-                        viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_FEE_INFO)
-                        safeNavigate(MayaConversionPreviewFragmentDirections.mayaOrderReviewToFeeInfo())
-                    }
-                )
+                DashWalletTheme {
+                    MayaConversionPreviewScreen(
+                        state = uiState,
+                        onBackClick = {
+                            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_TOP_BACK)
+                            findNavController().popBackStack()
+                        },
+                        onCancelClick = ::onCancelClick,
+                        onConfirmClick = ::onConfirmClick,
+                        onFeeInfoClick = {
+                            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_FEE_INFO)
+                            safeNavigate(MayaConversionPreviewFragmentDirections.mayaOrderReviewToFeeInfo())
+                        }
+                    )
+                }
             }
         }
     }

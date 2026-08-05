@@ -31,6 +31,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.safeNavigate
 import java.text.SimpleDateFormat
@@ -46,19 +47,24 @@ class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transacti
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                TransactionMetadataSettingsScreen(onBackClick = {
-                    findNavController().popBackStack()
-                }, onInfoButtonClick = {
-                    // info button
-                    safeNavigate(TransactionMetadataSettingsFragmentDirections.toInfoDialog(
-                        firstTime = false,
-                        useNavigation = true
-                    ))
-                },
-                onSaveToNetwork = {
-                    saveToNetwork()
-                }, viewModel
-                )
+                DashWalletTheme {
+                    TransactionMetadataSettingsScreen(
+                        onBackClick = {
+                        findNavController().popBackStack()
+                    }, onInfoButtonClick = {
+                        // info button
+                        safeNavigate(
+                            TransactionMetadataSettingsFragmentDirections.toInfoDialog(
+                                firstTime = false,
+                                useNavigation = true
+                            )
+                        )
+                    },
+                        onSaveToNetwork = {
+                            saveToNetwork()
+                        }, viewModel
+                    )
+                }
             }
         }
     }

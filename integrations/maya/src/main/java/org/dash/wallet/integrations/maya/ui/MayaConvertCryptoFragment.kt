@@ -40,6 +40,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.util.Constants
@@ -111,21 +112,23 @@ class MayaConvertCryptoFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MayaConvertCryptoScreen(
-                    state = uiState,
-                    onBackClick = {
-                        convertViewModel.reset()
-                        findNavController().popBackStack()
-                    },
-                    onMaxClick = ::onMaxClick,
-                    onCurrencySelected = ::onCurrencySelected,
-                    onKeyInput = ::onKeyInput,
-                    onContinueClick = {
-                        if (!uiState.isProcessing) {
-                            convertViewModel.continueSwap(pickedCurrencyOption)
+                DashWalletTheme {
+                    MayaConvertCryptoScreen(
+                        state = uiState,
+                        onBackClick = {
+                            convertViewModel.reset()
+                            findNavController().popBackStack()
+                        },
+                        onMaxClick = ::onMaxClick,
+                        onCurrencySelected = ::onCurrencySelected,
+                        onKeyInput = ::onKeyInput,
+                        onContinueClick = {
+                            if (!uiState.isProcessing) {
+                                convertViewModel.continueSwap(pickedCurrencyOption)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }
@@ -712,6 +715,14 @@ class MayaConvertCryptoFragment : Fragment() {
 
     override fun onDestroy() {
         super.onDestroy()
-        convertViewModel.clear()
+        // Clear the entered amounts only when this screen is popped off the back stack:
+        // isRemoving is false on a configuration change, where clear() would wipe the
+        // saved-state amount the recreated fragment is about to restore. Resolving the
+        // navGraphViewModels lazy throws once the whole flow was popped to Home — the
+        // graph scope is gone and its ViewModel state with it, so there is nothing left
+        // to clear.
+        if (isRemoving) {
+            runCatching { convertViewModel }.getOrNull()?.clear()
+        }
     }
 }

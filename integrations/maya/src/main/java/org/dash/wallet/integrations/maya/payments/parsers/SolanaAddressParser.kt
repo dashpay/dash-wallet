@@ -16,10 +16,23 @@
  */
 package org.dash.wallet.integrations.maya.payments.parsers
 
+import org.bitcoinj.core.Base58
 import org.dash.wallet.common.payments.parsers.AddressParser
 
 /**
  * Solana address parser — Base58 ed25519 public key, 32 to 44 characters.
- * Uses a permissive Base58 alphabet check; final validation is done by SwapKit.
  */
-class SolanaAddressParser : AddressParser("[1-9A-HJ-NP-Za-km-z]{32,44}", null)
+class SolanaAddressParser : AddressParser("[1-9A-HJ-NP-Za-km-z]{32,44}", null) {
+    /**
+     * A Solana address is the Base58 encoding of a raw 32-byte ed25519 public key. The
+     * lexical pattern alone also matches other chains' Base58 strings — notably a Dash
+     * P2PKH address (25-byte Base58Check payload, 34 chars), which then only fails at
+     * conversion time (MO-969) — so require the decoded payload to be exactly 32 bytes.
+     */
+    override fun verifyAddress(addressCandidate: String) {
+        val decoded = Base58.decode(addressCandidate)
+        require(decoded.size == 32) {
+            "not a Base58-encoded 32-byte key (${decoded.size} bytes)"
+        }
+    }
+}

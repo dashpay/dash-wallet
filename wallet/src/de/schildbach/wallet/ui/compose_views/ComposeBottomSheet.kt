@@ -10,6 +10,7 @@ import androidx.fragment.app.DialogFragment
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogComposeContainerBinding
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.viewBinding
 
 class ComposeBottomSheet @JvmOverloads constructor(
@@ -33,8 +34,10 @@ class ComposeBottomSheet @JvmOverloads constructor(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.composeContainer.setContent {
-            Box(modifier = Modifier.navigationBarsPadding()) {
-                content(this@ComposeBottomSheet)
+            DashWalletTheme {
+                Box(modifier = Modifier.navigationBarsPadding()) {
+                    content(this@ComposeBottomSheet)
+                }
             }
         }
     }

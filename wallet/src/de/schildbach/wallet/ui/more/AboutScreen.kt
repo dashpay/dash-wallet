@@ -43,13 +43,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.ListItem1
 import org.dash.wallet.common.ui.components.ListItem10
 import org.dash.wallet.common.ui.components.ListItem11
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
@@ -94,10 +97,11 @@ fun AboutScreen(
     onReviewAndRateClick: () -> Unit = {},
     onContactSupportClick: () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         // Fixed top navigation — back chevron only
         NavBarBack(onBackClick = onBackClick)
@@ -145,7 +149,7 @@ fun AboutScreen(
                 ListItem10(
                     secondaryText = stringResource(R.string.about_fork_disclaimer),
                     primaryText = stringResource(R.string.about_github_link),
-                    primaryColor = MyTheme.Colors.dashBlue,
+                    primaryColor = colors.dashBlue,
                     onClick = onGithubLinkClick
                 )
             }
@@ -194,14 +198,14 @@ fun AboutScreen(
                 Text(
                     text = stringResource(R.string.about_copyright, uiState.copyrightYear),
                     style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.textSecondary,
+                    color = colors.textSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
                     text = stringResource(R.string.about_license),
                     style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.textSecondary,
+                    color = colors.textSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -216,6 +220,7 @@ fun AboutScreen(
  */
 @Composable
 private fun DashLogoHeader(isMainNet: Boolean) {
+    val colors = LocalDashColors.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -226,7 +231,7 @@ private fun DashLogoHeader(isMainNet: Boolean) {
             painter = painterResource(R.drawable.ic_dash_logo_white),
             contentDescription = null,
             colorFilter = ColorFilter.tint(
-                if (isMainNet) MyTheme.Colors.dashBlue else MyTheme.Colors.orange
+                if (isMainNet) colors.dashBlue else colors.orange
             ),
             modifier = Modifier
                 .height(28.dp)
@@ -244,6 +249,7 @@ private fun AboutSectionTitle(
     text: String,
     trailing: (@Composable () -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -256,7 +262,7 @@ private fun AboutSectionTitle(
         Text(
             text = text,
             style = MyTheme.Body2Medium,
-            color = MyTheme.Colors.textTertiary
+            color = colors.textTertiary
         )
         if (trailing != null) {
             Spacer(Modifier.weight(1f))
@@ -286,57 +292,66 @@ private fun ForceSyncButton(onClick: () -> Unit) {
 }
 
 @Composable
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 private fun AboutScreenPreview() {
-    AboutScreen(
-        uiState = AboutUIState(
-            versionName = "11.8.2 (10)",
-            dashjVersion = "22.0.3",
-            platformVersion = "4.0.0",
-            deviceSyncStatus = "01 Jan 2026 at 20:00",
-            serverUpdateStatus = "01 Jan 2026",
-            firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
-            fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:APA91bFxb4Zn9gbNfaN-rJDGQRFKX3yuQUF2PB",
-            showForceSyncButton = true,
-            isMainNet = true,
-            copyrightYear = 2026
+    DashWalletTheme {
+        AboutScreen(
+            uiState = AboutUIState(
+                versionName = "11.8.2 (10)",
+                dashjVersion = "22.0.3",
+                platformVersion = "4.0.0",
+                deviceSyncStatus = "01 Jan 2026 at 20:00",
+                serverUpdateStatus = "01 Jan 2026",
+                firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
+                fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:APA91bFxb4Zn9gbNfaN-rJDGQRFKX3yuQUF2PB",
+                showForceSyncButton = true,
+                isMainNet = true,
+                copyrightYear = 2026
+            )
         )
-    )
+    }
 }
 
 @Composable
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "TestNet Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "TestNet Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 private fun AboutScreenTestNetPreview() {
-    AboutScreen(
-        uiState = AboutUIState(
-            versionName = "11.8.2 (10)",
-            dashjVersion = "22.0.3",
-            platformVersion = "4.0.0",
-            deviceSyncStatus = "01 Jan 2026 at 20:00",
-            serverUpdateStatus = "01 Jan 2026",
-            firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
-            fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:APA91bFxb4Zn9gbNfaN-rJDGQRFKX3yuQUF2PB",
-            showForceSyncButton = true,
-            isMainNet = false,
-            copyrightYear = 2026
+    DashWalletTheme {
+        AboutScreen(
+            uiState = AboutUIState(
+                versionName = "11.8.2 (10)",
+                dashjVersion = "22.0.3",
+                platformVersion = "4.0.0",
+                deviceSyncStatus = "01 Jan 2026 at 20:00",
+                serverUpdateStatus = "01 Jan 2026",
+                firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
+                fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:APA91bFxb4Zn9gbNfaN-rJDGQRFKX3yuQUF2PB",
+                showForceSyncButton = true,
+                isMainNet = false,
+                copyrightYear = 2026
+            )
         )
-    )
+    }
 }
 
 @Composable
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Loading Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Loading Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 private fun AboutScreenLoadingPreview() {
-    AboutScreen(
-        uiState = AboutUIState(
-            versionName = "7.4.7 (10)",
-            dashjVersion = "22.0.3",
-            platformVersion = "4.0.0",
-            deviceSyncStatus = "Syncing…",
-            serverUpdateStatus = null,
-            firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
-            fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:A...N-rJDGQRFKX3yuQUF2PB",
-            showForceSyncButton = false,
-            copyrightYear = 2026
+    DashWalletTheme {
+        AboutScreen(
+            uiState = AboutUIState(
+                versionName = "7.4.7 (10)",
+                dashjVersion = "22.0.3",
+                platformVersion = "4.0.0",
+                deviceSyncStatus = "Syncing…",
+                serverUpdateStatus = null,
+                firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
+                fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:A...N-rJDGQRFKX3yuQUF2PB",
+                showForceSyncButton = false,
+                copyrightYear = 2026
+            )
         )
-    )
+    }
 }
