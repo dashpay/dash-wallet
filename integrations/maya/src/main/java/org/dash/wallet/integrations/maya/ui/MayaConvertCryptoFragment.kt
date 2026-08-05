@@ -280,13 +280,14 @@ class MayaConvertCryptoFragment : Fragment() {
         }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
-            // An amount-too-low error (SwapKit's `noRoutesFound`, Maya's "amount too low")
-            // shouldn't pop a modal — surface it in the same inline red error the local
-            // min-amount check uses, so the user can simply raise the amount and retry without
-            // dismissing a dialog. The active backend's aggregator classifies and localizes the
-            // error (see SwapProvider): Maya's amount-too-low keeps its "below the allowed
-            // minimum" copy, while SwapKit's noRoutesFound — which can also mean the route is
-            // briefly unavailable — gets the same neutral no-route message the DEX buy screens show.
+            // An amount-too-low error (SwapKit's `sellAssetAmountTooSmall` / `noRoutesFound`,
+            // Maya's "amount too low") shouldn't pop a modal — surface it in the same inline red
+            // error the local min-amount check uses, so the user can simply raise the amount and
+            // retry without dismissing a dialog. The active backend's aggregator classifies and
+            // localizes the error (see SwapProvider): Maya's amount-too-low keeps its "below the
+            // allowed minimum" copy, SwapKit's explicit …AmountTooSmall gets below-the-minimum
+            // copy, and its ambiguous noRoutesFound — which can also mean the route is briefly
+            // unavailable — gets the neutral no-route message the DEX buy screens show.
             if (!it.isNullOrBlank() && viewModel.isAmountTooLowError(it)) {
                 setInlineError(getString(viewModel.errorMessageRes(it)))
                 return@observe
