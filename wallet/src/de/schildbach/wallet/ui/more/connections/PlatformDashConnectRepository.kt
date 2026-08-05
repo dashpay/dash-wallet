@@ -460,8 +460,14 @@ class PlatformDashConnectRepository @Inject constructor(
         // yappr serializes the IdentityUpdateTransition WITHOUT the outer StateTransition enum
         // tag: the payload starts with the transition's own version byte (0x00 = V0) followed by
         // the identity id. StateTransition::deserialize expects the enum variant tag first, so
-        // prepend IdentityUpdate's tag (6). Try the tagged form first in case the app ever starts
-        // sending full StateTransition bytes.
+        // prepend IdentityUpdate's tag (6).
+        //
+        // The framing is incidental, not contractual: wasm-dpp2's
+        // IdentityUpdateTransition::to_bytes() serializes the bare inner transition, while the
+        // StateTransition wrapper's own to_bytes() (which yappr DOES use on its document path,
+        // via toStateTransition()) emits the tag. So a future yappr refactor could start sending
+        // tagged bytes — hence both framings are accepted here rather than only the tagless one.
+        // No upstream spec states which to expect.
         val info = try {
             NativeStateTransition.deserialize(byteArrayOf(STATE_TRANSITION_IDENTITY_UPDATE_VARIANT) + transitionBytes)
         } catch (ex: Exception) {
