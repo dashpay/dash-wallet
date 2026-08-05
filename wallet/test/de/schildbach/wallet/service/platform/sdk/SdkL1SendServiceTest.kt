@@ -1312,6 +1312,48 @@ class SdkL1SendServiceTest {
     }
 
     @Test
+    fun maxMayaDepositRefusesWhileAppLockedOutputsExist() = runBlocking {
+        // A max deposit spends all but the headroom, so selection would reach
+        // CrowdNode-locked outputs — the same fail-closed refusal the send-all
+        // drain applies. Nothing may be built or measured.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        try {
+            service(source, hasAppLockedOutputs = { true }).maxMayaDepositDuffs()
+            fail("expected the max deposit to be refused while app-locked outputs exist")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("app-locked"))
+        }
+        assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun maxMayaDepositRefusesOnSeamRegisteredLocks() = runBlocking {
+        // Locks on SDK-only txs are invisible to the dashj check; they block too.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val registry = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        try {
+            service(source, seamRegistry = registry).maxMayaDepositDuffs()
+            fail("expected the max deposit to be refused while seam locks exist")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("app-locked"))
+        }
+        assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun maxMayaDepositFailsClosedWhenTheLockCheckThrows() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val svc = service(source, hasAppLockedOutputs = { throw IllegalStateException("wallet unavailable") })
+        try {
+            svc.maxMayaDepositDuffs()
+            fail("expected a failed lock check to block the max deposit")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("app-locked"))
+        }
+        assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
     fun maxMayaDepositRejectsAnOversizeMemo() = runBlocking {
         val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
         try {

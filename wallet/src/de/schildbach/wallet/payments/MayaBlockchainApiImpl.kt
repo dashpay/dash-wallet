@@ -185,7 +185,23 @@ class MayaBlockchainApiImpl @Inject constructor(
         // balance would price a deposit that cannot be built, and paying the
         // vault less than the quote is exactly the under-delivery we refuse.
         val quoteAmount = if (swapTradeUIModel.maximum) {
-            val maxDeposit = maxSwapDepositAmount()
+            // Contained: the measurement refuses (throws) when the wallet holds
+            // app-locked outputs a max deposit would sweep, and can fail on
+            // gate/bind errors — surface those as a recoverable failure rather
+            // than letting them escape into the caller's scope.
+            val maxDeposit = try {
+                maxSwapDepositAmount()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                log.error("maya max sell: deposit fee measurement failed", t)
+                return ResponseResource.Failure(
+                    (t as? Exception) ?: MayaException(t.message ?: "could not size the swap deposit"),
+                    false,
+                    0,
+                    t.message
+                )
+            }
             if (maxDeposit.duffs <= 0L) {
                 return ResponseResource.Failure(
                     MayaException("balance too low to cover a swap deposit and its fee"),

@@ -1746,26 +1746,7 @@ class SdkL1SendService internal constructor(
             // blocks. Real fix: an upstream SDK UTXO lock/exclusion API
             // (iOS's add_inputs_from_outpoints binding is the porting
             // candidate).
-            val hasLockedOutputs = try {
-                hasAppLockedSpendableOutputs()
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                log.warn("SDK {}: app-locked-output preflight failed; blocking the drain (fail closed)", operation, t)
-                true
-            }
-            // B7 union: seam-registered locks (SDK-only txs — CrowdNode
-            // API-response outputs locked via WalletDataAdapter →
-            // [SeamOutputLockRegistry]) are invisible to the dashj wallet
-            // check above; OR them in so the drain cannot spend them
-            // either. Fail closed: a registry read failure also blocks.
-            val hasSeamLockedOutputs = try {
-                seamOutputLockRegistry.hasAnyLocks()
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                log.warn("SDK {}: seam output-lock registry read failed; blocking the drain (fail closed)", operation, t)
-                true
-            }
-            if (hasLockedOutputs || hasSeamLockedOutputs) {
+            if (hasProtectedOutputs(operation)) {
                 log.warn(
                     "SDK {}: wallet has app-locked outputs (CrowdNode); send-all via the SDK would " +
                         "spend them — blocked until the SDK exposes UTXO exclusion",
@@ -2002,6 +1983,32 @@ class SdkL1SendService internal constructor(
     }
 
     /**
+     * FAIL-CLOSED protected-output preflight, shared by every path that
+     * sweeps (or all but sweeps) the wallet: true when the wallet holds any
+     * app-locked output — CrowdNode account locks in the held dashj wallet,
+     * or seam-registered locks on SDK-only txs that the dashj check cannot
+     * see. The FFI has no UTXO-exclusion API, so a sweep-scale build would
+     * spend protected funds; a check failure blocks too.
+     */
+    private fun hasProtectedOutputs(operation: String): Boolean {
+        val hasLockedOutputs = try {
+            hasAppLockedSpendableOutputs()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK {}: app-locked-output preflight failed; blocking (fail closed)", operation, t)
+            true
+        }
+        val hasSeamLockedOutputs = try {
+            seamOutputLockRegistry.hasAnyLocks()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK {}: seam output-lock registry read failed; blocking (fail closed)", operation, t)
+            true
+        }
+        return hasLockedOutputs || hasSeamLockedOutputs
+    }
+
+    /**
      * The largest amount a MAYACHAIN deposit can pay a vault right now:
      * spendable balance MINUS the deposit's own mining fee MINUS a small
      * change-output headroom.
@@ -2036,6 +2043,16 @@ class SdkL1SendService internal constructor(
         }
         val gate = probeSendGate()
         check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        // FAIL-CLOSED (funds-critical): a max deposit spends all but
+        // [MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS] of the wallet, so coin
+        // selection will reach app-locked outputs (CrowdNode) — which
+        // [spendableBalanceDuffs] deliberately INCLUDES and the FFI cannot be
+        // told to exclude. Same guard the send-all drain applies, for the same
+        // reason: refuse to quote rather than sweep protected funds into a
+        // swap. A partial (non-max) deposit keeps the ordinary send's exposure.
+        check(!hasProtectedOutputs("l1MayaMaxDeposit")) {
+            "wallet has app-locked outputs (CrowdNode); a max swap deposit would spend them"
+        }
         val spendable = source.spendableBalanceDuffs(walletIdHex)
         // The probe itself must be fundable, with a change output, before any
         // fee can be measured.
