@@ -1528,6 +1528,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private val activityHistory = arrayListOf<SyncActivitySample>()
 
         override fun onReceive(context: Context, intent: Intent) {
+            // Once a minute while the service runs, one line of process
+            // memory next to the sync-activity history — the crash-loop
+            // investigation needs to see native-heap/PSS growth over a
+            // session without adb access (cheap in-process reads only,
+            // getPss() is the most expensive at ~ms).
+            logMemory()
+
             // WHICH ENGINE'S ACTIVITY COUNTS. The detector exists to stop a
             // genuinely idle service, and its four counters were all dashj-fed.
             // Post-cutover the dashj peergroup is HELD, so every one of them is
@@ -1574,6 +1581,36 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             lastSdkProgress = current
             sdkSampled = true
             return sample
+        }
+
+        /**
+         * One per-minute memory line into wallet.log. All figures come from
+         * in-process syscalls — no dumpsys, no exec: [Runtime] for the JVM
+         * heap, [android.os.Debug]'s native-heap counters for the
+         * Rust/dashj allocations, and [android.os.Debug.getPss] (reads
+         * /proc/self/smaps, a few ms — fine at this cadence) for the real
+         * resident footprint the OS kills on. Never throws.
+         */
+        private fun logMemory() {
+            try {
+                val runtime = Runtime.getRuntime()
+                val jvmUsed = runtime.totalMemory() - runtime.freeMemory()
+                val jvmMax = runtime.maxMemory()
+                val nativeUsed = android.os.Debug.getNativeHeapAllocatedSize()
+                val nativeSize = android.os.Debug.getNativeHeapSize()
+                val pssKb = android.os.Debug.getPss()
+                log.info(
+                    "MEM pss={}MB nativeHeap={}/{}MB jvm={}/{}MB",
+                    pssKb / 1024,
+                    nativeUsed / (1024 * 1024),
+                    nativeSize / (1024 * 1024),
+                    jvmUsed / (1024 * 1024),
+                    jvmMax / (1024 * 1024)
+                )
+            } catch (t: Throwable) {
+                // A diagnostics line must never take the tick down.
+                log.debug("memory log line failed: {}", t.toString())
+            }
         }
 
         private fun pushAndEvaluate(sample: SyncActivitySample) {
