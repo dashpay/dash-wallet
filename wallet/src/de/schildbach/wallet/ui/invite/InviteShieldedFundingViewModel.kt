@@ -104,8 +104,8 @@ internal fun inviteShieldedOptions(
  *
  * The shielded contested/non-contested "amount to shield" figures come
  * from the same fund-minimum constants the create-username flow shows
- * ([Constants.SHIELDED_USERNAME_FUND_MIN] 0.033 DASH /
- * [Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED] 0.253 DASH) — the 0.03 /
+ * ([Constants.SHIELDED_USERNAME_FUND_MIN] 0.035 DASH /
+ * [Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED] 0.26 DASH) — the 0.03 /
  * 0.25 v13 Type-20 exit denomination plus [Constants.SHIELDED_FEE_MARGIN]
  * for the Shield operation's own fee.
  *
@@ -130,7 +130,7 @@ data class InviteShieldedFundingUIState(
 ) {
     /**
      * The shielded balance a NON-contested invitation requires the user to
-     * hold: [Constants.SHIELDED_USERNAME_FUND_MIN] (0.033 DASH) — the 0.03
+     * hold: [Constants.SHIELDED_USERNAME_FUND_MIN] (0.035 DASH) — the 0.03
      * v13 Type-20 exit denomination plus [Constants.SHIELDED_FEE_MARGIN] for
      * the Shield operation's own fee. This is the "amount to shield" the
      * sheet asks for, NOT the bare exit denomination (0.03), which is only
@@ -186,7 +186,7 @@ data class InviteShieldedFundingUIState(
     /**
      * "Shield your funds first" is only useful when the wallet holds at
      * least the SHIELD-guidance amount ([Constants.SHIELDED_USERNAME_FUND_MIN],
-     * 0.033 DASH — the 0.03 pool denomination plus the Shield operation's
+     * 0.035 DASH — round guidance above the 0.03 pool denomination plus the Shield fee
      * fee margin) — below it the sheet disables the button and offers
      * only "Continue without privacy".
      */

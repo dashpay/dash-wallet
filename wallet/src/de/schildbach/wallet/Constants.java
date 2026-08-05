@@ -357,10 +357,12 @@ public final class Constants {
     // denominations equal DASH_PAY_FEE / DASH_PAY_FEE_CONTESTED, pinned by
     // InviteFeeGateTest), and the Shield operation's own fee is deducted
     // from the locked amount — so shielding the bare denomination lands
-    // just short. Guidance = denomination + SHIELDED_FEE_MARGIN
-    // (0.033 / 0.253).
-    public static final Coin SHIELDED_USERNAME_FUND_MIN = DASH_PAY_FEE.add(SHIELDED_FEE_MARGIN);
-    public static final Coin SHIELDED_USERNAME_FUND_MIN_CONTESTED = DASH_PAY_FEE_CONTESTED.add(SHIELDED_FEE_MARGIN);
+    // just short. User-facing guidance is a ROUND number chosen above
+    // denomination + SHIELDED_FEE_MARGIN (product decision 2026-08-05):
+    // 0.035 / 0.26. Must never fall below the enforced gate
+    // (denomination + SHIELDED_FEE_MARGIN) — pinned by InviteFeeGateTest.
+    public static final Coin SHIELDED_USERNAME_FUND_MIN = Coin.parseCoin("0.035");
+    public static final Coin SHIELDED_USERNAME_FUND_MIN_CONTESTED = Coin.parseCoin("0.26");
 
     // 150,000,000
     public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);

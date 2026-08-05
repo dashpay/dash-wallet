@@ -70,11 +70,11 @@ class InviteShieldedFundingUIStateTest {
             nonContestedFee = nonContestedFee,
             contestedFee = contestedFee
         )
-        // The sheet asks for the amount to SHIELD: 0.033 / 0.253 (the v13
-        // 0.03/0.25 exit denomination plus the 0.003 shielded-fee margin,
-        // Constants.SHIELDED_FEE_MARGIN), not the bare 0.03/0.25.
-        assertEquals(Dash(3_300_000L), state.nonContestedShieldedCost)
-        assertEquals(Dash(25_300_000L), state.contestedShieldedCost)
+        // The sheet asks for the amount to SHIELD: 0.035 / 0.26 — round
+        // user-facing guidance above denomination + Constants.SHIELDED_FEE_MARGIN
+        // (product decision 2026-08-05), not the bare 0.03/0.25.
+        assertEquals(Dash(3_500_000L), state.nonContestedShieldedCost)
+        assertEquals(Dash(26_000_000L), state.contestedShieldedCost)
     }
 
     @Test
@@ -100,21 +100,22 @@ class InviteShieldedFundingUIStateTest {
     }
 
     @Test
-    fun `fund-minimums are the minted denominations plus the shield-fee margin`() {
-        // The padded shield-IN guidance must track the SAME minted
-        // denominations: denomination + the 0.003 DASH shielded-fee margin
+    fun `fund-minimums never fall below the minted denominations plus the shield-fee margin`() {
+        // The shield-IN guidance is a ROUND number (0.035 / 0.26, product
+        // decision 2026-08-05) but must never drop below the enforced
+        // minimum: denomination + the 0.003 DASH shielded-fee margin
         // (Constants.SHIELDED_FEE_MARGIN — the Shield entry's consensus fee,
         // ~0.00213, is deducted from the locked amount, so the bare
         // denomination lands short; the pre-2026-08 0.05 pad was a guess).
         val padDuffs = 300_000L // 0.003 DASH
         val state = InviteShieldedFundingUIState()
-        assertEquals(
-            Dash(state.nonContestedPrivateWithdrawn.duffs + padDuffs),
-            state.nonContestedShieldedCost
+        assertTrue(
+            "non-contested guidance below denomination + margin",
+            state.nonContestedShieldedCost.duffs >= state.nonContestedPrivateWithdrawn.duffs + padDuffs
         )
-        assertEquals(
-            Dash(state.contestedPrivateWithdrawn.duffs + padDuffs),
-            state.contestedShieldedCost
+        assertTrue(
+            "contested guidance below denomination + margin",
+            state.contestedShieldedCost.duffs >= state.contestedPrivateWithdrawn.duffs + padDuffs
         )
     }
 
@@ -126,8 +127,8 @@ class InviteShieldedFundingUIStateTest {
             nonContestedFee = Dash.ZERO,
             contestedFee = Dash.ZERO
         )
-        assertEquals(Dash(3_300_000L), state.nonContestedShieldedCost)
-        assertEquals(Dash(25_300_000L), state.contestedShieldedCost)
+        assertEquals(Dash(3_500_000L), state.nonContestedShieldedCost)
+        assertEquals(Dash(26_000_000L), state.contestedShieldedCost)
     }
 
     // ── canCreatePrivateInvite gates on the withdrawn cost + Type-16

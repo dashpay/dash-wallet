@@ -127,7 +127,7 @@ data class UsernamePaymentUIState(
     /**
      * "Shield your funds first" is only useful when the wallet holds at
      * least the SHIELD-guidance amount ([Constants.SHIELDED_USERNAME_FUND_MIN],
-     * 0.033 DASH — the 0.03 v13 pool denomination plus the Shield
+     * 0.035 DASH — round guidance above the 0.03 v13 pool denomination plus the Shield fee
      * operation's fee margin, since that fee is deducted from the locked
      * amount) — below it the sheet disables the button and offers only
      * "Continue without privacy".
