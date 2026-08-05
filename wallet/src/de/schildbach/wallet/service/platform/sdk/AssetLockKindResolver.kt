@@ -248,11 +248,19 @@ class AssetLockKindResolver @Inject constructor(
             // durable transaction-kind / funding-type probes read from it.
             val db = sdkService.databaseOrNull()
 
+            // Whether the SDK has RECORDED this tx in its `transactions` ledger
+            // yet (nullable Int: the typed kind, or null when the tx is absent).
+            // A null here is NOT "definitely not an asset lock" — it is "the SDK
+            // wallet-changeset callback has not persisted this tx yet" (a fresh
+            // broadcast, or one the engine has not synced). It gates the negative
+            // cache below so a still-pending classification is never pinned.
+            val txKind = db?.transactionDao()?.transactionKindForDisplayTxid(hex)
+
             // UNSHIELD FIRST — the AssetUnlock (withdraw/unshield) has NO
             // asset_locks row and the SDK records it as an INCOMING transfer,
             // so neither the app-side records nor fundingTypeForTxid below can
             // see it. It is classified only from the transactions table.
-            if (db?.transactionDao()?.transactionKindForDisplayTxid(hex) == ASSET_UNLOCK_TRANSACTION_KIND) {
+            if (txKind == ASSET_UNLOCK_TRANSACTION_KIND) {
                 return AssetLockKind.UNSHIELD
             }
 
@@ -276,11 +284,22 @@ class AssetLockKindResolver @Inject constructor(
                 else -> null
             }
             // Negative-cache ONLY a verdict every probe could weigh in on: with
-            // the SDK DB up, all probes ran and null means "genuinely not a
-            // known asset lock" (until seeded or TTL re-probe). With the DB
-            // still down the verdict is partial — never cached, so the next
-            // pass re-probes (the pre-existing retry semantics).
-            if (kind == null && db != null) negative.markNegative(hex)
+            // the SDK DB up AND this tx already recorded in the SDK `transactions`
+            // table (txKind != null), all probes ran and null means "genuinely not
+            // a known asset lock" (until seeded or TTL re-probe). Two verdicts stay
+            // PARTIAL and are never cached so the next pass re-probes:
+            //   • the DB is still down (db == null) — the pre-existing retry semantics;
+            //   • the SDK has not recorded this tx yet (txKind == null) — its only
+            //     asset-lock classification, UNSHIELD (AssetUnlock kind 7), is read
+            //     from the transactions table, which the wallet-changeset callback
+            //     fills asynchronously after broadcast. Unlike the SHIELD spend there
+            //     is no authoring-time seed to bust a wrong pin, so caching the
+            //     transient null here stuck a fresh unshield on "Received" until the
+            //     TTL lapsed. A genuine external receive is upserted into the same
+            //     table (a non-null Standard kind), so it still caches normally —
+            //     only the not-yet-recorded window is spared, which self-limits once
+            //     the SDK persists the row.
+            if (kind == null && db != null && txKind != null) negative.markNegative(hex)
             kind
         } catch (e: CancellationException) {
             throw e
