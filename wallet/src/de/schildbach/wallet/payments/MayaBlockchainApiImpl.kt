@@ -26,6 +26,7 @@ import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.toSdkNetwork
 import kotlinx.coroutines.CancellationException
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaException
@@ -150,6 +151,11 @@ internal fun verifyMayaDepositShape(
  *   let a rebuilt retry select different inputs and pay the vault twice if
  *   the first deposit did reach the network — the BIP70 field-test lesson)
  *   and the error tells the user not to retry.
+ *
+ * MAX sells never under-deliver: the quote is set to [maxSwapDepositAmount]
+ * (balance − a MEASURED fee − change headroom), the deposit pays exactly that,
+ * and a balance drop between quote and build aborts instead of quietly paying
+ * the vault less than quoted.
  */
 class MayaBlockchainApiImpl @Inject constructor(
     private val sdkL1SendService: SdkL1SendService,
@@ -160,30 +166,46 @@ class MayaBlockchainApiImpl @Inject constructor(
     companion object {
         private val log: Logger = LoggerFactory.getLogger(MayaBlockchainApiImpl::class.java)
 
-        /**
-         * Adjust-down reserve for a MAX sell, in duffs. A max quote is
-         * derived from the spendable balance, which leaves nothing for the
-         * mining fee — when the engine reports the shortfall (a provably
-         * pre-broadcast build failure; nothing was reserved or sent), the
-         * build retries ONCE with this reserve carved out of the vault
-         * amount. 10 000 duffs covers the fee of a deposit spending ~67
-         * inputs at the engine's default rate; any unspent remainder
-         * returns as VOUT2 change.
-         */
-        private const val MAX_SELL_FEE_RESERVE_DUFFS = 10_000L
-
         /** Duffs per DASH as a decimal shift (1 DASH = 1e8 duffs). */
         private const val DUFFS_DECIMAL_SHIFT = 8
     }
+
+    override suspend fun maxSwapDepositAmount(): Dash =
+        Dash(sdkL1SendService.maxMayaDepositDuffs())
 
     override suspend fun commitSwapTransaction(
         tradeId: String,
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel> {
         log.info("commitSwapTransaction($tradeId, $swapTradeUIModel")
+        // A MAX sell arrives quoted at the FULL spendable balance (the UI fills
+        // the amount from the balance so `maximum` can be detected by equality).
+        // The mining fee has to come from somewhere, so re-quote at the measured
+        // maximum deposit before asking Maya for a price — quoting the full
+        // balance would price a deposit that cannot be built, and paying the
+        // vault less than the quote is exactly the under-delivery we refuse.
+        val quoteAmount = if (swapTradeUIModel.maximum) {
+            val maxDeposit = maxSwapDepositAmount()
+            if (maxDeposit.duffs <= 0L) {
+                return ResponseResource.Failure(
+                    MayaException("balance too low to cover a swap deposit and its fee"),
+                    false,
+                    0,
+                    null
+                )
+            }
+            log.info(
+                "maya max sell: re-quoting at the measured max deposit {} (was {})",
+                maxDeposit.toFriendlyString(),
+                swapTradeUIModel.amount.dash
+            )
+            swapTradeUIModel.amount.copy().apply { dash = maxDeposit.toBigDecimal() }
+        } else {
+            swapTradeUIModel.amount
+        }
         val resultSwapTrade = mayaWebApi.getSwapInfo(
             SwapQuoteRequest(
-                amount = swapTradeUIModel.amount,
+                amount = quoteAmount,
                 source_maya_asset = "DASH.DASH",
                 target_maya_asset = swapTradeUIModel.outputAsset,
                 fiatCurrency = swapTradeUIModel.amount.fiatCode,
@@ -243,29 +265,42 @@ class MayaBlockchainApiImpl @Inject constructor(
                 .movePointRight(DUFFS_DECIMAL_SHIFT)
                 .longValueExact()
 
-            // Build + sign with the funding inputs RESERVED, no broadcast.
-            // Any throw here is pre-broadcast by construction, so the MAX
-            // sell's mining-fee shortfall may be retried once, adjusted
-            // down by the reserve (nothing has moved).
-            var vaultDuffs = quotedDuffs
-            val payment = try {
-                sdkL1SendService.buildDeferredMayaDeposit(swapTradeUIModel.vaultAddress, vaultDuffs, memoBytes)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (t: Throwable) {
-                if (swapTradeUIModel.maximum && isInsufficientFunds(t) &&
-                    quotedDuffs > MAX_SELL_FEE_RESERVE_DUFFS
-                ) {
-                    vaultDuffs = quotedDuffs - MAX_SELL_FEE_RESERVE_DUFFS
-                    log.info(
-                        "maya max sell: {} duffs not fundable with the fee; retrying at {} duffs",
-                        quotedDuffs, vaultDuffs
+            val vaultDuffs = quotedDuffs
+
+            // A MAX sell was quoted at the measured maximum deposit (balance −
+            // measured fee − headroom). Re-measure with the REAL memo before
+            // building: if the spendable balance dropped since the quote, the
+            // deposit can no longer pay the quoted amount, and paying the vault
+            // LESS than quoted is never acceptable — NEAR Intents refuses
+            // under-delivery (~1h wait, then a refund minus 0.001 DASH) and Maya
+            // would execute a swap for an amount the user never agreed to. Abort
+            // with a recoverable error and let the user re-quote instead.
+            //
+            // This can only fire on a real balance drop: the quote reserved for a
+            // worst-case 80-byte memo, so re-measuring with the actual (shorter
+            // or equal) memo can only raise the ceiling, never lower it.
+            if (swapTradeUIModel.maximum) {
+                val maxDeposit = sdkL1SendService.maxMayaDepositDuffs(memoBytes.size)
+                if (vaultDuffs > maxDeposit) {
+                    log.warn(
+                        "maya max sell aborted: quoted {} duffs exceeds the {} duffs now depositable",
+                        vaultDuffs, maxDeposit
                     )
-                    sdkL1SendService.buildDeferredMayaDeposit(swapTradeUIModel.vaultAddress, vaultDuffs, memoBytes)
-                } else {
-                    throw t
+                    return ResponseResource.Failure(
+                        MayaException(
+                            "wallet balance changed; the deposit would fall below the quoted " +
+                                "amount — please request a new quote"
+                        ),
+                        false,
+                        0,
+                        null
+                    )
                 }
             }
+
+            // Build + sign with the funding inputs RESERVED, no broadcast.
+            val payment =
+                sdkL1SendService.buildDeferredMayaDeposit(swapTradeUIModel.vaultAddress, vaultDuffs, memoBytes)
 
             // Assert the deposit shape from the signed bytes BEFORE any
             // broadcast decision — a mis-shaped deposit to a Maya vault

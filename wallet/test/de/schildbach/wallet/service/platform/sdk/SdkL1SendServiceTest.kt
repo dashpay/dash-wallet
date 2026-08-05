@@ -56,7 +56,10 @@ class SdkL1SendServiceTest {
         var onSendAll: (String, String, Long) -> String = { _, _, _ ->
             throw IllegalStateException("send-all not stubbed")
         },
-        var onSweepReceival: () -> Long = { 0L }
+        var onSweepReceival: () -> Long = { 0L },
+        /** Fee the faked engine reports for a probe/real Maya deposit build. */
+        var onMayaDepositFee: (Long, ByteArray) -> Long = { _, _ -> 0L },
+        var externalAddress: String? = null
     ) : SdkL1SendSource {
         var boundCalls = 0
         var sendCalls = 0
@@ -125,6 +128,37 @@ class SdkL1SendServiceTest {
             sendAllFloors += floorDuffs
             return onSendAll(walletIdHex, addressBase58, floorDuffs)
         }
+
+        // ── Maya deposit build / release (fee-probe surface) ──────────────
+        var mayaBuildCalls = 0
+        var mayaReleaseCalls = 0
+        val mayaBuiltAmounts = mutableListOf<Long>()
+        val mayaBuiltMemoSizes = mutableListOf<Int>()
+        var mayaBuiltVault: String? = null
+
+        override suspend fun buildDeferredMayaDeposit(
+            walletIdHex: String,
+            vaultAddressBase58: String,
+            vaultDuffs: Long,
+            memo: ByteArray
+        ): SdkDeferredPayment {
+            mayaBuildCalls++
+            mayaBuiltAmounts += vaultDuffs
+            mayaBuiltMemoSizes += memo.size
+            mayaBuiltVault = vaultAddressBase58
+            return SdkDeferredPayment(
+                txidHex = "bb".repeat(32),
+                rawTxBytes = ByteArray(0),
+                feeDuffs = onMayaDepositFee(vaultDuffs, memo),
+                native = null
+            )
+        }
+
+        override suspend fun releaseDeferredPayment(walletIdHex: String, payment: SdkDeferredPayment) {
+            mayaReleaseCalls++
+        }
+
+        override suspend fun unusedExternalAddress(walletIdHex: String): String? = externalAddress
     }
 
     private fun config(enabled: Boolean?, cutoverState: String? = null): DashPayConfig = mockk {
@@ -1209,5 +1243,83 @@ class SdkL1SendServiceTest {
             )
         assertTrue(java.lang.reflect.Modifier.isNative(jni.modifiers))
         assertEquals(ByteArray::class.java, jni.returnType)
+    }
+
+    // ── Maya max-deposit measurement ──────────────────────────────────────
+    // The figure quoted for a MAX sell. It must NEVER come in under the real
+    // fee: a quote derived from a too-small reserve makes the deposit pay the
+    // vault less than quoted, and NEAR Intents refuses under-delivery.
+
+    private fun mayaSource(spendable: Long, feeDuffs: Long) = FakeSource(
+        boundWalletId = { walletId },
+        onSpendable = { spendable },
+        onMayaDepositFee = { _, _ -> feeDuffs },
+        externalAddress = validAddress
+    )
+
+    @Test
+    fun maxMayaDepositSubtractsTheMeasuredFeeAndTheChangeHeadroom() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        // 1_000_000 − 500 measured fee − 1_000 headroom
+        assertEquals(998_500L, service(source).maxMayaDepositDuffs())
+    }
+
+    @Test
+    fun maxMayaDepositProbesWithAFundableChangeCarryingBuildAndReleasesIt() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        service(source).maxMayaDepositDuffs()
+        assertEquals(1, source.mayaBuildCalls)
+        // Probe holds back enough to stay fundable AND keep a change output, so
+        // the measured size matches the real deposit's three-output shape.
+        assertEquals(980_000L, source.mayaBuiltAmounts.single())
+        assertEquals(validAddress, source.mayaBuiltVault)
+        // The probe's reservation must not leak — the very next real build
+        // would otherwise fail to fund.
+        assertEquals(1, source.mayaReleaseCalls)
+    }
+
+    @Test
+    fun maxMayaDepositProbesWithTheWorstCaseMemoByDefault() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        service(source).maxMayaDepositDuffs()
+        // Worst case: a shorter real memo can only shrink the real tx, so the
+        // reserve can never end up under the real fee.
+        assertEquals(SdkL1SendService.MAX_MAYA_MEMO_BYTES, source.mayaBuiltMemoSizes.single())
+    }
+
+    @Test
+    fun maxMayaDepositHonoursAnExplicitMemoSize() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        service(source).maxMayaDepositDuffs(memoSizeBytes = 72)
+        assertEquals(72, source.mayaBuiltMemoSizes.single())
+    }
+
+    @Test
+    fun maxMayaDepositIsZeroWhenTheBalanceCannotFundAProbe() = runBlocking {
+        val source = mayaSource(spendable = 20_000L, feeDuffs = 500L)
+        assertEquals(0L, service(source).maxMayaDepositDuffs())
+        // Nothing is built or reserved when there is nothing to measure.
+        assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun maxMayaDepositNeverGoesNegative() = runBlocking {
+        // A fee larger than what is left after the probe reserve would make the
+        // arithmetic negative; the caller must see 0 ("not enough funds"),
+        // never a negative quote.
+        val source = mayaSource(spendable = 20_001L, feeDuffs = 25_000L)
+        assertEquals(0L, service(source).maxMayaDepositDuffs())
+    }
+
+    @Test
+    fun maxMayaDepositRejectsAnOversizeMemo() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        try {
+            service(source).maxMayaDepositDuffs(memoSizeBytes = SdkL1SendService.MAX_MAYA_MEMO_BYTES + 1)
+            fail("expected an oversize memo to be rejected")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message!!.contains("memoSizeBytes"))
+        }
+        Unit
     }
 }

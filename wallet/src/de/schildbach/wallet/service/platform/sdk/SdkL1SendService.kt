@@ -22,6 +22,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -2001,6 +2002,73 @@ class SdkL1SendService internal constructor(
     }
 
     /**
+     * The largest amount a MAYACHAIN deposit can pay a vault right now:
+     * spendable balance MINUS the deposit's own mining fee MINUS a small
+     * change-output headroom.
+     *
+     * The fee is MEASURED, not guessed: a throwaway deposit is built through
+     * the real engine (same builder, same three options, the wallet's own
+     * address as a size stand-in) and its reported fee read off the
+     * reservation, which is then released. An estimate must never come in
+     * UNDER the real fee — a quote derived from a too-small reserve makes the
+     * deposit pay the vault less than quoted, and NEAR Intents refuses
+     * under-delivery (~1h wait, then a refund minus 0.001 DASH), so the
+     * measurement is deliberately biased high:
+     *
+     * - [memoSizeBytes] defaults to the 80-byte OP_RETURN ceiling, so a
+     *   shorter real memo can only make the real transaction smaller;
+     * - the probe keeps a change output (as the real deposit will, thanks to
+     *   the headroom), so the measured size matches the real one instead of
+     *   under-counting by an output;
+     * - [MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS] of headroom keeps that change
+     *   output comfortably above dust rather than at the threshold.
+     *
+     * Returns 0 when the balance cannot cover a deposit at all (the caller
+     * surfaces "not enough funds" rather than quoting a negative amount).
+     * Throws like [buildDeferredMayaDeposit] on gate/bind failures.
+     */
+    suspend fun maxMayaDepositDuffs(memoSizeBytes: Int = MAX_MAYA_MEMO_BYTES): Long {
+        require(memoSizeBytes in 1..MAX_MAYA_MEMO_BYTES) {
+            "memoSizeBytes must be 1..$MAX_MAYA_MEMO_BYTES, got $memoSizeBytes"
+        }
+        val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
+            "app wallet not bound to the SDK"
+        }
+        val gate = probeSendGate()
+        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        val spendable = source.spendableBalanceDuffs(walletIdHex)
+        // The probe itself must be fundable, with a change output, before any
+        // fee can be measured.
+        if (spendable <= MAYA_DEPOSIT_PROBE_RESERVE_DUFFS) {
+            log.info("SDK l1MayaMaxDeposit: spendable {} too small to probe a deposit", spendable)
+            return 0L
+        }
+        val probeAddress = checkNotNull(source.unusedExternalAddress(walletIdHex)) {
+            "no SDK address available to size a Maya deposit"
+        }
+        val probe = source.buildDeferredMayaDeposit(
+            walletIdHex,
+            probeAddress,
+            spendable - MAYA_DEPOSIT_PROBE_RESERVE_DUFFS,
+            ByteArray(memoSizeBytes)
+        )
+        val feeDuffs = try {
+            probe.feeDuffs
+        } finally {
+            // NonCancellable: the probe holds a real engine reservation, and
+            // leaving it to the TTL sweep would make the very next real build
+            // fail to fund.
+            withContext(NonCancellable) { releaseDeferredPayment(probe) }
+        }
+        val max = spendable - feeDuffs - MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS
+        log.info(
+            "SDK l1MayaMaxDeposit: spendable {}, measured fee {} ({}-byte memo), max deposit {}",
+            spendable, feeDuffs, memoSizeBytes, max
+        )
+        return max.coerceAtLeast(0L)
+    }
+
+    /**
      * [buildDeferredPayment] in the MAYACHAIN deposit shape (vault VOUT0,
      * [memo] as a zero-value OP_RETURN VOUT1, change back to VIN0's
      * address VOUT2, no reordering) — the Maya/SwapKit swap-send build.
@@ -2186,5 +2254,23 @@ class SdkL1SendService internal constructor(
          * engine's `DEFAULT_MAX_OP_RETURN_BYTES`, which re-checks).
          */
         const val MAX_MAYA_MEMO_BYTES = 80
+
+        /**
+         * Held back from the probe deposit in [maxMayaDepositDuffs] so it is
+         * fundable AND carries a change output (matching the real deposit's
+         * shape, so the measured fee is not an output short). Never reaches a
+         * quote: only the MEASURED fee plus
+         * [MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS] is withheld from the user.
+         */
+        private const val MAYA_DEPOSIT_PROBE_RESERVE_DUFFS = 20_000L
+
+        /**
+         * Left in the wallet by a max Maya deposit, on top of the measured
+         * fee: the deposit's change output must stay clear of the dust
+         * threshold (546 duffs), and a couple of duffs of slack absorbs a
+         * shorter-than-worst-case memo. 0.00001 DASH — negligible to the
+         * user, and it makes UNDER-reserving impossible.
+         */
+        private const val MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS = 1_000L
     }
 }
