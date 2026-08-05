@@ -159,6 +159,7 @@ class DashWalletFactory @Inject constructor(
             // wallet with many contacts and must not run inside the parse.
             // See FriendKeyChainLookahead for why the watched-key set is unchanged.
             FriendKeyChainLookahead.reset()
+            FriendKeyChainLookahead.useStore(walletFile)
             val serializer = WalletProtobufSerializer()
             serializer.setKeyChainFactory(FriendKeyChainLookahead.deferringFactory())
             val wallet = serializer.readWallet(walletStream, false, getExtensions(params))

@@ -18,7 +18,9 @@
 package de.schildbach.wallet.util
 
 import com.google.common.collect.ImmutableList
+import java.io.File
 import java.math.BigInteger
+import java.nio.file.Files
 import org.bitcoinj.core.Utils
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.crypto.ExtendedChildNumber
@@ -94,11 +96,25 @@ class FriendKeyChainLookaheadTest {
             .filter { it.hasPublicKey() }
             .map { it.publicKey.toByteArray().toList() }
 
+    /** A scratch directory standing in for the wallet's own directory. */
+    private lateinit var walletDir: File
+
+    /** The (never actually written) wallet file the side store is named after. */
+    private val walletFile: File get() = File(walletDir, "wallet-protobuf")
+
+    private val storeFile: File get() = FriendKeyChainLookaheadStore.storeFileFor(walletFile)
+
     @Before
-    fun setUp() = FriendKeyChainLookahead.reset()
+    fun setUp() {
+        FriendKeyChainLookahead.reset()
+        walletDir = Files.createTempDirectory("friend-lookahead").toFile()
+    }
 
     @After
-    fun tearDown() = FriendKeyChainLookahead.reset()
+    fun tearDown() {
+        FriendKeyChainLookahead.reset()
+        walletDir.deleteRecursively()
+    }
 
     // ── isDashPayFriendPath: exactly dashj's own DefaultKeyChainFactory test ──
 
@@ -515,5 +531,323 @@ class FriendKeyChainLookaheadTest {
         assertEquals(0, FriendKeyChainLookahead.pendingCount())
         assertEquals(0, FriendKeyChainLookahead.deferredCount())
         assertTrue(FriendKeyChainLookahead.awaitComplete(1_000L))
+    }
+
+    @Test
+    fun partitionLookaheadLeaves_removedHalfIsExactlyWhatTheKeptHalfLost() {
+        val keys = listOf(leafKey(0), leafKey(1), leafKey(2), leafKey(3), leafKey(2, depth = 6))
+        val partitioned = FriendKeyChainLookahead.partitionLookaheadLeaves(keys, 6, 0)
+
+        assertEquals(listOf(keys[0], keys[1], keys[4]), partitioned.kept)
+        assertEquals(listOf(keys[2], keys[3]), partitioned.removed)
+        assertEquals(keys.size, partitioned.kept.size + partitioned.removed.size)
+    }
+
+    // ── the side store: derive ONCE, not once per launch ─────────────────
+
+    /**
+     * Simulates a launch: a wallet load hands the deferring factory a chain,
+     * the completion pass provisions it, and the store is written back.
+     */
+    /**
+     * Every key an EAGER dashj chain on [path] owns — the reference set. The
+     * deferred chains deliberately serialize a SMALLER protobuf (the 11.10.58
+     * strip), so their own `serializeToProtobuf` is not a usable probe; what
+     * matters is what they own in memory, via `findKeyFromPubKey`.
+     */
+    private fun eagerKeys(path: ImmutableList<ChildNumber>): List<List<Byte>> =
+        publicKeys(FriendKeyChain(seed(), null, path).apply { maybeLookAhead() })
+
+    private fun assertOwnsExactly(chain: FriendKeyChain, path: ImmutableList<ChildNumber>) {
+        val eager = FriendKeyChain(seed(), null, path)
+        eager.maybeLookAhead()
+        assertEquals("the same number of keys as the eager chain", eager.numKeys(), chain.numKeys())
+        publicKeys(eager).forEach {
+            assertNotNull("must own every key the eager chain derives", chain.findKeyFromPubKey(it.toByteArray()))
+        }
+    }
+
+    private fun launch(path: ImmutableList<ChildNumber>): FriendKeyChain {
+        FriendKeyChainLookahead.reset()
+        FriendKeyChainLookahead.useStore(walletFile)
+        val chain = receivingChain(path) as FriendKeyChain
+        assertTrue("completion must finish", FriendKeyChainLookahead.awaitComplete(120_000L))
+        FriendKeyChainLookahead.flushStoreNow()
+        return chain
+    }
+
+    /**
+     * THE point of the 11.10.61 change. The tester's log shows 215 chains being
+     * re-derived on EVERY launch ("212 of 215 chains completed in 158953ms")
+     * because 11.10.58 deliberately keeps the window out of the wallet file.
+     * After the first launch the window lives in the side store, and the second
+     * launch installs it without deriving a single lookahead key.
+     */
+    @Test
+    fun theWindowIsDerivedOnceAndInstalledOnEveryLaunchAfterThat() {
+        val path = extendedDashPayPath()
+
+        val first = launch(path)
+        assertEquals("the first launch has to derive", 0, FriendKeyChainLookahead.restoredCount())
+        assertEquals(EXPECTED_DERIVED_KEYS, FriendKeyChainLookahead.derivedKeyCount())
+        assertTrue("the store must have been written", storeFile.exists())
+
+        val second = launch(path)
+        assertEquals("the second launch must restore, not derive", 1, FriendKeyChainLookahead.restoredCount())
+        assertEquals(EXPECTED_DERIVED_KEYS, FriendKeyChainLookahead.installedKeyCount())
+        assertEquals("not one lookahead key may be derived again", 0, FriendKeyChainLookahead.derivedKeyCount())
+
+        // FUNDS SAFETY: restored is byte-identical to derived, and to eager.
+        assertEquals(first.numKeys(), second.numKeys())
+        assertOwnsExactly(first, path)
+        assertOwnsExactly(second, path)
+    }
+
+    /**
+     * The store must never make the wallet file grow back: the strip is what
+     * 11.10.58 fixed (2.5MB -> 6.5MB on the tester's wallet) and a restored
+     * chain has to serialize exactly as small as a derived one.
+     */
+    @Test
+    fun restoringFromTheStore_doesNotReintroduceTheWalletFileBloat() {
+        val path = extendedDashPayPath()
+        val derived = launch(path)
+        val restored = launch(path)
+
+        assertEquals(serializedKeyCount(derived), serializedKeyCount(restored))
+        assertEquals(
+            "exactly the two metadata-carrier leaves persist in the wallet file",
+            FriendKeyChainLookahead.METADATA_CARRIER_LEAVES, serializedLeafCount(restored)
+        )
+        assertTrue(
+            "the wallet protobuf must stay far below the 131-key window",
+            serializedKeyCount(restored) < EXPECTED_DERIVED_KEYS
+        )
+    }
+
+    /** Rewrite the store, mutating the leaf at [leafIndex] of every entry. */
+    private fun poisonStore(leafIndex: Int) {
+        val chains = FriendKeyChainLookaheadStore.read(storeFile)
+        assertTrue("precondition: the store must hold something to poison", chains.isNotEmpty())
+        val poisoned = chains.map { chain ->
+            CachedLookaheadChain(
+                chain.accountPubKey,
+                chain.accountChainCode,
+                chain.leaves.mapIndexed { i, leaf ->
+                    if (i != leafIndex) {
+                        leaf
+                    } else {
+                        CachedLookaheadLeaf(leaf.index, leaf.pubKey.copyOf().also { it[1] = (it[1] + 1).toByte() }, leaf.chainCode)
+                    }
+                }
+            )
+        }
+        assertTrue(FriendKeyChainLookaheadStore.write(storeFile, poisoned))
+    }
+
+    /**
+     * The store is an ACCELERATOR, never an authority. A checksum-valid entry
+     * whose keys are not what derivation produces must be thrown away whole —
+     * installing it would watch the wrong address and miss a contact's payment.
+     * Both ends of the run are re-derived and compared, so poisoning either one
+     * is caught.
+     */
+    @Test
+    fun aStoreEntryThatDoesNotVerify_isDiscardedAndTheChainDerivesTheCorrectKeys() {
+        val path = extendedDashPayPath()
+
+        listOf(0, EXPECTED_DERIVED_KEYS - 1).forEach { poisonedLeaf ->
+            launch(path) // (re)write a clean store
+            poisonStore(poisonedLeaf)
+
+            FriendKeyChainLookahead.reset()
+            FriendKeyChainLookahead.useStore(walletFile)
+            val chain = receivingChain(path) as FriendKeyChain
+            assertTrue(FriendKeyChainLookahead.awaitComplete(120_000L))
+
+            assertEquals(
+                "a poisoned leaf $poisonedLeaf must reject the whole entry",
+                0, FriendKeyChainLookahead.restoredCount()
+            )
+            assertEquals(EXPECTED_DERIVED_KEYS, FriendKeyChainLookahead.derivedKeyCount())
+            assertOwnsExactly(chain, path)
+
+            // …and the rejected entry must be REPLACED, not left to be rejected
+            // on every launch from here on.
+            FriendKeyChainLookahead.flushStoreNow()
+            val repaired = launch(path)
+            assertEquals("the store must have been repaired", 1, FriendKeyChainLookahead.restoredCount())
+            assertOwnsExactly(repaired, path)
+        }
+    }
+
+    /**
+     * Entries are bound to their chain's ACCOUNT KEY, so a store belonging to a
+     * different contact (or a different wallet) can never be applied.
+     */
+    @Test
+    fun aStoreEntryForAnotherChain_isNeverApplied() {
+        val mine = extendedDashPayPath()
+        launch(mine)
+
+        // Re-label the entry as belonging to some other account key.
+        val chains = FriendKeyChainLookaheadStore.read(storeFile)
+        FriendKeyChainLookaheadStore.write(
+            storeFile,
+            chains.map { CachedLookaheadChain(ByteArray(33) { 7 }, ByteArray(32) { 7 }, it.leaves) }
+        )
+
+        FriendKeyChainLookahead.reset()
+        FriendKeyChainLookahead.useStore(walletFile)
+        val chain = receivingChain(mine) as FriendKeyChain
+        assertTrue(FriendKeyChainLookahead.awaitComplete(120_000L))
+
+        assertEquals(0, FriendKeyChainLookahead.restoredCount())
+        assertEquals(EXPECTED_DERIVED_KEYS, FriendKeyChainLookahead.derivedKeyCount())
+        assertOwnsExactly(chain, mine)
+    }
+
+    @Test
+    fun withNoStoreConfigured_theBehaviourIsExactly11_10_60() {
+        FriendKeyChainLookahead.reset() // leaves the store file unset
+        val chain = receivingChain(extendedDashPayPath()) as FriendKeyChain
+        assertTrue(FriendKeyChainLookahead.awaitComplete(120_000L))
+
+        assertEquals(0, FriendKeyChainLookahead.restoredCount())
+        assertEquals(EXPECTED_DERIVED_KEYS, FriendKeyChainLookahead.derivedKeyCount())
+        assertFalse("nothing may be written when no store is configured", storeFile.exists())
+        assertOwnsExactly(chain, extendedDashPayPath())
+    }
+
+    @Test
+    fun multipleChains_areAllPersistedAndAllRestored() {
+        val paths = (0 until 4).map { dashPayPath(leafA = it) }
+
+        FriendKeyChainLookahead.reset()
+        FriendKeyChainLookahead.useStore(walletFile)
+        val derived = paths.map { receivingChain(it) as FriendKeyChain }
+        assertTrue(FriendKeyChainLookahead.awaitComplete(120_000L))
+        FriendKeyChainLookahead.flushStoreNow()
+        assertEquals(4 * EXPECTED_DERIVED_KEYS, FriendKeyChainLookahead.derivedKeyCount())
+
+        FriendKeyChainLookahead.reset()
+        FriendKeyChainLookahead.useStore(walletFile)
+        val restored = paths.map { receivingChain(it) as FriendKeyChain }
+        assertTrue(FriendKeyChainLookahead.awaitComplete(120_000L))
+
+        assertEquals(4, FriendKeyChainLookahead.restoredCount())
+        assertEquals(0, FriendKeyChainLookahead.derivedKeyCount())
+        paths.forEachIndexed { i, path ->
+            assertEquals(derived[i].numKeys(), restored[i].numKeys())
+            assertOwnsExactly(restored[i], path)
+        }
+        // Distinct contacts keep distinct keys — no entry was applied twice.
+        assertNotEquals(eagerKeys(paths[0]), eagerKeys(paths[1]))
+        assertNull(
+            "contact 0's chain must not own contact 1's keys",
+            restored[0].findKeyFromPubKey(eagerKeys(paths[1]).last().toByteArray())
+        )
+    }
+
+    /**
+     * The SENDING side too. A contact has two chains — one derived from our
+     * seed, one WATCHING their xpub — and they come through different
+     * `KeyChainFactory` entry points. On the tester's wallet the watching
+     * chains were half the re-derived keys (14,070 of 29,580).
+     */
+    @Test
+    fun theWatchingSendingChain_isPersistedAndRestoredToo() {
+        val path = dashPayPath(leafA = 3)
+        // A fresh account key per chain — dashj's watching constructors adopt
+        // it, and require the detached, public-only form a contact's xpub gives.
+        fun accountKey() = FriendKeyChain(seed(), null, path).watchingKey.dropPrivateBytes().dropParent()
+
+        FriendKeyChainLookahead.reset()
+        FriendKeyChainLookahead.useStore(walletFile)
+        val derived = FriendKeyChainLookahead.deferringFactory()
+            .makeWatchingFriendKeyChain(accountKey(), path) as FriendKeyChain
+        assertTrue(FriendKeyChainLookahead.awaitComplete(120_000L))
+        FriendKeyChainLookahead.flushStoreNow()
+        assertTrue("the first launch derives", FriendKeyChainLookahead.derivedKeyCount() > 0)
+
+        FriendKeyChainLookahead.reset()
+        FriendKeyChainLookahead.useStore(walletFile)
+        val restored = FriendKeyChainLookahead.deferringFactory()
+            .makeWatchingFriendKeyChain(accountKey(), path) as FriendKeyChain
+        assertTrue(FriendKeyChainLookahead.awaitComplete(120_000L))
+
+        assertEquals(1, FriendKeyChainLookahead.restoredCount())
+        assertEquals(0, FriendKeyChainLookahead.derivedKeyCount())
+        assertEquals(derived.numKeys(), restored.numKeys())
+
+        val eager = FriendKeyChain(accountKey())
+        eager.maybeLookAhead()
+        assertEquals(eager.numKeys(), restored.numKeys())
+        publicKeys(eager).forEach {
+            assertNotNull(
+                "a restored watching chain must own every key the eager one derives",
+                restored.findKeyFromPubKey(it.toByteArray())
+            )
+        }
+    }
+
+    /**
+     * The store must not grow forever. Once a pass has provisioned EVERY
+     * deferred chain, whatever else is in the file belongs to a contact that is
+     * gone (or to a wallet that was restored over) and is dropped.
+     */
+    @Test
+    fun entriesForChainsTheWalletNoLongerHas_arePruned() {
+        val gone = dashPayPath(leafA = 1)
+        val kept = dashPayPath(leafA = 2)
+
+        FriendKeyChainLookahead.reset()
+        FriendKeyChainLookahead.useStore(walletFile)
+        receivingChain(gone)
+        receivingChain(kept)
+        assertTrue(FriendKeyChainLookahead.awaitComplete(120_000L))
+        FriendKeyChainLookahead.flushStoreNow()
+        assertEquals(2, FriendKeyChainLookaheadStore.read(storeFile).size)
+
+        // Next launch: only one of the two contacts still exists.
+        FriendKeyChainLookahead.reset()
+        FriendKeyChainLookahead.useStore(walletFile)
+        val survivor = receivingChain(kept) as FriendKeyChain
+        assertTrue(FriendKeyChainLookahead.awaitComplete(120_000L))
+        FriendKeyChainLookahead.flushStoreNow()
+
+        assertEquals(1, FriendKeyChainLookahead.restoredCount())
+        val remaining = FriendKeyChainLookaheadStore.read(storeFile)
+        assertEquals("the departed contact's entry must be gone", 1, remaining.size)
+        assertOwnsExactly(survivor, kept)
+        assertNull(
+            "and it must be the survivor's entry that stayed",
+            survivor.findKeyFromPubKey(eagerKeys(gone).last().toByteArray())
+        )
+    }
+
+    /**
+     * The tester's log always said "212 of 215 chains completed", never 215.
+     * It was a REPORTING race, not a stall: the summary was emitted by whichever
+     * worker first saw an empty queue, while the other three were still inside
+     * their final chain (4 threads -> up to 3 unreported). The summary now waits
+     * for the last worker to leave, so the count it prints is final.
+     */
+    @Test
+    fun theCompletionSummaryIsOnlyStampedOnceEveryWorkerHasFinished() {
+        repeat(8) { receivingChain(dashPayPath(leafA = it)) }
+        assertEquals(8, FriendKeyChainLookahead.deferredCount())
+
+        FriendKeyChainLookahead.completeAsync()
+        val deadline = System.currentTimeMillis() + 120_000L
+        while (FriendKeyChainLookahead.completionMs() < 0 && System.currentTimeMillis() < deadline) {
+            Thread.sleep(1L)
+        }
+
+        assertTrue("the pass must have finished", FriendKeyChainLookahead.completionMs() >= 0)
+        assertEquals(
+            "the moment the elapsed time is stamped, every chain must already be counted",
+            FriendKeyChainLookahead.deferredCount(), FriendKeyChainLookahead.completedCount()
+        )
     }
 }

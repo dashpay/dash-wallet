@@ -1183,7 +1183,13 @@ public class WalletApplication extends MultiDexApplication
                 // pool right after this, and the blockchain service waits for
                 // them before the wallet is attached to the peer group — so the
                 // watched-key set is unchanged. See FriendKeyChainLookahead.
+                // ...and, since 11.10.61, the derived window PERSISTS in a side
+                // file so the derivation happens once instead of on every launch
+                // (the tester's log: 215 chains, ~159s of EC derivation, every
+                // single time). The wallet protobuf itself stays at its small
+                // 11.10.58 shape. See FriendKeyChainLookaheadStore.
                 FriendKeyChainLookahead.reset();
+                FriendKeyChainLookahead.useStore(walletFile);
                 final WalletProtobufSerializer serializer = new WalletProtobufSerializer();
                 serializer.setKeyChainFactory(FriendKeyChainLookahead.deferringFactory());
                 wallet = serializer.readWallet(walletStream, false, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
