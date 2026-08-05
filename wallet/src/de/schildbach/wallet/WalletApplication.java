@@ -167,6 +167,7 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FriendKeyChainLookahead;
 import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
+import de.schildbach.wallet.util.ProcessExitReasons;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
 import de.schildbach.wallet.util.WalletFileSizeGuard;
 import de.schildbach.wallet.util.WalletLoadBudget;
@@ -344,6 +345,11 @@ public class WalletApplication extends MultiDexApplication
         StartupBreadcrumbs.init(getFilesDir());
 
         runStartupStage(StartupBreadcrumbs.STAGE_LOGGING_INITIALIZED, "LOGGING_INITIALIZED", this::initLogging);
+        // WHY THE PREVIOUS PROCESS DIED (LMK / ANR / crash / user) — asked of the
+        // system as soon as the log file appender exists, answered on a daemon
+        // thread. A reaped process leaves NOTHING in its own log; this is the only
+        // record of it that reaches the support report.
+        ProcessExitReasons.logRecentExits(this);
         runStartupStage(StartupBreadcrumbs.STAGE_FIREBASE_INITIALIZED, "FIREBASE_INITIALIZED", () -> {
             FirebaseApp.initializeApp(this);
             if (FirebaseApp.getApps(this).isEmpty()) {
