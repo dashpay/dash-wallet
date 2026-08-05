@@ -84,7 +84,7 @@ class SdkShieldedInviteCreationTest {
     private fun happySource() = mockk<ShieldedInviteSource> {
         coEvery { boundWalletIdOrNull() } returns walletIdHex
         coEvery { generateOneTimeOrchardKey() } returns key
-        coEvery { fundNoteToRaw43(walletIdHex, orchardAddress, any()) } just Runs
+        coEvery { fundNotesToRaw43(walletIdHex, orchardAddress, any()) } just Runs
         coEvery { currentChainTipHeight() } returns fundingHeight
     }
 
@@ -112,10 +112,34 @@ class SdkShieldedInviteCreationTest {
     // ── Pure helpers ──────────────────────────────────────────────────────
 
     @Test
-    fun denominationSelection_nonContestedIsPointOne_contestedIsPointThree() {
+    fun denominationSelection_nonContestedIsPointZeroThree_contestedIsPointTwentyFive() {
         assertEquals(denominationCredits, shieldedInviteDenominationCredits(feeCredits))
         assertEquals(contestedDenominationCredits, shieldedInviteDenominationCredits(contestedFeeCredits))
         assertNull(shieldedInviteDenominationCredits(0L))
+    }
+
+    /**
+     * The two-note layout is a CLAIM-side correctness property, not a wire
+     * detail: two sub-target notes force the claimer's greedy largest-first
+     * selection to spend BOTH, which keeps Orchard's padding action — and its
+     * RANDOM dummy nullifier — out of the bundle, so the identity id derived
+     * from the published nullifiers is reproducible across retries. Regressing
+     * to a single full-target note would silently break claim recovery.
+     */
+    @Test
+    fun inviteFundingSplit_isTwoEvenSubTargetNotes_summingToTheDenomination() {
+        listOf(denominationCredits, contestedDenominationCredits).forEach { total ->
+            val split = inviteFundingSplit(total)
+            assertEquals(2, split.size)
+            assertEquals(total, split.sum())
+            // Both strictly below the target, or selection could stop on one.
+            split.forEach { assertTrue(it < total) }
+        }
+        // Both shipped denominations split exactly evenly.
+        assertEquals(listOf(1_500_000_000L, 1_500_000_000L), inviteFundingSplit(3_000_000_000L))
+        assertEquals(listOf(12_500_000_000L, 12_500_000_000L), inviteFundingSplit(25_000_000_000L))
+        // An odd total puts the extra credit in the second note.
+        assertEquals(listOf(2L, 3L), inviteFundingSplit(5L))
     }
 
     @Test
@@ -151,7 +175,7 @@ class SdkShieldedInviteCreationTest {
             val result = service(source = source)
                 .createShieldedInvite("alice", "Alice", "", contested = false)
             assertTrue(result is SdkWriteResult.NotBroadcast)
-            coVerify(exactly = 0) { source.fundNoteToRaw43(any(), any(), any()) }
+            coVerify(exactly = 0) { source.fundNotesToRaw43(any(), any(), any()) }
         } finally {
             balanceFlow.value = creditsToDash(denominationCredits)
         }
@@ -178,8 +202,15 @@ class SdkShieldedInviteCreationTest {
         assertEquals(bytes32ToHex(spendingKey), link.oneTimeKey)
         assertEquals(fundingHeight, link.fundingHeight)
 
-        // The 0.1 note is funded to the generated one-time address.
-        coVerify { source.fundNoteToRaw43(walletIdHex, orchardAddress, denominationCredits) }
+        // The denomination is funded to the generated one-time address as TWO
+        // even sub-target notes (see inviteFundingSplit).
+        coVerify {
+            source.fundNotesToRaw43(
+                walletIdHex,
+                orchardAddress,
+                inviteFundingSplit(denominationCredits)
+            )
+        }
         // …and the link states what was funded, so the CLAIMER can tell which
         // tier this invite paid for. A shielded note has no on-chain asset
         // lock to read the amount off and the claim FFI never reports a note's
@@ -235,16 +266,22 @@ class SdkShieldedInviteCreationTest {
     }
 
     @Test
-    fun contested_fundsThePointThreeDenomination() = runTest {
+    fun contested_fundsThePointTwentyFiveDenomination() = runTest {
         balanceFlow.value = creditsToDash(contestedDenominationCredits)
         try {
             val source = happySource()
             val result = service(source = source)
                 .createShieldedInvite("alice", "Alice", "", contested = true)
             assertTrue(result is SdkWriteResult.Broadcast)
-            coVerify { source.fundNoteToRaw43(walletIdHex, orchardAddress, contestedDenominationCredits) }
+            coVerify {
+                source.fundNotesToRaw43(
+                    walletIdHex,
+                    orchardAddress,
+                    inviteFundingSplit(contestedDenominationCredits)
+                )
+            }
             // The two tiers must differ in the LINK as well as in the spend.
-            // Funding 0.3 while emitting a link indistinguishable from a 0.1
+            // Funding 0.25 while emitting a link indistinguishable from a 0.03
             // invite is what made the claimer's screen insist the contested
             // fee bought nothing.
             assertEquals(
@@ -260,7 +297,7 @@ class SdkShieldedInviteCreationTest {
     fun fundingRejectedPreBroadcast_notBroadcast() = runTest {
         val source = happySource()
         coEvery {
-            source.fundNoteToRaw43(any(), any(), any())
+            source.fundNotesToRaw43(any(), any(), any())
         } throws DashSdkError.InvalidParameter("bad recipient")
         val result = service(source = source)
             .createShieldedInvite("alice", "Alice", "", contested = false)
@@ -271,7 +308,7 @@ class SdkShieldedInviteCreationTest {
     fun fundingUnprovableFailure_isAmbiguous() = runTest {
         val source = happySource()
         coEvery {
-            source.fundNoteToRaw43(any(), any(), any())
+            source.fundNotesToRaw43(any(), any(), any())
         } throws DashSdkError.Timeout("dapi timeout")
         val result = service(source = source)
             .createShieldedInvite("alice", "Alice", "", contested = false)

@@ -69,6 +69,35 @@ internal fun shieldedInviteDenominationCredits(feeCreditsForKind: Long): Long? =
     chooseShieldedIdentityDenominationCredits(feeCreditsForKind)
 
 /**
+ * How an invite's [totalCredits] denomination is laid out on the wire: TWO
+ * even sub-target notes to the one-time address rather than one full-target
+ * note (3_000_000_000 → 1.5e9 + 1.5e9; 25_000_000_000 → 12.5e9 + 12.5e9).
+ * The TOTAL is unchanged, so the link's `amt`/`fundingCredits` and the exit
+ * denomination ladder are untouched — only the note layout differs.
+ *
+ * WHY two notes, not one: Orchard pads every bundle to a 2-action minimum,
+ * and a padding action's dummy nullifier is RANDOMLY generated. An identity
+ * id derived from the published nullifiers is therefore only reproducible
+ * offline when at least TWO REAL notes are spent — with a single real note a
+ * retry builds a different dummy, hence a different id, and the claimer can
+ * no longer recognise the identity its own earlier attempt created.
+ *
+ * Two sub-target notes structurally FORCE the claim-side spend to select
+ * both: greedy largest-first selection cannot stop on a note that does not
+ * cover the target. That keeps the padding action — and its random nullifier
+ * — out of the bundle. See `shielded_identity_id_is_reproducible` in rs-dpp,
+ * which states the same rule next to the id derivation it guards.
+ *
+ * Odd totals put the extra credit in the SECOND note; both notes stay below
+ * the target either way, which is the only property selection depends on.
+ */
+internal fun inviteFundingSplit(totalCredits: Long): List<Long> {
+    require(totalCredits >= 2) { "invite denomination too small to split: $totalCredits" }
+    val first = totalCredits / 2
+    return listOf(first, totalCredits - first)
+}
+
+/**
  * Lowercase hex of a 32-byte scalar — the wire form the shielded invitation
  * link carries the one-time Orchard spending key as (see
  * [InvitationLinkData.oneTimeKey]).
@@ -99,12 +128,19 @@ interface ShieldedInviteSource {
     suspend fun generateOneTimeOrchardKey(): OneTimeOrchardKey
 
     /**
-     * Type 16: fund a note of exactly [amountCredits] to [recipientRaw43]
-     * (the one-time key's 43-byte Orchard address) from the inviter's own
-     * shielded pool. Blocks for the ~30s Halo 2 proof. Throws on failure
+     * Type 16: fund one note per entry of [amountsCredits] — all to the SAME
+     * [recipientRaw43] (the one-time key's 43-byte Orchard address) — from the
+     * inviter's own shielded pool, in a SINGLE multi-output transfer. Orchard
+     * derives independent notes for a repeated address, which is the point:
+     * see [inviteFundingSplit] for why an invite is funded as two notes rather
+     * than one. Blocks for the ~30s Halo 2 proof. Throws on failure
      * (classified by the caller).
      */
-    suspend fun fundNoteToRaw43(walletIdHex: String, recipientRaw43: ByteArray, amountCredits: Long)
+    suspend fun fundNotesToRaw43(
+        walletIdHex: String,
+        recipientRaw43: ByteArray,
+        amountsCredits: List<Long>
+    )
 
     /**
      * The current chain-tip height, used as the invitation's advisory
@@ -136,14 +172,13 @@ internal class DashSdkShieldedInviteSource(
     override suspend fun generateOneTimeOrchardKey(): OneTimeOrchardKey =
         org.dashfoundation.dashsdk.wallet.generateOneTimeOrchardKey()
 
-    override suspend fun fundNoteToRaw43(
+    override suspend fun fundNotesToRaw43(
         walletIdHex: String,
         recipientRaw43: ByteArray,
-        amountCredits: Long
-    ) = manager().shieldedTransfer(
+        amountsCredits: List<Long>
+    ) = manager().shieldedTransferMulti(
         walletId = walletId(walletIdHex),
-        recipientRaw43 = recipientRaw43,
-        amount = amountCredits
+        outputs = amountsCredits.map { recipientRaw43 to it }
     )
 
     override suspend fun currentChainTipHeight(): Int? =
@@ -161,9 +196,10 @@ internal class DashSdkShieldedInviteSource(
  *
  * 1. generates a single-use Orchard key (32-byte spending key + 43-byte
  *    address) Rust-side;
- * 2. funds a note of exactly the fixed exit denomination (0.1 non-contested /
- *    0.3 contested) to that address from the inviter's OWN shielded pool
- *    (Type 16 transfer);
+ * 2. funds exactly the fixed exit denomination (0.03 non-contested / 0.25
+ *    contested) to that address from the inviter's OWN shielded pool, as TWO
+ *    even notes in a single Type 16 multi-output transfer
+ *    ([inviteFundingSplit]);
  * 3. builds an [InvitationLinkData.createShielded] link carrying the spending
  *    key (hex) + the funding chain-tip height — the claimer spends that note
  *    to create their identity ([SdkShieldedUsernameCreation.createIdentityFromInvitation]).
@@ -282,9 +318,10 @@ class SdkShieldedInviteCreation internal constructor(
             return notBroadcast("one-time key generation failed", t)
         }
 
-        // THE funding transfer — one attempt, ~30s Halo 2 proof.
+        // THE funding transfer — one attempt, ~30s Halo 2 proof. One transfer,
+        // TWO notes to the same one-time address (see [inviteFundingSplit]).
         try {
-            source.fundNoteToRaw43(walletId, key.address, denominationCredits)
+            source.fundNotesToRaw43(walletId, key.address, inviteFundingSplit(denominationCredits))
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             return when (val classified = classifyBroadcastFailure(t)) {
@@ -321,8 +358,8 @@ class SdkShieldedInviteCreation internal constructor(
             // tier this invite paid for. A shielded invite has no on-chain
             // asset lock to read the amount off, and the claim FFI takes the
             // denomination as an input rather than reporting the note's, so
-            // without this the claim screen cannot tell a 0.3 contested
-            // invite from a 0.1 non-contested one.
+            // without this the claim screen cannot tell a 0.25 contested
+            // invite from a 0.03 non-contested one.
             fundingCredits = denominationCredits
         )
 
