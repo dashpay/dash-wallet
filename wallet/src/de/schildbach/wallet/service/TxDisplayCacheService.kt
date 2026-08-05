@@ -369,12 +369,21 @@ class TxDisplayCacheService @Inject constructor(
                             displayCacheRefreshBus.isSdkAuthoritative(entry.rowId) ||
                             (entry.valueSatoshis == 0L && existing.valueSatoshis != 0L)
                         if (existingIsSdkStamped) {
+                            // The swap decoration (convert icon, "Conversion"/
+                            // "Converted" title, swapStatus) is METADATA-authoritative
+                            // — this very path runs BECAUSE the swap-orders table
+                            // changed — so it must pass the freeze or the home row
+                            // stays "Sent"/"Conversion" until a manual cache wipe
+                            // (2026-08-05 Maya field test). Value, exchange rate and
+                            // the filter bucket stay frozen: the dashj rebuild still
+                            // cannot be trusted for those, swap or not.
+                            val swapDecorated = entry.swapStatus != null
                             result = result.copy(
                                 valueSatoshis = existing.valueSatoshis,
-                                iconType      = existing.iconType,
-                                iconBgType    = existing.iconBgType,
-                                title         = existing.title,
-                                statusText    = existing.statusText,
+                                iconType      = if (swapDecorated) entry.iconType else existing.iconType,
+                                iconBgType    = if (swapDecorated) entry.iconBgType else existing.iconBgType,
+                                title         = if (swapDecorated) entry.title else existing.title,
+                                statusText    = if (swapDecorated) entry.statusText else existing.statusText,
                                 filterFlags   = existing.filterFlags
                             )
                         }
@@ -1267,12 +1276,24 @@ internal fun mergeDisplayEntryPreservingSdkStamped(
             existing.title == sendingTitle && entry.title == sentTitle
         val statusCleared = allowStatusProgress &&
             entry.statusText.isEmpty() && existing.statusText.isNotEmpty()
+        // The swap decoration (convert icon, "Conversion"/"Converted" title,
+        // swapStatus) is METADATA-authoritative — it comes from the swap-orders
+        // table the tracking service maintains, not from a dashj recomputation —
+        // so it must pass the freeze. The tracker flips PENDING→COMPLETED long
+        // after the row was SDK-stamped; freezing the title pinned the row at
+        // "Sent"/"Conversion" until a manual cache wipe (home-screen staleness
+        // found in the 2026-08-05 Maya field test). Value, exchange rate,
+        // contact identity and the filter bucket stay frozen: the dashj rebuild
+        // still cannot be trusted for those, swap or not. A rebuild WITHOUT
+        // swap metadata (entry.swapStatus == null) never undresses an existing
+        // swap row — the freeze keeps the cached shape as before.
+        val swapDecorated = entry.swapStatus != null
         result = result.copy(
             valueSatoshis = existing.valueSatoshis,
-            iconType      = existing.iconType,
-            iconBgType    = existing.iconBgType,
-            title         = if (sendingToSent) entry.title else existing.title,
-            statusText    = if (statusCleared) entry.statusText else existing.statusText,
+            iconType      = if (swapDecorated) entry.iconType else existing.iconType,
+            iconBgType    = if (swapDecorated) entry.iconBgType else existing.iconBgType,
+            title         = if (swapDecorated || sendingToSent) entry.title else existing.title,
+            statusText    = if (swapDecorated || statusCleared) entry.statusText else existing.statusText,
             filterFlags   = existing.filterFlags
         )
     }

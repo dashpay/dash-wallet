@@ -49,7 +49,8 @@ class TxDisplayCacheMergeGuardTest {
         comment: String = "",
         service: String? = null,
         contactUserId: String? = null,
-        exchangeRateFiatCode: String? = null
+        exchangeRateFiatCode: String? = null,
+        swapStatus: String? = null
     ) = TxDisplayCacheEntry(
         rowId = rowId,
         title = title,
@@ -68,7 +69,8 @@ class TxDisplayCacheMergeGuardTest {
         contactDisplayName = null,
         contactAvatarUrl = null,
         contactUserId = contactUserId,
-        filterFlags = filterFlags
+        filterFlags = filterFlags,
+        swapStatus = swapStatus
     )
 
     /** The SDK-corrected row for a confirmed plain send (no contact identity on it). */
@@ -239,5 +241,71 @@ class TxDisplayCacheMergeGuardTest {
         // by the next SDK sync pass.
         assertFalse(bus.isSdkAuthoritative("row-0"))
         assertTrue(bus.isSdkAuthoritative("row-${overflow - 1}"))
+    }
+
+    // ── Swap decoration vs. the freeze ────────────────────────────────────
+    // The swap-orders table is metadata-authoritative (the tracking service
+    // flips PENDING→COMPLETED long after the row was SDK-stamped), so a
+    // swap-decorated rebuild must update the SHAPE while the value stays
+    // frozen — the 2026-08-05 Maya field test showed the home row pinned at
+    // its stale title until a manual cache wipe.
+
+    /** A swap-decorated rebuild: dashj-degenerate value, fresh swap shape. */
+    private fun swapRebuild(status: String, title: String) = entry(
+        title = title,
+        valueSatoshis = 0L,
+        iconType = TxDisplayCacheEntry.ICON_CONVERT,
+        service = "swapkit",
+        swapStatus = status
+    )
+
+    @Test
+    fun swapDecorationPassesTheFreezeOnAnSdkStampedRow() {
+        // SDK-stamped plain "Sent" row; the swap order then lands (PENDING).
+        val merged = merge(
+            swapRebuild("PENDING", "Conversion: DASH → RUNE"),
+            sdkCorrected,
+            sdkAuthoritative = true
+        )
+        assertEquals("Conversion: DASH → RUNE", merged.title)
+        assertEquals(TxDisplayCacheEntry.ICON_CONVERT, merged.iconType)
+        // The dashj-degenerate value never clobbers the SDK-stamped one.
+        assertEquals(-96_450_513L, merged.valueSatoshis)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, merged.filterFlags)
+    }
+
+    @Test
+    fun swapStatusProgressUpdatesTheFrozenTitle() {
+        val existingSwapRow = entry(
+            title = "Conversion: DASH → RUNE",
+            valueSatoshis = -5_319_295L,
+            iconType = TxDisplayCacheEntry.ICON_CONVERT,
+            service = "swapkit",
+            swapStatus = "PENDING"
+        )
+        val merged = merge(
+            swapRebuild("COMPLETED", "Converted: DASH → RUNE"),
+            existingSwapRow,
+            sdkAuthoritative = true
+        )
+        assertEquals("Converted: DASH → RUNE", merged.title)
+        assertEquals("COMPLETED", merged.swapStatus)
+        assertEquals(-5_319_295L, merged.valueSatoshis)
+    }
+
+    @Test
+    fun rebuildWithoutSwapMetadataNeverUndressesASwapRow() {
+        val existingSwapRow = entry(
+            title = "Converted: DASH → RUNE",
+            valueSatoshis = -5_319_295L,
+            iconType = TxDisplayCacheEntry.ICON_CONVERT,
+            service = "swapkit",
+            swapStatus = "COMPLETED"
+        )
+        // A live-tx batch rebuild that missed the metadata join keeps the shape.
+        val merged = merge(dashjMisread, existingSwapRow, sdkAuthoritative = true)
+        assertEquals("Converted: DASH → RUNE", merged.title)
+        assertEquals(TxDisplayCacheEntry.ICON_CONVERT, merged.iconType)
+        assertEquals(-5_319_295L, merged.valueSatoshis)
     }
 }
