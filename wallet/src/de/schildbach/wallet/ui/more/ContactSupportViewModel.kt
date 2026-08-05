@@ -29,6 +29,7 @@ import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.service.DashjDiagnosticSyncState
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
+import de.schildbach.wallet.service.platform.sdk.DashSdkServiceImpl
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.ParityReport
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -94,6 +95,13 @@ class ContactSupportViewModel @Inject constructor(
         private const val MAX_LOGS_SIZE = 12 * 1024 * 1024
         private const val MAX_WALLET_DUMP_SIZE = 4 * 1024 * 1024
         private const val MAX_WALLET_LOG_SIZE = 4 * 1024 * 1024
+
+        /**
+         * Combined tail budget for the SDK's tracing run.log (+ its
+         * rotation) attached to the report — see the collection block in
+         * [createReport].
+         */
+        private const val MAX_SDK_RUN_LOG_TAIL = 4L * 1024 * 1024
     }
 
     val wallet: Wallet? = walletDataProvider.wallet
@@ -225,6 +233,37 @@ class ContactSupportViewModel @Inject constructor(
                     }
                 }
             }
+
+            // The SDK's Rust `tracing` output goes to its OWN file
+            // (files/sdk-logs/platform_wallet/run.log — see
+            // DashSdkServiceImpl.enableSdkFileLogging), outside the logback
+            // dir swept above, so it is attached explicitly. Tail-capped: the
+            // newest MAX_SDK_RUN_LOG_TAIL bytes carry the recent sessions,
+            // and the session-start rotation's run.log.1 fills in when the
+            // live file is still young.
+            try {
+                val sdkLogDir = File(
+                    File(application.filesDir, DashSdkServiceImpl.SDK_LOG_DIR_NAME),
+                    "platform_wallet"
+                )
+                var tailBudget = MAX_SDK_RUN_LOG_TAIL
+                for (name in listOf("run.log", "run.log.1")) {
+                    if (tailBudget <= 0L) break
+                    val source = File(sdkLogDir, name)
+                    if (!source.isFile || source.length() == 0L) continue
+                    val copied = copyTail(source, File(reportDir, "sdk-$name"), tailBudget)
+                    if (copied != null) {
+                        attachments.add(
+                            FileProvider.getUriForFile(
+                                application, application.packageName + ".file_attachment", copied
+                            )
+                        )
+                        tailBudget -= copied.length()
+                    }
+                }
+            } catch (x: Exception) {
+                log.info("problem attaching the SDK run.log", x)
+            }
         }
 
         if (collectWalletDump) {
@@ -350,6 +389,33 @@ class ContactSupportViewModel @Inject constructor(
         log.info("create report: {}", watch)
         _status.value = ReportGenerationStatus.Finishing
         return@withContext Pair(text.toString(), attachments)
+    }
+
+    /**
+     * Copies the LAST [maxBytes] of [source] into [dest] (whole file when it
+     * fits). Returns [dest], or null when nothing could be copied — never
+     * throws, so a mid-write rotation or permission hiccup cannot sink the
+     * report.
+     */
+    private fun copyTail(source: File, dest: File, maxBytes: Long): File? {
+        return try {
+            FileInputStream(source).use { fis ->
+                val length = source.length()
+                if (length > maxBytes) {
+                    var toSkip = length - maxBytes
+                    while (toSkip > 0) {
+                        val skipped = fis.skip(toSkip)
+                        if (skipped <= 0) break
+                        toSkip -= skipped
+                    }
+                }
+                FileOutputStream(dest).use { fos -> fis.copyTo(fos) }
+            }
+            if (dest.length() > 0) dest else null
+        } catch (e: IOException) {
+            log.info("could not tail-copy {}: {}", source, e.toString())
+            null
+        }
     }
 
     fun subject(): CharSequence {

@@ -35,6 +35,7 @@ import org.dashfoundation.dashsdk.security.WalletStorage
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
 import org.dashfoundation.dashsdk.wallet.WalletManagerStore
 import org.slf4j.LoggerFactory
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -822,6 +823,20 @@ class DashSdkServiceImpl @Inject constructor(
         // 1. One-time native library load + dash_sdk_init, then logging —
         //    ← AppContainer.bootstrap() steps 1–2. Idempotent.
         Sdk.initialize()
+        // FILE logging FIRST — the Rust `tracing` global subscriber is
+        // first-installer-wins, and enableLogging() installs a STDOUT
+        // subscriber that Android discards while blocking every later one.
+        // Routing tracing to a file is what makes the SDK's sync/scan/drain
+        // diagnostics reportable from a remote tester's device (the
+        // `log::`-facade lines already reach logcat + NativeLogBridge; the
+        // `tracing::` lines — the drain warns and the scan progress — went
+        // nowhere). INFO, not DEBUG: the file accumulates across days on a
+        // mainnet device, and INFO captures warn+info, which includes the
+        // per-entry drain failures (tracing::warn) and the scan lines.
+        enableSdkFileLogging()
+        // Kept for logcat/local debugging: a no-op when the file subscriber
+        // installed above won the global slot, and the fallback when it
+        // could not (unwritable dir).
         Sdk.enableLogging(if (BuildConfig.DEBUG) Sdk.LogLevel.DEBUG else Sdk.LogLevel.WARN)
 
         // 2. Storage layer — ← AppContainer construction (database,
@@ -869,6 +884,43 @@ class DashSdkServiceImpl @Inject constructor(
         }
     }
 
+    /**
+     * Route the SDK's `tracing` output to
+     * `files/sdk-logs/platform_wallet/run.log`, with an app-side
+     * session-start rotation ([Sdk.enableFileLogging] exposes only a level
+     * and a root directory — no size guard of its own): a run.log over
+     * [SDK_RUN_LOG_ROTATE_BYTES] is renamed to `run.log.1` (replacing any
+     * previous one) before the subscriber opens it, bounding total disk to
+     * about twice the cap. Best-effort — a failure here must never block
+     * SDK bring-up, and the console subscriber below remains the fallback.
+     */
+    private fun enableSdkFileLogging() {
+        try {
+            val sessionRoot = File(context.filesDir, SDK_LOG_DIR_NAME)
+            sessionRoot.mkdirs()
+            val runLog = File(File(sessionRoot, "platform_wallet"), "run.log")
+            if (runLog.length() > SDK_RUN_LOG_ROTATE_BYTES) {
+                val rotated = File(runLog.parentFile, "run.log.1")
+                rotated.delete()
+                if (runLog.renameTo(rotated)) {
+                    log.info(
+                        "rotated SDK run.log ({} bytes) to run.log.1", rotated.length()
+                    )
+                } else {
+                    log.warn("could not rotate oversized SDK run.log; it will keep growing")
+                }
+            }
+            val installed = Sdk.enableFileLogging(Sdk.LogLevel.INFO, sessionRoot.absolutePath)
+            log.info(
+                "SDK tracing file logging (INFO) at {}: {}",
+                runLog,
+                if (installed) "installed" else "NOT installed (subscriber already set or dir unwritable)"
+            )
+        } catch (t: Throwable) {
+            log.warn("failed to enable SDK tracing file logging; falling back to console", t)
+        }
+    }
+
     companion object {
         private val log = LoggerFactory.getLogger(DashSdkServiceImpl::class.java)
 
@@ -878,5 +930,16 @@ class DashSdkServiceImpl @Inject constructor(
          * row for debugging/parity with the example app's named wallets).
          */
         internal const val APP_WALLET_NAME = "Dash Wallet"
+
+        /**
+         * Directory under `filesDir` handed to [Sdk.enableFileLogging] as
+         * the session root; the SDK writes `platform_wallet/run.log`
+         * beneath it. The support report tails this file — keep the name
+         * in sync with `ContactSupportViewModel`.
+         */
+        const val SDK_LOG_DIR_NAME = "sdk-logs"
+
+        /** Session-start rotation threshold for the SDK's run.log (20 MB). */
+        const val SDK_RUN_LOG_ROTATE_BYTES = 20L * 1024 * 1024
     }
 }
