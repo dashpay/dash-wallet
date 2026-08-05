@@ -36,6 +36,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.compose_views.createApproveConnectionDialog
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.scan.ScanActivity
 
 /**
@@ -61,19 +62,21 @@ class ConnectionsFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                ConnectionsScreen(
-                    onBackClick = { findNavController().popBackStack() },
-                    onScanClick = { launchScanner() },
-                    onConnectionClick = { /* no-op: connections are managed by the QR scan and the row slider */ },
-                    onConnectionQrClick = { launchScanner() },
-                    onConnectionToggle = { connection, enabled ->
-                        // The switch is only ON for active connections; moving it OFF disconnects
-                        // directly (no confirmation dialog — the toggle itself is the action).
-                        if (!enabled) {
-                            viewModel.disconnect(connection)
+                DashWalletTheme {
+                    ConnectionsScreen(
+                        onBackClick = { findNavController().popBackStack() },
+                        onScanClick = { launchScanner() },
+                        onConnectionClick = { /* no-op: connections are managed by the QR scan and the row slider */ },
+                        onConnectionQrClick = { launchScanner() },
+                        onConnectionToggle = { connection, enabled ->
+                            // The switch is only ON for active connections; moving it OFF disconnects
+                            // directly (no confirmation dialog — the toggle itself is the action).
+                            if (!enabled) {
+                                viewModel.disconnect(connection)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }

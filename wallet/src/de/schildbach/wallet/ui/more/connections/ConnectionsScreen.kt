@@ -53,6 +53,7 @@ import org.dash.wallet.common.ui.components.DashSwitch
 import org.dash.wallet.common.ui.components.ListEmptyState
 import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.Menu
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
 import org.dash.wallet.common.ui.components.Size
@@ -116,10 +117,11 @@ private fun ConnectionsScreenContent(
     onConnectionQrClick: (DAppConnection) -> Unit = {},
     onConnectionToggle: (DAppConnection, Boolean) -> Unit = { _, _ -> }
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         NavBarBack(onBackClick = onBackClick)
 
@@ -192,8 +194,9 @@ private fun ConnectionsEmptyState(
     onScanClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Icon + heading + body inside a white rounded card (Figma 5787:51009 / 5787:50880),
+    // Icon + heading + body inside a rounded card (Figma 5787:51009 / 5787:50880),
     // with the Scan QR button in its own centered wrap below the card.
+    val colors = LocalDashColors.current
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -204,7 +207,7 @@ private fun ConnectionsEmptyState(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                .background(colors.backgroundSecondary, RoundedCornerShape(20.dp))
                 .padding(40.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(40.dp)
@@ -221,13 +224,13 @@ private fun ConnectionsEmptyState(
                 Text(
                     text = stringResource(R.string.dash_connect_empty_heading),
                     style = MyTheme.Typography.TitleMediumSemibold,
-                    color = MyTheme.Colors.textPrimary,
+                    color = colors.textPrimary,
                     textAlign = TextAlign.Center
                 )
                 Text(
                     text = stringResource(R.string.dash_connect_empty_message),
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textSecondary,
+                    color = colors.textSecondary,
                     textAlign = TextAlign.Center
                 )
             }
@@ -254,12 +257,13 @@ private fun ScanToCompleteBanner(
     onScanClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalDashColors.current
     Row(
         modifier = modifier
             .fillMaxWidth()
             // No outer horizontal inset: the banner lives inside the Menu card, which already
             // insets its children — matching Figma where the banner is attached to the card.
-            .background(MyTheme.Colors.dashBlue5, RoundedCornerShape(12.dp))
+            .background(colors.dashBlue5, RoundedCornerShape(12.dp))
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -272,7 +276,7 @@ private fun ScanToCompleteBanner(
         Text(
             text = stringResource(R.string.dash_connect_scan_to_complete_banner),
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.weight(1f)
         )
         DashButton(
@@ -292,6 +296,7 @@ private fun ConnectionListItem(
     onQrClick: () -> Unit,
     onToggle: (Boolean) -> Unit
 ) {
+    val colors = LocalDashColors.current
     val statusText = stringResource(
         when (connection.status) {
             ConnectionStatus.APPROVED -> R.string.dash_connect_status_approved
@@ -301,9 +306,9 @@ private fun ConnectionListItem(
     )
     val dateFormat = remember { SimpleDateFormat("d MMM yyyy, H:mm", Locale.getDefault()) }
     val dotColor = if (connection.status == ConnectionStatus.ACTIVE) {
-        MyTheme.Colors.green
+        colors.green
     } else {
-        MyTheme.Colors.dashBlue
+        colors.dashBlue
     }
 
     ListItem(
@@ -333,13 +338,13 @@ private fun ConnectionListItem(
                         Text(
                             text = statusText,
                             style = MyTheme.Typography.BodySmall,
-                            color = MyTheme.Colors.textPrimary
+                            color = colors.textPrimary
                         )
                     }
                     Text(
                         text = dateFormat.format(Date(connection.updatedAt)),
                         style = MyTheme.Typography.BodySmall,
-                        color = MyTheme.Colors.textTertiary
+                        color = colors.textTertiary
                     )
                 }
                 if (connection.status == ConnectionStatus.ACTIVE) {

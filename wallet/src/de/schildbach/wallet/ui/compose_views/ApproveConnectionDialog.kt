@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.ui.more.connections.ConnectionRequest
 import de.schildbach.wallet.ui.more.connections.ConnectionsViewModel
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
 import org.dash.wallet.common.ui.components.SheetButtonGroup
@@ -122,6 +123,7 @@ internal fun ApproveConnectionContent(
     onApprove: () -> Unit = {},
     onDeny: () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -143,7 +145,7 @@ internal fun ApproveConnectionContent(
                         request.appLabel.ifBlank { stringResource(R.string.dash_connect_unknown_app) }
                     ),
                     style = MyTheme.Typography.HeadlineMediumBold,
-                    color = MyTheme.Colors.textPrimary,
+                    color = colors.textPrimary,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
@@ -151,7 +153,7 @@ internal fun ApproveConnectionContent(
                         request.appLabel.ifBlank { stringResource(R.string.dash_connect_unknown_app) }
                     },
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textSecondary,
+                    color = colors.textSecondary,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -161,7 +163,7 @@ internal fun ApproveConnectionContent(
                 Text(
                     text = stringResource(R.string.dash_connect_approve_will_be_able),
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textPrimary
+                    color = colors.textPrimary
                 )
                 PermissionRow(
                     icon = R.drawable.ic_connections_check_circle,
@@ -179,7 +181,7 @@ internal fun ApproveConnectionContent(
                     .fillMaxWidth()
                     .border(
                         width = 1.5.dp,
-                        color = MyTheme.Colors.extraLightGray,
+                        color = colors.extraLightGray,
                         shape = RoundedCornerShape(16.dp)
                     )
                     .padding(horizontal = 20.dp, vertical = 10.dp),
@@ -200,7 +202,7 @@ internal fun ApproveConnectionContent(
                 Text(
                     text = stringResource(R.string.dash_connect_approve_no_access),
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textPrimary
+                    color = colors.textPrimary
                 )
                 PermissionRow(
                     icon = R.drawable.ic_connections_xmark_circle,
@@ -240,6 +242,7 @@ private fun PermissionRow(
     @DrawableRes icon: Int,
     text: String
 ) {
+    val colors = LocalDashColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -252,7 +255,7 @@ private fun PermissionRow(
         Text(
             text = text,
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.weight(1f)
         )
     }
@@ -263,6 +266,7 @@ private fun DetailRow(
     label: String,
     value: String
 ) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -271,13 +275,13 @@ private fun DetailRow(
         Text(
             text = label,
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = value,
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             textAlign = TextAlign.End,
             modifier = Modifier.weight(1f)
         )
