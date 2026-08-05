@@ -21,6 +21,8 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import de.schildbach.wallet.service.platform.sdk.DashPayBackfillGate
+import de.schildbach.wallet.service.platform.sdk.DashPayBackfillGateImpl
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.DashSdkServiceImpl
 import de.schildbach.wallet.service.platform.sdk.PlatformMnemonicProvider
@@ -46,6 +48,15 @@ abstract class PlatformSdkModule {
     @Singleton
     @Binds
     abstract fun bindDashSdkService(dashSdkService: DashSdkServiceImpl): DashSdkService
+
+    /**
+     * The DIP-15 coreHeight-backfill gate — the app-side interim mitigation
+     * for the SDK's in-memory-only `rescan_triggered` guard. Read-only and
+     * lazy like the rest of this module: it never starts the SDK.
+     */
+    @Singleton
+    @Binds
+    abstract fun bindDashPayBackfillGate(gate: DashPayBackfillGateImpl): DashPayBackfillGate
 
     /**
      * The Phase 3b dashj seed bridge. Never prompts: callers pass an

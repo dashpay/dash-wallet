@@ -767,6 +767,47 @@ class DashSdkServiceImpl @Inject constructor(
     }
 
     /**
+     * See [DashSdkService.readDashPayBackfillSignals]. Pure Room reads via
+     * [databaseOrNull] — no [ensureStarted], no native call, no sweep, so a
+     * gate consultation can never itself provoke the very rescan it is
+     * trying to suppress. Every failure degrades to
+     * [DashPayBackfillSignals.UNKNOWN] ("re-run the backfill").
+     */
+    override suspend fun readDashPayBackfillSignals(
+        walletIdHex: String,
+        ownerIdentityId: ByteArray
+    ): DashPayBackfillSignals {
+        return try {
+            val database = databaseOrNull() ?: return DashPayBackfillSignals.UNKNOWN
+            val walletId = walletIdFromHex(walletIdHex) ?: return DashPayBackfillSignals.UNKNOWN
+
+            // The durable filter-scan watermark — the value the DIP-15
+            // backfill lowers and the scan then climbs back up.
+            val syncedHeight = database.walletDao().getByWalletId(walletId)?.syncedHeight?.toLong()
+
+            // Diagnostic floor: the lowest contact core height the SDK itself
+            // has persisted for us. Never load-bearing (see the KDoc).
+            val contactRequests = database.dashpayDao().getContactRequestsByOwner(ownerIdentityId)
+            val floor = contactRequests.minOfOrNull { it.coreHeightCreatedAt.toLong() }
+
+            DashPayBackfillSignals(
+                syncedHeight = syncedHeight,
+                contactCoreHeightFloor = floor,
+                contactRequestCount = contactRequests.size
+            )
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn(
+                "failed to read DashPay backfill signals for SDK wallet {}…; " +
+                    "treating as unknown (the backfill will be re-run)",
+                walletIdHex.take(8), e
+            )
+            DashPayBackfillSignals.UNKNOWN
+        }
+    }
+
+    /**
      * One-shot bring-up; caller holds [lock]. On any failure every
      * partially-created resource is torn down and the exception rethrown,
      * leaving the service stopped (retryable).

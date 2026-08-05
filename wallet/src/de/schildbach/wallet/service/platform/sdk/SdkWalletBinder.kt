@@ -215,7 +215,11 @@ class SdkWalletBinder internal constructor(
     private val supportsPlatform: () -> Boolean,
     // Injectable clock so the friend-chain provisioning throttle is
     // deterministically testable on the host JVM. Production uses wall time.
-    private val now: () -> Long = { System.currentTimeMillis() }
+    private val now: () -> Long = { System.currentTimeMillis() },
+    // Stops the DIP-15 coreHeight backfill re-firing on every launch; see
+    // [DashPayBackfillGate]. Defaults to the pre-feature always-run
+    // behaviour so unrelated call sites and tests are provably unaffected.
+    private val backfillGate: DashPayBackfillGate = DashPayBackfillGate.ALWAYS_RUN
 ) {
     @Inject
     constructor(
@@ -224,7 +228,8 @@ class SdkWalletBinder internal constructor(
         identityConfig: BlockchainIdentityConfig,
         dashPayConfig: DashPayConfig,
         walletData: WalletData,
-        scope: CoroutineScope
+        scope: CoroutineScope,
+        backfillGate: DashPayBackfillGate
     ) : this(
         sdkService = sdkService,
         mnemonicProvider = mnemonicProvider,
@@ -232,7 +237,8 @@ class SdkWalletBinder internal constructor(
         dashPayConfig = dashPayConfig,
         walletData = walletData,
         scope = scope,
-        supportsPlatform = { Constants.SUPPORTS_PLATFORM }
+        supportsPlatform = { Constants.SUPPORTS_PLATFORM },
+        backfillGate = backfillGate
     )
 
     /** Serializes passes — the single-flight guarantee. */
@@ -420,12 +426,35 @@ class SdkWalletBinder internal constructor(
             if (!force && nowMs - lastProvisionAtMs < PROVISION_MIN_INTERVAL_MS) return
             // No identity ⇒ no contacts ⇒ no friend chains. Mirrors the bind
             // identity gate; a config read failure falls through to "return".
-            if (identityConfig.loadBase().userId == null) return
+            val userId = identityConfig.loadBase().userId ?: return
             // Single-flight: the sweep does network I/O and must not stack.
             if (!provisioning.compareAndSet(false, true)) return
             try {
                 lastProvisionAtMs = nowMs
+
+                // DIP-15 coreHeight-backfill gate. The sweep inside
+                // provisionDashPayContactAccounts unconditionally lowers the
+                // SPV synced_height (the SDK's "already backfilled" guard is
+                // in-memory only), so on a wallet with many contacts every
+                // launch restarts a ~25-minute re-scan and the initial sync
+                // never finishes. Skip the pass entirely once the backfill
+                // has PROVABLY completed and no contact has appeared since —
+                // the gate logs the floor, the persisted coverage and the
+                // decision. Any doubt resolves to running it.
+                val identityId = try {
+                    Identifier.from(userId).toBuffer()
+                } catch (e: Exception) {
+                    log.warn("DashPay backfill gate skipped: stored identity id is malformed")
+                    null
+                }
+                if (identityId != null &&
+                    !backfillGate.evaluate(walletId, identityId, userId).shouldRun
+                ) {
+                    return
+                }
+
                 val report = sdkService.provisionDashPayContactAccounts(walletId)
+                identityId?.let { backfillGate.recordPassOutcome(walletId, it, report) }
                 when {
                     !report.bound -> log.debug(
                         "DashPay friend-chain provisioning: SDK wallet {}… not loaded yet",

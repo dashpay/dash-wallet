@@ -138,6 +138,21 @@ class SdkWalletBinderTest {
             return onProvision(walletIdHex)
         }
 
+        /**
+         * Backfill signals the gate reads. Default UNKNOWN → the gate can
+         * prove nothing and always forces the pass, so every pre-existing
+         * provisioning test keeps its original expectations.
+         */
+        var backfillSignals: DashPayBackfillSignals = DashPayBackfillSignals.UNKNOWN
+        var backfillSignalReads = 0
+        override suspend fun readDashPayBackfillSignals(
+            walletIdHex: String,
+            ownerIdentityId: ByteArray
+        ): DashPayBackfillSignals {
+            backfillSignalReads++
+            return backfillSignals
+        }
+
         var storeKeyCalls = 0
         override suspend fun storeIdentityPrivateKey(
             pubkeyHex: String,
@@ -229,6 +244,7 @@ class SdkWalletBinderTest {
         supportsPlatform: Boolean = true,
         walletData: WalletData = walletData(),
         now: () -> Long = { System.currentTimeMillis() },
+        backfillGate: DashPayBackfillGate = DashPayBackfillGate.ALWAYS_RUN,
         scope: CoroutineScope
     ) = SdkWalletBinder(
         sdkService = sdk,
@@ -238,8 +254,38 @@ class SdkWalletBinderTest {
         walletData = walletData,
         scope = scope,
         supportsPlatform = { supportsPlatform },
-        now = now
+        now = now,
+        backfillGate = backfillGate
     )
+
+    /** Scriptable [DashPayBackfillGate] with interaction counters. */
+    private class FakeBackfillGate(var shouldRun: Boolean) : DashPayBackfillGate {
+        var evaluateCalls = 0
+        var recordCalls = 0
+        var lastWalletId: String? = null
+        var lastIdentityId: ByteArray? = null
+        var lastUserId: String? = null
+
+        override suspend fun evaluate(
+            walletIdHex: String,
+            ownerIdentityId: ByteArray,
+            ownerUserId: String
+        ): BackfillDecision {
+            evaluateCalls++
+            lastWalletId = walletIdHex
+            lastIdentityId = ownerIdentityId
+            lastUserId = ownerUserId
+            return BackfillDecision(shouldRun = shouldRun, reason = "test")
+        }
+
+        override suspend fun recordPassOutcome(
+            walletIdHex: String,
+            ownerIdentityId: ByteArray,
+            report: DashPayContactProvisionReport
+        ) {
+            recordCalls++
+        }
+    }
 
     /** SDK fake in the first-bind happy path: bind ok, discovery attaches. */
     private fun readySdk(): FakeSdkService {
@@ -1065,6 +1111,44 @@ class SdkWalletBinderTest {
         b.join()
 
         assertEquals(1, sdk.provisionCalls)
+    }
+
+    // ── DIP-15 coreHeight-backfill gate wiring ──────────────────────────
+
+    @Test
+    fun provisioning_backfillGateSaysSkip_doesNotTouchTheSdkSweep() = runBlocking {
+        // The tester-facing fix: once the backfill has provably completed,
+        // the pass (and with it the SDK's synced_height rewind) is skipped
+        // entirely, so the initial sync can finally finish.
+        val sdk = readySdk()
+        val gate = FakeBackfillGate(shouldRun = false)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, gate.evaluateCalls)
+        assertEquals(0, sdk.provisionCalls)
+        assertEquals(0, gate.recordCalls)
+    }
+
+    @Test
+    fun provisioning_backfillGateSaysRun_provisionsAndReportsTheOutcomeBack() = runBlocking {
+        val sdk = readySdk()
+        val gate = FakeBackfillGate(shouldRun = true)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.provisionCalls)
+        assertEquals(1, gate.recordCalls)
+        assertEquals(walletId, gate.lastWalletId)
+        assertEquals(userId, gate.lastUserId)
+        assertEquals(
+            Identifier.from(userId).toBuffer().toList(),
+            gate.lastIdentityId?.toList()
+        )
     }
 
     @Test

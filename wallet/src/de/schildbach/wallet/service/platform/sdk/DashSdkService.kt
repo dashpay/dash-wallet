@@ -107,6 +107,58 @@ data class DashPayContactProvisionReport(
 )
 
 /**
+ * The two read-only signals the app-side DIP-15 backfill gate
+ * ([DashPayBackfillGate]) needs to tell "the coreHeight backfill is still
+ * running" from "it has provably finished", WITHOUT any SDK change.
+ *
+ * Both are read straight out of the SDK's own Room database
+ * ([DashSdkService.databaseOrNull]) — no native call, no sweep, no
+ * side effect — so consulting them can never itself trigger a rescan.
+ */
+data class DashPayBackfillSignals(
+    /**
+     * The DURABLE per-wallet filter-scan watermark —
+     * `WalletEntity.syncedHeight` (SDK Room `wallets` row). This is the
+     * exact value the DIP-15 §12.6 backfill LOWERS: the Rust SPV filter
+     * scanner resumes at `synced_height + 1` and drops any wallet whose
+     * `synced_height >= batch_end`, and the value is rehydrated into the
+     * Rust `WalletMetadata.synced_height` on `loadPersistedWallets`
+     * (the full trace is documented in
+     * [L1ShadowSyncService.recoverByRecreatingWallet]'s KDoc).
+     *
+     * Because it is PERSISTED and survives process death, it is the only
+     * trustworthy "the scan has actually climbed to here" evidence — unlike
+     * the live `ShadowSyncProgress.filterHeight` cursor, which collapses to
+     * 0 on every engine restart.
+     *
+     * Null when the SDK is not started, the wallet row does not exist yet,
+     * or the read failed — always treated as "unknown", never as zero.
+     */
+    val syncedHeight: Long?,
+    /**
+     * `min(coreHeightCreatedAt)` over the contact requests the SDK has
+     * persisted for this identity (`DashpayContactRequestEntity`) — the
+     * app's independent view of the FLOOR the SDK's rewind targets.
+     *
+     * DIAGNOSTIC ONLY. The gate's correctness never depends on this value
+     * matching the SDK's internal floor computation (which subsets by
+     * direction and establishment); it is logged so a tester's log states
+     * the floor outright, and recorded alongside a completed backfill so a
+     * later launch can say whether a newly-appeared contact predates the
+     * covered range. Null when the SDK is not started or holds no contact
+     * requests for the owner.
+     */
+    val contactCoreHeightFloor: Long?,
+    /** How many contact requests the SDK has persisted for the owner (diagnostics). */
+    val contactRequestCount: Int
+) {
+    companion object {
+        /** Nothing observable — the gate treats this as "must re-run". */
+        val UNKNOWN = DashPayBackfillSignals(null, null, 0)
+    }
+}
+
+/**
  * Lifecycle owner for the Dash Platform Kotlin SDK inside the wallet app —
  * the Phase 3 bootstrap seam of the dashj → Kotlin SDK migration
  * (see `docs/kotlin-sdk-migration-plan.md`, "Phase 3 — Introduce the SDK").
@@ -427,6 +479,26 @@ interface DashSdkService {
      * @param walletIdHex the bound wallet id ([bindAppWallet]'s return).
      */
     suspend fun provisionDashPayContactAccounts(walletIdHex: String): DashPayContactProvisionReport
+
+    /**
+     * Read-only snapshot of the two signals the app-side DIP-15 backfill
+     * gate reasons over — see [DashPayBackfillSignals] for what each means
+     * and why the synced height is the reliable one.
+     *
+     * Deliberately does NOT call [ensureStarted]: it reads through
+     * [databaseOrNull] and returns [DashPayBackfillSignals.UNKNOWN] when the
+     * SDK is down, so a gate consultation can never start the SDK, never
+     * touch the network, and never trigger a sweep. Never throws — any
+     * failure surfaces as UNKNOWN, which the gate treats as "re-run the
+     * backfill" (the safe direction).
+     *
+     * @param walletIdHex the bound wallet id ([bindAppWallet]'s return).
+     * @param ownerIdentityId our 32-byte platform identity id.
+     */
+    suspend fun readDashPayBackfillSignals(
+        walletIdHex: String,
+        ownerIdentityId: ByteArray
+    ): DashPayBackfillSignals
 
     /**
      * Persist the raw private [privateKey] scalar of a single identity

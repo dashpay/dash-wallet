@@ -453,6 +453,47 @@ open class DashPayConfig @Inject constructor(
         val DASHJ_SYNC_DIAGNOSTIC_FROM_SECS = longPreferencesKey("dashj_sync_diagnostic_from_secs")
 
         /**
+         * DIP-15 §12.6 coreHeight-BACKFILL coverage record — the app-side
+         * interim mitigation for the SDK's in-memory-only `rescan_triggered`
+         * guard (`rs-platform-wallet/src/wallet/identity/state/managed_identity/
+         * dashpay.rs`), which is never persisted and therefore re-fires the
+         * rewind on EVERY launch, forever. See
+         * [de.schildbach.wallet.service.platform.sdk.DashPayBackfillGate].
+         *
+         * Written ONLY once the scan has provably climbed back PAST the
+         * height it was rewound from — never when a backfill merely starts.
+         * Marking on trigger would record an interrupted backfill as done and
+         * permanently miss the historical contact payments it exists to find.
+         *
+         * - COVERED_FLOOR: the synced height the completed backfill was
+         *   rewound DOWN to (observed, not computed).
+         * - COMPLETED_THROUGH: the durable `WalletEntity.syncedHeight` at the
+         *   moment completion was observed.
+         * - CONTACT_FINGERPRINT: the app's own contact-request set the
+         *   coverage belongs to. Any change invalidates the record, because a
+         *   newly-established contact's receival addresses were NOT in the
+         *   filter match set during the covered scan — regardless of its core
+         *   height — so its history needs its own backfill.
+         */
+        val DASHPAY_BACKFILL_COVERED_FLOOR = longPreferencesKey("dashpay_backfill_covered_floor")
+        val DASHPAY_BACKFILL_COMPLETED_THROUGH = longPreferencesKey("dashpay_backfill_completed_through")
+        val DASHPAY_BACKFILL_CONTACT_FINGERPRINT = stringPreferencesKey("dashpay_backfill_contact_fingerprint")
+
+        /**
+         * An OBSERVED, still-running backfill: the SDK lowered the durable
+         * synced height to PENDING_FLOOR from PENDING_TARGET, and the scan has
+         * not yet climbed back to PENDING_TARGET. Persisted (not in-memory)
+         * precisely because the tester's ~19-minute sessions are shorter than
+         * the ~25-minute re-scan — the watch has to resume across launches
+         * instead of restarting the rewind. Cleared when the backfill
+         * completes (promoted to the coverage record above) or when the
+         * contact set changes underneath it.
+         */
+        val DASHPAY_BACKFILL_PENDING_FLOOR = longPreferencesKey("dashpay_backfill_pending_floor")
+        val DASHPAY_BACKFILL_PENDING_TARGET = longPreferencesKey("dashpay_backfill_pending_target")
+        val DASHPAY_BACKFILL_PENDING_FINGERPRINT = stringPreferencesKey("dashpay_backfill_pending_fingerprint")
+
+        /**
          * Last shielded balance (in duffs) persisted from a fully-synced
          * (READY) shielded runtime, so the More-screen "Shielded" card can
          * render the known balance INSTANTLY on open — even while a
