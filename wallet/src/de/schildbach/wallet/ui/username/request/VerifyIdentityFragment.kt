@@ -85,9 +85,12 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
                             if (creationState.ordinal > IdentityCreationState.NONE.ordinal &&
                                 !requestUserNameViewModel.uiState.value.usernameRequestSubmitting
                             ) {
-                                // Same rule as RequestUsernameFragment: while
-                                // the processing dialog shows, ITS dismiss
-                                // button finishes — never this state flip.
+                                // Same rule as RequestUsernameFragment: a
+                                // submit this session finishes via the
+                                // navigate-home callback on the submitting
+                                // rising edge, so this state flip only routes
+                                // a creation already in flight — the guard
+                                // stops the two from racing.
                                 finishAfterCompletion()
                             }
                         }
@@ -103,13 +106,12 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
         // A submit can be triggered while THIS screen is the visible
         // destination (the cancelled-verification shortcut below, or the
         // confirm dialog stacked on top of it) — without the shared
-        // status dialogs those submissions ran with zero feedback here.
+        // status handler those submissions ran with zero feedback here.
         UsernameSubmitStatusDialogs(this, requestUserNameViewModel, authManager) {
-            // Explicit user dismissal of the processing dialog: the
-            // creation keeps running app-side. Route exactly as
-            // RequestUsernameFragment's dismiss does — a bare finish() here
-            // dropped the user on whatever screen happened to be underneath,
-            // so the two dismissal routes of the SAME dialog disagreed.
+            // Request handed off: the creation keeps running app-side.
+            // Route exactly as RequestUsernameFragment does — a bare
+            // finish() here dropped the user on whatever screen happened to
+            // be underneath, so both screens share the one completion route.
             finishAfterCompletion()
         }.observe()
     }

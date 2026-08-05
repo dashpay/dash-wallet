@@ -181,16 +181,16 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             showKeyboard()
         }
 
-        // The submit-status dialogs (processing / error / ambiguous) are the
-        // SHARED component every username-flow screen installs — see
-        // UsernameSubmitStatusDialogs (Brian: submitting silently dropped
-        // back to the entry screen with no feedback).
+        // The submit-status handler (navigate-home-on-submit / error /
+        // ambiguous) is the SHARED component every username-flow screen
+        // installs — see UsernameSubmitStatusDialogs (Brian: submitting
+        // silently dropped back to the entry screen with no feedback).
         UsernameSubmitStatusDialogs(this, requestUserNameViewModel, authManager) {
-            // The user explicitly closed the processing dialog: the
-            // creation keeps running (foreground service / app scope) and
-            // the destination screen reports the result. Route contested
-            // completions to the More screen's voting tile, non-contested
-            // ones back to Home.
+            // The request has been handed off: the creation keeps running
+            // (foreground service / app scope) and the home identity tile
+            // reports the result, so finish there now instead of showing a
+            // modal. Route contested completions to the More screen's
+            // voting tile, non-contested ones back to Home.
             finishAfterCompletion()
         }.observe()
 
@@ -486,15 +486,15 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // why are we closing, we should allow the user to chose a new name
                 // requireActivity().finish()
             } else if ((it?.creationState?.ordinal ?: 0) > IdentityCreationState.NONE.ordinal) {
-                // The L1 submit's processing dialog must stay up until ITS
-                // explicit dismiss button — finishing here on the identity
-                // state machine's first flip auto-closed it under the user
-                // (observed live). While it shows, the dialog's dismissal
-                // callback does the finishing; entries with a creation
-                // already in flight (no submit this session) keep the
-                // immediate exit. Contested completions route to the More
-                // screen's voting tile instead of Home (see
-                // finishAfterCompletion).
+                // A submit this session finishes to Home the moment it is
+                // handed off (the submitting rising edge, via
+                // UsernameSubmitStatusDialogs' navigate-home callback), so
+                // this identity-state path only serves entries that find a
+                // creation ALREADY in flight (no submit this session): flip
+                // straight to the completion route. The submitting guard
+                // keeps the two from racing / double-routing. Contested
+                // completions route to the More screen's voting tile instead
+                // of Home (see finishAfterCompletion).
                 if (!requestUserNameViewModel.uiState.value.usernameRequestSubmitting) {
                     finishAfterCompletion()
                 }

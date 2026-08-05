@@ -48,7 +48,6 @@ import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirem
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import de.schildbach.wallet.ui.dashpay.RetryStatusHint
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
 import de.schildbach.wallet.ui.main.resolveRequestedUsernameDisplay
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
@@ -468,17 +467,6 @@ class RequestUserNameViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
     val uiState: StateFlow<RequestUserNameUIState> = _uiState.asStateFlow()
-
-    /**
-     * The live transient registration status hint (30s "network catching
-     * up" watchdog, per-attempt "waiting for confirmation"), surfaced by
-     * the shared registration path via [IdentityCreationStatusHolder]. The
-     * home-screen tile already shows this, but during creation the user is
-     * watching the processing dialog — [UsernameSubmitStatusDialogs]
-     * observes this to show the same copy as a live secondary line there.
-     */
-    val identityCreationStatusHint: StateFlow<RetryStatusHint?>
-        get() = identityCreationStatus.statusHint
 
     private val _requestedUserNameLink = MutableStateFlow<String?>(null)
     val requestedUserNameLink: StateFlow<String?> = _requestedUserNameLink.asStateFlow()

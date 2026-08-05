@@ -20,30 +20,39 @@ import androidx.fragment.app.Fragment
 import org.dash.wallet.common.services.AuthenticationManager
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.Lifecycle
-import de.schildbach.wallet.ui.dashpay.RetryStatusHint
-import de.schildbach.wallet.ui.dashpay.retryStatusHintTextRes
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.observe
 
 /**
- * The ONE submit-status dialog set for the username request flow, shared
- * by every screen a [RequestUserNameViewModel.submit] can be triggered
- * from ([RequestUsernameFragment], [RequestUsernameSecondaryFragment],
+ * The ONE submit-status handler for the username request flow, shared by
+ * every screen a [RequestUserNameViewModel.submit] can be triggered from
+ * ([RequestUsernameFragment], [RequestUsernameSecondaryFragment],
  * [VerifyIdentityFragment]) so all four submission paths — non-contested
  * shielded, contested shielded, L1/asset-lock (Dash balance, invite,
- * reuse-transaction) and the dual primary+secondary registration — show
- * identical feedback instead of per-screen copies (Brian: contested
- * submissions bounced with no processing dialog because only one screen
- * implemented one):
+ * reuse-transaction) and the dual primary+secondary registration — behave
+ * identically instead of each screen rolling its own (Brian: contested
+ * submissions bounced with no feedback because only one screen implemented
+ * it):
  *
- * - submitting → a DISMISSIBLE processing dialog (explicit dismiss button
- *   + cancelable): the creation runs on the app scope / a foreground
- *   service and survives the dialog;
+ * - submitting → the flow finishes straight to Home so the user watches
+ *   the home identity tile, which already shows richer live progress than
+ *   a modal ever did. The creation itself keeps running on the app scope /
+ *   a foreground service and is entirely independent of this screen, so
+ *   leaving does not interrupt it. (The old "~30s, you can close this"
+ *   processing dialog was redundant with that tile and was removed.)
  * - error → retryable error dialog ("Try again" re-submits);
  * - ambiguous → close-only dialog that offers NO retry and claims no
  *   "extra cost" (the outcome may already be on chain — funds safety).
+ *
+ * The error / pool-syncing / ambiguous surfaces are the SYNCHRONOUS
+ * refusals: they are set without ever flipping `usernameRequestSubmitting`
+ * true (the creation never started), so the screen is still present to
+ * show them. An outcome that arrives AFTER the request started running is
+ * surfaced by the home tile (in-progress / error-with-retry) and the
+ * executor's sticky state — a subsequent submit of an ambiguous creation
+ * is refused synchronously and re-shows the ambiguous dialog, so funds
+ * safety holds without the modal.
  *
  * Install from `onViewCreated` via [observe]; the observation is bound to
  * the fragment's view lifecycle.
@@ -53,40 +62,43 @@ class UsernameSubmitStatusDialogs(
     private val viewModel: RequestUserNameViewModel,
     private val authManager: AuthenticationManager,
     /**
-     * Invoked when the USER closes the processing dialog (the explicit
-     * dismiss button or a cancel) — never for the programmatic dismissal
-     * that replaces it with a terminal dialog, and never for lifecycle
-     * teardown. The L1/asset-lock screens finish to the home screen here:
-     * the dialog is the user's "informed when ready" acknowledgement, so
-     * the screen must not leave (auto-dismissing the dialog) before it.
+     * Invoked once, on the rising edge of `usernameRequestSubmitting`: the
+     * request has been handed off and keeps running on the app scope / a
+     * foreground service, so the flow finishes to its completion route
+     * (Home for non-contested, the More screen's voting tile for
+     * contested) where the home identity tile reports progress and the
+     * final result. Replaces the old "user closed the processing dialog"
+     * hook — the destination is the same, it is just reached without a
+     * modal in between.
      */
-    private val onProcessingDismissedByUser: (() -> Unit)? = null
+    private val onSubmitNavigateHome: (() -> Unit)? = null
 ) {
-    private var processingDialog: AdaptiveDialog? = null
-    private var processingDismissedProgrammatically = false
     private var errorDialogShown = false
     private var poolSyncingDialogShown = false
     private var ambiguousDialogShown = false
+    private var navigatedHome = false
 
     fun observe() {
-        // The transient registration status hint (30s "network catching up"
-        // watchdog / per-retry "waiting for confirmation") is already shown
-        // on the home tile, but during creation the user is watching THIS
-        // processing dialog — mirror the hint into it as a live secondary
-        // line so the >30s wait is explained here too, not just after the
-        // screen finishes to home.
-        viewModel.identityCreationStatusHint.observe(fragment.viewLifecycleOwner) { hint ->
-            applyStatusHint(hint)
-        }
         viewModel.uiState.observe(fragment.viewLifecycleOwner) { state ->
+            // The request has been accepted and is running on the app scope /
+            // a foreground service — finish to Home (or the voting tile) so
+            // the user watches the home identity tile instead of a modal.
+            // Rising edge only: re-emissions for unrelated fields must not
+            // re-trigger the route.
             if (state.usernameRequestSubmitting) {
-                showProcessingDialog()
+                if (!navigatedHome) {
+                    navigatedHome = true
+                    onSubmitNavigateHome?.invoke()
+                }
             } else {
-                dismissProcessingDialog()
+                navigatedHome = false
             }
-            // Terminal states replace the processing dialog. Each is shown
-            // on its rising edge only — uiState re-emissions for unrelated
-            // fields must not stack duplicate dialogs.
+            // Terminal states. Each is shown on its rising edge only —
+            // uiState re-emissions for unrelated fields must not stack
+            // duplicate dialogs. These are the SYNCHRONOUS refusals (no
+            // submitting=true flip, so the screen is still present); an
+            // outcome reached after the request started is surfaced by the
+            // home tile instead.
             if (state.usernameSubmittedError && !errorDialogShown) {
                 errorDialogShown = true
                 showErrorDialog()
@@ -106,52 +118,6 @@ class UsernameSubmitStatusDialogs(
                 showAmbiguousDialog()
             }
         }
-    }
-
-    /** Dismissible: the creation runs on the app scope and survives the dialog. */
-    private fun showProcessingDialog() {
-        if (processingDialog?.dialog?.isShowing == true) return
-        processingDismissedProgrammatically = false
-        processingDialog = AdaptiveDialog.progress(
-            fragment.getString(R.string.username_creation_processing),
-            fragment.getString(R.string.close)
-        ).also { dialog ->
-            // A hint may already be live (the watchdog fired before the
-            // dialog was (re)shown — e.g. after the lock screen tore it
-            // down mid-creation). Seed it so the secondary line is present
-            // on first frame instead of only on the next emission.
-            applyStatusHint(viewModel.identityCreationStatusHint.value, dialog)
-            dialog.show(fragment.requireActivity()) { result ->
-                // `false` is the explicit dismiss button; `null` is a
-                // cancel (tap-outside/back) OR teardown — the RESUMED
-                // check tells a user cancel apart from a rotation/finish
-                // destroying the dialog under us.
-                val userDismissed = !processingDismissedProgrammatically &&
-                    (
-                        result == false ||
-                            fragment.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
-                        )
-                if (userDismissed) {
-                    onProcessingDismissedByUser?.invoke()
-                }
-            }
-        }
-    }
-
-    /**
-     * Push the current [RetryStatusHint] into the processing dialog's live
-     * secondary line (or clear it when null). Uses the shared
-     * [retryStatusHintTextRes] mapping so the copy matches the home tile.
-     */
-    private fun applyStatusHint(hint: RetryStatusHint?, dialog: AdaptiveDialog? = processingDialog) {
-        val text = retryStatusHintTextRes(hint)?.let { fragment.getString(it) }
-        dialog?.updateSecondaryMessage(text)
-    }
-
-    private fun dismissProcessingDialog() {
-        processingDismissedProgrammatically = true
-        processingDialog?.dismissAllowingStateLoss()
-        processingDialog = null
     }
 
     private fun showErrorDialog() {
