@@ -51,9 +51,11 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     // The Type-20 exit denominations that actually LEAVE the pool for a
     // private invite (0.03 non-contested / 0.25 contested — the v13 mint
     // mapping, shieldedInviteDenominationCredits) — the amount the user
-    // "pays". Distinct from the 0.08/0.30 fund-minimum the pool must
-    // HOLD (that is the gate threshold, see inviteFeeGate). Pinned to the
-    // mint via inviteFeeRequirement (InviteFeeGateTest).
+    // "pays", shown on the tiles/confirm screen. Distinct from what the pool
+    // must HOLD: the gate and the insufficiency message use
+    // inviteFeeRequirement = denomination + the Type-16 transfer-fee margin
+    // (the mint's fee is carved from the pool on top of the funded notes).
+    // Pinned to the mint via inviteFeeRequirement (InviteFeeGateTest).
     private val shieldedNonContestedFee = Coin.parseCoin("0.03")
     private val shieldedContestedFee = Coin.parseCoin("0.25")
 
@@ -153,7 +155,8 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
      * regardless of balance (Fix G2); only "Confirm and pay" is gated, on the
      * CURRENTLY selected kind, sourced from the L1 wallet or the shielded pool
      * per [args].shielded. When the selection is unaffordable, name what the
-     * user needs (the pool minimum for a private invite, the L1 fee otherwise).
+     * user needs ([inviteFeeRequirement] — denomination + transfer-fee margin
+     * for a private invite, the L1 fee otherwise).
      */
     private fun applyGate() {
         val continueEnabled = inviteFeeGate(

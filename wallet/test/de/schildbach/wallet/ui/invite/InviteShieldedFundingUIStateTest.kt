@@ -70,11 +70,11 @@ class InviteShieldedFundingUIStateTest {
             nonContestedFee = nonContestedFee,
             contestedFee = contestedFee
         )
-        // The sheet asks for the amount to SHIELD: 0.08 / 0.30 (the v13
-        // 0.03/0.25 exit denomination padded 0.05 for the shielded-spend
-        // fee), not the bare 0.03/0.25.
-        assertEquals(Dash(8_000_000L), state.nonContestedShieldedCost)
-        assertEquals(Dash(30_000_000L), state.contestedShieldedCost)
+        // The sheet asks for the amount to SHIELD: 0.033 / 0.253 (the v13
+        // 0.03/0.25 exit denomination plus the 0.003 shielded-fee margin,
+        // Constants.SHIELDED_FEE_MARGIN), not the bare 0.03/0.25.
+        assertEquals(Dash(3_300_000L), state.nonContestedShieldedCost)
+        assertEquals(Dash(25_300_000L), state.contestedShieldedCost)
     }
 
     @Test
@@ -100,11 +100,13 @@ class InviteShieldedFundingUIStateTest {
     }
 
     @Test
-    fun `fund-minimums are the minted denominations plus the shield-fee pad`() {
+    fun `fund-minimums are the minted denominations plus the shield-fee margin`() {
         // The padded shield-IN guidance must track the SAME minted
-        // denominations: denomination + 0.05 DASH pad (the pad the pre-v13
-        // 0.15/0.35 figures encoded over 0.1/0.3).
-        val padDuffs = 5_000_000L // 0.05 DASH
+        // denominations: denomination + the 0.003 DASH shielded-fee margin
+        // (Constants.SHIELDED_FEE_MARGIN — the Shield entry's consensus fee,
+        // ~0.00213, is deducted from the locked amount, so the bare
+        // denomination lands short; the pre-2026-08 0.05 pad was a guess).
+        val padDuffs = 300_000L // 0.003 DASH
         val state = InviteShieldedFundingUIState()
         assertEquals(
             Dash(state.nonContestedPrivateWithdrawn.duffs + padDuffs),
@@ -124,30 +126,30 @@ class InviteShieldedFundingUIStateTest {
             nonContestedFee = Dash.ZERO,
             contestedFee = Dash.ZERO
         )
-        assertEquals(Dash(8_000_000L), state.nonContestedShieldedCost)
-        assertEquals(Dash(30_000_000L), state.contestedShieldedCost)
+        assertEquals(Dash(3_300_000L), state.nonContestedShieldedCost)
+        assertEquals(Dash(25_300_000L), state.contestedShieldedCost)
     }
 
-    // ── canCreatePrivateInvite gates on the WITHDRAWN cost (0.03), not the
-    //    padded shield-IN fund-minimum (0.08) ─────────────────────────────────
+    // ── canCreatePrivateInvite gates on the withdrawn cost + Type-16
+    //    transfer-fee margin (0.033), not the bare denomination and not the
+    //    shield-IN fund-minimum ────────────────────────────────────────────
 
     @Test
-    fun `canCreatePrivateInvite true once the pool holds the withdrawn cost`() {
+    fun `canCreatePrivateInvite true once the pool holds denomination plus mint fee margin`() {
         val state = InviteShieldedFundingUIState(
             shieldedEnabled = true,
             resolved = true,
             syncStatus = ShieldedSyncStatus.READY,
-            shieldedBalance = Dash(3_000_000L) // exactly 0.03 DASH — the withdrawn denomination
+            shieldedBalance = Dash(3_300_000L) // exactly 0.033 — denomination + margin
         )
         assertTrue(state.canCreatePrivateInvite)
     }
 
     @Test
-    fun `canCreatePrivateInvite true for a pool between the withdrawn cost and the padded gate`() {
-        // A pool holding 0.05 (>= 0.03 withdrawn, < 0.08 shield-IN minimum) can
-        // fund a non-contested private invite — gating on the padded minimum
-        // wrongly hid it (the shield-IN pad is irrelevant once funds are
-        // already shielded).
+    fun `canCreatePrivateInvite true for a pool above the gate but below the shield-IN contested minimum`() {
+        // A pool holding 0.05 (>= 0.033 gate) can fund a non-contested private
+        // invite — gating entry on any L1 shield-IN figure wrongly hid it (the
+        // Shield fee is irrelevant once funds are already shielded).
         val state = InviteShieldedFundingUIState(
             shieldedEnabled = true,
             resolved = true,
@@ -158,12 +160,26 @@ class InviteShieldedFundingUIStateTest {
     }
 
     @Test
-    fun `canCreatePrivateInvite false below the withdrawn cost`() {
+    fun `canCreatePrivateInvite false at exactly the bare denomination`() {
+        // FIX-1 REGRESSION PIN: exactly 0.03 used to pass and then fail
+        // opaquely at the FFI — the Type-16 mint fee is charged on top of the
+        // funded notes, so the bare denomination cannot mint.
         val state = InviteShieldedFundingUIState(
             shieldedEnabled = true,
             resolved = true,
             syncStatus = ShieldedSyncStatus.READY,
-            shieldedBalance = Dash(2_999_999L) // just under 0.03 DASH
+            shieldedBalance = Dash(3_000_000L) // exactly 0.03 DASH
+        )
+        assertFalse(state.canCreatePrivateInvite)
+    }
+
+    @Test
+    fun `canCreatePrivateInvite false just below the gate`() {
+        val state = InviteShieldedFundingUIState(
+            shieldedEnabled = true,
+            resolved = true,
+            syncStatus = ShieldedSyncStatus.READY,
+            shieldedBalance = Dash(3_299_999L) // just under 0.033 DASH
         )
         assertFalse(state.canCreatePrivateInvite)
     }

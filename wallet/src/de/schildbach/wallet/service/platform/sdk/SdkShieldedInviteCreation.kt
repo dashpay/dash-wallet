@@ -98,6 +98,36 @@ internal fun inviteFundingSplit(totalCredits: Long): List<Long> {
 }
 
 /**
+ * Fee margin, in Platform credits, the inviter's pool must hold ON TOP of the
+ * invite denomination before a shielded invite is attempted.
+ *
+ * The invite mint is a Type-16 shielded transfer, and its consensus fee is
+ * carved from the pool IN ADDITION to the two funded notes — unlike the
+ * Type-20 identity create, whose metered fee is taken out of the denomination
+ * itself. A pool holding exactly the denomination therefore cannot mint an
+ * invite: it passes a bare `>= denomination` check and then fails opaquely at
+ * the FFI's note selection.
+ *
+ * The SDK exposes the exact fee only as a runtime FFI call
+ * (`ShieldedProver.estimateFee`), so the margin is pinned app-side. Derivation
+ * from the consensus constants (rs-platform-version / rs-dpp
+ * `compute_minimum_shielded_fee`, current values):
+ *
+ *     min_fee(n_actions) = 100_000_000                    (proof verification)
+ *                        + n × 22_000_000                 (per-action processing)
+ *                        + n × 344 × 27_400 = n × 9_425_600 (per-action storage)
+ *                        = 100_000_000 + n × 31_425_600 credits
+ *
+ * The mint's bundle has at least 3 actions (two invite notes + change on the
+ * output side), so the floor is 194_276_800 credits ≈ 0.00194 DASH; each
+ * additional pool note the spend has to select adds one action
+ * (31_425_600 credits). 0.003 DASH covers bundles up to 6 actions — the same
+ * 0.003 margin [de.schildbach.wallet.Constants.SHIELDED_FEE_MARGIN] uses for
+ * the shield-first guidance (equality pinned by `InviteFeeGateTest`).
+ */
+internal const val SHIELDED_INVITE_FEE_MARGIN_CREDITS = 300_000_000L // 0.003 DASH
+
+/**
  * Lowercase hex of a 32-byte scalar — the wire form the shielded invitation
  * link carries the one-time Orchard spending key as (see
  * [InvitationLinkData.oneTimeKey]).
@@ -282,7 +312,11 @@ class SdkShieldedInviteCreation internal constructor(
 
         // The inviter funds the note from their OWN pool, so — unlike the
         // claim path — the pool balance IS the funding source and must cover
-        // the denomination with a trustworthy (READY) balance.
+        // the denomination with a trustworthy (READY) balance. The Type-16
+        // transfer's fee is carved from the pool ON TOP of the funded notes
+        // (see [SHIELDED_INVITE_FEE_MARGIN_CREDITS]), so the bar is
+        // denomination + fee margin — a pool holding exactly the denomination
+        // would pass a bare check and then fail opaquely at the FFI.
         if (!shieldedBalanceService.ensureShieldedReady()) {
             return notBroadcast(SdkShieldedUsernameCreation.REASON_RUNTIME_NOT_READY, null)
         }
@@ -295,10 +329,11 @@ class SdkShieldedInviteCreation internal constructor(
             if (t is CancellationException) throw t
             return notBroadcast("shielded balance unavailable", t)
         }
-        if (balance < creditsToDash(denominationCredits)) {
+        val requiredCredits = denominationCredits + SHIELDED_INVITE_FEE_MARGIN_CREDITS
+        if (balance < creditsToDash(requiredCredits)) {
             return notBroadcast(
-                "shielded balance below the ${creditsToDash(denominationCredits).toPlainString()} " +
-                    "DASH invite denomination",
+                "shielded balance below the ${creditsToDash(requiredCredits).toPlainString()} " +
+                    "DASH invite denomination + transfer-fee margin",
                 null
             )
         }

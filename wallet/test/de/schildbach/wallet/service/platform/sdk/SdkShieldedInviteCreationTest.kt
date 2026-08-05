@@ -73,7 +73,13 @@ class SdkShieldedInviteCreationTest {
     private val key = OneTimeOrchardKey(spendingKey = spendingKey, address = orchardAddress)
 
     private val statusFlow = MutableStateFlow(ShieldedSyncStatus.READY)
-    private val balanceFlow = MutableStateFlow(creditsToDash(denominationCredits))
+
+    // The preflight bar is denomination + the Type-16 transfer-fee margin (the
+    // mint's fee is carved from the pool ON TOP of the funded notes), so the
+    // default balance holds the margin too.
+    private val nonContestedRequiredCredits = denominationCredits + SHIELDED_INVITE_FEE_MARGIN_CREDITS
+    private val contestedRequiredCredits = contestedDenominationCredits + SHIELDED_INVITE_FEE_MARGIN_CREDITS
+    private val balanceFlow = MutableStateFlow(creditsToDash(nonContestedRequiredCredits))
 
     private fun balanceService(ready: Boolean = true) = mockk<ShieldedBalanceService> {
         coEvery { ensureShieldedReady() } returns ready
@@ -177,7 +183,25 @@ class SdkShieldedInviteCreationTest {
             assertTrue(result is SdkWriteResult.NotBroadcast)
             coVerify(exactly = 0) { source.fundNotesToRaw43(any(), any(), any()) }
         } finally {
-            balanceFlow.value = creditsToDash(denominationCredits)
+            balanceFlow.value = creditsToDash(nonContestedRequiredCredits)
+        }
+    }
+
+    @Test
+    fun balanceAtExactlyTheDenomination_notBroadcast_neverFunds() = runTest {
+        // FIX-1 REGRESSION PIN: the Type-16 mint fee is carved from the pool
+        // on top of the two funded notes, so a pool holding EXACTLY the
+        // denomination cannot mint — it used to pass the bare preflight and
+        // then fail opaquely at the FFI's note selection.
+        balanceFlow.value = creditsToDash(denominationCredits) // 0.03, no fee margin
+        try {
+            val source = happySource()
+            val result = service(source = source)
+                .createShieldedInvite("alice", "Alice", "", contested = false)
+            assertTrue(result is SdkWriteResult.NotBroadcast)
+            coVerify(exactly = 0) { source.fundNotesToRaw43(any(), any(), any()) }
+        } finally {
+            balanceFlow.value = creditsToDash(nonContestedRequiredCredits)
         }
     }
 
@@ -267,7 +291,7 @@ class SdkShieldedInviteCreationTest {
 
     @Test
     fun contested_fundsThePointTwentyFiveDenomination() = runTest {
-        balanceFlow.value = creditsToDash(contestedDenominationCredits)
+        balanceFlow.value = creditsToDash(contestedRequiredCredits)
         try {
             val source = happySource()
             val result = service(source = source)
@@ -289,7 +313,7 @@ class SdkShieldedInviteCreationTest {
                 (result as SdkWriteResult.Broadcast).value.linkData.shieldedFundingCredits
             )
         } finally {
-            balanceFlow.value = creditsToDash(denominationCredits)
+            balanceFlow.value = creditsToDash(nonContestedRequiredCredits)
         }
     }
 

@@ -20,8 +20,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.SHIELDED_INVITE_FEE_MARGIN_CREDITS
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
+import de.schildbach.wallet.service.platform.sdk.creditsToDash
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -102,9 +104,10 @@ internal fun inviteShieldedOptions(
  *
  * The shielded contested/non-contested "amount to shield" figures come
  * from the same fund-minimum constants the create-username flow shows
- * ([Constants.SHIELDED_USERNAME_FUND_MIN] 0.08 DASH /
- * [Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED] 0.30 DASH) — the 0.03 /
- * 0.25 v13 Type-20 exit denomination padded 0.05 for the shielded-spend fee.
+ * ([Constants.SHIELDED_USERNAME_FUND_MIN] 0.033 DASH /
+ * [Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED] 0.253 DASH) — the 0.03 /
+ * 0.25 v13 Type-20 exit denomination plus [Constants.SHIELDED_FEE_MARGIN]
+ * for the Shield operation's own fee.
  *
  * The balance/sync pair follows the More-screen balance-card rule: a
  * shielded balance is only trusted when the sync status is
@@ -127,14 +130,15 @@ data class InviteShieldedFundingUIState(
 ) {
     /**
      * The shielded balance a NON-contested invitation requires the user to
-     * hold: [Constants.SHIELDED_USERNAME_FUND_MIN] (0.08 DASH) — the 0.03
-     * v13 Type-20 exit denomination padded 0.05 for the shielded-spend fee.
-     * This is the "amount to shield" the sheet asks for, NOT the bare exit
-     * denomination (0.03), which is only what finally leaves the pool.
+     * hold: [Constants.SHIELDED_USERNAME_FUND_MIN] (0.033 DASH) — the 0.03
+     * v13 Type-20 exit denomination plus [Constants.SHIELDED_FEE_MARGIN] for
+     * the Shield operation's own fee. This is the "amount to shield" the
+     * sheet asks for, NOT the bare exit denomination (0.03), which is only
+     * what finally leaves the pool.
      */
     val nonContestedShieldedCost: Dash = Dash(Constants.SHIELDED_USERNAME_FUND_MIN.value)
 
-    /** The shielded balance a CONTESTED invitation requires (0.30 DASH — 0.25 + the 0.05 pad). */
+    /** The shielded balance a CONTESTED invitation requires (0.253 DASH — 0.25 + the fee margin). */
     val contestedShieldedCost: Dash = Dash(Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED.value)
 
     /**
@@ -156,6 +160,18 @@ data class InviteShieldedFundingUIState(
     val contestedPrivateWithdrawn: Dash = Dash(25_000_000L) // 0.25 DASH
 
     /**
+     * The pool balance that actually lets a private invite be MINTED — the
+     * non-contested withdrawn denomination PLUS the Type-16 transfer-fee
+     * margin ([SHIELDED_INVITE_FEE_MARGIN_CREDITS]): the mint's consensus
+     * fee is carved from the pool on top of the funded notes, so a pool
+     * holding exactly the denomination cannot mint (it would pass a bare
+     * check and then fail opaquely at the FFI's note selection). Same bar as
+     * the downstream fee gate ([inviteFeeRequirement]/`inviteFeeGate`).
+     */
+    val nonContestedPrivateInviteGate: Dash =
+        Dash(nonContestedPrivateWithdrawn.duffs + creditsToDash(SHIELDED_INVITE_FEE_MARGIN_CREDITS).duffs)
+
+    /**
      * The sheet to show at the invite decision point. Until the flag read
      * resolves the prompt is [InviteShieldedFundingPrompt.NONE] so an
      * undecided state never renders a sheet — the fragment waits for
@@ -170,8 +186,8 @@ data class InviteShieldedFundingUIState(
     /**
      * "Shield your funds first" is only useful when the wallet holds at
      * least the SHIELD-guidance amount ([Constants.SHIELDED_USERNAME_FUND_MIN],
-     * 0.08 DASH — the 0.03 pool denomination padded for the Shield
-     * operation's fee) — below it the sheet disables the button and offers
+     * 0.033 DASH — the 0.03 pool denomination plus the Shield operation's
+     * fee margin) — below it the sheet disables the button and offers
      * only "Continue without privacy".
      */
     val canShieldMinimum: Boolean
@@ -182,22 +198,20 @@ data class InviteShieldedFundingUIState(
      * directly (the L2 "Create a private invitation" path). Requires the
      * shielded features on, the pool [ShieldedSyncStatus.READY] (a mid-sync
      * `Dash.ZERO` is a placeholder, never evidence), and a trusted balance of
-     * at least the NON-contested private invite WITHDRAWN cost
-     * ([nonContestedPrivateWithdrawn], 0.03 DASH — the Type-20 exit denomination
-     * that actually leaves the pool). This is the SAME amount the downstream
-     * fee gate checks ([de.schildbach.wallet.ui.invite.inviteFeeRequirement] /
-     * `inviteFeeGate`, `SHIELDED_INVITE_NON_CONTESTED` = 0.03); gating entry on
-     * the padded shield-IN fund-minimum (0.08, which bakes in the L1 Shield fee
-     * that is irrelevant once funds are already shielded) wrongly hid the
-     * private-invite option for a pool holding between the denomination and the
-     * padded minimum. The contested choice (0.25) is re-checked when the
-     * inviter picks the username kind at the fee step; here we only gate
-     * whether ANY private invite is offerable.
+     * at least [nonContestedPrivateInviteGate] — the NON-contested withdrawn
+     * denomination plus the Type-16 transfer-fee margin the mint carves from
+     * the pool on top of the notes. This is the SAME bar the downstream fee
+     * gate checks ([de.schildbach.wallet.ui.invite.inviteFeeRequirement] /
+     * `inviteFeeGate`); gating entry on the shield-IN fund-minimum (which
+     * bakes in the L1 Shield fee that is irrelevant once funds are already
+     * shielded) wrongly hid the private-invite option. The contested choice
+     * is re-checked when the inviter picks the username kind at the fee
+     * step; here we only gate whether ANY private invite is offerable.
      */
     val canCreatePrivateInvite: Boolean
         get() = shieldedEnabled &&
             syncStatus == ShieldedSyncStatus.READY &&
-            shieldedBalance >= nonContestedPrivateWithdrawn
+            shieldedBalance >= nonContestedPrivateInviteGate
 
     /**
      * The action buttons the sheet renders, in display order. See

@@ -333,16 +333,34 @@ public final class Constants {
     public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.20");
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
 
+    // Fee margin one shielded operation costs ON TOP of its denomination /
+    // shielded amount. Derived from the consensus fee constants
+    // (rs-platform-version / rs-dpp compute_minimum_shielded_fee, current
+    // values):
+    //  - Shield entry (ShieldFromAssetLock): pool fee = min_shielded_fee(2
+    //    actions) 162,851,200 + asset-lock base cost 50,000,000
+    //    = 212,851,200 credits ~= 0.00213 DASH, deducted from the locked
+    //    amount;
+    //  - Type-16 shielded transfer (the invite mint):
+    //    100M + n_actions x 31,425,600 credits, i.e. ~0.00194 DASH at the
+    //    3-action minimum, +0.000314 per extra spent note.
+    // 0.003 covers either with headroom (a transfer of up to 6 actions).
+    // Replaces the 0.05 guess pad (2026-08-05). Kept in sync with the
+    // credits-space twin SHIELDED_INVITE_FEE_MARGIN_CREDITS
+    // (SdkShieldedInviteCreation.kt) by InviteFeeGateTest.
+    public static final Coin SHIELDED_FEE_MARGIN = Coin.parseCoin("0.003");
+
     // How much the user should SHIELD (L1 -> pool) to afford a username via
     // the shielded path. The pool must hold the whole exit denomination
     // (0.03 non-contested / 0.25 contested under the v13 allowed set —
-    // see SHIELDED_IDENTITY_DENOMINATIONS_CREDITS), and the Shield
-    // operation's fee is deducted from the locked amount — so shielding the
-    // bare denomination lands just short. Padded guidance per Brian
-    // (2026-07-12): denomination + 0.05 shielded-spend fee padding (the same
-    // 0.05 pad the pre-v13 0.15/0.35 figures encoded over 0.1/0.3).
-    public static final Coin SHIELDED_USERNAME_FUND_MIN = Coin.parseCoin("0.08");
-    public static final Coin SHIELDED_USERNAME_FUND_MIN_CONTESTED = Coin.parseCoin("0.30");
+    // see SHIELDED_IDENTITY_DENOMINATIONS_CREDITS; under v13 the
+    // denominations equal DASH_PAY_FEE / DASH_PAY_FEE_CONTESTED, pinned by
+    // InviteFeeGateTest), and the Shield operation's own fee is deducted
+    // from the locked amount — so shielding the bare denomination lands
+    // just short. Guidance = denomination + SHIELDED_FEE_MARGIN
+    // (0.033 / 0.253).
+    public static final Coin SHIELDED_USERNAME_FUND_MIN = DASH_PAY_FEE.add(SHIELDED_FEE_MARGIN);
+    public static final Coin SHIELDED_USERNAME_FUND_MIN_CONTESTED = DASH_PAY_FEE_CONTESTED.add(SHIELDED_FEE_MARGIN);
 
     // 150,000,000
     public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);

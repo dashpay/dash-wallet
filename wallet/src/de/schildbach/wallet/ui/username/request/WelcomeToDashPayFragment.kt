@@ -104,15 +104,17 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
                     Constants.DASH_PAY_FEE.toPlainString()
                 )
             } else if (!requestUserNameViewModel.canAffordContestedUsername()) {
-                // The worst case across BOTH payment paths, expressed in
-                // what must leave THIS (L1) balance: a contested username
-                // via the shielded path needs 0.30 shielded from the wallet
-                // (0.25 v13 pool denomination + 0.05 Shield-fee padding;
-                // the L1 path's 0.25 is below it).
+                // "Cost up to" must quote the true maximum COST of a
+                // username — the 0.25 contested fee/denomination
+                // (DASH_PAY_FEE_CONTESTED), identical on both payment
+                // paths. The padded shield-first funding guidance
+                // (denomination + fee margin, SHIELDED_USERNAME_FUND_MIN*)
+                // is NOT a cost; the shield sheets present it as "shield at
+                // least X" instead.
                 binding.balanceRequirementDisclaimer.text = getString(
                     R.string.welcome_request_username_min_balance_disclaimer_all,
                     requestUserNameViewModel.walletBalance.value.toPlainString(),
-                    Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED.toPlainString()
+                    Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
                 )
             }
             binding.balanceRequirementDisclaimer.isVisible =

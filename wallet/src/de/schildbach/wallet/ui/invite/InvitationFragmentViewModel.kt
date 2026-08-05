@@ -31,8 +31,10 @@ import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.SHIELDED_INVITE_FEE_MARGIN_CREDITS
 import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedInviteCreation
+import de.schildbach.wallet.service.platform.sdk.creditsToDash
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
@@ -73,15 +75,20 @@ import javax.inject.Inject
  *
  * - Private invite ([shielded] == true): the Type-20 exit denomination the
  *   invite withdraws from the pool — 0.25 contested / 0.03 non-contested
- *   (the v13 mint mapping, `shieldedInviteDenominationCredits`) — so the
- *   payment validation matches the amount shown on the tiles and the
- *   confirm screen (not the padded 0.08/0.30 pool fund-minimum).
+ *   (the v13 mint mapping, `shieldedInviteDenominationCredits`) — PLUS the
+ *   Type-16 transfer-fee margin ([SHIELDED_INVITE_FEE_MARGIN]): the mint's
+ *   consensus fee is carved from the pool on top of the funded notes, so a
+ *   pool holding exactly the denomination passes a bare gate and then fails
+ *   opaquely at the FFI. The tiles/confirm screen still DISPLAY the bare
+ *   denomination (what the invite is worth); this requirement is what the
+ *   user must HOLD, and what the insufficiency message quotes.
  * - L1 invite: the L1 fee — [Constants.DASH_PAY_FEE_CONTESTED] (0.25)
  *   contested / [Constants.DASH_PAY_FEE] (0.03) non-contested.
  */
 internal fun inviteFeeRequirement(shielded: Boolean, contestedSelected: Boolean): Coin {
     return if (shielded) {
-        if (contestedSelected) SHIELDED_INVITE_CONTESTED else SHIELDED_INVITE_NON_CONTESTED
+        (if (contestedSelected) SHIELDED_INVITE_CONTESTED else SHIELDED_INVITE_NON_CONTESTED)
+            .add(SHIELDED_INVITE_FEE_MARGIN)
     } else {
         if (contestedSelected) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
     }
@@ -98,6 +105,15 @@ internal fun inviteFeeRequirement(shielded: Boolean, contestedSelected: Boolean)
  */
 private val SHIELDED_INVITE_NON_CONTESTED: Coin = Coin.parseCoin("0.03")
 private val SHIELDED_INVITE_CONTESTED: Coin = Coin.parseCoin("0.25")
+
+/**
+ * The Type-16 shielded-transfer fee margin as an L1 [Coin] — the single
+ * source of the value is [SHIELDED_INVITE_FEE_MARGIN_CREDITS] (see its KDoc
+ * for the consensus-fee derivation); this is just the credits → duffs form
+ * the [Coin]-based gate arithmetic needs.
+ */
+private val SHIELDED_INVITE_FEE_MARGIN: Coin =
+    Coin.valueOf(creditsToDash(SHIELDED_INVITE_FEE_MARGIN_CREDITS).duffs)
 
 /**
  * Pure "Confirm and pay" gate for the invitation-fee dialog (host-JVM

@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui.invite
 
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.SHIELDED_INVITE_FEE_MARGIN_CREDITS
 import de.schildbach.wallet.service.platform.sdk.creditsToDash
 import de.schildbach.wallet.service.platform.sdk.dashToCredits
 import de.schildbach.wallet.service.platform.sdk.shieldedInviteDenominationCredits
@@ -50,31 +51,49 @@ class InviteFeeGateTest {
     }
 
     @Test
-    fun `requirement is the withdrawn Type-20 denomination for a private invite`() {
-        // Matches the amount shown on the tiles / confirm screen (0.03 / 0.25,
-        // the v13 mint mapping), not the padded pool fund-minimum.
-        assertEquals(Coin.parseCoin("0.03"), inviteFeeRequirement(shielded = true, contestedSelected = false))
-        assertEquals(Coin.parseCoin("0.25"), inviteFeeRequirement(shielded = true, contestedSelected = true))
+    fun `requirement is denomination plus transfer-fee margin for a private invite`() {
+        // The mint's Type-16 fee is carved from the pool ON TOP of the funded
+        // notes (unlike the Type-20 exit, whose fee is metered out of the
+        // denomination), so the HOLD requirement — and the "you need at least
+        // X" insufficiency copy — is denomination + margin. The tiles/confirm
+        // screen still DISPLAY the bare 0.03/0.25 denomination.
+        assertEquals(Coin.parseCoin("0.033"), inviteFeeRequirement(shielded = true, contestedSelected = false))
+        assertEquals(Coin.parseCoin("0.253"), inviteFeeRequirement(shielded = true, contestedSelected = true))
     }
 
     @Test
-    fun `shielded requirements match the minted denominations`() {
+    fun `shielded requirements match the minted denominations plus the fee margin`() {
         // MINT PARITY PIN (the v13 UI/mint split, T-2): the UI's shielded
         // requirement constants must equal what the mint actually funds —
-        // shieldedInviteDenominationCredits for the tier's fee. If a platform
-        // version revises the exit-denomination set again, this fails the
-        // build instead of letting the UI advertise/gate amounts the mint no
-        // longer produces (the 0.1/0.3-vs-0.03/0.25 regression).
+        // shieldedInviteDenominationCredits for the tier's fee — plus the
+        // Type-16 transfer-fee margin the mint carves from the pool on top.
+        // If a platform version revises the exit-denomination set again, this
+        // fails the build instead of letting the UI advertise/gate amounts the
+        // mint no longer produces (the 0.1/0.3-vs-0.03/0.25 regression).
         for (contested in listOf(false, true)) {
             val fee = if (contested) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
             val mintedCredits = shieldedInviteDenominationCredits(dashToCredits(Dash(fee.value)))
-            val minted = Coin.valueOf(creditsToDash(mintedCredits!!).duffs)
+            val required = Coin.valueOf(
+                creditsToDash(mintedCredits!! + SHIELDED_INVITE_FEE_MARGIN_CREDITS).duffs
+            )
             assertEquals(
-                "UI requirement (contested=$contested) diverged from the minted denomination",
-                minted,
+                "UI requirement (contested=$contested) diverged from the minted denomination + margin",
+                required,
                 inviteFeeRequirement(shielded = true, contestedSelected = contested)
             )
         }
+    }
+
+    @Test
+    fun `credits-space fee margin equals the Coin-space shielded fee margin`() {
+        // SHIELDED_INVITE_FEE_MARGIN_CREDITS (the SDK-layer constant the
+        // service preflight uses) and Constants.SHIELDED_FEE_MARGIN (the
+        // Coin-space pad the shield-first fund-minimums use) must be the same
+        // value — both derive from the same consensus fee formula.
+        assertEquals(
+            Constants.SHIELDED_FEE_MARGIN,
+            Coin.valueOf(creditsToDash(SHIELDED_INVITE_FEE_MARGIN_CREDITS).duffs)
+        )
     }
 
     // ---- L1 invite (args.shielded == false) ----
@@ -109,27 +128,54 @@ class InviteFeeGateTest {
     }
 
     @Test
-    fun `shielded ready at or above the contested minimum enables continue`() {
+    fun `shielded ready at or above the contested requirement enables continue`() {
         assertTrue(
             inviteFeeGate(
                 shielded = true,
                 l1Balance = Coin.ZERO,
                 shieldedReady = true,
-                shieldedBalance = Coin.parseCoin("0.25"), // the withdrawn contested amount (v13)
+                shieldedBalance = Coin.parseCoin("0.253"), // 0.25 denomination + 0.003 margin
                 contestedSelected = true
             )
         )
     }
 
     @Test
-    fun `shielded ready between the two minimums allows only the non-contested selection`() {
-        val balance = Coin.parseCoin("0.20") // 0.03 <= balance < 0.25
+    fun `a pool holding exactly the bare denomination does NOT enable continue`() {
+        // THE FIX-1 REGRESSION PIN: exactly the denomination used to pass the
+        // gate and then fail opaquely at the FFI, because the Type-16 mint fee
+        // is charged on top of the funded notes.
         assertFalse(
-            "contested needs 0.25",
+            "exactly 0.25 cannot pay the contested mint's transfer fee",
+            inviteFeeGate(
+                shielded = true,
+                l1Balance = Coin.ZERO,
+                shieldedReady = true,
+                shieldedBalance = Coin.parseCoin("0.25"),
+                contestedSelected = true
+            )
+        )
+        assertFalse(
+            "exactly 0.03 cannot pay the non-contested mint's transfer fee",
+            inviteFeeGate(
+                shielded = true,
+                l1Balance = Coin.ZERO,
+                shieldedReady = true,
+                shieldedBalance = Coin.parseCoin("0.03"),
+                contestedSelected = false
+            )
+        )
+    }
+
+    @Test
+    fun `shielded ready between the two requirements allows only the non-contested selection`() {
+        val balance = Coin.parseCoin("0.20") // 0.033 <= balance < 0.253
+        assertFalse(
+            "contested needs 0.253",
             inviteFeeGate(true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance, contestedSelected = true)
         )
         assertTrue(
-            "non-contested needs only 0.03",
+            "non-contested needs only 0.033",
             inviteFeeGate(true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance, contestedSelected = false)
         )
     }
