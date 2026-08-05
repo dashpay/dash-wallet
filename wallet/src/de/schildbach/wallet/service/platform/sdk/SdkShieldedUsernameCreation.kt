@@ -404,8 +404,9 @@ interface ShieldedUsernameSource {
      * prefunded voting balance from the contested unique index
      * automatically (`prefunded_voting_balance_for_document`), paid from
      * the identity's credit balance — which is why a contested creation
-     * must fund the identity with the 0.3 denomination. Returns the full
-     * domain name (e.g. `"alice.dash"`).
+     * must fund the identity with the 0.25 denomination (the smallest v13
+     * exit denomination that covers it; the pre-v13 0.3 is retired).
+     * Returns the full domain name (e.g. `"alice.dash"`).
      */
     suspend fun registerDpnsName(walletIdHex: String, identityId: ByteArray, label: String): String
 }
@@ -609,9 +610,10 @@ sealed class ShieldedUsernameSubmitState {
  *
  * 1. Preflights (nothing submitted if any fails → NotBroadcast): flag on,
  *    contested-ness derived from the label (contested labels take the
- *    0.25-fee → 0.3-denomination mapping so the identity's credits cover
- *    the ~0.2 prefunded voting balance the contested DPNS registration
- *    debits; non-contested take 0.03 → 0.1), fee → denomination mapping
+ *    0.25-fee → 0.25-denomination mapping — the smallest covering member
+ *    of the v13 set — so the identity's credits cover the ~0.2 prefunded
+ *    voting balance the contested DPNS registration debits; non-contested
+ *    take 0.03 → 0.03), fee → denomination mapping
  *    resolves ([chooseShieldedIdentityDenominationCredits]), shielded runtime
  *    ready ([ShieldedBalanceService.ensureShieldedReady]) with the pool
  *    READY (trustworthy balance, not a mid-sync placeholder zero) and

@@ -875,15 +875,21 @@ class CreateIdentityService : LifecycleService() {
 
     /**
      * Claim a SHIELDED (L2) invitation: create the identity directly from the
-     * invite's one-time Orchard key (Type-20). The new identity is funded with
-     * the invite's FULL note value (the link's `amt`,
-     * [InvitationLinkData.shieldedFundingCredits]) regardless of which
-     * username tier the claimer picked — a 0.3 contested invite claimed with
-     * a non-contested name still puts all 0.3 into the identity's credits
-     * instead of the 0.1 username minimum. Legacy links without `amt` try the
-     * denominations descending (0.3 → 0.1), falling back only on the
-     * fail-closed "no covering note" refusal, so a claim never spends more
-     * than the note actually holds (see
+     * invite's one-time Orchard key (Type-20). The new identity is funded
+     * with as much of the invite's note value as the allowed
+     * exit-denomination set permits, regardless of which username tier the
+     * claimer picked (`inviteClaimDenominationLadder`): the claim starts at
+     * the largest allowed denomination the link's `amt`
+     * ([InvitationLinkData.shieldedFundingCredits]) covers — for a legacy
+     * 0.3 contested note that is 0.25, since 0.3 is retired from the v13 set
+     * — and steps DOWN the ladder (0.25 → 0.1 → 0.03, never below the
+     * username-derived floor) only on the fail-closed "no covering note"
+     * refusal, so a claim never spends more than the note actually holds.
+     * Links without a believable `amt` start from the largest denomination
+     * any invite note could cover (0.25). Any PROVABLE remainder the exit
+     * clamp left in the claimer's own pool (`inviteClaimOverageCredits` —
+     * e.g. a legacy 0.3 note exits 0.25, leaving 0.05) is then moved onto
+     * the new identity by [ShieldedInviteOverageTopUp] below (see
      * [SdkShieldedUsernameCreation.createIdentityFromInvitation]).
      *
      * On success the identity is on chain and the caller's existing recovery +

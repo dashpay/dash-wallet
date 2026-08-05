@@ -455,13 +455,18 @@
     <string name="request_username_username_voting_message">+ what is username voting?</string>
     <string name="request_username_character_requirement">Letters, numbers and hyphens only</string>
     <string name="request_username_character_requirement_invite_noncontested">Numbers 2-9</string>
+    <!-- LEGACY layout default only — never shown at runtime: the layout no
+         longer references it (the requirement TextView starts empty) and the
+         runtime always sets request_username_balance_requirement_amount with
+         the real path-dependent amount. Kept (with its translations) purely
+         to avoid translation churn; do not add new usages. -->
     <string name="request_username_balance_requirement">You need to have 0.25 DASH to create this username</string>
     <!-- Make-username-private sheet: the private-username funding bar (%s =
-         SHIELDED_USERNAME_FUND_MIN, 0.08 — the smallest v13 shielded exit
-         denomination 0.03 plus the 0.05 Shield-fee padding). -->
+         SHIELDED_USERNAME_FUND_MIN — the smallest v13 shielded exit
+         denomination 0.03 plus the SHIELDED_FEE_MARGIN Shield-fee margin). -->
     <string name="username_payment_min_shield">You need to shield at least %s Dash for a private username</string>
     <!-- Shown when the wallet balance is below the funding bar and the
-         shield-first button is disabled (%s = SHIELDED_USERNAME_FUND_MIN, 0.08). -->
+         shield-first button is disabled (%s = SHIELDED_USERNAME_FUND_MIN). -->
     <string name="username_payment_shield_minimum">Minimum of %s Dash is required to shield funds</string>
     <!-- ⓘ explainer on the make-username-private sheet: contested vs
          non-contested, worded from the request screen's validation rules;
@@ -481,9 +486,11 @@
          ~2h privacy window. -->
     <string name="username_shielded_wait_2hrs">You should wait at least 2 hrs before creating your shielded username</string>
     <string name="username_cost_info_noncontested_title">Non-contested username</string>
-    <string name="username_cost_info_noncontested_message">Contains a number from 2 to 9 or is 20–23 characters long. Shield at least 0.08 Dash.</string>
+    <!-- %s = SHIELDED_USERNAME_FUND_MIN (denomination + Shield-fee margin) — funding guidance, not the cost. -->
+    <string name="username_cost_info_noncontested_message">Contains a number from 2 to 9 or is 20–23 characters long. Shield at least %s Dash.</string>
     <string name="username_cost_info_contested_title">Contested username</string>
-    <string name="username_cost_info_contested_message">3–19 characters using only letters, the numbers 0 and 1, and hyphens. The Dash network votes on these usernames. Shield at least 0.30 Dash.</string>
+    <!-- %s = SHIELDED_USERNAME_FUND_MIN_CONTESTED (denomination + Shield-fee margin) — funding guidance, not the cost. -->
+    <string name="username_cost_info_contested_message">3–19 characters using only letters, the numbers 0 and 1, and hyphens. The Dash network votes on these usernames. Shield at least %s Dash.</string>
     <!-- The path-dependent variant: %s is the actual requirement of the chosen
          payment source × contested-ness (L1 0.03/0.25, v13 shielded
          denomination 0.03/0.25, identity credits 0.01/0.2). -->

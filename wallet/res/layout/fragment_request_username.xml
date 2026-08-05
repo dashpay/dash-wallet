@@ -157,12 +157,16 @@
                 android:src="@drawable/ic_error_circle"
                 />
 
+            <!-- No layout default: the runtime always sets the real
+                 path-dependent amount (request_username_balance_requirement_amount,
+                 RequestUsernameFragment); a static default could flash a stale
+                 hardcoded figure before the override lands. -->
             <TextView
                 android:id="@+id/balance_requirement_text"
                 style="@style/Overline.Medium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/request_username_balance_requirement"
+                android:text=""
                 android:maxLines="2"
                 />
         </LinearLayout>

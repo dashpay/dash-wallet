@@ -130,8 +130,8 @@ fun SelectPaymentOptionSheet(
  * first" (primary) and "Continue without privacy" (tinted).
  *
  * [minShieldAmount] is the private-username funding bar as a plain DASH
- * string (`Constants.SHIELDED_USERNAME_FUND_MIN`, "0.08" — the smallest v13
- * Type-20 exit denomination 0.03 plus the Shield-fee padding); it drives both
+ * string (`Constants.SHIELDED_USERNAME_FUND_MIN`, "0.033" — the smallest v13
+ * Type-20 exit denomination 0.03 plus the Shield-fee margin); it drives both
  * the "You need to shield at least…" line (with its ⓘ → username-cost
  * explainer) and, via [canShieldMinimum], the shield-first button: below
  * the bar the button is disabled with an explanatory message and the user
@@ -273,7 +273,12 @@ private fun UsernameCostInfoDialog(onDismiss: () -> Unit) {
                         color = MyTheme.Colors.textPrimary
                     )
                     Text(
-                        text = stringResource(R.string.username_cost_info_noncontested_message),
+                        // Funding guidance ("shield at least") fed from the live
+                        // fund-minimum so the copy can never drift from Constants.
+                        text = stringResource(
+                            R.string.username_cost_info_noncontested_message,
+                            de.schildbach.wallet.Constants.SHIELDED_USERNAME_FUND_MIN.toPlainString()
+                        ),
                         style = MyTheme.Typography.BodySmall,
                         color = MyTheme.Colors.textSecondary
                     )
@@ -285,7 +290,10 @@ private fun UsernameCostInfoDialog(onDismiss: () -> Unit) {
                         color = MyTheme.Colors.textPrimary
                     )
                     Text(
-                        text = stringResource(R.string.username_cost_info_contested_message),
+                        text = stringResource(
+                            R.string.username_cost_info_contested_message,
+                            de.schildbach.wallet.Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED.toPlainString()
+                        ),
                         style = MyTheme.Typography.BodySmall,
                         color = MyTheme.Colors.textSecondary
                     )
@@ -402,7 +410,7 @@ private fun SelectPaymentOptionSelectedPreview() {
 @Composable
 private fun MakeUsernamePrivatePreview() {
     MakeUsernamePrivateSheet(
-        minShieldAmount = "0.08",
+        minShieldAmount = "0.033",
         canShieldMinimum = true,
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},
@@ -414,7 +422,7 @@ private fun MakeUsernamePrivatePreview() {
 @Composable
 private fun MakeUsernamePrivateBelowMinimumPreview() {
     MakeUsernamePrivateSheet(
-        minShieldAmount = "0.08",
+        minShieldAmount = "0.033",
         canShieldMinimum = false,
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},
