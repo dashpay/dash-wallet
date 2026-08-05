@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.util.NativeLogBridge
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
@@ -455,6 +456,13 @@ class SdkWalletBinder internal constructor(
 
                 val report = sdkService.provisionDashPayContactAccounts(walletId)
                 identityId?.let { backfillGate.recordPassOutcome(walletId, it, report) }
+                // The sweep is a long native op: its SDK lines sat in the
+                // logcat buffer until the bridge's next 30 s / 5 min poll and
+                // were routinely rolled over before then. Pull them into
+                // wallet.log NOW, while they are still there — cheap,
+                // bounded, never throws, and we are on a background
+                // coroutine, not the main thread.
+                NativeLogBridge.drainNow()
                 when {
                     !report.bound -> log.debug(
                         "DashPay friend-chain provisioning: SDK wallet {}… not loaded yet",

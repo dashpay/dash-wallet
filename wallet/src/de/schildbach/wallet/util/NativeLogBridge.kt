@@ -166,6 +166,16 @@ object NativeLogBridge {
 
     private val budget = Budget()
 
+    /**
+     * Serializes whole drains (read + forward) between the poller thread and
+     * [drainNow] callers. Without it two concurrent drains interleave on
+     * [lastForwarded] and can re-emit or skip lines; with it a forced drain
+     * simply runs before or after the in-flight poll. Callers block at most
+     * [DRAIN_TIMEOUT_MS] + parse time — acceptable on the background
+     * contexts [drainNow] is called from, never the main thread.
+     */
+    private val drainLock = Any()
+
     @Volatile
     private var thread: Thread? = null
 
@@ -196,13 +206,18 @@ object NativeLogBridge {
      * Drains whatever the native side has logged since the last poll, on the
      * CALLING thread. Called from report generation (already on
      * `Dispatchers.IO`) so the tail of the session makes it into the attached
-     * `wallet.log` instead of being up to one poll interval stale. Bounded by
-     * the same timeout and budget as a normal poll, and never throws.
+     * `wallet.log` instead of being up to one poll interval stale, and after
+     * the DashPay provisioning pass, whose long native ops used to outlive
+     * the 30 s/5 min poll cadence and lose their SDK lines. Bounded by the
+     * same timeout and budget as a normal poll, serialized against the
+     * poller via [drainLock], and never throws.
      */
     fun drainNow() {
         if (disabled) return
         try {
-            forward(readNativeLines())
+            synchronized(drainLock) {
+                forward(readNativeLines())
+            }
         } catch (t: Throwable) {
             log.info("native log drain failed; continuing without it: {}", t.toString())
         }
@@ -211,9 +226,11 @@ object NativeLogBridge {
     private fun runLoop() {
         while (!disabled) {
             val produced = try {
-                val lines = readNativeLines()
-                consecutiveFailures = 0
-                forward(lines)
+                synchronized(drainLock) {
+                    val lines = readNativeLines()
+                    consecutiveFailures = 0
+                    forward(lines)
+                }
             } catch (t: Throwable) {
                 consecutiveFailures++
                 if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
