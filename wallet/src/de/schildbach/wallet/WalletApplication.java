@@ -1084,6 +1084,14 @@ public class WalletApplication extends MultiDexApplication
         // other lines on that logger (Timed out / TIMEOUT CAUSE / CRITICAL)
         // pass untouched. See PeerTimeoutDumpThrottle.
         context.addTurboFilter(new de.schildbach.wallet.util.PeerTimeoutDumpThrottle());
+
+        // The Rust/SDK `log::` facade goes to logcat ONLY (android_logger, tag
+        // "DashSDK", installed in JNI_OnLoad). Remote testers cannot run adb,
+        // so those lines were invisible in every uploaded report. Copy them
+        // into this pipeline — on a daemon thread, bounded, fail-soft — so
+        // they land in wallet.log and ride along with the support report.
+        // See NativeLogBridge.
+        de.schildbach.wallet.util.NativeLogBridge.INSTANCE.start();
     }
 
     @Deprecated(message = "Inject Configuration instead")

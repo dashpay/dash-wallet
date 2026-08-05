@@ -33,6 +33,7 @@ import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.ParityReport
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.util.CrashReporter
+import de.schildbach.wallet.util.NativeLogBridge
 import de.schildbach.wallet.util.StartupBreadcrumbs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -173,6 +174,11 @@ class ContactSupportViewModel @Inject constructor(
 
         if (collectApplicationLog) {
             _status.value = ReportGenerationStatus.Logs
+            // Top up wallet.log with whatever the native SDK has logged since
+            // the bridge's last poll, so the attached log includes the tail of
+            // the session and not just up-to-one-interval-old native output.
+            // Blocking is fine here (Dispatchers.IO) and it never throws.
+            NativeLogBridge.drainNow()
             val logDir = File(application.filesDir, "log")
             var totalLogsSize = 0L
             if (logDir.exists()) {
