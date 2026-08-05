@@ -328,34 +328,6 @@ class PlatformDashConnectRepository @Inject constructor(
         }
         result.unwrap() // throws on Platform error (surface stale-revision etc.)
         log.info("published loginKeyResponse for app ${Base58.encode(appContractIdBytes)} (replace=${existing != null})")
-
-        // DIAGNOSTIC: confirm the published doc is findable exactly the way the app polls for it —
-        // by (contractId, appEphemeralPubKeyHash). If this finds 0 docs, the app never sees the login.
-        try {
-            log.info(
-                "loginKeyResponse fields: appEphHash={} walletEphPub={} payloadLen={} keyIndex={}",
-                org.bitcoinj.core.Utils.HEX.encode(appEphemeralPubKeyHash),
-                org.bitcoinj.core.Utils.HEX.encode(walletEphemeralPubKey),
-                encryptedPayload.size,
-                keyIndex
-            )
-            val byEph = DocumentQuery.Builder()
-                .where(FIELD_CONTRACT_ID, "==", appContractIdBytes)
-                .where(FIELD_APP_EPH_PUBKEY_HASH, "==", appEphemeralPubKeyHash)
-                .build()
-            val found = platform.platform.documents.get(TYPE_LOCATOR, byEph)
-            log.info("self-verify: query by (contractId, appEphHash) found {} doc(s)", found.size)
-            found.firstOrNull()?.let { doc ->
-                val storedHash = doc.data[FIELD_APP_EPH_PUBKEY_HASH] as? ByteArray
-                log.info(
-                    "self-verify: stored appEphHash={} revision={}",
-                    storedHash?.let { org.bitcoinj.core.Utils.HEX.encode(it) },
-                    doc.revision
-                )
-            }
-        } catch (e: Exception) {
-            log.warn("self-verify query failed", e)
-        }
     }
 
     private fun findOwnLoginKeyResponse(ownerId: Identifier, appContractIdBytes: ByteArray): Document? {
