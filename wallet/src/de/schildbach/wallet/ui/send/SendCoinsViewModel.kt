@@ -117,6 +117,14 @@ class SendCoinsViewModel @Inject constructor(
         private set
 
     /**
+     * Whether the last dry run failed for lack of funds, as a plain boolean so
+     * screens do not have to know the dashj exception type (Phase 3 keeps the
+     * dashj surface inside the ViewModel).
+     */
+    val isInsufficientFunds: Boolean
+        get() = dryRunException is InsufficientMoneyException
+
+    /**
      * Phase 5d: a DISPLAY-only, deterministic fee estimate for the confirm
      * dialog when the post-cutover dry-run does NOT complete the tx (so
      * `dryrunSendRequest.tx.fee` is null — no inputs are attached). Null on the

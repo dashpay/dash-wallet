@@ -12,21 +12,17 @@ import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.more.tools.ConfirmTopUpDialogFragment
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.utils.ExchangeRate
-import org.dash.wallet.common.money.MonetaryFormat
+import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
-import de.schildbach.wallet.util.format
-import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
 
 class BuyCreditsFragment : SendCoinsFragment() {
     companion object {
         private val log = LoggerFactory.getLogger(BuyCreditsFragment::class.java)
 
         /** The smallest top-up this screen accepts (exclusive bound). */
-        private val MIN_TOP_UP = org.dash.wallet.common.money.Coin.valueOf(50_000)
+        private val MIN_TOP_UP = Coin.valueOf(50_000)
     }
 
     private val buyCreditsViewModel by viewModels<BuyCreditsViewModel>()
@@ -46,27 +42,20 @@ class BuyCreditsFragment : SendCoinsFragment() {
 
     override fun updateView() {
         val isReplaying = viewModel.isBlockchainReplaying.value
-        val dryRunException = viewModel.dryRunException
 
-        if (isReplaying != true && dryRunException != null) {
-            when (dryRunException) {
-                is InsufficientMoneyException -> {
-                    val errorMessage = getErrorMessage(R.string.credit_balance_insufficient_error_message)
-                    enterAmountFragment?.setError(errorMessage)
-                    return
-                }
-                else -> {}
-            }
+        if (isReplaying != true && viewModel.isInsufficientFunds) {
+            val errorMessage = getErrorMessage(R.string.credit_balance_insufficient_error_message)
+            enterAmountFragment?.setError(errorMessage)
+            return
         }
 
         // Below the top-up minimum the Continue button greys out; say WHY
         // instead of leaving the user guessing (the amount must exceed the
         // minimum — the button enables above it, not at it).
-        val entered = enterAmountViewModel.amount.value?.toDashjCoin()
-        val minimum = MIN_TOP_UP.toDashjCoin()
-        if (entered != null && entered.isPositive && entered <= minimum) {
+        val entered = enterAmountViewModel.amount.value
+        if (entered != null && entered.isPositive && entered.isLessThanOrEqualTo(MIN_TOP_UP)) {
             enterAmountFragment?.setError(
-                getString(R.string.buy_credits_below_minimum, minimum.toFriendlyString())
+                getString(R.string.buy_credits_below_minimum, MIN_TOP_UP.toFriendlyString())
             )
             return
         }
@@ -100,47 +89,11 @@ class BuyCreditsFragment : SendCoinsFragment() {
     }
 
     override suspend fun showPaymentConfirmation() {
-        val dryRunRequest = viewModel.dryrunSendRequest ?: return
-        //val address = viewModel.basePaymentIntent.address?.toBase58() ?: return
-
-        // Post-cutover the dry run does NOT complete the tx (no inputs are
-        // attached), so `tx.fee` is null and the ViewModel's deterministic
-        // display estimate is the only fee figure — an unguarded
-        // `amount.minus(txFee)` here crashed the send-max confirmation.
-        val txFee = dryRunRequest.tx.fee ?: viewModel.dryRunFeeEstimate
-        val amount: Coin?
-        val total: String?
-
-        if (dryRunRequest.emptyWallet) {
-            // Send-max delivers amount − fee; with no fee figure at all, show
-            // the entered amount rather than crashing.
-            amount = enterAmountViewModel.amount.value?.toDashjCoin()
-                ?.let { entered -> txFee?.let { entered.minus(it) } ?: entered }
-            total = enterAmountViewModel.amount.value?.toPlainString()
-        } else {
-            amount = enterAmountViewModel.amount.value?.toDashjCoin()
-            total = amount?.add(txFee ?: Coin.ZERO)?.toPlainString()
-        }
-
-        val rate = enterAmountViewModel.selectedExchangeRate.value
-        val exchangeRate = rate?.let {
-            org.dash.wallet.common.money.ExchangeRate(org.dash.wallet.common.money.Coin.COIN, rate.fiat)
-        }
-        val amountStr = amount?.let { MonetaryFormat.BTC.noCode().format(it).toString() } ?: ""
-        val fee = txFee?.toPlainString() ?: ""
-
-        //var dashPayProfile: DashPayProfile? = null
-
-//        if (viewModel.contactData.value?.requestReceived == true) {
-//            dashPayProfile = viewModel.contactData.value?.dashPayProfile
-//        }
-//
-//        val isPendingContactRequest = viewModel.contactData.value?.isPendingRequest == true
-//        val username = dashPayProfile?.username
-//        val displayName = (dashPayProfile?.displayName ?: "").ifEmpty { username }
-//        val avatarUrl = dashPayProfile?.avatarUrl
-
-        // need to put the conformation for used with Create UserName
+        // The dialog reads the amount and rate it displays from the shared
+        // SendCoinsViewModel and its own ViewModel, so nothing is computed or
+        // passed here. (The dashj dry-run figures this method used to derive —
+        // fee, total, send-max amount — were never read by anything, and the
+        // null `tx.fee` post-cutover made deriving them a crash risk.)
         val dialog = ConfirmTopUpDialogFragment()
         dialog.show(requireActivity()) { confirmed ->
             if (confirmed) {
@@ -163,8 +116,8 @@ class BuyCreditsFragment : SendCoinsFragment() {
      * off the SDK-overlaid balance (dashj's is held at 0 post-cutover).
      */
     private fun isWholeBalance(amount: Coin): Boolean {
-        val available = viewModel.maxOutputAmount.value ?: return false
-        return available.isPositive && amount >= available
+        val available = viewModel.maxOutputAmount.value?.toNeutralCoin() ?: return false
+        return available.isPositive && amount.isGreaterThanOrEqualTo(available)
     }
 
     private suspend fun handleGo() {
@@ -174,12 +127,12 @@ class BuyCreditsFragment : SendCoinsFragment() {
         // reachable through the FFI yet (rust-dashcore #915 has the builder
         // work; the key-wallet entry point still pins drain = false — see
         // MO-998). Refuse up front rather than spend an approximated amount.
-        if (enterAmountFragment?.maxSelected == true || isWholeBalance(editedAmount.toDashjCoin())) {
+        if (enterAmountFragment?.maxSelected == true || isWholeBalance(editedAmount)) {
             showMaxNotSupportedDialog()
             viewModel.resetState()
             return
         }
-        handleSdkTopUp(editedAmount.toDashjCoin().value)
+        handleSdkTopUp(editedAmount.value)
         viewModel.resetState()
     }
 
