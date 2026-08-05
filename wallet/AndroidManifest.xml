@@ -117,7 +117,20 @@
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme"
             android:launchMode="singleTop"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- DashConnect (MO-945): login (dash-key:) and key-registration (dash-st:)
+                 URIs from external scanners and browsers route to the Connections screen -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <data android:scheme="dash-key" />
+                <data android:scheme="dash-st" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+            </intent-filter>
+        </activity>
 
         <activity-alias
             android:name="de.schildbach.wallet.MainActivity"
