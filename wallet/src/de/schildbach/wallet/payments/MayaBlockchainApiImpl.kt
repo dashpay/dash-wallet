@@ -315,8 +315,40 @@ class MayaBlockchainApiImpl @Inject constructor(
             }
 
             // Build + sign with the funding inputs RESERVED, no broadcast.
-            val payment =
-                sdkL1SendService.buildDeferredMayaDeposit(swapTradeUIModel.vaultAddress, vaultDuffs, memoBytes)
+            // A MAX sell builds as a DRAIN: the engine sets the vault output to
+            // (total inputs - fee) with no change, so the deposit delivers the
+            // whole account rather than an amount the app derived separately.
+            val payment = sdkL1SendService.buildDeferredMayaDeposit(
+                swapTradeUIModel.vaultAddress,
+                vaultDuffs,
+                memoBytes,
+                drain = swapTradeUIModel.maximum
+            )
+
+            // A drain's amount is the ENGINE's, so check the built transaction
+            // against the quote before deciding to broadcast. The pre-build
+            // guard above compared a re-measurement; this compares THIS signed
+            // transaction — the one that would actually go to the vault — and
+            // so cannot be defeated by anything that moved in between. Paying
+            // the vault less than quoted is under-delivery: Maya would execute
+            // a swap the user never agreed to, and NEAR Intents refuses it
+            // outright (~1h wait, then a refund minus 0.001 DASH).
+            if (swapTradeUIModel.maximum && payment.deliverableDuffs < vaultDuffs) {
+                log.warn(
+                    "maya max sell aborted after build: the drain delivers {} duffs, below the quoted {}",
+                    payment.deliverableDuffs, vaultDuffs
+                )
+                sdkL1SendService.releaseDeferredPayment(payment)
+                return ResponseResource.Failure(
+                    MayaException(
+                        "wallet balance changed; the deposit would fall below the quoted " +
+                            "amount — please request a new quote"
+                    ),
+                    false,
+                    0,
+                    null
+                )
+            }
 
             // Assert the deposit shape from the signed bytes BEFORE any
             // broadcast decision — a mis-shaped deposit to a Maya vault

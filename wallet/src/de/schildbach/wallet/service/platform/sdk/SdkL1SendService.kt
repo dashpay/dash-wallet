@@ -512,7 +512,21 @@ class SdkDeferredPayment internal constructor(
     val txidHex: String,
     val rawTxBytes: ByteArray,
     val feeDuffs: Long,
-    internal val native: Any?
+    internal val native: Any?,
+    /**
+     * What the single non-OP_RETURN output actually pays, in duffs.
+     *
+     * For an explicit-amount build this is the amount the caller asked for.
+     * For a DRAIN it is the figure the ENGINE computed (total inputs − fee,
+     * no change) — the caller never supplied it, so this is the only way to
+     * learn what the transaction will deliver. A max swap deposit must check
+     * this against the quoted amount BEFORE broadcasting: paying a vault less
+     * than quoted is under-delivery, which Maya and NEAR Intents refuse.
+     *
+     * 0 when the source could not report it (fakes, or an SDK too old to
+     * expose it); callers treat 0 as "unknown" rather than "pays nothing".
+     */
+    val deliverableDuffs: Long = 0
 )
 
 // ── Source seam ───────────────────────────────────────────────────────
@@ -648,7 +662,8 @@ interface SdkL1SendSource {
         walletIdHex: String,
         vaultAddressBase58: String,
         vaultDuffs: Long,
-        memo: ByteArray
+        memo: ByteArray,
+        drain: Boolean = false
     ): SdkDeferredPayment =
         throw UnsupportedOperationException("Maya deposit build not supported by this source")
 
@@ -1291,7 +1306,8 @@ internal class DashSdkL1SendSource(
         walletIdHex: String,
         vaultAddressBase58: String,
         vaultDuffs: Long,
-        memo: ByteArray
+        memo: ByteArray,
+        drain: Boolean
     ): SdkDeferredPayment {
         val manager = manager()
         val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
@@ -1300,15 +1316,33 @@ internal class DashSdkL1SendSource(
         // the vault recipient SDK-side, so preserveOutputOrder yields the
         // documented vault=VOUT0 / memo=VOUT1 shape; an over-long memo
         // throws pre-reservation.
+        // A drain supplies NO amount: the engine sets the vault output to
+        // (total inputs − fee), so 0 is the honest value to pass and anything
+        // else would be a number the engine discards.
         val signed = wallet.buildSignedPayment(
             recipients = listOf(vaultAddressBase58 to vaultDuffs),
             network = toSdkNetwork(Constants.NETWORK_PARAMETERS),
             coreSignerHandle = manager.mnemonicResolverHandle,
             opReturnData = memo,
             preserveOutputOrder = true,
-            changeToFirstInput = true
+            changeToFirstInput = true,
+            // A DRAIN spends every BIP44 UTXO and has the engine set the vault
+            // output to (total inputs - fee), memo bytes priced in, no change:
+            // `vaultDuffs` is ignored. That is what a MAX deposit means, and it
+            // removes the guess the probe-measured path had to make.
+            selectionStrategy = if (drain) {
+                org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.SelectionStrategy.ALL
+            } else {
+                null
+            }
         )
-        return SdkDeferredPayment(signed.txidHex, signed.rawTxBytes, signed.feeDuffs, signed)
+        return SdkDeferredPayment(
+            signed.txidHex,
+            signed.rawTxBytes,
+            signed.feeDuffs,
+            signed,
+            deliverableDuffs = signed.deliverableAmountDuffs
+        )
     }
 
     override suspend fun broadcastDeferredPayment(
@@ -2053,34 +2087,45 @@ class SdkL1SendService internal constructor(
         check(!hasProtectedOutputs("l1MayaMaxDeposit")) {
             "wallet has app-locked outputs (CrowdNode); a max swap deposit would spend them"
         }
-        val spendable = source.spendableBalanceDuffs(walletIdHex)
-        // The probe itself must be fundable, with a change output, before any
-        // fee can be measured.
-        if (spendable <= MAYA_DEPOSIT_PROBE_RESERVE_DUFFS) {
-            log.info("SDK l1MayaMaxDeposit: spendable {} too small to probe a deposit", spendable)
-            return 0L
-        }
+        // MEASURE BY DRAINING, don't estimate. A max deposit IS a drain, so
+        // build one and read what the engine says it delivers: every BIP44 UTXO
+        // selected, this memo's bytes priced into the fee, no change. That is
+        // the same computation the real deposit will perform, so quote and
+        // deposit cannot disagree — which subtracting a guessed fee and a
+        // change-headroom constant from the wallet-wide spendable could not
+        // promise. The probe is built to an OWN address; the destination does
+        // not change the fee (same P2PKH output size as a vault), and it is
+        // released immediately either way.
         val probeAddress = checkNotNull(source.unusedExternalAddress(walletIdHex)) {
             "no SDK address available to size a Maya deposit"
         }
-        val probe = source.buildDeferredMayaDeposit(
-            walletIdHex,
-            probeAddress,
-            spendable - MAYA_DEPOSIT_PROBE_RESERVE_DUFFS,
-            ByteArray(memoSizeBytes)
-        )
-        val feeDuffs = try {
-            probe.feeDuffs
+        val probe = try {
+            source.buildDeferredMayaDeposit(
+                walletIdHex,
+                probeAddress,
+                0L, // ignored under a drain
+                ByteArray(memoSizeBytes),
+                drain = true
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // The engine refuses a drain whose inputs cannot cover the fee
+            // (typed InsufficientFunds), which is exactly "nothing depositable"
+            // — the floor the probe-reserve constant used to approximate.
+            log.info("SDK l1MayaMaxDeposit: no drain is fundable; max deposit 0 ({})", t.message)
+            return 0L
+        }
+        val max = try {
+            probe.deliverableDuffs
         } finally {
             // NonCancellable: the probe holds a real engine reservation, and
             // leaving it to the TTL sweep would make the very next real build
             // fail to fund.
             withContext(NonCancellable) { releaseDeferredPayment(probe) }
         }
-        val max = spendable - feeDuffs - MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS
         log.info(
-            "SDK l1MayaMaxDeposit: spendable {}, measured fee {} ({}-byte memo), max deposit {}",
-            spendable, feeDuffs, memoSizeBytes, max
+            "SDK l1MayaMaxDeposit: drain-measured max deposit {} duffs (fee {}, {}-byte memo)",
+            max, probe.feeDuffs, memoSizeBytes
         )
         return max.coerceAtLeast(0L)
     }
@@ -2098,9 +2143,12 @@ class SdkL1SendService internal constructor(
     suspend fun buildDeferredMayaDeposit(
         vaultAddressBase58: String,
         vaultDuffs: Long,
-        memo: ByteArray
+        memo: ByteArray,
+        drain: Boolean = false
     ): SdkDeferredPayment {
-        check(vaultDuffs > 0) { "Maya vault amount must be positive, got $vaultDuffs" }
+        // A drain has the engine compute the vault output, so no amount is
+        // supplied; every other build must name a positive one.
+        check(drain || vaultDuffs > 0) { "Maya vault amount must be positive, got $vaultDuffs" }
         val vault = vaultAddressBase58.trim()
         check(vault.isNotEmpty() && addressValidSafe(vault)) {
             "Maya vault address is malformed or for the wrong network"
@@ -2113,10 +2161,14 @@ class SdkL1SendService internal constructor(
         }
         val gate = probeSendGate()
         check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
-        val payment = source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo)
+        val payment = source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo, drain)
         log.info(
-            "SDK l1DeferredMayaBuild: built {} ({} duffs to the vault, {}-byte memo, fee {} duffs), inputs reserved",
-            payment.txidHex, vaultDuffs, memo.size, payment.feeDuffs
+            "SDK l1DeferredMayaBuild: built {} ({} duffs to the vault{}, {}-byte memo, fee {} duffs), inputs reserved",
+            payment.txidHex,
+            if (drain) payment.deliverableDuffs else vaultDuffs,
+            if (drain) " by DRAIN (engine-computed)" else "",
+            memo.size,
+            payment.feeDuffs
         )
         return payment
     }
