@@ -97,11 +97,13 @@ class ContactSupportViewModel @Inject constructor(
         private const val MAX_WALLET_LOG_SIZE = 4 * 1024 * 1024
 
         /**
-         * Combined tail budget for the SDK's tracing run.log (+ its
+         * Per-crate tail budget for the SDK's tracing run.log (+ its
          * rotation) attached to the report — see the collection block in
-         * [createReport].
+         * [createReport]. Two crates are swept (platform_wallet, dash_spv),
+         * so the SDK's total contribution stays at the 4 MB it was when only
+         * one was collected.
          */
-        private const val MAX_SDK_RUN_LOG_TAIL = 4L * 1024 * 1024
+        private const val MAX_SDK_RUN_LOG_TAIL = 2L * 1024 * 1024
     }
 
     val wallet: Wallet? = walletDataProvider.wallet
@@ -234,31 +236,41 @@ class ContactSupportViewModel @Inject constructor(
                 }
             }
 
-            // The SDK's Rust `tracing` output goes to its OWN file
-            // (files/sdk-logs/platform_wallet/run.log — see
+            // The SDK's Rust `tracing` output goes to its OWN files
+            // (files/sdk-logs/<crate>/run.log — see
             // DashSdkServiceImpl.enableSdkFileLogging), outside the logback
-            // dir swept above, so it is attached explicitly. Tail-capped: the
-            // newest MAX_SDK_RUN_LOG_TAIL bytes carry the recent sessions,
-            // and the session-start rotation's run.log.1 fills in when the
-            // live file is still young.
+            // dir swept above, so they are attached explicitly. Tail-capped:
+            // the newest bytes carry the recent sessions, and the
+            // session-start rotation's run.log.1 fills in when the live file
+            // is still young.
+            //
+            // dash_spv is swept alongside platform_wallet because sync
+            // stalls surface ONLY there: masternode/filter/header progress,
+            // peer disconnects and the qrinfo request state all live in the
+            // SPV log, and a report that omits it cannot diagnose a wallet
+            // that never finishes syncing. Each crate gets its own budget so
+            // a chatty one cannot starve the other.
             try {
-                val sdkLogDir = File(
-                    File(application.filesDir, DashSdkServiceImpl.SDK_LOG_DIR_NAME),
-                    "platform_wallet"
-                )
-                var tailBudget = MAX_SDK_RUN_LOG_TAIL
-                for (name in listOf("run.log", "run.log.1")) {
-                    if (tailBudget <= 0L) break
-                    val source = File(sdkLogDir, name)
-                    if (!source.isFile || source.length() == 0L) continue
-                    val copied = copyTail(source, File(reportDir, "sdk-$name"), tailBudget)
-                    if (copied != null) {
-                        attachments.add(
-                            FileProvider.getUriForFile(
-                                application, application.packageName + ".file_attachment", copied
+                val sdkRoot = File(application.filesDir, DashSdkServiceImpl.SDK_LOG_DIR_NAME)
+                for (crate in listOf("platform_wallet", "dash_spv")) {
+                    val sdkLogDir = File(sdkRoot, crate)
+                    var tailBudget = MAX_SDK_RUN_LOG_TAIL
+                    for (name in listOf("run.log", "run.log.1")) {
+                        if (tailBudget <= 0L) break
+                        val source = File(sdkLogDir, name)
+                        if (!source.isFile || source.length() == 0L) continue
+                        val copied =
+                            copyTail(source, File(reportDir, "sdk-$crate-$name"), tailBudget)
+                        if (copied != null) {
+                            attachments.add(
+                                FileProvider.getUriForFile(
+                                    application,
+                                    application.packageName + ".file_attachment",
+                                    copied
+                                )
                             )
-                        )
-                        tailBudget -= copied.length()
+                            tailBudget -= copied.length()
+                        }
                     }
                 }
             } catch (x: Exception) {
