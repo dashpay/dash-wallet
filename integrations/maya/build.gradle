@@ -17,11 +17,11 @@ if (servicePropsFile.exists()) {
 
 android {
     namespace 'org.dash.wallet.integrations.maya'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         minSdk 24
-        targetSdk 35
+        targetSdk 36
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles 'proguard-rules.pro'

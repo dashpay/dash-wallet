@@ -47,7 +47,6 @@ dependencies {
     implementation 'com.google.android.gms:play-services-ads-identifier:18.2.0'
 
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$desugaringLibraryVersion"
-    implementation 'com.google.android.material:material:1.3.0'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
     // Android arch
@@ -60,6 +59,7 @@ dependencies {
         exclude(group: 'com.android.support', module: 'support-media-compat')
     }
     implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
     implementation "androidx.biometric:biometric:1.1.0"
 
@@ -114,6 +114,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.7.2")
+    implementation("androidx.activity:activity-ktx:1.7.2")
     implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycleVersion"
     implementation "com.airbnb.android:lottie-compose:6.6.7"
 
@@ -244,10 +245,11 @@ android {
     android.ndkVersion '21.3.6528147'
     namespace "de.schildbach.wallet_test"
 
+    compileSdk 36
+
     defaultConfig {
-        compileSdk 35
         minSdkVersion 24
-        targetSdkVersion 35
+        targetSdkVersion 36
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11090002
         versionName project.hasProperty('versionName') ? project.property('versionName') : "11.9.0"
