@@ -313,6 +313,31 @@ data class InvitationLinkData(
     val expired: Boolean
         get() = validationTimestamp?.let { it < System.currentTimeMillis() - VALIDATION_EXPIRED } ?: true
 
+    /**
+     * Whether [other] is the SAME invitation as this one, compared on the
+     * field that identifies the invite's funds — the one-time Orchard key
+     * for a shielded invite, the asset-lock txid for an L1 one. Link
+     * equality would not do: the same invite reaches us with different
+     * optional params and param order depending on whether it arrived
+     * directly or through the AppsFlyer wrapper.
+     *
+     * Returns false for a malformed stored link rather than throwing: the
+     * callers use this to SUPPRESS a message, and a wrong suppression is a
+     * cosmetic error where a crash is not.
+     */
+    fun isSameInvitation(other: InvitationLinkData?): Boolean {
+        other ?: return false
+        return try {
+            when {
+                isShielded && other.isShielded -> oneTimeKey == other.oneTimeKey
+                !isShielded && !other.isShielded -> assetLockTx == other.assetLockTx
+                else -> false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun validate(validationState: InvitationValidationState): InvitationLinkData {
         return copy(validationState = validationState, validationTimestamp = System.currentTimeMillis())
     }

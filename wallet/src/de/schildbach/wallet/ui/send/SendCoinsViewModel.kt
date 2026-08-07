@@ -26,7 +26,6 @@ import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
-import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.platform.sdk.SEND_ALL_FEE_RESERVE_DUFFS
@@ -63,7 +62,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
-import kotlin.math.min
 import de.schildbach.wallet.util.format
 import de.schildbach.wallet.util.setAmount
 import de.schildbach.wallet.util.setFiatAmount
@@ -670,22 +668,29 @@ class SendCoinsViewModel @Inject constructor(
         }
 
         val dashPayProfile = userData.dashPayProfile
-        val dashPayContactRequests = dashPayContactRequestDao.loadToOthers(dashPayProfile.userId)
-        val map = HashMap<Long, DashPayContactRequest>(dashPayContactRequests.size)
 
-        // This is currently using the first version, but it should use the version specified
-        // in the ContactInfo.accountRef related to this contact.  Ideally the user should
-        // approve of a change to the "accountReference" that is used.
-        var firstTimestamp = Long.MAX_VALUE
-        for (contactRequest in dashPayContactRequests) {
-            map[contactRequest.timestamp] = contactRequest
-            firstTimestamp = min(firstTimestamp, contactRequest.timestamp)
-        }
+        // The accountReference must come from the contact request THIS contact addressed to US:
+        // that request carries their incoming-funds xpub for our shared friendship chain, and it is
+        // the chain we pay them on. `requestReceived` above guarantees it exists.
+        //
+        // Two things this must not do, because both send money to the wrong person:
+        //  - loadToOthers() is `WHERE userId = :userId`, i.e. EVERY request this contact authored,
+        //    to anyone. It must be narrowed to the ones addressed to us before choosing.
+        //  - when several remain (a re-issued request, a restored wallet with a fuller contact
+        //    graph), the newest is the live channel. The previous code took min(timestamp) under
+        //    the name `mostRecentContactRequest` — the OLDEST — which is how an iOS build with the
+        //    same defect paid a 0.3 tDASH contact payment to a different contact entirely
+        //    (2026-08-06 QA, tx 8d2a994c…).
+        val receivedFromContact = userData.fromContactRequest!!
+        val ourUserId = receivedFromContact.toUserId
+        val contactRequest = dashPayContactRequestDao.loadToOthers(dashPayProfile.userId)
+            .filter { it.toUserId == ourUserId }
+            .maxByOrNull { it.timestamp }
+            ?: receivedFromContact
 
-        val mostRecentContactRequest = map[firstTimestamp]
         val address = identityRepository.getNextContactAddress(
             dashPayProfile.userId,
-            mostRecentContactRequest!!.accountReference
+            contactRequest.accountReference
         )
         return if (address != null) {
             PaymentIntent.fromAddressWithIdentity(

@@ -394,7 +394,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        handleIntent(intent!!)
+        intent ?: return
+        // Keep getIntent() in step with what is actually being handled: the
+        // activity replays getIntent() when it is recreated, so the extras
+        // handleIntent consumes must be consumed from that same instance.
+        setIntent(intent)
+        handleIntent(intent)
     }
 
     // BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
@@ -442,6 +447,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         if (intent.hasExtra(EXTRA_INVITE)) {
             val invite = intent.extras!!.getParcelable<InvitationLinkData>(EXTRA_INVITE)!!
+            // Consume the invite so it is handled exactly once. Android
+            // redelivers the launching intent every time the task is
+            // recreated (relaunch from Recents, process death, config
+            // change); without this, an invite the user already dealt with
+            // is re-armed on each of those and re-runs validation.
+            intent.removeExtra(EXTRA_INVITE)
             if (inviteHandlerViewModel.invitation.value == null) {
                 handleInvite(invite)
             } else {

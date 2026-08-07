@@ -29,9 +29,12 @@ import de.schildbach.wallet.data.NotificationItemPayment
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.DisplayCacheRefreshBus
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -47,6 +50,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -82,7 +86,9 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
     val identityRepository: IdentityRepository,
     private val dashSystemService: DashSystemService,
     private val walletData: WalletData,
-    private val blockchainStateDao: BlockchainStateDao
+    private val blockchainStateDao: BlockchainStateDao,
+    private val txDisplayCacheDao: TxDisplayCacheDao,
+    private val displayCacheRefreshBus: DisplayCacheRefreshBus
 ) : ViewModel() {
 
     companion object {
@@ -161,9 +167,17 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
         return items.filter { item ->
             when (item) {
                 is NotificationItemPayment -> {
-                    val tx = item.tx ?: return@filter false
-                    val sent = tx.getValue(bag).signum() < 0
-                    val isInternal = tx.purpose == org.bitcoinj.core.Transaction.Purpose.KEY_ROTATION
+                    val tx = item.tx
+                    val corrected = item.correctedDisplay
+                    // Same precedence as the row renderer: the display-cache row wins on direction,
+                    // and it is the ONLY source for an SDK-owned payment that has no dashj tx —
+                    // which would otherwise be dropped by every non-ALL filter.
+                    val sent = when {
+                        corrected != null -> corrected.valueSatoshis < 0
+                        tx != null -> tx.getValue(bag).signum() < 0
+                        else -> return@filter false
+                    }
+                    val isInternal = tx?.purpose == org.bitcoinj.core.Transaction.Purpose.KEY_ROTATION
                     when (filter) {
                         NotificationFilter.RECEIVED -> !sent && !isInternal
                         NotificationFilter.SENT -> sent && !isInternal
@@ -289,11 +303,39 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
         combine(
             identityRepository.observeContacts(dashPayProfile.username, UsernameSortOrderBy.DATE_ADDED, true)
                 .distinctUntilChanged(),
+            // A trigger, NOT a gate. combine emits only once EVERY source has emitted, and
+            // observeMostRecentTransaction stays silent until the dashj wallet changes — post-cutover
+            // that wallet is held and empty (received contact payments are SDK-owned and never
+            // bridged into it), so without the seed the combine never fires and the whole activity
+            // list stays empty. Seeding lets the contacts + cache sources drive it.
             walletData.observeMostRecentTransaction()
-                .distinctUntilChanged()
-        ) { contacts, _ ->
+                .map { }
+                .onStart { emit(Unit) },
+            // The SDK-owned corrected-display rows for this contact: the only source for payments
+            // that never reached dashj, and authoritative for direction/amount/status on the ones
+            // that did. Re-emits on every cache write, so rows update live.
+            txDisplayCacheDao.observeByContactUserId(dashPayProfile.userId)
+                .distinctUntilChanged(),
+            // CutoverUiDataService signals this bus after every display-cache write, covering the
+            // case where Room's InvalidationTracker misses a change and a row would otherwise
+            // linger on a stale status.
+            displayCacheRefreshBus.changes
+                .onStart { emit(Unit) }
+        ) { contacts, _, _, _ ->
             contacts
-        }.map { toNotificationItems(dashPayProfile.userId, it) }
+        }.map { contacts ->
+            // Re-read the corrected rows FRESH on every trigger rather than trusting the reactive
+            // snapshot, so a late Room invalidation still lands. Catch INSIDE the map: an exception
+            // reaching the terminal catch below would COMPLETE the flow and permanently freeze the
+            // list until the sheet is reopened.
+            val correctedRows = txDisplayCacheDao.getByContactUserId(dashPayProfile.userId)
+            try {
+                toNotificationItems(dashPayProfile.userId, contacts, correctedRows)
+            } catch (ex: Exception) {
+                log.error("error building contact notification items", ex)
+                rawNotifications.value
+            }
+        }
             .onEach { results -> rawNotifications.value = results }
             .catch { ex ->
                 log.error("error while observing contact requests", ex)
@@ -324,7 +366,11 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
         return fresh.copy(dashPayProfile = mergedProfile)
     }
 
-    suspend fun toNotificationItems(userId: String, contactRequests: List<UsernameSearchResult>): List<NotificationItem> {
+    suspend fun toNotificationItems(
+        userId: String,
+        contactRequests: List<UsernameSearchResult>,
+        correctedRows: List<TxDisplayCacheEntry>
+    ): List<NotificationItem> {
         return withContext(Dispatchers.IO) {
             val results = arrayListOf<NotificationItem>()
             var accountReference = 0
@@ -358,14 +404,39 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
                 }
             }
 
-            val blockchainIdentity = identityRepository.blockchainIdentity ?: run {
-                log.warn("blockchainIdentity is null, cannot get contact transactions")
-                return@withContext emptyList()
+            // dashj-sourced contact txs. On a held/empty dashj wallet (post-cutover) or a transient
+            // error this yields nothing — but the contact rows above and the SDK-only rows below
+            // must STILL render, so fall through to an empty list instead of returning and
+            // discarding the whole list.
+            val txs = try {
+                identityRepository.blockchainIdentity
+                    ?.getContactTransactions(Identifier.from(userId), accountReference)
+                    ?: emptyList()
+            } catch (ex: Exception) {
+                log.warn("getContactTransactions failed; rendering SDK-sourced rows only", ex)
+                emptyList()
             }
-            val txs = blockchainIdentity.getContactTransactions(Identifier.from(userId), accountReference)
 
+            // When a tx_display_cache row exists it carries the authoritative direction, amount and
+            // status — the dashj Transaction mis-reads an SDK-authored contact send (it sees only
+            // the change). Absent (pre-cutover / non-SDK txs) → the row renders from dashj as before.
+            val correctedById = correctedRows.associateBy { it.rowId }
+
+            val dashjRowIds = HashSet<String>(txs.size)
             txs.forEach {
-                results.add(NotificationItemPayment(it))
+                val rowId = it.txId.toString().lowercase()
+                dashjRowIds.add(rowId)
+                results.add(NotificationItemPayment(it, correctedById[rowId]))
+            }
+
+            // Contact payments the SDK owns but never bridged into the held dashj wallet have no
+            // dashj Transaction, so the loop above never emits them — this is every received
+            // contact payment post-cutover. Render them from the cache entry alone. Deduped by
+            // rowId so a tx present in both appears once, via the dashj-corrected path.
+            correctedRows.forEach { entry ->
+                if (entry.rowId !in dashjRowIds) {
+                    results.add(NotificationItemPayment(correctedDisplay = entry))
+                }
             }
 
             val sortedResults = results.sortedWith(

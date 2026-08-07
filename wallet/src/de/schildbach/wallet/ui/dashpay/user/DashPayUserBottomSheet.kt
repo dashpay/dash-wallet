@@ -193,8 +193,10 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
                 state.userData?.let { startPayActivity(it) }
             },
             onNotificationClick = { item ->
-                if (item is NotificationItemPayment && item.tx != null) {
-                    TransactionDetailsDialogFragment.newInstance(item.tx.txId)
+                // txId resolves from the dashj tx when present and from the display-cache rowId
+                // otherwise, so an SDK-only payment row opens its details like any other.
+                if (item is NotificationItemPayment) {
+                    TransactionDetailsDialogFragment.newInstance(item.txId)
                         .show(parentFragmentManager, null)
                 }
             },
@@ -847,7 +849,14 @@ private fun NotificationRow(
             }
             is NotificationItemPayment -> {
                 val tx = item.tx
-                val sent = tx?.let(isSentTransaction) ?: false
+                // The display-cache row is authoritative post-cutover: dashj mis-reads an
+                // SDK-authored send, and for a received contact payment there is no dashj tx at all.
+                val corrected = item.correctedDisplay
+                val sent = when {
+                    corrected != null -> corrected.valueSatoshis < 0
+                    tx != null -> isSentTransaction(tx)
+                    else -> false
+                }
                 val iconRes = if (sent) R.drawable.ic_transaction_sent else R.drawable.ic_transaction_received
                 Icon(
                     painter = painterResource(iconRes),
@@ -872,11 +881,13 @@ private fun NotificationRow(
                 }
                 // Use the wallet-net value (same basis as the sent/received classification) rather
                 // than a single output, which on a sent tx would show change or one recipient leg.
-                val amount = tx?.let {
-                    try {
-                        transactionValue(it).toFriendlyString()
+                val amount = when {
+                    corrected != null -> Coin.valueOf(corrected.valueSatoshis).toFriendlyString()
+                    tx != null -> try {
+                        transactionValue(tx).toFriendlyString()
                     } catch (_: Exception) { "" }
-                } ?: ""
+                    else -> ""
+                }
                 if (amount.isNotEmpty()) {
                     Text(
                         text = amount,
