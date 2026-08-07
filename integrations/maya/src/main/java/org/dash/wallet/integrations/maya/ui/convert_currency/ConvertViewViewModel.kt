@@ -70,7 +70,28 @@ class ConvertViewViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(ConvertViewViewModel::class.java)
         private const val KEY_AMOUNT = "amount"
         private const val KEY_PENDING_RESULT = "pending_conversion_result"
+        private const val KEY_MAX_SELECTED = "max_amount_selected"
     }
+
+    /**
+     * True when the entered amount came from the Max button — the user asked to convert the whole
+     * wallet, which the swap backends carry out as a sweep ([SwapRequest.maximum]).
+     *
+     * Held as explicit intent rather than inferred by comparing the entered amount with the
+     * balance: with the picker on fiat or crypto, [amount] is anchored on that currency, and the
+     * trip back to DASH loses precision twice — [GenericUtils.toScaledBigDecimal] rounds the
+     * entered value to 8 decimals, and [toCoin] then *truncates* the recomputed DASH value. The
+     * result lands a satoshi or more below the balance, so an equality test quietly downgraded a
+     * fiat-entered Max to a partial swap. Persisted so it survives a configuration change.
+     *
+     * Set it through [selectMaxAmount], which also pins the DASH amount; assign it directly only
+     * to clear it when the entry stops being a Max (an edit, a currency or direction change).
+     */
+    var maxAmountSelected: Boolean
+        get() = savedStateHandle[KEY_MAX_SELECTED] ?: false
+        set(value) {
+            savedStateHandle[KEY_MAX_SELECTED] = value
+        }
 
     /**
      * The parameters of a conversion-result sheet the user hasn't acknowledged yet. The lock
@@ -92,6 +113,7 @@ class ConvertViewViewModel @Inject constructor(
     fun clearSavedState() {
         savedStateHandle.remove<Amount>(KEY_AMOUNT)
         savedStateHandle.remove<MayaTransactionParams>(KEY_PENDING_RESULT)
+        savedStateHandle.remove<Boolean>(KEY_MAX_SELECTED)
     }
     var destinationCurrency: String? = null
     var destinationAddress: String? = null
@@ -217,6 +239,14 @@ class ConvertViewViewModel @Inject constructor(
         }
     }
     fun setSelectedCryptoCurrency(account: AccountDataUIModel) {
+        // A different target crypto means whatever was entered — including a Max — no longer
+        // applies. Only a real change clears it: this is called again with the same currency
+        // every time the enter-amount screen's view is (re)created, and a Max entry has to
+        // survive that (see [maxAmountSelected]).
+        val previousCurrency = if (this::account.isInitialized) this.account.coinbaseAccount.currency else null
+        if (previousCurrency != null && previousCurrency != account.coinbaseAccount.currency) {
+            maxAmountSelected = false
+        }
         amount.cryptoCode = account.coinbaseAccount.currency
         amount.fiatCode = selectedLocalCurrencyCode
         this.account = account
@@ -325,6 +355,11 @@ class ConvertViewViewModel @Inject constructor(
             userDashAccountEmptyError.call()
             return
         }
+        // Flipping the direction changes which balance "max" refers to; as with the target
+        // currency, only a real change clears it (this is re-asserted on every view creation).
+        if (_dashToCrypto.value != null && _dashToCrypto.value != dashToCrypto) {
+            maxAmountSelected = false
+        }
         _dashToCrypto.value = dashToCrypto
     }
 
@@ -333,6 +368,7 @@ class ConvertViewViewModel @Inject constructor(
         _dashToCrypto.value = false
         _enteredConvertDashAmount.value = Coin.ZERO
         _enteredConvertCryptoAmount.value = Pair("", "")
+        maxAmountSelected = false
         savedStateHandle.remove<Amount>(KEY_AMOUNT)
     }
 
@@ -345,7 +381,14 @@ class ConvertViewViewModel @Inject constructor(
                 destinationAddress?.let { address ->
                     SwapRequest(
                         amount,
-                        amount.dash.toCoin() == walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED),
+                        // A sweep is what the Max button asked for, so take it from that intent
+                        // ([maxAmountSelected]) rather than inferring it: a fiat- or
+                        // crypto-anchored Max doesn't survive the round trip back to DASH as an
+                        // exact match. The comparison stays as a fallback for a full balance the
+                        // user typed in by hand.
+                        maxAmountSelected ||
+                            amount.dash.toCoin() ==
+                            walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED),
                         address,
                         it.currency,
                         it.asset,
@@ -420,6 +463,26 @@ class ConvertViewViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Records that the entered amount is the whole wallet ([maxAmountSelected]) and re-pins
+     * [amount]'s DASH component to the exact balance.
+     *
+     * Call it right after the Max value has been entered in [displayType]: entering it re-anchors
+     * [amount] on the picker's currency, and for fiat or crypto the DASH value is then a rounded
+     * back-conversion rather than the balance (see [maxAmountSelected]) — which the Maya quote and
+     * the amount checks both read. Assigning [Amount.dash] recomputes fiat and crypto from the
+     * exact balance; the anchor is restored to [displayType] afterwards (that setter doesn't
+     * recompute) so the picker's currency still drives what's displayed and logged.
+     */
+    fun selectMaxAmount(displayType: CurrencyInputType) {
+        val balance = walletDataProvider.wallet?.getBalance(Wallet.BalanceType.ESTIMATED) ?: return
+        amount.dash = balance.toBigDecimal()
+        amount.anchoredType = displayType
+        savedStateHandle[KEY_AMOUNT] = amount.copy()
+        maxAmountSelected = true
+        updateAmounts()
+    }
+
     private fun doesMeetSendingConditions(value: Coin): Boolean {
         if (dashToCrypto.value != true) {
             // No need to check
@@ -475,5 +538,6 @@ class ConvertViewViewModel @Inject constructor(
 
     fun reset() {
         amount.dash = BigDecimal.ZERO
+        maxAmountSelected = false
     }
 }

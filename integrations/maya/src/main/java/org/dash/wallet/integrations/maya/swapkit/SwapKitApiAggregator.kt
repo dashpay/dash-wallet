@@ -681,6 +681,13 @@ class SwapKitApiAggregator @Inject constructor(
                 buyAsset = swapRequest.target_maya_asset,
                 sellAmount = sellAmount,
                 slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT,
+                // Deliberately omitted, not an oversight: /v3/quote has no disableBalanceCheck /
+                // disableBuildTx escape hatch, so handing it a source address makes SwapKit
+                // balance-check that one address — which fails for an HD wallet whose balance is
+                // spread across UTXOs (and this is the unfunded current receive address anyway).
+                // Nothing is lost by leaving it out: the deposit address comes back from
+                // /v3/swap, so the intent — and the refund destination it refunds to — is only
+                // created there, and that call does report [sourceAddress].
                 // sourceAddress = sourceAddress,
                 destinationAddress = swapRequest.targetAddress
             )

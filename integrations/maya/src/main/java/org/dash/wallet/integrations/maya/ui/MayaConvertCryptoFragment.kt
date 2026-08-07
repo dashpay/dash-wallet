@@ -84,8 +84,15 @@ class MayaConvertCryptoFragment : Fragment() {
     private val decimalSeparator =
         DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
 
-    // Amount-entry state ported from the old ConvertViewFragment keyboard listener.
-    private var maxAmountSelected: Boolean = false
+    // Amount-entry state ported from the old ConvertViewFragment keyboard listener. The Max flag
+    // lives in the ViewModel (see [ConvertViewViewModel.maxAmountSelected]): it decides whether
+    // the swap sweeps the wallet, so it has to survive a configuration change along with the
+    // amount it belongs to.
+    private var maxAmountSelected: Boolean
+        get() = convertViewModel.maxAmountSelected
+        set(value) {
+            convertViewModel.maxAmountSelected = value
+        }
     private var canContinue: Boolean = false
 
     // Hard gate on Get quote independent of the entered value — false when the wallet has no
@@ -214,7 +221,8 @@ class MayaConvertCryptoFragment : Fragment() {
 
         convertViewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) { account ->
             selectedCoinBaseAccount = account
-            maxAmountSelected = false
+            // A stale Max entry is dropped by the ViewModel when the target currency actually
+            // changes — not here, which also fires when this screen's view is recreated.
             resetViewSelection(account)
         }
 
@@ -392,6 +400,12 @@ class MayaConvertCryptoFragment : Fragment() {
                 selectedCurrencyIndex = pickedCurrencyIndex
             )
             applyNewValue(convertViewModel.enteredConvertAmount, pickedCurrencyType, isLocalized = true)
+            // The value re-applied above comes from the formatted display string, which for fiat
+            // is rounded to the currency's 2 decimals — so a restored Max needs the exact balance
+            // pinned back on, taken from the balance as it stands now.
+            if (maxAmountSelected) {
+                convertViewModel.selectMaxAmount(pickedCurrencyType)
+            }
         }
     }
 
@@ -419,7 +433,10 @@ class MayaConvertCryptoFragment : Fragment() {
                 // Enter the balance in whichever currency the picker is on.
                 val type = pickedCurrencyType
                 applyNewValue(maxAmount.getValue(type).toString(), type, isLocalized = false)
-                maxAmountSelected = true
+                // Flag it as a Max and re-pin the exact balance: the line above re-anchors the
+                // amount on the displayed currency, so for fiat/crypto the DASH value it derives
+                // back is a satoshi or two short of the balance.
+                convertViewModel.selectMaxAmount(type)
             }
         }
     }
