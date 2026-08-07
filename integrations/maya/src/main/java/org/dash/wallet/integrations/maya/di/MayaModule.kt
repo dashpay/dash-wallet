@@ -107,8 +107,8 @@ abstract class MayaModule {
     abstract fun bindMayaApi(mayaApi: MayaApiAggregator): MayaApi
 
     // Note: MayaBlockchainApi is implemented and bound in the wallet module
-    // (de.schildbach.wallet.payments.MayaBlockchainApiImpl), which owns the dashj
-    // transaction machinery that swap-transaction construction requires.
+    // (de.schildbach.wallet.payments.MayaBlockchainApiImpl), which builds the
+    // swap deposit on the Kotlin SDK's deferred build/broadcast surface.
 
     @Binds
     @Singleton

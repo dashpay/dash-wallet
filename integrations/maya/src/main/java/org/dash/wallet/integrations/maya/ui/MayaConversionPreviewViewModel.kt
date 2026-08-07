@@ -21,7 +21,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.dash.wallet.common.WalletDataProvider
@@ -32,7 +31,6 @@ import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.SwapOrder
 import org.dash.wallet.common.money.TxIds
-import org.dash.wallet.common.observeTransactionLocked
 import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -128,12 +126,21 @@ class MayaConversionPreviewViewModel @Inject constructor(
                 // This verifies that the transaction was successfully broadcast and seen by peers.
                 // Dash IS locks typically arrive within 1-2 seconds; we allow up to 10 seconds
                 // before proceeding anyway (the tx was sent; lock may arrive later).
+                // waitUntilLocked (not a change-only observation) because the lock usually
+                // lands BEFORE this code runs — the SDK route has often seen the IS-lock by
+                // the time the send call returns, and a change-only stream would miss it and
+                // always burn the full timeout.
                 val txId = result.value.txid
                 if (txId != TxIds.ZERO_HASH_HEX) {
-                    val locked = withTimeoutOrNull(IS_LOCK_TIMEOUT_MS) {
-                        walletDataProvider.observeTransactionLocked(txId).first()
+                    val locked = try {
+                        withTimeoutOrNull(IS_LOCK_TIMEOUT_MS) {
+                            walletDataProvider.waitUntilLocked(txId)
+                        } != null
+                    } catch (e: Exception) {
+                        log.warn("could not watch maya swap tx {} for a lock", txId, e)
+                        false
                     }
-                    if (locked != null) {
+                    if (locked) {
                         log.info("maya swap tx {} IS-locked or confirmed", txId)
                     } else {
                         log.warn("maya swap tx {} not IS-locked within {}ms timeout", txId, IS_LOCK_TIMEOUT_MS)

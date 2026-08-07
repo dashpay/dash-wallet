@@ -22,6 +22,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -511,7 +512,21 @@ class SdkDeferredPayment internal constructor(
     val txidHex: String,
     val rawTxBytes: ByteArray,
     val feeDuffs: Long,
-    internal val native: Any?
+    internal val native: Any?,
+    /**
+     * What the single non-OP_RETURN output actually pays, in duffs.
+     *
+     * For an explicit-amount build this is the amount the caller asked for.
+     * For a DRAIN it is the figure the ENGINE computed (total inputs − fee,
+     * no change) — the caller never supplied it, so this is the only way to
+     * learn what the transaction will deliver. A max swap deposit must check
+     * this against the quoted amount BEFORE broadcasting: paying a vault less
+     * than quoted is under-delivery, which Maya and NEAR Intents refuse.
+     *
+     * 0 when the source could not report it (fakes, or an SDK too old to
+     * expose it); callers treat 0 as "unknown" rather than "pays nothing".
+     */
+    val deliverableDuffs: Long = 0
 )
 
 // ── Source seam ───────────────────────────────────────────────────────
@@ -630,6 +645,27 @@ interface SdkL1SendSource {
         recipients: List<Pair<String, Long>>
     ): SdkDeferredPayment =
         throw UnsupportedOperationException("deferred (BIP70) payment not supported by this source")
+
+    /**
+     * [buildDeferredPayment] in the MAYACHAIN deposit shape
+     * (`docs.mayaprotocol.com` → "Sending Transactions", UTXO chains):
+     * one recipient output to the Asgard vault at VOUT0, the swap [memo]
+     * as a zero-value OP_RETURN at VOUT1, change routed BACK TO THE FIRST
+     * INPUT'S ADDRESS at VOUT2 (MAYAChain identifies the depositor by
+     * VIN0 and pays refunds there), no BIP-69 reordering. Same
+     * reservation contract as [buildDeferredPayment]: exactly one of
+     * [broadcastDeferredPayment] / [releaseDeferredPayment] should
+     * follow. Default throws: only the production source (and fakes
+     * exercising Maya) need it.
+     */
+    suspend fun buildDeferredMayaDeposit(
+        walletIdHex: String,
+        vaultAddressBase58: String,
+        vaultDuffs: Long,
+        memo: ByteArray,
+        drain: Boolean = false
+    ): SdkDeferredPayment =
+        throw UnsupportedOperationException("Maya deposit build not supported by this source")
 
     /**
      * Broadcast a payment built by [buildDeferredPayment], consuming its
@@ -1266,6 +1302,49 @@ internal class DashSdkL1SendSource(
         return SdkDeferredPayment(signed.txidHex, signed.rawTxBytes, signed.feeDuffs, signed)
     }
 
+    override suspend fun buildDeferredMayaDeposit(
+        walletIdHex: String,
+        vaultAddressBase58: String,
+        vaultDuffs: Long,
+        memo: ByteArray,
+        drain: Boolean
+    ): SdkDeferredPayment {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        // Same deferred-build primitive as buildDeferredPayment, plus the
+        // three MAYACHAIN builder options. The OP_RETURN is appended after
+        // the vault recipient SDK-side, so preserveOutputOrder yields the
+        // documented vault=VOUT0 / memo=VOUT1 shape; an over-long memo
+        // throws pre-reservation.
+        // A drain supplies NO amount: the engine sets the vault output to
+        // (total inputs − fee), so 0 is the honest value to pass and anything
+        // else would be a number the engine discards.
+        val signed = wallet.buildSignedPayment(
+            recipients = listOf(vaultAddressBase58 to vaultDuffs),
+            network = toSdkNetwork(Constants.NETWORK_PARAMETERS),
+            coreSignerHandle = manager.mnemonicResolverHandle,
+            opReturnData = memo,
+            preserveOutputOrder = true,
+            changeToFirstInput = true,
+            // A DRAIN spends every BIP44 UTXO and has the engine set the vault
+            // output to (total inputs - fee), memo bytes priced in, no change:
+            // `vaultDuffs` is ignored. That is what a MAX deposit means, and it
+            // removes the guess the probe-measured path had to make.
+            selectionStrategy = if (drain) {
+                org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.SelectionStrategy.ALL
+            } else {
+                null
+            }
+        )
+        return SdkDeferredPayment(
+            signed.txidHex,
+            signed.rawTxBytes,
+            signed.feeDuffs,
+            signed,
+            deliverableDuffs = signed.deliverableAmountDuffs
+        )
+    }
+
     override suspend fun broadcastDeferredPayment(
         walletIdHex: String,
         payment: SdkDeferredPayment
@@ -1701,26 +1780,7 @@ class SdkL1SendService internal constructor(
             // blocks. Real fix: an upstream SDK UTXO lock/exclusion API
             // (iOS's add_inputs_from_outpoints binding is the porting
             // candidate).
-            val hasLockedOutputs = try {
-                hasAppLockedSpendableOutputs()
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                log.warn("SDK {}: app-locked-output preflight failed; blocking the drain (fail closed)", operation, t)
-                true
-            }
-            // B7 union: seam-registered locks (SDK-only txs — CrowdNode
-            // API-response outputs locked via WalletDataAdapter →
-            // [SeamOutputLockRegistry]) are invisible to the dashj wallet
-            // check above; OR them in so the drain cannot spend them
-            // either. Fail closed: a registry read failure also blocks.
-            val hasSeamLockedOutputs = try {
-                seamOutputLockRegistry.hasAnyLocks()
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                log.warn("SDK {}: seam output-lock registry read failed; blocking the drain (fail closed)", operation, t)
-                true
-            }
-            if (hasLockedOutputs || hasSeamLockedOutputs) {
+            if (hasProtectedOutputs(operation)) {
                 log.warn(
                     "SDK {}: wallet has app-locked outputs (CrowdNode); send-all via the SDK would " +
                         "spend them — blocked until the SDK exposes UTXO exclusion",
@@ -1957,6 +2017,163 @@ class SdkL1SendService internal constructor(
     }
 
     /**
+     * FAIL-CLOSED protected-output preflight, shared by every path that
+     * sweeps (or all but sweeps) the wallet: true when the wallet holds any
+     * app-locked output — CrowdNode account locks in the held dashj wallet,
+     * or seam-registered locks on SDK-only txs that the dashj check cannot
+     * see. The FFI has no UTXO-exclusion API, so a sweep-scale build would
+     * spend protected funds; a check failure blocks too.
+     */
+    private fun hasProtectedOutputs(operation: String): Boolean {
+        val hasLockedOutputs = try {
+            hasAppLockedSpendableOutputs()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK {}: app-locked-output preflight failed; blocking (fail closed)", operation, t)
+            true
+        }
+        val hasSeamLockedOutputs = try {
+            seamOutputLockRegistry.hasAnyLocks()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK {}: seam output-lock registry read failed; blocking (fail closed)", operation, t)
+            true
+        }
+        return hasLockedOutputs || hasSeamLockedOutputs
+    }
+
+    /**
+     * The largest amount a MAYACHAIN deposit can pay a vault right now:
+     * spendable balance MINUS the deposit's own mining fee MINUS a small
+     * change-output headroom.
+     *
+     * The fee is MEASURED, not guessed: a throwaway deposit is built through
+     * the real engine (same builder, same three options, the wallet's own
+     * address as a size stand-in) and its reported fee read off the
+     * reservation, which is then released. An estimate must never come in
+     * UNDER the real fee — a quote derived from a too-small reserve makes the
+     * deposit pay the vault less than quoted, and NEAR Intents refuses
+     * under-delivery (~1h wait, then a refund minus 0.001 DASH), so the
+     * measurement is deliberately biased high:
+     *
+     * - [memoSizeBytes] defaults to the 80-byte OP_RETURN ceiling, so a
+     *   shorter real memo can only make the real transaction smaller;
+     * - the probe keeps a change output (as the real deposit will, thanks to
+     *   the headroom), so the measured size matches the real one instead of
+     *   under-counting by an output;
+     * - [MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS] of headroom keeps that change
+     *   output comfortably above dust rather than at the threshold.
+     *
+     * Returns 0 when the balance cannot cover a deposit at all (the caller
+     * surfaces "not enough funds" rather than quoting a negative amount).
+     * Throws like [buildDeferredMayaDeposit] on gate/bind failures.
+     */
+    suspend fun maxMayaDepositDuffs(memoSizeBytes: Int = MAX_MAYA_MEMO_BYTES): Long {
+        require(memoSizeBytes in 1..MAX_MAYA_MEMO_BYTES) {
+            "memoSizeBytes must be 1..$MAX_MAYA_MEMO_BYTES, got $memoSizeBytes"
+        }
+        val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
+            "app wallet not bound to the SDK"
+        }
+        val gate = probeSendGate()
+        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        // FAIL-CLOSED (funds-critical): a max deposit spends all but
+        // [MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS] of the wallet, so coin
+        // selection will reach app-locked outputs (CrowdNode) — which
+        // [spendableBalanceDuffs] deliberately INCLUDES and the FFI cannot be
+        // told to exclude. Same guard the send-all drain applies, for the same
+        // reason: refuse to quote rather than sweep protected funds into a
+        // swap. A partial (non-max) deposit keeps the ordinary send's exposure.
+        check(!hasProtectedOutputs("l1MayaMaxDeposit")) {
+            "wallet has app-locked outputs (CrowdNode); a max swap deposit would spend them"
+        }
+        // MEASURE BY DRAINING, don't estimate. A max deposit IS a drain, so
+        // build one and read what the engine says it delivers: every BIP44 UTXO
+        // selected, this memo's bytes priced into the fee, no change. That is
+        // the same computation the real deposit will perform, so quote and
+        // deposit cannot disagree — which subtracting a guessed fee and a
+        // change-headroom constant from the wallet-wide spendable could not
+        // promise. The probe is built to an OWN address; the destination does
+        // not change the fee (same P2PKH output size as a vault), and it is
+        // released immediately either way.
+        val probeAddress = checkNotNull(source.unusedExternalAddress(walletIdHex)) {
+            "no SDK address available to size a Maya deposit"
+        }
+        val probe = try {
+            source.buildDeferredMayaDeposit(
+                walletIdHex,
+                probeAddress,
+                0L, // ignored under a drain
+                ByteArray(memoSizeBytes),
+                drain = true
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // The engine refuses a drain whose inputs cannot cover the fee
+            // (typed InsufficientFunds), which is exactly "nothing depositable"
+            // — the floor the probe-reserve constant used to approximate.
+            log.info("SDK l1MayaMaxDeposit: no drain is fundable; max deposit 0 ({})", t.message)
+            return 0L
+        }
+        val max = try {
+            probe.deliverableDuffs
+        } finally {
+            // NonCancellable: the probe holds a real engine reservation, and
+            // leaving it to the TTL sweep would make the very next real build
+            // fail to fund.
+            withContext(NonCancellable) { releaseDeferredPayment(probe) }
+        }
+        log.info(
+            "SDK l1MayaMaxDeposit: drain-measured max deposit {} duffs (fee {}, {}-byte memo)",
+            max, probe.feeDuffs, memoSizeBytes
+        )
+        return max.coerceAtLeast(0L)
+    }
+
+    /**
+     * [buildDeferredPayment] in the MAYACHAIN deposit shape (vault VOUT0,
+     * [memo] as a zero-value OP_RETURN VOUT1, change back to VIN0's
+     * address VOUT2, no reordering) — the Maya/SwapKit swap-send build.
+     * Same gate and reservation contract; the caller verifies the shape
+     * from [SdkDeferredPayment.rawTxBytes] and then broadcasts via
+     * [broadcastDeferredPayment] or abandons via [releaseDeferredPayment].
+     * [memo] must fit the 80-byte OP_RETURN standardness limit — checked
+     * here (and re-checked engine-side) BEFORE anything is reserved.
+     */
+    suspend fun buildDeferredMayaDeposit(
+        vaultAddressBase58: String,
+        vaultDuffs: Long,
+        memo: ByteArray,
+        drain: Boolean = false
+    ): SdkDeferredPayment {
+        // A drain has the engine compute the vault output, so no amount is
+        // supplied; every other build must name a positive one.
+        check(drain || vaultDuffs > 0) { "Maya vault amount must be positive, got $vaultDuffs" }
+        val vault = vaultAddressBase58.trim()
+        check(vault.isNotEmpty() && addressValidSafe(vault)) {
+            "Maya vault address is malformed or for the wrong network"
+        }
+        check(memo.size in 1..MAX_MAYA_MEMO_BYTES) {
+            "Maya memo must be 1..$MAX_MAYA_MEMO_BYTES bytes, got ${memo.size}"
+        }
+        val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
+            "app wallet not bound to the SDK"
+        }
+        val gate = probeSendGate()
+        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        val payment = source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo, drain)
+        log.info(
+            "SDK l1DeferredMayaBuild: built {} ({} duffs to the vault{}, {}-byte memo, fee {} duffs), inputs reserved",
+            payment.txidHex,
+            if (drain) payment.deliverableDuffs else vaultDuffs,
+            if (drain) " by DRAIN (engine-computed)" else "",
+            memo.size,
+            payment.feeDuffs
+        )
+        return payment
+    }
+
+    /**
      * Broadcast [payment]'s already-signed tx, consuming its reservation —
      * the "merchant acked" arm of a BIP70 flow. One attempt, classified by
      * [classifyDeferredBroadcastFailure]; the token-error refusals (stale /
@@ -2099,5 +2316,30 @@ class SdkL1SendService internal constructor(
          * the promised amount intact.
          */
         private const val COIN_JOIN_DRAIN_FLOOR_DUFFS = 1L
+
+        /**
+         * OP_RETURN relay-standardness limit — the ceiling for a Maya swap
+         * memo, matching Dash Core's `-datacarriersize` default (and the
+         * engine's `DEFAULT_MAX_OP_RETURN_BYTES`, which re-checks).
+         */
+        const val MAX_MAYA_MEMO_BYTES = 80
+
+        /**
+         * Held back from the probe deposit in [maxMayaDepositDuffs] so it is
+         * fundable AND carries a change output (matching the real deposit's
+         * shape, so the measured fee is not an output short). Never reaches a
+         * quote: only the MEASURED fee plus
+         * [MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS] is withheld from the user.
+         */
+        private const val MAYA_DEPOSIT_PROBE_RESERVE_DUFFS = 20_000L
+
+        /**
+         * Left in the wallet by a max Maya deposit, on top of the measured
+         * fee: the deposit's change output must stay clear of the dust
+         * threshold (546 duffs), and a couple of duffs of slack absorbs a
+         * shorter-than-worst-case memo. 0.00001 DASH — negligible to the
+         * user, and it makes UNDER-reserving impossible.
+         */
+        private const val MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS = 1_000L
     }
 }
