@@ -690,7 +690,9 @@ class SwapKitApiAggregator @Inject constructor(
         }
         val route = quote.routes.bestRoute()
             ?: return ResponseResource.Failure(
-                MayaException(quote.providerErrors?.firstOrNull()?.message ?: "no swapkit route"),
+                MayaException(
+                    SwapKitErrors.providerErrorMessage(quote.providerErrors?.firstOrNull()) ?: "no swapkit route"
+                ),
                 false,
                 0,
                 null
@@ -889,7 +891,9 @@ class SwapKitApiAggregator @Inject constructor(
         }
         val route = quote.routes.bestRoute()
             ?: return ResponseResource.Failure(
-                MayaException(quote.providerErrors?.firstOrNull()?.message ?: "no swapkit route"),
+                MayaException(
+                    SwapKitErrors.providerErrorMessage(quote.providerErrors?.firstOrNull()) ?: "no swapkit route"
+                ),
                 false,
                 0,
                 null
@@ -1186,9 +1190,9 @@ class SwapKitApiAggregator @Inject constructor(
     @StringRes
     override fun errorMessageRes(error: String?): Int = SwapKitErrors.messageResFor(error)
 
-    // SwapKit reports a below-minimum sell amount as `noRoutesFound` (no provider can fill it).
-    override fun isAmountTooLowError(error: String?): Boolean =
-        error?.substringBefore(':')?.trim() == "noRoutesFound"
+    // Below-minimum sell amounts arrive either as a top-level `noRoutesFound` or as a provider's
+    // `sellAssetAmountTooSmall`; SwapKitErrors owns that vocabulary.
+    override fun isAmountTooLowError(error: String?): Boolean = SwapKitErrors.isAmountTooLow(error)
 
     override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat) {
         // usdToFiat is the wallet's "1 USD in SELECTED_CURRENCY" rate. Unlike Maya

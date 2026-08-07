@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.maya.swapkit
 
 import androidx.annotation.StringRes
 import org.dash.wallet.integrations.maya.R
+import org.dash.wallet.integrations.maya.swapkit.model.SwapKitProviderError
 
 /**
  * Maps a raw SwapKit error into a user-facing, localized message resource.
@@ -38,6 +39,15 @@ import org.dash.wallet.integrations.maya.R
  */
 object SwapKitErrors {
     /**
+     * Codes meaning "the sell amount is below what this swap can fill", which the UI surfaces as
+     * an inline hint (raise the amount and retry) rather than a blocking modal.
+     *
+     * `noRoutesFound` is the top-level form; `sellAssetAmountTooSmall` is what providers report
+     * per-provider in `providerErrors[]` when the amount is under their minimum.
+     */
+    private val AMOUNT_TOO_LOW_CODES = setOf("noRoutesFound", "sellAssetAmountTooSmall")
+
+    /**
      * Friendly message resource for [rawError] — the message carried by the failed swap's
      * exception. The leading token (before an optional `": <detail>"`) is treated as the SwapKit
      * error code; unrecognised or null values fall back to [R.string.dex_error_generic].
@@ -49,12 +59,10 @@ object SwapKitErrors {
      */
     @StringRes
     fun messageResFor(rawError: String?): Int {
-        // Match on the code prefix so both a bare "validation_error" and a
-        // "validation_error: <detail>" map to the same friendly message.
-        val code = rawError?.substringBefore(':')?.trim().orEmpty()
-        return when (code) {
+        return when (codeOf(rawError)) {
             // /v3/quote
             "noRoutesFound" -> R.string.dex_error_no_route
+            "sellAssetAmountTooSmall" -> R.string.dex_error_amount_too_small
             "blackListAsset" -> R.string.dex_error_blacklisted
             "invalidRequest", "validation_error" -> R.string.dex_error_validation
             "apiKeyInvalid", "unauthorized" -> R.string.dex_error_unavailable
@@ -70,4 +78,30 @@ object SwapKitErrors {
             else -> R.string.dex_error_generic
         }
     }
+
+    /** True when [rawError] means the sell amount is under the minimum this swap can fill. */
+    fun isAmountTooLow(rawError: String?): Boolean = codeOf(rawError) in AMOUNT_TOO_LOW_CODES
+
+    /**
+     * The failure of a quote that came back with no routes, rendered in the same
+     * `"<code>: <detail>"` shape the top-level `error` field uses. A provider reports its code in
+     * [SwapKitProviderError.errorCode] and prose in `message`; only the code is a stable
+     * identifier, so it must lead — matching on the prose would silently fall through to the
+     * generic message (the `sellAssetAmountTooSmall` case, where the user needs to be told to
+     * raise the amount). Null when there is no provider error to report.
+     */
+    fun providerErrorMessage(error: SwapKitProviderError?): String? {
+        val code = error?.errorCode?.trim()?.takeIf { it.isNotEmpty() }
+        val detail = error?.message?.trim()?.takeIf { it.isNotEmpty() }
+        return when {
+            code != null && detail != null -> "$code: $detail"
+            else -> code ?: detail
+        }
+    }
+
+    /**
+     * The SwapKit error code carried by [rawError]: the leading token before an optional
+     * `": <detail>"`, so both a bare `validation_error` and `validation_error: <detail>` match.
+     */
+    private fun codeOf(rawError: String?): String = rawError?.substringBefore(':')?.trim().orEmpty()
 }
