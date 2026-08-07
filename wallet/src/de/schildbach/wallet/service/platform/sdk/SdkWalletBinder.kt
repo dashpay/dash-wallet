@@ -24,6 +24,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -220,7 +221,10 @@ class SdkWalletBinder internal constructor(
     // Stops the DIP-15 coreHeight backfill re-firing on every launch; see
     // [DashPayBackfillGate]. Defaults to the pre-feature always-run
     // behaviour so unrelated call sites and tests are provably unaffected.
-    private val backfillGate: DashPayBackfillGate = DashPayBackfillGate.ALWAYS_RUN
+    private val backfillGate: DashPayBackfillGate = DashPayBackfillGate.ALWAYS_RUN,
+    // Injectable so the post-arm rewind watch is testable on the host JVM
+    // without a minute of real time per poll. Production uses the constant.
+    private val backfillWatchIntervalMs: Long = BACKFILL_WATCH_INTERVAL_MS
 ) {
     @Inject
     constructor(
@@ -282,6 +286,9 @@ class SdkWalletBinder internal constructor(
      * DashPay sweep) and must neither block nor be blocked by a bind pass.
      */
     private val provisioning = AtomicBoolean(false)
+
+    /** Single-flight guard for [watchArmedBackfillRewind]. */
+    private val backfillWatchRunning = AtomicBoolean(false)
 
     /**
      * Wall-clock of the last provisioning pass — throttles the non-forced
@@ -411,6 +418,48 @@ class SdkWalletBinder internal constructor(
     fun provisionContactAccountsInBackground(force: Boolean = false): Job =
         scope.launch { provisionContactAccountsIfEnabled(force) }
 
+    /**
+     * Watch for the armed rewind's durable drop until the gate has latched it.
+     *
+     * The gate's own logic is race-free — it recognises the rewind whenever it
+     * sees the synced height below the armed target — but that is only true for
+     * a bounded window, and the gate is otherwise consulted only when a
+     * provisioning trigger happens to fire. On a wallet with many contacts the
+     * window is minutes and the next trigger is half an hour away, so the
+     * evidence expires unseen and every launch pays the full rescan again. This
+     * loop closes that gap and costs one cheap signal read per minute, only
+     * after a pass that actually armed a rewind, and only until it is latched.
+     */
+    private fun watchArmedBackfillRewind(walletId: String, identityId: ByteArray, userId: String) {
+        if (!backfillWatchRunning.compareAndSet(false, true)) return
+        scope.launch {
+            try {
+                repeat(BACKFILL_WATCH_MAX_POLLS) {
+                    delay(backfillWatchIntervalMs)
+                    try {
+                        if (backfillGate.isRewindAccountedFor()) return@launch
+                        // evaluate() persists the latch as a side effect. It
+                        // cannot re-arm here: this process has provisioned, so
+                        // the unaccounted-marker branch is not reachable.
+                        backfillGate.evaluate(walletId, identityId, userId)
+                        if (backfillGate.isRewindAccountedFor()) return@launch
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.warn("DashPay backfill rewind watch poll failed; retrying", e)
+                    }
+                }
+                log.info(
+                    "DashPay backfill rewind watch gave up after {} polls; the armed marker " +
+                        "stays, so the next launch provisions again",
+                    BACKFILL_WATCH_MAX_POLLS
+                )
+            } finally {
+                backfillWatchRunning.set(false)
+            }
+        }
+    }
+
     /** As [provisionContactAccountsInBackground], but awaitable. Never throws. */
     suspend fun provisionContactAccountsIfEnabled(force: Boolean = false) {
         try {
@@ -448,14 +497,26 @@ class SdkWalletBinder internal constructor(
                     log.warn("DashPay backfill gate skipped: stored identity id is malformed")
                     null
                 }
-                if (identityId != null &&
-                    !backfillGate.evaluate(walletId, identityId, userId).shouldRun
-                ) {
-                    return
+                var armedRewind = false
+                if (identityId != null) {
+                    val decision = backfillGate.evaluate(walletId, identityId, userId)
+                    if (!decision.shouldRun) return
+                    armedRewind = decision.armedToWrite != null
                 }
 
                 val report = sdkService.provisionDashPayContactAccounts(walletId)
                 identityId?.let { backfillGate.recordPassOutcome(walletId, it, report) }
+                // The pass we just armed rewinds the SPV synced height, but the
+                // drop only becomes DURABLE ~9-60 s later, and it stays visible
+                // only until the scan climbs back out of it. recordPassOutcome
+                // reads once, immediately, and routinely loses that race; the
+                // next consultation is driven by the provisioning trigger, which
+                // in the field arrived ~32 min later — long after the evidence
+                // was gone. The marker then went unaccounted for and the NEXT
+                // launch re-ran the whole rewind, forever. Poll for it instead.
+                if (armedRewind && identityId != null) {
+                    watchArmedBackfillRewind(walletId, identityId, userId)
+                }
                 // The sweep is a long native op: its SDK lines sat in the
                 // logcat buffer until the bridge's next 30 s / 5 min poll and
                 // were routinely rolled over before then. Pull them into
@@ -767,6 +828,17 @@ class SdkWalletBinder internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkWalletBinder::class.java)
+
+        /**
+         * Cadence and budget for [watchArmedBackfillRewind]. The window the
+         * watch has to catch is bounded by how long the re-scan takes to climb
+         * back past the armed height — ~15 min on the field wallet that
+         * exposed this (211 contacts, ~345k filters). 45 one-minute polls
+         * covers that with room to spare on a slower device, and each poll is
+         * a single cached signal read.
+         */
+        internal const val BACKFILL_WATCH_INTERVAL_MS = 60_000L
+        internal const val BACKFILL_WATCH_MAX_POLLS = 45
 
         /**
          * Floor between non-forced friend-chain provisioning passes. The

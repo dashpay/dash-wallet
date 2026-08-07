@@ -245,6 +245,7 @@ class SdkWalletBinderTest {
         walletData: WalletData = walletData(),
         now: () -> Long = { System.currentTimeMillis() },
         backfillGate: DashPayBackfillGate = DashPayBackfillGate.ALWAYS_RUN,
+        backfillWatchIntervalMs: Long = 5L,
         scope: CoroutineScope
     ) = SdkWalletBinder(
         sdkService = sdk,
@@ -255,13 +256,21 @@ class SdkWalletBinderTest {
         scope = scope,
         supportsPlatform = { supportsPlatform },
         now = now,
-        backfillGate = backfillGate
+        backfillGate = backfillGate,
+        backfillWatchIntervalMs = backfillWatchIntervalMs
     )
 
     /** Scriptable [DashPayBackfillGate] with interaction counters. */
-    private class FakeBackfillGate(var shouldRun: Boolean) : DashPayBackfillGate {
+    private class FakeBackfillGate(
+        var shouldRun: Boolean,
+        /** Set to arm a rewind, which is what starts the post-arm watch. */
+        var armed: BackfillArmed? = null,
+        /** Flipped by a test to end the watch, standing in for the latch. */
+        var accountedFor: Boolean = true
+    ) : DashPayBackfillGate {
         var evaluateCalls = 0
         var recordCalls = 0
+        var accountedForCalls = 0
         var lastWalletId: String? = null
         var lastIdentityId: ByteArray? = null
         var lastUserId: String? = null
@@ -275,7 +284,11 @@ class SdkWalletBinderTest {
             lastWalletId = walletIdHex
             lastIdentityId = ownerIdentityId
             lastUserId = ownerUserId
-            return BackfillDecision(shouldRun = shouldRun, reason = "test")
+            return BackfillDecision(
+                shouldRun = shouldRun,
+                reason = "test",
+                armedToWrite = armed
+            )
         }
 
         override suspend fun recordPassOutcome(
@@ -284,6 +297,11 @@ class SdkWalletBinderTest {
             report: DashPayContactProvisionReport
         ) {
             recordCalls++
+        }
+
+        override suspend fun isRewindAccountedFor(): Boolean {
+            accountedForCalls++
+            return accountedFor
         }
     }
 
@@ -1149,6 +1167,61 @@ class SdkWalletBinderTest {
             Identifier.from(userId).toBuffer().toList(),
             gate.lastIdentityId?.toList()
         )
+    }
+
+    @Test
+    fun provisioning_armedRewind_keepsPollingUntilTheGateAccountsForIt() = runBlocking {
+        // The livelock this closes: the armed rewind is only provable while
+        // the synced height sits below the armed target, and the gate is
+        // otherwise consulted only when a provisioning trigger fires — in the
+        // field, ~32 min later, long after the window shut. So every launch
+        // re-ran the whole rescan. The watch keeps looking until it latches.
+        val sdk = readySdk()
+        val gate = FakeBackfillGate(
+            shouldRun = true,
+            armed = BackfillArmed(targetHeight = 2_352_092L, contactFingerprint = "fp"),
+            accountedFor = false
+        )
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        val evaluatesAfterPass = gate.evaluateCalls
+
+        // The rewind has not landed yet: the watch must keep polling.
+        delay(40)
+        assertTrue(
+            "the watch should re-consult the gate while the rewind is unaccounted for",
+            gate.evaluateCalls > evaluatesAfterPass
+        )
+
+        // The latch lands; the watch must stop consulting.
+        gate.accountedFor = true
+        delay(20)
+        val evaluatesAtLatch = gate.evaluateCalls
+        delay(40)
+        assertEquals(
+            "the watch should stop once the rewind is accounted for",
+            evaluatesAtLatch,
+            gate.evaluateCalls
+        )
+    }
+
+    @Test
+    fun provisioning_noRewindArmed_startsNoWatch() = runBlocking {
+        // A pass that armed nothing has nothing to observe, so the poll must
+        // not run at all — it would be pure battery cost on a healthy wallet.
+        val sdk = readySdk()
+        val gate = FakeBackfillGate(shouldRun = true, armed = null, accountedFor = false)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        val evaluatesAfterPass = gate.evaluateCalls
+
+        delay(40)
+        assertEquals(evaluatesAfterPass, gate.evaluateCalls)
+        assertEquals(0, gate.accountedForCalls)
     }
 
     @Test

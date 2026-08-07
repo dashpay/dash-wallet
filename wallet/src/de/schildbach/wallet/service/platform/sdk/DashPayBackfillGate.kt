@@ -570,6 +570,21 @@ interface DashPayBackfillGate {
         report: DashPayContactProvisionReport
     )
 
+    /**
+     * Whether an armed rewind has already been accounted for — a watch is
+     * latched or coverage is recorded — so there is nothing left for a
+     * post-arm poll to observe. Never throws; a read failure answers false,
+     * which only costs another poll.
+     *
+     * Exists because the ONLY race-free evidence that the armed rewind
+     * happened is the durable synced height sitting BELOW the armed target,
+     * and that is true for a bounded window (the scan climbs back out of it).
+     * Missing the window strands the marker and the next launch re-runs the
+     * whole rewind — the livelock seen in the field. See the poll in
+     * `SdkWalletBinder.watchArmedBackfillRewind`.
+     */
+    suspend fun isRewindAccountedFor(): Boolean
+
     companion object {
         /**
          * The pre-feature behaviour: always provision, never record. The
@@ -588,6 +603,9 @@ interface DashPayBackfillGate {
                 ownerIdentityId: ByteArray,
                 report: DashPayContactProvisionReport
             ) = Unit
+
+            // Nothing is ever armed, so there is never anything to watch for.
+            override suspend fun isRewindAccountedFor() = true
         }
     }
 }
@@ -703,6 +721,16 @@ class DashPayBackfillGateImpl @Inject constructor(
                     "the next trigger will provision again", e
             )
         }
+    }
+
+    override suspend fun isRewindAccountedFor(): Boolean = try {
+        readInProgress() != null || readCoverage() != null
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        // Answering false only costs another poll; answering true could end
+        // the watch while the evidence is still unread.
+        false
     }
 
     /** Null when the app's contact table cannot be read — treated as unknown. */
