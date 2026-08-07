@@ -200,4 +200,71 @@ class MayaDepositShapeTest {
         assertNotNull(error)
         assertTrue(error!!.contains("no inputs"))
     }
+    // --- expectedVaultDuffs -------------------------------------------------
+    //
+    // Regression: a MAX sell aborted pre-broadcast with "VOUT0 carries 7442734
+    // duffs, expected 7442725". Both guards around the build treat the quote as
+    // a FLOOR (each aborts only on `<`), but the shape check demanded exact
+    // equality with it, so a drain that delivered 9 duffs MORE than quoted --
+    // the ordinary result of the balance moving between quote and build -- was
+    // rejected as mis-shaped.
+
+    @Test
+    fun anOrdinarySellIsVerifiedAgainstTheQuote() {
+        // The app chose this amount, so the quote is the expectation and the
+        // engine's drain figure is irrelevant (it is 0 for a non-drain build).
+        assertEquals(
+            1_000_000L,
+            expectedVaultDuffs(isMaxSell = false, quotedDuffs = 1_000_000L, drainDeliverableDuffs = 0L)
+        )
+    }
+
+    @Test
+    fun aMaxSellIsVerifiedAgainstTheEngineNotTheQuote() {
+        // The exact numbers from the failing deposit.
+        assertEquals(
+            7_442_734L,
+            expectedVaultDuffs(isMaxSell = true, quotedDuffs = 7_442_725L, drainDeliverableDuffs = 7_442_734L)
+        )
+    }
+
+    @Test
+    fun aMaxSellDeliveringMoreThanQuotedNowPassesTheShapeCheck() {
+        // End to end over the real gate: the transaction that was rejected.
+        val quoted = 7_442_725L
+        val delivered = 7_442_734L
+        val tx = deposit(vaultValue = delivered)
+
+        assertNotNull(
+            "the quote alone must still reject it -- that is the bug being fixed",
+            verifyMayaDepositShape(tx, vaultAddress, quoted, memo)
+        )
+        assertNull(
+            "verified against the engine's amount it is well-formed",
+            verifyMayaDepositShape(
+                tx,
+                vaultAddress,
+                expectedVaultDuffs(isMaxSell = true, quotedDuffs = quoted, drainDeliverableDuffs = delivered),
+                memo
+            )
+        )
+    }
+
+    @Test
+    fun aMaxSellStillFailsWhenTheBytesDisagreeWithTheEngine() {
+        // The check stays exact, so it keeps its real job: the decoded host
+        // bytes must agree with what Rust computed from the REGISTERED
+        // transaction. A drain paying one duff less than the engine reported
+        // is still a failure.
+        val tx = deposit(vaultValue = 7_442_733L)
+        assertNotNull(
+            verifyMayaDepositShape(
+                tx,
+                vaultAddress,
+                expectedVaultDuffs(isMaxSell = true, quotedDuffs = 7_442_725L, drainDeliverableDuffs = 7_442_734L),
+                memo
+            )
+        )
+    }
+
 }

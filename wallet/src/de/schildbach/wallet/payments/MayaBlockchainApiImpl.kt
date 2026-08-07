@@ -129,6 +129,33 @@ internal fun verifyMayaDepositShape(
 }
 
 /**
+ * The vault amount [verifyMayaDepositShape] must find at VOUT0.
+ *
+ * For an ordinary sell the app chose the amount, so the quote IS the
+ * expectation and any deviation is a defect.
+ *
+ * A MAX sell is a DRAIN: the ENGINE sets the vault output to
+ * (total inputs − fee), so the app never supplied that number and the quote
+ * is only a FLOOR — which is exactly how the two guards around the build
+ * treat it (both abort on `<`, never on `>`). Holding the shape check to
+ * the quote instead would reject a drain that legitimately delivers MORE
+ * than quoted, which is what the balance moving between quote and build
+ * normally produces.
+ *
+ * So a max sell is verified against [drainDeliverableDuffs] — the value Rust
+ * computed from the REGISTERED transaction. That keeps the check exact
+ * rather than loosening it to a range, and makes it a genuine cross-check:
+ * the decoded host bytes must agree with what the engine registered, and a
+ * disagreement between those two is precisely the failure the check exists
+ * to catch.
+ */
+internal fun expectedVaultDuffs(
+    isMaxSell: Boolean,
+    quotedDuffs: Long,
+    drainDeliverableDuffs: Long
+): Long = if (isMaxSell) drainDeliverableDuffs else quotedDuffs
+
+/**
  * Wallet-module implementation of the Maya integration's [MayaBlockchainApi]:
  * builds the swap deposit on the Kotlin SDK's deferred build/broadcast
  * surface ([SdkL1SendService.buildDeferredMayaDeposit] — vault VOUT0,
@@ -355,11 +382,16 @@ class MayaBlockchainApiImpl @Inject constructor(
             // strands funds. Decoded with the SDK's own consensus decoder;
             // a decode failure counts as a failed shape check (released,
             // recoverable), never as a broadcastable pass.
+            val depositDuffs = expectedVaultDuffs(
+                isMaxSell = swapTradeUIModel.maximum,
+                quotedDuffs = vaultDuffs,
+                drainDeliverableDuffs = payment.deliverableDuffs
+            )
             val shapeError = try {
                 verifyMayaDepositShape(
                     TransactionDecoder.decode(payment.rawTxBytes, toSdkNetwork(Constants.NETWORK_PARAMETERS)),
                     swapTradeUIModel.vaultAddress,
-                    vaultDuffs,
+                    depositDuffs,
                     memoBytes
                 )
             } catch (e: CancellationException) {
@@ -386,7 +418,7 @@ class MayaBlockchainApiImpl @Inject constructor(
             runCatching { reservationLockMirror.setLocks(payment, locked = true) }
                 .onFailure { log.warn("failed to mirror the maya reservation into wallet locks", it) }
 
-            log.info("maya swap deposit {}: broadcasting ({} duffs to the vault)", payment.txidHex, vaultDuffs)
+            log.info("maya swap deposit {}: broadcasting ({} duffs to the vault)", payment.txidHex, depositDuffs)
             return when (val result = sdkL1SendService.broadcastDeferredPayment(payment)) {
                 is SdkWriteResult.Broadcast -> {
                     // Synchronous display bridge (same mechanism as every SDK
