@@ -67,7 +67,8 @@ class ImgurService @Inject constructor(
                     throw Exception(response.message)
                 }
             } else {
-                log.error("imgur: upload failed (${response.code}): ${response.message}")
+                val errorBody = responseBody?.string()
+                log.error("imgur: upload failed (${response.code}): ${response.message}, body: $errorBody")
                 analytics.logError(Exception(response.message), "Failed to upload profile picture: ImgUr")
                 throw Exception(response.message)
             }
