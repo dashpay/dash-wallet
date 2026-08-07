@@ -26,7 +26,11 @@ import dagger.assisted.AssistedInject
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentTopUp
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION
+import de.schildbach.wallet.service.platform.sdk.REASON_PRE_BROADCAST_BUILD_SHORTFALL
+import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.work.BaseWorker
+import de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve
 import kotlinx.coroutines.CancellationException
 import org.slf4j.LoggerFactory
 
@@ -52,16 +56,29 @@ class PerformTopUpWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
     private val sdkTransparentTopUp: SdkTransparentTopUp,
-    private val blockchainIdentityConfig: BlockchainIdentityConfig
+    private val blockchainIdentityConfig: BlockchainIdentityConfig,
+    private val assetLockFundingPreflight: SdkAssetLockFundingPreflight
 ) : BaseWorker(context, parameters) {
     companion object {
         private val log = LoggerFactory.getLogger(PerformTopUpWorker::class.java)
         const val KEY_AMOUNT_DUFFS = "PerformTopUpWorker.AMOUNT_DUFFS"
+
+        /** The purchase is a MAX ("spend everything") — see the class doc. */
+        const val KEY_IS_MAX_SPEND = "PerformTopUpWorker.IS_MAX_SPEND"
         const val KEY_NEW_BALANCE = "PerformTopUpWorker.NEW_BALANCE"
         const val KEY_AMBIGUOUS = "PerformTopUpWorker.AMBIGUOUS"
 
         /** Progress marker: the SDK call that does the actual work has begun. */
         const val KEY_SDK_CALL_STARTED = "PerformTopUpWorker.SDK_CALL_STARTED"
+
+        /**
+         * Platform's minimum for an IdentityTopUp asset lock, in duffs:
+         * identity_topup_base_cost (500) + the 50,000-duff processing floor —
+         * the same figure the SDK FFI enforces as MIN_TOP_UP_DUFFS. A MAX
+         * retry adjusted below this would broadcast a lock Core accepts but
+         * Platform deterministically rejects, stranding the balance.
+         */
+        const val PLATFORM_TOP_UP_FLOOR_DUFFS = 50_500L
     }
 
     override suspend fun doWorkWithBaseProgress(): Result {
@@ -74,7 +91,12 @@ class PerformTopUpWorker @AssistedInject constructor(
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "no identity to top up"))
         }
 
-        val result = try {
+        val isMaxSpend = inputData.getBoolean(KEY_IS_MAX_SPEND, false)
+        // What actually went out — the adjusted retry overwrites this, so the
+        // success log names the sent amount, not the requested one.
+        var sentDuffs = amountDuffs
+
+        var result = try {
             // Tell the UI the hand-off is complete: the purchase is now the
             // SDK's (and this worker's) responsibility, not the screen's.
             setProgress(workDataOf(KEY_SDK_CALL_STARTED to true))
@@ -84,9 +106,73 @@ class PerformTopUpWorker @AssistedInject constructor(
             log.error("top-up threw unexpectedly", t)
             SdkWriteResult.Ambiguous(t)
         }
+
+        // MAX-spend fee convergence — the shielded Internal Transfer rule
+        // (ShieldedTransferExecutor.submit), applied to the top-up asset
+        // lock: the exact L1 fee is unknowable app-side, so a MAX purchase
+        // submits the FULL balance first and, when that fails the
+        // provably-pre-broadcast coin selection (nothing submitted, the
+        // selection released), retries ONCE with an ESTIMATED fee reserve
+        // withheld, sized from the wallet's spendable UTXO count. An
+        // over-reserve is lossless — the asset-lock builder returns the
+        // excess as change. One shot only: the retry result never
+        // re-adjusts. The adjusted amount must stay above Platform's
+        // top-up floor, or the retry would strand a lock Platform rejects.
+        // Match the CLASSIFIER's verdict, not a raw engine message: the
+        // top-up build surfaces its shortfall as key-wallet's builder text
+        // ("Coin selection error: Insufficient funds…"), which
+        // classifyBroadcastFailure already folds — together with the
+        // shielded path's "asset lock coin selection is short" shape — into
+        // these two named, provably-pre-broadcast, retryable reasons.
+        // (Matching only the shielded message here is the bug that made the
+        // first live MAX test fail without ever retrying.)
+        val first = result
+        val retryableShortfall = first is SdkWriteResult.NotBroadcast &&
+            (
+                first.reason == REASON_PRE_BROADCAST_BUILD_SHORTFALL ||
+                    first.reason == REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION
+                )
+        if (isMaxSpend && first is SdkWriteResult.NotBroadcast && retryableShortfall) {
+            // The input population comes from the SDK's OWN eligible-UTXO
+            // query — the same table its coin selection reads — not dashj's
+            // spendableUtxoCount(): dashj counts coins the asset lock can
+            // never select (CoinJoin, other accounts, non-final) and can be
+            // stale post-cutover. Null = no evidence; adjust nothing.
+            val utxoCount = assetLockFundingPreflight.eligibleAssetLockUtxoCountOrNull()
+            if (utxoCount == null) {
+                log.warn("max top-up: eligible UTXO count unavailable — not auto-adjusting")
+            }
+            val reserve = utxoCount?.let(::assetLockMaxFeeReserve)
+            val adjusted = reserve?.let { amountDuffs - it.duffs }
+            if (adjusted != null && adjusted > PLATFORM_TOP_UP_FLOOR_DUFFS) {
+                sentDuffs = adjusted
+                log.info(
+                    "max top-up auto-adjusting for the L1 asset-lock fee: requested {} duffs, " +
+                        "reserve {} duffs ({} UTXOs), retrying once with {}",
+                    amountDuffs,
+                    reserve.duffs,
+                    utxoCount,
+                    adjusted
+                )
+                result = try {
+                    sdkTransparentTopUp.topUp(identityId, adjusted)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.error("adjusted max top-up threw unexpectedly", t)
+                    SdkWriteResult.Ambiguous(t)
+                }
+            } else if (adjusted != null) {
+                log.warn(
+                    "max top-up not auto-adjusting: {} duffs after the fee reserve is at or " +
+                        "below Platform's {}-duff top-up floor",
+                    adjusted,
+                    PLATFORM_TOP_UP_FLOOR_DUFFS
+                )
+            }
+        }
         return when (result) {
             is SdkWriteResult.Broadcast -> {
-                log.info("top-up of {} duffs credited; new balance {}", amountDuffs, result.value)
+                log.info("top-up of {} duffs credited; new balance {}", sentDuffs, result.value)
                 Result.success(workDataOf(KEY_NEW_BALANCE to result.value))
             }
             is SdkWriteResult.NotBroadcast -> {

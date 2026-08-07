@@ -451,7 +451,6 @@
          the asset-lock build can actually select (final, confirmed/InstantSend-
          locked coins) do not. -->
     <string name="buy_credits_funds_settling">You need at least %s spendable Dash for this top-up. Recently received or transferred funds may still be settling.</string>
-    <string name="buy_credits_max_not_supported">Buying credits with your whole balance isn’t supported yet. Please enter an amount instead.</string>
     <string name="buy_credits_below_minimum">Enter more than %s to buy credits.</string>
 
     <string name="request_username_username_voting_message">+ what is username voting?</string>

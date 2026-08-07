@@ -43,9 +43,14 @@ class PerformTopUpOperation(private val application: Application) {
                 .getWorkInfosForUniqueWorkLiveData(WORK_NAME)
     }
 
-    fun enqueue(amountDuffs: Long) {
+    fun enqueue(amountDuffs: Long, isMaxSpend: Boolean = false) {
         val request = OneTimeWorkRequestBuilder<PerformTopUpWorker>()
-            .setInputData(workDataOf(PerformTopUpWorker.KEY_AMOUNT_DUFFS to amountDuffs))
+            .setInputData(
+                workDataOf(
+                    PerformTopUpWorker.KEY_AMOUNT_DUFFS to amountDuffs,
+                    PerformTopUpWorker.KEY_IS_MAX_SPEND to isMaxSpend
+                )
+            )
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
