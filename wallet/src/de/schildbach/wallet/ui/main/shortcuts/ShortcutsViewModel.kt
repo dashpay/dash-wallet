@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
@@ -44,7 +44,7 @@ import javax.inject.Inject
 class ShortcutsViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig,
     private val config: Configuration,
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val shortcutProvider: ShortcutProvider,
     private val deviceInfo: DeviceInfoProvider,
     private val topperClient: TopperClient,
@@ -210,7 +210,7 @@ class ShortcutsViewModel @Inject constructor(
     suspend fun getTopperUrl(walletName: String): String {
         return topperClient.getOnRampUrl(
             walletUIConfig.getExchangeCurrencyCode(),
-            walletData.freshReceiveAddress(),
+            walletData.freshReceiveAddressString(),
             walletName
         )
     }

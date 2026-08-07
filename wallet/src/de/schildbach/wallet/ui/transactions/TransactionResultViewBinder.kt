@@ -36,6 +36,9 @@ import coil.transform.RoundedCornersTransformation
 import org.dash.wallet.common.ui.components.MerchantNameIcon
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.service.platform.sdk.L1TxUiStatus
+import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
+import de.schildbach.wallet.service.platform.sdk.assetLockTitleRes
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
@@ -43,16 +46,25 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
-import org.dash.wallet.common.transactions.TransactionUtils
-import org.dash.wallet.common.transactions.TransactionUtils.allOutputAddresses
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils
+import de.schildbach.wallet.transactions.TransactionUtils.allOutputAddresses
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.util.currencySymbol
 import org.dash.wallet.common.util.makeLinks
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 /**
  * @author Samuel Barbosa
@@ -60,7 +72,8 @@ import org.dash.wallet.common.util.makeLinks
 class TransactionResultViewBinder(
     private val wallet: Wallet,
     private val dashFormat: MonetaryFormat,
-    private val binding: TransactionResultContentBinding
+    private val binding: TransactionResultContentBinding,
+    private val openProfile: (DashPayProfile) -> Unit
 ): TransactionConfidence.Listener {
     private val iconSize = binding.root.context.resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
     private val context by lazy { binding.root.context }
@@ -74,6 +87,17 @@ class TransactionResultViewBinder(
     private var onRescanTriggered: (() -> Unit)? = null
 
     private lateinit var transaction: Transaction
+    private var sdkDetail: SdkTxDetail? = null
+
+    /**
+     * Bug A: a direction/amount override for a dashj-held transaction whose
+     * frozen post-cutover wallet reads `getValue(wallet) == 0` (an SDK-authored
+     * send). Unlike [sdkDetail] (which means "no dashj tx at all" and drives the
+     * whole [bindSdkDetail] rendering), this only corrects [bind]'s direction and
+     * net amount — the rest of the dashj-driven sheet is unchanged. Null except
+     * for that post-cutover case.
+     */
+    private var sdkOverride: SdkTxDetail? = null
     private var isError = false
     private var iconBitmap: Bitmap? = null
     @DrawableRes
@@ -98,11 +122,20 @@ class TransactionResultViewBinder(
     private var outputAddresses: List<Address> = listOf()
     private var outputAssetLocks = listOf<String>()
 
-    fun bind(tx: Transaction, profile: DashPayProfile?, payeeName: String? = null, payeeSecuredBy: String? = null) {
+    fun bind(
+        tx: Transaction,
+        profile: DashPayProfile?,
+        payeeName: String? = null,
+        payeeSecuredBy: String? = null,
+        sdkOverride: SdkTxDetail? = null
+    ) {
         this.transaction = tx
         this.dashPayProfile = profile
-        val value = tx.getValue(wallet)
-        val isSent = value.signum() < 0
+        this.sdkOverride = sdkOverride
+        // Bug A: prefer the authoritative SDK direction/net when present — the
+        // held dashj wallet can't value an SDK-authored send (getValue==0).
+        val value = sdkOverride?.let { Coin.valueOf(it.netAmountDuffs) } ?: tx.getValue(wallet)
+        val isSent = sdkOverride?.isSent ?: (value.signum() < 0)
 
         if (payeeName != null) {
             binding.paymentMemo.text = payeeName
@@ -209,13 +242,113 @@ class TransactionResultViewBinder(
         val exchangeRate = tx.exchangeRate
         if (exchangeRate != null) {
             binding.fiatValue.setFiatAmount(
-                tx.getValue(wallet),
+                value,
                 exchangeRate,
                 Constants.LOCAL_FORMAT,
-                exchangeRate.fiat?.currencySymbol
+                exchangeRate.fiat?.toNeutralFiat()?.currencySymbol
             )
         } else {
             binding.fiatValue.isVisible = false
+        }
+    }
+
+    /**
+     * Step B1: bind an SDK-only transaction (not present in the dashj
+     * wallet — post-cutover receives/sends served from the SDK store via
+     * the `transaction_decode` binding). Renders only honestly-derivable
+     * fields: direction/title, net amount, fee (when the SDK recorded it
+     * or Σin−Σout was computable), date, addresses and OP_RETURN
+     * presence. dashj-only affordances (confidence/peer state, error
+     * states, exchange-rate fiat value) stay absent — no fabrication.
+     */
+    fun bindSdkDetail(detail: SdkTxDetail) {
+        this.sdkDetail = detail
+        val isSent = detail.isSent
+
+        if (isSent) {
+            binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
+            // A Platform-funding asset lock (upgrade / top-up / invite) surfaces
+            // its "…Fee" title instead of the generic "Amount Sent".
+            binding.transactionTitle.text = detail.assetLockKind
+                ?.let { context.getText(assetLockTitleRes(it)) }
+                ?: context.getText(R.string.transaction_details_amount_sent)
+            binding.transactionAmountSignal.text = "-"
+        } else {
+            binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.system_green))
+            binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_received)
+            binding.transactionAmountSignal.text = "+"
+        }
+        binding.transactionAmountSignal.isVisible = true
+        updateIcon()
+
+        binding.dashAmount.setFormat(dashFormat)
+        binding.dashAmount.setAmount(Coin.valueOf(kotlin.math.abs(detail.netAmountDuffs)))
+        // No exchange rate is recorded for SDK-only transactions.
+        binding.fiatValue.isVisible = false
+
+        val fee = detail.feeDuffs?.let { Coin.valueOf(it) }
+        binding.feeContainer.isVisible = isFeeAvailable(fee)
+        if (isFeeAvailable(fee)) {
+            binding.transactionFee.setFormat(dashFormat)
+            binding.transactionFee.setAmount(fee)
+        }
+
+        binding.dateContainer.isVisible = detail.timestampMs > 0
+        if (detail.timestampMs > 0) {
+            binding.transactionDateAndTime.text = DateUtils.formatDateTime(
+                context,
+                detail.timestampMs,
+                DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME
+            )
+        }
+
+        val inflater = LayoutInflater.from(context)
+        when {
+            detail.isInternal -> {
+                binding.inputAddressesLabel.setText(R.string.transaction_details_moved_from)
+                binding.outputAddressesLabel.setText(R.string.transaction_details_moved_internally_to)
+            }
+            isSent -> binding.outputAddressesLabel.setText(R.string.transaction_details_sent_to)
+            else -> binding.outputAddressesLabel.setText(R.string.transaction_details_received_at)
+        }
+        setStringInputs(detail.inputAddresses, inflater)
+        setStringOutputs(detail.outputAddresses, detail.hasOpReturn, inflater)
+    }
+
+    private fun setStringInputs(addresses: List<String>, inflater: LayoutInflater) {
+        binding.inputsContainer.isVisible = addresses.isNotEmpty()
+        addresses.forEach {
+            val addressView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                binding.transactionInputAddressesContainer,
+                false
+            ) as TextView
+            addressView.text = it
+            binding.transactionInputAddressesContainer.addView(addressView)
+        }
+    }
+
+    private fun setStringOutputs(addresses: List<String>, hasOpReturn: Boolean, inflater: LayoutInflater) {
+        binding.outputsContainer.isVisible = addresses.isNotEmpty() || hasOpReturn
+        binding.transactionOutputAddressesContainer.isVisible = addresses.isNotEmpty()
+        addresses.forEach {
+            val addressView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                binding.transactionOutputAddressesContainer,
+                false
+            ) as TextView
+            addressView.text = it
+            binding.transactionOutputAddressesContainer.addView(addressView)
+        }
+        binding.transactionOutputOpReturnsContainer.isVisible = hasOpReturn
+        if (hasOpReturn) {
+            val opReturnView = inflater.inflate(
+                R.layout.transaction_result_address_row,
+                binding.transactionOutputOpReturnsContainer,
+                false
+            ) as TextView
+            opReturnView.text = "OP RETURN"
+            binding.transactionOutputOpReturnsContainer.addView(opReturnView)
         }
     }
 
@@ -288,7 +421,9 @@ class TransactionResultViewBinder(
     }
 
     private fun updateIcon() {
-        if (!::transaction.isInitialized) {
+        val sdkDetail = this.sdkDetail
+        val sdkOverride = this.sdkOverride
+        if (!::transaction.isInitialized && sdkDetail == null) {
             return
         }
 
@@ -301,6 +436,19 @@ class TransactionResultViewBinder(
             R.drawable.ic_transaction_failed
         } else if (iconRes != null) {
             iconRes!!
+        } else if (sdkDetail != null) {
+            when {
+                !sdkDetail.isSent -> R.drawable.ic_transaction_received
+                sdkDetail.isInternal -> R.drawable.ic_internal
+                else -> R.drawable.ic_transaction_sent
+            }
+        } else if (sdkOverride != null) {
+            // Bug A: direction from the SDK override, not the dashj value (0).
+            when {
+                !sdkOverride.isSent -> R.drawable.ic_transaction_received
+                sdkOverride.isInternal -> R.drawable.ic_internal
+                else -> R.drawable.ic_transaction_sent
+            }
         } else if (transaction.getValue(wallet).signum() >= 0) {
             R.drawable.ic_transaction_received
         } else if (transaction.isEntirelySelf(wallet)) {
@@ -366,7 +514,15 @@ class TransactionResultViewBinder(
 
     @SuppressLint("SetTextI18n")
     private fun setTransactionDirection(tx: Transaction, wallet: Wallet) {
-        if (tx.confidence.hasErrors()) {
+        // #1/#6 residual: when an SDK detail is present (sdkOverride for a dashj-held tx the frozen
+        // post-cutover wallet mis-reads, or sdkDetail for an SDK-only tx) the lock/confirmation
+        // status is authoritative from the engine-derived L1TxUiStatus — PENDING / INSTANT_LOCKED /
+        // IN_BLOCK / CHAINLOCKED — none of which encode a failure. So an SDK-detailed tx is never
+        // rendered from the frozen dashj confidence's error/failed state; dashj tx.confidence is
+        // consulted only in the dashj-only case, preserving the existing error handling there.
+        val sdkStatus: L1TxUiStatus? = (sdkOverride ?: sdkDetail)?.status
+        val hasError = if (sdkStatus != null) false else tx.confidence.hasErrors()
+        if (hasError) {
             val errorStatus = TxError.fromTransaction(tx)
             val showReportIssue = errorStatus == TxError.DoubleSpend || errorStatus == TxError.Duplicate ||
                 errorStatus == TxError.Unknown || errorStatus == TxError.InConflict
@@ -380,6 +536,7 @@ class TransactionResultViewBinder(
             binding.feeContainer.isVisible = false
             binding.dateContainer.isVisible = false
             binding.openExplorerCard.isVisible = false
+            binding.openProviderExplorerCard.isVisible = false
             binding.openTaxCategoryCard.isVisible = false
             binding.dashAmount.setStrikeThru(true)
             binding.fiatValue.setStrikeThru(true)
@@ -406,7 +563,10 @@ class TransactionResultViewBinder(
                 )
             }
         } else {
-            if (tx.getValue(wallet).signum() < 0) {
+            // Bug A: honor the SDK direction override (an SDK-authored send the
+            // frozen dashj wallet values at 0 would otherwise title "Received").
+            val isSent = sdkOverride?.isSent ?: (tx.getValue(wallet).signum() < 0)
+            if (isSent) {
                 binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
                 binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_sent)
                 binding.transactionAmountSignal.text = "-"
@@ -427,10 +587,6 @@ class TransactionResultViewBinder(
 
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {
         return transactionFee != null && transactionFee.isPositive
-    }
-
-    private fun openProfile(profile: DashPayProfile) {
-        context.startActivity(DashPayUserActivity.createIntent(context, profile))
     }
 
     private fun setInputs(inputAddresses: List<Address>, inflater: LayoutInflater) {

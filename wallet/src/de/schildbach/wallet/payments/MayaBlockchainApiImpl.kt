@@ -1,0 +1,257 @@
+/*
+ * Copyright 2023 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.payments
+
+import kotlinx.coroutines.CancellationException
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.InsufficientMoneyException
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionOutput
+import org.bitcoinj.script.ScriptBuilder
+import org.bitcoinj.script.ScriptPattern
+import org.bitcoinj.wallet.SendRequest
+import de.schildbach.wallet.data.WalletData
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.InsufficientFundsException
+import de.schildbach.wallet.payments.WalletSendPaymentService
+import org.dash.wallet.common.services.SendPaymentService
+import de.schildbach.wallet.util.toDashjCoin
+import org.dash.wallet.common.util.toCoin
+import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
+import org.dash.wallet.integrations.maya.api.MayaException
+import org.dash.wallet.integrations.maya.api.MayaWebApi
+import org.dash.wallet.integrations.maya.model.IncorrectSwapOutputCount
+import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
+import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.math.RoundingMode
+import javax.inject.Inject
+
+/**
+ * Wallet-module implementation of the Maya integration's [MayaBlockchainApi]: constructs the
+ * swap transaction (Asgard vault output + OP_RETURN memo + controlled change output ordering)
+ * with dashj and broadcasts it. Lives here so integrations/maya stays dashj-free.
+ */
+class MayaBlockchainApiImpl @Inject constructor(
+    private val sendPaymentService: WalletSendPaymentService,
+    private val mayaWebApi: MayaWebApi,
+    private val walletProviderData: WalletData
+) : MayaBlockchainApi {
+    companion object {
+        private val log: Logger = LoggerFactory.getLogger(MayaBlockchainApiImpl::class.java)
+        // Maximum bytes the DASH OP_RETURN can hold (enforced by
+        // ScriptBuilder.createOpReturnScript). A Maya swap memo longer than this would
+        // otherwise crash with an IllegalArgumentException inside the builder.
+        private const val MAX_OP_RETURN_BYTES = 80
+    }
+
+    override suspend fun commitSwapTransaction(
+        tradeId: String,
+        swapTradeUIModel: SwapTradeUIModel
+    ): ResponseResource<SwapTradeUIModel> {
+        log.info("commitSwapTransaction($tradeId, $swapTradeUIModel")
+        val resultSwapTrade = mayaWebApi.getSwapInfo(
+            SwapQuoteRequest(
+                amount = swapTradeUIModel.amount,
+                source_maya_asset = "DASH.DASH",
+                target_maya_asset = swapTradeUIModel.outputAsset,
+                fiatCurrency = swapTradeUIModel.amount.fiatCode,
+                targetAddress = swapTradeUIModel.destinationAddress,
+                maximum = swapTradeUIModel.maximum
+            )
+        )
+        return if (resultSwapTrade is ResponseResource.Success) {
+            buildAndSendSwapTx(resultSwapTrade.value)
+        } else {
+            resultSwapTrade
+        }
+    }
+
+    override suspend fun buildAndSendSwapTx(
+        swapTradeUIModel: SwapTradeUIModel
+    ): ResponseResource<SwapTradeUIModel> {
+        val params = walletProviderData.networkParameters
+        try {
+            val sendRequest: SendRequest
+            val memo = swapTradeUIModel.memo
+                ?: "=:${swapTradeUIModel.outputAsset}:${swapTradeUIModel.destinationAddress}"
+
+            // Guard the OP_RETURN size before building the script. ScriptBuilder
+            // .createOpReturnScript throws an IllegalArgumentException (with a null
+            // message) for payloads over MAX_OP_RETURN_BYTES; fail cleanly instead so the
+            // UI can surface a real error. Long token identifiers (e.g. an asset contract
+            // address plus the destination address) are what push a memo past the limit.
+            val memoBytes = memo.toByteArray()
+            if (memoBytes.size > MAX_OP_RETURN_BYTES) {
+                log.error("maya swap memo too long: {} bytes (max {}): {}", memoBytes.size, MAX_OP_RETURN_BYTES, memo)
+                return ResponseResource.Failure(
+                    MayaException("swap memo too long for OP_RETURN: ${memoBytes.size} > $MAX_OP_RETURN_BYTES bytes"),
+                    false,
+                    0,
+                    null
+                )
+            }
+            val tx = Transaction(params)
+
+            // set outputs according to:
+            //   https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/sending-transactions#utxo-chains
+            // Send the transaction with Asgard vault as VOUT0
+            if (!swapTradeUIModel.maximum) {
+                val dashAmountWithFees = if (!swapTradeUIModel.maximum) {
+                    (swapTradeUIModel.amount.dash + swapTradeUIModel.feeAmount.dash)
+                } else {
+                    swapTradeUIModel.amount.dash
+                }.setScale(8, RoundingMode.HALF_UP).toCoin().toDashjCoin()
+                tx.addOutput(
+                    dashAmountWithFees,
+                    Address.fromBase58(params, swapTradeUIModel.vaultAddress)
+                )
+                // Include the memo as an OP_RETURN in VOUT1
+                // memo documentation: https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/transaction-memos#swap
+                // SWAP:ASSET:DESTADDR[:AFFILIATE:FEE]
+                log.info("memo: {}", memo)
+                tx.addOutput(
+                    TransactionOutput(
+                        params,
+                        tx,
+                        Coin.ZERO,
+                        ScriptBuilder.createOpReturnScript(memo.toByteArray()).program
+                    )
+                )
+                sendRequest = SendRequest.forTx(tx)
+            } else {
+                sendRequest = SendRequest.emptyWallet(Address.fromBase58(params, swapTradeUIModel.vaultAddress))
+            }
+
+            // Override randomised VOUT ordering; MAYAChain requires specific output ordering.
+            sendRequest.sortByBIP69 = false // we don't want the output order changed
+            sendRequest.shuffleOutputs = false // we don't want the output order changed
+
+            // this will complete the transaction by adding inputs and an output for change
+            sendPaymentService.completeTransaction(sendRequest)
+
+            // verify that there are only 3 outputs in the transaction
+            if (!swapTradeUIModel.maximum && sendRequest.tx.outputs.size != 3) {
+                return ResponseResource.Failure(
+                    IncorrectSwapOutputCount(sendRequest.tx.outputs.size),
+                    false,
+                    0,
+                    null
+                )
+            }
+
+            if (swapTradeUIModel.maximum) {
+                // Include the memo as an OP_RETURN in VOUT1
+                // memo documentation: https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/transaction-memos#swap
+                // SWAP:ASSET:DESTADDR[:AFFILIATE:FEE]
+                sendRequest.tx.addOutput(
+                    TransactionOutput(
+                        params,
+                        tx,
+                        Coin.ZERO,
+                        ScriptBuilder.createOpReturnScript(memo.toByteArray()).program
+                    )
+                )
+                // account for the size and possibly larger signatures when re-signed
+                val size = sendRequest.tx.bitcoinSerialize().size + sendRequest.tx.inputs.size
+                sendRequest.tx.outputs[0].value = swapTradeUIModel.amount.dash.toCoin().toDashjCoin() -
+                    Coin.valueOf(size * Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.value / 1000)
+            } else {
+                // Pass all change back to the VIN0 address in VOUT2
+                val connectedOutput = sendRequest.tx.getInput(0).connectedOutput
+                    ?: return ResponseResource.Failure(
+                        MayaException("transaction input not connected"),
+                        false,
+                        0,
+                        null
+                    )
+                val scriptPubKey = connectedOutput.scriptPubKey
+
+                // to replace output[2], we must clear all outputs and them back
+                // this is because Transaction.getOutputs returns an immutable list
+                val outputs = sendRequest.tx.outputs.map { it }
+                sendRequest.tx.clearOutputs()
+                for (i in outputs.indices) {
+                    if (i != 2) {
+                        sendRequest.tx.addOutput(outputs[i])
+                    } else {
+                        sendRequest.tx.addOutput(outputs[i].value, scriptPubKey)
+                    }
+                }
+            }
+
+            // remove all signatures since we changed the last output.
+            for (input in sendRequest.tx.inputs) {
+                input.clearScriptBytes()
+            }
+
+            log.info("maya swap transaction: {}", sendRequest.tx)
+
+            sendPaymentService.signTransaction(sendRequest)
+            log.info("maya swap transaction resigned: {}", sendRequest.tx)
+
+            // check that vout3 is using vin0
+            if (!swapTradeUIModel.maximum && ScriptPattern.isP2PKH(sendRequest.tx.outputs[2].scriptPubKey)) {
+                val input0 = sendRequest.tx.inputs[0]
+                if (sendRequest.tx.outputs[2].scriptPubKey != input0.connectedOutput?.scriptPubKey) {
+                    return ResponseResource.Failure(MayaException("vout3 script != vin0"), false, 0, null)
+                }
+            }
+            // check the fee
+            val fee = sendRequest.tx.fee / sendRequest.tx.bitcoinSerialize().size * 1000
+            if (fee < Transaction.DEFAULT_TX_FEE) {
+                return ResponseResource.Failure(MayaException("swap transaction fee too small"), false, 0, null)
+            }
+
+            // Replace sendRequest.tx with a fresh Transaction before committing.
+            // wallet.completeTx() caches a TransactionConfidence (keyed to the txid at
+            // that moment) in Transaction.confidence.  After we modify outputs and re-sign,
+            // the txid changes but the cached field is not updated — it still points to the
+            // stale confidence.  Creating a new Transaction and moving the same input/output
+            // objects into it leaves confidence == null, so wallet.commitTx() will create
+            // the correct confidence for the final txid, keeping the TxConfidenceTable and
+            // any confidence listeners in sync.  All transient state (connectedOutput,
+            // input.value, signatures) is preserved because we reuse the same objects.
+            val freshTx = Transaction(params)
+            sendRequest.tx.outputs.forEach { freshTx.addOutput(it) }
+            sendRequest.tx.inputs.forEach { freshTx.addInput(it) }
+            sendRequest.tx = freshTx
+
+            // send the transaction
+            log.info("maya swap transaction: {}", sendRequest.tx.toStringHex())
+            val sentTransaction = sendPaymentService.sendTransaction(sendRequest)
+            swapTradeUIModel.txid = sentTransaction.txId.toString()
+            return ResponseResource.Success(swapTradeUIModel)
+        } catch (e: InsufficientMoneyException) {
+            // rethrown as the neutral exception so the maya module can detect it without dashj
+            val neutral = InsufficientFundsException(e.message, e)
+            return ResponseResource.Failure(neutral, false, 0, e.message)
+        } catch (e: CancellationException) {
+            // Never convert cancellation into Failure: if the coroutine is cancelled after
+            // sendTransaction() has broadcast the swap tx, a Failure would tell the caller the
+            // swap failed and invite a retry — a double swap. Propagate so the caller's scope
+            // handles it as a cancellation, not a result.
+            throw e
+        } catch (e: Exception) {
+            log.error("failed to build/send maya swap transaction", e)
+            return ResponseResource.Failure(e, false, 0, e.message)
+        }
+    }
+}

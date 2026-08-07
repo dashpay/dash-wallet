@@ -33,7 +33,7 @@ import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.OuzoDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.money.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 
 import java.io.File;
@@ -49,6 +49,9 @@ public final class Constants {
 
     /** Network this wallet is on (e.g. testnet or mainnet). */
     public static final NetworkParameters NETWORK_PARAMETERS;
+
+    /** Neutral network descriptor matching {@link #NETWORK_PARAMETERS}, for the dashj-free common APIs. */
+    public static final org.dash.wallet.common.payments.parsers.AddressNetwork ADDRESS_NETWORK;
 
     private static String FILENAME_NETWORK_SUFFIX;
     private static String FEE_NETWORK_SUFFIX;
@@ -66,6 +69,8 @@ public final class Constants {
     public static boolean SUPPORTS_INVITES;
     // TODO: remove all references to this when transaction metadata is saved on platform
     public static final boolean SUPPORTS_TXMETADATA;
+    public static final boolean SUPPORTS_MAYA_NATIVE = false;
+    public static final boolean SUPPORTS_SWAPKIT = true;
 
     public static final EnumSet<MasternodeSync.SYNC_FLAGS> SYNC_FLAGS = MasternodeSync.SYNC_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.VERIFY_FLAGS> VERIFY_FLAGS = MasternodeSync.VERIFY_DEFAULT_SPV;
@@ -121,7 +126,10 @@ public final class Constants {
                 if (SUPPORTS_PLATFORM) {
                     SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 }
-                org.dash.wallet.common.util.Constants.FAUCET_URL = "http://faucet.testnet.networks.dash.org/";
+                // Same faucet the iOS example app uses (it replaced
+                // faucet.testnet.networks.dash.org, which no longer accepts
+                // connections and whose captcha challenge fails).
+                org.dash.wallet.common.util.Constants.FAUCET_URL = "https://faucet.thepasta.org/";
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v4-testnet.db");
                 break;
             }
@@ -148,7 +156,9 @@ public final class Constants {
                 throw new IllegalStateException("Unsupported flavor " + BuildConfig.FLAVOR);
             }
         }
-        org.dash.wallet.common.util.Constants.INSTANCE.setMAX_MONEY(NETWORK_PARAMETERS.getMaxMoney());
+        ADDRESS_NETWORK = org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(NETWORK_PARAMETERS.getId());
+        org.dash.wallet.common.util.Constants.INSTANCE.setMAX_MONEY(
+                org.dash.wallet.common.money.Coin.valueOf(NETWORK_PARAMETERS.getMaxMoney().getValue()));
         org.dash.wallet.common.util.Constants.INSTANCE.setBUILD_FLAVOR(BuildConfig.FLAVOR);
     }
 
@@ -278,6 +288,13 @@ public final class Constants {
     public static String NOTIFICATION_CHANNEL_ID_ONGOING = "dash.notifications.ongoing";
     public static String NOTIFICATION_CHANNEL_ID_GENERIC = "dash.notifications.generic";
     public static String NOTIFICATION_CHANNEL_ID_DASHPAY = "dash.notifications.dashpay";
+    /**
+     * Incoming contact requests. Deliberately a channel of its own rather than
+     * {@link #NOTIFICATION_CHANNEL_ID_DASHPAY}: that one is IMPORTANCE_LOW (it carries the
+     * identity-creation progress notification, which must stay silent), and Android freezes a
+     * channel's importance at creation time, so an existing install could never be raised.
+     */
+    public static String NOTIFICATION_CHANNEL_ID_CONTACTS = "dash.notifications.contacts";
 
     public static int USERNAME_MIN_LENGTH = 3;
     public static int USERNAME_NON_CONTESTED_MIN_LENGTH = 20;
@@ -315,6 +332,37 @@ public final class Constants {
     public static final Coin DASH_PAY_FEE_CONTESTED = Coin.parseCoin("0.25");
     public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.20");
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
+
+    // Fee margin one shielded operation costs ON TOP of its denomination /
+    // shielded amount. Derived from the consensus fee constants
+    // (rs-platform-version / rs-dpp compute_minimum_shielded_fee, current
+    // values):
+    //  - Shield entry (ShieldFromAssetLock): pool fee = min_shielded_fee(2
+    //    actions) 162,851,200 + asset-lock base cost 50,000,000
+    //    = 212,851,200 credits ~= 0.00213 DASH, deducted from the locked
+    //    amount;
+    //  - Type-16 shielded transfer (the invite mint):
+    //    100M + n_actions x 31,425,600 credits, i.e. ~0.00194 DASH at the
+    //    3-action minimum, +0.000314 per extra spent note.
+    // 0.003 covers either with headroom (a transfer of up to 6 actions).
+    // Replaces the 0.05 guess pad (2026-08-05). Kept in sync with the
+    // credits-space twin SHIELDED_INVITE_FEE_MARGIN_CREDITS
+    // (SdkShieldedInviteCreation.kt) by InviteFeeGateTest.
+    public static final Coin SHIELDED_FEE_MARGIN = Coin.parseCoin("0.003");
+
+    // How much the user should SHIELD (L1 -> pool) to afford a username via
+    // the shielded path. The pool must hold the whole exit denomination
+    // (0.03 non-contested / 0.25 contested under the v13 allowed set —
+    // see SHIELDED_IDENTITY_DENOMINATIONS_CREDITS; under v13 the
+    // denominations equal DASH_PAY_FEE / DASH_PAY_FEE_CONTESTED, pinned by
+    // InviteFeeGateTest), and the Shield operation's own fee is deducted
+    // from the locked amount — so shielding the bare denomination lands
+    // just short. User-facing guidance is a ROUND number chosen above
+    // denomination + SHIELDED_FEE_MARGIN (product decision 2026-08-05):
+    // 0.035 / 0.26. Must never fall below the enforced gate
+    // (denomination + SHIELDED_FEE_MARGIN) — pinned by InviteFeeGateTest.
+    public static final Coin SHIELDED_USERNAME_FUND_MIN = Coin.parseCoin("0.035");
+    public static final Coin SHIELDED_USERNAME_FUND_MIN_CONTESTED = Coin.parseCoin("0.26");
 
     // 150,000,000
     public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);

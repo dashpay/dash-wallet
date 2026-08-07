@@ -13,7 +13,6 @@
     <string name="blockchain_state_progress_stalled">Synchronization stalled</string>
     <string name="blockchain_state_progress_problem_storage">Synchronizing: Storage problem</string>
     <string name="blockchain_state_progress_problem_network">Synchronizing: Network problem</string>
-    <string name="mixing_state_progress_mixing">Mixing Coins (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Dash address copied to clipboard</string>
     <string name="wallet_address_dialog_fragment_hint">To protect your privacy, your address will change once it receives a payment.</string>
     <string name="wallet_balance_fragment_too_much">This amount is quite high for carrying in your pocket. Please move some to a safer place.</string>
@@ -43,8 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Manage apps</string>
     <string name="wallet_timeskew_dialog_title">Check date &amp; time settings</string>
     <string name="wallet_timeskew_dialog_msg">Your device time is off by %d minutes. You probably cannot send or receive Dash due to this problem.\n\nYou should check and if necessary correct your date, time and timezone settings.</string>
-    <string name="wallet_coinjoin_timeskew_dialog_msg">Your device time is %s by %d seconds. You cannot use CoinJoin due to this difference.\n\nThe time settings on your device needs to be changed to “Set time automatically” to use CoinJoin.</string>
-    <string name="settings_coinjoin_timeskew_dialog_msg">Your device time is off by more than 5 seconds. You cannot use CoinJoin due to this difference.\n\nThe time settings on your device needs to be changed to “Set time automatically” before using CoinJoin.</string>
     <string name="send_coins_activity_title">Send Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Fetching signature from %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Fetching signature failed</string>
@@ -78,6 +75,12 @@
     <string name="send_coins_sent_msg">Sent!</string>
     <string name="send_coins_failed_msg">Failed!</string>
     <string name="send_coins_error_msg">Problem sending coins!</string>
+    <!-- Shown when a payment shape cannot be processed by the wallet's send engine (e.g. multi-recipient payment requests). No funds were sent. -->
+    <string name="send_coins_error_not_supported">This payment type isn\'t supported yet. No funds have left your wallet.</string>
+    <!-- Generic fallback when a send fails for an internal reason; the raw error text is never shown to the user. -->
+    <string name="send_coins_error_generic">The payment could not be sent.</string>
+    <!-- Shown when the send engine could not sign because the wallet's secure key store is locked. No funds were sent; the same payment works after unlocking. -->
+    <string name="send_coins_error_signer_locked">Your wallet couldn\'t sign this payment because it is locked. No funds have left your wallet — unlock your wallet and try again.</string>
     <string name="send_coins_options_fee_category">Fee</string>
     <string name="send_coins_options_fee_category_economic">Economic</string>
     <string name="send_coins_options_fee_category_priority">Priority</string>
@@ -151,6 +154,9 @@
     <string name="transaction_row_status_sent">Sent</string>
     <string name="transaction_row_status_sending">Sending</string>
     <string name="transaction_row_status_sent_internally">Internal</string>
+    <string name="transaction_row_shielded">Shielded</string>
+    <string name="transaction_row_unshielded">Unshielded</string>
+    <string name="transaction_row_invitation">Invitation</string>
     <string name="transaction_row_status_processing">Processing</string>
     <string name="transaction_row_status_confirming">Confirming</string>
     <string name="transaction_row_status_locked">Locked</string>
@@ -165,6 +171,10 @@
     <string name="transaction_row_status_error_obsolete">Obsolete</string>
     <string name="transaction_row_status_error_invalid">Invalid</string>
     <string name="transaction_row_status_error_other">Unknown</string>
+    <string name="transaction_row_status_refunded">Refunded</string>
+    <string name="transaction_row_status_failed">Failed</string>
+    <string name="transaction_row_conversion">Conversion · %1$s/%2$s</string>
+    <string name="transaction_row_converted">Converted · %1$s/%2$s</string>
     <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
     <string name="transaction_row_time_text">On %s at %s</string>
     <string name="transaction_row_status_masternode_registration">Masternode Registration</string>
@@ -181,6 +191,27 @@
     <string name="network_monitor_activity_title">Network monitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blocks</string>
+    <string name="network_monitor_stage_idle">Not started</string>
+    <string name="network_monitor_stage_connecting">Connecting to the Dash network…</string>
+    <string name="network_monitor_stage_headers">Downloading block headers</string>
+    <string name="network_monitor_stage_filter_headers">Downloading filter headers</string>
+    <string name="network_monitor_stage_masternodes">Syncing masternode list</string>
+    <string name="network_monitor_stage_filters">Scanning block filters</string>
+    <string name="network_monitor_stage_synced">Synced</string>
+    <string name="network_monitor_stage_error">Sync error</string>
+    <string name="network_monitor_progress">%1$d%%</string>
+    <string name="network_monitor_headers_label">Block headers</string>
+    <string name="network_monitor_filters_label">Block filters</string>
+    <string name="network_monitor_mnlist_label">Masternode list height</string>
+    <string name="network_monitor_chainlock_label">ChainLock height</string>
+    <string name="network_monitor_height_of_target">%1$s / %2$s</string>
+    <string name="network_monitor_value_unknown">—</string>
+    <string name="network_monitor_connection_connected">Connected to the Dash network</string>
+    <string name="network_monitor_connection_searching">Searching for peers…</string>
+    <string name="network_monitor_connection_idle">Network engine not started</string>
+    <string name="network_monitor_connection_error">Connection error</string>
+    <string name="network_monitor_peer_details_note">The wallet engine does not report individual peer connections.</string>
+    <string name="network_monitor_dashj_hint">Peer and block lists come from the dashj diagnostic engine. Turn on dashj sync in Tools to view them.</string>
     <string name="block_row_mining_difficulty_adjustment">Mining difficulty adjustment</string>
     <string name="block_row_mining_reward_adjustment">Mining reward halving</string>
     <string name="block_row_now">just now</string>
@@ -293,6 +324,8 @@
     <string name="report_issue_dialog_message_crash">Would you like to send a crash report, helping to fix this issue in the future?</string>
     <string name="report_issue_dialog_description">issue description</string>
     <string name="report_issue_dialog_report">Report</string>
+    <string name="wallet_recovery_from_seed_message">Your wallet file could not be read and no automatic backup was usable. Your funds are safe on the network — restore your wallet with your recovery phrase to continue.</string>
+    <string name="safe_mode_startup_message">The app did not finish starting up the last few times, so this start skipped loading your wallet. Nothing has been changed or deleted. Send us a report, or try opening your wallet again.</string>
     <string name="report_issue_dialog_collect_device_info">Append device information</string>
     <string name="report_issue_dialog_collect_installed_packages">Append list of installed packages</string>
     <string name="report_issue_dialog_collect_application_log">Append application log</string>
@@ -359,7 +392,7 @@
     <string name="notification_bluetooth_service_listening">Ready to receive payments via Bluetooth</string>
     <string name="notification_sync_paused">Blockchain sync paused</string>
     <string name="notification_background_processes_paused">Background processing paused</string>
-    <string name="notification_background_processes_paused_text">You\'ve reached the Android 6-hour foreground service limit for mixing or blockchain sync. Tap to reset…</string>
+    <string name="notification_background_processes_paused_text">You\'ve reached the Android 6-hour foreground service limit for blockchain sync. Tap to reset…</string>
     <string name="appwidget_wallet_balance_title">Dash balance</string>
 
     <!-- generic buttons -->

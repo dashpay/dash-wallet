@@ -19,14 +19,14 @@ package org.dash.wallet.integrations.coinbase.viewmodels
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.InsufficientMoneyException
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.isTransactionPending
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.isInsufficientMoney
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
@@ -83,17 +83,17 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                 } else {
                     if (inputCurrency == Constants.DASH_CURRENCY) {
                         try {
-                            val coin = Coin.parseCoin(inputAmount)
+                            val coin = Dash.parse(inputAmount)
                             sellDashToCoinBase(coin)
                         } catch (x: Exception) {
-                            Coin.ZERO
+                            Dash.ZERO
                         }
                     } else {
                         sendFundToWalletParams = SendTransactionToWalletParams(
                             amount = result.value.displayInputAmount,
                             currency = result.value.displayInputCurrency,
                             idem = UUID.randomUUID().toString(),
-                            to = walletDataProvider.freshReceiveAddress().toBase58(),
+                            to = walletDataProvider.freshReceiveAddressString(),
                             type = CoinbaseConstants.TRANSACTION_TYPE_SEND
                         ).apply {
                             commitSwapTradeSuccessState.value = this
@@ -171,7 +171,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         analyticsService.logEvent(eventName, mapOf())
     }
 
-    private suspend fun sellDashToCoinBase(coin: Coin) {
+    private suspend fun sellDashToCoinBase(coin: Dash) {
         _showLoading.value = true
 
         when (val result = coinBaseRepository.createAddress()) {
@@ -192,22 +192,23 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         }
     }
 
-    private suspend fun sendDashToCoinbase(coin: Coin, addressInfo: String): Boolean {
-        val address = Address.fromString(walletDataProvider.networkParameters, addressInfo.trim { it <= ' ' })
+    private suspend fun sendDashToCoinbase(coin: Dash, addressInfo: String): Boolean {
+        val address = addressInfo.trim { it <= ' ' }
         return try {
-            val transaction = sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false)
+            val txId = sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false)
             transactionMetadataProvider.markAddressAsTransferOutAsync(
-                address.toBase58(),
+                address,
                 ServiceName.Coinbase
             )
-            transaction.isPending
-        } catch (x: InsufficientMoneyException) {
-            onInsufficientMoneyCallback.call()
-            x.printStackTrace()
-            false
-        } catch (ex: Exception) {
-            onFailure.value = ex.message
-            ex.printStackTrace()
+            walletDataProvider.isTransactionPending(txId)
+        } catch (x: Exception) {
+            if (x.isInsufficientMoney) {
+                onInsufficientMoneyCallback.call()
+                x.printStackTrace()
+            } else {
+                onFailure.value = x.message
+                x.printStackTrace()
+            }
             false
         }
     }

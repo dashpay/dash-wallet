@@ -56,9 +56,9 @@ class StakingDialog : OffsetDialogFragment(R.layout.dialog_staking) {
             )
         }
 
-        binding.stakingConnectedDashAddress.text = viewModel.accountAddress.value?.toBase58()
+        binding.stakingConnectedDashAddress.text = viewModel.accountAddress.value
         binding.stakingConnectedAddressContainer.setOnClickListener {
-            viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
+            viewModel.accountAddress.value?.copy(requireActivity(), "dash address")
             Toast.makeText(requireContext(), R.string.crowdnode_staking_toast_address_copied, Toast.LENGTH_SHORT).show()
         }
     }

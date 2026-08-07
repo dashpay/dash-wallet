@@ -344,32 +344,13 @@
     <string name="request_username_min_balance_disclaimer">Dash Ağı\'nda bir kullanıcı adı talep etmek için %s\'den fazla Dash\'e sahip olmanız gerekir</string>
 
     <!-- CoinJoin -->
-    <string name="coinjoin">CoinJoin</string>
     <string name="turned_off">Kapalı</string>
-    <string name="coinjoin_info_subtitle">Dash’inizi karıştırmak işlemlerinizi daha özel hale getirir</string>
-    <string name="coinjoin_description_1">Bu aktive edildiğinde yalnızca karıştırılmış olan Dash\'ı harcayabileceksiniz. İstediğiniz bir zaman bunu kapatabilirsiniz.</string>
-    <string name="coinjoin_description_2">Yeni alınan Dash, cüzdan başlatıldığında otomatik olarak karıştırılacaktır.</string>
-    <string name="coinjoin_description_3">Bu özelliğin açılması daha yüksek pil kullanımına neden olur</string>
-    <string name="coinjoin_mixing_level_title">Karıştırma seviyesini seçin</string>
-    <string name="coinjoin_mixing_level_subtitle">Karıştırma seviyesini istediğiniz zaman değiştirebilir veya durdurabilirsiniz</string>
     <string name="coinjoin_mixing_transactions">Karıştırma İşlemleri</string>
     <string name="coinjoin_transaction_group">Bunlar birbiriyle ilişkili karıştırma işlemleri.</string>
     <string name="intermediate">Orta seviye</string>
     <string name="advanced">Gelişmiş</string>
     <string name="intermediate_level_card_decs">Yüksek düzeyde teknik uzmanlığa sahip ileri düzey kullanıcılar, işlem geçmişinizi belirleyebilir.</string>
     <string name="advanced_level_card_decs">Herhangi bir düzeyde teknik uzmanlığa sahip ileri düzey kullanıcıların işlem geçmişinizi belirlemesi çok zor olacaktır.</string>
-    <string name="coinjoin_intermediate_time">30 dakikaya kadar</string>
-    <string name="coinjoin_advanced_time">Birden fazla saat</string>
-    <string name="coinjoin_start">Karıştırmaya Başla</string>
-    <string name="coinjoin_stop">Karıştırmayı Durdur</string>
-    <string name="coinjoin_mixing">Karıştırma</string>
-    <string name="coinjoin_not_started">Başlamadı</string>
-    <string name="coinjoin_progress_balance">%1$s / %2$s</string>
-    <string name="coinjoin_progress_finished">Tamamen Karıştırılmış</string>
-    <string name="coinjoin_change_level_confirmation">Gizlilik düzeyini değiştirmek istediğinizden emin misiniz\?</string>
-    <string name="coinjoin_stop_mixing_title">Karıştırmayı sonlandırmak istediğinizden emin misiniz\?</string>
-    <string name="coinjoin_stop_mixing_message">Karıştırılmış tüm fonlar karıştırılmamış fonlarınızla birleştirilecektir</string>
-    <string name="coinjoin_mixed_balance">Karıştırılmış bakiye:</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">Kredi bakiyeniz düşük</string>

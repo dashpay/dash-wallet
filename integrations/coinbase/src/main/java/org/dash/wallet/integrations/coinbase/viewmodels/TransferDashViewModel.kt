@@ -6,12 +6,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards
-import org.bitcoinj.wallet.Wallet.DustySendRequested
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.R
 import org.dash.wallet.common.WalletDataProvider
@@ -20,6 +14,11 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.getDashBalance
+import org.dash.wallet.common.isTransactionPending
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.observeTotalDashBalance
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -51,13 +50,13 @@ class TransferDashViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig
 ) : ViewModel() {
 
-    val minimumFee: Coin = Coin.valueOf(226)
+    val minimumFee: Dash = Dash.valueOf(226)
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
     val observeLoadingState: LiveData<Boolean>
         get() = _loadingState
 
-    private val _dashBalanceInWalletState = MutableLiveData(walletDataProvider.getWalletBalance())
-    val dashBalanceInWalletState: LiveData<Coin>
+    private val _dashBalanceInWalletState = MutableLiveData(walletDataProvider.getDashBalance())
+    val dashBalanceInWalletState: LiveData<Dash>
         get() = _dashBalanceInWalletState
 
     private var withdrawalLimitCurrency = MutableStateFlow<String?>(null)
@@ -89,22 +88,22 @@ class TransferDashViewModel @Inject constructor(
 
     val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
-    var minAllowedSwapDashCoin: Coin = Coin.ZERO
-    var minFiatAmount: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+    var minAllowedSwapDashCoin: Dash = Dash.ZERO
+    var minFiatAmount: FiatValue = FiatValue.valueOf(Constants.USD_CURRENCY, 0)
 
-    var maxForDashCoinBaseAccount: Coin = Coin.ZERO
+    var maxForDashCoinBaseAccount: Dash = Dash.ZERO
         private set
 
     init {
         getUserAccountAddress()
         getUserData()
-        walletDataProvider.observeSpendableBalance()
+        walletDataProvider.observeTotalDashBalance()
             .onEach(_dashBalanceInWalletState::postValue)
             .launchIn(viewModelScope)
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
-            .onEach { minFiatAmount = Fiat.valueOf(it, minFiatAmount.value) }
+            .onEach { minFiatAmount = FiatValue.valueOf(it, minFiatAmount.value) }
             .launchIn(viewModelScope)
 
         withdrawalLimitCurrency
@@ -133,18 +132,18 @@ class TransferDashViewModel @Inject constructor(
         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
         val coin = try {
-            Coin.parseCoin(bd.toString())
+            Dash.parse(bd.toString())
         } catch (x: Exception) {
-            Coin.ZERO
+            Dash.ZERO
         }
 
         minAllowedSwapDashCoin = coin
 
         val formattedAmount = GenericUtils.formatFiatWithoutComma(minFaitValue.toString())
         minFiatAmount = try {
-            Fiat.parseFiat(minFiatAmount.currencyCode, formattedAmount)
+            FiatValue.parseFiat(minFiatAmount.currencyCode, formattedAmount)
         } catch (x: Exception) {
-            Fiat.valueOf(minFiatAmount.currencyCode, 0)
+            FiatValue.valueOf(minFiatAmount.currencyCode, 0)
         }
     }
 
@@ -152,11 +151,11 @@ class TransferDashViewModel @Inject constructor(
         maxForDashCoinBaseAccount = account.coinbaseAccount.coinBalance()
     }
 
-    private suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
+    private suspend fun isInputGreaterThanLimit(amountInDash: Dash): Boolean {
         return coinBaseRepository.isInputGreaterThanLimit(amountInDash)
     }
 
-    suspend fun checkEnteredAmountValue(amountInDash: Coin): SwapValueErrorType {
+    suspend fun checkEnteredAmountValue(amountInDash: Dash): SwapValueErrorType {
         return when {
             (amountInDash == minAllowedSwapDashCoin || amountInDash.isGreaterThan(minAllowedSwapDashCoin)) &&
                 maxForDashCoinBaseAccount.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.NotEnoughBalance
@@ -171,7 +170,7 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    fun isInputGreaterThanWalletBalance(input: Coin, balanceInWallet: Coin): Boolean {
+    fun isInputGreaterThanWalletBalance(input: Dash, balanceInWallet: Dash): Boolean {
         return input.isGreaterThan(balanceInWallet)
     }
 
@@ -199,25 +198,22 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    suspend fun sendDash(dashValue: Coin, isEmptyWallet: Boolean, checkConditions: Boolean) {
+    suspend fun sendDash(dashValue: Dash, isEmptyWallet: Boolean, checkConditions: Boolean) {
         _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet, checkConditions)
     }
 
-    suspend fun estimateNetworkFee(value: Coin, emptyWallet: Boolean): SendPaymentService.TransactionDetails? {
+    suspend fun estimateNetworkFee(value: Dash, emptyWallet: Boolean): SendPaymentService.TransactionEstimate? {
         try {
             return sendPaymentService.estimateNetworkFee(dashAddress, value, emptyWallet)
         } catch (exception: Exception) {
-            when (exception) {
-                is DustySendRequested -> {
+            when {
+                exception.isDustySend -> {
                     _sendDashToCoinbaseError.value = NetworkFeeExceptionState(R.string.send_coins_error_dusty_send)
                 }
-                is InsufficientMoneyException -> {
+                exception.isInsufficientMoney -> {
                     _sendDashToCoinbaseError.value = NetworkFeeExceptionState(
                         R.string.send_coins_error_insufficient_money
                     )
-                }
-                is CouldNotAdjustDownwards -> {
-                    _sendDashToCoinbaseError.value = NetworkFeeExceptionState(R.string.send_coins_error_dusty_send)
                 }
                 else -> {
                     _sendDashToCoinbaseError.value = NetworkFeeExceptionState(exceptionMessage = exception.toString())
@@ -228,32 +224,36 @@ class TransferDashViewModel @Inject constructor(
     }
 
     private suspend fun checkTransaction(
-        coin: Coin,
+        coin: Dash,
         isEmptyWallet: Boolean,
         checkConditions: Boolean
     ): SendDashResponseState {
         return try {
-            val transaction = sendPaymentService.sendCoins(
+            val txId = sendPaymentService.sendCoins(
                 dashAddress,
                 coin,
                 emptyWallet = isEmptyWallet,
                 checkBalanceConditions = checkConditions
             )
             transactionMetadataProvider.markAddressAsTransferOutAsync(
-                dashAddress.toBase58(),
+                dashAddress,
                 ServiceName.Coinbase
             )
-            SendDashResponseState.SuccessState(transaction.isPending)
-        } catch (e: LeftoverBalanceException) {
-            throw e
-        } catch (e: InsufficientMoneyException) {
-            e.printStackTrace()
-            SendDashResponseState.InsufficientMoneyState
+            SendDashResponseState.SuccessState(walletDataProvider.isTransactionPending(txId))
         } catch (e: Exception) {
-            e.printStackTrace()
-            e.message?.let {
-                SendDashResponseState.FailureState(it)
-            } ?: SendDashResponseState.UnknownFailureState
+            when {
+                e.isLeftoverBalanceWarning -> throw e
+                e.isInsufficientMoney -> {
+                    e.printStackTrace()
+                    SendDashResponseState.InsufficientMoneyState
+                }
+                else -> {
+                    e.printStackTrace()
+                    e.message?.let {
+                        SendDashResponseState.FailureState(it)
+                    } ?: SendDashResponseState.UnknownFailureState
+                }
+            }
         }
     }
 
@@ -262,7 +262,7 @@ class TransferDashViewModel @Inject constructor(
             dashValue,
             Constants.DASH_CURRENCY,
             UUID.randomUUID().toString(),
-            walletDataProvider.freshReceiveAddress().toBase58(),
+            walletDataProvider.freshReceiveAddressString(),
             CoinbaseConstants.TRANSACTION_TYPE_SEND
         )
 
@@ -330,13 +330,10 @@ class TransferDashViewModel @Inject constructor(
             }
         }
     }
-    private val dashAddress: Address
-        get() = Address.fromString(
-            walletDataProvider.networkParameters,
-            (observeCoinbaseAddressState.value ?: observeCoinbaseUserAccountAddress.value ?: "").trim {
-                it <= ' '
-            }
-        )
+    private val dashAddress: String
+        get() = (observeCoinbaseAddressState.value ?: observeCoinbaseUserAccountAddress.value ?: "").trim {
+            it <= ' '
+        }
 }
 
 sealed class SendDashResponseState {

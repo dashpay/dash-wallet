@@ -24,9 +24,9 @@ import java.io.InputStream;
 
 import javax.annotation.Nullable;
 
-import org.bitcoin.protocols.payments.Protos;
-import org.bitcoin.protocols.payments.Protos.Payment;
-import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.dash.wallet.common.payments.bip70.Protos;
+import org.dash.wallet.common.payments.bip70.Protos.Payment;
+import org.dash.wallet.common.payments.bip70.PaymentProtocol;
 import org.dash.wallet.common.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -25,8 +25,8 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.base.Stopwatch
 import de.schildbach.wallet.data.InvitationLinkData
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.serializeIdentityToleratingContractBounds
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -99,7 +99,6 @@ class BlockchainIdentityData(
     var registrationStatus: IdentityStatus? = null,
     var usernameStatus: UsernameStatus? = null,
     var usernameSecondaryStatus: UsernameStatus? = null,
-    var privacyMode: CoinJoinMode? = null,
     var creditBalance: Coin? = null,
     var activeKeyCount: Int? = null,
     var totalKeyCount: Int? = null,
@@ -219,7 +218,6 @@ open class BlockchainIdentityConfig @Inject constructor(
         val USERNAME_SECONDARY_REGISTRATION_STATUS = stringPreferencesKey("username_secondary_registration_status")
 
         val IDENTITY = stringPreferencesKey("identity")
-        val PRIVACY_MODE = stringPreferencesKey("privacy_mode")
         val BALANCE = longPreferencesKey("identity_balance")
 
         val REQUESTED_USERNAME_LINK = stringPreferencesKey("requested_username_link")
@@ -247,7 +245,6 @@ open class BlockchainIdentityConfig @Inject constructor(
                 registrationStatus = prefs[IDENTITY_REGISTRATION_STATUS]?.let { IdentityStatus.valueOf(it) },
                 usernameStatus = prefs[USERNAME_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
                 usernameSecondaryStatus = prefs[USERNAME_SECONDARY_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
-                privacyMode = prefs[PRIVACY_MODE]?.let { CoinJoinMode.valueOf(it) },
                 creditBalance = prefs[BALANCE]?.let { Coin.valueOf(it) },
                 verificationLink = prefs[REQUESTED_USERNAME_LINK],
                 cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
@@ -304,13 +301,20 @@ open class BlockchainIdentityConfig @Inject constructor(
             blockchainIdentityData.userId?.let { prefs[IDENTITY_ID] = it }
             prefs[RESTORING] = blockchainIdentityData.restoring
             blockchainIdentityData.creditFundingTxId?.let { prefs[ASSET_LOCK_TXID] = it.toString() }
-            blockchainIdentityData.identity?.let { prefs[IDENTITY] = it.toBuffer().toHex() }
+            // Serialize tolerantly: the wallet's own 6-key identities carry
+            // contract bounds on keys 4/5 that the legacy dashj CBOR encoder
+            // cannot serialize (`No converter for SingleContractDocumentType`).
+            // A faithful toBuffer() throws here and stalls identity creation at
+            // IDENTITY_REGISTERING. This strips the bounds from the LOCAL cache
+            // blob only; the on-chain registration (SDK path) keeps them.
+            blockchainIdentityData.identity?.let {
+                prefs[IDENTITY] = serializeIdentityToleratingContractBounds(it).toHex()
+            }
             prefs[USING_INVITE] = blockchainIdentityData.usingInvite
             blockchainIdentityData.invite?.let { prefs[INVITE_LINK] = it.link.toString() }
             blockchainIdentityData.registrationStatus?.let { prefs[IDENTITY_REGISTRATION_STATUS] = it.name }
             blockchainIdentityData.usernameStatus?.let { prefs[USERNAME_REGISTRATION_STATUS] = it.name }
             blockchainIdentityData.usernameSecondaryStatus?.let { prefs[USERNAME_SECONDARY_REGISTRATION_STATUS] = it.name }
-            blockchainIdentityData.privacyMode?.let { prefs[PRIVACY_MODE] = it.name }
             blockchainIdentityData.creditBalance?.let { prefs[BALANCE] = it.value }
             blockchainIdentityData.usernameRequested?.let { prefs[USERNAME_REQUESTED] = it.name}
             blockchainIdentityData.verificationLink?.let { prefs[REQUESTED_USERNAME_LINK] = it }

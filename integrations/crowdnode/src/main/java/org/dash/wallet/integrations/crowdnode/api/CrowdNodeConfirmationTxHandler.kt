@@ -22,10 +22,8 @@ import android.content.res.Resources
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.services.NotificationService
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
@@ -36,20 +34,20 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 
 class CrowdNodeAPIConfirmationForwarded(
-    params: NetworkParameters
+    networkId: String
 ) : CoinsToAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(params),
+    CrowdNodeConstants.getCrowdNodeAddress(networkId),
     CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT,
     includeFee = true
 )
 
 open class CrowdNodeAPIConfirmationTx(
-    address: Address
+    address: String
 ) : CoinsToAddressTxFilter(address, CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT)
 
 class CrowdNodeAPIConfirmationHandler(
-    private val apiAddress: Address,
-    private val primaryAddress: Address,
+    apiAddress: String,
+    private val primaryAddress: String,
     private val blockchainApi: CrowdNodeBlockchainApi,
     private val notificationService: NotificationService,
     private val crowdNodeConfig: CrowdNodeConfig,
@@ -64,7 +62,7 @@ class CrowdNodeAPIConfirmationHandler(
         Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     )
 
-    fun handle(tx: Transaction) {
+    fun handle(tx: TxInfo) {
         log.info("Handling confirmation tx: ${tx.txId}")
 
         handlerScope.launch {

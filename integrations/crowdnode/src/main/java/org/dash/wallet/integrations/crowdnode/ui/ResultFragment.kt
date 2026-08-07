@@ -27,11 +27,10 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards
-import org.bitcoinj.wallet.Wallet.DustySendRequested
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.isDustySend
+import org.dash.wallet.common.services.isInsufficientMoney
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
@@ -66,10 +65,10 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
     }
 
     private fun setErrorMessage(ex: Exception) {
-        binding.subtitle.text = when (ex) {
-            is DustySendRequested, is CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
-            is InsufficientMoneyException -> ex.message ?: getString(R.string.send_coins_error_insufficient_money)
-            is CrowdNodeException -> {
+        binding.subtitle.text = when {
+            ex.isDustySend -> getString(R.string.send_coins_error_dusty_send)
+            ex.isInsufficientMoney -> ex.message ?: getString(R.string.send_coins_error_insufficient_money)
+            ex is CrowdNodeException -> {
                 if (ex.message == CrowdNodeException.WITHDRAWAL_ERROR) {
                     getString(R.string.crowdnode_withdrawal_limits_error)
                 } else {
@@ -96,7 +95,7 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             setErrorMessage(it)
         }
 
-        if (viewModel.crowdNodeError is InsufficientMoneyException ||
+        if (viewModel.crowdNodeError?.isInsufficientMoney == true ||
             viewModel.crowdNodeError?.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true ||
             viewModel.crowdNodeError?.message == CrowdNodeException.CONFIRMATION_ERROR
         ) {

@@ -32,10 +32,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.MoneyFormat
+import org.dash.wallet.common.money.dashToFiat
+import org.dash.wallet.common.money.fiatValue
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
@@ -66,7 +67,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     private var loadingDialog: AdaptiveDialog? = null
     private var cryptoWalletsDialog: CryptoWalletsDialog? = null
     private var selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel? = null
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    private val dashFormat = MoneyFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(8).optionalDecimals()
 
     private lateinit var fragment: ConvertViewFragment
@@ -105,11 +106,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) { rate ->
-            rate?.let {
+            rate?.fiatValue?.let { fiatValue ->
                 binding.toolbarSubtitle.text = getString(
                     R.string.exchange_rate_template,
-                    Coin.COIN.toPlainString(),
-                    rate.fiat.toFormattedString()
+                    Dash.COIN.toPlainString(),
+                    fiatValue.toFormattedString()
                 )
             }
         }
@@ -201,7 +202,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
-            binding.convertView.exchangeRate = it?.let { ExchangeRate(Coin.COIN, it.fiat) }
+            binding.convertView.exchangeRate = it?.fiatValue
             setConvertViewInput()
         }
 
@@ -279,7 +280,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         lifecycleScope.launch {
             if (swapValueErrorType == SwapValueErrorType.NOError) {
                 if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
-                    if (viewModel.getLastBalance() < (request.amount ?: Coin.ZERO)) {
+                    if (viewModel.getLastBalance() < (request.amount ?: Dash.ZERO)) {
                         showNoAssetsError()
                     }
                 } else {
@@ -344,8 +345,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         if (convertViewModel.dashToCrypto.value == true) {
             viewModel.dashWalletBalance.value?.let { dash ->
                 convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
-                    val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
-                    val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
+                    val fiatAmount = rate.dashToFiat(dash).toFormattedString()
                     binding.limitDesc.text = "${getString(R.string.entered_amount_is_too_high)} $fiatAmount"
                 }
             }
@@ -362,8 +362,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     private fun setMinAmountErrorMessage() {
         convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
             selectedCoinBaseAccount?.currencyToDashExchangeRate?.let { currencyToDashExchangeRate ->
-                val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
-                val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, convertViewModel.minAllowedSwapAmount)
+                val fiatAmount = FiatValue.parseFiat(rate.currencyCode, convertViewModel.minAllowedSwapAmount)
                 binding.limitDesc.text = "${getString(
                     R.string.entered_amount_is_too_low
                 )} ${fiatAmount.toFormattedString()}"

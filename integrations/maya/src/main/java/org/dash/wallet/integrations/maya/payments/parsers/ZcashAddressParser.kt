@@ -26,14 +26,20 @@ import org.dash.wallet.common.payments.parsers.Bech32AddressParser
  * - Sapling shielded: `zs1...` — Bech32, 78 chars total
  * - Unified: `u1...` — Bech32m, variable length (91+ chars)
  */
-class ZcashAddressParser : AddressParser("t[13][1-9A-HJ-NP-Za-km-z]{33}", null) {
-    private val saplingParser = Bech32AddressParser("zs", 75, null) // zs1... Sapling shielded
-    private val unifiedParser = Bech32AddressParser("u", 88, null) // u1... unified (min length)
+class ZcashAddressParser : AddressParser("t[13][1-9A-HJ-NP-Za-km-z]{33}") {
+    private val saplingParser = Bech32AddressParser("zs", 75) // zs1... Sapling shielded
+    private val unifiedParser = Bech32AddressParser("u", 88) // u1... unified (min length)
 
     override fun exactMatch(inputText: String): Boolean {
         return super.exactMatch(inputText) ||
             saplingParser.exactMatch(inputText) ||
             unifiedParser.exactMatch(inputText)
+    }
+
+    // Only the bech32 forms (Sapling zs1..., unified u1...) are case-insensitive; transparent
+    // t-addresses are Base58 and keep their case.
+    override fun isCaseInsensitiveFormat(input: String): Boolean {
+        return input.startsWith("zs1", ignoreCase = true) || input.startsWith("u1", ignoreCase = true)
     }
 
     override fun findAll(inputText: String): List<IntRange> {

@@ -22,19 +22,26 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.common.WalletDataProvider
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.integrations.maya.api.CurrencyBeaconApi
+import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import org.dash.wallet.integrations.maya.api.ExchangeRateApi
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateAggregatedProvider
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.FreeCurrencyApi
 import org.dash.wallet.integrations.maya.api.MayaApi
 import org.dash.wallet.integrations.maya.api.MayaApiAggregator
-import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
-import org.dash.wallet.integrations.maya.api.MayaBlockchainApiImpl
 import org.dash.wallet.integrations.maya.api.MayaEndpoint
 import org.dash.wallet.integrations.maya.api.RemoteDataSource
+import org.dash.wallet.integrations.maya.api.SwapProvider
+import org.dash.wallet.integrations.maya.swapkit.SwapKitAuthInterceptor
+import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
+import org.dash.wallet.integrations.maya.swapkit.SwapKitEndpoint
 import org.dash.wallet.integrations.maya.utils.MayaConstants
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -43,10 +50,9 @@ abstract class MayaModule {
     companion object {
         @Provides
         fun provideMayaEndpoint(
-            remoteDataSource: RemoteDataSource,
-            walletDataProvider: WalletDataProvider
+            remoteDataSource: RemoteDataSource
         ): MayaEndpoint {
-            val baseUrl = MayaConstants.getBaseUrl(walletDataProvider.networkParameters)
+            val baseUrl = MayaConstants.getBaseUrl()
             return remoteDataSource.buildApi(MayaEndpoint::class.java, baseUrl)
         }
 
@@ -73,17 +79,48 @@ abstract class MayaModule {
             val baseUrl = MayaConstants.FREE_CURRENCY_API_BASE_URL
             return remoteDataSource.buildApi(FreeCurrencyApi::class.java, baseUrl)
         }
+
+        @Provides
+        @Singleton
+        fun provideSwapKitEndpoint(): SwapKitEndpoint {
+            val client = OkHttpClient.Builder()
+                .addInterceptor(SwapKitAuthInterceptor(SwapKitConstants.API_KEY))
+                .also { builder ->
+                    if (BuildConfig.DEBUG) {
+                        val logging = HttpLoggingInterceptor()
+                        logging.level = HttpLoggingInterceptor.Level.BODY
+                        builder.addInterceptor(logging)
+                    }
+                }
+                .build()
+            return Retrofit.Builder()
+                .baseUrl(SwapKitConstants.BASE_URL)
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(SwapKitEndpoint::class.java)
+        }
     }
 
     @Binds
     @Singleton
     abstract fun bindMayaApi(mayaApi: MayaApiAggregator): MayaApi
 
-    @Binds
-    @Singleton
-    abstract fun bindMayaBlockchainApi(mayaApi: MayaBlockchainApiImpl): MayaBlockchainApi
+    // Note: MayaBlockchainApi is implemented and bound in the wallet module
+    // (de.schildbach.wallet.payments.MayaBlockchainApiImpl), which owns the dashj
+    // transaction machinery that swap-transaction construction requires.
 
     @Binds
     @Singleton
     abstract fun bindFiatExchangeRateApi(fiatApi: FiatExchangeRateAggregatedProvider): FiatExchangeRateProvider
+
+    /**
+     * Single dispatch point for the cross-chain swap surface. The same singleton
+     * instance is also injectable as [DispatchingSwapProvider] for callers that
+     * need to switch the active backend at runtime (e.g.
+     * `BuyAndSellViewModel.setSwapBackend`).
+     */
+    @Binds
+    @Singleton
+    abstract fun bindSwapProvider(impl: DispatchingSwapProvider): SwapProvider
 }

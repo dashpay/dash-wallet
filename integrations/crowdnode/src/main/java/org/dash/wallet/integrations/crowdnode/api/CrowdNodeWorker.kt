@@ -26,8 +26,6 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import org.bitcoinj.core.Address
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.crowdnode.R
@@ -38,7 +36,6 @@ class CrowdNodeWorker @AssistedInject constructor(
     @Assisted val appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val crowdNodeApi: CrowdNodeApi,
-    private val walletDataProvider: WalletDataProvider,
     private val notificationService: NotificationService,
     private val analytics: AnalyticsService
 ) : CoroutineWorker(appContext, workerParams) {
@@ -58,8 +55,6 @@ class CrowdNodeWorker @AssistedInject constructor(
 
         try {
             if (!accountAddress.isNullOrEmpty()) {
-                val address = Address.fromBase58(walletDataProvider.networkParameters, accountAddress)
-
                 when (operation) {
                     SIGNUP_CALL -> {
                         val notification = notificationService.buildNotification(
@@ -83,7 +78,7 @@ class CrowdNodeWorker @AssistedInject constructor(
                                 )
                             )
                         }
-                        crowdNodeApi.signUp(address)
+                        crowdNodeApi.signUp(accountAddress)
                     }
                 }
             }

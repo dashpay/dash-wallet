@@ -258,7 +258,6 @@ Username</b></string>
     <string name="please_note_cant_change_this_later">Pakitandaan na hindi mo na ito mababago sa ibang pagkakataon</string>
     <string name="Intermediate_level_WIFI_Warning">Ang intermediate na antas ng privacy ay nangangailangan ng maaasahang koneksyon sa internet</string>
     <string name="Advanced_level_WIFI_Warning">Ang advanced na antas ng privacy ay nangangailangan ng maaasahang koneksyon sa internet</string>
-    <string name="privcay_level_WIFI_warning_desc">Inirerekomenda na nasa isang Wi-Fi network upang maiwasan ang pagkakaroon ng karagdagang mga bayarin sa paghahalo</string>
     <string name="continue_anyway">Magpatuloy pa rin</string>
     <string name="welcome_to_dash_pay">Maligayang pagdating sa Dash Pay</string>
     <string name="pay_to_usernames">Magbayad sa mga username. Wala nang mga alphanumeric na address.</string>
@@ -404,34 +403,13 @@ Username</b></string>
     <string name="request_username_min_balance_disclaimer">Upang humiling ng username sa Dash Network, kailangan mong magkaroon ng higit sa %s Dash</string>
 
     <!-- CoinJoin -->
-    <string name="coinjoin">CoinJoin</string>
     <string name="turned_off">Naka-off</string>
-    <string name="coinjoin_info_subtitle">Ang paghahalo ng iyong mga Dash coins ay gagawing mas pribado ang iyong mga transaksyon</string>
-    <string name="coinjoin_description_1">Magagawa mo lang gumastos ng Dash na pinaghalo kapag naka-on ito. Maaari itong i-off anumang oras.</string>
-    <string name="coinjoin_description_2">Awtomatikong ihahalo ang bagong natanggap na Dash kapag binuksan ang wallet</string>
-    <string name="coinjoin_description_3">Ang pag-on sa feature na ito ay magreresulta ng mas mataas na paggamit ng baterya</string>
-    <string name="coinjoin_mixing_level_title">Piliin ang antas ng paghahalo</string>
-    <string name="coinjoin_mixing_level_subtitle">Maaari mong baguhin o ihinto ang antas ng paghahalo anumang oras</string>
     <string name="coinjoin_mixing_transactions">Paghahalo ng mga Transaksyon</string>
     <string name="coinjoin_transaction_group">Ito ay paghahalo ng mga kaugnay na transaksyon.</string>
     <string name="intermediate">Intermediate</string>
     <string name="advanced">Advanced</string>
     <string name="intermediate_level_card_decs">Maaaring matukoy ng mga advanced na user na may napakataas na antas ng teknikal na kadalubhasaan ang iyong history ng transaksyon</string>
     <string name="advanced_level_card_decs">Napakahirap para sa mga advanced na user na may anumang antas ng teknikal na kadalubhasaan na matukoy ang iyong kasaysayan ng transaksyon</string>
-    <string name="coinjoin_intermediate_time">hanggang 30 minuto</string>
-    <string name="coinjoin_advanced_time">Maramihang oras</string>
-    <string name="coinjoin_start">Simulan ang Paghahalo</string>
-    <string name="coinjoin_stop">Itigil ang Paghahalo</string>
-    <string name="coinjoin_mixing">Paghahalo</string>
-    <string name="coinjoin_mixing_finishing">Pagtatapos</string>
-    <string name="coinjoin_paused">Sandaling Pagtigil</string>
-    <string name="coinjoin_not_started">Hindi Nagsimula</string>
-    <string name="coinjoin_progress_balance">%1$s ng %2$s</string>
-    <string name="coinjoin_progress_finished">Ganap na Nahalo</string>
-    <string name="coinjoin_change_level_confirmation">Sigurado ka bang gusto mong baguhin ang antas ng privacy\?</string>
-    <string name="coinjoin_stop_mixing_title">Sigurado ka bang gusto mong ihinto ang paghahalo\?</string>
-    <string name="coinjoin_stop_mixing_message">Ang anumang mga pondo na pinaghalo ay isasama sa iyong mga hindi pinaghalong pondo</string>
-    <string name="coinjoin_mixed_balance">Pinaghalong balanse:</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">Ang iyong balanse sa kredito ay mababa</string>
@@ -460,9 +438,6 @@ Username</b></string>
     <string name="request_username_lost_vote">Ang hiniling na username ay ibinigay sa ibang tao</string>
     <string name="request_username_blocked_message">Ang username %say hinarangan ng Dash Network. Pakisubukang muli sa pamamagitan ng paghiling ng isa pang username. </string>
     <string name="request_username_lost_vote_message">Dahil sa proseso ng pagboto, nagpasya ang Dash Network na italaga ang username %s sa ibang tao. Pakisubukang muli sa pamamagitan ng paghiling ng isa pang username.</string>
-    <string name="mix_dash_mix">Paghaluin ang Balanse</string>
-    <string name="mix_dash_title">Paghaluin ang iyong Dash</string>
-    <string name="mix_dash_message">Upang makatulong na pigilan ang ibang tao na makita kung kanino ka magbabayad, inirerekomendang ihalo ang iyong balanse bago mo gawin ang iyong username.</string>
     <string name="tools_credits_title">mga kredito</string>
     <string name="tools_credits_buy_button">Bumili</string>
     <string name="dashpay_what_are_credits_title">Ano ang mga kredito\?</string>
@@ -531,7 +506,6 @@ Username</b></string>
     <string name="invitation_creating_progress_wip">Gumagawa ng Imbitasyon...</string>
     <string name="invitation_fee_confirm_and_pay_button">Kumpirmahin at magbayad</string>
     <string name="error_sending_invite_transaction">Error sa pagpapadala ng transaksyon ng imbitasyon</string>
-    <string name="request_username_invitation_not_mixed_message">Ang imbitasyon ay ginawa gamit ang walang halong pondo</string>
     <string name="request_username_invitation_only_noncontested_message">Maaari ka lamang lumikha ng hindi pinagtatalunang username gamit ang imbitasyong ito</string>
     <string name="username_types_title">Ano ang pinagtatalunan at hindi pinagtatalunan na mga username\?</string>
     <string name="username_types_message">Mayroong dalawang uri ng mga username: pinagtatalunan at hindi pinagtatalunan.\n\nAng mga hindi nilalabanang username ay may kahit isang numero (2-9) o mas mahaba sa 20 character at awtomatikong maaaprubahan.\n\nKung gusto mong lumikha ng isang pinagtatalunang username na mas maikli at walang mga numero, kailangan mong magparehistro sa DashPay nang walang imbitasyon, bayaran ang kinakailangang bayad at maghintay ng pag-apruba sa pagtatapos ng panahon ng pagboto.</string>

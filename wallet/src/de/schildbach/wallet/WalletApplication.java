@@ -79,14 +79,14 @@ import org.conscrypt.Conscrypt;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
-import org.dash.wallet.common.WalletDataProvider;
+import de.schildbach.wallet.data.WalletData;
 import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.transactions.TransactionWrapperFactory;
-import org.dash.wallet.common.transactions.filters.TransactionFilter;
+import de.schildbach.wallet.transactions.WalletTransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
@@ -95,20 +95,27 @@ import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
 import de.schildbach.wallet.security.SecurityInitializer;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
-import de.schildbach.wallet.service.CoinJoinService;
 import de.schildbach.wallet.service.TxDisplayCacheService;
 import de.schildbach.wallet.service.DashSystemService;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.service.platform.IdentityRepository;
 import de.schildbach.wallet.service.platform.TopUpRepository;
+import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator;
+import de.schildbach.wallet.service.platform.sdk.CutoverDebugReadout;
+import de.schildbach.wallet.service.platform.sdk.CutoverEvidenceCollector;
+import de.schildbach.wallet.service.platform.sdk.L1ShadowDebugReset;
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService;
 import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integrations.uphold.api.UpholdClient;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
+import de.schildbach.wallet.payments.BalanceConditionBridge;
+import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
+import org.dash.wallet.integrations.maya.api.SwapTrackingService;
 import org.dash.wallet.integrations.uphold.utils.UpholdConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -155,9 +162,15 @@ import de.schildbach.wallet.transactions.WalletMostRecentTransactionsObserver;
 import de.schildbach.wallet.security.PinRetryController;
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.AnrSupervisor;
+import de.schildbach.wallet.util.AtomicFileWriter;
 import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.FriendKeyChainLookahead;
 import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
+import de.schildbach.wallet.util.ProcessExitReasons;
+import de.schildbach.wallet.util.StartupBreadcrumbs;
+import de.schildbach.wallet.util.WalletFileSizeGuard;
+import de.schildbach.wallet.util.WalletLoadBudget;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 import kotlin.Deprecated;
@@ -175,7 +188,7 @@ import kotlinx.coroutines.flow.StateFlowKt;
  */
 @HiltAndroidApp
 public class WalletApplication extends MultiDexApplication
-        implements androidx.work.Configuration.Provider, AutoLogoutTimerHandler, WalletDataProvider {
+        implements androidx.work.Configuration.Provider, AutoLogoutTimerHandler, WalletData {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -201,6 +214,19 @@ public class WalletApplication extends MultiDexApplication
 
     public boolean myPackageReplaced = false;
 
+    /** The wallet protobuf load threw past the internal recovery (e.g. OOM on a huge wallet). */
+    private volatile boolean walletLoadFailed = false;
+    /** Safe mode skipped the wallet load after consecutive launch deaths (see StartupBreadcrumbs). */
+    private volatile boolean walletLoadSkippedSafeMode = false;
+    /** An optional startup stage failed and was skipped (catch-degrade). */
+    private volatile boolean startupDegraded = false;
+    /**
+     * Both the primary wallet file AND the key backup are unusable — the only
+     * remaining recovery is a restore from the user's recovery phrase.
+     * OnboardingActivity surfaces that state explicitly.
+     */
+    private volatile boolean walletRecoveryFromSeedNeeded = false;
+
     private AutoLogout autoLogout;
     private AnrSupervisor anrSupervisor;
     private Function0 afterWipeFunction;
@@ -224,6 +250,8 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     PlatformSyncService platformSyncService;
     @Inject
+    de.schildbach.wallet.ui.dashpay.utils.DashPayConfig dashPayConfig;
+    @Inject
     TopUpRepository topUpRepository;
     @Inject
     PackageInfoProvider packageInfoProvider;
@@ -239,8 +267,19 @@ public class WalletApplication extends MultiDexApplication
     SecurityInitializer securityInitializer;
     @Inject
     TxDisplayCacheService txDisplayCacheService;
+    @Inject
+    L1ShadowSyncService l1ShadowSyncService;
+    @Inject
+    CutoverCoordinator cutoverCoordinator;
+    @Inject
+    de.schildbach.wallet.service.platform.sdk.CutoverAutoCommitObserver cutoverAutoCommitObserver;
+    @Inject
+    CutoverEvidenceCollector cutoverEvidenceCollector;
+    @Inject
+    de.schildbach.wallet.service.platform.sdk.CutoverUiDataService cutoverUiDataService;
+    @Inject
+    SwapTrackingService swapTrackingService;
     private WalletBalanceObserver walletBalanceObserver;
-    private CoinJoinService coinJoinService;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;
 
@@ -254,11 +293,79 @@ public class WalletApplication extends MultiDexApplication
         return walletFile.exists();
     }
 
+    /**
+     * True when the wallet file exists but NO wallet object is loaded — the
+     * launch is running degraded (load failure caught, or safe mode skipped
+     * the load after consecutive launch deaths). OnboardingActivity must show
+     * the crash-report path instead of onboarding/`wallet!!` routing.
+     */
+    public boolean isWalletLoadDegraded() {
+        return walletLoadFailed || walletLoadSkippedSafeMode;
+    }
+
+    /** Whether safe mode (crash-loop breaker) skipped the wallet load this launch. */
+    public boolean isSafeModeLaunch() {
+        return walletLoadSkippedSafeMode;
+    }
+
+    /**
+     * Both the primary wallet AND the key backup are unusable — only a restore
+     * from the recovery phrase can bring this wallet back.
+     */
+    public boolean isWalletRecoveryFromSeedNeeded() {
+        return walletRecoveryFromSeedNeeded;
+    }
+
+    /**
+     * Preserve any existing (unusable) wallet file aside before a
+     * restore-from-seed writes a fresh one at the same path — the degraded
+     * recovery flow calls this so NOTHING is ever overwritten. Safe to call
+     * when the file no longer exists (the oversize guard may already have
+     * renamed it).
+     */
+    public void preserveWalletFileForRecovery() {
+        if (walletFile != null && walletFile.exists()) {
+            WalletFileSizeGuard.preserveAside(walletFile, "pre-seed-restore");
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
-        initLogging();
-        FirebaseApp.initializeApp(this);
+        // CRASH-TRACE HANDLING FIRST — before the wallet load, the SDK engines,
+        // logging, Firebase, everything that can die on a large wallet. Any
+        // launch crash from here on is persisted to cache/crash.trace and the
+        // NEXT launch offers the report dialog even with no adb and no
+        // Crashlytics (the app itself is the diagnostic channel).
+        CrashReporter.init(getCacheDir());
+        // Numbered, PERSISTED launch-stage markers. Also decides whether this
+        // launch runs in SAFE MODE (two consecutive launches died before the
+        // main UI → skip the wallet load + engine starts so the app opens and
+        // offers the crash report — see StartupBreadcrumbs).
+        StartupBreadcrumbs.init(getFilesDir());
+
+        runStartupStage(StartupBreadcrumbs.STAGE_LOGGING_INITIALIZED, "LOGGING_INITIALIZED", this::initLogging);
+        // WHY THE PREVIOUS PROCESS DIED (LMK / ANR / crash / user) — asked of the
+        // system as soon as the log file appender exists, answered on a daemon
+        // thread. A reaped process leaves NOTHING in its own log; this is the only
+        // record of it that reaches the support report.
+        ProcessExitReasons.logRecentExits(this);
+        runStartupStage(StartupBreadcrumbs.STAGE_FIREBASE_INITIALIZED, "FIREBASE_INITIALIZED", () -> {
+            FirebaseApp.initializeApp(this);
+            if (FirebaseApp.getApps(this).isEmpty()) {
+                // Built without google-services.json (the Firebase config is intentionally optional,
+                // see gradle/google-services.gradle). Initialize a placeholder app so DI-provided
+                // Firebase services (auth, analytics) can be constructed; their network calls fail
+                // soft inside existing error handling instead of crashing the process.
+                log.warn("no Firebase config in this build; initializing placeholder FirebaseApp");
+                FirebaseApp.initializeApp(this, new com.google.firebase.FirebaseOptions.Builder()
+                        .setApplicationId("1:000000000000:android:0000000000000000000000")
+                        .setProjectId("dash-wallet-local-build")
+                        // must match Firebase's AIza[0-9A-Za-z\-_]{35} API-key format check
+                        .setApiKey("AIzaSyPlaceholderLocalBuild000000000000")
+                        .build());
+            }
+        });
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("STARTUP WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
@@ -267,11 +374,44 @@ public class WalletApplication extends MultiDexApplication
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_CONFIG_LOADED, "CONFIG_LOADED");
         if (walletFileExists()) {
-            fullInitialization();
+            if (StartupBreadcrumbs.isSafeModeAdvised()) {
+                // Crash-loop breaker: the last two launches died before the
+                // main UI. Skip the wallet load and every engine start so the
+                // app OPENS and OnboardingActivity offers the crash report;
+                // the launch after this one retries a normal start.
+                walletLoadSkippedSafeMode = true;
+                log.warn("SAFE MODE: {} consecutive launches died before the main UI — "
+                        + "skipping the wallet load so the app can open and offer a crash report",
+                        StartupBreadcrumbs.SAFE_MODE_THRESHOLD);
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_SKIPPED_SAFE_MODE,
+                        "WALLET_LOAD_SKIPPED_SAFE_MODE");
+            } else {
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_BEGIN, "WALLET_LOAD_BEGIN",
+                        "size=" + walletFile.length());
+                try {
+                    fullInitialization();
+                } catch (final Throwable t) {
+                    // The un-degradable stage failed in a way the internal
+                    // recovery (restore-from-backup) did not handle: an
+                    // OutOfMemoryError parsing a huge protobuf, an
+                    // Error("cannot read backup"), anything unforeseen. DO NOT
+                    // crash the launch and DO NOT touch the wallet file — open
+                    // degraded so OnboardingActivity can offer the crash
+                    // report instead of looping.
+                    walletLoadFailed = true;
+                    log.error("wallet load FAILED — opening degraded for crash reporting", t);
+                    StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_FAILED,
+                            "WALLET_LOAD_FAILED", t.getClass().getName() + ": " + t.getMessage());
+                    try {
+                        CrashReporter.saveBackgroundTrace(t, packageInfoProvider.getPackageInfo());
+                    } catch (final Throwable ignored) {
+                    }
+                }
+            }
         }
 
-        CrashReporter.init(getCacheDir());
         // enable deadlock warnings to try to catch the cause of the stuck at "Syncing 31%"
         Threading.setUseDefaultAndroidPolicy(false);
         Threading.warnOnLockCycles();
@@ -292,13 +432,101 @@ public class WalletApplication extends MultiDexApplication
         anrSupervisor = new AnrSupervisor();
         anrSupervisor.start();
 
+        runStartupStage(-1, "DEBUG_RECEIVERS", () -> {
+            // DEBUG-only adb trigger for an L1 shadow hard reset; provably a
+            // no-op in release builds (the method returns before registering).
+            L1ShadowDebugReset.registerIfDebug(this, l1ShadowSyncService);
+            // DEBUG-only adb trigger for a one-shot Phase 5d cutover readiness
+            // readout (advisory only — can never commit a cutover).
+            CutoverDebugReadout.registerIfDebug(this, cutoverCoordinator, cutoverEvidenceCollector);
+        });
+
+        // resume status polling for any DEX swaps still in flight
+        runStartupStage(-1, "SWAP_TRACKING", swapTrackingService::start);
+
         // enable TLS 1.3 support on Android 9 and lower
         // Android 10 and above support TLS 1.3 by default
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
             Security.insertProviderAt(Conscrypt.newProvider(), 1);
         }
 
+        // THE LAUNCH-COMPLETE MILESTONE. Everything that can crash-loop the app
+        // is behind us, so this launch counts as a SUCCESS right now and the
+        // crash-loop strike counter is cleared here — NOT inferred later from a
+        // survival timer. A process death after this point (lowmemorykiller
+        // reclaiming a backgrounded app, a swipe-away, a reboot) is not a launch
+        // failure and must never latch safe mode.
+        StartupBreadcrumbs.markLaunchComplete();
+    }
 
+    /**
+     * SAFE-MODE ESCAPE HATCH — retry the wallet load that safe mode skipped,
+     * in this same process, at the user's request (or automatically when the
+     * degraded screen is re-entered on a warm start).
+     *
+     * This exists because the safe-mode verdict is taken ONCE, in
+     * {@link #onCreate()}. Re-opening the app while the safe-mode process is
+     * still alive does not re-run onCreate, so without this the user saw the
+     * degraded screen on every open until the process happened to die — which
+     * is exactly what a QA device hit. NOTHING is wiped: this is the same load
+     * a normal launch performs.
+     *
+     * @return true when the wallet is loaded and normal routing may proceed.
+     */
+    public boolean retryWalletLoadAfterSafeMode() {
+        if (!walletLoadSkippedSafeMode) {
+            return wallet != null;
+        }
+        log.warn("SAFE MODE ESCAPE: retrying the skipped wallet load in-process");
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SAFE_MODE_RETRY, "SAFE_MODE_RETRY");
+        walletLoadSkippedSafeMode = false;
+        try {
+            fullInitialization();
+        } catch (final Throwable t) {
+            // Same handling as the onCreate load: open degraded for crash
+            // reporting, never crash and never touch the wallet file.
+            walletLoadFailed = true;
+            log.error("safe-mode retry FAILED — staying degraded", t);
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_FAILED,
+                    "WALLET_LOAD_FAILED", t.getClass().getName() + ": " + t.getMessage());
+            try {
+                CrashReporter.saveBackgroundTrace(t, packageInfoProvider.getPackageInfo());
+            } catch (final Throwable ignored) {
+            }
+            return false;
+        }
+        if (wallet != null) {
+            // The load works: the strikes that engaged safe mode were a false
+            // alarm (a killed background process, not a failing launch). Clear
+            // the latch on disk so no later launch engages off that history.
+            StartupBreadcrumbs.clearSafeModeLatch();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Catch-degrade wrapper for OPTIONAL launch stages: a failure logs, records
+     * a non-fatal trace (rides along in the support report) and sets the
+     * degraded latch — the app still OPENS. Never used for the wallet load
+     * itself, which has its own dedicated failure handling.
+     */
+    private void runStartupStage(final int breadcrumbStage, final String name, final Runnable stage) {
+        try {
+            stage.run();
+            if (breadcrumbStage >= 0) {
+                StartupBreadcrumbs.mark(breadcrumbStage, name);
+            }
+        } catch (final Throwable t) {
+            startupDegraded = true;
+            log.error("startup stage {} FAILED — continuing degraded", name, t);
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_DEGRADED, "DEGRADED:" + name,
+                    t.getClass().getName() + ": " + t.getMessage());
+            try {
+                CrashReporter.saveBackgroundTrace(t, packageInfoProvider.getPackageInfo());
+            } catch (final Throwable ignored) {
+            }
+        }
     }
 
     // Initialize AppsFlyer
@@ -498,9 +726,33 @@ public class WalletApplication extends MultiDexApplication
         }
         WalletEx walletEx = (WalletEx) wallet;
         if (walletEx.getCoinJoin() != null) {
-            // this wallet is not encrypted yet
+            // Mixing was removed from the app, but wallets that mixed in the past still hold
+            // funds on the CoinJoin keychain. Initializing it here keeps those UTXOs
+            // recognized and spendable through the regular send flow.
             walletEx.initializeCoinJoin(null, 0);
         }
+
+        // Phase 5d restore/new-wallet cutover: setWallet is called ONLY by
+        // onboarding after CREATING or RESTORING a wallet (a normal launch
+        // and an app upgrade both load via loadWalletFromProtobuf, not here),
+        // so this is exactly the "fresh wallet setup happening now" seam. A
+        // freshly created/restored wallet has no already-synced dashj balance
+        // to protect, so make the SDK L1-primary from the start (dashj held,
+        // SDK does the fast initial sync). Fire-and-forget on the app IO scope:
+        // the restore-from-FILE caller invokes setWallet on the MAIN thread, so
+        // this must NOT block on DataStore I/O. The commit self-gates on the SDK
+        // L1 flag and is a no-op if already committed; the home screen reads
+        // cutover state reactively.
+        //
+        // An UPGRADE install never reaches here (it loads via
+        // loadWalletFromProtobuf) — it commits at the finalizeInitialization
+        // seam below instead. But the converse is NOT true: a fresh
+        // create/restore reaches BOTH seams, because onboarding's PIN step calls
+        // saveWalletAndFinalizeInitialization() -> finalizeInitialization()
+        // afterwards. That is why this call also latches
+        // "freshWalletSetupThisLaunch" inside the coordinator, which suppresses
+        // the one-time UPGRADE sync explainer the other seam would otherwise arm.
+        cutoverCoordinator.commitForFreshWalletSetupAsync();
     }
 
     public void saveWalletAndFinalizeInitialization() {
@@ -514,6 +766,7 @@ public class WalletApplication extends MultiDexApplication
 
     public void finalizeInitialization() {
         long _t = System.currentTimeMillis();
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_FINALIZE_INIT_BEGIN, "FINALIZE_INIT_BEGIN");
         // TODO, put this in a different place. maybe SecurityInitilizer
         // TODO, can we remove this?
         try {
@@ -535,6 +788,7 @@ public class WalletApplication extends MultiDexApplication
 
         dashSystemService.getSystem().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
         log.info("STARTUP finalizeInit: initDash done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_INIT_DASH_DONE, "INIT_DASH_DONE");
 
         if (config.versionCodeCrossed((int)packageInfoProvider.getVersionCode(), VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
@@ -550,6 +804,7 @@ public class WalletApplication extends MultiDexApplication
 
         afterLoadWallet();
         log.info("STARTUP finalizeInit: afterLoadWallet done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_AFTER_LOAD_WALLET_DONE, "AFTER_LOAD_WALLET_DONE");
 
         cleanupFiles();
 
@@ -558,13 +813,21 @@ public class WalletApplication extends MultiDexApplication
         }
 
         if (Constants.SUPPORTS_PLATFORM) {
-            initPlatform();
+            // Catch-degrade: initPlatform kicks the SDK bind + L1 engine +
+            // cutover services. A failure here must not stop the app from
+            // opening — the wallet UI still works from the display cache.
+            runStartupStage(StartupBreadcrumbs.STAGE_PLATFORM_INIT_KICKED, "PLATFORM_INIT_KICKED",
+                    this::initPlatform);
         }
         log.info("STARTUP finalizeInit: initPlatform+channels done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
-        initUphold();
-        initCoinbase();
-        initDashSpend();
-        WalletApplicationExt.INSTANCE.clearCachedAddresses(this);
+        // Catch-degrade: third-party integration setup must never block the
+        // wallet from opening.
+        runStartupStage(-1, "INTEGRATIONS", () -> {
+            initUphold();
+            initCoinbase();
+            initDashSpend();
+            WalletApplicationExt.INSTANCE.clearCachedAddresses(this);
+        });
         log.info("STARTUP finalizeInit: integrations done in {}ms", System.currentTimeMillis() - _t);
     }
 
@@ -626,6 +889,14 @@ public class WalletApplication extends MultiDexApplication
                 R.string.notification_dashpay_channel_name,
                 R.string.notification_dashpay_channel_description,
                 NotificationManager.IMPORTANCE_LOW);
+
+        // Incoming contact requests. Separate from the DashPay channel above on purpose: that one
+        // is IMPORTANCE_LOW for the identity-creation progress notification, and a channel's
+        // importance cannot be changed once the system has created it.
+        createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_CONTACTS,
+                R.string.notification_contacts_channel_name,
+                R.string.notification_contacts_channel_description,
+                NotificationManager.IMPORTANCE_HIGH);
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -657,18 +928,7 @@ public class WalletApplication extends MultiDexApplication
     private void afterLoadWallet() {
         wallet.setSaveOnNextBlock(false);
         wallet.autosaveToFile(walletFile, Constants.Files.WALLET_AUTOSAVE_DELAY_MS, TimeUnit.MILLISECONDS, null);
-
-        // clean up spam
-        try {
-            wallet.cleanup();
-        } catch (IllegalStateException x) {
-            // Catch an inconsistent exception here and reset the blockchain.  This is for loading older wallets that had
-            // txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
-            // the fees were fixed, then those stuck transactions became inconsistent and the exception is thrown.
-            if (x.getMessage().contains("Inconsistent spent tx:")) {
-                deleteBlockchainFiles();
-            } else throw x;
-        }
+        final Wallet walletForMaintenance = wallet;
 
         // did blockchain rescan fail
         if (config.isResetBlockchainPending()) {
@@ -679,12 +939,74 @@ public class WalletApplication extends MultiDexApplication
             config.clearResetBlockchainPending();
         }
 
-        // make sure there is at least one recent backup
-        if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists())
-            backupWallet();
+        // DEFERRED O(wallet) maintenance — off the critical launch path. Both
+        // walks scale with wallet size (cleanup iterates transactions under the
+        // wallet lock; backupWallet builds the FULL Protos.Wallet tree — a
+        // multi-hundred-MB transient on a very large CoinJoin wallet — before
+        // stripping transactions). Neither is needed for the UI to come up, and
+        // on a huge wallet doing them synchronously inside Application.onCreate
+        // risks the exact startup ANR/OOM crash-loop this launch path is being
+        // hardened against. Failures degrade (log + non-fatal trace), never crash.
+        new Thread(() -> {
+            try {
+                // clean up spam
+                try {
+                    walletForMaintenance.cleanup();
+                } catch (IllegalStateException x) {
+                    // Catch an inconsistent exception here and reset the blockchain.  This is for loading older wallets that had
+                    // txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
+                    // the fees were fixed, then those stuck transactions became inconsistent and the exception is thrown.
+                    if (x.getMessage() != null && x.getMessage().contains("Inconsistent spent tx:")) {
+                        deleteBlockchainFiles();
+                    } else {
+                        throw x;
+                    }
+                }
+
+                // make sure there is at least one recent backup
+                if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists())
+                    backupWallet();
+            } catch (final Throwable t) {
+                log.error("deferred wallet maintenance failed — continuing degraded", t);
+                try {
+                    CrashReporter.saveBackgroundTrace(t, packageInfoProvider.getPackageInfo());
+                } catch (final Throwable ignored) {
+                }
+            }
+        }, "wallet-startup-maintenance").start();
 
         // setup WalletBalanceObserver
         walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig);
+
+        // Parity-free cutover (QA directive): make the SDK L1-primary from the FIRST
+        // launch for EVERY wallet — UPGRADES included, not just fresh create/restore
+        // (which commit in setWallet). Each Phase-1 function is tested AFTER cutover, so
+        // dashj should never have to dual-run and parity-match before the SDK takes over.
+        // Idempotent (no-op once CUT_OVER) and self-gated on USE_KOTLIN_SDK_L1_SHADOW, so
+        // it stays inert when the SDK L1 engine is off; once committed the
+        // CutoverAutoCommitObserver parity path never runs (it stands down when CUT_OVER).
+        //
+        // The UPGRADE variant: identical commit, but it also arms the one-time
+        // sync explainer when this launch is the one that actually flips the
+        // state AND the previous version was pre-11.10 (see
+        // CutoverCoordinator.commitForUpgradedWalletAsync).
+        //
+        // NOTE this seam is NOT upgrade-only. It runs on every launch that
+        // loads the wallet from the protobuf (WalletApplication:936) AND at the
+        // end of onboarding, because SetPinViewModel.initWallet() calls
+        // saveWalletAndFinalizeInitialization() -> finalizeInitialization()
+        // right after setWallet() created/restored the wallet. So a fresh
+        // create/restore DOES reach here; the coordinator suppresses the
+        // explainer for it via the freshWalletSetupThisLaunch latch that
+        // setWallet's commit sets synchronously.
+        //
+        // config.lastVersionCode is the versionCode recorded by the PREVIOUS
+        // launch (0 on a never-run install). It is a final field captured when
+        // Configuration was constructed, so it still holds the pre-upgrade
+        // value here even though finalizeInitialization already persisted this
+        // launch's code via config.updateLastVersionCode() — and it is stable
+        // no matter which of the two afterLoadWallet() call paths runs first.
+        cutoverCoordinator.commitForUpgradedWalletAsync(config.lastVersionCode);
     }
 
     private void deleteBlockchainFiles() {
@@ -761,6 +1083,21 @@ public class WalletApplication extends MultiDexApplication
         log.addAppender(fileAppender);
         log.addAppender(logcatAppender);
         log.setLevel(Level.INFO);
+
+        // dashj's peer-timeout diagnostic WARN-logs a full thread dump on
+        // EVERY peer timeout (96 dumps = 118k log lines in one flapping
+        // session, starving I/O). Keep at most one dump per interval; all
+        // other lines on that logger (Timed out / TIMEOUT CAUSE / CRITICAL)
+        // pass untouched. See PeerTimeoutDumpThrottle.
+        context.addTurboFilter(new de.schildbach.wallet.util.PeerTimeoutDumpThrottle());
+
+        // The Rust/SDK `log::` facade goes to logcat ONLY (android_logger, tag
+        // "DashSDK", installed in JNI_OnLoad). Remote testers cannot run adb,
+        // so those lines were invisible in every uploaded report. Copy them
+        // into this pipeline — on a daemon thread, bounded, fail-soft — so
+        // they land in wallet.log and ride along with the support report.
+        // See NativeLogBridge.
+        de.schildbach.wallet.util.NativeLogBridge.INSTANCE.start();
     }
 
     @Deprecated(message = "Inject Configuration instead")
@@ -798,69 +1135,240 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void loadWalletFromProtobuf() {
-        FileInputStream walletStream = null;
+        // PRE-PARSE SIZE GUARD (empirically grounded — see WalletFileSizeGuard):
+        // the parse peaks at ~8x the file size in heap, and a >=2GB file is
+        // unparseable at ANY heap size (protobuf's 2GiB CodedInputStream wall;
+        // the WRITE side streams past it silently). Decide BEFORE touching the
+        // parser whether this file can possibly load.
+        final long fileSize = walletFile.length();
+        final int largeMemoryClassMb = largeMemoryClassMb();
+        final WalletFileSizeGuard.Verdict sizeVerdict = WalletFileSizeGuard.verdict(fileSize, largeMemoryClassMb);
+        if (sizeVerdict != WalletFileSizeGuard.Verdict.NORMAL) {
+            log.warn("wallet file size guard: {} bytes, largeHeap {}MB, soft limit {} bytes -> {}",
+                    fileSize, largeMemoryClassMb, WalletFileSizeGuard.softLimitBytes(largeMemoryClassMb), sizeVerdict);
+        }
 
-        try {
-            final Stopwatch watch = Stopwatch.createStarted();
-            walletStream = new FileInputStream(walletFile);
-            wallet = new WalletProtobufSerializer().readWallet(walletStream, false, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
-
-            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
-            if (authenticationGroupExtension != null) {
-                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
-            }
-            if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
-                throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
-
-            log.info("wallet loaded from: '{}', took {}", walletFile, watch);
-        } catch (final FileNotFoundException x) {
-            log.error("problem loading wallet", x);
-
-            Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
-
+        if (sizeVerdict == WalletFileSizeGuard.Verdict.UNPARSEABLE) {
+            // The file is beyond the point of no return by construction — do
+            // NOT attempt the parse (the attempt OOM-crash-loops the launch on
+            // any real device and can never succeed). Preserve the file
+            // untouched under a timestamped name (forensics + safety, never
+            // delete) and go straight to the deliberate key-backup recovery.
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_FILE_OVERSIZE, "WALLET_FILE_OVERSIZE",
+                    "size=" + fileSize + " hardLimit=" + WalletFileSizeGuard.HARD_LIMIT_BYTES);
+            final File preserved = WalletFileSizeGuard.preserveAside(walletFile, "oversize");
+            log.error("wallet file is {} bytes (>= {} hard limit) — unparseable by construction; "
+                    + "preserved as '{}', recovering from the key backup", fileSize,
+                    WalletFileSizeGuard.HARD_LIMIT_BYTES, preserved != null ? preserved.getName() : "(rename failed)");
             wallet = restoreWalletFromBackup();
-            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
-            if (authenticationGroupExtension != null) {
-                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
-            }
-        } catch (final UnreadableWalletException x) {
-            log.error("problem loading wallet", x);
+            adoptAuthenticationGroupExtension();
+        } else {
+            FileInputStream walletStream = null;
+            boolean parsed = false;
+            // TIME guard, the companion to the size guard above. The DashPay
+            // friend-key-chain crash loop was a 2.5MB wallet that took MINUTES
+            // to parse: the parse cannot be interrupted safely, so the watchdog
+            // records the over-budget launch and arms the crash-loop breaker so
+            // the NEXT launch opens in safe mode if this one dies.
+            final WalletLoadBudget.Watchdog budget = WalletLoadBudget.arm(WalletLoadBudget.DEFAULT_BUDGET_MS, () -> {
+                log.error("wallet load exceeded its {}ms budget ({} DashPay friend chains still deriving) — "
+                                + "arming safe mode for the next launch",
+                        WalletLoadBudget.DEFAULT_BUDGET_MS, FriendKeyChainLookahead.pendingCount());
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_OVERBUDGET, "WALLET_LOAD_OVERBUDGET",
+                        "budgetMs=" + WalletLoadBudget.DEFAULT_BUDGET_MS
+                                + " pendingFriendChains=" + FriendKeyChainLookahead.pendingCount());
+                StartupBreadcrumbs.armSafeModeOnNextDeath();
+            });
+            try {
+                final Stopwatch watch = Stopwatch.createStarted();
+                walletStream = new FileInputStream(walletFile);
+                // Keep the DashPay friend-key-chain lookahead OFF the parse:
+                // 100+33 keys per CONTACT chain is ~1.2s each on a real device
+                // and blocks Application.onCreate for minutes on a wallet with
+                // many contacts. The identical derivations run on a background
+                // pool right after this, and the blockchain service waits for
+                // them before the wallet is attached to the peer group — so the
+                // watched-key set is unchanged. See FriendKeyChainLookahead.
+                // ...and, since 11.10.61, the derived window PERSISTS in a side
+                // file so the derivation happens once instead of on every launch
+                // (the tester's log: 215 chains, ~159s of EC derivation, every
+                // single time). The wallet protobuf itself stays at its small
+                // 11.10.58 shape. See FriendKeyChainLookaheadStore.
+                FriendKeyChainLookahead.reset();
+                FriendKeyChainLookahead.useStore(walletFile);
+                final WalletProtobufSerializer serializer = new WalletProtobufSerializer();
+                serializer.setKeyChainFactory(FriendKeyChainLookahead.deferringFactory());
+                wallet = serializer.readWallet(walletStream, false, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
 
-            Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+                adoptAuthenticationGroupExtension();
+                if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
+                    throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
 
-            wallet = restoreWalletFromBackup();
-            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
-            if (authenticationGroupExtension != null) {
-                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
-            }
-        } finally {
-            if (walletStream != null) {
-                try {
-                    walletStream.close();
-                } catch (final IOException x) {
-                    // swallow
+                log.info("wallet loaded from: '{}', took {} ({} DashPay friend chains deferred)", walletFile, watch,
+                        FriendKeyChainLookahead.deferredCount());
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_PROTOBUF_PARSED,
+                        "WALLET_PROTOBUF_PARSED", "took=" + watch
+                                + " deferredFriendChains=" + FriendKeyChainLookahead.deferredCount());
+                // Overlap the deferred derivations with the rest of startup.
+                parsed = true;
+                FriendKeyChainLookahead.completeAsync();
+            } catch (final FileNotFoundException x) {
+                log.error("problem loading wallet", x);
+
+                Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+
+                wallet = restoreWalletFromBackup();
+                adoptAuthenticationGroupExtension();
+            } catch (final UnreadableWalletException x) {
+                log.error("problem loading wallet", x);
+
+                Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+
+                wallet = restoreWalletFromBackup();
+                adoptAuthenticationGroupExtension();
+            } catch (final OutOfMemoryError oom) {
+                if (sizeVerdict == WalletFileSizeGuard.Verdict.RISKY) {
+                    // EXPECTED failure mode of a risky-size file (>= min(heap/10,
+                    // 100MB) — the measured 8x parse multiplier leaves no
+                    // headroom): route to the same deliberate recovery as the
+                    // hard guard instead of crash-looping. Preserve the file
+                    // aside first so the next launch cannot re-trip the OOM.
+                    log.error("OOM parsing a RISKY-size wallet file ({} bytes, largeHeap {}MB) — "
+                            + "preserving the file and recovering from the key backup", fileSize, largeMemoryClassMb);
+                    StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_PARSE_OOM_RECOVERED,
+                            "WALLET_PARSE_OOM_RECOVERED", "size=" + fileSize);
+                    try {
+                        CrashReporter.saveBackgroundTrace(oom, packageInfoProvider.getPackageInfo());
+                    } catch (final Throwable ignored) {
+                    }
+                    WalletFileSizeGuard.preserveAside(walletFile, "oomed");
+                    wallet = restoreWalletFromBackup();
+                    adoptAuthenticationGroupExtension();
+                } else {
+                    // A NORMAL-size file OOMing is anomalous (not provably the
+                    // file's fault) — do NOT wipe anything; let the onCreate
+                    // catch-degrade open the app for crash reporting with the
+                    // wallet file untouched.
+                    throw oom;
+                }
+            } finally {
+                final long loadMs = budget.disarm();
+                if (WalletLoadBudget.isOverBudget(loadMs, WalletLoadBudget.DEFAULT_BUDGET_MS)) {
+                    log.warn("wallet load finished OVER budget: {}ms (budget {}ms)",
+                            loadMs, WalletLoadBudget.DEFAULT_BUDGET_MS);
+                }
+                if (!parsed) {
+                    // The parse was abandoned (recovery path took over): its
+                    // deferred chains belong to a wallet nobody holds, so drop
+                    // them instead of deriving keys for an orphan object graph.
+                    FriendKeyChainLookahead.reset();
+                }
+                if (walletStream != null) {
+                    try {
+                        walletStream.close();
+                    } catch (final IOException x) {
+                        // swallow
+                    }
                 }
             }
         }
 
-        wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
+        if (wallet != null) {
+            wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
 
-        if (!wallet.isConsistent()) {
-            Toast.makeText(WalletApplication.this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
+            if (!isWalletConsistent(wallet)) {
+                Toast.makeText(WalletApplication.this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
 
-            wallet = restoreWalletFromBackup();
-            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
-            if (authenticationGroupExtension != null) {
-                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
+                wallet = restoreWalletFromBackup();
+                adoptAuthenticationGroupExtension();
             }
+        }
+
+        if (wallet == null) {
+            // Every recovery avenue is exhausted (primary unusable AND the key
+            // backup missing/unreadable — restoreWalletFromBackup() already set
+            // walletRecoveryFromSeedNeeded). Open DEGRADED instead of throwing:
+            // OnboardingActivity shows the "restore from your recovery phrase"
+            // state plus the crash report. NOTHING is wiped or overwritten.
+            walletLoadFailed = true;
+            log.error("wallet load AND key-backup recovery both failed — opening degraded "
+                    + "(restore from seed required)");
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_FAILED, "WALLET_LOAD_FAILED",
+                    "recovery exhausted; restore from seed required");
+            return;
         }
 
         if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
             throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
+        StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_CONSISTENCY_CHECKED, "WALLET_CONSISTENCY_CHECKED");
         walletStateFlow.setValue(wallet);
         finalizeInitialization();
     }
 
+    /** The device's largeHeap limit in MB (the manifest sets largeHeap="true"), conservative fallback. */
+    private int largeMemoryClassMb() {
+        try {
+            final ActivityManager am = activityManager != null ? activityManager
+                    : (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+            if (am != null) {
+                return am.getLargeMemoryClass();
+            }
+        } catch (final Throwable t) {
+            log.warn("failed to read largeMemoryClass", t);
+        }
+        // Conservative: a small assumed heap only lowers the RISKY threshold,
+        // which still ATTEMPTS the parse — it only changes OOM routing.
+        return 256;
+    }
+
+    /** Adopt the (re)loaded wallet's AuthenticationGroupExtension; no-op when no wallet. */
+    private void adoptAuthenticationGroupExtension() {
+        if (wallet == null) {
+            return;
+        }
+        final WalletExtension extension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
+        if (extension != null) {
+            this.authenticationGroupExtension = (AuthenticationGroupExtension) extension;
+        }
+    }
+
+    /**
+     * Consistency check that is SAFE on a very large wallet.
+     *
+     * <p>dashj's {@link Wallet#isConsistent()} swallows the {@link IllegalStateException} from
+     * {@code isConsistentOrThrow()} and then logs {@code this.toString()} — a full textual dump of
+     * EVERY transaction and EVERY key in the wallet, built as a single String. On a large mainnet
+     * CoinJoin wallet (100k+ mixing transactions) that dump is a multi-hundred-megabyte allocation
+     * on top of an already fully-inflated wallet, and it is emitted on the main thread from inside
+     * {@code Application.onCreate}. The result is process death (heap exhaustion, or an LMK reap
+     * once RSS balloons) before the app can reach its own recovery path — and because the wallet
+     * file is unchanged, it repeats on every launch: a crash-loop that only a reinstall escapes.
+     *
+     * <p>Calling {@code isConsistentOrThrow()} directly gives the identical verdict and keeps the
+     * diagnostic (the exception message names the offending transaction) without ever building the
+     * dump. Returns false exactly where {@code isConsistent()} would have.
+     */
+    private boolean isWalletConsistent(final Wallet walletToCheck) {
+        try {
+            walletToCheck.isConsistentOrThrow();
+            return true;
+        } catch (final IllegalStateException x) {
+            // Deliberately NOT logging walletToCheck.toString() — see the javadoc above.
+            log.error("inconsistent wallet: {}", x.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Restore the transaction-stripped KEY backup ({@code key-backup-protobuf})
+     * — the deliberate recovery for an unusable primary wallet file. Returns
+     * {@code null} (and latches {@link #walletRecoveryFromSeedNeeded}) when the
+     * backup itself is missing, unreadable or inconsistent: this method must
+     * NEVER throw out of {@code Application.onCreate} — the old
+     * {@code Error("cannot read backup")} was itself a guaranteed crash loop.
+     * The caller degrades into the safe-mode/report path instead.
+     */
+    @Nullable
     private Wallet restoreWalletFromBackup() {
         InputStream is = null;
 
@@ -868,8 +1376,8 @@ public class WalletApplication extends MultiDexApplication
             is = openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
             final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
 
-            if (!wallet.isConsistent())
-                throw new Error("inconsistent backup");
+            if (!isWalletConsistent(wallet))
+                throw new UnreadableWalletException("inconsistent backup");
 
             wallet.addKeyChain(Constants.BIP44_PATH);
 
@@ -878,17 +1386,52 @@ public class WalletApplication extends MultiDexApplication
             Toast.makeText(this, R.string.toast_wallet_reset, Toast.LENGTH_LONG).show();
 
             log.info("wallet restored from backup: '{}'", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
+                    "WALLET_RECOVERED_FROM_BACKUP");
+
+            // POST-RECOVERY GUARD: if the Tools "dashj sync (diagnostic)"
+            // toggle is ON, force it OFF. With the toggle on, the un-held dashj
+            // peergroup dirties the wallet continuously and the 5s autosave
+            // rewrites an ever-growing file — the exact growth engine that can
+            // balloon a wallet past the 2GB point of no return. The freshly
+            // recovered small wallet must not start re-ballooning on its first
+            // session. One-line user notice via Toast when it was actually on.
+            // TODO(autosave-cap PR): the real fix is a size-aware autosave
+            // policy (prune/cap, longer delay above a size threshold) — a
+            // separate PR; this recovery-time toggle-off is the stopgap.
+            WalletApplicationExt.INSTANCE.disableDashjSyncDiagnosticAfterRecovery(this);
 
             return wallet;
         } catch (final IOException x) {
-            throw new Error("cannot read backup", x);
-        } catch (final UnreadableWalletException x) {
-            throw new Error("cannot read backup", x);
-        } finally {
+            log.error("cannot read backup — wallet needs a restore from seed", x);
+            walletRecoveryFromSeedNeeded = true;
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_BACKUP_UNUSABLE,
+                    "WALLET_BACKUP_UNUSABLE", x.getClass().getName() + ": " + x.getMessage());
             try {
-                is.close();
-            } catch (final IOException x) {
-                // swallow
+                CrashReporter.saveBackgroundTrace(x, packageInfoProvider.getPackageInfo());
+            } catch (final Throwable ignored) {
+            }
+            return null;
+        } catch (final UnreadableWalletException x) {
+            log.error("cannot read backup — wallet needs a restore from seed", x);
+            walletRecoveryFromSeedNeeded = true;
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_BACKUP_UNUSABLE,
+                    "WALLET_BACKUP_UNUSABLE", x.getClass().getName() + ": " + x.getMessage());
+            try {
+                CrashReporter.saveBackgroundTrace(x, packageInfoProvider.getPackageInfo());
+            } catch (final Throwable ignored) {
+            }
+            return null;
+        } finally {
+            // `is` is still null when openFileInput() itself threw (no backup file at all).
+            // Without this guard the finally block raises a NullPointerException that REPLACES
+            // the real "cannot read backup" failure, destroying the only diagnostic we have.
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (final IOException x) {
+                    // swallow
+                }
             }
         }
     }
@@ -920,21 +1463,19 @@ public class WalletApplication extends MultiDexApplication
         builder.clearLastSeenBlockTimeSecs();
         final Protos.Wallet walletProto = builder.build();
 
-        OutputStream os = null;
-
+        // Write atomically (temp -> fsync -> rename). This backup is the ONLY fallback
+        // loadWalletFromProtobuf() has when the primary wallet fails to parse, and dashj keeps no
+        // backup of its own. Writing it in place (the previous behaviour) meant a kill mid-write
+        // left a TRUNCATED backup, so a later primary-wallet failure would hit
+        // restoreWalletFromBackup() -> Error("cannot read backup") thrown straight out of
+        // Application.onCreate — an unrecoverable crash-loop with both copies unusable.
+        // dashj already writes the primary wallet this way (Wallet.saveToFile temp+rename).
         try {
-            os = openFileOutput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, Context.MODE_PRIVATE);
-            walletProto.writeTo(os);
+            AtomicFileWriter.write(this, Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, walletProto::writeTo);
             watch.stop();
             log.info("wallet backed up to: '{}', took {}", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, watch);
         } catch (final IOException x) {
             log.error("problem writing wallet backup", x);
-        } finally {
-            try {
-                os.close();
-            } catch (final IOException x) {
-                // swallow
-            }
         }
     }
 
@@ -951,18 +1492,38 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void clearDatastorePrefs() {
+        // Clear live DataStore-backed configs through their API first: deleting the
+        // backing file of a LIVE DataStore out-of-band leaves its in-memory cache
+        // populated while disk is empty (memory/disk desync — observed live as the
+        // debug SDK flags never reseeding after a Reset Wallet and datastore files
+        // recreated with a random subset of keys). The API-level clear resets
+        // memory and disk atomically.
+        final Set<String> apiCleared = WalletApplicationExt.INSTANCE.clearLiveConfigs();
+
+        // File-delete only the datastore files with no live DataStore instance
+        // (configs never instantiated this process have no in-memory cache, so raw
+        // deletion is safe for them). Deleting an api-cleared file here would
+        // desynchronize its live cache again.
+        final List<String> fileDeleted = new ArrayList<>();
         final File folder = new File(getFilesDir(), Constants.Files.DATASTORE_PREFS_DIRECTORY);
 
         if (folder.isDirectory()) {
-            log.info("removing datastore preferences");
             final File[] files = folder.listFiles();
 
             if (files != null) {
-                for (File file: files) {
-                    file.delete();
+                for (File file : files) {
+                    if (!apiCleared.contains(file.getName())) {
+                        if (file.delete()) {
+                            fileDeleted.add(file.getName());
+                        } else {
+                            log.warn("failed to delete datastore preferences file: '{}'", file.getName());
+                        }
+                    }
                 }
             }
         }
+
+        log.info("datastore preferences cleared; api-cleared: {}, file-deleted: {}", apiCleared, fileDeleted);
     }
 
     private void clearWebCookies() {
@@ -994,6 +1555,20 @@ public class WalletApplication extends MultiDexApplication
     @Deprecated(message = "not used")
     public void stopBlockchainService() {
         stopService(blockchainServiceIntent);
+    }
+
+    /**
+     * DIAGNOSTIC (Tools "dashj sync" toggle): bounce the blockchain service so
+     * it runs a fresh onCreate and re-resolves the Phase 5d engine-start gate
+     * ({@code dashjEngineMayStart}) against the new
+     * {@code DASHJ_SYNC_DIAGNOSTIC} value — starting the dashj peergroup when
+     * the diagnostic is turned on, or re-holding it when turned off. Stops then
+     * (after a short delay for the teardown to settle) starts the service.
+     */
+    public void restartBlockchainService() {
+        stopService(blockchainServiceIntent);
+        new android.os.Handler(android.os.Looper.getMainLooper())
+                .postDelayed(() -> startBlockchainService(false), 1500);
     }
 
     public void resetBlockchainState() {
@@ -1253,21 +1828,75 @@ public class WalletApplication extends MultiDexApplication
     }
 
     @NotNull
-    public Coin getWalletBalance() {
-        if (wallet == null || walletBalanceObserver == null) {
-            return Coin.ZERO;
-        }
-
-        return  walletBalanceObserver.getTotalBalance().getValue();
+    @Override
+    public String getNetworkId() {
+        return getNetworkParameters().getId();
     }
 
     @NotNull
-    public Coin getMixedBalance() {
+    @Override
+    public String currentReceiveAddressString() {
+        return currentReceiveAddress().toBase58();
+    }
+
+    @NotNull
+    @Override
+    public String freshReceiveAddressString() {
+        return freshReceiveAddress().toBase58();
+    }
+
+    @NotNull
+    public Coin getWalletBalance() {
+        // Phase 5d: post-cutover the dashj wallet is held/frozen, so the SDK
+        // balance (non-null only after a committed cutover) wins.
+        final Coin sdkBalance = cutoverUiDataService != null ? cutoverUiDataService.sdkBalanceOrNull() : null;
+        if (sdkBalance != null) {
+            return sdkBalance;
+        }
         if (wallet == null || walletBalanceObserver == null) {
             return Coin.ZERO;
         }
+        if (!walletBalanceObserver.isSeeded()) {
+            // Cold start: the observer's async DataStore seed hasn't landed yet and its
+            // StateFlow still holds the Coin.ZERO construction value — a widget render
+            // through this redirect would show zero. Read the wallet directly instead
+            // (pre-cutover only; post-cutover the SDK overlay above already served).
+            org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+            return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+        }
 
-        return  walletBalanceObserver.getMixedBalance().getValue();
+        // Accepted residual staleness: the observer refreshes through a ~500ms-throttled
+        // wallet-change listener, so this cached value can trail a just-landed tx by up
+        // to the throttle window; the event-driven widget pushes re-render right after,
+        // so it self-corrects.
+        return  walletBalanceObserver.getTotalBalance().getValue();
+    }
+
+    @Override
+    public int spendableUtxoCount() {
+        // Post-cutover the dashj wallet is HELD, so its UTXO set is frozen at
+        // the cutover snapshot (or empty on a fresh restore) — and unlike the
+        // balance this count was never overlaid. Its consumer is the shielded
+        // max-fee reserve, which sizes itself at ~148 bytes per input, so a
+        // stale count under-reserves (the max-shield retry fails again) or
+        // over-reserves (the user cannot shield their full balance). Serve the
+        // SDK's live count instead. Null = keep dashj: pre-cutover always, and
+        // post-cutover until the SDK scan has caught up — see
+        // CutoverUiDataService.sdkSpendableUtxoCountOrNull for why this one
+        // deliberately does NOT hold a last-known value the way the balance does.
+        final Integer sdkCount = cutoverUiDataService != null
+                ? cutoverUiDataService.sdkSpendableUtxoCountOrNull()
+                : null;
+        if (sdkCount != null) {
+            return sdkCount;
+        }
+
+        final Wallet wallet = this.wallet;
+        if (wallet == null) {
+            return 0;
+        }
+        // the exact output set getBalance(ESTIMATED) sums — see the interface doc
+        return wallet.calculateAllSpendCandidates(false, false).size();
     }
 
     @NonNull
@@ -1277,17 +1906,14 @@ public class WalletApplication extends MultiDexApplication
             return FlowKt.emptyFlow();
         }
 
-        return walletBalanceObserver.getTotalBalance();
-    }
-
-    @NonNull
-    @Override
-    public Flow<Coin> observeMixedBalance() {
-        if (wallet == null || walletBalanceObserver == null) {
-            return FlowKt.emptyFlow();
+        // Phase 5d: cutover-aware. Pre-cutover the overlay's SDK side is
+        // permanently null, so this is the dashj feed unchanged; after a
+        // committed cutover the SDK's live L1 balance wins (the dashj
+        // wallet is held and its balance freezes).
+        if (cutoverUiDataService != null) {
+            return cutoverUiDataService.overlayTotalBalance(walletBalanceObserver.getTotalBalance());
         }
-
-        return walletBalanceObserver.getMixedBalance();
+        return walletBalanceObserver.getTotalBalance();
     }
 
     @NonNull
@@ -1300,24 +1926,62 @@ public class WalletApplication extends MultiDexApplication
             return FlowKt.emptyFlow();
         }
 
+        // Phase 5d/B7: cutover-aware for the selector-less ESTIMATED and
+        // ESTIMATED_SPENDABLE streams (what the neutral facade's
+        // observeEstimatedBalance() serves, and what the Create-Username funding
+        // gate reads via observeBalance(ESTIMATED_SPENDABLE)): post-cutover dashj's
+        // held wallet has no coins, so both freeze at 0, and the SDK's live total
+        // (which sums the same unspent-output set — the correct spendable figure
+        // post-cutover) wins via the same overlay observeTotalBalance() uses —
+        // pre-cutover the SDK side is permanently null and dashj values pass through
+        // unchanged. Selector-based streams stay dashj-fed: they serve send-path
+        // coin selection, which another track owns.
+        if (cutoverUiDataService != null
+                && (balanceType == Wallet.BalanceType.ESTIMATED
+                        || balanceType == Wallet.BalanceType.ESTIMATED_SPENDABLE)
+                && coinSelector == null) {
+            return cutoverUiDataService.overlayTotalBalance(
+                    walletBalanceObserver.observe(balanceType, null));
+        }
+
         return walletBalanceObserver.observe(balanceType, coinSelector);
     }
 
     @NonNull
     @Override
-    public Flow<Coin> observeSpendableBalance() {
-        if (wallet == null || walletBalanceObserver == null || coinJoinService == null) {
+    public Flow<Coin> observeMaxOutputBalance() {
+        if (wallet == null || walletBalanceObserver == null) {
             return FlowKt.emptyFlow();
         }
 
-        return walletBalanceObserver.observeSpendable(coinJoinService);
+        // Phase 5d: the send screen's "max sendable" DISPLAY feed. The dashj
+        // max-output-coin-selector balance (ESTIMATED total minus the fee to spend
+        // it all) is a selector-based stream, so the plain observeBalance() overlay
+        // deliberately skips it. Post-cutover the held dashj wallet has no coins, so
+        // this freezes at 0; the SDK's ACCOUNT-AWARE max-sendable figure (BIP44
+        // spendable + DashPay receival confirmed net of per-sweep fee headroom —
+        // what the send-all's sweep-then-drain actually delivers) wins via
+        // overlayMaxSendableBalance, which itself falls back to the SDK's live
+        // total when the account-level snapshot is unavailable — pre-cutover both
+        // SDK sides are permanently null and the dashj max-output value passes
+        // through unchanged. This feeds only the DISPLAYED available balance /
+        // max-amount cap (and the send-all detection keyed off it); the real
+        // send's coin selection is owned independently by SendCoinsTaskRunner
+        // and is untouched.
+        final Flow<Coin> maxOutput =
+                walletBalanceObserver.observe(Wallet.BalanceType.ESTIMATED, new MaxOutputAmountCoinSelector());
+        if (cutoverUiDataService != null) {
+            return cutoverUiDataService.overlayMaxSendableBalance(maxOutput);
+        }
+        return maxOutput;
     }
+
 
     @NonNull
     @Override
     public Flow<Transaction> observeTransactions(
         boolean withConfidence,
-        @NonNull TransactionFilter... filters
+        @NonNull WalletTransactionFilter... filters
     ) {
         if (wallet == null) {
             return FlowKt.emptyFlow();
@@ -1367,7 +2031,7 @@ public class WalletApplication extends MultiDexApplication
 
     @NonNull
     @Override
-    public Collection<Transaction> getTransactions(@NonNull TransactionFilter... filters) {
+    public Collection<Transaction> getTransactions(@NonNull WalletTransactionFilter... filters) {
         if (wallet == null) {
             return Lists.newArrayList();
         }
@@ -1380,7 +2044,7 @@ public class WalletApplication extends MultiDexApplication
         ArrayList<Transaction> filteredTransactions = new ArrayList<>();
 
         for (Transaction tx : transactions) {
-            for (TransactionFilter filter : filters) {
+            for (WalletTransactionFilter filter : filters) {
                 if (filter.matches(tx)) {
                     filteredTransactions.add(tx);
                     break;
@@ -1397,6 +2061,8 @@ public class WalletApplication extends MultiDexApplication
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
         return TransactionWrapperHelper.INSTANCE.wrapTransactions(
                 wallet.getTransactions(true),
+                wallet,
+                Constants.NETWORK_PARAMETERS,
                 wrapperFactories
         );
     }
@@ -1436,7 +2102,7 @@ public class WalletApplication extends MultiDexApplication
             @Nullable Address address,
             @NonNull Coin amount
     ) throws LeftoverBalanceException {
-        new CrowdNodeBalanceCondition().check(
+        BalanceConditionBridge.check(
                 getWalletBalance(),
                 address,
                 amount,
@@ -1447,10 +2113,6 @@ public class WalletApplication extends MultiDexApplication
     @Override
     public boolean canAffordIdentityCreation() {
         return !getWalletBalance().isLessThan(Constants.DASH_PAY_FEE);
-    }
-
-    public void setCoinJoinService(CoinJoinService coinJoinService) {
-        this.coinJoinService = coinJoinService;
     }
 
     @Override

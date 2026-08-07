@@ -24,7 +24,6 @@ import com.google.common.base.Stopwatch
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
@@ -32,6 +31,8 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.work.BaseForegroundWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
@@ -39,7 +40,7 @@ import de.schildbach.wallet.ui.dashpay.work.GetUsernameVotingResultOperation
 import de.schildbach.wallet_test.R
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dashpay.UsernameInfo
@@ -59,12 +60,12 @@ class RestoreIdentityWorker @AssistedInject constructor(
     val walletApplication: WalletApplication,
     val analytics: AnalyticsService,
     val platformSyncService: PlatformSyncService,
-    val walletDataProvider: WalletDataProvider,
+    val walletDataProvider: WalletData,
     val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
-    val coinJoinConfig: CoinJoinConfig,
     val identityConfig: BlockchainIdentityConfig,
-    val usernameRequestDao: UsernameRequestDao
+    val usernameRequestDao: UsernameRequestDao,
+    val transparentUsernameCreation: SdkTransparentUsernameCreation
 ) : BaseForegroundWorker(
     context,
     parameters,
@@ -79,6 +80,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
         const val KEY_PASSWORD = "RestoreIdentityWorker.PASSWORD"
         const val KEY_IDENTITY = "RestoreIdentityWorker.IDENTITY"
         const val KEY_RETRY = "RestoreIdentityWorker.RETRY"
+        const val KEY_FROM_CREATION = "RestoreIdentityWorker.FROM_CREATION"
         const val CHANNEL_ID = "restore_identity_work_channel"
         const val NOTIFICATION_ID = 1000
     }
@@ -89,10 +91,11 @@ class RestoreIdentityWorker @AssistedInject constructor(
         val identity = inputData.getString(KEY_IDENTITY)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_IDENTITY parameter"))
         val retrying = inputData.getBoolean(KEY_RETRY, false)
+        val fromCreation = inputData.getBoolean(KEY_FROM_CREATION, false)
 
         return try {
             // restore identity and all other
-            restoreIdentity(Identifier.from(identity).toBuffer(), retrying)
+            restoreIdentity(Identifier.from(identity).toBuffer(), retrying, fromCreation)
             Result.success(
                 workDataOf(
                     KEY_IDENTITY to identity,
@@ -109,21 +112,46 @@ class RestoreIdentityWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun restoreIdentity(identity: ByteArray, retrying: Boolean) {
+    private suspend fun restoreIdentity(identity: ByteArray, retrying: Boolean, fromCreation: Boolean = false) {
         log.info("Restoring identity and username")
         try {
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 0)
             platformSyncService.updateSyncStatus(PreBlockStage.StartRecovery)
 
-            // use an "empty" state for each
-            val blockchainIdentityData = BlockchainIdentityData(IdentityCreationState.NONE, null, null, null, null, true)
+            // A fromCreation run can arrive with the creation state ALREADY
+            // advanced to DONE by the transparent-create path (a confirmed,
+            // non-contested primary sets DONE so the welcome tile appears the
+            // instant creation completes). Resetting that to NONE/restoring=true
+            // here — before the background recovery re-advances it — would blink
+            // the just-shown welcome tile out. So for a fromCreation run whose
+            // persisted state is already completed (>= DONE), PRESERVE it: seed
+            // the working object from the persisted state and skip the reset
+            // persist. A genuine device restore (fromCreation=false) and a
+            // not-yet-completed creation (e.g. a contested primary still at
+            // USERNAME_REGISTERED, which must route to VOTING) both keep the
+            // historic empty/restoring reset unchanged.
+            val alreadyCompletedFromCreation = if (fromCreation) {
+                identityConfig.load()?.takeIf { it.creationState >= IdentityCreationState.DONE }
+            } else {
+                null
+            }
+            // use an "empty" state for each (unless preserving a completed fromCreation state)
+            val blockchainIdentityData = alreadyCompletedFromCreation
+                ?: BlockchainIdentityData(IdentityCreationState.NONE, null, null, null, null, true)
 
             val authExtension =
                 walletDataProvider.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
             //authExtension.setWallet(walletApplication.wallet!!) // why is the wallet not set?  we didn't deserialize it probably!
             val cftxs = authExtension.assetLockTransactions
 
-            identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+            if (alreadyCompletedFromCreation == null) {
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+            } else {
+                log.info(
+                    "fromCreation restore: preserving already-completed creation state {} (not resetting to NONE/restoring)",
+                    alreadyCompletedFromCreation.creationState
+                )
+            }
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 1)
             val existingIdentity = identityRepository.getIdentityFromPublicKeyId()
                 ?: throw IllegalArgumentException("identity $identity doesn't exist on the network")
@@ -156,6 +184,15 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 firstIdentityKey.pubKeyHash
             )
 
+            // Recovery only fetches the identity; it never issues the identity's keys on the
+            // wallet's BLOCKCHAIN_IDENTITY chain (lookahead 0). Identities created by the
+            // Kotlin SDK (canonical 4-key set, derivation index == keyId) therefore arrive
+            // with zero issued keys and every later legacy-path signature (contact request
+            // send/accept, profile create/update) dies in WalletSignerCallback with
+            // "signer callback returned 0". Backfill them now; a no-op for identities whose
+            // keys were issued at creation by the legacy flow.
+            platformRepo.ensureIdentityChainKeys(blockchainIdentity.identity, encryptionKey)
+
             identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetIdentity)
@@ -175,10 +212,74 @@ class RestoreIdentityWorker @AssistedInject constructor(
             platformSyncService.updateSyncStatus(PreBlockStage.GetName)
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_3_restoring), 5, 4)
 
+            // Post-cutover TRANSPARENT create whose DPNS name did not land: the
+            // identity exists on chain but has no on-chain name yet. This worker
+            // OWNS re-driving ONLY the name step via the same SDK seam the create
+            // path uses — it NEVER funds (the identity already exists), so this is
+            // the refund-safe retry/completion point. Gated on the COMMITTED
+            // cutover rather than `fromCreation`: a home-tile retry re-runs this
+            // worker with fromCreation=false, and post-cutover the dashj name path
+            // is dead, so the SDK must own it either way. A genuine device restore
+            // starts from an empty config (no requested USERNAME) and falls through
+            // to the throw below (ask the user for a new username). Pre-cutover this
+            // is skipped and the classic dashj retry path is unchanged.
+            if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
+                val requestedLabel = identityConfig.get(BlockchainIdentityConfig.USERNAME)
+                val cutoverCommitted = try {
+                    transparentUsernameCreation.isCutoverCommitted()
+                } catch (e: Exception) {
+                    log.warn("cutover-state read failed while completing DPNS registration; skipping", e)
+                    false
+                }
+                if (cutoverCommitted && !requestedLabel.isNullOrEmpty()) {
+                    log.info("identity has no on-chain name yet — registering DPNS name '{}' via the SDK", requestedLabel)
+                    identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.PREORDER_REGISTERING)
+                    identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
+                    when (
+                        val result = transparentUsernameCreation.registerDpnsNameForExistingIdentity(
+                            Identifier.from(identity).toString(),
+                            requestedLabel
+                        )
+                    ) {
+                        is SdkWriteResult.Broadcast -> {
+                            log.info("SDK DPNS registration of '{}' confirmed: {}", requestedLabel, result.value)
+                            // Re-recover so the contested / DONE handling below sees
+                            // the now on-chain name (populates currentUsername; the
+                            // contested block picks up a name in voting).
+                            platformRepo.recoverUsernames(blockchainIdentity)
+                            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERED)
+                        }
+                        // Retryable: leave the state at USERNAME_REGISTERING (the
+                        // catch below stamps a generic error — NOT "missing domain
+                        // document", so the tile shows the retry card, and restoring
+                        // stays true so a retry re-runs THIS worker, never a re-fund).
+                        is SdkWriteResult.NotBroadcast ->
+                            error("username registration did not complete (retryable): ${result.reason}")
+                        is SdkWriteResult.Ambiguous ->
+                            error("username registration outcome unconfirmed (retryable): ${result.cause.message}")
+                    }
+                }
+            }
+
             var foundContestedNameInVotingPeriod = false
             val maybeDualUsernames = blockchainIdentity.currentUsername != null && !Names.isUsernameContestable(blockchainIdentity.currentUsername!!)
             val instantUsername = blockchainIdentity.currentUsername
-            if (blockchainIdentity.currentUsername == null || maybeDualUsernames) {
+            // dashj's recoverUsernames() keys the recovered name on its
+            // DPNS-NORMALIZED label ("c0ntested1"); for a contested name that
+            // is what lands in currentUsername/primaryUsername and, through
+            // the USERNAME pref, on the More-screen tile. When a contestable
+            // name is found directly this block was skipped, so its display
+            // label was never recovered and no UsernameRequest row was
+            // inserted for resolveRequestedUsernameDisplay to map back — the
+            // tile showed the normalized form (Fix B, observed on the shielded
+            // contested create). Enter it for contestable names too: the
+            // voting-contender recovery below reads the user's own contender
+            // document and restores the DISPLAY .label (and the request row),
+            // while the normalized form stays the lookup key everywhere else.
+            val currentIsContestable = blockchainIdentity.currentUsername
+                ?.let { Names.isUsernameContestable(it) } == true
+            if (blockchainIdentity.currentUsername == null || maybeDualUsernames || currentIsContestable) {
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
 
                 // find active voting here
@@ -221,19 +322,28 @@ class RestoreIdentityWorker @AssistedInject constructor(
                                     UsernameStatus.CONFIRMED,
                                     blockchainIdentity.currentUsername!!,
                                     usernameRequestStatus,
-                                    0
+                                    null
                                 )
                                 put(blockchainIdentity.currentUsername!!, usernameInfo)
                             }
                             var votingStartedAt = -1L
                             var label = name
-                            if (winner.isEmpty) {
+                            // The contested-names index only knows the DPNS-normalized
+                            // label ("c0ntested1"); the user's own contender document
+                            // carries the DISPLAY label they typed ("contested1").
+                            // Recover it whenever the document is available — and set
+                            // primaryUsername too: that field is what gets persisted
+                            // as the USERNAME pref, and leaving it normalized is what
+                            // put the normalized form on the More-screen tile
+                            // (observed live).
+                            documentWithVotes.serializedDocument?.let { serialized ->
                                 val contestedDocument = DomainDocument(
-                                    platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
+                                    platformRepo.platform.names.deserialize(serialized)
                                 )
-                                blockchainIdentity.currentUsername = contestedDocument.label
-                                votingStartedAt = contestedDocument.createdAt!!
                                 label = contestedDocument.label
+                                blockchainIdentity.currentUsername = label
+                                blockchainIdentity.primaryUsername = label
+                                votingStartedAt = contestedDocument.createdAt ?: -1L
                             }
                             val verifyDocument = IdentityVerify(platformRepo.platform.platform).get(
                                 blockchainIdentity.uniqueIdentifier,
@@ -268,18 +378,30 @@ class RestoreIdentityWorker @AssistedInject constructor(
                                 blockchainIdentity.usernameStatuses[blockchainIdentity.currentUsername!!] = usernameInfo
                             }
 
-                            // determine when voting started by finding the minimum timestamp
-                            val earliestCreatedAt = voteContenders.map.values.minOf {
-                                val document = documentWithVotes.serializedDocument?.let { platformRepo.platform.names.deserialize(it) }
-                                document?.createdAt ?: 0
-                            }
+                            // determine when voting started by finding the earliest
+                            // contender document (each contender's OWN document — the
+                            // old code re-read this identity's document for every
+                            // entry). Non-positive/missing timestamps must never win:
+                            // a 0 here was persisted as votingPeriodStart and rendered
+                            // as "Results on Dec 31, 1969" (observed live).
+                            val earliestCreatedAt = voteContenders.map.values
+                                .mapNotNull { contender ->
+                                    contender.serializedDocument
+                                        ?.let { platformRepo.platform.names.deserialize(it) }
+                                        ?.createdAt
+                                }
+                                .filter { createdAt -> createdAt > 0 }
+                                .minOrNull()
+                                ?: votingStartedAt
 
-                            usernameInfo.votingStartedAt = earliestCreatedAt
+                            if (earliestCreatedAt > 0) {
+                                usernameInfo.votingStartedAt = earliestCreatedAt
+                            }
                             usernameInfo.requestStatus = usernameRequestStatus
                             identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                             // schedule work to check the status after voting has ended
-                            if (usernameInfo.votingStartedAt != 0L) {
+                            if (earliestCreatedAt > 0) {
                                 GetUsernameVotingResultOperation(walletApplication)
                                     .create(
                                         usernameInfo.username!!,
@@ -336,19 +458,24 @@ class RestoreIdentityWorker @AssistedInject constructor(
                                         UsernameStatus.CONFIRMED,
                                         blockchainIdentity.currentUsername!!,
                                         usernameRequestStatus,
-                                        0
+                                        null
                                     )
                                     put(blockchainIdentity.currentUsername!!, usernameInfo)
                                 }
                                 var votingStartedAt = -1L
                                 var label = name
-                                if (winner.isEmpty) {
+                                // Same display-label recovery as the currently-contested
+                                // loop above: the index name is normalized; the user's
+                                // own document carries the typed display label, and
+                                // primaryUsername is what gets persisted as USERNAME.
+                                documentWithVotes.serializedDocument?.let { serialized ->
                                     val contestedDocument = DomainDocument(
-                                        platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
+                                        platformRepo.platform.names.deserialize(serialized)
                                     )
-                                    blockchainIdentity.currentUsername = contestedDocument.label
-                                    votingStartedAt = contestedDocument.createdAt!!
                                     label = contestedDocument.label
+                                    blockchainIdentity.currentUsername = label
+                                    blockchainIdentity.primaryUsername = label
+                                    votingStartedAt = contestedDocument.createdAt ?: -1L
                                 }
                                 val verifyDocument = IdentityVerify(platformRepo.platform.platform).get(
                                     blockchainIdentity.uniqueIdentifier,
@@ -385,23 +512,32 @@ class RestoreIdentityWorker @AssistedInject constructor(
                                         usernameInfo
                                 }
 
-                                // determine when voting started by finding the minimum timestamp
-                                val earliestCreatedAt = voteContenders.map.values.minOf {
-                                    val document = documentWithVotes.serializedDocument?.let {
-                                        platformRepo.platform.names.deserialize(it)
+                                // determine when voting started by finding the earliest
+                                // contender document (each contender's OWN document);
+                                // non-positive/missing timestamps must never win — a 0
+                                // here was persisted as votingPeriodStart and rendered
+                                // as the Unix epoch.
+                                val earliestCreatedAt = voteContenders.map.values
+                                    .mapNotNull { contender ->
+                                        contender.serializedDocument
+                                            ?.let { platformRepo.platform.names.deserialize(it) }
+                                            ?.createdAt
                                     }
-                                    document?.createdAt ?: 0
-                                }
+                                    .filter { createdAt -> createdAt > 0 }
+                                    .minOrNull()
+                                    ?: votingStartedAt
 
-                                usernameInfo?.votingStartedAt = earliestCreatedAt
-                                usernameInfo?.requestStatus = usernameRequestStatus
+                                if (earliestCreatedAt > 0) {
+                                    usernameInfo.votingStartedAt = earliestCreatedAt
+                                }
+                                usernameInfo.requestStatus = usernameRequestStatus
                                 identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                                 // schedule work to check the status after voting has ended
-                                if (usernameInfo?.votingStartedAt != 0L) {
+                                if (earliestCreatedAt > 0) {
                                     GetUsernameVotingResultOperation(walletApplication)
                                         .create(
-                                            usernameInfo?.username!!,
+                                            usernameInfo.username!!,
                                             blockchainIdentity.uniqueIdentifier.toString(),
                                             earliestCreatedAt
                                         )
@@ -442,6 +578,13 @@ class RestoreIdentityWorker @AssistedInject constructor(
 
             // At this point, let's see what has been recovered.  It is possible that only the identity was recovered.
             // In this case, we should require that the user enters in a new username.
+            // Reached only when the identity has no on-chain name AND there was
+            // nothing to register here (no requested USERNAME persisted) — the
+            // SDK completion step above already handled (and, on failure, threw
+            // a retryable error for) the fresh-create case that HAS a requested
+            // label. With no label there is nothing to re-drive, so this stays
+            // the historic "only the identity was recovered, ask for a new
+            // username" path (a genuine device restore of a name-less identity).
             if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
                 blockchainIdentityData.creationState = IdentityCreationState.USERNAME_REGISTERING
                 blockchainIdentityData.restoring = false
@@ -464,8 +607,19 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 (blockchainIdentityData.creationState == IdentityCreationState.VOTING && blockchainIdentityData.lostVote && blockchainIdentityData.showSecondaryUsername)) {
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE)
                 identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
-                // Complete the entire process
-                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE_AND_DISMISS)
+                // A FRESH creation (the shielded/Type-20 create handing its
+                // new on-chain identity here) must STOP at DONE so the home
+                // welcome tile appears — exactly like the L1
+                // CreateIdentityService path, which leaves a completed
+                // non-voting name at DONE for the user to dismiss. Only a
+                // genuine device restore auto-advances to DONE_AND_DISMISS
+                // (no welcome tile). Fix A: the restore handoff previously
+                // over-advanced to DONE_AND_DISMISS unconditionally, marking
+                // the tile already-dismissed so it never rendered.
+                if (!fromCreation) {
+                    // Complete the entire process
+                    identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE_AND_DISMISS)
+                }
             }
             identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
 

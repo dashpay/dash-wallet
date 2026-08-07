@@ -32,7 +32,7 @@ import org.bitcoinj.wallet.listeners.WalletChangeEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
 import org.bitcoinj.wallet.listeners.WalletResetEventListener
-import org.dash.wallet.common.transactions.filters.TransactionFilter
+import de.schildbach.wallet.transactions.WalletTransactionFilter
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -72,7 +72,7 @@ class WalletObserver(
     /** observe new transactions (sent and received) and optionally transaction confidence changes for the past hour. */
     fun observeTransactions(
         observeTxConfidence: Boolean,
-        vararg filters: TransactionFilter
+        vararg filters: WalletTransactionFilter
     ): Flow<Transaction> = callbackFlow {
         log.info("observing transactions start {}", this@WalletObserver)
         try {

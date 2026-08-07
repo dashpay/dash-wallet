@@ -4,6 +4,11 @@ buildscript {
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.12.0'
         dashjVersion = '22.0.4'
+        // Dash Platform Kotlin SDK (org.dashj:dash-sdk-android). Single source of
+        // truth for both the dependency coordinate (wallet/build.gradle) and the
+        // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
+        // cutover hands L1 ownership to the SDK.
+        dashSdkVersion = '0.1.0-v41int18-SNAPSHOT'
         dppVersion = "4.0.0"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
@@ -69,10 +74,48 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "$kotlin_version" apply false
 }
 
+// Credentials for the GitHub Packages Maven registry that hosts the pre-release
+// Dash Platform Kotlin SDK (see the repository declaration below). GitHub Packages
+// requires authentication for reads as well as writes.
+//   CI     : GITHUB_ACTOR / GITHUB_TOKEN environment variables.
+//   Local  : optional gpr.user / gpr.token in ~/.gradle/gradle.properties.
+// Never commit a token; both sources are read at configuration time only.
+def githubPackagesUser = System.getenv('GITHUB_ACTOR') ?: findProperty('gpr.user')
+def githubPackagesToken = System.getenv('GITHUB_TOKEN') ?: findProperty('gpr.token')
+
 allprojects {
     repositories {
-        google()
         mavenLocal()
+        // org.dashj:dash-sdk-android pre-release snapshots are published to GitHub
+        // Packages on dashpay/platform; they are deliberately not on Maven Central
+        // until the SDK cutover ships. mavenLocal() above is declared first, so a
+        // locally published SDK build still wins for local development, and this
+        // repository is only consulted when the coordinate is not already in ~/.m2.
+        // The content filter keeps every other dependency off this registry —
+        // GitHub Packages answers unknown coordinates with 401/403, which would
+        // otherwise turn unrelated lookups into hard resolution failures.
+        // Declared only when credentials exist so a credential-less checkout keeps
+        // building against ~/.m2.
+        // The pre-release SDK AAR is published to THIS repo's own package
+        // registry (publishing needs write on the destination repo, which
+        // fork-based contributors do not have on dashpay/platform). The
+        // package is public, so no credentials are required to read it —
+        // CI resolves it with nothing configured. Credentials are still
+        // honoured when present, for private-package scenarios.
+        maven {
+            name 'GitHubPackagesDashSdk'
+            url 'https://maven.pkg.github.com/dashpay/dash-wallet'
+            if (githubPackagesUser && githubPackagesToken) {
+                credentials {
+                    username = githubPackagesUser
+                    password = githubPackagesToken
+                }
+            }
+            content {
+                includeModule('org.dashj', 'dash-sdk-android')
+            }
+        }
+        google()
         mavenCentral()
         maven { url 'https://jitpack.io' }
         maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }

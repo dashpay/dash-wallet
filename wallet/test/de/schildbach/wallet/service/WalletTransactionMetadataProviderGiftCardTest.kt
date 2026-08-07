@@ -28,7 +28,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Sha256Hash
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.junit.Assert.assertEquals
@@ -49,8 +49,8 @@ class WalletTransactionMetadataProviderGiftCardTest {
     private lateinit var cacheDao: TransactionMetadataChangeCacheDao
     private lateinit var provider: WalletTransactionMetadataProvider
 
-    private val txId: Sha256Hash =
-        Sha256Hash.wrap("0000000000000000000000000000000000000000000000000000000000000001")
+    private val txId: org.dash.wallet.common.data.TxId =
+        org.dash.wallet.common.data.TxId.wrap("0000000000000000000000000000000000000000000000000000000000000001")
 
     @Before
     fun setUp() {
@@ -60,8 +60,9 @@ class WalletTransactionMetadataProviderGiftCardTest {
             transactionMetadataDao = mockk(relaxed = true),
             addressMetadataDao = mockk<AddressMetadataDao>(relaxed = true),
             iconBitmapDao = mockk<IconBitmapDao>(relaxed = true),
-            walletData = mockk<WalletDataProvider>(relaxed = true),
+            walletData = mockk<WalletData>(relaxed = true),
             giftCardDao = giftCardDao,
+            swapOrderDao = mockk(relaxed = true),
             transactionMetadataChangeCacheDao = cacheDao,
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),
             dashPayConfig = mockk<DashPayConfig>(relaxed = true)
@@ -84,7 +85,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             note = "order-123",
             index = 0
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
 
         // Fulfillment writes only the newly-arrived number/pin.
         val incoming = existing.copy(
@@ -129,7 +130,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             note = "order-7",
             index = 0
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
 
         // Caller hands us defaults (merchantName="", price=0.0) without realising they would
         // clobber the stored merchant info.
@@ -163,7 +164,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
     @Test
     fun `insert path is used when no existing row matches the index`() = runTest {
         // No local row for this (txId, index) yet — e.g. the dummy row wasn't saved.
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns emptyList()
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns emptyList()
 
         val incoming = GiftCard(
             txId = txId,
@@ -208,7 +209,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             barcodeValue = null, barcodeFormat = null,
             merchantUrl = "https://redeem/1", note = "order-multi", index = 1
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(card0, card1)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(card0, card1)
 
         // Only update card at index 1.
         val incoming = card1.copy(
@@ -239,7 +240,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             barcodeValue = null, barcodeFormat = null,
             merchantUrl = "https://kept", note = "order-9", index = 0
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
         coEvery { giftCardDao.updateGiftCard(any()) } returns 1
 
         val incoming = existing.copy(number = "N", pin = "P", merchantUrl = null, note = null)
@@ -257,7 +258,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
                 merchantName = "Acme",
                 originalPrice = 25.0,
                 merchantUrl = "https://kept",
-                order = "1234",
+                order = "order-9",
                 index = 0,
                 giftCardChallenge = null,
                 cacheTimestamp = any()
@@ -273,7 +274,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             barcodeValue = null, barcodeFormat = null,
             merchantUrl = "https://kept", note = "order-9", index = 2
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
         coEvery { giftCardDao.updateGiftCard(any()) } returns 1
 
         provider.updateGiftCardMetadata(existing.copy(number = "N", pin = "P"))

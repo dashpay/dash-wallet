@@ -99,6 +99,27 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
             ).apply { isCancelable = false }
         }
 
+        /**
+         * Indeterminate progress WITH an explicit dismiss button, for
+         * operations that keep running app-side after the dialog is closed
+         * (the caller's work must not be tied to the dialog's lifecycle).
+         * The button resolves the result callback with `false`.
+         */
+        @JvmStatic
+        fun progress(
+            message: String,
+            dismissButtonText: String
+        ): AdaptiveDialog {
+            return create(
+                R.layout.dialog_progress_dismissible,
+                null,
+                null,
+                message,
+                dismissButtonText,
+                null
+            ).apply { isCancelable = true }
+        }
+
         @JvmStatic
         fun create(
             @DrawableRes icon: Int?,
@@ -151,6 +172,34 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
     protected var onResultListener: ((Boolean?) -> Unit)? = null
     var isMessageSelectable = false
 
+    /**
+     * Optional live secondary status line (layouts that carry a
+     * `R.id.dialog_secondary_message` view, e.g. the dismissible progress
+     * dialog). Held here so [updateSecondaryMessage] can be called before
+     * the view exists (the dialog is shown asynchronously) and re-applied
+     * after view (re)creation — a long-running operation can push a "why
+     * this is slow" hint into the dialog the user is watching. Null/blank
+     * hides the line.
+     */
+    private var secondaryMessage: String? = null
+    private var secondaryMessageView: TextView? = null
+
+    /**
+     * Set (or clear) the live secondary status line. Safe to call at any
+     * time, on the main thread — before the dialog is shown, while it is
+     * visible, or after it has been dismissed.
+     */
+    fun updateSecondaryMessage(text: String?) {
+        secondaryMessage = text
+        secondaryMessageView?.let { applySecondaryMessage(it) }
+    }
+
+    private fun applySecondaryMessage(view: TextView) {
+        val text = secondaryMessage
+        view.text = text ?: ""
+        view.isVisible = !text.isNullOrEmpty()
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -180,6 +229,10 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
         val messageView: TextView? = view.findViewById(R.id.dialog_message)
         val positiveButton: TextView? = view.findViewById(R.id.dialog_positive_button)
         val negativeButton: TextView? = view.findViewById(R.id.dialog_negative_button)
+
+        secondaryMessageView = view.findViewById<TextView?>(R.id.dialog_secondary_message)?.also {
+            applySecondaryMessage(it)
+        }
 
         showIfNotEmpty(iconView, ICON_RES_ARG)
         showIfNotEmpty(titleView, TITLE_ARG)
@@ -261,6 +314,14 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
         super.onDismiss(dialog)
         onResultListener?.invoke(null)
         onResultListener = null
+    }
+
+    override fun onDestroyView() {
+        // Drop the view reference so a later updateSecondaryMessage never
+        // touches a detached view; the pending text stays in secondaryMessage
+        // and is re-applied on the next onViewCreated.
+        secondaryMessageView = null
+        super.onDestroyView()
     }
 
     protected fun showIfNotEmpty(view: TextView?, argKey: String): Boolean {

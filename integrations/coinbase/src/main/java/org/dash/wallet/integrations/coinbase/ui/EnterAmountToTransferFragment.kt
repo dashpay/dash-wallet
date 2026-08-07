@@ -30,9 +30,10 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.dashToFiat
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.segmented_picker.PickerDisplayMode
@@ -54,6 +55,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 
 @AndroidEntryPoint
@@ -97,44 +100,47 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             SegmentedOption(viewModel.localCurrencyCode)
         )
         binding.currencyOptions.setContent {
-            SegmentedPicker(
-                currencyOptions,
-                modifier = Modifier
-                    .height(48.dp)
-                    .width(40.dp),
-                selectedIndex = pickedCurrencyIndex,
-                style = SegmentedPickerStyle(
-                    displayMode = PickerDisplayMode.Vertical,
-                    cornerRadius = 8f,
-                    backgroundColor = Color.Transparent,
-                    thumbColor = MyTheme.Colors.primary5,
-                    textStyle = MyTheme.Micro,
-                    shadowElevation = 0
-                )
-            ) { _, index ->
-                val changed = pickedCurrencyIndex != index
-                pickedCurrencyIndex = index
-                viewModel.isFiatSelected = index == 1
-                if (changed) {
-                    val cleanedValue = viewModel.formatInput
-                    formatTransferredAmount(cleanedValue)
+            DashWalletTheme {
+                val colors = LocalDashColors.current
+                SegmentedPicker(
+                    currencyOptions,
+                    modifier = Modifier
+                        .height(48.dp)
+                        .width(40.dp),
+                    selectedIndex = pickedCurrencyIndex,
+                    style = SegmentedPickerStyle(
+                        displayMode = PickerDisplayMode.Vertical,
+                        cornerRadius = 8f,
+                        backgroundColor = Color.Transparent,
+                        thumbColor = colors.primary5,
+                        textStyle = MyTheme.Micro,
+                        shadowElevation = 0
+                    )
+                ) { _, index ->
+                    val changed = pickedCurrencyIndex != index
+                    pickedCurrencyIndex = index
+                    viewModel.isFiatSelected = index == 1
+                    if (changed) {
+                        val cleanedValue = viewModel.formatInput
+                        formatTransferredAmount(cleanedValue)
+                    }
                 }
             }
         }
 
         binding.transferBtn.setOnClickListener {
             val cleanedInput = GenericUtils.formatFiatWithoutComma(viewModel.inputValue)
-            val fiatAmount: Fiat
-            val dashAmount: Coin
+            val fiatAmount: FiatValue
+            val dashAmount: Dash
             if (viewModel.isFiatSelected) {
                 fiatAmount = exchangeRate?.let { rate ->
-                    Fiat.parseFiat(rate.fiat.currencyCode, cleanedInput)
-                } ?: Fiat.parseFiat(CoinbaseConstants.DEFAULT_CURRENCY_USD, CoinbaseConstants.VALUE_ZERO)
+                    FiatValue.parseFiat(rate.currencyCode, cleanedInput)
+                } ?: FiatValue.parseFiat(CoinbaseConstants.DEFAULT_CURRENCY_USD, CoinbaseConstants.VALUE_ZERO)
                 dashAmount = viewModel.applyExchangeRateToFiat(fiatAmount)
             } else {
-                dashAmount = Coin.parseCoin(cleanedInput)
-                fiatAmount = exchangeRate?.coinToFiat(dashAmount)
-                    ?: Fiat.parseFiat(CoinbaseConstants.DEFAULT_CURRENCY_USD, CoinbaseConstants.VALUE_ZERO)
+                dashAmount = Dash.parse(cleanedInput)
+                fiatAmount = exchangeRate?.dashToFiat(dashAmount)
+                    ?: FiatValue.parseFiat(CoinbaseConstants.DEFAULT_CURRENCY_USD, CoinbaseConstants.VALUE_ZERO)
             }
 
             viewModel.onContinueTransferEvent.value = Pair(fiatAmount, dashAmount)
@@ -146,7 +152,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
         }
 
         viewModel.localCurrencyExchangeRate.observe(viewLifecycleOwner) {
-            exchangeRate = it?.let { ExchangeRate(Coin.COIN, it.fiat) }
+            exchangeRate = it
         }
 
         viewModel.keyboardStateCallback.observe(viewLifecycleOwner) {
@@ -216,7 +222,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             try {
                 value.append(number)
                 val formattedValue = GenericUtils.formatFiatWithoutComma(value.toString())
-                Coin.parseCoin(formattedValue)
+                Dash.parse(formattedValue)
                 formatTransferredAmount(value.toString())
             } catch (e: Exception) {
                 value.deleteCharAt(value.length - 1)

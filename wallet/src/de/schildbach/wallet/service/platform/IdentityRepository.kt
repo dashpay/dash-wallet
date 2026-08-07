@@ -17,6 +17,8 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
+import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TIMESPAN
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TOP_CONTACT_COUNT
@@ -44,7 +46,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dashj.platform.dapiclient.MaxRetriesReachedException
 import org.dashj.platform.dapiclient.NoAvailableAddressesForRetryException
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
@@ -66,6 +68,57 @@ import java.util.HashMap
 import java.util.HashSet
 import java.util.NoSuchElementException
 import javax.inject.Inject
+
+/**
+ * No-resurrection guard for the persisted blockchain identity.
+ *
+ * Observed live: "Reset Wallet" does not restart the process, and a platform
+ * sync iteration that loaded a fully-populated [BlockchainIdentityData]
+ * BEFORE the reset can re-persist it AFTER [BlockchainIdentityConfig.clear]
+ * ran (e.g. the fire-and-forget persists in PlatformSynchronizationService's
+ * checkVotingStatus / the DONE_AND_DISMISS transition in
+ * updateContactRequests). That resurrects the previous wallet's identity —
+ * username, CONFIRMED/DONE_AND_DISMISS state — onto a brand-new wallet and
+ * re-enables the whole DashPay UI.
+ *
+ * A cleared store has no CREATION_STATE (or NONE). No legitimate flow writes
+ * a DONE/DONE_AND_DISMISS identity over a cleared store in a single step:
+ * creation, restore (RestoreIdentityWorker) and invite flows all march the
+ * persisted creationState through intermediate states first. So "store says
+ * NONE/absent, incoming object says DONE" can only be a stale pre-reset
+ * object and must never be written.
+ */
+internal fun isResurrectingClearedIdentity(
+    persistedCreationState: String?,
+    incomingState: IdentityCreationState
+): Boolean {
+    if (incomingState < IdentityCreationState.DONE) {
+        return false
+    }
+    return persistedCreationState == null || persistedCreationState == IdentityCreationState.NONE.name
+}
+
+/**
+ * [BlockchainIdentity.uniqueIdString] without the lateinit landmine.
+ *
+ * dashj's `BlockchainIdentity.uniqueId` is a `lateinit var` that the legacy
+ * dashj creation flow always initializes — but an SDK-KEYSTORE-claimed
+ * identity (shielded/L1 invite claim, transparent SDK create) reaches the
+ * wrapper by rehydration, and any wrapper built while the persisted record
+ * had no identityId yet (state below IDENTITY_REGISTERED at process start,
+ * with the id persisted later by the in-process claim) is cached with the
+ * lateinit UNSET. Reading `uniqueIdString` on such a wrapper throws
+ * `UninitializedPropertyAccessException` — observed live on the S22 (11.10.50)
+ * when an invite-claim resume crashed in [IdentityRepositoryImpl.initBlockchainIdentity]'s
+ * logging of the stale cached wrapper. Every read that can meet a rehydrated
+ * or stale-cached wrapper must go through this and fall back to the persisted
+ * identityId.
+ */
+internal fun BlockchainIdentity.uniqueIdStringOrNull(): String? = try {
+    uniqueIdString
+} catch (e: UninitializedPropertyAccessException) {
+    null
+}
 
 interface IdentityRepository {
     val blockchainIdentity: BlockchainIdentity?
@@ -113,10 +166,12 @@ class IdentityRepositoryImpl @Inject constructor(
     private val walletApplication: WalletApplication,
     val appDatabase: AppDatabase,
     private val blockchainIdentityDataStorage: BlockchainIdentityConfig,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val platformRepo: PlatformRepo,
     private val dashPayConfig: DashPayConfig,
     private val dashSystemService: DashSystemService,
+    private val sdkUsernameQueries: SdkUsernameQueries,
+    private val sdkProfileQueries: SdkProfileQueries,
 ) : IdentityRepository {
     companion object {
         private val log = LoggerFactory.getLogger(IdentityRepository::class.java)
@@ -195,12 +250,12 @@ class IdentityRepositoryImpl @Inject constructor(
 
     @Throws(IllegalStateException::class)
     suspend fun getIdentity(): String {
-        return if (_blockchainIdentity != null) {
-            _blockchainIdentity!!.uniqueIdString
-        } else {
-            blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)
-                ?: throw IllegalStateException("IdentityId not found")
-        }
+        // The cached wrapper can be rehydrated/stale with its lateinit
+        // uniqueId UNSET (SDK-claimed identity persisted after the cache was
+        // built) — read it safely and fall back to the persisted identityId.
+        return _blockchainIdentity?.uniqueIdStringOrNull()
+            ?: blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)
+            ?: throw IllegalStateException("IdentityId not found")
     }
 
     override suspend fun getIdentityBalance(): CreditBalanceInfo? = withContext(Dispatchers.IO) {
@@ -238,7 +293,7 @@ class IdentityRepositoryImpl @Inject constructor(
                 }
                 identity = blockchainIdentityData.identity
             }
-            log.info("loading identity ${blockchainIdentityData.userId} == ${_blockchainIdentity?.uniqueIdString}: {}", watch)
+            log.info("loading identity ${blockchainIdentityData.userId} == ${_blockchainIdentity?.uniqueIdStringOrNull()}: {}", watch)
         } else {
             log.info("loading identity: {}", watch)
             return blockchainIdentity
@@ -246,7 +301,7 @@ class IdentityRepositoryImpl @Inject constructor(
 
         // TODO: needs to check against Platform to see if values exist.  Check after
         // Syncing complete
-        log.info("loading identity ${blockchainIdentityData.userId} == ${_blockchainIdentity?.uniqueIdString}: {}", watch)
+        log.info("loading identity ${blockchainIdentityData.userId} == ${_blockchainIdentity?.uniqueIdStringOrNull()}: {}", watch)
         return blockchainIdentity.apply {
             primaryUsername = blockchainIdentityData.username
             secondaryUsername = blockchainIdentityData.usernameSecondary
@@ -326,6 +381,23 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
+        // Defense in depth against a wallet reset racing the platform sync
+        // loop: re-read the persisted creationState immediately before
+        // persisting and refuse to write a completed (>= DONE) identity over
+        // a cleared store — see [isResurrectingClearedIdentity].
+        if (blockchainIdentityData.creationState >= IdentityCreationState.DONE) {
+            val persistedState = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.CREATION_STATE)
+            if (isResurrectingClearedIdentity(persistedState, blockchainIdentityData.creationState)) {
+                log.warn(
+                    "refusing to persist {} identity ({}) over a cleared store (persisted creationState={}) — " +
+                        "stale object surviving a wallet reset",
+                    blockchainIdentityData.creationState,
+                    blockchainIdentityData.username,
+                    persistedState
+                )
+                return
+            }
+        }
         blockchainIdentityDataStorage.insert(blockchainIdentityData)
     }
 
@@ -333,7 +405,10 @@ class IdentityRepositoryImpl @Inject constructor(
         blockchainIdentityData.apply {
             creditFundingTxId = blockchainIdentity.assetLockTransaction?.txId
             userId = if (blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED)
-                blockchainIdentity.uniqueIdString
+                // Safe read: an SDK-claimed identity's rehydrated wrapper can
+                // have the lateinit unset while the record already carries the
+                // on-chain id — keep the persisted value, never crash or wipe.
+                blockchainIdentity.uniqueIdStringOrNull() ?: userId
             else null
             identity = blockchainIdentity.identity
             registrationStatus = blockchainIdentity.registrationStatus
@@ -439,16 +514,23 @@ class IdentityRepositoryImpl @Inject constructor(
             //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
             // Sometimes when onlyExactUsername = true, an exception is thrown here and that results in a crash
             // it is not clear why a search for an existing username results in a failure to find it again.
-            val nameDocuments = if (!onlyExactUsername) {
-                platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
-            } else {
-                val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
-                if (nameDocument != null) {
-                    listOf(nameDocument)
+            // Phase 3c (docs/kotlin-sdk-migration-plan.md): name-document
+            // retrieval via the Kotlin SDK behind USE_KOTLIN_SDK_DPNS_READS
+            // (default off). Null means "flag off or SDK path failed" —
+            // fall through to the unchanged dashj-platform queries. The rest
+            // of this pipeline (profiles, contacts, contested filtering) is
+            // dashj either way.
+            val nameDocuments = sdkUsernameQueries.searchDomainDocumentsOrNull(text, onlyExactUsername, limit)
+                ?: if (!onlyExactUsername) {
+                    platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
                 } else {
-                    listOf()
+                    val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
+                    if (nameDocument != null) {
+                        listOf(nameDocument)
+                    } else {
+                        listOf()
+                    }
                 }
-            }
             // determine if multiple names belong to the same identity. If so, don't show any non-contested names
             val identifierDocumentMap = hashMapOf<Identifier, ArrayList<DomainDocument>>()
             nameDocuments.forEach { document ->
@@ -478,7 +560,12 @@ class IdentityRepositoryImpl @Inject constructor(
             }.toSet().toList()
 
             val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
-                val profileDocuments = platform.profiles.getList(userIds)
+                // Phase 3d (docs/kotlin-sdk-migration-plan.md): profile
+                // retrieval via the Kotlin SDK behind USE_KOTLIN_SDK_DPNS_READS
+                // (default off). Null means "flag off or SDK path failed" —
+                // fall through to the unchanged dashj-platform query.
+                val profileDocuments = sdkProfileQueries.getProfileDocumentsOrNull(userIds)
+                    ?: platform.profiles.getList(userIds)
                 profileDocuments.associateBy({ it.ownerId }, { it })
             } else {
                 log.warn("search usernames: userIdList is empty, though nameDocuments has ${nameDocuments.size} items")
@@ -825,7 +912,26 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     override fun updateIdentity() {
-        _blockchainIdentity?.updateIdentity()
+        val blockchainIdentity = _blockchainIdentity ?: return
+        // dashj's BlockchainIdentity.updateIdentity() is a plain CACHED get —
+        // platform.identities.get(uniqueIdentifier) — whose fetch succeeds and
+        // is then CBOR-encoded into the in-memory identity cache
+        // (PlatformStateRepository.storeIdentity). The legacy encoder has no
+        // converter for a key's SingleContractDocumentType bound and throws
+        // IllegalArgumentException("No converter for ...", Cbor.kt:186) AFTER
+        // the fetch. Our own 6-key identities carry that bound on keys 4/5, so
+        // the un-tolerated dashj call threw on the full contact-update path
+        // (updateContactRequests(initialSync = true)) and aborted the whole
+        // sync BEFORE the contact-request fetch ever ran — observed live
+        // (S21, 2026-08-02) as an iPhone contact-request acceptance going
+        // undiscovered for ~16 minutes. Route the refresh through the tolerant
+        // fetch instead (see PlatformService.getIdentity /
+        // IdentityCacheTolerance) and assign the result ourselves —
+        // functionally identical to the dashj method, minus the fatal cache
+        // write.
+        platform.getIdentity(blockchainIdentity.uniqueIdentifier)?.let {
+            blockchainIdentity.identity = it
+        }
     }
 
     // current unused
@@ -834,7 +940,7 @@ class IdentityRepositoryImpl @Inject constructor(
         val profiles = dashPayProfileDao.loadAll()
         val profilesById = profiles.associateBy({ it.userId }, { it })
         report.append("Contact Requests (Sent) -----------------\n")
-        dashPayContactRequestDao.loadToOthers(_blockchainIdentity?.uniqueIdString ?: return "").forEach {
+        dashPayContactRequestDao.loadToOthers(_blockchainIdentity?.uniqueIdStringOrNull() ?: return "").forEach {
             val fromProfile = profilesById[it.userId]
             report.append(it.userId)
             if (fromProfile != null) {
@@ -848,7 +954,7 @@ class IdentityRepositoryImpl @Inject constructor(
             report.append("\n")
         }
         report.append("Contact Requests (Received) -----------------\n")
-        dashPayContactRequestDao.loadFromOthers(_blockchainIdentity?.uniqueIdString ?: return "").forEach {
+        dashPayContactRequestDao.loadFromOthers(_blockchainIdentity?.uniqueIdStringOrNull() ?: return "").forEach {
             val fromProfile = profilesById[it.userId]
             report.append(it.userId)
             if (fromProfile != null) {

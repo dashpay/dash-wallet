@@ -70,16 +70,19 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.WalletEx
+import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.ui.components.merchantNameBitmap
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.dashjTx
+import de.schildbach.wallet.transactions.toTxInfo
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.transactions.TransactionWrapper
-import org.dash.wallet.common.transactions.batchAndFilterUpdates
+import de.schildbach.wallet.transactions.batchAndFilterUpdates
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
@@ -93,14 +96,15 @@ import javax.inject.Singleton
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class TxDisplayCacheService @Inject constructor(
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val walletApplication: WalletApplication,
     private val txDisplayCacheDao: TxDisplayCacheDao,
     private val txGroupCacheDao: TxGroupCacheDao,
     private val metadataProvider: TransactionMetadataProvider,
     private val platformRepo: PlatformRepo,
     private val identityRepo: IdentityRepository,
-    private val blockchainStateProvider: BlockchainStateProvider
+    private val blockchainStateProvider: BlockchainStateProvider,
+    private val displayCacheRefreshBus: DisplayCacheRefreshBus
 ) {
 
     companion object {
@@ -138,7 +142,7 @@ class TxDisplayCacheService @Inject constructor(
     // Internal filter driven by setFilter() calls from the ViewModel
     private val _currentFilter = MutableStateFlow(TxFilterType.ALL)
 
-    @Volatile private var metadata: Map<Sha256Hash, PresentableTxMetadata> = mapOf()
+    @Volatile private var metadata: Map<TxId, PresentableTxMetadata> = mapOf()
     @Volatile private var contacts: Map<String, DashPayProfile> = mapOf()
     @Volatile private var contactsByTxId: Map<String, DashPayProfile> = mapOf()
     @Volatile private var minContactCreatedDate: LocalDate = LocalDate.MIN
@@ -266,9 +270,9 @@ class TxDisplayCacheService @Inject constructor(
                 val oldMetadata = this.metadata
                 this.metadata = newMetadata
 
-                val changedIds = buildSet<Sha256Hash> {
-                    newMetadata.forEach { (id, meta) -> if (meta != oldMetadata[id]) add(id) }
-                    oldMetadata.forEach { (id, _) -> if (id !in newMetadata) add(id) }
+                val changedIds = buildSet<String> {
+                    newMetadata.forEach { (id, meta) -> if (meta != oldMetadata[id]) add(id.toString()) }
+                    oldMetadata.forEach { (id, _) -> if (id !in newMetadata) add(id.toString()) }
                 }
 
                 if (changedIds.isEmpty()) {
@@ -285,7 +289,7 @@ class TxDisplayCacheService @Inject constructor(
                     wrapper.transactions.keys.any { it in changedIds }
                 }
                 val inMemoryTxIds = inMemoryWrappers.flatMap { it.transactions.keys }.toSet()
-                val missingTxIds = changedIds.filter { it !in inMemoryTxIds }.map { it.toString() }
+                val missingTxIds = changedIds.filter { it !in inMemoryTxIds }
                 val lazyWrappers = if (missingTxIds.isNotEmpty()) {
                     val cacheEntries = txGroupCacheDao.getGroupsForTxIds(missingTxIds)
                     val loadedById = HashMap<String, TransactionWrapper>()
@@ -304,31 +308,77 @@ class TxDisplayCacheService @Inject constructor(
                             wrapper,
                             walletData.transactionBag,
                             Constants.CONTEXT,
-                            contact = contactsByTxId[txId.toString()],
-                            metadata = newMetadata[txId],
+                            contact = contactsByTxId[txId],
+                            metadata = newMetadata[TxId.wrap(txId)],
                             chainLockBlockHeight = chainLockBlockHeight
                         )
                         TxDisplayCacheEntry.fromTransactionRowView(
                             row,
                             walletApplication,
                             computeFilterFlags(wrapper),
-                            newMetadata[txId]?.customIconId?.toString()
+                            newMetadata[TxId.wrap(txId)]?.customIconId?.toString()
                         )
                     }
                     val rowIds = newEntries.map { it.rowId }
                     val existingByRowId = txDisplayCacheDao.getEntriesByIds(rowIds).associateBy { it.rowId }
                     val entries = newEntries.map { entry ->
-                        val existing = existingByRowId[entry.rowId]
-                        if (existing != null && existing.service != null && entry.service == null) {
-                            entry.copy(
+                        val existing = existingByRowId[entry.rowId] ?: return@map entry
+                        var result = entry
+                        if (existing.service != null && result.service == null) {
+                            result = result.copy(
                                 service      = existing.service,
                                 iconType     = existing.iconType,
                                 iconBgType   = existing.iconBgType,
-                                customIconId = entry.customIconId ?: existing.customIconId
+                                customIconId = result.customIconId ?: existing.customIconId
                             )
-                        } else {
-                            entry
                         }
+                        // Post-cutover preserve-guard: this rebuild comes from the
+                        // dashj wrapper, which for an SDK-only tx reports value=0 /
+                        // rate=null. A memo/tax edit must NOT clobber a value/rate
+                        // that CutoverUiDataService already re-stamped onto the row,
+                        // so keep the existing non-degenerate value/rate (mirrors the
+                        // service-preservation guard above).
+                        if (result.valueSatoshis == 0L && existing.valueSatoshis != 0L) {
+                            result = result.copy(valueSatoshis = existing.valueSatoshis)
+                        }
+                        if (result.exchangeRateFiatCode == null &&
+                            result.exchangeRateFiatValue == null &&
+                            existing.exchangeRateFiatCode != null
+                        ) {
+                            result = result.copy(
+                                exchangeRateFiatCode  = existing.exchangeRateFiatCode,
+                                exchangeRateFiatValue = existing.exchangeRateFiatValue
+                            )
+                        }
+                        // Post-cutover preserve-guard (direction/amount/status/icon): an
+                        // SDK-stamped row carries the engine + contact correction that the dashj
+                        // wrapper cannot reproduce — an SDK contact send surfaces only its +change,
+                        // so this rebuild would revert the row to a "Received" misread (wrong icon,
+                        // title, direction and status). A memo/tax-category edit must never change a
+                        // tx's direction/amount/status, so when the existing row was SDK-stamped
+                        // (it carries a contact identity, or the dashj rebuild degenerated to
+                        // value 0 while the cached row holds a real value) preserve its
+                        // value/icon/title/status/filter bucket across the rebuild. For a
+                        // pre-cutover contact tx the existing row was built from the same dashj
+                        // computation, so this copy is a no-op — behavior is byte-for-byte unchanged.
+                        // The SDK-authority register covers NON-contact rows (a plain
+                        // SDK-authored send has no contact identity and its dashj
+                        // rebuild is not always degenerate), closing the hole that let
+                        // a memo/tax edit revert a corrected plain send.
+                        val existingIsSdkStamped = existing.contactUserId != null ||
+                            displayCacheRefreshBus.isSdkAuthoritative(entry.rowId) ||
+                            (entry.valueSatoshis == 0L && existing.valueSatoshis != 0L)
+                        if (existingIsSdkStamped) {
+                            result = result.copy(
+                                valueSatoshis = existing.valueSatoshis,
+                                iconType      = existing.iconType,
+                                iconBgType    = existing.iconBgType,
+                                title         = existing.title,
+                                statusText    = existing.statusText,
+                                filterFlags   = existing.filterFlags
+                            )
+                        }
+                        result
                     }
                     txDisplayCacheDao.insertAll(entries)
                 }
@@ -362,7 +412,7 @@ class TxDisplayCacheService @Inject constructor(
                 txGroupCacheDao.deleteAll()
                 walletData.wallet?.let { wallet ->
                     coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-                    crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+                    crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
                 }
                 _currentPagingSource.value?.invalidate()
             }
@@ -391,6 +441,19 @@ class TxDisplayCacheService @Inject constructor(
                 }
             }
             .catch { e -> log.error("blockchain state flow error (cache service)", e) }
+            .launchIn(serviceScope)
+
+        // Belt-and-suspenders home-list refresh: CutoverUiDataService signals the bus
+        // immediately after every display-cache write (fresh SDK receive, direction/amount
+        // correction, or a pending→confirmed IS-lock flip). Room's InvalidationTracker is
+        // supposed to re-fire the live PagingSource on those upserts but on-device it can
+        // miss the change, leaving a stale "Sending"/"Processing" row for minutes. Force the
+        // active PagingSource to re-query on every signal — equivalent to adapter.refresh(),
+        // and no more disruptive to scroll than any normal data change. Pre-cutover nothing
+        // writes the cache, so the bus never fires and this is inert.
+        displayCacheRefreshBus.changes
+            .onEach { _currentPagingSource.value?.invalidate() }
+            .catch { e -> log.error("display cache refresh bus flow error", e) }
             .launchIn(serviceScope)
     }
 
@@ -511,7 +574,7 @@ class TxDisplayCacheService @Inject constructor(
             walletData.wallet?.let { wallet ->
                 val t0 = System.currentTimeMillis()
                 coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-                crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+                crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
 
                 val rawCount = wallet.getTransactions(true).size
                 val t1 = System.currentTimeMillis()
@@ -554,15 +617,15 @@ class TxDisplayCacheService @Inject constructor(
                 wrapper,
                 walletData.transactionBag,
                 Constants.CONTEXT,
-                contact = contactsByTxId[txId.toString()],
-                metadata = metadata[txId],
+                contact = contactsByTxId[txId],
+                metadata = metadata[TxId.wrap(txId)],
                 chainLockBlockHeight = chainLockBlockHeight
             )
             return TxDisplayCacheEntry.fromTransactionRowView(
                 row,
                 walletApplication,
                 computeFilterFlags(wrapper),
-                metadata[txId]?.customIconId?.toString()
+                metadata[TxId.wrap(txId)]?.customIconId?.toString()
             )
         }
 
@@ -584,11 +647,11 @@ class TxDisplayCacheService @Inject constructor(
                 else                       -> TxGroupCacheEntry.TYPE_SINGLE
             }
             wrapper.transactions.values
-                .sortedBy { it.updateTime }
+                .sortedBy { it.updateTimeMillis }
                 .mapIndexed { index, tx ->
                     TxGroupCacheEntry(
                         groupId     = wrapper.id,
-                        txId        = tx.txId.toString(),
+                        txId        = tx.txId,
                         wrapperType = type,
                         groupDate   = wrapper.groupDate.toString(),
                         sortOrder   = index
@@ -602,7 +665,7 @@ class TxDisplayCacheService @Inject constructor(
         val wallet = walletData.wallet ?: return
         val t0 = System.currentTimeMillis()
         val cjFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-        val cnFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+        val cnFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
         coinJoinWrapperFactory = cjFactory
         crowdNodeWrapperFactory = cnFactory
 
@@ -625,11 +688,11 @@ class TxDisplayCacheService @Inject constructor(
 
             val wrapper = when (wrapperType) {
                 TxGroupCacheEntry.TYPE_COINJOIN -> {
-                    txs.forEach { cjFactory.tryInclude(it) }
+                    txs.forEach { cjFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                     cjFactory.wrappers.find { it.id == groupId }
                 }
                 TxGroupCacheEntry.TYPE_CROWDNODE -> {
-                    txs.forEach { cnFactory.tryInclude(it) }
+                    txs.forEach { cnFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                     cnFactory.wrappers.find { it.id == groupId }
                 }
                 else -> null
@@ -648,7 +711,7 @@ class TxDisplayCacheService @Inject constructor(
         // before rebuildWrappedList / initializeFactoriesFromCache has run).
         if (coinJoinWrapperFactory == null) {
             coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-            crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+            crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
         }
         val cjFactory = coinJoinWrapperFactory ?: return null
         val cnFactory = crowdNodeWrapperFactory ?: return null
@@ -666,11 +729,11 @@ class TxDisplayCacheService @Inject constructor(
 
         val wrapper = when (wrapperType) {
             TxGroupCacheEntry.TYPE_COINJOIN -> {
-                txs.forEach { cjFactory.tryInclude(it) }
+                txs.forEach { cjFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                 cjFactory.wrappers.find { it.id == groupId }
             }
             TxGroupCacheEntry.TYPE_CROWDNODE -> {
-                txs.forEach { cnFactory.tryInclude(it) }
+                txs.forEach { cnFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                 cnFactory.wrappers.find { it.id == groupId }
             }
             else -> txs.firstOrNull()?.let { createSingleTxWrapper(it) }
@@ -684,10 +747,12 @@ class TxDisplayCacheService @Inject constructor(
     }
 
     private suspend fun updateWrappedListForTransactions(txs: List<Transaction>) {
+        val bag = walletData.transactionBag
+        val params = walletData.networkParameters
         val txIdToWrapper = HashMap<String, TransactionWrapper>(wrappedTransactionList.size * 4)
         wrappedTransactionList.forEach { wrapper ->
             wrapper.transactions.keys.forEach { txId ->
-                txIdToWrapper[txId.toString()] = wrapper
+                txIdToWrapper[txId] = wrapper
             }
         }
 
@@ -698,7 +763,7 @@ class TxDisplayCacheService @Inject constructor(
         for (tx in txs) {
             val existing = txIdToWrapper[tx.txId.toString()]
             if (existing != null) {
-                existing.transactions[tx.txId] = tx
+                existing.transactions[tx.txId.toString()] = tx.toTxInfo(bag, params)
                 affectedWrappers.add(existing)
             } else {
                 unknownTxs.add(tx)
@@ -719,7 +784,7 @@ class TxDisplayCacheService @Inject constructor(
                         ?: loadWrapperOnDemand(cacheEntry.groupId, cacheEntry.wrapperType)
                             ?.also { loadedById[it.id] = it }
                     if (wrapper != null) {
-                        wrapper.transactions[tx.txId] = tx
+                        wrapper.transactions[tx.txId.toString()] = tx.toTxInfo(bag, params)
                         affectedWrappers.add(wrapper)
                         if (mutableList.none { it.id == wrapper.id }) {
                             mutableList.add(wrapper)
@@ -730,7 +795,8 @@ class TxDisplayCacheService @Inject constructor(
 
                 var added = false
 
-                val (cjIncluded, cjWrapper) = coinJoinWrapperFactory?.tryInclude(tx) ?: (false to null)
+                val txInfo = tx.toTxInfo(bag, params)
+                val (cjIncluded, cjWrapper) = coinJoinWrapperFactory?.tryInclude(txInfo) ?: (false to null)
                 if (cjIncluded && cjWrapper != null) {
                     if (mutableList.none { it.id == cjWrapper.id }) {
                         mutableList.add(cjWrapper)
@@ -740,7 +806,7 @@ class TxDisplayCacheService @Inject constructor(
                 }
 
                 if (!added) {
-                    val (cnIncluded, cnWrapper) = crowdNodeWrapperFactory?.tryInclude(tx) ?: (false to null)
+                    val (cnIncluded, cnWrapper) = crowdNodeWrapperFactory?.tryInclude(txInfo) ?: (false to null)
                     if (cnIncluded && cnWrapper != null) {
                         if (mutableList.none { it.id == cnWrapper.id }) {
                             mutableList.add(cnWrapper)
@@ -769,20 +835,23 @@ class TxDisplayCacheService @Inject constructor(
             val txId = wrapper.transactions.keys.first()
             val row = TransactionRowView.fromTransactionWrapper(
                 wrapper, walletData.transactionBag, Constants.CONTEXT,
-                contact = contactsByTxId[txId.toString()],
-                metadata = metadata[txId],
+                contact = contactsByTxId[txId],
+                metadata = metadata[TxId.wrap(txId)],
                 chainLockBlockHeight = chainLockBlockHeight
             )
             TxDisplayCacheEntry.fromTransactionRowView(
                 row,
                 walletApplication,
                 computeFilterFlags(wrapper),
-                metadata[txId]?.customIconId?.toString()
+                metadata[TxId.wrap(txId)]?.customIconId?.toString()
             )
         }
         if (displayEntries.isNotEmpty()) {
             val beforeCount = txDisplayCacheDao.getCount()
-            txDisplayCacheDao.insertAll(displayEntries)
+            // Never regress an SDK-stamped row: mid-rescan the dashj wrapper computes a
+            // "Received +change"/no-contact misread for a contact send the SDK already
+            // corrected — merge so contact identity and direction/shape are preserved.
+            txDisplayCacheDao.insertAll(mergeAllPreservingSdkStamped(displayEntries))
             val afterCount = txDisplayCacheDao.getCount()
             if (afterCount != beforeCount) {
                 log.info(
@@ -799,11 +868,11 @@ class TxDisplayCacheService @Inject constructor(
                 else                       -> TxGroupCacheEntry.TYPE_SINGLE
             }
             wrapper.transactions.values
-                .sortedBy { it.updateTime }
+                .sortedBy { it.updateTimeMillis }
                 .mapIndexed { index, tx ->
                     TxGroupCacheEntry(
                         groupId     = wrapper.id,
-                        txId        = tx.txId.toString(),
+                        txId        = tx.txId,
                         wrapperType = type,
                         groupDate   = wrapper.groupDate.toString(),
                         sortOrder   = index
@@ -824,9 +893,9 @@ class TxDisplayCacheService @Inject constructor(
         val txsToResolve = wrappedTransactionList
             .map { it.transactions.values.first() }
             .filter { tx ->
-                !tx.isEntirelySelf(walletData.transactionBag) &&
-                    tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() >= minContactCreatedDate &&
-                    contactsByTxId[tx.txId.toString()] == null
+                !tx.isEntirelySelf &&
+                    tx.groupDate >= minContactCreatedDate &&
+                    contactsByTxId[tx.txId] == null
             }
 
         if (txsToResolve.isEmpty()) return
@@ -839,8 +908,8 @@ class TxDisplayCacheService @Inject constructor(
                 .map { tx ->
                     async(Dispatchers.IO) {
                         try {
-                            identityRepo.blockchainIdentity?.getContactForTransaction(tx)?.let { id ->
-                                contactsSnapshot[id]?.let { profile -> tx.txId.toString() to profile }
+                            identityRepo.blockchainIdentity?.getContactForTransaction(tx.dashjTx)?.let { id ->
+                                contactsSnapshot[id]?.let { profile -> tx.txId to profile }
                             }
                         } catch (e: Exception) {
                             log.warn("failed to resolve contact for tx {}: {}", tx.txId, e.message)
@@ -866,19 +935,22 @@ class TxDisplayCacheService @Inject constructor(
                         wrapper,
                         walletData.transactionBag,
                         Constants.CONTEXT,
-                        contact = contactsByTxId[txId.toString()],
-                        metadata = metadata[txId],
+                        contact = contactsByTxId[txId],
+                        metadata = metadata[TxId.wrap(txId)],
                         chainLockBlockHeight = chainLockBlockHeight
                     )
                     TxDisplayCacheEntry.fromTransactionRowView(
                         row,
                         walletApplication,
                         computeFilterFlags(wrapper),
-                        metadata[txId]?.customIconId?.toString()
+                        metadata[TxId.wrap(txId)]?.customIconId?.toString()
                     )
                 }
             if (updatedEntries.isNotEmpty()) {
-                txDisplayCacheDao.insertAll(updatedEntries)
+                // Attach the freshly-resolved contact but never regress the SDK-stamped
+                // value/direction/status of an already-corrected row (the dashj wrapper
+                // misreads an SDK contact send as "Received +change").
+                txDisplayCacheDao.insertAll(mergeAllPreservingSdkStamped(updatedEntries))
             }
         }
     }
@@ -942,28 +1014,31 @@ class TxDisplayCacheService @Inject constructor(
                     wrapper,
                     walletData.transactionBag,
                     Constants.CONTEXT,
-                    contact = contactsByTxId[txId.toString()],
-                    metadata = metadata[txId],
+                    contact = contactsByTxId[txId],
+                    metadata = metadata[TxId.wrap(txId)],
                     chainLockBlockHeight = chainLockBlockHeight
                 )
                 TxDisplayCacheEntry.fromTransactionRowView(
                     row,
                     walletApplication,
                     computeFilterFlags(wrapper),
-                    metadata[txId]?.customIconId?.toString()
+                    metadata[TxId.wrap(txId)]?.customIconId?.toString()
                 )
             }
         if (updatedEntries.isNotEmpty()) {
-            txDisplayCacheDao.insertAll(updatedEntries)
+            // Same preserve-merge as resolveAllContacts: attach the contact, keep the
+            // SDK-stamped shape.
+            txDisplayCacheDao.insertAll(mergeAllPreservingSdkStamped(updatedEntries))
         }
     }
 
     private fun createSingleTxWrapper(tx: Transaction): TransactionWrapper = object : TransactionWrapper {
+        private val txInfo = tx.toTxInfo(walletData.transactionBag, walletData.networkParameters)
         override val id           = tx.txId.toString()
-        override val transactions = hashMapOf(tx.txId to tx)
-        override val groupDate    = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-        override fun tryInclude(t: Transaction) = t.txId == tx.txId
-        override fun getValue(bag: org.bitcoinj.core.TransactionBag) = tx.getValue(bag)
+        override val transactions = hashMapOf(txInfo.txId to txInfo)
+        override val groupDate    = txInfo.groupDate
+        override fun tryInclude(tx: org.dash.wallet.common.transactions.TxInfo) = tx.txId == txInfo.txId
+        override fun getValue() = org.dash.wallet.common.money.Dash(txInfo.netValueDuffs)
     }
 
     /**
@@ -981,7 +1056,7 @@ class TxDisplayCacheService @Inject constructor(
      */
     private fun iconBitmapForEntry(entry: TxDisplayCacheEntry): Bitmap? {
         val txId = try {
-            Sha256Hash.wrap(entry.rowId)
+            TxId.wrap(entry.rowId)
         } catch (e: IllegalArgumentException) {
             return null
         }
@@ -1015,13 +1090,68 @@ class TxDisplayCacheService @Inject constructor(
      * yet when the fast-startup cache is first rendered).
      */
     private suspend fun iconBitmapForEntryCold(entry: TxDisplayCacheEntry): Bitmap? {
-        val iconId = entry.customIconId ?: return null
         iconBitmapForEntry(entry)?.let { return it }
+        val iconId = entry.customIconId ?: return null
         return try {
-            metadataProvider.getIcon(Sha256Hash.wrap(iconId))
+            metadataProvider.getIcon(TxId.wrap(iconId))
         } catch (e: IllegalArgumentException) {
             null
         }
+    }
+
+    /**
+     * Merge a dashj-rebuilt display [entry] over the [existing] cached row so the
+     * rebuild can never REGRESS SDK-stamped state (mirrors the metadata-flow
+     * preserve-guard, factored for the live-tx and contact-resolution writers).
+     *
+     * Post-cutover / post-restore, [CutoverUiDataService] corrects contact rows to
+     * their authoritative shape (engine signed net → SENT −0.1 with the contact
+     * identity), but the dashj-side writers here rebuild the same rowIds from the
+     * dashj wrapper, which mid-rescan (inputs not yet connected) or for an
+     * SDK-only tx computes a "Received +change" misread with no contact — on
+     * device this flip-flopped a corrected SENT contact row back to a bare green
+     * RECEIVED arrow until the next SDK pass (≤60s). Guards, all idempotent:
+     *  - an existing service classification is kept (same as the metadata guard);
+     *  - a degenerate rebuild (value 0 while the cached row holds a real value)
+     *    keeps the cached value, and a null rate never clears a stamped rate;
+     *  - contact attribution is never DROPPED: a rebuild without a contact keeps
+     *    the cached contact columns;
+     *  - the display SHAPE (value/icon/title/status/filter bucket) of a row
+     *    carrying a contact identity is frozen ENTIRELY against this rebuild
+     *    (not just on a direction flip: on-device a same-direction rebuild
+     *    rewrote a contact send's −0.4 to −260, dashj's fee-only misread of a
+     *    friendship payment). Only same-direction status PROGRESS passes
+     *    through ("Sending"→"Sent", clearing a stale secondary status);
+     *    degenerate rebuilds freeze the same way. Non-contact, non-degenerate
+     *    rows pass through unchanged, so pre-cutover behaviour is untouched.
+     */
+    private fun mergePreservingSdkStamped(
+        entry: TxDisplayCacheEntry,
+        existing: TxDisplayCacheEntry?
+    ): TxDisplayCacheEntry = mergeDisplayEntryPreservingSdkStamped(
+        entry = entry,
+        existing = existing,
+        sendingTitle = walletApplication.getString(R.string.transaction_row_status_sending),
+        sentTitle = walletApplication.getString(R.string.transaction_row_status_sent),
+        // NON-contact SDK-stamped rows: the row carries no contact identity to
+        // recognise it by, so the SDK sync pipeline registers every rowId it planned
+        // or verified ([DisplayCacheRefreshBus.markSdkAuthoritative]) and this rebuild
+        // consults that register. Pre-cutover nothing registers, so the flag is always
+        // false and behaviour is byte-for-byte unchanged.
+        sdkAuthoritative = displayCacheRefreshBus.isSdkAuthoritative(entry.rowId)
+    )
+
+    /** Batch [mergePreservingSdkStamped] over [entries] with one Room read for the existing rows. */
+    private suspend fun mergeAllPreservingSdkStamped(
+        entries: List<TxDisplayCacheEntry>
+    ): List<TxDisplayCacheEntry> {
+        if (entries.isEmpty()) return entries
+        // Chunked: SQLite's IN-clause variable cap is 999 and rescan batches can be large.
+        val existingByRowId = HashMap<String, TxDisplayCacheEntry>(entries.size)
+        for (chunk in entries.map { it.rowId }.chunked(500)) {
+            txDisplayCacheDao.getEntriesByIds(chunk).forEach { existingByRowId[it.rowId] = it }
+        }
+        return entries.map { mergePreservingSdkStamped(it, existingByRowId[it.rowId]) }
     }
 
     private fun computeFilterFlags(wrapper: TransactionWrapper): Int {
@@ -1030,14 +1160,14 @@ class TxDisplayCacheService @Inject constructor(
         if (wrapper is CoinJoinMixingTxSet) {
             flags = TxDisplayCacheEntry.FLAG_COINJOIN
         } else {
-            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.SENT, bag).matches(it) }) {
+            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.SENT, bag).matches(it.dashjTx) }) {
                 flags = flags or TxDisplayCacheEntry.FLAG_SENT
             }
-            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.RECEIVED, bag).matches(it) }) {
+            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.RECEIVED, bag).matches(it.dashjTx) }) {
                 flags = flags or TxDisplayCacheEntry.FLAG_RECEIVED
             }
             val firstTxId = wrapper.transactions.keys.first()
-            if (ServiceName.isDashSpend(metadata[firstTxId]?.service)) {
+            if (ServiceName.isDashSpend(metadata[TxId.wrap(firstTxId)]?.service)) {
                 flags = flags or TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
             }
         }
@@ -1055,4 +1185,96 @@ class TxDisplayCacheService @Inject constructor(
     fun close() {
         serviceScope.cancel()
     }
+}
+
+/**
+ * PURE merge of a dashj-rebuilt display [entry] over the [existing] cached row —
+ * the host-testable core of [TxDisplayCacheService.mergePreservingSdkStamped]
+ * (see that method's KDoc for the full rationale). Kept free of Android/Room so
+ * the guard's carve-outs can be unit-tested directly.
+ *
+ * @param sdkAuthoritative whether the SDK sync pipeline has claimed authority over
+ *        this rowId ([DisplayCacheRefreshBus.markSdkAuthoritative]) — the signal
+ *        that identifies a NON-contact SDK-stamped row. Always false pre-cutover.
+ */
+internal fun mergeDisplayEntryPreservingSdkStamped(
+    entry: TxDisplayCacheEntry,
+    existing: TxDisplayCacheEntry?,
+    sendingTitle: String,
+    sentTitle: String,
+    sdkAuthoritative: Boolean
+): TxDisplayCacheEntry {
+    existing ?: return entry
+    var result = entry
+    if (existing.service != null && result.service == null) {
+        result = result.copy(
+            service      = existing.service,
+            iconType     = existing.iconType,
+            iconBgType   = existing.iconBgType,
+            customIconId = result.customIconId ?: existing.customIconId
+        )
+    }
+    val degenerateRebuild = entry.valueSatoshis == 0L && existing.valueSatoshis != 0L
+    if (degenerateRebuild) {
+        result = result.copy(valueSatoshis = existing.valueSatoshis)
+    }
+    if (result.exchangeRateFiatCode == null && existing.exchangeRateFiatCode != null) {
+        result = result.copy(
+            exchangeRateFiatCode  = existing.exchangeRateFiatCode,
+            exchangeRateFiatValue = existing.exchangeRateFiatValue
+        )
+    }
+    if (result.contactUserId == null && existing.contactUserId != null) {
+        result = result.copy(
+            contactUsername    = existing.contactUsername,
+            contactDisplayName = existing.contactDisplayName,
+            contactAvatarUrl   = existing.contactAvatarUrl,
+            contactUserId      = existing.contactUserId
+        )
+    }
+    // FULL shape freeze for contact/SDK-stamped rows. The previous guard only
+    // froze on a SENT↔RECEIVED direction flip or a value-0 rebuild — verified
+    // on-device to be full of holes: a contact send of −0.4 was rewritten by
+    // this dashj-side path to −260 (fee-only: dashj counts the friendship
+    // payment output as watched-own, so its net degenerates to −fee) with the
+    // direction UNCHANGED and the value non-zero, so no rule fired and the
+    // wrong value persisted. The dashj wrapper can never recompute the
+    // authoritative value/direction of an SDK-authored tx (only the SDK's signed
+    // wallet net can), so when the existing row carries a contact identity, is
+    // registered as SDK-AUTHORITATIVE, or the rebuild is degenerate, NOTHING
+    // display-shaping from the rebuild is trusted: value, icon, title, status and
+    // filter bucket all stay as cached. The ONLY refresh allowed through is
+    // same-direction status PROGRESS — dashj's legitimate job: flipping a
+    // "Sending" title to "Sent", and clearing a stale secondary status
+    // ("Processing"/"Confirming" → none). dashj may never (re)introduce a
+    // secondary status or relabel an SDK-authored title ("Shielded", "Invitation").
+    // Pre-cutover a contact row is rebuilt from the SAME dashj computation
+    // that produced it, so the freeze is value-identical there (the one
+    // deliberate exception: a contact row's "Processing"→"Confirming" text
+    // swap no longer flows through these writers — cosmetic only).
+    // Rows without contact data, not SDK-registered and non-degenerate are
+    // untouched: byte-for-byte pre-cutover behavior.
+    // dashj stays AUTHORITATIVE for transaction ERRORS (dead / conflicting /
+    // double-spent): the SDK display path has no error concept and the planner carves
+    // error rows out of every re-stamp, so a rebuild that newly reports hasErrors must
+    // pass through whole — otherwise a failed tx would keep its "Sent" icon and title.
+    val newlyErrored = entry.hasErrors && !existing.hasErrors
+    val sdkStamped = existing.contactUserId != null || sdkAuthoritative
+    if (!newlyErrored && (sdkStamped || degenerateRebuild)) {
+        val sameDirection = entry.iconType == existing.iconType
+        val allowStatusProgress = sameDirection && !degenerateRebuild
+        val sendingToSent = allowStatusProgress &&
+            existing.title == sendingTitle && entry.title == sentTitle
+        val statusCleared = allowStatusProgress &&
+            entry.statusText.isEmpty() && existing.statusText.isNotEmpty()
+        result = result.copy(
+            valueSatoshis = existing.valueSatoshis,
+            iconType      = existing.iconType,
+            iconBgType    = existing.iconBgType,
+            title         = if (sendingToSent) entry.title else existing.title,
+            statusText    = if (statusCleared) entry.statusText else existing.statusText,
+            filterFlags   = existing.filterFlags
+        )
+    }
+    return result
 }

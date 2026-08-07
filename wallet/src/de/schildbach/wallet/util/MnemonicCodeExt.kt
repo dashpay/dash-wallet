@@ -5,14 +5,24 @@ import android.content.SharedPreferences
 import com.google.common.base.Stopwatch
 import org.bitcoinj.crypto.MnemonicCode
 import org.bitcoinj.crypto.MnemonicException
+import org.dash.wallet.common.crypto.bip39.Bip39
+import org.dash.wallet.common.crypto.bip39.Bip39Exception
+import org.dash.wallet.common.crypto.bip39.Bip39Wordlist
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.InputStream
 
 /***
- * Extends MnemonicCode class with non-English wordlists support
+ * Extends MnemonicCode class with non-English wordlists support.
+ *
+ * Local word validation (membership + checksum) is served by the self-contained [Bip39] port;
+ * this class still extends dashj's [MnemonicCode] because the global [MnemonicCode.INSTANCE]
+ * feeds dashj-internal seed handling (actual wallet restore) until kill-list Step D removes it.
  */
 class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : MnemonicCode(wordstream, wordListDigest) {
+
+    /** The same words dashj loaded, wrapped for dashj-faithful Bip39 validation. */
+    private val bip39Wordlist: Bip39Wordlist by lazy { Bip39Wordlist.of(wordList) }
 
     companion object {
 
@@ -64,9 +74,27 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
             throw MnemonicException.MnemonicLengthException("Word list size must be 12 or 24")
         }
         try {
-            check(words)
+            checkWords(words)
         } catch (x: MnemonicException) {
             checkNonEnglish(context, words, x)
+        }
+    }
+
+    /**
+     * Validates against this instance's wordlist using the self-contained [Bip39] port
+     * (differential-tested identical to dashj's `MnemonicCode.check`), translating
+     * [Bip39Exception] subtypes 1:1 to the [MnemonicException] types callers expect.
+     */
+    @Throws(MnemonicException::class)
+    private fun checkWords(words: List<String>) {
+        try {
+            Bip39.check(words, bip39Wordlist)
+        } catch (x: Bip39Exception.LengthException) {
+            throw MnemonicException.MnemonicLengthException(x.message)
+        } catch (x: Bip39Exception.WordException) {
+            throw MnemonicException.MnemonicWordException(x.badWord)
+        } catch (x: Bip39Exception.ChecksumException) {
+            throw MnemonicException.MnemonicChecksumException()
         }
     }
 
@@ -80,7 +108,7 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
             }
             val mnemonicCode = MnemonicCodeExt(context.assets.open(wordlistPath), null)
             try {
-                mnemonicCode.check(words)
+                mnemonicCode.checkWords(words)
                 saveWordlistPath(context, wordlistPath)
                 INSTANCE = mnemonicCode
                 break

@@ -27,8 +27,17 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
+import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.SHIELDED_INVITE_FEE_MARGIN_CREDITS
+import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
+import de.schildbach.wallet.service.platform.sdk.SdkShieldedInviteCreation
+import de.schildbach.wallet.service.platform.sdk.creditsToDash
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
@@ -50,12 +59,92 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.wallet.AuthenticationKeyChain
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import javax.inject.Inject
+
+/**
+ * The balance the invitation-fee dialog requires the user to HOLD for the
+ * currently selected username kind, given the funding source (host-JVM
+ * unit-testable). Drives both the "Confirm and pay" gate ([inviteFeeGate])
+ * and the insufficiency message.
+ *
+ * - Private invite ([shielded] == true): the Type-20 exit denomination the
+ *   invite withdraws from the pool — 0.25 contested / 0.03 non-contested
+ *   (the v13 mint mapping, `shieldedInviteDenominationCredits`) — PLUS the
+ *   Type-16 transfer-fee margin ([SHIELDED_INVITE_FEE_MARGIN]): the mint's
+ *   consensus fee is carved from the pool on top of the funded notes, so a
+ *   pool holding exactly the denomination passes a bare gate and then fails
+ *   opaquely at the FFI. The tiles/confirm screen still DISPLAY the bare
+ *   denomination (what the invite is worth); this requirement is what the
+ *   user must HOLD, and what the insufficiency message quotes.
+ * - L1 invite: the L1 fee — [Constants.DASH_PAY_FEE_CONTESTED] (0.25)
+ *   contested / [Constants.DASH_PAY_FEE] (0.03) non-contested.
+ */
+internal fun inviteFeeRequirement(shielded: Boolean, contestedSelected: Boolean): Coin {
+    return if (shielded) {
+        (if (contestedSelected) SHIELDED_INVITE_CONTESTED else SHIELDED_INVITE_NON_CONTESTED)
+            .add(SHIELDED_INVITE_FEE_MARGIN)
+    } else {
+        if (contestedSelected) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+    }
+}
+
+/**
+ * Type-20 exit denominations withdrawn from the shielded pool for an invite —
+ * MUST equal what the mint actually funds
+ * ([de.schildbach.wallet.service.platform.sdk.shieldedInviteDenominationCredits]
+ * for the tier's fee, v13 set: 0.03 non-contested / 0.25 contested). Pinned to
+ * the mint by `InviteFeeGateTest.shielded requirements match the minted
+ * denominations` so a platform-version change fails the build instead of
+ * splitting the UI from the mint again (the pre-v13 0.1/0.3 regression).
+ */
+private val SHIELDED_INVITE_NON_CONTESTED: Coin = Coin.parseCoin("0.03")
+private val SHIELDED_INVITE_CONTESTED: Coin = Coin.parseCoin("0.25")
+
+/**
+ * The Type-16 shielded-transfer fee margin as an L1 [Coin] — the single
+ * source of the value is [SHIELDED_INVITE_FEE_MARGIN_CREDITS] (see its KDoc
+ * for the consensus-fee derivation); this is just the credits → duffs form
+ * the [Coin]-based gate arithmetic needs.
+ */
+private val SHIELDED_INVITE_FEE_MARGIN: Coin =
+    Coin.valueOf(creditsToDash(SHIELDED_INVITE_FEE_MARGIN_CREDITS).duffs)
+
+/**
+ * Pure "Confirm and pay" gate for the invitation-fee dialog (host-JVM
+ * unit-testable — follows the `inviteShieldedOptions` /
+ * `usernameSubmitButtonState` helper pattern). BOTH username-kind tiles stay
+ * selectable regardless of balance (Fix G2 — the user must be able to tap
+ * either); only this button gate reads the balance, for the CURRENTLY
+ * selected kind's [inviteFeeRequirement].
+ *
+ * - L1 invite ([shielded] == false): enabled once the L1 wallet holds the
+ *   selected fee.
+ * - Private invite ([shielded] == true): funded from the SHIELDED POOL, so
+ *   gate on the pool, not L1. A mid-sync shielded balance is a `Dash.ZERO`
+ *   placeholder, NOT evidence of an empty pool — while [shieldedReady] is
+ *   false the balance is UNKNOWN and the button stays disabled (never
+ *   enabled off a stale-looking balance).
+ */
+internal fun inviteFeeGate(
+    shielded: Boolean,
+    l1Balance: Coin,
+    shieldedReady: Boolean,
+    shieldedBalance: Coin,
+    contestedSelected: Boolean
+): Boolean {
+    val requirement = inviteFeeRequirement(shielded, contestedSelected)
+    return if (shielded) {
+        shieldedReady && shieldedBalance >= requirement
+    } else {
+        l1Balance >= requirement
+    }
+}
 
 @ExperimentalCoroutinesApi
 @HiltViewModel
@@ -64,6 +153,11 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val platformRepo: PlatformRepo,
     private val invitationDao: InvitationsDao,
+    private val identityRepository: IdentityRepository,
+    private val sdkShieldedInviteCreation: SdkShieldedInviteCreation,
+    private val sdkL1InviteCreation: SdkL1InviteCreation,
+    private val shieldedBalanceService: ShieldedBalanceService,
+    private val assetLockFundingPreflight: de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
@@ -89,6 +183,27 @@ open class InvitationFragmentViewModel @Inject constructor(
     val walletData
         get() = walletApplication
 
+    /**
+     * SHIELDED-pool balance/sync accessors for the invitation-fee dialog's
+     * private-invite gate (Fix F). A private invite funds its fee from the
+     * pool, so the dialog must read the pool — not the (now-low) L1 balance —
+     * to decide whether contested is selectable. Mirrors how
+     * [InviteShieldedFundingViewModel] sources them: bring the runtime up
+     * (idempotent), then observe the balance flow and the sync status.
+     */
+    val shieldedSyncStatus: StateFlow<ShieldedSyncStatus>
+        get() = shieldedBalanceService.shieldedSyncStatus
+
+    fun observeShieldedBalance(): Flow<Dash> = shieldedBalanceService.observeShieldedBalance()
+
+    /** Bring up the shielded runtime so its balance loads / status advances. */
+    fun ensureShieldedReady() {
+        viewModelScope.launch {
+            runCatching { shieldedBalanceService.ensureShieldedReady() }
+                .onFailure { log.warn("shielded bring-up failed", it) }
+        }
+    }
+
     suspend fun sendInviteTransaction(value: Coin): String {
         // ensure that the fundingAddress hasn't been used
         withContext(Dispatchers.IO) {
@@ -106,6 +221,132 @@ open class InvitationFragmentViewModel @Inject constructor(
             .create(fundingAddress, value)
             .enqueue()
         return fundingAddress
+    }
+
+    /**
+     * The shielded (L2) invitation link, once created. Null until a shielded
+     * invite is successfully funded — the shielded path has no WorkManager
+     * output (the L1 [sendInviteStatusLiveData] source), so the created-invite
+     * screen reads the link from here for the shielded branch.
+     */
+    private val _shieldedInviteLink = MutableStateFlow<InvitationLinkData?>(null)
+    val shieldedInviteLink: StateFlow<InvitationLinkData?>
+        get() = _shieldedInviteLink
+
+    /**
+     * The share/copy link for a created shielded invite — the AppsFlyer
+     * OneLink wrapping the deep link (H1), or the raw deep link when OneLink
+     * generation was unavailable. The created-invite screen shares THIS, not
+     * the raw [shieldedInviteLink] deep link (which stays the preview source).
+     */
+    private val _shieldedInviteShareLink = MutableStateFlow<String?>(null)
+    val shieldedInviteShareLink: StateFlow<String?>
+        get() = _shieldedInviteShareLink
+
+    /**
+     * True while a shielded (L2) or SDK L1 invite spend is in flight — both
+     * [createShieldedInvite] and [createL1Invite] run a ~30s proof/funding
+     * step off the main thread with no other in-flight signal. The confirm
+     * dialog observes this to disable its buttons and show a progress
+     * indicator during creation (Fix C). Reset in a `finally` so it clears on
+     * both success and error.
+     */
+    private val _inviteCreationInFlight = MutableStateFlow(false)
+    val inviteCreationInFlight: StateFlow<Boolean>
+        get() = _inviteCreationInFlight
+
+    /**
+     * Fund a SHIELDED (L2) invitation directly from the shielded pool — the
+     * private-invitation counterpart of [sendInviteTransaction]. [contested]
+     * (derived from the fee the inviter picked) selects the exit denomination.
+     * On success the funded deep link is published to [shieldedInviteLink] and
+     * its shareable OneLink to [shieldedInviteShareLink]. Runs the ~30s proof
+     * off the main thread.
+     */
+    suspend fun createShieldedInvite(contested: Boolean): SdkWriteResult<InvitationLinkData> {
+        _inviteCreationInFlight.value = true
+        return try {
+            withContext(Dispatchers.IO) {
+                val profile = identityRepository.getLocalUserProfile()
+                    ?: return@withContext SdkWriteResult.NotBroadcast("no local user profile")
+                when (val result = sdkShieldedInviteCreation.createShieldedInvite(
+                    username = profile.username,
+                    displayName = profile.displayName,
+                    avatarUrl = profile.avatarUrl,
+                    contested = contested
+                )) {
+                    is SdkWriteResult.Broadcast -> {
+                        _shieldedInviteLink.value = result.value.linkData
+                        _shieldedInviteShareLink.value = result.value.shareLink
+                        SdkWriteResult.Broadcast(result.value.linkData)
+                    }
+                    is SdkWriteResult.NotBroadcast -> result
+                    is SdkWriteResult.Ambiguous -> result
+                }
+            }
+        } finally {
+            _inviteCreationInFlight.value = false
+        }
+    }
+
+    /**
+     * Whether a STANDARD (L1) invite should be created through the Kotlin SDK
+     * DIP-13 path ([createL1Invite]) instead of the dashj asset-lock worker
+     * ([sendInviteTransaction]) — the flag is on AND the cutover is committed.
+     * A false result (flag off / pre-cutover / read failure) keeps the dashj
+     * path, byte-identical to before.
+     */
+    suspend fun shouldRouteL1ToSdk(): Boolean = sdkL1InviteCreation.isEnabledAndCommitted()
+
+    /**
+     * PRE-FLIGHT funding-eligibility for an SDK-funded L1 invitation of
+     * [amountDuffs]: would the asset-lock coin selection (final —
+     * confirmed/IS-locked — BIP44 coins only) actually find the funds? The
+     * display-balance check alone lets a user start a ~30s creation that
+     * then bounces "Insufficient funds" when the balance is backed by
+     * non-final or out-of-account outputs. Fail-OPEN: true when the
+     * preflight has no evidence (pre-cutover, SDK unavailable, read
+     * failure) — the real build stays the authority.
+     */
+    suspend fun canFundL1Invite(amountDuffs: Long): Boolean =
+        assetLockFundingPreflight.canFundAssetLockDuffs(amountDuffs) ?: true
+
+    /**
+     * Fund a STANDARD (L1) invitation through the Kotlin SDK's DIP-13
+     * invitation wrapper — the post-cutover transparent counterpart of
+     * [sendInviteTransaction]. Unlike the dashj worker path this produces the
+     * bearer link directly (no WorkManager output), so — exactly like
+     * [createShieldedInvite] — on success the funded deep link is published to
+     * [shieldedInviteLink] and its shareable OneLink to [shieldedInviteShareLink]
+     * (the created-invite screen's generic out-of-band link channel). [contested]
+     * (derived from the fee the inviter picked) selects the funding fee. Runs the
+     * funding spend off the main thread.
+     */
+    suspend fun createL1Invite(contested: Boolean): SdkWriteResult<InvitationLinkData> {
+        _inviteCreationInFlight.value = true
+        return try {
+            withContext(Dispatchers.IO) {
+                val profile = identityRepository.getLocalUserProfile()
+                    ?: return@withContext SdkWriteResult.NotBroadcast("no local user profile")
+                when (val result = sdkL1InviteCreation.createL1Invite(
+                    username = profile.username,
+                    displayName = profile.displayName,
+                    avatarUrl = profile.avatarUrl,
+                    inviterIdentityIdBase58 = profile.userId,
+                    contested = contested
+                )) {
+                    is SdkWriteResult.Broadcast -> {
+                        _shieldedInviteLink.value = result.value.linkData
+                        _shieldedInviteShareLink.value = result.value.shareLink
+                        SdkWriteResult.Broadcast(result.value.linkData)
+                    }
+                    is SdkWriteResult.NotBroadcast -> result
+                    is SdkWriteResult.Ambiguous -> result
+                }
+            }
+        } finally {
+            _inviteCreationInFlight.value = false
+        }
     }
 
     val invitationPreviewImageFile by lazy {

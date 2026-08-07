@@ -233,27 +233,33 @@ public class CrashReporter {
         report.append("Time of last blockchain reset: ").append(lastBlockchainResetTime > 0
                 ? String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) : "none").append("\n");
         report.append("Network: " + Constants.NETWORK_PARAMETERS.getId() + "\n");
-        report.append("Encrypted: " + wallet.isEncrypted() + "\n");
-        report.append("Keychain size: " + wallet.getKeyChainGroupSize() + "\n");
+        if (wallet != null) {
+            report.append("Encrypted: " + wallet.isEncrypted() + "\n");
+            report.append("Keychain size: " + wallet.getKeyChainGroupSize() + "\n");
 
-        final Set<Transaction> transactions = wallet.getTransactions(true);
-        int numInputs = 0;
-        int numOutputs = 0;
-        int numSpentOutputs = 0;
-        for (final Transaction tx : transactions) {
-            numInputs += tx.getInputs().size();
-            final List<TransactionOutput> outputs = tx.getOutputs();
-            numOutputs += outputs.size();
-            for (final TransactionOutput txout : outputs) {
-                if (!txout.isAvailableForSpending())
-                    numSpentOutputs++;
+            final Set<Transaction> transactions = wallet.getTransactions(true);
+            int numInputs = 0;
+            int numOutputs = 0;
+            int numSpentOutputs = 0;
+            for (final Transaction tx : transactions) {
+                numInputs += tx.getInputs().size();
+                final List<TransactionOutput> outputs = tx.getOutputs();
+                numOutputs += outputs.size();
+                for (final TransactionOutput txout : outputs) {
+                    if (!txout.isAvailableForSpending())
+                        numSpentOutputs++;
+                }
             }
+            report.append("Transactions: " + transactions.size() + "\n");
+            report.append("Inputs: " + numInputs + "\n");
+            report.append("Outputs: " + numOutputs + " (spent: " + numSpentOutputs + ")\n");
+            report.append(
+                    "Last block seen: " + wallet.getLastBlockSeenHeight() + " (" + wallet.getLastBlockSeenHash() + ")\n");
+        } else {
+            // Degraded launch: the wallet protobuf failed to load (or safe mode
+            // skipped it) — the report must still go out.
+            report.append("Wallet: NOT LOADED (degraded launch — load failed or was skipped by safe mode)\n");
         }
-        report.append("Transactions: " + transactions.size() + "\n");
-        report.append("Inputs: " + numInputs + "\n");
-        report.append("Outputs: " + numOutputs + " (spent: " + numSpentOutputs + ")\n");
-        report.append(
-                "Last block seen: " + wallet.getLastBlockSeenHeight() + " (" + wallet.getLastBlockSeenHash() + ")\n");
 
         report.append("Databases:");
         for (final String db : packageInfoProvider.getDatabases())

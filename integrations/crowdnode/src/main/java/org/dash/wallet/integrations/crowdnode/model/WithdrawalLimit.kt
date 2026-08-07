@@ -18,7 +18,7 @@
 package org.dash.wallet.integrations.crowdnode.model
 
 import com.google.gson.annotations.SerializedName
-import org.bitcoinj.core.Coin
+import org.dash.wallet.common.money.Dash
 
 data class WithdrawalLimit(
     @SerializedName("Key")
@@ -35,6 +35,6 @@ enum class WithdrawalLimitPeriod {
 }
 
 data class WithdrawalLimitsException(
-    val amount: Coin,
+    val amount: Dash,
     val period: WithdrawalLimitPeriod
 ) : Exception()

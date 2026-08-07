@@ -13,7 +13,6 @@
     <string name="blockchain_state_progress_stalled">Naantala ang pagtutugma</string>
     <string name="blockchain_state_progress_problem_storage">Pagtutugma: Problema sa storage</string>
     <string name="blockchain_state_progress_problem_network">Pagtutugma: Problema sa network</string>
-    <string name="mixing_state_progress_mixing">Paghahalo ng mga barya (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Ang Dash address ay nakopya na sa clipboard</string>
     <string name="wallet_address_dialog_fragment_hint">Para maprotektahan ang iyong pagiging pribado, babaguhin ang iyong address sa oras na matanggap ang bayad.</string>
     <string name="wallet_balance_fragment_too_much">Ang halagang ito ay masyadong mataas para dalhin ng iyong pitaka. Pakilipat ang iba sa mas ligtas na lugar.</string>
@@ -43,8 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Pangasiwaan ang apps</string>
     <string name="wallet_timeskew_dialog_title">Suriin ang settings ng petsa &amp; oras </string>
     <string name="wallet_timeskew_dialog_msg">Ang oras sa iyong device ay huli ng %d minuto. Maaaring hindi ka makapagpadala o makatanggap ng Dash dahil sa problemang ito.\n\nPalaging suriin at hanggat maaari ayusin ang settings ng iyong petsa, oras at time zone.</string>
-    <string name="wallet_coinjoin_timeskew_dialog_msg">Ang oras ng iyong device ay %s sa pamamagitang ng %d segundo. Hindi mo magagamit ang CoinJoin dahil sa pagkakaibang ito.\n\nAng mga setting ng oras sa iyong device ay kailangang baguhin sa “Awtomatikong itakda ang oras” para magamit ang CoinJoin.</string>
-    <string name="settings_coinjoin_timeskew_dialog_msg">Ang oras ng iyong device ay naka-off nang higit sa 5 segundo. Hindi mo magagamit ang CoinJoin dahil sa pagkakaibang ito.\n\nAng mga setting ng oras sa iyong device ay kailangang baguhin sa “Awtomatikong itakda ang oras” bago gamitin ang CoinJoin.</string>
     <string name="send_coins_activity_title">Ipadala ang Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Nakakuha ng pansin ang lagda mula %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ang pagkuha ng pansin ng lagda ay hindi nagtagumpay</string>

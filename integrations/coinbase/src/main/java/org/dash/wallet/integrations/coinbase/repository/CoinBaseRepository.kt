@@ -20,16 +20,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.safeApiCall
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.fiatToDash
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.integrations.coinbase.*
 import org.dash.wallet.integrations.coinbase.model.*
 import org.dash.wallet.integrations.coinbase.service.CoinBaseAuthApi
@@ -69,7 +68,7 @@ interface CoinBaseRepositoryInt {
     suspend fun completeCoinbaseAuthentication(authorizationCode: String): Boolean
     suspend fun refreshWithdrawalLimit()
     suspend fun getExchangeRateFromCoinbase(): ResponseResource<CoinbaseToDashExchangeRateUIModel>
-    suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean
+    suspend fun isInputGreaterThanLimit(amountInDash: Dash): Boolean
 }
 
 class CoinBaseRepository @Inject constructor(
@@ -117,7 +116,7 @@ class CoinBaseRepository @Inject constructor(
         saveUserAccountInfo()
 
         config.set(CoinbaseConfig.USER_ACCOUNT_ID, userAccountData.uuid.toString())
-        config.set(CoinbaseConfig.LAST_BALANCE, userAccountData.coinBalance().value)
+        config.set(CoinbaseConfig.LAST_BALANCE, userAccountData.coinBalance().duffs)
 
         return userAccountData
     }
@@ -309,7 +308,7 @@ class CoinBaseRepository @Inject constructor(
         lastAddress ?: ""
     }
 
-    override suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
+    override suspend fun isInputGreaterThanLimit(amountInDash: Dash): Boolean {
         // TODO: disabled until Coinbase changes are clear
         return false
 //        val withdrawalLimitInDash = getWithdrawalLimitInDash()
@@ -320,9 +319,7 @@ class CoinBaseRepository @Inject constructor(
         val withdrawalLimit = config.get(CoinbaseConfig.USER_WITHDRAWAL_LIMIT)
         val withdrawalLimitCurrency = config.get(CoinbaseConfig.SEND_LIMIT_CURRENCY)
             ?: CoinbaseConstants.DEFAULT_CURRENCY_USD
-        val exchangeRate = exchangeRates.getExchangeRate(withdrawalLimitCurrency)?.let {
-            ExchangeRate(Coin.COIN, it.fiat)
-        }
+        val exchangeRate = exchangeRates.getExchangeRate(withdrawalLimitCurrency)
 
         return if (withdrawalLimit.isNullOrEmpty() || exchangeRate == null) {
             0.0
@@ -330,11 +327,11 @@ class CoinBaseRepository @Inject constructor(
             val formattedAmount = GenericUtils.formatFiatWithoutComma(withdrawalLimit)
             val currency = config.get(CoinbaseConfig.SEND_LIMIT_CURRENCY) ?: CoinbaseConstants.DEFAULT_CURRENCY_USD
             val fiatAmount = try {
-                Fiat.parseFiat(currency, formattedAmount)
+                FiatValue.parseFiat(currency, formattedAmount)
             } catch (x: Exception) {
-                Fiat.valueOf(currency, 0)
+                FiatValue.valueOf(currency, 0)
             }
-            val amountInDash = exchangeRate.fiatToCoin(fiatAmount)
+            val amountInDash = exchangeRate.fiatToDash(fiatAmount)
             return amountInDash.toPlainString().toDoubleOrZero
         }
     }

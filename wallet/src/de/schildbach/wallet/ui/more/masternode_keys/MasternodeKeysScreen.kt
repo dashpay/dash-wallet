@@ -35,11 +35,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.ListItem
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
@@ -65,10 +68,11 @@ private fun MasternodeKeysScreenContent(
     onBackClick: () -> Unit = {},
     onKeyTypeClick: (MasternodeKeyType) -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         NavBarBack(
             onBackClick = onBackClick
@@ -108,7 +112,7 @@ private fun TableListMasternodeKeyItem(
             MasternodeKeyType.PLATFORM -> R.string.masternode_key_type_platform
         }
     )
-
+    val colors = LocalDashColors.current
     ListItem(
         title = typeName,
         subtitle = stringResource(R.string.masternode_key_type_total, info.totalKeys),
@@ -120,12 +124,12 @@ private fun TableListMasternodeKeyItem(
                 Text(
                     text = stringResource(R.string.masternode_key_type_used, info.usedKeys),
                     style = MyTheme.Typography.LabelMedium,
-                    color = MyTheme.Colors.textPrimary
+                    color = colors.textPrimary
                 )
                 Icon(
                     painter = painterResource(id = R.drawable.ic_list_chevron_right),
                     contentDescription = null,
-                    tint = MyTheme.Colors.textTertiary,
+                    tint = colors.textTertiary,
                     modifier = Modifier.size(width = 5.dp, height = 10.dp)
                 )
             }
@@ -134,17 +138,20 @@ private fun TableListMasternodeKeyItem(
     )
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun MasternodeKeysScreenPreview() {
-    MasternodeKeysScreenContent(
-        uiState = MasternodeKeysUIState(
-            keyTypes = listOf(
-                MasternodeKeyTypeInfo(MasternodeKeyType.OWNER, 5, 3),
-                MasternodeKeyTypeInfo(MasternodeKeyType.VOTING, 3, 1),
-                MasternodeKeyTypeInfo(MasternodeKeyType.OPERATOR, 2, 0),
-                MasternodeKeyTypeInfo(MasternodeKeyType.PLATFORM, 1, 0)
+    DashWalletTheme {
+        MasternodeKeysScreenContent(
+            uiState = MasternodeKeysUIState(
+                keyTypes = listOf(
+                    MasternodeKeyTypeInfo(MasternodeKeyType.OWNER, 5, 3),
+                    MasternodeKeyTypeInfo(MasternodeKeyType.VOTING, 3, 1),
+                    MasternodeKeyTypeInfo(MasternodeKeyType.OPERATOR, 2, 0),
+                    MasternodeKeyTypeInfo(MasternodeKeyType.PLATFORM, 1, 0)
+                )
             )
         )
-    )
+    }
 }

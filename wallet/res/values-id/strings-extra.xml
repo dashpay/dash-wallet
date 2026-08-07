@@ -460,8 +460,6 @@
     <string name="masternode_key_not_used">Tidak digunakan</string>
     <string name="masternode_key_revoked">Dicabut</string>
     <string name="masternode_key_private_public_base64">Kunci private / publik (base64)</string>
-    <string name="timeskew_ahead">lebih awal</string>
-    <string name="timeskew_behind">dibelakang</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Harga tidak diambil. Nilai Fiat mungkin salah.</string>

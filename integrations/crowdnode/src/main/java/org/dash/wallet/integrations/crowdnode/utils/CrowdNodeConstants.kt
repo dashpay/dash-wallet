@@ -17,11 +17,10 @@
 
 package org.dash.wallet.integrations.crowdnode.utils
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.params.MainNetParams
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.DashAddressValidator
+import org.dash.wallet.common.money.DashNetworks
+import org.dash.wallet.common.money.MoneyFormat
 
 object CrowdNodeConstants {
     private const val CROWDNODE_TESTNET_ADDRESS = "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
@@ -32,61 +31,66 @@ object CrowdNodeConstants {
     private const val MAINNET_LOGIN_URL = "https://login.crowdnode.io"
     private const val TESTNET_LOGIN_URL = "https://logintest.crowdnode.io"
 
-    val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(1000000)
-    val REQUIRED_FOR_SIGNUP: Coin = MINIMUM_REQUIRED_DASH - Coin.valueOf(100000)
-    val API_OFFSET: Coin = Coin.valueOf(20000)
-    val MINIMUM_DASH_DEPOSIT: Coin = Coin.COIN.div(2)
-    val DASH_FORMAT: MonetaryFormat = MonetaryFormat.BTC.minDecimals(1)
+    val MINIMUM_REQUIRED_DASH: Dash = Dash.valueOf(1000000)
+    val REQUIRED_FOR_SIGNUP: Dash = MINIMUM_REQUIRED_DASH - Dash.valueOf(100000)
+    val API_OFFSET: Dash = Dash.valueOf(20000)
+    val MINIMUM_DASH_DEPOSIT: Dash = Dash.COIN.div(2)
+    val DASH_FORMAT: MoneyFormat = MoneyFormat.BTC.minDecimals(1)
         .repeatOptionalDecimals(1, 3).postfixCode()
-    val API_CONFIRMATION_DASH_AMOUNT: Coin = Coin.valueOf(54321)
-    val MINIMUM_LEFTOVER_BALANCE: Coin = Coin.valueOf(30000)
+    val API_CONFIRMATION_DASH_AMOUNT: Dash = Dash.valueOf(54321)
+    val MINIMUM_LEFTOVER_BALANCE: Dash = Dash.valueOf(30000)
 
     object WithdrawalLimits {
         // Current withdrawal limits can be found here:
         // https://knowledge.crowdnode.io/en/articles/6387601-api-withdrawal-limits
         // or with the API:
         // https://app.crowdnode.io/odata/apifundings/GetWithdrawalLimits(address='')
-        val DEFAULT_LIMIT_PER_TX: Coin = Coin.COIN.multiply(15)
-        val DEFAULT_LIMIT_PER_HOUR: Coin = Coin.COIN.multiply(30)
-        val DEFAULT_LIMIT_PER_DAY: Coin = Coin.COIN.multiply(60)
+        val DEFAULT_LIMIT_PER_TX: Dash = Dash.COIN.multiply(15)
+        val DEFAULT_LIMIT_PER_HOUR: Dash = Dash.COIN.multiply(30)
+        val DEFAULT_LIMIT_PER_DAY: Dash = Dash.COIN.multiply(60)
     }
 
-    fun getCrowdNodeAddress(params: NetworkParameters): Address {
-        return Address.fromBase58(
-            params,
-            if (params == MainNetParams.get()) {
-                CROWDNODE_MAINNET_ADDRESS
-            } else {
-                CROWDNODE_TESTNET_ADDRESS
-            }
-        )
+    /** The CrowdNode base58 address for the network identified by [networkId] (see [DashNetworks]). */
+    fun getCrowdNodeAddress(networkId: String): String {
+        return if (networkId == DashNetworks.MAINNET) {
+            CROWDNODE_MAINNET_ADDRESS
+        } else {
+            CROWDNODE_TESTNET_ADDRESS
+        }
     }
 
-    fun getCrowdNodeBaseUrl(params: NetworkParameters): String {
-        return if (params == MainNetParams.get()) {
+    /** [networkId] as in [DashNetworks]. */
+    fun getCrowdNodeBaseUrl(networkId: String): String {
+        return if (networkId == DashNetworks.MAINNET) {
             MAINNET_BASE_URL
         } else {
             TESTNET_BASE_URL
         }
     }
 
-    fun getApiLinkUrl(address: Address): String {
-        return getCrowdNodeBaseUrl(address.parameters) + "APILink/${address.toBase58()}"
+    fun getApiLinkUrl(address: String): String {
+        return getBaseUrlForAddress(address) + "APILink/$address"
     }
 
-    fun getProfileUrl(params: NetworkParameters): String {
-        return getCrowdNodeBaseUrl(params) + "Profile"
+    fun getProfileUrl(networkId: String): String {
+        return getCrowdNodeBaseUrl(networkId) + "Profile"
     }
 
-    fun getFundsOpenUrl(address: Address): String {
-        return getCrowdNodeBaseUrl(address.parameters) + "FundsOpen/${address.toBase58()}"
+    fun getFundsOpenUrl(address: String): String {
+        return getBaseUrlForAddress(address) + "FundsOpen/$address"
     }
 
-    fun getLoginUrl(params: NetworkParameters): String {
-        return if (params == MainNetParams.get()) {
+    fun getLoginUrl(networkId: String): String {
+        return if (networkId == DashNetworks.MAINNET) {
             MAINNET_LOGIN_URL
         } else {
             TESTNET_LOGIN_URL
         }
+    }
+
+    private fun getBaseUrlForAddress(address: String): String {
+        // Same base-url-by-network resolution as the Address-typed original:
+        // anything that isn't a mainnet address maps to the testnet url.
+        return getCrowdNodeBaseUrl(DashAddressValidator.networkIdOrNull(address) ?: DashNetworks.TESTNET)
     }
 }

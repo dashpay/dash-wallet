@@ -17,38 +17,57 @@
 
 package org.dash.wallet.common.util;
 
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.uri.BitcoinURI;
+import org.dash.wallet.common.payments.parsers.AddressFormatException;
+import org.dash.wallet.common.payments.parsers.AddressNetwork;
+import org.dash.wallet.common.payments.parsers.AddressUtils;
+import org.dash.wallet.common.payments.parsers.PaymentURI;
 
+/**
+ * Dashj-free port of the previous bitcoinj-typed helpers: addresses are base58 strings and
+ * networks are {@link AddressNetwork} descriptors. Resolution rules are identical — a testnet
+ * address is re-interpreted on the current network (testnet and devnets share version bytes).
+ */
 public class AddressUtil {
 
-    public static NetworkParameters getParametersFromAddress(String address, NetworkParameters currentNetworkParameters) throws AddressFormatException {
-        NetworkParameters networkParameters = Address.getParametersFromAddress(address);
-        if (networkParameters.equals(TestNet3Params.get())) {
-            return currentNetworkParameters;
+    public static AddressNetwork getParametersFromAddress(String address, AddressNetwork currentNetwork)
+            throws AddressFormatException {
+        AddressNetwork network = AddressNetwork.fromDashAddress(address);
+        if (network.getId().equals(AddressNetwork.ID_TESTNET)) {
+            return currentNetwork;
         } else {
-            return networkParameters;
+            return network;
         }
     }
 
-    public static Address fromString(NetworkParameters params, String base58, NetworkParameters currentNetworkParameters) throws AddressFormatException {
-        NetworkParameters networkParameters = (params != null) ? params : getParametersFromAddress(base58, currentNetworkParameters);
-        return Address.fromString(networkParameters, base58);
+    /** Validates the given base58 address for {@code params} (or the address-derived network when null). */
+    public static String fromString(AddressNetwork params, String base58, AddressNetwork currentNetwork)
+            throws AddressFormatException {
+        AddressNetwork network = (params != null) ? params : getParametersFromAddress(base58, currentNetwork);
+        AddressUtils.DecodedAddress decoded = AddressUtils.decode(base58);
+        if (!network.acceptsVersion(decoded.getVersion())) {
+            throw new AddressFormatException.WrongNetwork(decoded.getVersion());
+        }
+        return base58;
     }
 
-    public static Address getCorrectAddress(BitcoinURI bitcoinUri, NetworkParameters currentNetworkParameters) {
-        Address address = bitcoinUri.getAddress();
+    /**
+     * The address of the payment URI, re-validated against the current network when it decodes
+     * as a testnet/devnet address. Mirrors the previous bitcoinj-typed behavior exactly.
+     */
+    public static String getCorrectAddress(PaymentURI paymentUri, AddressNetwork currentNetwork) {
+        String address = paymentUri.getAddress();
         if (address != null) {
-            NetworkParameters networkParameters = address.getParameters();
-            if (networkParameters.equals(TestNet3Params.get()) && !currentNetworkParameters.equals(TestNet3Params.get())) {
-                try {
-                    return Address.fromString(currentNetworkParameters, address.toString());
-                } catch (AddressFormatException.WrongNetwork x) {
-                    return address;
+            try {
+                AddressNetwork network = AddressNetwork.fromDashAddress(address);
+                if (network.getId().equals(AddressNetwork.ID_TESTNET)
+                        && !currentNetwork.getId().equals(AddressNetwork.ID_TESTNET)) {
+                    AddressUtils.DecodedAddress decoded = AddressUtils.decode(address);
+                    if (!currentNetwork.acceptsVersion(decoded.getVersion())) {
+                        return address; // WrongNetwork: keep the original, like the dashj original
+                    }
                 }
+            } catch (AddressFormatException x) {
+                return address;
             }
         }
         return address;

@@ -30,10 +30,11 @@ import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.ConcatAdapter
 import de.schildbach.wallet.ui.CreateUsernameActivity
-import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
+import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
+import de.schildbach.wallet.ui.dashpay.RetryStatusHint
 import de.schildbach.wallet.ui.invite.InviteHandler
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -51,6 +52,7 @@ import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.InviteHandlerViewModel
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.registerLockScreenDeactivated
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
@@ -74,6 +76,17 @@ import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetails
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardOrderDetailsDialog
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardViewModel
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.service.L1SyncUiStatus
+import kotlinx.coroutines.flow.map
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
@@ -85,6 +98,13 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private var firstPageLoadStartTime: Long = 0L
     private var onViewCreatedTime: Long = 0L
     private var pendingManualRefresh: Boolean = false
+
+    /**
+     * One "still syncing" invite notice per launch. The provisional
+     * NOT_SYNCED verdict can be re-reached on every sync-state emission,
+     * and the notice is informational — repeating it would be a nag.
+     */
+    private var notSyncedInviteNoticeShown = false
 
     private val viewModel by activityViewModels<MainViewModel>()
     private val giftCardViewModel by activityViewModels<GiftCardViewModel>()
@@ -98,6 +118,9 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     @Inject
     lateinit var identityRepository: IdentityRepository
 
+    @Inject
+    lateinit var identityCreationStatus: IdentityCreationStatusHolder
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         onViewCreatedTime = System.currentTimeMillis()
@@ -107,12 +130,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             viewLifecycleOwner.lifecycleScope.launch {
                 if (rowView is TransactionRowView) {
                     if (isProfileClick && rowView.contact != null) {
-                        requireContext().startActivity(
-                            DashPayUserActivity.createIntent(
-                                requireContext(),
-                                rowView.contact
-                            )
-                        )
+                        DashPayUserBottomSheet.newInstance(rowView.contact).show(requireActivity())
                     } else {
                         // For rows loaded from the display cache, txWrapper is null.
                         // Fall back to the live wrapper list so CoinJoin/CrowdNode groups still open.
@@ -130,7 +148,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                 // CrowdNode) icon for non-group wrappers, so route here instead.
                                 if (ServiceName.isDashSpend(rowView.service)) {
                                     viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
-                                    val txId = Sha256Hash.wrap(rowView.id)
+                                    val txId = rowView.id
                                     if (giftCardViewModel.getGiftCardCount(txId) > 1) {
                                         GiftCardOrderDetailsDialog.newInstance(txId)
                                     } else {
@@ -138,13 +156,13 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                     }
                                 } else {
                                     viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                                    TransactionDetailsDialogFragment.newInstance(txWrapper.transactions.keys.first())
+                                    TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(txWrapper.transactions.keys.first()))
                                 }
                             }
 
                             ServiceName.isDashSpend(rowView.service) -> {
                                 viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
-                                val txId = Sha256Hash.wrap(rowView.id)
+                                val txId = rowView.id
                                 if (giftCardViewModel.getGiftCardCount(txId) > 1) {
                                     GiftCardOrderDetailsDialog.newInstance(txId)
                                 } else {
@@ -305,16 +323,26 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         })
 
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
-            header.isSynced = it
-            if (inviteHandlerViewModel.isUsingInvite) {
-                lifecycleScope.launch {
-                    processInvitation(inviteHandlerViewModel.invitation.value!!, isSynced = it, isLockScreenActive())
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.syncStatus.map { it.isSynced }.distinctUntilChanged().collect { isSynced ->
+                header.isSynced = isSynced
+                if (inviteHandlerViewModel.isUsingInvite) {
+                    // Re-drives the invite through validation on every sync-state
+                    // change: an invite checked mid-scan gets the provisional
+                    // NOT_SYNCED verdict, and this is what converts it to
+                    // VALID/ALREADY_CLAIMED once the scan completes — the user
+                    // never has to re-tap the link.
+                    processInvitation(
+                        inviteHandlerViewModel.invitation.value!!,
+                        isLockScreenActive(),
+                        revalidate = isSynced
+                    )
                 }
             }
-            updateSyncState()
         }
-        viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.syncStatus.collect { updateSyncState(it) }
+        }
 
         // Collect live PagingData and submit to the live (PagingDataAdapter) adapter.
         viewLifecycleOwner.lifecycleScope.launch {
@@ -387,10 +415,25 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         }
 
+        // Transient retry-status hint on the identity processing tile —
+        // why the current step is taking longer than usual (e.g. platform
+        // consensus core height lagging a fresh funding tx; no IS lock
+        // yet). Cleared by the service on success/fresh runs.
+        identityCreationStatus.statusHint.observe(viewLifecycleOwner) { hint ->
+            header.statusHint = when (hint) {
+                RetryStatusHint.CORE_HEIGHT_LAG -> getString(R.string.identity_processing_network_catching_up)
+                RetryStatusHint.WAITING_FOR_ISLOCK -> getString(R.string.identity_processing_waiting_confirmation)
+                null -> null
+            }
+        }
+
         inviteHandlerViewModel.invitation.observe(viewLifecycleOwner) { invitation ->
-            val isSynced = viewModel.isBlockchainSynced.value == true
-            if (invitation != null && isSynced) {
-                processInvitation(invitation, viewModel.isBlockchainSynced.value == true, isLockScreenActive())
+            val isSynced = viewModel.syncStatus.value.isSynced
+            // No longer gated on isSynced: an invite that arrives mid-scan
+            // must still get a verdict (the provisional NOT_SYNCED one) and
+            // the accompanying notice, instead of silently doing nothing.
+            if (invitation != null) {
+                processInvitation(invitation, isLockScreenActive())
             }
             header.invitation = invitation
             header.isSynced = isSynced
@@ -418,26 +461,42 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         lifecycleScope.launch {
             inviteHandlerViewModel.invitation.value?.let {
                 // only process for the dialog
-                processInvitation(
-                    it,
-                    viewModel.isBlockchainSynced.value == true,
-                    false
-                )
+                processInvitation(it, isLockScreenActive = false)
             }
         }
     }
 
-    private suspend fun processInvitation(invitation: InvitationLinkData, isSynced: Boolean, isLockScreenActive: Boolean) {
-        if (invitation.validationState != null) return
-        if (isSynced) {
-            if (invitation.expired) {
-                inviteHandlerViewModel.validateInvitation()
-            }
+    private suspend fun processInvitation(
+        invitation: InvitationLinkData,
+        isLockScreenActive: Boolean,
+        /**
+         * Re-drive validation for an invite that only ever got the PROVISIONAL
+         * NOT_SYNCED verdict. Set ONLY by the sync-state observer: validation
+         * republishes the invitation, so re-validating off the invitation feed
+         * itself would loop.
+         */
+        revalidate: Boolean = false
+    ) {
+        // NOT_SYNCED is a PROVISIONAL verdict, not a terminal one — the chain
+        // was still catching up when the invite was checked. Unlike every
+        // other state it must not latch, or the invite would sit behind this
+        // early return for the rest of the launch (the live bug: nothing was
+        // shown at all and the invite never resolved).
+        val state = invitation.validationState
+        val provisional = state == InvitationValidationState.NOT_SYNCED
+        if (state != null && !provisional) return
 
-            val currentInvitation = inviteHandlerViewModel.invitation.value ?: invitation
-            if (!isLockScreenActive) {
-                showInviteValidationDialog(currentInvitation)
-            }
+        // InviteHandlerViewModel.validateInvitation() carries its own sync
+        // gate and answers NOT_SYNCED while the chain is behind, so calling it
+        // mid-sync is safe — and it is what lets the dialog below say
+        // something instead of leaving the user with silence.
+        if ((state == null && invitation.expired) || (provisional && revalidate)) {
+            inviteHandlerViewModel.validateInvitation()
+        }
+
+        val currentInvitation = inviteHandlerViewModel.invitation.value ?: invitation
+        if (!isLockScreenActive) {
+            showInviteValidationDialog(currentInvitation)
         }
     }
 
@@ -481,7 +540,27 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
 
             InvitationValidationState.NOT_SYNCED -> {
-
+                // SAFETY NET, not the primary surface: the invite tile itself
+                // already carries the "still syncing" text
+                // (accept_invitation_row.xml → join_dashpay_wait, shown while
+                // HistoryHeaderAdapter.isSynced is false). This branch is only
+                // reachable in the narrow race where the sync state flips
+                // between the caller's guard and the validator's own check, so
+                // a lightweight message is enough — no modal.
+                //
+                // Deliberately does NOT clearInvitation(): unlike every
+                // terminal branch above, the invite must survive so
+                // processInvitation can re-validate it once the scan finishes.
+                // Shown once per launch so repeated sync-state emissions
+                // cannot turn it into a nag.
+                if (!notSyncedInviteNoticeShown) {
+                    notSyncedInviteNoticeShown = true
+                    Toast.makeText(
+                        requireContext(),
+                        R.string.invitation_not_synced_message,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
 
             else -> {}
@@ -504,17 +583,18 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         startActivity(createUsernameActivityIntent)
     }
 
-    private fun updateSyncState() {
-        val isSynced = viewModel.isBlockchainSynced.value
-        val percentage = viewModel.blockchainSyncPercentage.value
+    /** The single "Syncing N%" header — engine-agnostic (see L1SyncStatusService). */
+    private fun updateSyncState(status: L1SyncUiStatus) {
+        val isSynced = status.isSynced
+        val percentage = status.percentage
 
-        if (isSynced != null && isSynced) {
+        if (isSynced) {
             binding.syncing.isVisible = false
         } else {
             binding.syncing.isVisible = true
             var syncing = getString(R.string.syncing)
 
-            if (percentage == null || percentage == 0) {
+            if (percentage == 0) {
                 syncing += "…"
                 binding.syncing.text = syncing
             } else {
@@ -600,7 +680,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                 blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) &&
                                 (errorMessage?.contains("Document transitions with duplicate unique properties") == true ||
                                         errorMessage?.contains("missing domain document for") == true ||
-                                errorMessage?.contains("DuplicateUniqueIndexError") == true)
+                                errorMessage?.contains("DuplicateUniqueIndexError") == true ||
+                                // The requested primary was lost to the pre-11.10.52
+                                // wrapper-adoption clobber (S22): the user must re-enter
+                                // it; the claimed-invite retry arm repairs the record.
+                                errorMessage?.contains("primary username was lost") == true)
                     if (needsNewUsername ||
                         // do we need this, cause the error could be due to a stale node
                         blockchainIdentityData.creationState == IdentityCreationState.REQUESTED_NAME_CHECKING &&
@@ -626,6 +710,17 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 safeNavigate(WalletFragmentDirections.homeToSearchUser())
                 // hide "Hello Card" after first click
                 viewModel.dismissUsernameCreatedCard()
+            } else if (blockchainIdentityData.creationState == IdentityCreationState.VOTING &&
+                !blockchainIdentityData.usernameSecondary.isNullOrEmpty()
+            ) {
+                // DUAL creation welcome card (instant secondary usable while
+                // the contested primary is in voting): same first-click
+                // behavior as DONE, but the dismissal persists via the
+                // header's own pref — DONE_AND_DISMISS must not be written
+                // while the state machine is at VOTING (it would kill the
+                // More screen's voting tile).
+                safeNavigate(WalletFragmentDirections.homeToSearchUser())
+                header.dismissVotingDualHelloCard()
             } else {
                 // not possible to get here?
             }

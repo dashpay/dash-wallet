@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -65,6 +65,16 @@ import java.util.Currency
 import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.util.toFormattedString
 
 enum class TxMetadataSaveFrequency {
     afterTenTransactions,
@@ -107,6 +117,15 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private var originalState: TransactionMetadataSettings? = null
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
+
+    override fun onCleared() {
+        // viewModelScope is cancelled by the framework, but the IO worker
+        // scope is ours to stop — its launchIn collectors never complete on
+        // their own and would outlive the screen.
+        workerJob.cancel()
+        super.onCleared()
+    }
+
     private var _selectedExchangeRate = MutableStateFlow<ExchangeRate?>(null)
     val selectedExchangeRate = _selectedExchangeRate.asStateFlow()
     private var selectedCurrency: String = Constants.USD_CURRENCY
@@ -177,7 +196,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
                                     item -> TransactionMetadata(
                                         item.txId,
                                     item.sentTimestamp ?: 0,
-                                        Coin.ZERO,
+                                        org.dash.wallet.common.money.Coin.ZERO,
                                         TransactionCategory.Sent
                                     )
                                 }
@@ -223,7 +242,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
 
     fun getBalanceInLocalFormat(): String {
         selectedExchangeRate.value?.fiat?.let {
-            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it)
+            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.toDashjFiat())
             val fiatValue = exchangeRate.coinToFiat(CURRENT_DATA_COST)
             val minValue = try {
                 val fractionDigits = Currency.getInstance(selectedCurrency).defaultFractionDigits

@@ -17,23 +17,22 @@
 
 package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class CrowdNodeSignUpTx(networkParams: NetworkParameters) : CoinsToAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams),
+class CrowdNodeSignUpTx(networkId: String) : CoinsToAddressTxFilter(
+    CrowdNodeConstants.getCrowdNodeAddress(networkId),
     SIGNUP_REQUEST_CODE
 ) {
     companion object {
-        val SIGNUP_REQUEST_CODE: Coin =
-            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.SignUp.code)
+        val SIGNUP_REQUEST_CODE: Dash =
+            CrowdNodeConstants.API_OFFSET + Dash.valueOf(ApiCode.SignUp.code)
     }
 
-    override fun matches(tx: Transaction): Boolean {
+    override fun matches(tx: TxInfo): Boolean {
         return super.matches(tx) && fromAddresses.size == 1
     }
 }

@@ -35,6 +35,40 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.slf4j.LoggerFactory
 
+/** Which screen the create-username nav graph starts on. */
+internal enum class CreateUsernameStartDestination { VOTING_REQUEST_DETAILS, WELCOME, REQUEST_USERNAME }
+
+/**
+ * The start-destination decision of [CreateUsernameActivity], pure and
+ * host-testable.
+ *
+ * - A username already in voting (post-payment) keeps its details screen.
+ * - The CREATE path — no identity, nothing in flight
+ *   ([identityCreationStarted] false, the same `creationState == NONE`
+ *   signal MoreFragment keys off) and no invite deep-link — ALWAYS starts
+ *   at the full designed flow (welcome → payment sheets), on every entry,
+ *   until the wallet actually has a username. The old
+ *   [dashPayInfoShown]-based shortcut to the request screen no longer
+ *   applies here, which also makes the
+ *   `HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN` write in
+ *   `UsernameVotingInfoFragment` harmless for this path.
+ * - Invite deep-links and re-entries with an identity in flight
+ *   (locked/lost-vote reuse, display-complete) keep the legacy behavior:
+ *   welcome only the first time ([dashPayInfoShown] false), then straight
+ *   to the request screen.
+ */
+internal fun resolveCreateUsernameStartDestination(
+    usernameInVoting: Boolean,
+    usingInvite: Boolean,
+    identityCreationStarted: Boolean,
+    dashPayInfoShown: Boolean
+): CreateUsernameStartDestination = when {
+    usernameInVoting -> CreateUsernameStartDestination.VOTING_REQUEST_DETAILS
+    !usingInvite && !identityCreationStarted -> CreateUsernameStartDestination.WELCOME
+    !dashPayInfoShown -> CreateUsernameStartDestination.WELCOME
+    else -> CreateUsernameStartDestination.REQUEST_USERNAME
+}
+
 @AndroidEntryPoint
 class CreateUsernameActivity : LockScreenActivity() {
 
@@ -119,20 +153,31 @@ class CreateUsernameActivity : LockScreenActivity() {
                 userName = username,
                 invite = invite
             )
+            // Bridge the same args into RequestUserNameViewModel here so EVERY
+            // start destination recognizes the invite — not just REQUEST_USERNAME
+            // (which re-bridges in RequestUsernameFragment). Without this, a
+            // first-time invite that starts on the WELCOME screen leaves
+            // isUsingInvite() false and its balance gate blocks Continue. Applies
+            // to both L1 and shielded (L2) invites.
+            requestUserNameViewModel.setCreateUsernameArgs(dashPayViewModel.createUsernameArgs)
 
-            if (requestUserNameViewModel.isUserNameRequested() &&
+            val usernameInVoting = requestUserNameViewModel.isUserNameRequested() &&
                 !requestUserNameViewModel.isUsernameLocked() &&
                 !requestUserNameViewModel.isUsernameLostAfterVoting() &&
                 requestUserNameViewModel.isUsernameInVotingState()
-            ) {
-                navGraph.setStartDestination(R.id.votingRequestDetailsFragment)
-            } else {
-                if (!dashPayViewModel.isDashPayInfoShown()) {
-                    navGraph.setStartDestination(R.id.welcomeToDashPayFragment)
-                } else {
-                    navGraph.setStartDestination(R.id.requestUsernameFragment)
+            val startDestination = resolveCreateUsernameStartDestination(
+                usernameInVoting = usernameInVoting,
+                usingInvite = invite != null,
+                identityCreationStarted = requestUserNameViewModel.hasIdentityOrCreationStarted(),
+                dashPayInfoShown = dashPayViewModel.isDashPayInfoShown()
+            )
+            navGraph.setStartDestination(
+                when (startDestination) {
+                    CreateUsernameStartDestination.VOTING_REQUEST_DETAILS -> R.id.votingRequestDetailsFragment
+                    CreateUsernameStartDestination.WELCOME -> R.id.welcomeToDashPayFragment
+                    CreateUsernameStartDestination.REQUEST_USERNAME -> R.id.requestUsernameFragment
                 }
-            }
+            )
 
             navController.graph = navGraph
             navController.setGraph(navController.graph, bundle)

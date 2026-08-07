@@ -25,17 +25,17 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.uri.BitcoinURI
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.MoneyFormat
+import org.dash.wallet.common.money.moneyFormat
+import org.dash.wallet.common.observeTotalDashBalance
+import org.dash.wallet.common.payments.parsers.DashUri
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SystemActionsService
@@ -81,11 +81,11 @@ class CrowdNodeViewModel @Inject constructor(
     val networkError = SingleLiveEvent<Unit>()
     val onlineAccountRequest = SingleLiveEvent<Map<String, String>>()
 
-    private val _accountAddress = MutableLiveData<Address>()
-    val accountAddress: LiveData<Address>
+    private val _accountAddress = MutableLiveData<String>()
+    val accountAddress: LiveData<String>
         get() = _accountAddress
 
-    val primaryDashAddress
+    val primaryDashAddress: String?
         get() = crowdNodeApi.primaryAddress
 
     val needPassphraseBackUp
@@ -97,8 +97,8 @@ class CrowdNodeViewModel @Inject constructor(
     val hasEnoughBalance: LiveData<Boolean>
         get() = _hasEnoughBalance
 
-    private val _dashBalance = MutableLiveData<Coin>()
-    val dashBalance: LiveData<Coin>
+    private val _dashBalance = MutableLiveData<Dash>()
+    val dashBalance: LiveData<Dash>
         get() = _dashBalance
 
     val signUpStatus: SignUpStatus
@@ -119,18 +119,18 @@ class CrowdNodeViewModel @Inject constructor(
         get() = _crowdNodeBalance
 
     private var crowdNodeFee: Double = FeeInfo.DEFAULT_FEE
-    val dashFormat: MonetaryFormat
-        get() = globalConfig.format.noCode()
+    val dashFormat: MoneyFormat
+        get() = globalConfig.moneyFormat.noCode()
 
-    val networkParameters: NetworkParameters
-        get() = walletDataProvider.networkParameters
+    val networkId: String
+        get() = walletDataProvider.networkId
 
     val shouldShowFirstDepositBanner: Boolean
         get() = !crowdNodeApi.hasAnyDeposits() &&
             (crowdNodeBalance.value?.balance?.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT) ?: true)
 
     init {
-        walletDataProvider.observeSpendableBalance()
+        walletDataProvider.observeTotalDashBalance()
             .distinctUntilChanged()
             .onEach {
                 _dashBalance.postValue(it)
@@ -149,12 +149,12 @@ class CrowdNodeViewModel @Inject constructor(
                 when (it.status) {
                     Status.LOADING -> {
                         _crowdNodeBalance.postValue(
-                            _crowdNodeBalance.value?.copy(balance = it.data ?: Coin.ZERO, isUpdating = true)
+                            _crowdNodeBalance.value?.copy(balance = it.data ?: Dash.ZERO, isUpdating = true)
                         )
                     }
                     Status.SUCCESS -> {
                         _crowdNodeBalance.postValue(
-                            _crowdNodeBalance.value?.copy(balance = it.data ?: Coin.ZERO, isUpdating = false)
+                            _crowdNodeBalance.value?.copy(balance = it.data ?: Dash.ZERO, isUpdating = false)
                         )
                     }
                     Status.ERROR -> {
@@ -287,12 +287,12 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
-    suspend fun deposit(value: Coin, checkBalanceConditions: Boolean): Boolean {
-        val emptyWallet = value >= dashBalance.value
+    suspend fun deposit(value: Dash, checkBalanceConditions: Boolean): Boolean {
+        val emptyWallet = dashBalance.value?.let { value >= it } == true
         return crowdNodeApi.deposit(value, emptyWallet, checkBalanceConditions)
     }
 
-    suspend fun withdraw(value: Coin): Boolean {
+    suspend fun withdraw(value: Dash): Boolean {
         return crowdNodeApi.withdraw(value)
     }
 
@@ -339,7 +339,7 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     fun initiateOnlineSignUp() {
-        val signupUrl = CrowdNodeConstants.getProfileUrl(networkParameters)
+        val signupUrl = CrowdNodeConstants.getProfileUrl(networkId)
         onlineAccountRequest.postValue(
             mapOf(
                 URL_ARG to signupUrl,
@@ -373,7 +373,7 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
-    suspend fun getWithdrawalLimits(): List<Coin> {
+    suspend fun getWithdrawalLimits(): List<Dash> {
         return listOf(
             crowdNodeApi.getWithdrawalLimit(WithdrawalLimitPeriod.PerTransaction),
             crowdNodeApi.getWithdrawalLimit(WithdrawalLimitPeriod.PerHour),
@@ -385,7 +385,7 @@ class CrowdNodeViewModel @Inject constructor(
         val accountAddress = accountAddress.value ?: return
         val amount = CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT
 
-        val paymentRequestUri = BitcoinURI.convertToBitcoinURI(accountAddress, amount, "", "")
+        val paymentRequestUri = DashUri.toUri(accountAddress, amount)
         systemActions.shareText(paymentRequestUri)
     }
 
@@ -393,13 +393,13 @@ class CrowdNodeViewModel @Inject constructor(
         analytics.logEvent(eventName, mapOf())
     }
 
-    private fun getOrCreateAccountAddress(): Address {
+    private fun getOrCreateAccountAddress(): String {
         return crowdNodeApi.accountAddress ?: createNewAccountAddress()
     }
 
-    private fun createNewAccountAddress(): Address {
-        val address = walletDataProvider.freshReceiveAddress()
-        globalConfig.crowdNodeAccountAddress = address.toBase58()
+    private fun createNewAccountAddress(): String {
+        val address = walletDataProvider.freshReceiveAddressString()
+        globalConfig.crowdNodeAccountAddress = address
 
         return address
     }

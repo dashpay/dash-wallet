@@ -87,7 +87,6 @@
     <string name="select_currency">Piliin ang Pera</string>
     <string name="send_coins_error_dusty_send">Ang halaga ay sobrang liit para maipadala</string>
     <string name="send_coins_error_insufficient_money">Hindi sapat na pondo</string>
-    <string name="send_coins_error_insufficient_mixed_money">Hindi sapat na pinaghalong pondo. Hintayin ang paghahalo ng CoinJoin upang matapos o huwag paganahin ang tampok na ito sa mga setting upang makumpleto ang transaksyong ito.</string>
     <string name="syncing">Nagsi-sync</string>
     <string name="no_connection">Walang koneksyon sa internet</string>
     <string name="rate_not_available">Hindi available</string>

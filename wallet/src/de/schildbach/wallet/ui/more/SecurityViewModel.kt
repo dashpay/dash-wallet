@@ -34,9 +34,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
@@ -44,6 +43,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.toFormattedString
 import javax.inject.Inject
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toFormattedString
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -51,7 +52,7 @@ class SecurityViewModel @Inject constructor(
     private val exchangeRates: ExchangeRatesProvider,
     private val configuration: Configuration,
     private val walletUIConfig: WalletUIConfig,
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val analytics: AnalyticsService,
     private val walletApplication: WalletApplication,
     val biometricHelper: BiometricHelper,
@@ -65,7 +66,8 @@ class SecurityViewModel @Inject constructor(
         get() = configuration.remindBackupSeed
 
     val balance: Coin
-        get() = walletData.wallet?.getBalance(Wallet.BalanceType.ESTIMATED) ?: Coin.ZERO
+        // Through the seam (not wallet.getBalance directly): cutover-aware.
+        get() = walletData.getWalletBalance()
 
     val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE).asLiveData()
 
@@ -91,7 +93,7 @@ class SecurityViewModel @Inject constructor(
 
     fun getBalanceInLocalFormat(): String {
         selectedExchangeRate?.fiat?.let {
-            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it)
+            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.toDashjFiat())
             return exchangeRate.coinToFiat(balance).toFormattedString()
         }
 

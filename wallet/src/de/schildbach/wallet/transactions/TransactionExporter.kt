@@ -23,16 +23,25 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.transactions.TransactionUtils
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 @SuppressLint("SimpleDateFormat")
 abstract class TransactionExporter(
@@ -71,9 +80,16 @@ abstract class TransactionExporter(
         val list = transactionMetadataProvider.getAllTransactionMetadata()
 
         metadataMap = if (list.isNotEmpty()) {
-            list.associateBy({ it.txId }, { it })
+            list.associateBy({ it.txId.toSha256Hash() }, { it })
         } else {
             mapOf()
+        }
+    }
+
+    /** exportString() implementations call this so exporting works without a prior initMetadataMap() call */
+    protected suspend fun ensureMetadataMap() {
+        if (!::metadataMap.isInitialized) {
+            initMetadataMap()
         }
     }
 

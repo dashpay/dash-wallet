@@ -138,9 +138,20 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
         val fiatBalanceStr = viewModel.getBalanceInLocalFormat()
 
         if (walletBalance.isGreaterThan(Coin.ZERO) && viewModel.needPassphraseBackUp) {
+            // At-risk wallet (has a balance, recovery phrase not yet backed up):
+            // ONE confirmation that keeps both safety affordances — the balance
+            // in the title AND the "back up your seed first" extra action. This
+            // was previously two near-identical red-button dialogs shown back to
+            // back (same body text + same button), which read as an accidental
+            // double-prompt; collapsed to a single informative confirmation.
             val resetWalletDialog = ExtraActionDialog.create(
                 R.drawable.ic_warning_yellow_circle,
-                getString(R.string.launch_reset_wallet_title),
+                getString(
+                    R.string.start_reset_wallet_title,
+                    fiatBalanceStr.ifEmpty {
+                        walletBalance.toFriendlyString()
+                    }
+                ),
                 getString(R.string.launch_reset_wallet_message),
                 getString(R.string.button_cancel),
                 getString(R.string.reset_wallet_button),
@@ -152,25 +163,7 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                 requireActivity(),
                 onResult = {
                     if (it == true) {
-                        val startResetWalletDialog = AdaptiveDialog.create(
-                            R.drawable.ic_warning_yellow_circle,
-                            getString(
-                                R.string.start_reset_wallet_title,
-                                fiatBalanceStr.ifEmpty {
-                                    walletBalance.toFriendlyString()
-                                }
-                            ),
-                            getString(R.string.launch_reset_wallet_message),
-                            getString(R.string.button_cancel),
-                            getString(R.string.reset_wallet_button)
-                        ).apply {
-                            requireArguments().putInt(AdaptiveDialog.POS_BUTTON_COLOR_ARG, R.style.PrimaryButtonTheme_Large_Red)
-                        }
-                        startResetWalletDialog.show(requireActivity()) { confirmed ->
-                            if (confirmed == true) {
-                                checkUsernameThenReset()
-                            }
-                        }
+                        checkUsernameThenReset()
                     }
                 },
                 onExtraMessageAction = {

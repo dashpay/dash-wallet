@@ -52,6 +52,7 @@ import org.slf4j.LoggerFactory
 import java.math.BigInteger
 import java.util.regex.Matcher
 import java.util.regex.Pattern
+import de.schildbach.wallet.util.toSha256Hash
 
 open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
 
@@ -236,9 +237,9 @@ open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
                         if (isAdded) {
                             if (resource is BitmapDrawable) {
                                 ProfilePictureHelper.avatarHashAndFingerprint(requireContext(), pictureUrl, null, object : OnResourceReadyListener {
-                                    override fun onResourceReady(avatarHash: Sha256Hash?, avatarFingerprint: BigInteger?) {
+                                    override fun onResourceReady(avatarHash: org.dash.wallet.common.data.TxId?, avatarFingerprint: BigInteger?) {
                                         if (isAdded) {
-                                            sharedViewModel.avatarHash = avatarHash
+                                            sharedViewModel.avatarHash = avatarHash?.toSha256Hash()
                                             sharedViewModel.avatarFingerprint = avatarFingerprint
 
                                             sharedViewModel.bitmapCache = resource.bitmap

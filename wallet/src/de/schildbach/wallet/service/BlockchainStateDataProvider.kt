@@ -41,9 +41,10 @@ import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.StoredBlock
 import org.bitcoinj.store.BlockStoreException
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.NetworkStatus
+import org.dash.wallet.common.data.SyncStage
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.dash.wallet.common.services.BlockchainStateProvider
 import java.io.IOException
@@ -70,7 +71,7 @@ class BlockchainStateDataProvider @Inject constructor(
     private val context: Context,
     private val dashSystemService: DashSystemService,
     private val blockchainStateDao: BlockchainStateDao,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val configuration: Configuration
 ) : BlockchainStateProvider {
     companion object {
@@ -89,8 +90,22 @@ class BlockchainStateDataProvider @Inject constructor(
     private val coroutineScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
     private val networkStatusFlow = MutableStateFlow(NetworkStatus.UNKNOWN)
-    private val blockchainFlow = MutableStateFlow<AbstractBlockChain?>(null)
-    private val syncStageFlow = MutableStateFlow<PeerGroup.SyncStage?>(null)
+    private val syncStageFlow = MutableStateFlow<SyncStage?>(null)
+
+    /**
+     * The impediment set as last reported by the dashj service's
+     * connectivity/storage/security monitors ([updateImpediments] /
+     * [updateBlockchainState]) — those monitors keep running post-cutover
+     * (they are Android-side, not peergroup-side), so they stay the source
+     * of truth for connectivity while the SDK derivation
+     * ([updateSdkBlockchainState]) contributes only the progress-stall
+     * NETWORK bit. Both writers compose the row's impediments the same way
+     * ([composeImpediments]); everything runs on the serial [coroutineScope].
+     */
+    private var serviceImpediments: Set<Impediment> = emptySet()
+
+    /** Kill-list Step B: the SDK-derived progress-stall NETWORK impediment (post-cutover only). */
+    private var sdkStallNetworkImpediment = false
 
     override suspend fun getState(): BlockchainState? {
         return blockchainStateDao.getState()
@@ -102,10 +117,100 @@ class BlockchainStateDataProvider @Inject constructor(
 
     fun updateImpediments(impediments: Set<Impediment>) {
         coroutineScope.launch {
+            serviceImpediments = impediments
             val blockchainState = blockchainStateDao.getState()
             if (blockchainState != null) {
                 blockchainState.impediments.clear()
-                blockchainState.impediments.addAll(impediments)
+                blockchainState.impediments.addAll(composeImpediments())
+                blockchainStateDao.saveState(blockchainState)
+            }
+        }
+    }
+
+    /**
+     * Service-reported impediments plus the SDK-derived stall NETWORK bit.
+     * Pre-cutover [sdkStallNetworkImpediment] is permanently false, so this
+     * is exactly the service set — byte-identical to the pre-Step-B path.
+     */
+    private fun composeImpediments(): EnumSet<Impediment> {
+        val impediments = EnumSet.noneOf(Impediment::class.java)
+        impediments.addAll(serviceImpediments)
+        if (sdkStallNetworkImpediment) {
+            impediments.add(Impediment.NETWORK)
+        }
+        return impediments
+    }
+
+    /**
+     * Kill-list Step B (sync-state track): apply one SDK-derived
+     * [de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateUpdate]
+     * to the persisted row — the post-cutover replacement for
+     * [updateBlockchainState], fed by
+     * [de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateService]'s
+     * equality-gated poll of the SDK SPV progress. Null fields preserve the
+     * row's current value (see the update class KDoc) — `chainlockHeight`
+     * included, and it is additionally clamped MONOTONICALLY so the
+     * engine's session-scoped lower bound can never regress a higher value
+     * an earlier session (or dashj, pre-cutover) already established.
+     * Serialized with every other writer on [coroutineScope].
+     */
+    internal fun updateSdkBlockchainState(update: de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateUpdate) {
+        coroutineScope.launch {
+            sdkStallNetworkImpediment = update.networkStalled
+            val blockchainState = blockchainStateDao.getState() ?: BlockchainState()
+            update.bestChainHeight?.let {
+                blockchainState.bestChainHeight = it
+                // The ongoing-sync notification only dismisses when the row's
+                // height reaches config.bestChainHeightEver (BlockchainServiceImpl),
+                // and only dashj paths ever advanced that pref — frozen at
+                // cutover. Mirror WalletApplication's maybe-increment write so
+                // the SDK tip keeps it moving post-cutover.
+                configuration.maybeIncrementBestChainHeightEver(it)
+            }
+            update.bestChainDateMs?.let { blockchainState.bestChainDate = java.util.Date(it) }
+            update.mnListHeight?.let { blockchainState.mnlistHeight = it }
+            // Chainlock height: the engine only knows the chainlocks it
+            // applied THIS session (a lower bound — see
+            // SdkBlockchainStateUpdate.chainlockHeight), so take the max
+            // rather than assigning. A restart therefore never walks the
+            // row backwards past what dashj or an earlier session proved.
+            update.chainlockHeight?.let {
+                if (it > blockchainState.chainlockHeight) {
+                    blockchainState.chainlockHeight = it
+                }
+            }
+            // Null percent (transient SDK ERROR) preserves the row's value —
+            // a peer hiccup must not flap isSynced() consumers 100 → 0 → 100.
+            update.percentageSync?.let { blockchainState.percentageSync = it }
+            // The SDK has no replay concept — its re-scan reads as percent < 100.
+            blockchainState.replaying = false
+            blockchainState.impediments = composeImpediments()
+            blockchainStateDao.saveState(blockchainState)
+            syncStageFlow.value = update.syncStage
+        }
+    }
+
+    /**
+     * Kill-list Step B: the cutover-ROLLBACK hook, invoked by
+     * [de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateService]
+     * when the cutover gate transitions true → false. The derivation
+     * coroutine is already cancelled at that point, but state it wrote
+     * would otherwise latch: a raised [sdkStallNetworkImpediment] would keep
+     * composing [org.dash.wallet.common.data.entity.BlockchainState.Impediment.NETWORK]
+     * into every later write (syncFailed() forever), and the SDK-written
+     * [syncStageFlow] value would mask dashj's until its next update. Resets
+     * both — recomposing the persisted row's impediments so an
+     * already-persisted NETWORK bit clears too — and lets the resumed dashj
+     * pipeline re-drive everything else. Serialized on [coroutineScope].
+     */
+    internal fun clearSdkDerivedState() {
+        coroutineScope.launch {
+            sdkStallNetworkImpediment = false
+            syncStageFlow.value = null
+            val blockchainState = blockchainStateDao.getState()
+            if (blockchainState != null) {
+                blockchainState.impediments.clear()
+                blockchainState.impediments.addAll(composeImpediments())
                 blockchainStateDao.saveState(blockchainState)
             }
         }
@@ -121,15 +226,25 @@ class BlockchainStateDataProvider @Inject constructor(
             val chainLockHeight = dashSystemService.system.chainLockHandler.bestChainLockBlockHeight
             val mnListHeight: Int =
                 dashSystemService.system.masternodeListManager.listAtChainTip.height.toInt()
+            serviceImpediments = impediments
             blockchainState.bestChainDate = chainHead.header.time
             blockchainState.bestChainHeight = chainHead.height
-            blockchainState.impediments = EnumSet.copyOf(impediments)
+            blockchainState.impediments = composeImpediments()
             blockchainState.chainlockHeight = chainLockHeight
             blockchainState.mnlistHeight = mnListHeight
             blockchainState.percentageSync = percentageSync
             blockchainStateDao.saveState(blockchainState)
-            syncStageFlow.value = syncStage
+            syncStageFlow.value = syncStage?.toNeutral()
         }
+    }
+
+    private fun PeerGroup.SyncStage.toNeutral(): SyncStage = when (this) {
+        PeerGroup.SyncStage.OFFLINE -> SyncStage.OFFLINE
+        PeerGroup.SyncStage.HEADERS -> SyncStage.HEADERS
+        PeerGroup.SyncStage.MNLIST -> SyncStage.MNLIST
+        PeerGroup.SyncStage.PREBLOCKS -> SyncStage.PREBLOCKS
+        PeerGroup.SyncStage.BLOCKS -> SyncStage.BLOCKS
+        PeerGroup.SyncStage.COMPLETE -> SyncStage.COMPLETE
     }
 
     fun resetBlockchainState() {
@@ -179,26 +294,12 @@ class BlockchainStateDataProvider @Inject constructor(
         return networkStatusFlow
     }
 
-    fun setBlockChain(blockChain: AbstractBlockChain?) {
-        coroutineScope.launch {
-            blockchainFlow.emit(blockChain)
-        }
-    }
-
-    override fun getBlockChain(): AbstractBlockChain? {
-        return dashSystemService.system.blockChain
-    }
-
-    override fun observeBlockChain(): Flow<AbstractBlockChain?> {
-        return blockchainFlow
-    }
-
-    override fun observeSyncStage(): Flow<PeerGroup.SyncStage?> {
+    override fun observeSyncStage(): Flow<SyncStage?> {
         return syncStageFlow
     }
 
-    override fun getSyncStage(): PeerGroup.SyncStage {
-        return syncStageFlow.value ?: PeerGroup.SyncStage.OFFLINE
+    override fun getSyncStage(): SyncStage {
+        return syncStageFlow.value ?: SyncStage.OFFLINE
     }
 
     override suspend fun getMasternodeAPY(): Double {

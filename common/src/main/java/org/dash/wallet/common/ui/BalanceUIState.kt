@@ -17,11 +17,11 @@
 
 package org.dash.wallet.common.ui
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
 
 data class BalanceUIState(
-    val balance: Coin = Coin.ZERO,
-    val balanceFiat: Fiat? = null,
+    val balance: Dash = Dash.ZERO,
+    val balanceFiat: FiatValue? = null,
     val isUpdating: Boolean = false
 )

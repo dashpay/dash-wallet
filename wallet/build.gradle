@@ -1,3 +1,19 @@
+import org.gradle.api.artifacts.transform.CacheableTransform
+import org.gradle.api.artifacts.transform.InputArtifact
+import org.gradle.api.artifacts.transform.TransformAction
+import org.gradle.api.artifacts.transform.TransformOutputs
+import org.gradle.api.artifacts.transform.TransformParameters
+
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes
+
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
+
 plugins {
     id 'com.android.application'
     id 'project-report'
@@ -65,6 +81,13 @@ dependencies {
 
     implementation 'org.bouncycastle:bcprov-jdk15to18:1.74'
     implementation "org.dashj:dashj-core:$dashjVersion"
+    // Dash Platform Kotlin SDK (Phase 3+ of the dashj migration; see docs/kotlin-sdk-migration-plan.md).
+    // Published from the platform repo's kotlin-sdk package (locally: ./gradlew :sdk:publishToMavenLocal).
+    // Step B1 (tx-detail) experimental AAR: adds the transaction_decode JNI
+    // binding (TransactionDecoder). Published from platform branch
+    // claude/b1-txdetail-jni; NEVER repoint at 0.1.0-SNAPSHOT without also
+    // dropping the TransactionDecoder usage below.
+    implementation "org.dashj:dash-sdk-android:$dashSdkVersion"
     // dashj-platform SDK is declared per-flavor in a dependencies block after the
     // android {} block, since the flavor-scoped configurations (e.g. prodImplementation)
     // only exist once productFlavors have been registered.
@@ -106,6 +129,7 @@ dependencies {
     ksp "com.github.bumptech.glide:compiler:$glideVersion"
     implementation 'com.github.MikeOrtiz:TouchImageView:3.6'
     implementation "io.coil-kt:coil:$coilVersion"
+    implementation "io.coil-kt:coil-compose:$coilVersion"
 
     // Compose
     implementation(platform("androidx.compose:compose-bom:$composeBom"))
@@ -239,20 +263,46 @@ try {
     commitYear = new Date().format('yyyy')
 }
 
+// Short commit hash of HEAD, shown on the About screen in debug builds so
+// testers can verify exactly which build is installed. Same
+// configuration-cache-safe pattern as commitYear; falls back to "unknown".
+def gitCommit
+try {
+    def out = providers.exec {
+        workingDir = rootDir
+        commandLine 'git', 'rev-parse', '--short', 'HEAD'
+    }.standardOutput.asText.get().trim()
+    gitCommit = (out ==~ /[0-9a-f]{7,12}/) ? out : "unknown"
+} catch (Exception ignored) {
+    gitCommit = "unknown"
+}
+
 android {
     android.ndkVersion '21.3.6528147'
     namespace "de.schildbach.wallet_test"
 
     defaultConfig {
         compileSdk 35
-        minSdkVersion 24
+        minSdkVersion 29
         targetSdkVersion 35
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11080201
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.8.2"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11090002
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.9.0"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
+        // 64-bit only: the Kotlin SDK's native core (Halo2/Orchard) cannot build 32-bit,
+        // and Platform features were already disabled on 32-bit devices.
+        // QA builds pass -PqaArm64 to drop the x86_64 native lib (~65 MB) — the QA
+        // devices are all arm64, so this halves the native payload and the upload size.
+        // Default (prod, x86_64 emulators) keeps both ABIs.
+        ndk {
+            if (project.hasProperty('qaArm64')) {
+                abiFilters 'arm64-v8a'
+            } else {
+                abiFilters 'arm64-v8a', 'x86_64'
+            }
+        }
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
@@ -271,7 +321,9 @@ android {
             buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv("SUPPORT_EMAIL")}\"")
         }
         buildConfigField("String", "DASHJ_VERSION", "\"$dashjVersion\"")
+        buildConfigField("String", "DASH_SDK_VERSION", "\"$dashSdkVersion\"")
         buildConfigField("int", "COMMIT_YEAR", "$commitYear")
+        buildConfigField("String", "GIT_COMMIT", "\"$gitCommit\"")
     }
 
     buildTypes {
@@ -518,6 +570,200 @@ dependencies {
         ["java", "kotlin", "android"].each { artifact ->
             "${flavor}Implementation"("org.dashj.platform:dash-sdk-$artifact:$ver")
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Covariant java.nio buffer patch (fixes NoSuchMethodError crash on Android <= 15)
+//
+// dashj-core 22.x is compiled with a modern JDK without `--release 8`, so javac
+// binds e.g. SPVBlockStore's `buffer.position(int)` call to the JDK-13 covariant
+// override `MappedByteBuffer.position(I)Ljava/nio/MappedByteBuffer;`. Android's
+// libcore does NOT declare the covariant java.nio buffer overrides up to and
+// including API 35 (android.jar 35: MappedByteBuffer.position(int) still returns
+// java.nio.Buffer), so on those devices ART throws
+//   java.lang.NoSuchMethodError: No virtual method position(I)Ljava/nio/MappedByteBuffer;
+// from SPVBlockStore.getChainHead, crash-looping BlockchainServiceImpl and
+// killing sync on Android <= 15. Neither D8 (verified: 8.7.18 / 8.9.35 / 8.13.19)
+// nor any desugar_jdk_libs release (verified: 1.1.5, 2.1.5, 2.1.5-nio) retargets
+// these invokes, so we patch the dependency bytecode at build time instead.
+//
+// The transform rewrites, in every external jar on this module's classpaths,
+//   invokevirtual java/nio/<TypedBuffer>.{position(I)|limit(I)|mark()|reset()|
+//                                          clear()|flip()|rewind()} : L<TypedBuffer>;
+// to the API-1 base declaration
+//   invokevirtual java/nio/Buffer.<name> : Ljava/nio/Buffer;  +  checkcast <TypedBuffer>
+// which is exactly the call shape javac emits with `--release 8`. Jars without
+// matching call sites are passed through untouched.
+// ---------------------------------------------------------------------------
+@CacheableTransform
+abstract class NioCovariantBufferPatch implements TransformAction<TransformParameters.None> {
+
+    // Methods declared on java.nio.Buffer since API 1 that JDK 9/13 re-declared on
+    // the typed buffer subclasses with covariant return types (absent on Android <= 15).
+    private static final Map<String, String> RETARGETABLE_ARGS = [
+        'position': '(I)',
+        'limit'   : '(I)',
+        'mark'    : '()',
+        'reset'   : '()',
+        'clear'   : '()',
+        'flip'    : '()',
+        'rewind'  : '()',
+    ]
+
+    private static final Set<String> TYPED_NIO_BUFFERS = [
+        'java/nio/MappedByteBuffer',
+        'java/nio/ByteBuffer',
+        'java/nio/CharBuffer',
+        'java/nio/DoubleBuffer',
+        'java/nio/FloatBuffer',
+        'java/nio/IntBuffer',
+        'java/nio/LongBuffer',
+        'java/nio/ShortBuffer',
+    ] as Set
+
+    @Classpath
+    @InputArtifact
+    abstract Provider<FileSystemLocation> getInputArtifact()
+
+    @Override
+    void transform(TransformOutputs outputs) {
+        File input = inputArtifact.get().asFile
+        // Never touch Android platform/bootstrap jars - they legitimately contain
+        // (and define) the java.nio classes themselves.
+        boolean platformJar = input.name == 'android.jar' ||
+            input.name.startsWith('core-for-system-modules') ||
+            input.name.startsWith('core-lambda-stubs')
+        if (!input.isFile() || !input.name.endsWith('.jar') || platformJar) {
+            outputs.file(input)
+            return
+        }
+
+        // First pass: read entries, patching classes that contain covariant calls.
+        Map<String, byte[]> patchedEntries = [:]
+        List<String> rewrites = []
+        new ZipFile(input).withCloseable { zip ->
+            zip.entries().each { entry ->
+                if (entry.directory || !entry.name.endsWith('.class') ||
+                        entry.name.startsWith('java/') || entry.name.startsWith('javax/')) {
+                    return
+                }
+                byte[] bytes = zip.getInputStream(entry).withCloseable { it.bytes }
+                // Cheap pre-filter: the constant pool must name a typed buffer class.
+                String haystack = new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1)
+                if (!TYPED_NIO_BUFFERS.any { haystack.contains(it) }) {
+                    return
+                }
+                try {
+                    byte[] patched = rewriteClass(bytes, entry.name, rewrites)
+                    if (patched != null) {
+                        patchedEntries[entry.name] = patched
+                    }
+                } catch (Throwable t) {
+                    // Unparseable class (exotic version etc.) - leave it untouched.
+                    System.err.println("NioCovariantBufferPatch: skipped ${input.name}!${entry.name}: $t")
+                }
+            }
+        }
+
+        if (patchedEntries.isEmpty()) {
+            outputs.file(input)
+            return
+        }
+
+        System.out.println(
+            "NioCovariantBufferPatch: patched ${rewrites.size()} covariant java.nio call site(s) " +
+            "in ${input.name}: ${rewrites.toSorted().toUnique().join(', ')}"
+        )
+
+        // Second pass: copy the jar, substituting patched classes and dropping any
+        // now-stale signature files.
+        File outFile = outputs.file(input.name)
+        Set<String> seen = []
+        new ZipFile(input).withCloseable { zip ->
+            new ZipOutputStream(outFile.newOutputStream()).withCloseable { zos ->
+                zip.entries().each { entry ->
+                    String name = entry.name
+                    if (!seen.add(name)) {
+                        return // malformed duplicate entry
+                    }
+                    if (name ==~ /META-INF\/[^\/]+\.(SF|RSA|DSA|EC)/) {
+                        return // signature invalidated by patching
+                    }
+                    ZipEntry out = new ZipEntry(name)
+                    out.time = entry.time
+                    zos.putNextEntry(out)
+                    if (!entry.directory) {
+                        byte[] bytes = patchedEntries[name] ?: zip.getInputStream(entry).withCloseable { it.bytes }
+                        zos.write(bytes)
+                    }
+                    zos.closeEntry()
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns patched class bytes, or null if the class has no covariant buffer calls.
+     * Not private: Gradle instantiates a decorated subclass, and Groovy's dynamic
+     * dispatch from the closure inside transform() cannot reach private members of
+     * the base class through it.
+     */
+    protected static byte[] rewriteClass(byte[] classBytes, String entryName, List<String> rewrites) {
+        ClassReader reader = new ClassReader(classBytes)
+        ClassWriter writer = new ClassWriter(reader, 0)
+        boolean[] changed = [false]
+        ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
+            @Override
+            MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+                MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions)
+                return new MethodVisitor(Opcodes.ASM9, mv) {
+                    @Override
+                    void visitMethodInsn(int opcode, String owner, String mName, String mDesc, boolean isInterface) {
+                        String args = RETARGETABLE_ARGS[mName]
+                        if (opcode == Opcodes.INVOKEVIRTUAL && !isInterface && args != null &&
+                                TYPED_NIO_BUFFERS.contains(owner) && mDesc == "${args}L${owner};") {
+                            // e.g. MappedByteBuffer.position(I)LMappedByteBuffer;
+                            //   -> Buffer.position(I)LBuffer; + checkcast MappedByteBuffer
+                            super.visitMethodInsn(Opcodes.INVOKEVIRTUAL, 'java/nio/Buffer', mName,
+                                "${args}Ljava/nio/Buffer;", false)
+                            super.visitTypeInsn(Opcodes.CHECKCAST, owner)
+                            changed[0] = true
+                            rewrites.add("${entryName}: ${owner.substring(owner.lastIndexOf('/') + 1)}.${mName}${args}".toString())
+                            return
+                        }
+                        super.visitMethodInsn(opcode, owner, mName, mDesc, isInterface)
+                    }
+                }
+            }
+        }
+        reader.accept(visitor, 0)
+        return changed[0] ? writer.toByteArray() : null
+    }
+}
+
+def nioCovariantPatched = Attribute.of('nioCovariantBufferPatched', Boolean)
+
+dependencies {
+    attributesSchema {
+        attribute(nioCovariantPatched)
+    }
+    artifactTypes {
+        jar {
+            attributes.attribute(nioCovariantPatched, false)
+        }
+    }
+    registerTransform(NioCovariantBufferPatch) {
+        from.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, 'jar')
+            .attribute(nioCovariantPatched, false)
+        to.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, 'jar')
+            .attribute(nioCovariantPatched, true)
+    }
+}
+
+configurations.configureEach { conf ->
+    if (conf.canBeResolved) {
+        conf.attributes.attribute(nioCovariantPatched, true)
     }
 }
 

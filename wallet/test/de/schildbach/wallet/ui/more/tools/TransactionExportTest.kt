@@ -30,7 +30,10 @@ import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.fromTransaction
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toTxId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -70,9 +73,9 @@ class TransactionExportTest {
 
         wallet.addWalletTransaction(WalletTransaction(WalletTransaction.Pool.UNSPENT, tx))
         val txMetadata = TransactionMetadata(
-            tx.txId,
+            tx.txId.toTxId(),
             tx.updateTime?.time ?: System.currentTimeMillis(),
-            tx.outputSum,
+            tx.outputSum.toNeutralCoin(),
             TransactionCategory.fromTransaction(tx.type, tx.outputSum, tx.isEntirelySelf(wallet)),
             TaxCategory.TransferIn
         )
@@ -82,6 +85,9 @@ class TransactionExportTest {
         val exporter = TaxBitExporter(transactionMetadataProvider, wallet)
 
         runBlocking {
+            // production callers (ToolsViewModel) initialize the metadata map
+            // before exporting; exportString() requires it
+            exporter.initMetadataMap()
             val csvString = exporter.exportString()
             val csvLines = csvString.split("\n")
 

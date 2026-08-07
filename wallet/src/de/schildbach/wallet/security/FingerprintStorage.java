@@ -172,6 +172,16 @@ public class FingerprintStorage {
             keyStore = KeyStore.getInstance(Constants.ANDROID_KEY_STORE);
             KeyGenerator keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
             keyStore.load(null);
+            if (getLastIv() != null && !keyStore.containsAlias(KEYSTORE_ALIAS)) {
+                // The OS deleted the auth-bound key (removing the secure lock
+                // screen does this) while our prefs survived: the encrypted
+                // password can never be decrypted again, and createCipher would
+                // return null forever. Clear the stale state so the key is
+                // regenerated below and the user can simply re-enable
+                // fingerprint, instead of being stuck at "cipher is empty".
+                log.info("fingerprint key missing but stale IV present (lock screen was removed?) — clearing fingerprint state for re-enrollment");
+                clear();
+            }
             if (getLastIv() == null) {
                 KeyGenParameterSpec keyGeneratorSpec = createKeyGenParameterSpec();
                 keyGenerator.init(keyGeneratorSpec);

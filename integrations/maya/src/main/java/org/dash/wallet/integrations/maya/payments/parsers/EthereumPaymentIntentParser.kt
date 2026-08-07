@@ -19,7 +19,6 @@ package org.dash.wallet.integrations.maya.payments.parsers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.AddressFormatException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.payments.parsers.AddressParser
@@ -35,8 +34,7 @@ class EthereumPaymentIntentParser(
     "ethereum",
     uriPrefix,
     asset,
-    shortAsset,
-    params = null
+    shortAsset
 ) {
     private val log = LoggerFactory.getLogger(EthereumPaymentIntentParser::class.java)
     private val addressParser = AddressParser.getEthereumAddressParser()
@@ -44,7 +42,7 @@ class EthereumPaymentIntentParser(
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
             try {
-                val hexAddress = input.substring(uriPrefix.length)
+                val hexAddress = input.substring(uriPrefix.length + 1)
                 return@withContext createPaymentIntent(hexAddress)
             } catch (ex: Exception) {
                 log.info("got invalid uri: '$input'", ex)
@@ -56,9 +54,9 @@ class EthereumPaymentIntentParser(
                     )
                 )
             }
-        } else if (input.startsWith(currency) || input.startsWith("${currency.uppercase()}:")) {
+        } else if (input.startsWith("$currency:") || input.startsWith("${currency.uppercase()}:")) {
             try {
-                val hexAddress = input.substring(currency.length)
+                val hexAddress = input.substring(currency.length + 1)
                 return@withContext createPaymentIntent(hexAddress)
             } catch (ex: Exception) {
                 log.info("got invalid uri: '$input'", ex)
@@ -73,7 +71,7 @@ class EthereumPaymentIntentParser(
         } else if (addressParser.exactMatch(input)) {
             try {
                 return@withContext createPaymentIntent(input)
-            } catch (ex: AddressFormatException) {
+            } catch (ex: Exception) {
                 log.info("got invalid address", ex)
                 throw PaymentIntentParserException(
                     ex,

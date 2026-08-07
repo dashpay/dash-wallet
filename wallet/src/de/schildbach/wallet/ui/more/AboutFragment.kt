@@ -39,6 +39,7 @@ import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.features.exploredash.ExploreSyncWorker
 import org.dash.wallet.features.exploredash.utils.ExploreDatabasePrefs
 import org.slf4j.LoggerFactory
@@ -73,33 +74,54 @@ class AboutFragment : Fragment() {
                     NetworkParameters.ID_REGTEST -> " - regtest"
                     else -> " - ${Constants.NETWORK_PARAMETERS.devNetName}"
                 }
+                // Debug builds append the git commit so testers can verify exactly
+                // which build is installed (VERSION_NAME is identical across test builds).
+                val buildStamp = if (BuildConfig.DEBUG) " @${BuildConfig.GIT_COMMIT}" else ""
                 val appVersion = "${BuildConfig.VERSION_NAME} " +
-                    getString(R.string.about_build_number, BuildConfig.VERSION_CODE % 100) + network
+                    getString(R.string.about_build_number, BuildConfig.VERSION_CODE % 100) + network + buildStamp
 
-                AboutScreen(
-                    uiState = AboutUIState(
-                        versionName = appVersion,
-                        dashjVersion = BuildConfig.DASHJ_VERSION,
-                        platformVersion = BuildConfig.DPP_VERSION,
-                        deviceSyncStatus = deviceSyncStatus,
-                        serverUpdateStatus = serverUpdateStatus,
-                        firebaseInstallationId = state.firebaseInstallationId,
-                        fcmToken = state.firebaseCloudMessagingToken,
-                        showForceSyncButton = !state.isMainNet,
-                        isMainNet = state.isMainNet,
-                        copyrightYear = BuildConfig.COMMIT_YEAR
-                    ),
-                    onBackClick = { findNavController().popBackStack() },
-                    onForceSyncClick = { forceSync() },
-                    onFirebaseInstallationIdClick = { viewModel.copyFirebaseInstallationId() },
-                    onFcmTokenClick = { viewModel.copyFCMToken() },
-                    onGithubLinkClick = { openGithubLink() },
-                    onReviewAndRateClick = { viewModel.reviewApp() },
-                    onContactSupportClick = {
-                        viewModel.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT)
-                        handleReportIssue()
-                    }
-                )
+                // L1-engine row reflects whichever engine owns the wallet's L1
+                // this launch: the Dash Kotlin SDK once the cutover has committed
+                // (state.sdkOwnsL1), or dashj while it still owns L1 (pre-cutover /
+                // upgrade dual-run). A fresh restore reports the SDK from the start.
+                val l1EngineLabel = if (state.sdkOwnsL1) {
+                    getString(R.string.about_kotlin_sdk_label)
+                } else {
+                    getString(R.string.about_dashj_label)
+                }
+                val l1EngineVersion = if (state.sdkOwnsL1) {
+                    BuildConfig.DASH_SDK_VERSION
+                } else {
+                    BuildConfig.DASHJ_VERSION
+                }
+
+                DashWalletTheme {
+                    AboutScreen(
+                        uiState = AboutUIState(
+                            versionName = appVersion,
+                        l1EngineLabel = l1EngineLabel,
+                        l1EngineVersion = l1EngineVersion,
+                            platformVersion = BuildConfig.DPP_VERSION,
+                            deviceSyncStatus = deviceSyncStatus,
+                            serverUpdateStatus = serverUpdateStatus,
+                            firebaseInstallationId = state.firebaseInstallationId,
+                            fcmToken = state.firebaseCloudMessagingToken,
+                            showForceSyncButton = !state.isMainNet,
+                            isMainNet = state.isMainNet,
+                            copyrightYear = BuildConfig.COMMIT_YEAR
+                        ),
+                        onBackClick = { findNavController().popBackStack() },
+                        onForceSyncClick = { forceSync() },
+                        onFirebaseInstallationIdClick = { viewModel.copyFirebaseInstallationId() },
+                        onFcmTokenClick = { viewModel.copyFCMToken() },
+                        onGithubLinkClick = { openGithubLink() },
+                        onReviewAndRateClick = { viewModel.reviewApp() },
+                        onContactSupportClick = {
+                            viewModel.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT)
+                            handleReportIssue()
+                        }
+                    )
+                }
             }
         }
     }

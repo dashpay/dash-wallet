@@ -36,7 +36,7 @@ import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.SecuritySystemStatus
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -47,7 +47,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class SecurityFunctions @Inject constructor(
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val context: Context,
     private val biometricHelper: BiometricHelper,
     private val pinRetryController: PinRetryController,
@@ -149,11 +149,12 @@ class SecurityFunctions @Inject constructor(
         return@withContext deterministicSeed
     }
 
-    override suspend fun signMessage(address: Address, message: String): String {
+    override suspend fun signMessage(address: String, message: String): String {
         val securityGuard = SecurityGuard.getInstance()
         val password = securityGuard.retrievePassword()
         val keyParameter = deriveKey(walletData.wallet!!, password)
-        val key = walletData.wallet?.findKeyFromAddress(address)
+        val dashjAddress = Address.fromBase58(walletData.networkParameters, address)
+        val key = walletData.wallet?.findKeyFromAddress(dashjAddress)
         return key?.signMessage(message, keyParameter) ?: ""
     }
 

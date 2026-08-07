@@ -1,18 +1,16 @@
 package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.TransactionBag
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperFactory
+import org.dash.wallet.common.transactions.TxInfo
 
-class FullCrowdNodeSignUpTxSetFactory(params: NetworkParameters, transactionBag: TransactionBag) :
+class FullCrowdNodeSignUpTxSetFactory(networkId: String) :
     TransactionWrapperFactory {
-    private val wrapper = FullCrowdNodeSignUpTxSet(params, transactionBag)
+    private val wrapper = FullCrowdNodeSignUpTxSet(networkId)
     override val averageTransactions: Long = 5
     override val wrappers = listOf(wrapper)
 
-    override fun tryInclude(tx: Transaction): Pair<Boolean, TransactionWrapper?> {
+    override fun tryInclude(tx: TxInfo): Pair<Boolean, TransactionWrapper?> {
         if (wrapper.isComplete) {
             return Pair(false, wrapper)
         }

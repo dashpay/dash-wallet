@@ -24,7 +24,7 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet.security.SecurityGuard
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
@@ -33,7 +33,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class DecryptSeedViewModel @Inject constructor(
-    walletData: WalletDataProvider,
+    walletData: WalletData,
     pinRetryController: PinRetryController,
     configuration: Configuration,
     biometricHelper: BiometricHelper,

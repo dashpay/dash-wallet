@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.navigation.fragment.findNavController
 import com.google.common.base.Preconditions
+import org.dash.wallet.common.payments.parsers.AddressNetwork
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.payments.parsers.DashPaymentParsers
@@ -30,7 +31,7 @@ import org.dash.wallet.common.util.Constants.DASH_CURRENCY
 class DashAddressInputFragment : AddressInputFragment() {
 
     companion object {
-        private val paymentParsers = DashPaymentParsers(Constants.NETWORK_PARAMETERS)
+        private val paymentParsers = DashPaymentParsers(AddressNetwork.fromId(Constants.NETWORK_PARAMETERS.id))
     }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

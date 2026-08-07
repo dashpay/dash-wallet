@@ -107,13 +107,69 @@
         android:fillViewport="true"
         android:layout_marginHorizontal="15dp"
         app:layout_constraintTop_toBottomOf="@+id/top_stack"
-        app:layout_constraintBottom_toTopOf="@+id/request_username_button">
+        app:layout_constraintBottom_toTopOf="@+id/shielded_wait_container">
 
     <LinearLayout
         android:id="@+id/requirements_stack"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
+
+<!-- Failure/status rows FIRST (Brian): the floating shielded-wait bubble
+     and small screens can cover the bottom of this list, so a red
+     validation (username taken, insufficient balance) must sit at the
+     top, right under the input, where it is always visible. Both rows
+     are gone unless they have something to say. -->
+        <LinearLayout
+            android:id="@+id/username_available_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+            <ImageView
+                android:id="@+id/check_available"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_check_circle_green"
+                />
+            <TextView
+                style="@style/Overline.Medium"
+                android:id="@+id/username_available_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="Username is available"
+                />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/wallet_balance_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:layout_marginTop="8dp">
+            <ImageView
+                android:id="@+id/check_balance"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_error_circle"
+                />
+
+            <!-- No layout default: the runtime always sets the real
+                 path-dependent amount (request_username_balance_requirement_amount,
+                 RequestUsernameFragment); a static default could flash a stale
+                 hardcoded figure before the override lands. -->
+            <TextView
+                android:id="@+id/balance_requirement_text"
+                style="@style/Overline.Medium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:maxLines="2"
+                />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -169,52 +225,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/request_username_character_requirement"
-                />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/wallet_balance_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            tools:visibility="visible"
-            android:layout_marginTop="8dp">
-            <ImageView
-                android:id="@+id/check_balance"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_error_circle"
-                />
-
-            <TextView
-                style="@style/Overline.Medium"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/request_username_balance_requirement"
-                android:maxLines="2"
-                />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/username_available_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp">
-
-            <ImageView
-                android:id="@+id/check_available"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_check_circle_green"
-                />
-            <TextView
-                style="@style/Overline.Medium"
-                android:id="@+id/username_available_message"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="Username is available"
                 />
         </LinearLayout>
 
@@ -282,27 +292,30 @@
             </LinearLayout>
         </FrameLayout>
 
+        <!-- Advisory platform-health warning (RequestUserNameUIState.networkSlow):
+             informational only, never gates the request button. -->
         <LinearLayout
-            android:id="@+id/invite_with_unmixed_funds"
+            android:id="@+id/network_slow_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:visibility="gone"
-            tools:visibility="visible"
-            android:layout_marginTop="8dp">
+            tools:visibility="visible">
 
             <ImageView
-                android:id="@+id/check_unmixed"
+                android:id="@+id/network_slow_icon"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
                 android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_unmixed_funds"
+                android:src="@drawable/ic_warning_triangle"
                 />
             <TextView
                 style="@style/Overline.Medium"
-                android:id="@+id/invite_not_mixed_message"
-                android:layout_width="wrap_content"
+                android:id="@+id/network_slow_message"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/request_username_invitation_not_mixed_message" />
+                android:text="@string/username_network_slow_warning"
+                />
         </LinearLayout>
 
         <LinearLayout
@@ -323,6 +336,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
                 <TextView
+                    android:id="@+id/invite_only_noncontested_message"
                     style="@style/Overline.Medium"
                     android:layout_weight="1"
                     android:layout_width="0dp"
@@ -349,6 +363,44 @@
 
     </LinearLayout>
     </ScrollView>
+
+    <!-- Persistent privacy advisory shown ONLY while the shielded funding
+         path is selected and the pool is not yet READY (the button reads
+         "Preparing shielded balance…"): the user is creating the username
+         before the shield's recommended ~2h privacy window has elapsed.
+         Floats just above the button and stays until the pool reaches
+         READY (confirmation/sync complete). See RequestUsernameFragment. -->
+    <LinearLayout
+        android:id="@+id/shielded_wait_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="14dp"
+        android:background="@drawable/shielded_wait_toast_bg"
+        android:elevation="6dp"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintBottom_toTopOf="@+id/request_username_button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/shielded_wait_icon"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_hourglass" />
+
+        <TextView
+            style="@style/Overline.Medium"
+            android:id="@+id/shielded_wait_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/username_shielded_wait_2hrs" />
+    </LinearLayout>
 
     <Button
         android:id="@+id/request_username_button"

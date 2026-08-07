@@ -23,12 +23,13 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.getDashBalance
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -65,8 +66,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
     val swapTradeFailedCallback = SingleLiveEvent<String?>()
 
-    private val _dashWalletBalance = MutableLiveData<Coin>()
-    val dashWalletBalance: LiveData<Coin>
+    private val _dashWalletBalance = MutableLiveData<Dash>()
+    val dashWalletBalance: LiveData<Dash>
         get() = this._dashWalletBalance
 
     val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
@@ -80,7 +81,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     }
 
     fun swapTrade(
-        valueToConvert: Fiat,
+        valueToConvert: FiatValue,
         selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel,
         dashToCrypt: Boolean
     ) = viewModelScope.launch {
@@ -171,8 +172,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         analyticsService.logEvent(eventName, mapOf())
     }
 
-    suspend fun getLastBalance(): Coin {
-        return Coin.valueOf(config.get(CoinbaseConfig.LAST_BALANCE) ?: 0)
+    suspend fun getLastBalance(): Dash {
+        return Dash.valueOf(config.get(CoinbaseConfig.LAST_BALANCE) ?: 0)
     }
 
     private fun isValidCoinBaseAccount(it: CoinBaseUserAccountDataUIModel) = (
@@ -182,10 +183,10 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         )
 
     private fun setDashWalletBalance() {
-        _dashWalletBalance.value = walletDataProvider.getWalletBalance()
+        _dashWalletBalance.value = walletDataProvider.getDashBalance()
     }
 
-    suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
+    suspend fun isInputGreaterThanLimit(amountInDash: Dash): Boolean {
         return coinBaseRepository.isInputGreaterThanLimit(amountInDash)
     }
 }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_primary"
@@ -15,11 +16,158 @@
         app:popupTheme="@style/My.PopupOverlay"
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
 
+    <!-- Live engine-neutral sync status (works in every engine regime). -->
     <LinearLayout
+        android:id="@+id/network_status_container"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/network_status_stage"
+                style="@style/Body2.Medium"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                tools:text="@string/network_monitor_stage_filters" />
+
+            <TextView
+                android:id="@+id/network_status_progress"
+                style="@style/Body2.Medium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="97%" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/network_status_connection"
+            style="@style/Overline.Secondary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            tools:text="@string/network_monitor_connection_connected" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Overline.Secondary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/network_monitor_headers_label" />
+
+            <TextView
+                android:id="@+id/network_status_headers"
+                style="@style/Overline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="1,240,111 / 1,240,320" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Overline.Secondary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/network_monitor_filters_label" />
+
+            <TextView
+                android:id="@+id/network_status_filters"
+                style="@style/Overline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="1,201,890 / 1,240,320" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Overline.Secondary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/network_monitor_mnlist_label" />
+
+            <TextView
+                android:id="@+id/network_status_mnlist"
+                style="@style/Overline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="1,240,300" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Overline.Secondary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/network_monitor_chainlock_label" />
+
+            <TextView
+                android:id="@+id/network_status_chainlock"
+                style="@style/Overline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="1,240,318" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Overline.Secondary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/network_monitor_peer_details_note" />
+    </LinearLayout>
+
+    <!-- Shown while the dashj panels are hidden (diagnostic toggle off). -->
+    <TextView
+        android:id="@+id/network_monitor_dashj_hint"
+        style="@style/Overline.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        android:text="@string/network_monitor_dashj_hint" />
+
+    <!-- Legacy dashj peer/block lists; meaningful only while the dashj
+         sync diagnostic (Tools) has un-held the dashj engine. -->
+    <LinearLayout
+        android:id="@+id/network_monitor_dashj_panels"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:background="@color/background_primary"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:visibility="gone"
+        tools:visibility="visible">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -61,8 +209,8 @@
         <androidx.viewpager.widget.ViewPager
             android:id="@+id/network_monitor_pager"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|center_horizontal" />
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
     </LinearLayout>
 

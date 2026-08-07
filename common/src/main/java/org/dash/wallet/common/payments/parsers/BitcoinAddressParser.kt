@@ -17,11 +17,10 @@
 
 package org.dash.wallet.common.payments.parsers
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.AddressFormatException
-import org.bitcoinj.core.NetworkParameters
+class BitcoinAddressParser(params: AddressNetwork) : AddressParser(PATTERN_BITCOIN_ADDRESS, params) {
+    /** Mainnet constructor. */
+    constructor() : this(AddressNetwork.BITCOIN_MAINNET)
 
-class BitcoinAddressParser(params: NetworkParameters) : AddressParser(PATTERN_BITCOIN_ADDRESS, params) {
     private val bech32Parser = Bech32AddressParser(39, 59, params)
 
     override fun exactMatch(inputText: String): Boolean {
@@ -35,10 +34,21 @@ class BitcoinAddressParser(params: NetworkParameters) : AddressParser(PATTERN_BI
         return result
     }
 
+    // Only the segwit bech32 alternative is case-insensitive; legacy Base58 keeps its case.
+    override fun isCaseInsensitiveFormat(input: String): Boolean {
+        val hrp = params?.segwitHrp ?: return false
+        return input.startsWith("${hrp}1", ignoreCase = true)
+    }
+
     override fun verifyAddress(addressCandidate: String) {
         params?.let {
             try {
-                Address.fromString(params, addressCandidate)
+                val decoded = AddressUtils.decode(addressCandidate)
+                if (!it.acceptsVersion(decoded.version)) {
+                    throw AddressFormatException.WrongNetwork(decoded.version)
+                }
+            } catch (e: AddressFormatException.WrongNetwork) {
+                throw e
             } catch (e: AddressFormatException) {
                 SegwitAddress.fromBech32(params, addressCandidate)
             }

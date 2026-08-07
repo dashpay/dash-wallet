@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Context
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
@@ -43,7 +43,7 @@ import javax.inject.Inject
 class PaymentsViewModel @Inject constructor(
     platformRepo: PlatformRepo,
     identityConfig: BlockchainIdentityConfig,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val analytics: AnalyticsService
 ): ViewModel() {
     var fromQuickReceive: Boolean = false

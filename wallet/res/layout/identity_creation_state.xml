@@ -2,9 +2,10 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    style="@style/Button.Primary.Large.White"
+    style="@style/Button.Primary.Large.Inverted"
     android:layout_width="match_parent"
-    android:layout_height="70dp"
+    android:layout_height="wrap_content"
+    android:minHeight="70dp"
     android:layout_marginBottom="10dp"
     android:animateLayoutChanges="true"
     android:orientation="vertical"
@@ -26,6 +27,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
         android:layout_marginEnd="10dp"
+        android:layout_marginVertical="10dp"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/end_buttons"
@@ -48,6 +50,19 @@
             android:maxLines="1"
             android:text="@string/processing_home_title"
             tools:text="@string/processing_home_step_1" />
+
+        <!-- Transient retry-status hint (IdentityCreationStatusHolder):
+             why the current step is taking longer than usual. -->
+        <TextView
+            android:id="@+id/status_hint"
+            style="@style/Caption.Tertiary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:visibility="gone"
+            tools:text="@string/identity_processing_network_catching_up"
+            tools:visibility="visible" />
 
     </LinearLayout>
 

@@ -13,7 +13,6 @@
     <string name="blockchain_state_progress_stalled">Synchronisation blockiert</string>
     <string name="blockchain_state_progress_problem_storage">Synchronisation: Speicherplatz-Problem</string>
     <string name="blockchain_state_progress_problem_network">Synchronisation: Netzwerk-Problem</string>
-    <string name="mixing_state_progress_mixing">Coins mixen (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Dash Adresse wurde in die Zwischenablage kopiert</string>
     <string name="wallet_address_dialog_fragment_hint">Um deine Privatsphäre zu schützen, ändert sich deine Adresse sobald sie eine Zahlung empfängt.</string>
     <string name="wallet_balance_fragment_too_much">Dieser Wert scheint recht hoch dafür zu sein, dass er in der Tasche herum getragen wird. Bitte verschiebe etwas an einen sichereren Ort.</string>
@@ -44,8 +43,6 @@
     <string name="wallet_timeskew_dialog_title">Datums- und Zeit-Einstellungen überprüfen</string>
     <string name="wallet_timeskew_dialog_msg">Die Gerätezeit geht %dMinuten falsch. Daher ist es möglicherweise nicht möglich Dash zu senden. 
 Überprüfe und korrigiere bitte Datum, Uhrzeit und Zeitzone, falls dies nötig ist.</string>
-    <string name="wallet_coinjoin_timeskew_dialog_msg">Deine Gerätezeit ist %s zu %d Sekunden. Du kannst CoinJoin aufgrund dieses Unterschiedes nicht nutzen.\n\nDie Zeiteinstellungen auf deinem Gerät muss auf „Zeit automatisch einstellen“ geändert werden, um CoinJoin nutzen zu können.</string>
-    <string name="settings_coinjoin_timeskew_dialog_msg">Die Uhrzeit deines Geräts weicht um mehr als 5 Sekunden ab. Du kannst CoinJoin aufgrund dieses Unterschiedes nicht nutzen.\n\nDie Zeiteinstellungen auf deinem Gerät muss auf „Zeit automatisch einstellen“ geändert werden, bevor du den Dienst nutzen kannst.</string>
     <string name="send_coins_activity_title">Dash senden</string>
     <string name="send_coins_fragment_request_payment_request_progress">Rufe Signatur von %s ab…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Abrufen der Signatur fehlgeschlagen</string>

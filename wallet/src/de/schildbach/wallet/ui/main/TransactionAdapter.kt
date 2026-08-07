@@ -41,9 +41,21 @@ import de.schildbach.wallet_test.databinding.TransactionGroupHeaderBinding
 import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
+import org.dash.wallet.common.data.entity.SwapOrderStatus
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.avatar.UserAvatarPlaceholderDrawable
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.util.GenericUtils
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 open class HistoryViewHolder(root: View): RecyclerView.ViewHolder(root)
 
@@ -109,6 +121,7 @@ class TransactionViewHolder(
         setIcon(txView)
         setPrimaryStatus(txView)
         setSecondaryStatus(txView)
+        setSwapStatus(txView)
         setValue(txView.value, txView.hasErrors)
         setFiatValue(txView.value, txView.exchangeRate)
         setTime(txView.time, resourceMapper.dateTimeFormat)
@@ -124,13 +137,35 @@ class TransactionViewHolder(
         if (contact != null) {
             binding.primaryIcon.background = null
             binding.primaryIcon.setPadding(0, 0, 0, 0)
-            binding.primaryIcon.load(contact.avatarUrl) {
-                transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
-                placeholder(R.drawable.ic_avatar)
-                error(R.drawable.ic_avatar)
+            // Fall back to the SAME generated default avatar the profile screens show
+            // (a colored circle with the username's first letter) instead of the gray
+            // ic_avatar silhouette, for a contact whose avatarUrl is blank or fails to
+            // load. Mirrors ProfilePictureDisplay's default path (UserAvatarPlaceholderDrawable).
+            val username = contact.username
+            val fallbackAvatar = ResourcesCompat.getDrawable(resources, R.drawable.ic_avatar, null)
+            val defaultAvatar = if (username.isNotEmpty()) {
+                UserAvatarPlaceholderDrawable.getDrawable(
+                    itemView.context,
+                    username[0],
+                    (iconSize * ProfilePictureDisplay.FONT_SIZE_RATIO).toInt()
+                ) ?: fallbackAvatar
+            } else {
+                fallbackAvatar
+            }
+            if (contact.avatarUrl.isNotEmpty()) {
+                binding.primaryIcon.load(contact.avatarUrl) {
+                    transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+                    placeholder(defaultAvatar)
+                    error(defaultAvatar)
+                }
+            } else {
+                binding.primaryIcon.setImageDrawable(defaultAvatar)
             }
             binding.primaryIcon.setOnClickListener {
-                clickListener.invoke(txView, 0, true)
+                // Only treat the tap as a profile click when the contact carries a real
+                // userId (a defensively-reconstructed cache contact may have ""); the
+                // fragment's handler otherwise opens the transaction detail.
+                clickListener.invoke(txView, 0, contact.userId.isNotEmpty())
             }
 
             binding.secondaryIcon.isVisible = true
@@ -176,6 +211,19 @@ class TransactionViewHolder(
             binding.secondaryStatus.setTextColor(colorSecondaryStatus)
         } else {
             binding.secondaryStatus.text = null
+        }
+    }
+
+    private fun setSwapStatus(txView: TransactionRowView) {
+        val textRes = when (txView.swapStatus) {
+            null, SwapOrderStatus.COMPLETED -> 0
+            SwapOrderStatus.REFUNDED -> R.string.transaction_row_status_refunded
+            SwapOrderStatus.FAILED -> R.string.transaction_row_status_failed
+            else -> R.string.transaction_row_status_processing
+        }
+        binding.swapStatus.isVisible = textRes != 0
+        if (textRes != 0) {
+            binding.swapStatus.setText(textRes)
         }
     }
 

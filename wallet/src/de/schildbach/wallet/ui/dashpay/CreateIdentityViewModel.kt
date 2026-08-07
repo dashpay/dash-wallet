@@ -79,15 +79,4 @@ class CreateIdentityViewModel @Inject constructor(
             }
         }
     }
-
-    suspend fun shouldShowMixDash(): Boolean = dashPayConfig.get(DashPayConfig.MIX_DASH_SHOWN)?.not() ?: true
-
-    fun hideRequestedUsernameContainer() {
-        viewModelScope.launch {
-            blockchainIdentityDataDao.set(
-                BlockchainIdentityConfig.CREATION_STATE,
-                IdentityCreationState.DONE_AND_DISMISS.name
-            )
-        }
-    }
 }

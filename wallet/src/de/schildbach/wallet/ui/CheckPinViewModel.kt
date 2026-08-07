@@ -24,7 +24,7 @@ import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet.security.SecurityGuard
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -32,7 +32,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 open class CheckPinViewModel @Inject constructor(
-    val walletData: WalletDataProvider,
+    val walletData: WalletData,
     val configuration: Configuration,
     private val pinRetryController: PinRetryController,
     val biometricHelper: BiometricHelper,

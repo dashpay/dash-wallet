@@ -33,12 +33,15 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.util.security.EncryptionProvider
+import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.util.WeakHashMap
 
 abstract class BaseConfig(
     private val context: Context,
@@ -47,8 +50,53 @@ abstract class BaseConfig(
     private val encryptionProvider: EncryptionProvider? = null,
     migrations: List<DataMigration<Preferences>> = listOf()
 ) {
+    companion object {
+        private val log = LoggerFactory.getLogger(BaseConfig::class.java)
+
+        // Registry of live BaseConfig instances, weakly referenced so GC'able
+        // configs don't leak. Every instance registers itself on construction.
+        // A wallet wipe must clear each LIVE config through its DataStore API
+        // (memory + disk reset atomically) instead of deleting the backing file
+        // out-of-band: an out-of-band delete leaves the live DataStore's
+        // in-memory cache populated while disk is empty, so later reads return
+        // stale values and later writes recreate the file with a random subset
+        // of keys (observed live: debug SDK flags never reseeding after a
+        // Reset Wallet because the stale cache made them look already-set).
+        private val registryLock = Any()
+        private val liveInstances = WeakHashMap<BaseConfig, Unit>()
+
+        /**
+         * Clears every live [BaseConfig] instance through its DataStore API and
+         * returns the DataStore file names (e.g. "dashpay.preferences_pb") that
+         * were cleared. An instance whose clear fails is logged and excluded
+         * from the returned set so callers can fall back to raw file deletion
+         * for it.
+         */
+        suspend fun clearAllLiveInstances(): Set<String> {
+            val snapshot = synchronized(registryLock) { liveInstances.keys.toList() }
+            val cleared = mutableSetOf<String>()
+
+            for (instance in snapshot) {
+                try {
+                    instance.clearAll()
+                    cleared.add(instance.preferencesFileName)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("failed to clear live config '{}' via API", instance.preferencesFileName, e)
+                }
+            }
+
+            return cleared
+        }
+    }
+
     private val securityKeyAlias = "${name}_security_key"
     private val json = Json { encodeDefaults = true }
+
+    /** File name used by the underlying preferences DataStore for this config. */
+    val preferencesFileName: String
+        get() = "$name.preferences_pb"
 
     protected val Context.dataStore by preferencesDataStore(
         name = name,
@@ -65,6 +113,7 @@ abstract class BaseConfig(
         }
 
     init {
+        synchronized(registryLock) { liveInstances[this] = Unit }
         walletDataProvider.attachOnWalletWipedListener {
             clearAll()
         }
@@ -84,6 +133,13 @@ abstract class BaseConfig(
         }
     }
 
+    /** Remove [key] entirely, so a later [get] returns null (not a stale value). */
+    open suspend fun <T> remove(key: Preferences.Key<T>) {
+        context.dataStore.edit { preferences ->
+            preferences.remove(key)
+        }
+    }
+
     fun observeSecureData(key: Preferences.Key<String>): Flow<String?> {
         return data.secureMap { preferences -> preferences[key].orEmpty() }
     }
@@ -95,7 +151,7 @@ abstract class BaseConfig(
         context.dataStore.secureEdit(value) { preferences, encryptedValue -> preferences[key] = encryptedValue }
     }
 
-    suspend fun clearAll() {
+    open suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
     }
 

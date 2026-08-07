@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.ui.components.MyTheme.Colors
+import org.dash.wallet.common.ui.components.LocalDashColors
 
 /**
  * A Composable that displays a list of shortcut options.
@@ -49,12 +49,13 @@ fun ShortcutsList(
     shortcuts: List<ShortcutOption>,
     onClick: (ShortcutOption) -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column {
         Text(
             text = stringResource(R.string.select_option),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
-            color = Colors.textPrimary,
+            color = colors.textPrimary,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
                 .padding(top = 28.dp)
@@ -64,7 +65,7 @@ fun ShortcutsList(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(Colors.backgroundSecondary)
+                .background(colors.backgroundSecondary)
                 .padding(top = 12.dp)
         ) {
             item {

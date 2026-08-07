@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.Crypto
+import de.schildbach.wallet.util.FriendKeyChainLookahead
 import de.schildbach.wallet.util.Iso8601Format
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.DumpedPrivateKey
@@ -153,7 +154,16 @@ class DashWalletFactory @Inject constructor(
         var walletStream: FileInputStream? = null
         try {
             walletStream = FileInputStream(walletFile)
-            val wallet = WalletProtobufSerializer().readWallet(walletStream, false, getExtensions(params))
+            // Same deferral as WalletApplication.loadWalletFromProtobuf: the
+            // DashPay friend-chain lookahead is minutes of EC derivation on a
+            // wallet with many contacts and must not run inside the parse.
+            // See FriendKeyChainLookahead for why the watched-key set is unchanged.
+            FriendKeyChainLookahead.reset()
+            FriendKeyChainLookahead.useStore(walletFile)
+            val serializer = WalletProtobufSerializer()
+            serializer.setKeyChainFactory(FriendKeyChainLookahead.deferringFactory())
+            val wallet = serializer.readWallet(walletStream, false, getExtensions(params))
+            FriendKeyChainLookahead.completeAsync()
 
             if (wallet.params != params) {
                 throw UnreadableWalletException(
@@ -183,6 +193,8 @@ class DashWalletFactory @Inject constructor(
             // does this work on encrypted backups?
             wallet.addKeyChain(Constants.BIP44_PATH)
             wallet as WalletEx
+            // mixing was removed from the app, but the CoinJoin keychain is still provisioned
+            // so that funds mixed by older versions (or other wallets sharing this seed) stay visible
             wallet.initializeCoinJoin(0)
             return wallet
         } finally {

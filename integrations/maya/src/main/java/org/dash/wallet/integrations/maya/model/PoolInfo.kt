@@ -21,9 +21,8 @@ import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
-import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.util.toFiatValue
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import java.math.BigDecimal
 
@@ -44,7 +43,38 @@ data class PoolInfo(
     @SerializedName("bondable") val bondable: Boolean = false
 ) : Parcelable {
     @IgnoredOnParcel
-    var assetPriceFiat: Fiat = Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
+    var assetPriceFiat: FiatValue = FiatValue.zero(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
+
+    /**
+     * SwapKit only: true when this asset is routable from DASH **exclusively via
+     * MAYACHAIN** (no NEAR/other-provider fallback). Such assets inherit Maya's
+     * halt exposure and the OP_RETURN-memo constraint. Computed by
+     * [org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator] from the
+     * provider token-list intersection (see SWAPKIT_PROTOCOL.md → "Detecting
+     * Maya-only Assets"). Always false for the native Maya backend, where every
+     * asset is Maya-routed by definition.
+     */
+    @IgnoredOnParcel
+    var mayaOnly: Boolean = false
+
+    /**
+     * SwapKit only: true when this asset is routable from DASH **exclusively via
+     * NEAR** (in NEAR's token list but NOT MAYACHAIN's) — the mirror of [mayaOnly].
+     * When BOTH [mayaOnly] and [nearOnly] are false the asset is routable via both
+     * providers (or via neither, for an unclassified reachable asset), and the
+     * picker shows no route-provider label. Always false for the native Maya backend.
+     */
+    @IgnoredOnParcel
+    var nearOnly: Boolean = false
+
+    /**
+     * SwapKit only: true when [mayaOnly] and Maya currently reports this asset's
+     * chain as halted / trading-paused (or global trading paused). For non-Maya-only
+     * assets this stays false because a NEAR route keeps them tradable even during a
+     * Maya halt.
+     */
+    @IgnoredOnParcel
+    var mayaHalted: Boolean = false
 
     @IgnoredOnParcel
     val assetPriceInCacao: BigDecimal
@@ -55,10 +85,10 @@ data class PoolInfo(
             return cacaoBd.divide(assetBd, 8, java.math.RoundingMode.HALF_UP)
         }
 
-    fun setAssetPrice(cacaoToFiatRate: Fiat) {
+    fun setAssetPrice(cacaoToFiatRate: FiatValue) {
         assetPriceFiat = assetPriceInCacao
             .multiply(cacaoToFiatRate.toBigDecimal())
-            .toFiat(cacaoToFiatRate.currencyCode)
+            .toFiatValue(cacaoToFiatRate.currencyCode)
     }
 
     val currencyCode: String

@@ -87,7 +87,6 @@
     <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
     <string name="send_coins_error_dusty_send">مبلغ مورد نظر، بیش از حد کم است</string>
     <string name="send_coins_error_insufficient_money">موجودی ناکافی</string>
-    <string name="send_coins_error_insufficient_mixed_money">موجودی ترکیبی کافی نیست. منتظر بمانید تا فرایند ترکیب کوین‌جوین تمام شود و یا این قابلیت را از طریق تنظیمات غیرفعال کنید تا این تراکنش صورت گیرد. </string>
     <string name="syncing">در حال همزمان‌سازی</string>
     <string name="no_connection">به اینترنت متصل نیستید</string>
     <string name="rate_not_available">در دسترس نیست</string>

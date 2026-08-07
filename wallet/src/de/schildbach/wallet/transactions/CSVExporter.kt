@@ -21,7 +21,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
 
 abstract class CSVExporter(
     transactionMetadataProvider: TransactionMetadataProvider,
@@ -47,6 +47,7 @@ abstract class CSVExporter(
     }
 
     override suspend fun exportString(): String {
+        ensureMetadataMap()
         val history = StringBuilder()
 
         history.append(getHeader()).append(NEW_LINE)

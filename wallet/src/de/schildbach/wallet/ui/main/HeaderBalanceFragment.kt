@@ -25,6 +25,8 @@ import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HeaderBalanceFragmentBinding
@@ -32,6 +34,8 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.setAmount
 
 class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
     private val viewModel by activityViewModels<MainViewModel>()
@@ -51,14 +55,13 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         viewModel.exchangeRate.observe(viewLifecycleOwner) { updateBalance() }
         viewModel.totalBalance.observe(viewLifecycleOwner) { updateBalance() }
 
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { isSynced ->
-            if (isSynced) {
-                binding.syncingIndicator.isInvisible = true
-                binding.syncingIndicator.animation?.cancel()
-            } else {
-                binding.syncingIndicator.isInvisible = false
-                startSyncingIndicatorAnimation()
-            }
+        // The blinking "Syncing balance" indicator. Its predicate must stay in
+        // lockstep with CutoverUiDataService's balance HOLD — a label over a
+        // live climbing figure, or a settled figure with the label still
+        // blinking, is worse than either state alone. Both now read the same
+        // source (L1SyncStatusService), so they cannot drift apart.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.syncStatus.collect { updateSyncingIndicator(it.isSynced) }
         }
 
         viewModel.hideBalance.observe(viewLifecycleOwner) { hideBalance ->
@@ -71,13 +74,23 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         }
     }
 
+    private fun updateSyncingIndicator(isSynced: Boolean) {
+        if (isSynced) {
+            binding.syncingIndicator.isInvisible = true
+            binding.syncingIndicator.animation?.cancel()
+        } else {
+            binding.syncingIndicator.isInvisible = false
+            startSyncingIndicatorAnimation()
+        }
+    }
+
     private fun updateBalance() {
         val balance = viewModel.totalBalance.value ?: Coin.ZERO
         binding.walletBalanceDash.setAmount(balance)
         viewModel.exchangeRate.value?.let { exchangeRate ->
             val rate = org.bitcoinj.utils.ExchangeRate(
                 Coin.COIN,
-                exchangeRate.fiat
+                exchangeRate.fiat.toDashjFiat()
             )
 
             val localValue = rate.coinToFiat(balance)

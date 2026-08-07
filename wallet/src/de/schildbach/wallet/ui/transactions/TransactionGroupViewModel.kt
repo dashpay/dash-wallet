@@ -36,20 +36,24 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import de.schildbach.wallet.transactions.dashjTx
+import de.schildbach.wallet.transactions.toTxInfo
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
+import de.schildbach.wallet.util.toCoin
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class TransactionGroupViewModel @Inject constructor(
-    val walletData: WalletDataProvider,
+    val walletData: WalletData,
     val dashSystemService: DashSystemService,
     val config: Configuration,
     private val metadataProvider: TransactionMetadataProvider,
@@ -77,7 +81,7 @@ class TransactionGroupViewModel @Inject constructor(
     private val _blockchainState = MutableLiveData<BlockchainState>()
 
     fun init(transactionWrapper: TransactionWrapper) {
-        _exchangeRate.value = transactionWrapper.transactions.values.first().exchangeRate
+        _exchangeRate.value = transactionWrapper.transactions.values.first().dashjTx.exchangeRate
 
         blockchainStateDataProvider.observeState()
             .filterNotNull()
@@ -94,7 +98,7 @@ class TransactionGroupViewModel @Inject constructor(
                     .debounce(THROTTLE_DURATION)
                     .onEach { tx ->
                         chainLockBlockHeight = dashSystemService.system.chainLockHandler.bestChainLockBlockHeight
-                        if (transactionWrapper.tryInclude(tx)) {
+                        if (transactionWrapper.tryInclude(tx.toTxInfo(walletData.transactionBag, walletData.networkParameters))) {
                             refreshTransactions(transactionWrapper, memos)
                         }
                     }
@@ -104,7 +108,7 @@ class TransactionGroupViewModel @Inject constructor(
 
     private fun refreshTransactions(
         transactionWrapper: TransactionWrapper,
-        metadata: Map<Sha256Hash, PresentableTxMetadata>
+        metadata: Map<TxId, PresentableTxMetadata>
     ) {
         val resourceMapper = when (transactionWrapper) {
             is FullCrowdNodeSignUpTxSet -> CrowdNodeTxResourceMapper()
@@ -113,9 +117,9 @@ class TransactionGroupViewModel @Inject constructor(
         }
 
         _transactions.value = transactionWrapper.transactions.values.map {
-            val txMetadata = metadata.getOrDefault(it.txId, null)
+            val txMetadata = metadata.getOrDefault(TxId.wrap(it.txId), null)
             TransactionRowView.fromTransaction(
-                it,
+                it.dashjTx,
                 walletData.wallet!!,
                 walletData.wallet!!.context,
                 txMetadata,
@@ -124,6 +128,6 @@ class TransactionGroupViewModel @Inject constructor(
                 chainLockBlockHeight
             )
         }.sortedByDescending { row -> row.time }
-        _dashValue.value = transactionWrapper.getValue(walletData.transactionBag)
+        _dashValue.value = transactionWrapper.getValue().toCoin()
     }
 }
