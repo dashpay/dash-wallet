@@ -317,18 +317,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
     }
 
-    /**
-     * Optional host veto for the Max button, checked BEFORE anything else
-     * (no PIN prompt, no amount change) — for screens whose action cannot
-     * send a whole balance. Return true to swallow the tap; the host shows
-     * its own explanation.
-     */
-    var onMaxVetoed: (() -> Boolean)? = null
-
     private suspend fun onMaxAmountButtonClick() {
-        if (onMaxVetoed?.invoke() == true) {
-            return
-        }
         if (!didAuthorize && requirePinForBalance) {
             authManager.authenticate(requireActivity(), false) ?: return
             didAuthorize = true

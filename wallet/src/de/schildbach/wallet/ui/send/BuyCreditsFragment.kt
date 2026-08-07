@@ -57,12 +57,6 @@ class BuyCreditsFragment : SendCoinsFragment() {
                 }
             }
         }
-        // Refuse Max at the TAP, before the PIN prompt or any amount change:
-        // top-ups cannot send a whole balance (see handleGo).
-        enterAmountFragment?.onMaxVetoed = {
-            lifecycleScope.launch { showMaxNotSupportedDialog() }
-            true
-        }
     }
 
     override fun updateView() {
@@ -82,14 +76,6 @@ class BuyCreditsFragment : SendCoinsFragment() {
             enterAmountFragment?.setError(
                 getString(R.string.buy_credits_below_minimum, MIN_TOP_UP.toFriendlyString())
             )
-            return
-        }
-
-        // Whole-balance top-ups are not supported, whether reached with the
-        // MAX button or typed by hand — the amount must leave room for the
-        // L1 fee (see handleGo).
-        if (entered != null && isWholeBalance(entered)) {
-            enterAmountFragment?.setError(getString(R.string.buy_credits_max_not_supported))
             return
         }
         enterAmountFragment?.setError("")
@@ -149,40 +135,25 @@ class BuyCreditsFragment : SendCoinsFragment() {
      * fail-closed gate refuses with NotBroadcast and nothing is spent.
      */
     /**
-     * Whether [amount] would spend the wallet's whole spendable balance —
-     * the same rule the plain-send screen uses to detect a send-all, keyed
-     * off the SDK-overlaid balance (dashj's is held at 0 post-cutover).
+     * Whether [amount] is a MAX ("spend everything") purchase — the whole
+     * spendable balance, keyed off the SDK-overlaid balance (dashj's is held
+     * at 0 post-cutover). Same rule the shielded Internal Transfer screen
+     * uses (`amount == availableBalance` in ShieldedTransferViewModel).
      */
-    private fun isWholeBalance(amount: Coin): Boolean {
+    private fun isMaxSpend(amount: Coin): Boolean {
         val available = viewModel.maxOutputAmount.value?.toNeutralCoin() ?: return false
         return available.isPositive && amount.isGreaterThanOrEqualTo(available)
     }
 
     private suspend fun handleGo() {
         val editedAmount = enterAmountViewModel.amount.value ?: return
-        // Max ("use my whole balance") is NOT supported for top-ups: the SDK's
-        // top-up call takes an exact amount and its send-all mode is not
-        // reachable through the FFI yet (rust-dashcore #915 has the builder
-        // work; the key-wallet entry point still pins drain = false — see
-        // MO-998). Refuse up front rather than spend an approximated amount.
-        if (enterAmountFragment?.maxSelected == true || isWholeBalance(editedAmount)) {
-            showMaxNotSupportedDialog()
-            viewModel.resetState()
-            return
-        }
-        handleSdkTopUp(editedAmount.value)
+        // MAX follows the shielded Internal Transfer pattern: submit the FULL
+        // balance and let the worker make ONE fee-adjusted retry when the
+        // asset-lock coin selection comes up short pre-broadcast (the exact
+        // L1 fee is unknowable app-side). See PerformTopUpWorker.
+        val maxSpend = enterAmountFragment?.maxSelected == true || isMaxSpend(editedAmount)
+        handleSdkTopUp(editedAmount.value, maxSpend)
         viewModel.resetState()
-    }
-
-    private suspend fun showMaxNotSupportedDialog() {
-        if (!isAdded) return
-        AdaptiveDialog.create(
-            R.drawable.ic_error,
-            getString(R.string.credit_balance_button_buy),
-            getString(R.string.buy_credits_max_not_supported),
-            getString(R.string.button_dismiss),
-            null
-        ).showAsync(requireActivity())
     }
 
     /**
@@ -194,13 +165,15 @@ class BuyCreditsFragment : SendCoinsFragment() {
      * the recovery worker completes any tracked lock in the background and
      * the user is told NOT to retry.
      */
-    private suspend fun handleSdkTopUp(amountDuffs: Long) {
+    private suspend fun handleSdkTopUp(amountDuffs: Long, isMaxSpend: Boolean) {
         // PRE-FLIGHT funding eligibility: the asset-lock build only selects
         // FINAL (confirmed/IS-locked) BIP44 coins — refuse HERE, before the
         // spend attempt, when a display balance backed by non-final or
         // out-of-account outputs cannot fund the lock (fail-open on any
-        // preflight hiccup; the real build stays authoritative).
-        if (!buyCreditsViewModel.canFundTopUp(amountDuffs)) {
+        // preflight hiccup; the real build stays authoritative). A MAX spend
+        // is preflighted on its fee-adjusted retry amount — the full balance
+        // can never clear the preflight's fee headroom by definition.
+        if (!buyCreditsViewModel.canFundTopUp(amountDuffs, isMaxSpend)) {
             AdaptiveDialog.create(
                 R.drawable.ic_error,
                 getString(R.string.credit_balance_button_buy),
@@ -213,7 +186,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
             ).showAsync(requireActivity())
             return
         }
-        buyCreditsViewModel.startTopUp(amountDuffs)
+        buyCreditsViewModel.startTopUp(amountDuffs, isMaxSpend)
         observeTopUpWork()
     }
 
@@ -223,11 +196,15 @@ class BuyCreditsFragment : SendCoinsFragment() {
             when (work.state) {
                 WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> {
                     // Progress circle on the Send button for as long as the
-                    // purchase is actually running. (The "handed to the SDK"
-                    // marker fires ~20ms after the tap while the purchase
-                    // takes seconds, so gating on it made the spinner
-                    // invisible — the screen must stay busy until the work
-                    // reaches a terminal state.)
+                    // purchase is actually running — the screen must stay
+                    // busy until the work reaches a terminal state, because
+                    // a FAILURE must be shown HERE (closing at the SDK
+                    // hand-off was tried and reverted: it silenced every
+                    // post-hand-off failure dialog, e.g. a MAX retry refused
+                    // below the Platform floor). A MAX purchase waiting for
+                    // a chain-locked block legitimately holds this spinner
+                    // for minutes; the purchase itself survives the screen
+                    // (unique work + recovery worker) if the user backs out.
                     enterAmountFragment?.setContinueLoading(true)
                 }
                 WorkInfo.State.SUCCEEDED -> {

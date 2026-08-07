@@ -210,6 +210,36 @@ data class AssetLockFundingEvidence(
     val unclassifiedDuffs: Long
 )
 
+/** Eligible duffs: SUM over [ELIGIBLE_ASSET_LOCK_PREDICATE_SQL]. */
+internal const val ELIGIBLE_ASSET_LOCK_DUFFS_SQL =
+    "SELECT COALESCE(SUM(t.amount), 0) FROM txos t " +
+        ELIGIBLE_ASSET_LOCK_PREDICATE_SQL
+
+/**
+ * COUNT twin of [ELIGIBLE_ASSET_LOCK_DUFFS_SQL] — the number of UTXOs a
+ * fresh asset-lock build can select. Sizes the fee reserve a MAX
+ * ("spend everything") top-up withholds on its one adjusted retry: the fee
+ * is ~148 bytes per INPUT, and this is the exact input population, from the
+ * engine that will do the selecting. (dashj's spendableUtxoCount() is the
+ * wrong ruler here: it counts coins the asset lock can never select —
+ * CoinJoin, other accounts, non-final — and post-cutover it can be stale.)
+ */
+internal val ELIGIBLE_ASSET_LOCK_UTXO_COUNT_SQL = eligibleAssetLockUtxoCountSql(lockCount = 0)
+
+/**
+ * The COUNT with the SAME [lockCount]-parameterized finality term and spine
+ * as [eligibleAssetLockDuffsSql] (args: walletId, then the wire-order txid
+ * blobs) — the two queries must count/sum the SAME population, or the MAX
+ * fee reserve gets sized from a different UTXO set than the one the sum
+ * (and the engine's selection) sees.
+ */
+internal fun eligibleAssetLockUtxoCountSql(lockCount: Int): String =
+    "SELECT COUNT(*) $ASSET_LOCK_TXO_JOINS " +
+        "WHERE t.walletId = ? " +
+        "AND $UNSPENT_SELECTABLE_TERMS " +
+        "AND ${mirrorFinalTermSql(lockCount)} " +
+        "AND $BIP44_ACCOUNT_0_TERM"
+
 /**
  * Pure coverage predicate for the preflight (host-JVM testable): can
  * [eligibleDuffs] of asset-lock-eligible funds cover a lock of
@@ -359,7 +389,13 @@ class SdkAssetLockFundingPreflight internal constructor(
      * `null` when unavailable. Production wiring runs the two SQL passes
      * against the SDK's Room database.
      */
-    private val evidenceQuery: suspend () -> AssetLockFundingEvidence?
+    private val evidenceQuery: suspend () -> AssetLockFundingEvidence?,
+    /**
+     * COUNT twin of [evidenceQuery]'s eligible sum: the eligible-UTXO
+     * population, for sizing a MAX top-up's fee reserve. `null` when
+     * unavailable.
+     */
+    private val eligibleUtxoCountQuery: suspend () -> Int? = { null }
 ) {
     @Inject
     constructor(
@@ -383,6 +419,21 @@ class SdkAssetLockFundingPreflight internal constructor(
                 } catch (t: Throwable) {
                     if (t is CancellationException) throw t
                     log.warn("persisted IS-lock read failed; preflight evaluates without lock evidence", t)
+                    emptyList()
+                }
+            )
+        },
+        eligibleUtxoCountQuery = {
+            queryEligibleAssetLockUtxoCount(
+                sdkService.databaseOrNull(),
+                sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull(),
+                // Same lock evidence as evidenceQuery, so the count's
+                // population cannot diverge from the sum's.
+                persistedLockTxidsHex = try {
+                    instantSendLockDao.getMostRecentTxIds(MAX_PREFLIGHT_LOCK_TXIDS)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("persisted IS-lock read failed; UTXO count evaluates without lock evidence", t)
                     emptyList()
                 }
             )
@@ -418,6 +469,30 @@ class SdkAssetLockFundingPreflight internal constructor(
      * `null` = no evidence either way — treat as fundable (fail open).
      * A `false` is logged with the figures for on-device forensics.
      */
+    /**
+     * The number of UTXOs a fresh asset-lock build can select — the input
+     * population whose per-input bytes dominate the L1 fee. `null` = no
+     * evidence (pre-cutover, SDK unavailable, read failure); callers fall
+     * back to not adjusting rather than guessing.
+     */
+    suspend fun eligibleAssetLockUtxoCountOrNull(): Int? {
+        val committed = try {
+            cutoverCommitted()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("asset-lock funding preflight: cutover state read failed; no UTXO count", t)
+            return null
+        }
+        if (!committed) return null
+        return try {
+            eligibleUtxoCountQuery()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("asset-lock funding preflight: UTXO count read failed", t)
+            null
+        }
+    }
+
     suspend fun canFundAssetLockDuffs(requiredDuffs: Long): Boolean? {
         val evidence = assetLockFundingEvidenceOrNull() ?: return null
         val verdict = assetLockFundingVerdict(evidence, requiredDuffs)
@@ -458,6 +533,36 @@ class SdkAssetLockFundingPreflight internal constructor(
          * rule, coinbase rows are excluded outright (conservative — can
          * only under-count, never over-count).
          */
+        /**
+         * COUNT twin of [queryAssetLockFundingEvidence]'s eligible sum — how
+         * many UTXOs the asset-lock coin selection can draw on, counted over
+         * the SAME spine and the SAME persisted-IS-lock finality evidence so
+         * the population cannot diverge from the sum's. `null` when the SDK
+         * database or wallet binding is unavailable.
+         */
+        internal suspend fun queryEligibleAssetLockUtxoCount(
+            database: org.dashfoundation.dashsdk.persistence.DashDatabase?,
+            walletIdHex: String?,
+            persistedLockTxidsHex: List<String> = emptyList()
+        ): Int? {
+            val db = database ?: return null
+            val walletId = walletIdHex?.let { walletIdFromHex(it) } ?: return null
+            val lockBlobs = persistedLockTxidsHex
+                .take(MAX_PREFLIGHT_LOCK_TXIDS)
+                .mapNotNull { hexToBytesOrNull(it.lowercase())?.takeIf { b -> b.size == 32 }?.reversedArray() }
+            return withContext(Dispatchers.IO) {
+                val args = ArrayList<Any?>(1 + lockBlobs.size)
+                args.add(walletId)
+                args.addAll(lockBlobs)
+                db.openHelper.readableDatabase.query(
+                    androidx.sqlite.db.SimpleSQLiteQuery(
+                        eligibleAssetLockUtxoCountSql(lockBlobs.size),
+                        args.toTypedArray()
+                    )
+                ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+            }
+        }
+
         internal suspend fun queryAssetLockFundingEvidence(
             database: org.dashfoundation.dashsdk.persistence.DashDatabase?,
             walletIdHex: String?,
