@@ -303,6 +303,20 @@ class SdkWalletBinderTest {
             accountedForCalls++
             return accountedFor
         }
+
+        /** Set true to have the no-rewind conclusion succeed when the watch reaches it. */
+        var concludesNoRewind: Boolean = false
+        var concludeCalls = 0
+
+        override suspend fun concludeNoRewindObserved(
+            walletIdHex: String,
+            ownerIdentityId: ByteArray,
+            ownerUserId: String
+        ): Boolean {
+            concludeCalls++
+            if (concludesNoRewind) accountedFor = true
+            return concludesNoRewind
+        }
     }
 
     /** SDK fake in the first-bind happy path: bind ok, discovery attaches. */
@@ -1203,6 +1217,43 @@ class SdkWalletBinderTest {
         assertEquals(
             "the watch should stop once the rewind is accounted for",
             evaluatesAtLatch,
+            gate.evaluateCalls
+        )
+    }
+
+    @Test
+    fun provisioning_armedRewindThatNeverLands_concludesNoRewindAndStops() = runBlocking {
+        // The wallet that needs no backfill at all. Nothing is ever accounted
+        // for, so without a conclusion the watch would spin out its whole
+        // budget and every later launch would re-provision forever. The
+        // conclusion may only be reached after the quiet-observation window.
+        val sdk = readySdk()
+        val gate = FakeBackfillGate(
+            shouldRun = true,
+            armed = BackfillArmed(targetHeight = 1_529_377L, contactFingerprint = "fp"),
+            accountedFor = false
+        )
+        gate.concludesNoRewind = true
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        // Before the window elapses the watch must NOT conclude.
+        delay(15)
+        assertEquals(
+            "must not conclude before the quiet-observation window elapses",
+            0,
+            gate.concludeCalls
+        )
+
+        delay(60)
+        assertTrue("should have concluded once the window elapsed", gate.concludeCalls >= 1)
+        val evaluatesAtConclusion = gate.evaluateCalls
+        delay(40)
+        assertEquals(
+            "the watch should stop once the no-rewind conclusion is recorded",
+            evaluatesAtConclusion,
             gate.evaluateCalls
         )
     }

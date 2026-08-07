@@ -434,7 +434,7 @@ class SdkWalletBinder internal constructor(
         if (!backfillWatchRunning.compareAndSet(false, true)) return
         scope.launch {
             try {
-                repeat(BACKFILL_WATCH_MAX_POLLS) {
+                repeat(BACKFILL_WATCH_MAX_POLLS) { poll ->
                     delay(backfillWatchIntervalMs)
                     try {
                         if (backfillGate.isRewindAccountedFor()) return@launch
@@ -443,6 +443,20 @@ class SdkWalletBinder internal constructor(
                         // the unaccounted-marker branch is not reachable.
                         backfillGate.evaluate(walletId, identityId, userId)
                         if (backfillGate.isRewindAccountedFor()) return@launch
+                        // Still nothing accounted for after a sustained window
+                        // of polling — and this loop would have exited the
+                        // moment anything was. That is the evidence that no
+                        // rewind is coming, which no single after-read can
+                        // provide. Without concluding here, a wallet that
+                        // needed no backfill re-provisions on every launch
+                        // forever, because the settled-sweep path it would
+                        // otherwise take is unreachable while the SDK
+                        // re-enqueues every contact's account build per launch.
+                        if (poll + 1 >= BACKFILL_NO_REWIND_CONCLUSION_POLLS &&
+                            backfillGate.concludeNoRewindObserved(walletId, identityId, userId)
+                        ) {
+                            return@launch
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -839,6 +853,15 @@ class SdkWalletBinder internal constructor(
          */
         internal const val BACKFILL_WATCH_INTERVAL_MS = 60_000L
         internal const val BACKFILL_WATCH_MAX_POLLS = 45
+
+        /**
+         * Polls of quiet observation before the watch concludes the armed pass
+         * needed no rewind. Must comfortably exceed how long the SDK takes to
+         * make a rewind durable — 9–60 s by its own accounting, 102 s measured
+         * on the wallet this was diagnosed against — because concluding early
+         * would record coverage over a range that is about to be rewound.
+         */
+        internal const val BACKFILL_NO_REWIND_CONCLUSION_POLLS = 5
 
         /**
          * Floor between non-forced friend-chain provisioning passes. The

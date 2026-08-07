@@ -585,6 +585,28 @@ interface DashPayBackfillGate {
      */
     suspend fun isRewindAccountedFor(): Boolean
 
+    /**
+     * Conclude that the armed pass needed NO rewind, and record coverage.
+     *
+     * Only safe to call after a sustained observation window in which nothing
+     * was accounted for. "No rewind observed" is worthless at pass-outcome
+     * time — the durable height drops 9–60 s after the in-memory rewind (102 s
+     * on the wallet this was diagnosed against), so an immediate after-read
+     * cannot tell "nothing needed rewinding" from "it has not landed yet", and
+     * concluding there would record coverage over a range about to be rewound.
+     *
+     * The watch is what makes this decision sound: it exits the moment
+     * anything IS accounted for, so still being unaccounted-for after several
+     * minutes of polling is itself the evidence that no rewind is coming.
+     * Re-checks the height and fingerprint itself and refuses if a rewind did
+     * land. Returns whether coverage was recorded. Never throws.
+     */
+    suspend fun concludeNoRewindObserved(
+        walletIdHex: String,
+        ownerIdentityId: ByteArray,
+        ownerUserId: String
+    ): Boolean
+
     companion object {
         /**
          * The pre-feature behaviour: always provision, never record. The
@@ -606,6 +628,12 @@ interface DashPayBackfillGate {
 
             // Nothing is ever armed, so there is never anything to watch for.
             override suspend fun isRewindAccountedFor() = true
+
+            override suspend fun concludeNoRewindObserved(
+                walletIdHex: String,
+                ownerIdentityId: ByteArray,
+                ownerUserId: String
+            ) = false
         }
     }
 }
@@ -721,6 +749,58 @@ class DashPayBackfillGateImpl @Inject constructor(
                     "the next trigger will provision again", e
             )
         }
+    }
+
+    override suspend fun concludeNoRewindObserved(
+        walletIdHex: String,
+        ownerIdentityId: ByteArray,
+        ownerUserId: String
+    ): Boolean = try {
+        val armed = readArmed()
+        when {
+            armed == null -> false
+            // Something already accounted for the pass; leave it alone.
+            readInProgress() != null || readCoverage() != null -> false
+            else -> {
+                val height = sdkService
+                    .readDashPayBackfillSignals(walletIdHex, ownerIdentityId)
+                    .syncedHeight
+                val fingerprint = readContactFingerprint(ownerUserId)
+                when {
+                    height == null || fingerprint == null -> false
+                    // A changed contact set needs its own backfill, so this
+                    // pass proves nothing about the new one.
+                    armed.contactFingerprint != fingerprint -> false
+                    // The rewind DID land after all — that is the latch's
+                    // evidence, not ours. Leave it to the next consultation.
+                    height < armed.targetHeight -> false
+                    else -> {
+                        writeCoverage(
+                            BackfillCoverage(
+                                floor = height,
+                                completedThroughHeight = height,
+                                contactFingerprint = fingerprint
+                            )
+                        )
+                        clearArmed()
+                        log.info(
+                            "DashPay coreHeight backfill: armed pass (target {}) produced no " +
+                                "rewind across the whole observation window and the contact set " +
+                                "is unchanged — nothing needed backfilling; recording coverage " +
+                                "at height {} so later launches stop re-provisioning",
+                            armed.targetHeight,
+                            height
+                        )
+                        true
+                    }
+                }
+            }
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("failed to conclude the no-rewind outcome; the next launch will re-provision", e)
+        false
     }
 
     override suspend fun isRewindAccountedFor(): Boolean = try {
