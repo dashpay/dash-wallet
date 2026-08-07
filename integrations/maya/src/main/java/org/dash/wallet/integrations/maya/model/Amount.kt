@@ -83,6 +83,12 @@ data class Amount(
             }
         }
 
+    /**
+     * Which currency the amount is denominated in — the one the user typed. Set it directly from
+     * the picker's selection; there is deliberately no set-by-currency-code variant, because a
+     * code that matched none of [dashCode] / [fiatCode] / [cryptoCode] (a stale fiat code, say)
+     * left the anchor on the previous currency and the entered value was then read as that one.
+     */
     var anchoredType: CurrencyInputType
         get() = anchor
         set(value) {
@@ -121,14 +127,6 @@ data class Amount(
         CurrencyInputType.Dash -> _dash
         CurrencyInputType.Fiat -> _fiat
         CurrencyInputType.Crypto -> _crypto
-    }
-
-    fun setAnchoredType(currencyCode: String) {
-        when (currencyCode) {
-            dashCode -> anchor = CurrencyInputType.Dash
-            fiatCode -> anchor = CurrencyInputType.Fiat
-            cryptoCode -> anchor = CurrencyInputType.Crypto
-        }
     }
 
     /** 1 Crypto = x Fiat, eg 1 BTC = $65,000 or $65,000/BTC */

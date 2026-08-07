@@ -50,7 +50,6 @@ import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.slf4j.LoggerFactory
-import java.lang.IllegalArgumentException
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
@@ -134,7 +133,15 @@ class ConvertViewViewModel @Inject constructor(
     val selectedCryptoCurrencyAccount: LiveData<AccountDataUIModel?>
         get() = this._selectedCryptoCurrencyAccount
 
-    var selectedPickerCurrencyCode: String = Constants.USD_CURRENCY
+    /**
+     * Which of the three currencies the amount picker is on — the one the typed digits are
+     * denominated in. Held as a [CurrencyInputType] rather than a currency code so it can't drift
+     * out of step with what the screen shows: matching codes by string meant a late
+     * SELECTED_CURRENCY read (or a currency change mid-screen) could leave this pointing at fiat
+     * while the picker displayed DASH, and the typed amount was then read as fiat and converted
+     * down to a fraction of a DASH — quoted as an amount far below the route minimum.
+     */
+    var selectedPickerCurrency: CurrencyInputType = CurrencyInputType.Dash
 
     private val _enteredAmount = MutableLiveData<String>("0")
     val enteredAmount: LiveData<String>
@@ -174,16 +181,17 @@ class ConvertViewViewModel @Inject constructor(
         // do we need this?
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
-            .onEach { selectedLocalCurrencyCode = it }
+            // Mirror the code into [amount] as well: it is read back as
+            // [Amount.anchoredCurrencyCode] and drives the fiat label in the picker, and the
+            // config read is async — leaving amount.fiatCode at its "USD" default while the
+            // screen shows the real currency made the two disagree.
+            .onEach {
+                selectedLocalCurrencyCode = it
+                amount.fiatCode = it
+            }
             .flatMapLatest(exchangeRates::observeExchangeRate)
             .onEach(_selectedLocalExchangeRate::postValue)
             .launchIn(viewModelScope)
-
-        viewModelScope.launch {
-            walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY)?.let {
-                selectedPickerCurrencyCode = it
-            }
-        }
 
         savedStateHandle.get<Amount>(KEY_AMOUNT)?.let { savedAmount ->
             when (savedAmount.anchoredType) {
@@ -328,12 +336,11 @@ class ConvertViewViewModel @Inject constructor(
         savedStateHandle.remove<Amount>(KEY_AMOUNT)
     }
 
-    fun continueSwap(pickedCurrencyOption: String) {
+    fun continueSwap() {
         viewModelScope.launch {
             analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_CONTINUE, mapOf())
-            val currencyInputType = getCurrencyInputType(pickedCurrencyOption)
-            // val amount = getFiatAmount(currencyInputType)
-            logEnteredAmountCurrency(currencyInputType)
+            // What the user typed in is exactly what [amount] is anchored on.
+            logEnteredAmountCurrency(amount.anchoredType)
             onContinueEvent.value = selectedCryptoCurrencyAccount.value?.coinbaseAccount?.let {
                 destinationAddress?.let { address ->
                     SwapRequest(
@@ -401,8 +408,7 @@ class ConvertViewViewModel @Inject constructor(
         return convertedValue
     }
 
-    private fun updateDashWalletBalance() {
-        val balance = walletDataProvider.getWalletBalance()
+    private fun updateDashWalletBalance(balance: Coin = walletDataProvider.getWalletBalance()) {
         maxForDashWalletAmount = dashFormat.minDecimals(0)
             .optionalDecimals(0, 8).format(balance).toString()
     }
@@ -428,20 +434,6 @@ class ConvertViewViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getCurrencyInputType(currencyCode: String): CurrencyInputType {
-        val code = currencyCode.lowercase()
-        val account = selectedCryptoCurrencyAccount.value
-        val currency = account?.coinbaseAccount?.currency?.lowercase()
-
-        return when {
-            currency == Constants.DASH_CURRENCY.lowercase() -> CurrencyInputType.Dash
-            currency == code -> CurrencyInputType.Crypto
-            (walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY) ?: Constants.USD_CURRENCY)
-                .lowercase() == code -> CurrencyInputType.Fiat
-            else -> CurrencyInputType.Dash
-        }
-    }
-
     private fun logEnteredAmountCurrency(inputType: CurrencyInputType) {
         analyticsService.logEvent(
             when (inputType) {
@@ -462,33 +454,24 @@ class ConvertViewViewModel @Inject constructor(
         amount.dashFiatExchangeRate = dashRate
         amount.cryptoFiatExchangeRate = cryptoRate
     }
-    private fun setAmount(valueToBind: String, currencyCode: String, isLocalized: Boolean) {
+    private fun setAmount(valueToBind: String, currency: CurrencyInputType, isLocalized: Boolean) {
         val value = GenericUtils.toScaledBigDecimal(valueToBind, localized = isLocalized)
-        when (currencyCode) {
-            "DASH" -> amount.dash = value
-            selectedLocalCurrencyCode -> amount.fiat = value
-            selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency -> amount.crypto = value
+        // Assigning re-anchors [amount] on that currency and recomputes the other two.
+        when (currency) {
+            CurrencyInputType.Dash -> amount.dash = value
+            CurrencyInputType.Fiat -> amount.fiat = value
+            CurrencyInputType.Crypto -> amount.crypto = value
         }
     }
 
     fun setEnteredAmount(amount: String, isLocalized: Boolean) {
         _enteredAmount.value = amount
-        setAmount(amount, selectedPickerCurrencyCode, isLocalized)
+        setAmount(amount, selectedPickerCurrency, isLocalized)
         savedStateHandle[KEY_AMOUNT] = this.amount.copy()
-        log.info("setting amount: {} {}: {}", amount, selectedPickerCurrencyCode, this.amount)
+        log.info("setting amount: {} {}: {}", amount, selectedPickerCurrency, this.amount)
     }
 
-    fun getAmountValue(currencyCode: String): String {
-        return when (currencyCode) {
-            "DASH" -> amount.dash
-            selectedLocalCurrencyCode -> amount.fiat
-            selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency -> amount.crypto
-            else -> throw IllegalArgumentException(
-                "Currency code $currencyCode is not found (DASH, $selectedLocalCurrencyCode," +
-                    "$selectedCryptoCurrencyAccount.value!!.coinbaseAccount.currency)"
-            )
-        }.toString()
-    }
+    fun getAmountValue(currency: CurrencyInputType): String = amount.getValue(currency).toString()
 
     fun reset() {
         amount.dash = BigDecimal.ZERO
