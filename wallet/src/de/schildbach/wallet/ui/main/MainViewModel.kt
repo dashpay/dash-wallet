@@ -321,13 +321,15 @@ class MainViewModel @Inject constructor(
      * `ContactsBasedLiveData`: that class registers its contacts-updated listener
      * only while something observes it, so a contact request that arrived while the
      * user was on another screen never triggered a recount. The service keeps the
-     * value current regardless of what is on screen; this LiveData just republishes
-     * whatever it holds the moment an observer attaches.
+     * value current regardless of what is on screen.
+     *
+     * Exposed as the service's own StateFlow rather than through `asLiveData()`:
+     * that wrapper stops collecting a few seconds after its last observer
+     * detaches and keeps serving the value it had then, so the bell could render
+     * the pre-navigation count for a beat on the way back to the home screen.
      */
-    val notificationCountData: LiveData<Int> =
-        contactRequestNotificationService.unseenNotificationCount.asLiveData()
-    val notificationCount: Int
-        get() = notificationCountData.value ?: 0
+    val notificationCount: StateFlow<Int> =
+        contactRequestNotificationService.unseenNotificationCount
 
     private var contactRequestTimer: AnalyticsTimer? = null
 

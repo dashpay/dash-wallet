@@ -227,7 +227,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
         }
 
-        viewModel.notificationCountData.observe(viewLifecycleOwner) { setNotificationIndicator() }
+        viewModel.notificationCount.observe(viewLifecycleOwner) { setNotificationIndicator() }
 
         viewModel.totalBalance.observe(viewLifecycleOwner) {
             val balance: Coin = viewModel.totalBalance.value ?: Coin.ZERO
@@ -368,7 +368,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun setNotificationIndicator() {
         binding.notificationBell.isVisible = viewModel.hasIdentity
         binding.notificationBell.setImageResource(
-            if (viewModel.notificationCount > 0) {
+            if (viewModel.notificationCount.value > 0) {
                 R.drawable.ic_new_notifications
             } else {
                 R.drawable.ic_notification_bell

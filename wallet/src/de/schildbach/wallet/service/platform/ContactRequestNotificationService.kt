@@ -22,6 +22,7 @@ import android.content.Intent
 import androidx.core.os.bundleOf
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.ui.dashpay.NotificationsFragment
@@ -31,10 +32,17 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.dash.wallet.common.services.NotificationService
@@ -66,10 +74,20 @@ class ContactRequestNotificationService @Inject constructor(
     private val identityRepository: IdentityRepository,
     private val dashPayConfig: DashPayConfig,
     private val dashPayProfileDao: DashPayProfileDao,
+    private val dashPayContactRequestDao: DashPayContactRequestDao,
     private val notificationService: NotificationService
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(ContactRequestNotificationService::class.java)
+
+        /**
+         * Quiet period after a contact-request/profile table write before the
+         * count is re-derived. A sync pass writes many rows in a burst and the
+         * recompute is a whole-contact-list query, so the burst is coalesced
+         * into one pass. Combined with `conflate()` this cannot starve: a write
+         * arriving during the delay is kept and drives one more recompute.
+         */
+        private const val DATA_CHANGE_COALESCE_MS = 400L
 
         /** Notification tag prefix; the per-request suffix keeps distinct senders distinct. */
         const val NOTIFICATION_TAG_PREFIX = "dashpay_contact_request_"
@@ -111,6 +129,38 @@ class ContactRequestNotificationService @Inject constructor(
 
     /** Keys of contact requests already notified about in this process. Guarded by itself. */
     private val notifiedRequests = LinkedHashSet<String>()
+
+    init {
+        // Re-derive the count from the DATA it is computed from, not only when a
+        // sync pass happens to end.
+        //
+        // The count is answered by IdentityRepository.getNotificationCount() ->
+        // searchContacts(), which joins contact requests against PROFILES and
+        // skips any contact whose profile row has not been downloaded yet
+        // (PlatformRepo.getFromProfiles: `if (profile.value == null) continue`).
+        // A received request and its sender's profile do not have to land in the
+        // same pass — observed live on mainnet: the request row was inserted at
+        // 22:21:43, the pass ended computing 0 because the profile was missing,
+        // and the profile only arrived four minutes later. Nothing recomputed on
+        // that, so the bell stayed dark until the NEXT pass ended; opening the
+        // Contacts screen forces a pass, which is why the beacon appeared only
+        // after navigating there and back.
+        //
+        // LAST_SEEN_NOTIFICATION_TIME is in here for the same reason: the count
+        // is "newer than last seen", so the marker moving is a data change too.
+        merge(
+            dashPayContactRequestDao.observeCount().map { },
+            dashPayProfileDao.observeCount().map { },
+            dashPayConfig.observe(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME).map { }
+        )
+            .conflate()
+            .onEach {
+                delay(DATA_CHANGE_COALESCE_MS)
+                refreshCount()
+            }
+            .catch { e -> log.error("the notification count stopped tracking contact data", e) }
+            .launchIn(scope)
+    }
 
     /** Recompute [unseenNotificationCount] off the caller's thread; never throws. */
     fun refreshCountInBackground() {
