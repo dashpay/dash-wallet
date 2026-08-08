@@ -422,6 +422,18 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             if (identity != null) {
                 (requireActivity() as? LockScreenActivity)?.imitateUserInteraction()
                 header.blockchainIdentityData = identity
+                // Same reason as the sync and canJoin observers below: the identity
+                // record decides the processing/error/welcome tile AND the accept-
+                // invitation row, so it can turn the header from empty to non-empty.
+                // While the "no transactions" view is up the whole list — header
+                // included — is hidden, and that decision is otherwise only re-taken
+                // on a paging load-state emission, which a record change does not
+                // produce. Without this a wallet showing no rows (a filter that
+                // matches nothing, or a wallet with no history yet) renders the
+                // creation tile into a hidden list.
+                if (!header.isEmpty()) {
+                    showTransactionList()
+                }
             }
         }
 

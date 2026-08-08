@@ -106,6 +106,41 @@ internal fun joinDashPayEligible(
 }
 
 /**
+ * Pure accept-invitation row gate, as [headerIsEmpty] has always applied it.
+ *
+ * [creationInProgress] is null when no identity record has been observed yet,
+ * and that answers false here — i.e. the row does not count towards a
+ * non-empty header. Note `bindInvitation` treats a null record differently
+ * (it shows the row): pre-existing, left alone deliberately, since changing
+ * it changes what the header renders rather than when it is re-evaluated.
+ */
+internal fun acceptInvitationEligible(
+    hasInvitation: Boolean,
+    creationInProgress: Boolean?
+): Boolean = hasInvitation && creationInProgress == false
+
+/**
+ * Whether the home header would render NOTHING — pure, so the callers that
+ * have to re-take the "no transactions" decision can be reasoned about (and
+ * tested) without a bound view.
+ *
+ * This matters because `WalletTransactionsFragment.showEmptyView()` hides the
+ * whole transaction list, header included. Every input below can flip this
+ * answer, and none of them produces a paging load-state emission, so each of
+ * their observers has to re-take that decision itself.
+ */
+internal fun headerIsEmpty(
+    identity: BlockchainIdentityBaseData?,
+    hasInvitation: Boolean,
+    canJoinDashPay: Boolean,
+    isSynced: Boolean,
+    hideJoinDashPayCard: Boolean,
+    votingDualDismissed: Boolean
+): Boolean = !acceptInvitationEligible(hasInvitation, identity?.creationInProgress) &&
+    !joinDashPayEligible(identity?.creationState, canJoinDashPay, isSynced, hideJoinDashPayCard) &&
+    (identity == null || !helloCardEligible(identity, votingDualDismissed))
+
+/**
  * The name to greet the user with in the hello card ("Hello %s,") — pure and
  * host-testable.
  *
@@ -482,12 +517,15 @@ class HistoryHeaderAdapter(
     }
 
     private fun shouldShowAcceptInvitation(invitation: InvitationLinkData?, isSynced: Boolean): Boolean {
-        return invitation != null && blockchainIdentityData?.creationInProgress == false
+        return acceptInvitationEligible(invitation != null, blockchainIdentityData?.creationInProgress)
     }
 
-    fun isEmpty(): Boolean {
-        return !shouldShowAcceptInvitation(invitation, isSynced) &&
-                !shouldShowJoinDashPay(canJoinDashPay) &&
-                (blockchainIdentityData == null || !shouldShowHelloCard(blockchainIdentityData!!))
-    }
+    fun isEmpty(): Boolean = headerIsEmpty(
+        identity = blockchainIdentityData,
+        hasInvitation = invitation != null,
+        canJoinDashPay = canJoinDashPay,
+        isSynced = isSynced,
+        hideJoinDashPayCard = preferences.getBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, false),
+        votingDualDismissed = preferences.getBoolean(PREFS_KEY_HIDE_VOTING_DUAL_HELLO_CARD, false)
+    )
 }
