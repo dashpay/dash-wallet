@@ -1620,6 +1620,17 @@ class CutoverUiDataService internal constructor(
      * the live/persisting path.
      */
     private val l1Synced: Flow<Boolean> = flowOf(true),
+    /**
+     * How many DashPay contact ACCOUNT BUILDS the SDK still has queued for
+     * the given wallet — the receive-side DIP-15 accounts whose addresses are
+     * not in the watched script set until they are registered, so any payment
+     * a contact already sent us is still unmatched and the balance is short by
+     * it. Null = unknown (never treated as "none pending"); 0 = the queue is
+     * provably drained. Read on the balance pipeline's own cadence, and the
+     * gate on persisting [WalletUIConfig.LAST_TOTAL_BALANCE].
+     * Default null-returning: the fake-fed tests have no SDK queue.
+     */
+    private val deferredContactBuildCount: suspend (String) -> Int? = { null },
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val refreshIntervalMs: Long = REFRESH_INTERVAL_MS,
     private val walletBindRetryMs: Long = WALLET_BIND_RETRY_MS,
@@ -1671,6 +1682,7 @@ class CutoverUiDataService internal constructor(
         // this was a second hand-copied `synced || scanCaughtUpToTip`
         // expression that had to be kept in lockstep by hand.
         l1Synced = l1SyncStatusService.sdkScanCaughtUp,
+        deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
         resolveString = { resId -> context.getString(resId) },
         notifyCoinsReceived = { duffs ->
             notificationService.showNotification(
@@ -1979,6 +1991,13 @@ class CutoverUiDataService internal constructor(
     private val _lastKnownTotalBalance = MutableStateFlow<Coin?>(null)
 
     /**
+     * Known-unresolved DashPay contact account builds ([deferredContactBuildCount]),
+     * refreshed on the balance cadence. 0 means "provably none queued" — an
+     * unknown/failed read leaves the previous value rather than claiming zero.
+     */
+    private val _deferredContactBuilds = MutableStateFlow(0)
+
+    /**
      * The cutover-aware total-balance feed:
      * [de.schildbach.wallet.WalletApplication.observeTotalBalance] wraps
      * its dashj [WalletBalanceObserver][de.schildbach.wallet.transactions.WalletBalanceObserver]
@@ -2152,6 +2171,11 @@ class CutoverUiDataService internal constructor(
             walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE)?.let(Coin::valueOf)
         }.onFailure { log.warn("failed to read LAST_TOTAL_BALANCE", it) }.getOrNull()
 
+        // BEFORE the first figure is published: whether the wallet still has
+        // contact accounts waiting to be built, which decides whether that
+        // figure may be persisted as the next launch's last-known balance.
+        refreshDeferredContactBuilds(walletIdHex)
+
         // Seed the confirmed/total split once up front so the shielded screen's
         // Max (confirmed) and pending (total − confirmed) are populated before
         // the first tx event or ticker tick.
@@ -2177,6 +2201,9 @@ class CutoverUiDataService internal constructor(
                 .collect { duffs -> updateSdkBalance(duffs) }
         }
         launch {
+            ticker().collect { refreshDeferredContactBuilds(walletIdHex) }
+        }
+        launch {
             merge(txEvents.map { }, ticker()).collect {
                 try {
                     // Re-read the SDK's NATIVE ledger split, NOT the Room txos sum:
@@ -2192,6 +2219,30 @@ class CutoverUiDataService internal constructor(
                     log.warn("SDK balance snapshot re-read failed", t)
                 }
             }
+        }
+    }
+
+    /**
+     * Re-read the queued DashPay contact account builds. An unknown result
+     * (no probe wired, SDK down, read failed) leaves the last value alone —
+     * claiming zero would unlock the balance persist on no evidence.
+     */
+    private suspend fun refreshDeferredContactBuilds(walletIdHex: String) {
+        val pending = try {
+            deferredContactBuildCount(walletIdHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("deferred contact-account-build count read failed", t)
+            null
+        } ?: return
+        val previous = _deferredContactBuilds.value
+        _deferredContactBuilds.value = pending
+        if (previous != pending) {
+            log.info(
+                "deferred DashPay contact account builds: {} (was {}) — the balance {} be " +
+                    "persisted as the next launch's last-known figure",
+                pending, previous, if (pending == 0) "may" else "will NOT"
+            )
         }
     }
 
@@ -2232,6 +2283,7 @@ class CutoverUiDataService internal constructor(
     }
 
     private suspend fun updateSdkBalance(duffs: Long) {
+        val previous = _sdkTotalBalance.value
         _sdkTotalBalance.value = Coin.valueOf(duffs)
         // Keep the fast-startup seed fresh (same key the dashj
         // WalletBalanceObserver maintains) — but ONLY once the scan has
@@ -2239,7 +2291,28 @@ class CutoverUiDataService internal constructor(
         // very "last known" figure the next launch seeds and holds
         // ([overlayTotalBalance]), so a single interrupted scan would make
         // every later launch open on a wrong (too low) balance.
-        if (!_l1Synced.value) return
+        val synced = _l1Synced.value
+        // …and a caught-up scan is not on its own evidence that the figure is
+        // WHOLE. While DashPay contact account builds are still queued
+        // ([_deferredContactBuilds]) the contacts' receiving addresses are not
+        // in the watched script set, so payments they sent us have not been
+        // matched yet and the total is understated by exactly those. Persisting
+        // it seeds every later launch with a figure known to be short.
+        val deferredBuilds = _deferredContactBuilds.value
+        val persist = synced && deferredBuilds == 0
+        // One line per published figure (changes only — the ticker republishes
+        // the same value every REFRESH_INTERVAL_MS). Carries what decides what
+        // the user actually SEES: while !synced the header holds the last-known
+        // figure instead of this one ([overlayTotalBalance]).
+        if (previous?.value != duffs) {
+            log.info(
+                "SDK balance published: {} duffs (was {}) | l1Synced={} deferredContactBuilds={} " +
+                    "persistedAsLastKnown={} lastKnown={}",
+                duffs, previous?.value ?: "none", synced, deferredBuilds, persist,
+                _lastKnownTotalBalance.value?.value ?: "none"
+            )
+        }
+        if (!persist) return
         runCatching { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs) }
             .onFailure { log.warn("failed to persist LAST_TOTAL_BALANCE", it) }
     }

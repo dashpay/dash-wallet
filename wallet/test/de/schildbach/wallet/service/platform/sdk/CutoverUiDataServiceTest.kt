@@ -767,7 +767,8 @@ class CutoverUiDataServiceTest {
         walletUIConfig: WalletUIConfig = mockk(relaxed = true),
         notify: (Long) -> Unit = {},
         txEvents: Flow<L1TxEvent> = kotlinx.coroutines.flow.emptyFlow(),
-        l1Synced: Flow<Boolean> = flowOf(true)
+        l1Synced: Flow<Boolean> = flowOf(true),
+        deferredContactBuilds: Int? = null
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -779,6 +780,7 @@ class CutoverUiDataServiceTest {
         notifyCoinsReceived = notify,
         txEvents = txEvents,
         l1Synced = l1Synced,
+        deferredContactBuildCount = { deferredContactBuilds },
         nowMs = { now }
     )
 
@@ -863,6 +865,60 @@ class CutoverUiDataServiceTest {
         // And the partial is NEVER written back over the seed (the
         // compounding bug: it would poison the next launch's last-known).
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_deferredContactBuilds_publishTheBalanceButDoNotPersistIt() = runTest {
+        // A caught-up scan is not evidence that the figure is WHOLE: while
+        // DashPay contact account builds are queued, those contacts' receiving
+        // addresses are not in the watched script set, so payments they sent
+        // us are unmatched and the total is short by exactly those. Persisting
+        // it would seed every later launch with a figure known to be wrong.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuilds = 6
+        )
+        service.start()
+        runCurrent()
+
+        // The live figure is still published — the header must not freeze.
+        assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_drainedContactBuilds_persistTheBalanceAgain() = runTest {
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuilds = 0
+        )
+        service.start()
+        runCurrent()
+
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L) }
+    }
+
+    @Test
+    fun postCutover_unknownDeferredCount_keepsPersisting() = runTest {
+        // An unavailable probe is not evidence of a deferral; treating it as
+        // one would stop the last-known seed being maintained forever.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuilds = null
+        )
+        service.start()
+        runCurrent()
+
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L) }
     }
 
     @Test
