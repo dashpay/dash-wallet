@@ -138,6 +138,25 @@ class SdkWalletBinderTest {
             return onProvision(walletIdHex)
         }
 
+        var drainCalls = 0
+        var lastDrainWalletId: String? = null
+        var onDrain: suspend (String) -> DashPayContactDrainReport = { _ ->
+            DashPayContactDrainReport(
+                bound = true, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
+            )
+        }
+        override suspend fun drainDashPayContactAccountBuilds(
+            walletIdHex: String
+        ): DashPayContactDrainReport {
+            drainCalls++
+            lastDrainWalletId = walletIdHex
+            return onDrain(walletIdHex)
+        }
+
+        var pendingAccountBuilds: Int? = null
+        override suspend fun dashPayPendingAccountBuilds(walletIdHex: String): Int? =
+            pendingAccountBuilds
+
         /**
          * Backfill signals the gate reads. Default UNKNOWN → the gate can
          * prove nothing and always forces the pass, so every pre-existing
@@ -1162,6 +1181,61 @@ class SdkWalletBinderTest {
         assertEquals(1, gate.evaluateCalls)
         assertEquals(0, sdk.provisionCalls)
         assertEquals(0, gate.recordCalls)
+    }
+
+    @Test
+    fun provisioning_backfillGateSaysSkip_stillDrainsTheDeferredAccountBuilds() = runBlocking {
+        // The queue and the sweep are separate concerns: the gate skips the
+        // SWEEP because it rewinds the SPV synced height, but a contact's
+        // account build left queued keeps that contact's receiving addresses
+        // out of the watched script set, so their payments never match a
+        // filter and the balance stays short. Observed live: 182 builds
+        // deferred, 176 accounts registered, and no drain after the first
+        // session because every later launch took this skip path.
+        val sdk = readySdk()
+        sdk.onDrain = { _ ->
+            DashPayContactDrainReport(
+                bound = true, queuedBefore = 182, drainScheduled = true, queuedAfter = 6
+            )
+        }
+        val gate = FakeBackfillGate(shouldRun = false)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(0, sdk.provisionCalls)
+        assertEquals(1, sdk.drainCalls)
+        assertEquals(walletId, sdk.lastDrainWalletId)
+    }
+
+    @Test
+    fun provisioning_drainFailure_isContainedLikeTheRestOfThePass() = runBlocking {
+        val sdk = readySdk()
+        sdk.onDrain = { _ -> error("keystore unavailable") }
+        val gate = FakeBackfillGate(shouldRun = false)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.drainCalls)
+    }
+
+    @Test
+    fun provisioning_backfillGateSaysRun_leavesTheDrainToTheSweepPass() = runBlocking {
+        // provisionDashPayContactAccounts already schedules and observes the
+        // drain as its step 2 — the skip path is the only one that needed its
+        // own, so a permitted pass must not drain twice.
+        val sdk = readySdk()
+        val gate = FakeBackfillGate(shouldRun = true)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.provisionCalls)
+        assertEquals(0, sdk.drainCalls)
     }
 
     @Test

@@ -514,7 +514,18 @@ class SdkWalletBinder internal constructor(
                 var armedRewind = false
                 if (identityId != null) {
                     val decision = backfillGate.evaluate(walletId, identityId, userId)
-                    if (!decision.shouldRun) return
+                    if (!decision.shouldRun) {
+                        // The gate skips the SWEEP (it rewinds the SPV synced
+                        // height), never the DRAIN. Those are separate: a
+                        // contact's receiving account that is still queued has
+                        // no addresses in the watched script set, so their
+                        // payments never match a filter and the balance stays
+                        // short — and before this, the queue was only ever
+                        // drained on a pass the gate allowed through, i.e. on
+                        // almost no launch after the first.
+                        drainDeferredAccountBuilds(walletId)
+                        return
+                    }
                     armedRewind = decision.armedToWrite != null
                 }
 
@@ -564,6 +575,46 @@ class SdkWalletBinder internal constructor(
             log.warn(
                 "DashPay friend-chain provisioning pass failed; SDK contact-payment " +
                     "discovery may lag until the next pass",
+                t
+            )
+        }
+    }
+
+    /**
+     * Drain the SDK's deferred DashPay account-build queue and say what
+     * happened — queued / built / still queued. The counts are the only view
+     * the app has of that queue: the SDK logs an enqueue per contact
+     * ("Deferred DashPay account build: enqueued for the signer-backed
+     * drain") and then nothing, so a queue that never drains is invisible
+     * after the session that filled it.
+     *
+     * Never throws: an unavailable drain (locked device, seed verify) is a
+     * normal state and the queue survives for the next pass.
+     */
+    private suspend fun drainDeferredAccountBuilds(walletId: String) {
+        try {
+            val report = sdkService.drainDashPayContactAccountBuilds(walletId)
+            when {
+                !report.bound -> log.debug(
+                    "DashPay account-build drain: SDK wallet {}… not loaded yet",
+                    walletId.take(8)
+                )
+                report.queuedBefore == 0 -> log.debug(
+                    "DashPay account-build drain on {}…: queue empty, nothing deferred",
+                    walletId.take(8)
+                )
+                else -> log.info(
+                    "DashPay account-build drain on {}…: queued={} built={} stillQueued={} " +
+                        "(blocked or still draining), drainScheduled={}",
+                    walletId.take(8), report.queuedBefore, report.built, report.queuedAfter,
+                    report.drainScheduled
+                )
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn(
+                "DashPay account-build drain failed; the contacts' receiving addresses stay " +
+                    "unwatched until the next pass",
                 t
             )
         }

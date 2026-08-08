@@ -734,37 +734,121 @@ class DashSdkServiceImpl @Inject constructor(
         //    (ours) + DashpayExternalAccount (watch-only) accounts, whose
         //    addresses then enter the SPV monitored/filter set. A locked
         //    device / seed-verify failure leaves the queue for the next pass.
-        val pendingBefore = manager.contactCryptoPendingCount(walletId)
-        var drainScheduled = false
-        if (pendingBefore > 0) {
-            drainScheduled = try {
-                manager.unlockWalletFromKeystore(managed)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // Non-fatal: the next signer-present pass retries the drain;
-                // the sweep rebuilds the queue if it was lost.
-                log.warn(
-                    "DashPay contact-crypto drain deferred on SDK wallet {}… " +
-                        "(seed verify / Keystore unavailable): {}",
-                    walletIdHex.take(8), e.message
-                )
-                false
-            }
-        }
+        val drain = drainContactCryptoQueue(managed, walletId, walletIdHex)
 
         log.info(
             "DashPay contact provisioning on SDK wallet {}…: sweep success={} errors={}, " +
                 "pendingBuilds={}, drainScheduled={}",
-            walletIdHex.take(8), summary.success, summary.errors, pendingBefore, drainScheduled
+            walletIdHex.take(8), summary.success, summary.errors, drain.queuedBefore, drain.drainScheduled
         )
         return DashPayContactProvisionReport(
             bound = true,
             syncSuccess = summary.success,
             syncErrors = summary.errors,
-            pendingBefore = pendingBefore,
-            drainScheduled = drainScheduled
+            pendingBefore = drain.queuedBefore,
+            drainScheduled = drain.drainScheduled
         )
+    }
+
+    /**
+     * See [DashSdkService.drainDashPayContactAccountBuilds]. Deliberately does
+     * NOT sweep: the sweep is what rewinds the SPV synced height, and this
+     * exists precisely so the queue can be drained on launches where the
+     * backfill gate skips the sweep.
+     */
+    override suspend fun drainDashPayContactAccountBuilds(
+        walletIdHex: String
+    ): DashPayContactDrainReport {
+        ensureStarted()
+        val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
+        val managed = current.walletManager.wallets.value[walletIdHex]
+            ?: return DashPayContactDrainReport(
+                bound = false, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
+            )
+        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+        return drainContactCryptoQueue(managed, walletId, walletIdHex)
+    }
+
+    override suspend fun dashPayPendingAccountBuilds(walletIdHex: String): Int? = try {
+        ensureStarted()
+        val manager = runtime?.walletManager
+        val walletId = walletIdFromHex(walletIdHex)
+        if (manager == null || walletId == null) {
+            null
+        } else {
+            manager.contactCryptoPendingCount(walletId)
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.debug("contact-crypto pending count unavailable: {}", e.message)
+        null
+    }
+
+    /**
+     * Schedule the signer-backed drain (only when something is queued) and
+     * watch the queue drop for a bounded window, so the caller can state how
+     * many builds were queued, built and left rather than only that a drain
+     * was scheduled. The drain itself is asynchronous and single-flight
+     * Rust-side; polling never drives it, it only observes.
+     *
+     * Never throws: a seed-verify / Keystore failure leaves the queue intact
+     * for the next pass, which is a normal state on a locked device.
+     */
+    private suspend fun drainContactCryptoQueue(
+        managed: org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet,
+        walletId: ByteArray,
+        walletIdHex: String
+    ): DashPayContactDrainReport {
+        val manager = checkNotNull(runtime) { "SDK runtime missing" }.walletManager
+        val queuedBefore = manager.contactCryptoPendingCount(walletId)
+        if (queuedBefore == 0) {
+            return DashPayContactDrainReport(
+                bound = true, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
+            )
+        }
+        val drainScheduled = try {
+            manager.unlockWalletFromKeystore(managed)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Non-fatal: the next signer-present pass retries the drain;
+            // the sweep rebuilds the queue if it was lost.
+            log.warn(
+                "DashPay contact-crypto drain deferred on SDK wallet {}… " +
+                    "(seed verify / Keystore unavailable): {}",
+                walletIdHex.take(8), e.message
+            )
+            false
+        }
+        var queuedAfter = queuedBefore
+        if (drainScheduled) {
+            repeat(DRAIN_OBSERVE_POLLS) {
+                kotlinx.coroutines.delay(DRAIN_OBSERVE_INTERVAL_MS)
+                queuedAfter = try {
+                    manager.contactCryptoPendingCount(walletId)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.debug("contact-crypto pending re-count failed: {}", e.message)
+                    return@repeat
+                }
+                if (queuedAfter == 0) return@repeat
+            }
+        }
+        val report = DashPayContactDrainReport(
+            bound = true,
+            queuedBefore = queuedBefore,
+            drainScheduled = drainScheduled,
+            queuedAfter = queuedAfter
+        )
+        log.info(
+            "DashPay account-build drain on SDK wallet {}…: queued={} built={} stillQueued={} " +
+                "(blocked or still draining), drainScheduled={}",
+            walletIdHex.take(8), report.queuedBefore, report.built, report.queuedAfter,
+            report.drainScheduled
+        )
+        return report
     }
 
     /**
@@ -941,5 +1025,15 @@ class DashSdkServiceImpl @Inject constructor(
 
         /** Session-start rotation threshold for the SDK's run.log (20 MB). */
         const val SDK_RUN_LOG_ROTATE_BYTES = 20L * 1024 * 1024
+
+        /**
+         * How long a drain pass watches the contact-crypto queue before
+         * reporting. Long enough for a small queue to finish (each build is a
+         * key derivation plus a register), short enough that the caller — a
+         * background provisioning pass — is never held up: the report is
+         * observability, and whatever is still queued is picked up next pass.
+         */
+        private const val DRAIN_OBSERVE_POLLS = 10
+        private const val DRAIN_OBSERVE_INTERVAL_MS = 1_000L
     }
 }
