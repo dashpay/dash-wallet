@@ -488,7 +488,15 @@ class CoinJoinFundsMigrationService @Inject constructor(
         val destination = try {
             // A FRESH address, not the current one: reusing an address the
             // user has already published would link the mixed coins to it.
-            walletData.freshReceiveAddressString()
+            //
+            // OFF THE MAIN THREAD, deliberately: dashj's freshReceiveAddress()
+            // issues a key and then forces a SYNCHRONOUS full-wallet save, and
+            // that save re-serializes every DashPay friend key chain. Measured
+            // on a 215-chain wallet that is a 1.3 s main-thread block, and on a
+            // slower device with a larger wallet ~7 s — long enough that a
+            // tester read it as a hang and force-quit mid-migration. The caller
+            // runs on Main, so the dispatcher has to be imposed here.
+            withContext(Dispatchers.IO) { walletData.freshReceiveAddressString() }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("mixed-funds migration: could not derive an own receive address", t)
