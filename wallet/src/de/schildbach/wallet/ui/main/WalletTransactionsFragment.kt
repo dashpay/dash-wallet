@@ -326,6 +326,16 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.syncStatus.map { it.isSynced }.distinctUntilChanged().collect { isSynced ->
                 header.isSynced = isSynced
+                // The Join DashPay tile only becomes eligible once the scan
+                // finishes (HistoryHeaderAdapter.joinDashPayEligible), and the
+                // adapter re-binds itself above. But on a wallet with no
+                // displayed rows the whole list may currently be hidden behind
+                // the "no transactions" view — a decision only re-taken on a
+                // paging load-state emission, which may never arrive. Re-take
+                // it here so the tile actually becomes visible on completion.
+                if (!header.isEmpty()) {
+                    showTransactionList()
+                }
                 if (inviteHandlerViewModel.isUsingInvite) {
                     // Re-drives the invite through validation on every sync-state
                     // change: an invite checked mid-scan gets the provisional
@@ -445,6 +455,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         viewModel.isAbleToCreateIdentity.observe(viewLifecycleOwner) { canJoinDashPay ->
             header.canJoinDashPay = canJoinDashPay && header.invitation == null
+            // Same reason as the sync collector above: this flag can turn the
+            // header from empty to non-empty while the "no transactions" view
+            // is up, and that view's decision is not otherwise re-taken.
+            if (!header.isEmpty()) {
+                showTransactionList()
+            }
         }
 
         val myListener = { onLockScreenDeactivated() }

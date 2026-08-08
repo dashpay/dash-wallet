@@ -68,6 +68,41 @@ internal fun helloCardEligible(
             )
 }
 
+/**
+ * Pure "Join DashPay" tile visibility gate (host-JVM unit-testable, same
+ * pattern as [helloCardEligible]).
+ *
+ * The tile is an ENTRY POINT into identity creation, so it must not be
+ * offered while the L1 scan is still running: mid-sync the balance and
+ * history are incomplete, and identity creation needs confirmed,
+ * attributable funds — a user who taps through mid-restore is told they
+ * cannot afford a username they can in fact afford.
+ *
+ * The sync factor used to live in `MainViewModel.combineLatestData()`, which
+ * feeds `isAbleToCreateIdentity`; it is commented out there
+ * (`/*isSynced &&*/`) along with its `_isBlockchainSynced` MediatorLiveData
+ * source, so `canJoin` alone carries no sync information. The More screen
+ * compensates locally (`MoreFragment.updateJoinDashPaySyncState`, driven by
+ * the same `MainViewModel.syncStatus.isSynced`); this header did not, which
+ * is the defect. [isSynced] here is fed from that same authoritative signal.
+ *
+ * Unlike the More screen — which greys the row and shows a "still syncing"
+ * line, as the sibling accept-invitation row in this header also does — the
+ * home tile is HIDDEN while unsynced: it is an unsolicited nudge rather than
+ * a row the user navigated to, so a disabled nudge is just noise.
+ */
+internal fun joinDashPayEligible(
+    creationState: IdentityCreationState?,
+    canJoin: Boolean,
+    isSynced: Boolean,
+    hideJoinDashPayCard: Boolean
+): Boolean {
+    return creationState == IdentityCreationState.NONE &&
+        canJoin &&
+        isSynced &&
+        !hideJoinDashPayCard
+}
+
 class HistoryHeaderAdapter(
     private val preferences: SharedPreferences
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -123,6 +158,14 @@ class HistoryHeaderAdapter(
             }
         }
 
+    /**
+     * L1 scan completion, fed from `MainViewModel.syncStatus.isSynced`.
+     * Gates BOTH the accept-invitation row (greyed + "still syncing") and,
+     * since it is an entry point into identity creation, the Join DashPay
+     * tile (hidden outright — see [joinDashPayEligible]). The setter
+     * re-binds every tile, so the Join tile appears the moment the scan
+     * finishes rather than waiting for an unrelated header update.
+     */
     var isSynced: Boolean = false
         set(value) {
             field = value
@@ -381,8 +424,12 @@ class HistoryHeaderAdapter(
     }
 
     private fun shouldShowJoinDashPay(canJoin: Boolean): Boolean {
-        val hideJoinDashPay = preferences.getBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, false)
-        return blockchainIdentityData?.creationState == IdentityCreationState.NONE && canJoin && !hideJoinDashPay
+        return joinDashPayEligible(
+            creationState = blockchainIdentityData?.creationState,
+            canJoin = canJoin,
+            isSynced = isSynced,
+            hideJoinDashPayCard = preferences.getBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, false)
+        )
     }
 
     private fun shouldShowAcceptInvitation(invitation: InvitationLinkData?, isSynced: Boolean): Boolean {
