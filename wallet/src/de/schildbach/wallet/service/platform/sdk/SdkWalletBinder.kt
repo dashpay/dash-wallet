@@ -31,11 +31,57 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.util.NativeLogBridge
+import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * The birth time (Unix SECONDS) to hand [DashSdkService.bindAppWallet],
+ * which maps it to the SDK `birthHeight` via [BirthHeightResolver].
+ *
+ * ## Why the dashj wallet alone is not the answer
+ *
+ * [org.bitcoinj.wallet.Wallet.getEarliestKeyCreationTime] is NOT a real
+ * birth time for a seed restore: `DashWalletFactory.restoreWalletFromSeed`
+ * deliberately stamps every restored seed with
+ * [Constants.EARLIEST_HD_SEED_CREATION_TIME] ("always the oldest possible
+ * time", 2015-03-29) so dashj can never miss history. The wallet birth
+ * date the user picks on the restore screen is persisted SEPARATELY, in
+ * [BlockchainServiceConfig.getWalletCreationDate] — which is exactly what
+ * dashj's own fresh-store checkpointing reads
+ * (`BlockchainServiceImpl`: `serviceConfig.getWalletCreationDate() ?:
+ * wallet.earliestKeyCreationTime`). Reading only the wallet therefore
+ * handed the resolver the 2015 sentinel on EVERY restore, i.e. a full
+ * mainnet chain scan no matter which date was chosen.
+ *
+ * ## Rule: the earliest REAL signal, sentinel as the floor
+ *
+ * A value only carries information when it is strictly later than the
+ * sentinel — [BlockchainServiceConfig.getWalletCreationDate] already
+ * nulls the sentinel itself, and the wallet's time is filtered the same
+ * way here (the rule [de.schildbach.wallet.ui.more.ToolsViewModel] uses).
+ * Of the informative values we take the MINIMUM, not a precedence order:
+ * a wallet restored from a protobuf backup carries a genuine key
+ * creation time, and a later user-entered date must never be allowed to
+ * skip past it. When neither is informative — the "user does not know
+ * the date" path — we fall back to the raw wallet time, i.e. the 2015
+ * sentinel, which resolves to the earliest possible HD-wallet height.
+ * Scanning too early only costs time; scanning too late hides funds.
+ */
+internal fun sdkWalletBirthTimeSecs(
+    configuredCreationDateSecs: Long?,
+    walletEarliestKeyCreationTimeSecs: Long?
+): Long? {
+    val sentinel = Constants.EARLIEST_HD_SEED_CREATION_TIME
+    val informative = listOfNotNull(
+        configuredCreationDateSecs,
+        walletEarliestKeyCreationTimeSecs
+    ).filter { it > sentinel }
+    return informative.minOrNull() ?: walletEarliestKeyCreationTimeSecs
+}
 
 /**
  * The NON-INTERACTIVE wallet-unlock recipe shared by every background
@@ -232,6 +278,10 @@ class SdkWalletBinder internal constructor(
     private val identityConfig: BlockchainIdentityConfig,
     private val dashPayConfig: DashPayConfig,
     private val walletData: WalletData,
+    // Holds the wallet creation date the user picks on the restore screen
+    // (and in Settings → Rescan). See [sdkWalletBirthTimeSecs] for why the
+    // dashj wallet's own earliestKeyCreationTime cannot answer this.
+    private val blockchainServiceConfig: BlockchainServiceConfig,
     private val scope: CoroutineScope,
     private val supportsPlatform: () -> Boolean,
     // Injectable clock so the friend-chain provisioning throttle is
@@ -252,6 +302,7 @@ class SdkWalletBinder internal constructor(
         identityConfig: BlockchainIdentityConfig,
         dashPayConfig: DashPayConfig,
         walletData: WalletData,
+        blockchainServiceConfig: BlockchainServiceConfig,
         scope: CoroutineScope,
         backfillGate: DashPayBackfillGate
     ) : this(
@@ -260,6 +311,7 @@ class SdkWalletBinder internal constructor(
         identityConfig = identityConfig,
         dashPayConfig = dashPayConfig,
         walletData = walletData,
+        blockchainServiceConfig = blockchainServiceConfig,
         scope = scope,
         supportsPlatform = { Constants.SUPPORTS_PLATFORM },
         backfillGate = backfillGate
@@ -695,6 +747,27 @@ class SdkWalletBinder internal constructor(
         )
     }
 
+    /**
+     * The birth time handed to [DashSdkService.bindAppWallet]: the wallet
+     * creation date the user picked during the restore (persisted in
+     * [BlockchainServiceConfig], the same store dashj's own checkpointing
+     * reads) combined with the dashj wallet's key time by
+     * [sdkWalletBirthTimeSecs]. A config read failure degrades to the
+     * wallet time alone — never to a value LATER than what we would
+     * otherwise have used.
+     */
+    private suspend fun resolveBirthTimeSecs(): Long? {
+        val configured = try {
+            blockchainServiceConfig.getWalletCreationDate()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("wallet creation date unreadable; falling back to the wallet's key time", e)
+            null
+        }
+        return sdkWalletBirthTimeSecs(configured, walletData.wallet?.earliestKeyCreationTime)
+    }
+
     /** One pass; caller holds [mutex]. Throws freely — [bindIfEnabled] contains the fallout. */
     private suspend fun bindLocked(unlockProvider: suspend () -> WalletUnlock?) {
         // 1. Flags (both default OFF). Read failure = off.
@@ -737,7 +810,7 @@ class SdkWalletBinder internal constructor(
             // Decrypt + hand off; the words are function-local and the
             // reference dies with this call (see PlatformMnemonicProvider).
             val words = mnemonicProvider.getMnemonicWords(unlock)
-            val birthTimeSecs = walletData.wallet?.earliestKeyCreationTime
+            val birthTimeSecs = resolveBirthTimeSecs()
             sdkService.bindAppWallet(words, birthTimeSecs).also {
                 boundWalletIdHex = it
                 boundWalletFingerprint = fingerprint

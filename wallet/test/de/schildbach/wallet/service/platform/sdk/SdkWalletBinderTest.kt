@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.wallet.Wallet
 import de.schildbach.wallet.data.WalletData
+import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dashfoundation.dashsdk.Sdk
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
 import org.dashj.platform.dpp.identifier.Identifier
@@ -244,6 +245,23 @@ class SdkWalletBinderTest {
     private fun walletData(): WalletData = mockk { every { wallet } returns null }
 
     /**
+     * A [WalletData] whose dashj wallet reports [earliestKeyCreationTimeSecs]
+     * — the ONLY birth signal the binder used to read, and the one a seed
+     * restore stamps with the 2015 [sentinelSecs] sentinel.
+     */
+    private fun walletDataWithKeyTime(earliestKeyCreationTimeSecs: Long): WalletData {
+        val dashjWallet: Wallet = mockk {
+            every { watchingKey.pubKeyHash } returns ByteArray(20)
+            every { earliestKeyCreationTime } returns earliestKeyCreationTimeSecs
+        }
+        return mockk { every { wallet } returns dashjWallet }
+    }
+
+    /** The persisted wallet creation date; null = the user never chose one. */
+    private fun blockchainServiceConfig(creationDateSecs: Long?): BlockchainServiceConfig =
+        mockk { coEvery { getWalletCreationDate() } returns creationDateSecs }
+
+    /**
      * A dashj wallet whose watching key hashes to a fingerprint derived
      * from [seedByte] — two wallets fingerprint equal iff their seed bytes
      * match, mirroring the deterministic seed → watching-key relationship
@@ -262,6 +280,7 @@ class SdkWalletBinderTest {
         config: DashPayConfig = dashPayConfig(readsFlag = true),
         supportsPlatform: Boolean = true,
         walletData: WalletData = walletData(),
+        serviceConfig: BlockchainServiceConfig = blockchainServiceConfig(null),
         now: () -> Long = { System.currentTimeMillis() },
         backfillGate: DashPayBackfillGate = DashPayBackfillGate.ALWAYS_RUN,
         backfillWatchIntervalMs: Long = 5L,
@@ -272,6 +291,7 @@ class SdkWalletBinderTest {
         identityConfig = identity,
         dashPayConfig = config,
         walletData = walletData,
+        blockchainServiceConfig = serviceConfig,
         scope = scope,
         supportsPlatform = { supportsPlatform },
         now = now,
@@ -516,6 +536,98 @@ class SdkWalletBinderTest {
         assertNull(sdk.lastBirthTime)
         // The identity probed is the one from BlockchainIdentityConfig.
         assertEquals(userId, Identifier.from(sdk.lastIdentityId!!).toString())
+    }
+
+    // ── Wallet birth time: the chosen restore date must reach the SDK ────
+
+    /**
+     * `DashWalletFactory.restoreWalletFromSeed` stamps EVERY restored seed
+     * with this 2015 value ("the wallet creation time should always be the
+     * oldest possible time"), so a restored wallet's own
+     * `earliestKeyCreationTime` says nothing about when the wallet was
+     * really created — it is a floor, not a measurement.
+     */
+    private val sentinelSecs = de.schildbach.wallet.Constants.EARLIEST_HD_SEED_CREATION_TIME
+
+    /** A date a tester could pick on the restore screen: 2023-07-22. */
+    private val chosenDateSecs = 1_690_000_000L
+
+    @Test
+    fun chosenRestoreDate_reachesBindAppWallet() = runBlocking {
+        // The regression: a restore with a date chosen still handed the
+        // resolver the 2015 sentinel (observed on mainnet as
+        // "resolved birth time 1427610960 … birthHeight=239040"), because
+        // the binder read only the wallet and the picked date lives in
+        // BlockchainServiceConfig.
+        val sdk = readySdk()
+        val binder = binder(
+            sdk,
+            walletData = walletDataWithKeyTime(sentinelSecs),
+            serviceConfig = blockchainServiceConfig(chosenDateSecs),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(chosenDateSecs, sdk.lastBirthTime)
+    }
+
+    @Test
+    fun noRestoreDateChosen_keepsTheEarliestPossibleBirthTime() = runBlocking {
+        // "I don't know when I created it": nothing is persisted, so the
+        // binder must still hand over the earliest-possible sentinel —
+        // a full scan is the correct answer here, and anything LATER
+        // would risk hiding transactions.
+        val sdk = readySdk()
+        val binder = binder(
+            sdk,
+            walletData = walletDataWithKeyTime(sentinelSecs),
+            serviceConfig = blockchainServiceConfig(null),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(sentinelSecs, sdk.lastBirthTime)
+    }
+
+    @Test
+    fun birthTime_prefersTheChosenDateOverTheRestoreSentinel() {
+        assertEquals(chosenDateSecs, sdkWalletBirthTimeSecs(chosenDateSecs, sentinelSecs))
+    }
+
+    @Test
+    fun birthTime_unknownDateFallsBackToTheSentinel() {
+        assertEquals(sentinelSecs, sdkWalletBirthTimeSecs(null, sentinelSecs))
+    }
+
+    @Test
+    fun birthTime_aSentinelValuedConfigIsNotInformation() {
+        // BlockchainServiceConfig already nulls the sentinel, but a caller
+        // that passes it raw must not be treated as a real choice either.
+        assertEquals(sentinelSecs, sdkWalletBirthTimeSecs(sentinelSecs, sentinelSecs))
+    }
+
+    @Test
+    fun birthTime_neverSkipsPastARealWalletKeyTime() {
+        // Restore-from-backup: the protobuf carries a genuine key creation
+        // time (2020). A later user-entered date must NOT move the scan
+        // start forward past it — that would silently hide 2020-2023
+        // transactions. The earliest real signal wins.
+        val realKeyTimeSecs = 1_580_000_000L // 2020-01-26
+        assertEquals(realKeyTimeSecs, sdkWalletBirthTimeSecs(chosenDateSecs, realKeyTimeSecs))
+    }
+
+    @Test
+    fun birthTime_chosenDateWinsWhenItIsEarlierThanTheWalletKeyTime() {
+        val realKeyTimeSecs = 1_700_000_000L // 2023-11-14
+        assertEquals(chosenDateSecs, sdkWalletBirthTimeSecs(chosenDateSecs, realKeyTimeSecs))
+    }
+
+    @Test
+    fun birthTime_noWalletAndNoDateStaysUnknown() {
+        // Unknown => bindAppWallet maps null to birthHeight 0 (genesis).
+        assertNull(sdkWalletBirthTimeSecs(null, null))
     }
 
     @Test
