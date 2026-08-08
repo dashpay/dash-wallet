@@ -1039,6 +1039,17 @@ interface CutoverUiSource {
     suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = null
 
     /**
+     * ONE-SHOT count of the wallet's own transaction RECORDS — the distinct
+     * txids the wallet's TXOs fund or spend, i.e. the cardinality of the set
+     * [observeWalletTxRecords] / [forEachWalletTxRecordPage] enumerate. This
+     * is the SDK-side number the display cache's completeness check measures
+     * itself against post-cutover ([de.schildbach.wallet.service.decideCacheRebuild]).
+     *
+     * Null when unavailable. Default null: sources without a TXO store.
+     */
+    suspend fun currentWalletRecordCount(walletIdHex: String): Int? = null
+
+    /**
      * The subset of [txidHexes] (display-order txid hex) that CREATED at least
      * one TXO on a CoinJoin account (`accounts.accountType == 1`, the FFI
      * `AccountTypeTagFFI::CoinJoin` tag space — see
@@ -1167,6 +1178,27 @@ internal class DashSdkCutoverUiSource(
                     arrayOf<Any?>(walletId)
                 )
             ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+        }
+    }
+
+    override suspend fun currentWalletRecordCount(walletIdHex: String): Int? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        val db = database()
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            db.openHelper.readableDatabase.query(
+                androidx.sqlite.db.SimpleSQLiteQuery(
+                    // Wallet membership is the TXO join and the record set is the
+                    // UNION of funded and spent txids — the SAME convention
+                    // observeWalletTxRecords/SdkTxStoreWalker enumerate and the
+                    // parity probe (L1ShadowSource.sdkTxCount) counts, so this
+                    // number and the rows the pipeline writes describe one set.
+                    "SELECT COUNT(*) FROM (" +
+                        "SELECT txid AS t FROM txos WHERE walletId = ? AND txid IS NOT NULL " +
+                        "UNION " +
+                        "SELECT spendingTxid AS t FROM txos WHERE walletId = ? AND spendingTxid IS NOT NULL)",
+                    arrayOf<Any?>(walletId, walletId)
+                )
+            ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else null }
         }
     }
 
@@ -1790,6 +1822,35 @@ class CutoverUiDataService internal constructor(
         clearContactResolutionCaches()
         reResolveRequested.set(true)
         contactReResolveRequests.tryEmit(Unit)
+    }
+
+    /**
+     * Ask for one full reconcile walk over every SDK record NOW, without
+     * busting the contact-resolution caches — the remedy the display cache's
+     * completeness check applies when it finds rows missing post-cutover
+     * ([de.schildbach.wallet.service.TxDisplayCacheService]). Same idempotent
+     * pass the 60s ticker runs, so an unnecessary request costs one walk.
+     * Fire-and-forget, non-suspending, inert pre-cutover (no collector).
+     */
+    fun requestFullReconcile() {
+        contactReResolveRequests.tryEmit(Unit)
+    }
+
+    /**
+     * The SDK's own wallet-relevant record count
+     * ([CutoverUiSource.currentWalletRecordCount]), or null when the tx
+     * pipeline is not running (pre-cutover / not yet bound) or the read
+     * failed — "unknown", never zero, so a caller can tell the two apart.
+     */
+    suspend fun sdkWalletRecordCount(): Int? {
+        val walletIdHex = activeWalletIdHex ?: return null
+        return try {
+            source.currentWalletRecordCount(walletIdHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK wallet record-count read failed", t)
+            null
+        }
     }
 
     private val _sdkTotalBalance = MutableStateFlow<Coin?>(null)
