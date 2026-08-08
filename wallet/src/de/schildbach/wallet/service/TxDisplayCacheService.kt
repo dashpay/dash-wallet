@@ -36,11 +36,14 @@ import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.database.entity.TxGroupCacheEntry
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.CutoverState
+import de.schildbach.wallet.service.platform.sdk.dashjEngineMayStart
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinTxWrapperFactory
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.CoroutineScope
@@ -104,7 +107,8 @@ class TxDisplayCacheService @Inject constructor(
     private val platformRepo: PlatformRepo,
     private val identityRepo: IdentityRepository,
     private val blockchainStateProvider: BlockchainStateProvider,
-    private val displayCacheRefreshBus: DisplayCacheRefreshBus
+    private val displayCacheRefreshBus: DisplayCacheRefreshBus,
+    private val dashPayConfig: DashPayConfig
 ) {
 
     companion object {
@@ -532,15 +536,50 @@ class TxDisplayCacheService @Inject constructor(
     }
 
     /**
-     * Wipes both caches and triggers a full rebuild from the current wallet state.
+     * The persisted cutover verdict, through the SAME predicate the send path
+     * and [de.schildbach.wallet.service.platform.sdk.CutoverUiDataService]
+     * evaluate. Reads the store rather than the live UI gate so the answer is
+     * correct before the SDK pipelines have started.
+     *
+     * A read failure reports COMMITTED — the direction that refuses a
+     * destructive dashj rebuild it cannot prove is safe. The refusal only
+     * bites when the dashj wallet is also empty, where a rebuild has nothing
+     * to rebuild anyway.
+     */
+    private suspend fun cutoverCommittedOrUnknown(): Boolean = try {
+        !dashjEngineMayStart(CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)))
+    } catch (e: Exception) {
+        log.warn("could not read the cutover state; treating it as committed", e)
+        true
+    }
+
+    /**
+     * Wipes both caches and rebuilds them from the dashj wallet.
+     *
+     * REFUSES to run post-cutover on a held dashj wallet — see
+     * [dashjRebuildWouldEraseHistory]. Reachable from the home screen (a long
+     * press on the History title offers "refresh"), so the refusal has to be
+     * structural, not a convention.
      */
     fun forceRebuildTransactionCache() {
         serviceScope.launch {
+            val wallet = walletData.wallet ?: return@launch
+            val dashjTxCount = wallet.getTransactionCount(true)
+            if (dashjRebuildWouldEraseHistory(cutoverCommittedOrUnknown(), dashjTxCount)) {
+                log.error(
+                    "REFUSING to rebuild the transaction cache: the cutover is committed and the " +
+                        "dashj wallet holds 0 transactions, so rebuilding from it would wipe all " +
+                        "{} display rows / {} group rows and leave the history permanently empty " +
+                        "(the SDK owns the transactions now, and nothing re-populates a wiped " +
+                        "dashj-sourced cache)",
+                    txDisplayCacheDao.getCount(), txGroupCacheDao.getTotalTxCount()
+                )
+                return@launch
+            }
             txDisplayCacheDao.deleteAll()
             txGroupCacheDao.deleteAll()
             wrappedTransactionList = emptyList()
             _txDataSource.value = TxDataSource.Empty
-            val wallet = walletData.wallet ?: return@launch
             val filter = TxDirectionFilter(_currentFilter.value, wallet)
             rebuildWrappedList(filter)
         }
@@ -1278,3 +1317,14 @@ internal fun mergeDisplayEntryPreservingSdkStamped(
     }
     return result
 }
+
+/**
+ * Whether rebuilding the display/group caches from the dashj wallet would
+ * DESTROY the user's visible history rather than refresh it.
+ *
+ * Post-cutover the dashj wallet is held with zero transactions while the SDK
+ * feeds the caches, so a rebuild from it wipes both tables and re-populates
+ * them from nothing — and no dashj-sourced path ever fills them again.
+ */
+internal fun dashjRebuildWouldEraseHistory(cutoverCommitted: Boolean, dashjTxCount: Int): Boolean =
+    cutoverCommitted && dashjTxCount == 0
