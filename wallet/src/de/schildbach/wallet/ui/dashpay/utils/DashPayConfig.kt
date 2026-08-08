@@ -480,6 +480,25 @@ open class DashPayConfig @Inject constructor(
         val DASHPAY_BACKFILL_CONTACT_FINGERPRINT = stringPreferencesKey("dashpay_backfill_contact_fingerprint")
 
         /**
+         * Whether COVERED_FLOOR was DIRECTLY OBSERVED (the durable synced
+         * height seen after the SDK's rewind) rather than ASSUMED from a pass
+         * that produced no rewind at all.
+         *
+         * The two are not interchangeable. An observed floor is authoritative:
+         * the SDK chose it, so the fact that some contact's core height sits
+         * below it only reflects the SDK subsetting by direction and
+         * establishment. An ASSUMED floor is just "the tip at the moment we
+         * concluded there was nothing to do" — and if that conclusion was
+         * wrong, it silently claims coverage over history that was never
+         * re-scanned with the contact addresses watched.
+         *
+         * Absent on records written before this flag existed, which are
+         * treated as ASSUMED so a wallet already carrying a bad floor
+         * re-validates once instead of staying stuck forever.
+         */
+        val DASHPAY_BACKFILL_COVERAGE_OBSERVED = booleanPreferencesKey("dashpay_backfill_coverage_observed")
+
+        /**
          * An OBSERVED, still-running backfill: the SDK lowered the durable
          * synced height to PENDING_FLOOR from PENDING_TARGET, and the scan has
          * not yet climbed back to PENDING_TARGET. Persisted (not in-memory)

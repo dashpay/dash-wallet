@@ -874,11 +874,19 @@ class DashSdkServiceImpl @Inject constructor(
             // has persisted for us. Never load-bearing (see the KDoc).
             val contactRequests = database.dashpayDao().getContactRequestsByOwner(ownerIdentityId)
             val floor = contactRequests.minOfOrNull { it.coreHeightCreatedAt.toLong() }
+            // The RECEIVED subset — the requests that give us a receival
+            // (`dashpayReceivingFunds`) chain, and so the only ones whose
+            // history the rewind exists to re-scan. Used solely to WITHHOLD a
+            // "nothing to backfill" conclusion; see the KDoc.
+            val receivedFloor = contactRequests
+                .filterNot { it.isOutgoing }
+                .minOfOrNull { it.coreHeightCreatedAt.toLong() }
 
             DashPayBackfillSignals(
                 syncedHeight = syncedHeight,
                 contactCoreHeightFloor = floor,
-                contactRequestCount = contactRequests.size
+                contactRequestCount = contactRequests.size,
+                receivedContactCoreHeightFloor = receivedFloor
             )
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e

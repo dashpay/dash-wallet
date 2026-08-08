@@ -377,9 +377,160 @@ class DashPayBackfillGateTest {
             firstPassInProcess = true
         )
         assertEquals(
-            BackfillCoverage(1_000_000L, 1_000_000L, fingerprintA),
+            // ASSUMED, not observed: no rewind was ever seen, so the record
+            // stays open to being refuted by later evidence.
+            BackfillCoverage(1_000_000L, 1_000_000L, fingerprintA, observedFloor = false),
             outcome.coverageToWrite
         )
+    }
+
+    @Test
+    fun passOutcome_noRewindButAReceivedContactPredatesTheHeight_recordsNOTHING() {
+        // The S22 field case. A received contact request created at core
+        // height 2_382_103 means a rewind was OWED; a quiet pass therefore
+        // proves the rewind was suppressed or has not persisted, NOT that
+        // there was nothing to backfill. Recording coverage at the tip here
+        // claims 136k blocks as scanned that never were.
+        val outcome = decideDashPayBackfillPassOutcome(
+            before = BackfillObservation(
+                syncedHeight = 2_518_637L,
+                contactFingerprint = fingerprintA,
+                sdkContactFloor = 2_382_103L,
+                sdkContactCount = 6,
+                sdkReceivedContactFloor = 2_382_103L,
+                appContactCount = 6
+            ),
+            syncedHeightAfter = 2_518_637L,
+            report = settledReport(),
+            firstPassInProcess = true
+        )
+        assertNull(outcome.coverageToWrite)
+        // The armed marker must survive so the next trigger provisions again.
+        assertFalse(outcome.clearArmed)
+    }
+
+    @Test
+    fun passOutcome_noRewindWhileTheSdkHasNotIngestedTheAppsContactsYet_recordsNOTHING() {
+        // The other half of the S22 case: the gate ran 16 minutes before the
+        // SDK's contact store was populated, so provisioning had nothing to
+        // act on and no rewind could possibly fire. The app's own table
+        // already held the contacts — that disagreement is the tell.
+        val outcome = decideDashPayBackfillPassOutcome(
+            before = BackfillObservation(
+                syncedHeight = 2_518_637L,
+                contactFingerprint = fingerprintA,
+                sdkContactFloor = null,
+                sdkContactCount = 0,
+                sdkReceivedContactFloor = null,
+                appContactCount = 2
+            ),
+            syncedHeightAfter = 2_518_637L,
+            report = settledReport(),
+            firstPassInProcess = true
+        )
+        assertNull(outcome.coverageToWrite)
+        assertFalse(outcome.clearArmed)
+    }
+
+    @Test
+    fun passOutcome_noRewindAndTheSdkAgreesThereAreNoContacts_stillRecordsCoverage() {
+        // The genuinely-quiet wallet must still reach the covered steady
+        // state, or the gate re-provisions on every launch forever.
+        val outcome = decideDashPayBackfillPassOutcome(
+            before = BackfillObservation(
+                syncedHeight = 1_000_000L,
+                contactFingerprint = fingerprintA,
+                sdkContactFloor = null,
+                sdkContactCount = 0,
+                sdkReceivedContactFloor = null,
+                appContactCount = 0
+            ),
+            syncedHeightAfter = 1_000_000L,
+            report = settledReport(),
+            firstPassInProcess = true
+        )
+        assertEquals(
+            BackfillCoverage(1_000_000L, 1_000_000L, fingerprintA, observedFloor = false),
+            outcome.coverageToWrite
+        )
+    }
+
+    @Test
+    fun passOutcome_noRewindWithOnlyOUTGOINGContactsBelowTheHeight_stillRecordsCoverage() {
+        // Outgoing requests yield no receival chain, so nothing is owed a
+        // rewind and withholding here would strand the wallet re-provisioning
+        // forever.
+        val outcome = decideDashPayBackfillPassOutcome(
+            before = BackfillObservation(
+                syncedHeight = 1_000_000L,
+                contactFingerprint = fingerprintA,
+                sdkContactFloor = 790_000L,
+                sdkContactCount = 3,
+                sdkReceivedContactFloor = null,
+                appContactCount = 3
+            ),
+            syncedHeightAfter = 1_000_000L,
+            report = settledReport(),
+            firstPassInProcess = true
+        )
+        assertEquals(
+            BackfillCoverage(1_000_000L, 1_000_000L, fingerprintA, observedFloor = false),
+            outcome.coverageToWrite
+        )
+    }
+
+    // ── an ASSUMED floor stays open to being refuted ─────────────────────
+
+    @Test
+    fun assumedCoverage_refutedByAReceivedContactBelowTheFloor_discardsAndReRuns() {
+        // The exact suppression seen on S22 at 22:25:17: coverage floor
+        // 2_518_645 with the SDK reporting a contact core height of
+        // 2_382_103, contact set unchanged — and the old gate SKIPPED.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(
+                syncedHeight = 2_518_646L,
+                contactFingerprint = fingerprintA,
+                sdkContactFloor = 2_382_103L,
+                sdkContactCount = 5,
+                sdkReceivedContactFloor = 2_382_103L,
+                appContactCount = 5
+            ),
+            coverage = BackfillCoverage(
+                2_518_645L, 2_518_645L, fingerprintA, observedFloor = false
+            ),
+            inProgress = null,
+            armed = null,
+            hasProvisionedInProcess = false
+        )
+        assertTrue(decision.shouldRun)
+        assertTrue(decision.clearCoverage)
+        assertEquals(BackfillArmed(2_518_646L, fingerprintA), decision.armedToWrite)
+    }
+
+    @Test
+    fun observedCoverage_isNEVERSecondGuessedByTheContactFloor() {
+        // An observed floor is the height the SDK itself rewound to; a
+        // contact below it just reflects the SDK subsetting by direction and
+        // establishment. Re-running on that would rewind every launch forever
+        // — the livelock this whole gate exists to stop.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(
+                syncedHeight = 2_518_646L,
+                contactFingerprint = fingerprintA,
+                sdkContactFloor = 2_167_000L,
+                sdkContactCount = 182,
+                sdkReceivedContactFloor = 2_167_000L,
+                appContactCount = 182
+            ),
+            coverage = BackfillCoverage(
+                2_302_092L, 2_400_000L, fingerprintA, observedFloor = true
+            ),
+            inProgress = null,
+            armed = null,
+            hasProvisionedInProcess = false
+        )
+        assertFalse(decision.shouldRun)
+        assertFalse(decision.clearCoverage)
     }
 
     @Test
@@ -712,5 +863,70 @@ class DashPayBackfillGateTest {
         )
 
         assertTrue(gate.evaluate(walletId, identityId, userId).shouldRun)
+    }
+
+    @Test
+    fun gate_concludeNoRewind_refusesWhileAReceivedContactPredatesTheHeight() = runBlocking {
+        // S22, 22:24:42: the watch window expired with nothing accounted for
+        // and the gate concluded "nothing needed backfilling", recording a
+        // floor of 2_518_645 over a wallet whose oldest received contact
+        // dates from 2_382_103. That record then suppressed the rewind.
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET] = 2_518_643L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT] = fingerprintA
+
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_518_645L, 2_382_103L, 5, 2_382_103L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+
+        assertFalse(gate.concludeNoRewindObserved(walletId, identityId, userId))
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
+        // The marker survives, so the next launch provisions again.
+        assertEquals(2_518_643L, store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
+    }
+
+    @Test
+    fun gate_concludeNoRewind_recordsCoverageWhenNothingWasOwedARewind() = runBlocking {
+        // No RECEIVED requests means no receival chain and so nothing to
+        // backfill; this wallet must still reach the covered steady state.
+        val outgoingOnly = contactSetFingerprint(0, 140, 1_700_000_000_000L, 1_699_000_000_000L)
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET] = 1_000_000L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT] = outgoingOnly
+
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(1_000_042L, 790_000L, 140, null)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 0, fromUs = 140)
+        )
+
+        assertTrue(gate.concludeNoRewindObserved(walletId, identityId, userId))
+        assertEquals(1_000_042L, store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
+        // Recorded as ASSUMED, so later evidence can still refute it.
+        assertEquals(false, store.values[DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED])
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
+    }
+
+    @Test
+    fun gate_preFlagCoverageRecord_isTreatedAsAssumedAndReValidated() = runBlocking {
+        // A wallet upgrading with a bad floor already persisted (no OBSERVED
+        // flag, because the flag did not exist when it was written) must
+        // re-validate rather than stay stuck on it forever.
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR] = 2_518_645L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH] = 2_518_645L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT] = fingerprintA
+
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_518_646L, 2_382_103L, 5, 2_382_103L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+
+        assertTrue(gate.evaluate(walletId, identityId, userId).shouldRun)
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
+        assertEquals(2_518_646L, store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
     }
 }

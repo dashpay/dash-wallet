@@ -186,11 +186,31 @@ data class DashPayBackfillSignals(
      */
     val contactCoreHeightFloor: Long?,
     /** How many contact requests the SDK has persisted for the owner (diagnostics). */
-    val contactRequestCount: Int
+    val contactRequestCount: Int,
+    /**
+     * `min(coreHeightCreatedAt)` over the RECEIVED (`isOutgoing == false`)
+     * contact requests only — the subset that yields
+     * `dashpayReceivingFunds` accounts, and therefore the only subset whose
+     * history the DIP-15 rewind exists to re-scan.
+     *
+     * Unlike [contactCoreHeightFloor] this one IS load-bearing, in exactly
+     * one direction: it can only ever REFUSE to conclude "there was nothing
+     * to backfill". A contact request received at a core height below the
+     * height about to be recorded as covered means a rewind was OWED, so a
+     * pass that produced none proves the rewind was suppressed or has not
+     * persisted — never that it was unnecessary. It is never used to record
+     * coverage, only to withhold it, so a wrong value costs a re-scan and
+     * cannot lose payments.
+     *
+     * Null when the SDK is not started or holds no RECEIVED contact requests
+     * for the owner — in which case no rewind is owed and the conclusion is
+     * unobstructed.
+     */
+    val receivedContactCoreHeightFloor: Long? = null
 ) {
     companion object {
         /** Nothing observable — the gate treats this as "must re-run". */
-        val UNKNOWN = DashPayBackfillSignals(null, null, 0)
+        val UNKNOWN = DashPayBackfillSignals(null, null, 0, null)
     }
 }
 

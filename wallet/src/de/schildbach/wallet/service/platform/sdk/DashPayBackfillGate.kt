@@ -37,7 +37,20 @@ import javax.inject.Singleton
 data class BackfillCoverage(
     val floor: Long,
     val completedThroughHeight: Long,
-    val contactFingerprint: String
+    val contactFingerprint: String,
+    /**
+     * Whether [floor] was DIRECTLY OBSERVED as the durable synced height
+     * after the SDK's rewind, rather than ASSUMED from a pass that produced
+     * no rewind at all.
+     *
+     * An observed floor is authoritative — the SDK picked it, so a contact
+     * core height below it merely reflects the SDK subsetting by direction
+     * and establishment, and the record is never second-guessed. An assumed
+     * floor is only ever "the tip when we concluded there was nothing to
+     * do", so it stays open to being invalidated by later evidence that a
+     * rewind was in fact owed.
+     */
+    val observedFloor: Boolean = true
 )
 
 /**
@@ -99,10 +112,24 @@ data class BackfillObservation(
     /** Diagnostic `min(coreHeightCreatedAt)`; see [DashPayBackfillSignals.contactCoreHeightFloor]. */
     val sdkContactFloor: Long?,
     /** How many contact requests the SDK has persisted for us (diagnostics only). */
-    val sdkContactCount: Int = 0
+    val sdkContactCount: Int = 0,
+    /**
+     * `min(coreHeightCreatedAt)` over RECEIVED requests only; see
+     * [DashPayBackfillSignals.receivedContactCoreHeightFloor]. Consulted
+     * only to WITHHOLD a "nothing to backfill" conclusion.
+     */
+    val sdkReceivedContactFloor: Long? = null,
+    /**
+     * How many contact requests the APP's own Room table holds — the same
+     * read [contactFingerprint] is built from. Null when it could not be
+     * read. Exists so the gate can tell "the SDK looked and there is
+     * genuinely nothing" from "the SDK has not ingested the app's contacts
+     * yet", which look identical in [sdkContactCount] alone.
+     */
+    val appContactCount: Int? = null
 ) {
     companion object {
-        val UNKNOWN = BackfillObservation(null, null, null, 0)
+        val UNKNOWN = BackfillObservation(null, null, null, 0, null, null)
     }
 }
 
@@ -192,6 +219,54 @@ data class BackfillPassOutcome(
  * can be accounted for later regardless of when the SDK's watermark
  * persist lands.
  */
+/**
+ * Why concluding "there was nothing to backfill" is NOT admissible over
+ * [observation] at [heightToRecord] — or null when it is.
+ *
+ * "No rewind was observed" is only evidence of "no rewind was needed" when
+ * nothing was owed one. Two field-observed states make it worthless, and
+ * both were visible in the same tester log:
+ *
+ * 1. **A rewind was OWED.** The SDK holds a RECEIVED contact request whose
+ *    `coreHeightCreatedAt` is below the height about to be recorded. Its
+ *    receival addresses enter the filter match set forward-only, so the
+ *    range between them was scanned WITHOUT those addresses. Recording
+ *    coverage from [heightToRecord] would claim that range as covered and
+ *    permanently suppress the backfill that would have found those
+ *    payments. Not seeing the rewind means it was suppressed (the SDK's
+ *    `rescan_triggered` guard is in-memory and per-process) or has not
+ *    persisted yet (~9–60 s) — never that it was unnecessary.
+ * 2. **The SDK has not ingested the app's contacts yet.** The SDK's contact
+ *    store is filled by its own sync, minutes AFTER the app's Room table is
+ *    filled independently over dashj-platform. A gate consultation landing
+ *    in that window sees an empty SDK store, provisions nothing, observes no
+ *    rewind — and would conclude a wallet with contacts has nothing to
+ *    backfill. The app's own count is the tell: SDK silence next to a
+ *    non-empty app table is a not-yet, not a nothing.
+ *
+ * Withholding costs a re-scan on the next trigger. Concluding wrongly loses
+ * the payments the backfill exists to find, so this only ever refuses.
+ */
+internal fun noRewindConclusionBlockedBecause(
+    observation: BackfillObservation,
+    heightToRecord: Long
+): String? {
+    val receivedFloor = observation.sdkReceivedContactFloor
+    if (receivedFloor != null && receivedFloor < heightToRecord) {
+        return "the SDK holds a RECEIVED contact request created at core height " +
+            "$receivedFloor, below the $heightToRecord about to be recorded as covered — a " +
+            "rewind was OWED, so a pass that produced none proves it was suppressed or has " +
+            "not persisted, not that it was unnecessary"
+    }
+    val appCount = observation.appContactCount
+    if (observation.sdkContactCount == 0 && appCount != null && appCount > 0) {
+        return "the SDK holds no contact requests while the app's own table holds $appCount; " +
+            "the SDK has not ingested them yet, so provisioning had nothing to act on and its " +
+            "silence is not evidence that nothing needs backfilling"
+    }
+    return null
+}
+
 internal fun decideDashPayBackfill(
     observation: BackfillObservation,
     coverage: BackfillCoverage?,
@@ -349,9 +424,32 @@ internal fun decideDashPayBackfill(
                 armedToWrite = BackfillArmed(syncedHeight, fingerprint)
             )
         }
+        // An ASSUMED floor rests on "nothing needed backfilling". The SDK's
+        // contact store can arrive minutes later and refute that outright, and
+        // when it does the record is claiming a range it never scanned with
+        // the contact addresses watched. Re-validate it against the evidence
+        // that exists NOW, which the fingerprint (a same-set comparison)
+        // cannot see. An OBSERVED floor is never re-validated: the SDK chose
+        // it, so a contact below it is the expected result of the SDK
+        // subsetting by direction and establishment, and re-running on that
+        // would rewind on every launch forever.
+        if (!coverage.observedFloor) {
+            val blocked = noRewindConclusionBlockedBecause(observation, coverage.floor)
+            if (blocked != null) {
+                return BackfillDecision(
+                    shouldRun = true,
+                    reason = "the recorded coverage ASSUMED floor ${coverage.floor} (it was " +
+                        "never observed as a rewind) and later evidence refutes it: $blocked; " +
+                        "discarding the coverage and backfilling again",
+                    clearCoverage = true,
+                    armedToWrite = BackfillArmed(syncedHeight, fingerprint)
+                )
+            }
+        }
         return BackfillDecision(
             shouldRun = false,
-            reason = "backfill already covered: floor ${coverage.floor}, completed through " +
+            reason = "backfill already covered: floor ${coverage.floor} " +
+                "(${if (coverage.observedFloor) "observed" else "assumed"}), completed through " +
                 "${coverage.completedThroughHeight}, synced height now $syncedHeight, " +
                 "contact set unchanged ($fingerprint)"
         )
@@ -447,6 +545,15 @@ internal fun decideDashPayBackfillPassOutcome(
         report.pendingBefore == 0 &&
         !report.drainScheduled
     if (firstPassInProcess && settledAndClean) {
+        val blocked = noRewindConclusionBlockedBecause(before, syncedHeightAfter)
+        if (blocked != null) {
+            // Leaves the armed marker in place, so the next trigger re-runs.
+            return BackfillPassOutcome(
+                reason = "no rewind on this process's FIRST provisioning pass and the sweep " +
+                    "was clean and settled, but recording coverage would be unsound: " +
+                    "$blocked; recording nothing so the next trigger provisions again"
+            )
+        }
         return BackfillPassOutcome(
             reason = "no rewind on this process's FIRST provisioning pass and the sweep was " +
                 "clean and settled; there is nothing to backfill — recording coverage at " +
@@ -454,7 +561,9 @@ internal fun decideDashPayBackfillPassOutcome(
             coverageToWrite = BackfillCoverage(
                 floor = syncedHeightAfter,
                 completedThroughHeight = syncedHeightAfter,
-                contactFingerprint = fingerprint
+                contactFingerprint = fingerprint,
+                // ASSUMED, not observed: no rewind was ever seen.
+                observedFloor = false
             ),
             clearArmed = true
         )
@@ -669,11 +778,14 @@ class DashPayBackfillGateImpl @Inject constructor(
     ): BackfillDecision {
         return try {
             val signals = sdkService.readDashPayBackfillSignals(walletIdHex, ownerIdentityId)
+            val appContacts = readAppContactSet(ownerUserId)
             val observation = BackfillObservation(
                 syncedHeight = signals.syncedHeight,
-                contactFingerprint = readContactFingerprint(ownerUserId),
+                contactFingerprint = appContacts?.fingerprint,
                 sdkContactFloor = signals.contactCoreHeightFloor,
-                sdkContactCount = signals.contactRequestCount
+                sdkContactCount = signals.contactRequestCount,
+                sdkReceivedContactFloor = signals.receivedContactCoreHeightFloor,
+                appContactCount = appContacts?.count
             )
             lastObservation = observation
 
@@ -692,13 +804,16 @@ class DashPayBackfillGateImpl @Inject constructor(
             // about: the floor, what was persisted, and what we did about it.
             log.info(
                 "DashPay coreHeight backfill gate: floor(min coreHeightCreatedAt over {} SDK " +
-                    "contact request(s))={}, syncedHeight={}, persistedCoverage={}, " +
-                    "persistedInProgress={}, persistedArmed={}, appContactSet={} -> {} ({})",
+                    "contact request(s))={} (received-only floor={}), syncedHeight={}, " +
+                    "persistedCoverage={}, persistedInProgress={}, persistedArmed={}, " +
+                    "appContactSet={} -> {} ({})",
                 observation.sdkContactCount,
                 observation.sdkContactFloor ?: "unknown",
+                observation.sdkReceivedContactFloor ?: "unknown",
                 observation.syncedHeight ?: "unknown",
                 coverage?.let {
-                    "floor=${it.floor}/completedThrough=${it.completedThroughHeight}"
+                    "floor=${it.floor}(${if (it.observedFloor) "observed" else "assumed"})" +
+                        "/completedThrough=${it.completedThroughHeight}"
                 } ?: "none",
                 inProgress?.let { "floor=${it.floor}/target=${it.targetHeight}" } ?: "none",
                 armed?.let { "target=${it.targetHeight}" } ?: "none",
@@ -762,10 +877,10 @@ class DashPayBackfillGateImpl @Inject constructor(
             // Something already accounted for the pass; leave it alone.
             readInProgress() != null || readCoverage() != null -> false
             else -> {
-                val height = sdkService
-                    .readDashPayBackfillSignals(walletIdHex, ownerIdentityId)
-                    .syncedHeight
-                val fingerprint = readContactFingerprint(ownerUserId)
+                val signals = sdkService.readDashPayBackfillSignals(walletIdHex, ownerIdentityId)
+                val height = signals.syncedHeight
+                val appContacts = readAppContactSet(ownerUserId)
+                val fingerprint = appContacts?.fingerprint
                 when {
                     height == null || fingerprint == null -> false
                     // A changed contact set needs its own backfill, so this
@@ -775,23 +890,52 @@ class DashPayBackfillGateImpl @Inject constructor(
                     // evidence, not ours. Leave it to the next consultation.
                     height < armed.targetHeight -> false
                     else -> {
-                        writeCoverage(
-                            BackfillCoverage(
-                                floor = height,
-                                completedThroughHeight = height,
-                                contactFingerprint = fingerprint
-                            )
-                        )
-                        clearArmed()
-                        log.info(
-                            "DashPay coreHeight backfill: armed pass (target {}) produced no " +
-                                "rewind across the whole observation window and the contact set " +
-                                "is unchanged — nothing needed backfilling; recording coverage " +
-                                "at height {} so later launches stop re-provisioning",
-                            armed.targetHeight,
+                        // A quiet observation window is only evidence when
+                        // nothing was owed a rewind. Refusing here leaves the
+                        // armed marker, so the next launch provisions again.
+                        val blocked = noRewindConclusionBlockedBecause(
+                            BackfillObservation(
+                                syncedHeight = height,
+                                contactFingerprint = fingerprint,
+                                sdkContactFloor = signals.contactCoreHeightFloor,
+                                sdkContactCount = signals.contactRequestCount,
+                                sdkReceivedContactFloor = signals.receivedContactCoreHeightFloor,
+                                appContactCount = appContacts.count
+                            ),
                             height
                         )
-                        true
+                        if (blocked != null) {
+                            log.info(
+                                "DashPay coreHeight backfill: armed pass (target {}) produced " +
+                                    "no rewind across the whole observation window, but NOT " +
+                                    "concluding the backfill was unnecessary — {}; leaving the " +
+                                    "armed marker so the next launch provisions again",
+                                armed.targetHeight,
+                                blocked
+                            )
+                            false
+                        } else {
+                            writeCoverage(
+                                BackfillCoverage(
+                                    floor = height,
+                                    completedThroughHeight = height,
+                                    contactFingerprint = fingerprint,
+                                    // ASSUMED: no rewind was ever observed.
+                                    observedFloor = false
+                                )
+                            )
+                            clearArmed()
+                            log.info(
+                                "DashPay coreHeight backfill: armed pass (target {}) produced " +
+                                    "no rewind across the whole observation window and the " +
+                                    "contact set is unchanged — nothing needed backfilling; " +
+                                    "recording coverage at height {} so later launches stop " +
+                                    "re-provisioning",
+                                armed.targetHeight,
+                                height
+                            )
+                            true
+                        }
                     }
                 }
             }
@@ -813,13 +957,21 @@ class DashPayBackfillGateImpl @Inject constructor(
         false
     }
 
+    /** The app's own contact-request set: its fingerprint and its size. */
+    private data class AppContactSet(val fingerprint: String, val count: Int)
+
     /** Null when the app's contact table cannot be read — treated as unknown. */
-    private suspend fun readContactFingerprint(ownerUserId: String): String? = try {
-        contactSetFingerprint(
-            requestsToUs = contactRequestDao.countAllRequestsToUser(ownerUserId),
-            requestsFromUs = contactRequestDao.countAllRequestsFromUser(ownerUserId),
-            latestToUsMillis = contactRequestDao.getLastTimestampToUser(ownerUserId),
-            latestFromUsMillis = contactRequestDao.getLastTimestampFromUser(ownerUserId)
+    private suspend fun readAppContactSet(ownerUserId: String): AppContactSet? = try {
+        val toUs = contactRequestDao.countAllRequestsToUser(ownerUserId)
+        val fromUs = contactRequestDao.countAllRequestsFromUser(ownerUserId)
+        AppContactSet(
+            fingerprint = contactSetFingerprint(
+                requestsToUs = toUs,
+                requestsFromUs = fromUs,
+                latestToUsMillis = contactRequestDao.getLastTimestampToUser(ownerUserId),
+                latestFromUsMillis = contactRequestDao.getLastTimestampFromUser(ownerUserId)
+            ),
+            count = toUs + fromUs
         )
     } catch (e: CancellationException) {
         throw e
@@ -845,7 +997,12 @@ class DashPayBackfillGateImpl @Inject constructor(
             dashPayConfig.get(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH) ?: return null
         val fingerprint =
             dashPayConfig.get(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) ?: return null
-        return BackfillCoverage(floor, through, fingerprint)
+        // Absent on records written before the flag existed. Those were
+        // written by the code path that could assume a floor, so treat them
+        // as ASSUMED: a wallet already carrying a bad floor then re-validates
+        // once instead of staying stuck on it forever.
+        val observed = dashPayConfig.get(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED) ?: false
+        return BackfillCoverage(floor, through, fingerprint, observed)
     }
 
     private suspend fun writeCoverage(coverage: BackfillCoverage) {
@@ -856,12 +1013,16 @@ class DashPayBackfillGateImpl @Inject constructor(
         dashPayConfig.set(
             DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT, coverage.contactFingerprint
         )
+        dashPayConfig.set(
+            DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED, coverage.observedFloor
+        )
     }
 
     private suspend fun clearCoverage() {
         dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR)
         dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH)
         dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT)
+        dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED)
     }
 
     private suspend fun readInProgress(): BackfillInProgress? {
