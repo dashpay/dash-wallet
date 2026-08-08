@@ -99,6 +99,18 @@ sealed class SdkWriteResult<out T> {
  * Kept as a top-level pure function so the table is unit-testable on the
  * host JVM without any native or Android dependency.
  */
+/**
+ * [classifyBroadcastFailure] reasons for the two PRE-BROADCAST funding
+ * shortfalls that are retryable with a smaller amount (nothing submitted,
+ * selection released). Named so retry logic — e.g. a MAX top-up's one-shot
+ * fee-adjusted retry — matches the classifier's own verdict instead of
+ * re-matching raw engine messages that differ per build path.
+ */
+internal const val REASON_PRE_BROADCAST_BUILD_SHORTFALL =
+    "pre-broadcast build failure (insufficient funds / coin selection)"
+internal const val REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION =
+    "pre-broadcast asset-lock coin-selection failure"
+
 internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = when {
     t is DashSdkError.InvalidParameter ||
         t is DashSdkError.InvalidState ||
@@ -155,7 +167,7 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
             m.contains("transaction build failed") ||
             m.contains("set_funding failed")
     } == true ->
-        SdkWriteResult.NotBroadcast("pre-broadcast build failure (insufficient funds / coin selection)", t)
+        SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_BUILD_SHORTFALL, t)
     // Shielded note selection (rs-platform-wallet note_selection.rs) runs
     // strictly BEFORE proof generation or broadcast — nothing was submitted
     // and the selected notes are released. Surfaced as a WalletOperation
@@ -182,7 +194,7 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // real shape. Message-matched until the SDK exposes typed errors.
     // Retryable with a smaller amount.
     t.message?.contains("asset lock coin selection is short") == true ->
-        SdkWriteResult.NotBroadcast("pre-broadcast asset-lock coin-selection failure", t)
+        SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION, t)
     // The SDK's SPV client wasn't running when broadcast was attempted, so the
     // tx never left the device (observed live: the interim shield pipeline
     // broadcasts via the shadow SPV, which our recovery paths stop/reset — the

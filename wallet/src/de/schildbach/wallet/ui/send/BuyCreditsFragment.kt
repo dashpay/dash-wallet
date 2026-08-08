@@ -1,42 +1,28 @@
 package de.schildbach.wallet.ui.send
 
-import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.data.CreditBalanceInfo
-import de.schildbach.wallet.integration.android.BitcoinIntegration
-import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import androidx.work.WorkInfo
+import de.schildbach.wallet.service.platform.work.PerformTopUpOperation
+import de.schildbach.wallet.service.platform.work.PerformTopUpWorker
+import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.more.tools.ConfirmTopUpDialogFragment
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.crypto.KeyCrypterException
-import org.bitcoinj.utils.ExchangeRate
-import org.dash.wallet.common.money.MonetaryFormat
-import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.services.LeftoverBalanceException
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.slf4j.LoggerFactory
-import de.schildbach.wallet.util.format
-import de.schildbach.wallet.util.setAmount
-import de.schildbach.wallet.util.setFiatAmount
-import de.schildbach.wallet.util.toDashjFiat
-import de.schildbach.wallet.util.toDashjCoin
 import de.schildbach.wallet.util.toNeutralCoin
-import de.schildbach.wallet.util.toNeutralFiat
-import de.schildbach.wallet.util.toTxId
-import de.schildbach.wallet.util.toSha256Hash
 
 class BuyCreditsFragment : SendCoinsFragment() {
     companion object {
         private val log = LoggerFactory.getLogger(BuyCreditsFragment::class.java)
+
+        /** The smallest top-up this screen accepts (exclusive bound). */
+        private val MIN_TOP_UP = Coin.valueOf(50_000)
     }
 
     private val buyCreditsViewModel by viewModels<BuyCreditsViewModel>()
@@ -44,29 +30,34 @@ class BuyCreditsFragment : SendCoinsFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.paymentHeader.setTitle(getString(R.string.credit_balance_button_buy))
-        enterAmountViewModel.setMinAmount(org.dash.wallet.common.money.Coin.valueOf(50_000))
+        enterAmountViewModel.setMinAmount(MIN_TOP_UP)
         binding.paymentHeader.setPreposition("")
-        viewModel.isAssetLock = true
     }
 
     override fun updateView() {
         val isReplaying = viewModel.isBlockchainReplaying.value
-        val dryRunException = viewModel.dryRunException
 
-        if (isReplaying != true && dryRunException != null) {
-            when (dryRunException) {
-                is InsufficientMoneyException -> {
-                    val errorMessage = getErrorMessage(R.string.credit_balance_insufficient_error_message)
-                    enterAmountFragment?.setError(errorMessage)
-                    return
-                }
-                else -> {}
-            }
+        if (isReplaying != true && viewModel.isInsufficientFunds) {
+            val errorMessage = getErrorMessage(R.string.credit_balance_insufficient_error_message)
+            enterAmountFragment?.setError(errorMessage)
+            return
         }
+
+        // Below the top-up minimum the Continue button greys out; say WHY
+        // instead of leaving the user guessing (the amount must exceed the
+        // minimum — the button enables above it, not at it).
+        val entered = enterAmountViewModel.amount.value
+        if (entered != null && entered.isPositive && entered.isLessThanOrEqualTo(MIN_TOP_UP)) {
+            enterAmountFragment?.setError(
+                getString(R.string.buy_credits_below_minimum, MIN_TOP_UP.toFriendlyString())
+            )
+            return
+        }
+        enterAmountFragment?.setError("")
 
         // if there is no value (null) or it is zero, then display the message in the
         // enter amount fragment using 0.01 DASH
-        val amount = enterAmountViewModel.amount.value?.toDashjCoin() ?: Coin.CENT
+        val amount = entered ?: Coin.CENT
         val operations = if (amount.isZero) {
             Coin.CENT.value
         } else {
@@ -84,152 +75,67 @@ class BuyCreditsFragment : SendCoinsFragment() {
     }
 
     override suspend fun showPaymentConfirmation() {
-        val dryRunRequest = viewModel.dryrunSendRequest ?: return
-        //val address = viewModel.basePaymentIntent.address?.toBase58() ?: return
-
-        val txFee = dryRunRequest.tx.fee
-        val amount: Coin?
-        val total: String?
-
-        if (dryRunRequest.emptyWallet) {
-            amount = enterAmountViewModel.amount.value?.toDashjCoin()?.minus(txFee)
-            total = enterAmountViewModel.amount.value?.toPlainString()
-        } else {
-            amount = enterAmountViewModel.amount.value?.toDashjCoin()
-            total = amount?.add(txFee ?: Coin.ZERO)?.toPlainString()
-        }
-
-        val rate = enterAmountViewModel.selectedExchangeRate.value
-        val exchangeRate = rate?.let {
-            org.dash.wallet.common.money.ExchangeRate(org.dash.wallet.common.money.Coin.COIN, rate.fiat)
-        }
-        val amountStr = amount?.let { MonetaryFormat.BTC.noCode().format(it).toString() } ?: ""
-        val fee = txFee?.toPlainString() ?: ""
-
-        //var dashPayProfile: DashPayProfile? = null
-
-//        if (viewModel.contactData.value?.requestReceived == true) {
-//            dashPayProfile = viewModel.contactData.value?.dashPayProfile
-//        }
-//
-//        val isPendingContactRequest = viewModel.contactData.value?.isPendingRequest == true
-//        val username = dashPayProfile?.username
-//        val displayName = (dashPayProfile?.displayName ?: "").ifEmpty { username }
-//        val avatarUrl = dashPayProfile?.avatarUrl
-
-        // need to put the conformation for used with Create UserName
+        // The dialog reads the amount and rate it displays from the shared
+        // SendCoinsViewModel and its own ViewModel, so nothing is computed or
+        // passed here. (The dashj dry-run figures this method used to derive —
+        // fee, total, send-max amount — were never read by anything, and the
+        // null `tx.fee` post-cutover made deriving them a crash risk.)
         val dialog = ConfirmTopUpDialogFragment()
         dialog.show(requireActivity()) { confirmed ->
             if (confirmed) {
                 lifecycleScope.launch {
-                    handleGo(true)
+                    handleGo()
                 }
             }
-        }
-    }
-
-    private suspend fun handleGo(checkBalance: Boolean) {
-        if (viewModel.dryrunSendRequest == null) {
-            log.error("illegal state dryrunSendRequest == null")
-            return
-        }
-
-        val editedAmount = enterAmountViewModel.amount.value
-        val rate = enterAmountViewModel.selectedExchangeRate.value
-
-        if (editedAmount != null) {
-            // Post-cutover the dashj L1 engine is HELD (0 UTXOs), so building
-            // the top-up asset lock with dashj fails InsufficientMoneyException
-            // — the funds live in the SDK. Route top-up funding through the
-            // SDK's fused topUpFromCore (resume-gated) instead of the dashj
-            // asset-lock + TopupIdentityWorker chain. There is NO dashj tx/txid,
-            // so the SDK outcome is observed directly (no TransactionResult
-            // screen). Pre-cutover this branch is skipped and the dashj path
-            // below is byte-for-byte unchanged.
-            if (buyCreditsViewModel.isCutoverCommitted()) {
-                handleSdkTopUp(editedAmount.toDashjCoin().value)
-                viewModel.resetState()
-                return
-            }
-
-            val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it.toDashjFiat()) }
-
-            try {
-                // TODO: there are no events for Topups
-                // viewModel.logEvent(AnalyticsConstants.Topup.ENTER_AMOUNT_TOPUP)
-
-                val maxSelected = enterAmountFragment?.maxSelected ?: false
-                if (maxSelected) {
-                    viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
-                }
-                // buy do an asset lock transaction or we do this in the worker?
-                val topUpKey = viewModel.getNextKey()
-                val tx = viewModel.signAndSendAssetLock(editedAmount.toDashjCoin(), exchangeRate, checkBalance, topUpKey, maxSelected)
-                buyCreditsViewModel.topUpTransaction = tx
-
-                onSignAndSendPaymentSuccess(tx)
-            } catch (ex: LeftoverBalanceException) {
-                val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
-
-                if (shouldContinue == true) {
-                    handleGo(false)
-                }
-            } catch (ex: InsufficientMoneyException) {
-                showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
-            } catch (ex: KeyCrypterException) {
-                log.info("send topup failure (encryption)", ex)
-                showFailureDialog(ex)
-            } catch (ex: Wallet.CouldNotAdjustDownwards) {
-                showEmptyWalletFailedDialog()
-            } catch (ex: Exception) {
-                showFailureDialog(ex)
-            }
-
-            viewModel.resetState()
-        }
-    }
-
-    private fun onSignAndSendPaymentSuccess(transaction: Transaction) {
-//        viewModel.logSentEvent(enterAmountViewModel.dashToFiatDirection.value ?: true)
-        val callingActivity = requireActivity().callingActivity
-
-        if (callingActivity != null) {
-            log.info("returning result to calling activity: {}", callingActivity.flattenToString())
-            val resultIntent = Intent()
-            BitcoinIntegration.transactionHashToResult(
-                resultIntent,
-                transaction.txId.toString()
-            )
-            requireActivity().setResult(Activity.RESULT_OK, resultIntent)
-        }
-        lifecycleScope.launch {
-            buyCreditsViewModel.topUpOnPlatform()
-            showTransactionResult(transaction, false)
-            playSentSound()
-            requireActivity().finish()
         }
     }
 
     /**
-     * Post-cutover top-up: fund the identity's credit balance through the SDK's
-     * resume-gated, fused topUpFromCore and observe the three-valued outcome
-     * directly. Unlike the dashj path there is no funding Transaction, so the
-     * TransactionResultActivity screen is skipped — the new credit balance is
-     * surfaced by the credits UI on return.
-     *
-     * Funds safety: the executor runs the mandatory resume gate before any
-     * fresh build and never falls back to dashj. NotBroadcast means nothing was
-     * spent (retry-safe); Ambiguous means the top-up MAY be on chain — the
-     * executor keeps it sticky (refuses any further attempt this process) and
+     * Phase 2/3 (MO-998): SDK-only — the dashj purchase path
+     * (signAndSendAssetLock + TopupIdentityWorker) is deleted. Pre-cutover,
+     * [de.schildbach.wallet.service.platform.sdk.SdkTransparentTopUp]'s
+     * fail-closed gate refuses with NotBroadcast and nothing is spent.
+     */
+    /**
+     * Whether [amount] is a MAX ("spend everything") purchase — the whole
+     * spendable balance, keyed off the SDK-overlaid balance (dashj's is held
+     * at 0 post-cutover). Same rule the shielded Internal Transfer screen
+     * uses (`amount == availableBalance` in ShieldedTransferViewModel).
+     */
+    private fun isMaxSpend(amount: Coin): Boolean {
+        val available = viewModel.maxOutputAmount.value?.toNeutralCoin() ?: return false
+        return available.isPositive && amount.isGreaterThanOrEqualTo(available)
+    }
+
+    private suspend fun handleGo() {
+        val editedAmount = enterAmountViewModel.amount.value ?: return
+        // MAX follows the shielded Internal Transfer pattern: submit the FULL
+        // balance and let the worker make ONE fee-adjusted retry when the
+        // asset-lock coin selection comes up short pre-broadcast (the exact
+        // L1 fee is unknowable app-side). See PerformTopUpWorker.
+        val maxSpend = enterAmountFragment?.maxSelected == true || isMaxSpend(editedAmount)
+        handleSdkTopUp(editedAmount.value, maxSpend)
+        viewModel.resetState()
+    }
+
+    /**
+     * The purchase runs as UNIQUE background work ([PerformTopUpWorker] via
+     * the ViewModel) so a lock screen / rotation / process death cannot
+     * cancel it mid-flight; this screen only OBSERVES the work. Success →
+     * finish (the credits UI shows the new balance on return); failure with
+     * nothing spent → standard error dialog, retry-safe; unconfirmed →
+     * the recovery worker completes any tracked lock in the background and
      * the user is told NOT to retry.
      */
-    private suspend fun handleSdkTopUp(amountDuffs: Long) {
+    private suspend fun handleSdkTopUp(amountDuffs: Long, isMaxSpend: Boolean) {
         // PRE-FLIGHT funding eligibility: the asset-lock build only selects
         // FINAL (confirmed/IS-locked) BIP44 coins — refuse HERE, before the
         // spend attempt, when a display balance backed by non-final or
         // out-of-account outputs cannot fund the lock (fail-open on any
-        // preflight hiccup; the real build stays authoritative).
-        if (!buyCreditsViewModel.canFundTopUp(amountDuffs)) {
+        // preflight hiccup; the real build stays authoritative). A MAX spend
+        // is preflighted on its fee-adjusted retry amount — the full balance
+        // can never clear the preflight's fee headroom by definition.
+        if (!buyCreditsViewModel.canFundTopUp(amountDuffs, isMaxSpend)) {
             AdaptiveDialog.create(
                 R.drawable.ic_error,
                 getString(R.string.credit_balance_button_buy),
@@ -242,30 +148,49 @@ class BuyCreditsFragment : SendCoinsFragment() {
             ).showAsync(requireActivity())
             return
         }
-        val progress = AdaptiveDialog.progress(getString(R.string.send_coins_sending_msg))
-        progress.show(parentFragmentManager, "buy_credits_sdk_topup")
-        val result = try {
-            buyCreditsViewModel.topUpViaSdk(amountDuffs)
-        } finally {
-            progress.dismissAllowingStateLoss()
-        }
+        buyCreditsViewModel.startTopUp(amountDuffs, isMaxSpend)
+        observeTopUpWork()
+    }
 
-        when (result) {
-            is SdkWriteResult.Broadcast -> {
-                log.info("SDK top-up broadcast; new credit balance {}", result.value)
-                onSdkTopUpSuccess()
-            }
-            is SdkWriteResult.NotBroadcast -> {
-                // Provably nothing spent — retry-safe. Surface the standard
-                // send-error dialog so the user can try again.
-                log.warn("SDK top-up not sent: {}", result.reason)
-                showFailureDialog(Exception(result.reason))
-            }
-            is SdkWriteResult.Ambiguous -> {
-                // The top-up MAY have gone through; the executor is sticky and
-                // refuses any retry. Never offer a retry (double-pay risk).
-                log.error("SDK top-up outcome unconfirmed", result.cause)
-                showSdkTopUpAmbiguousDialog()
+    private fun observeTopUpWork() {
+        buyCreditsViewModel.topUpWorkStatus().observe(viewLifecycleOwner) { infos ->
+            val work = infos.lastOrNull() ?: return@observe
+            when (work.state) {
+                WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> {
+                    // Progress circle on the Send button for as long as the
+                    // purchase is actually running — the screen must stay
+                    // busy until the work reaches a terminal state, because
+                    // a FAILURE must be shown HERE (closing at the SDK
+                    // hand-off was tried and reverted: it silenced every
+                    // post-hand-off failure dialog, e.g. a MAX retry refused
+                    // below the Platform floor). A MAX purchase waiting for
+                    // a chain-locked block legitimately holds this spinner
+                    // for minutes; the purchase itself survives the screen
+                    // (unique work + recovery worker) if the user backs out.
+                    enterAmountFragment?.setContinueLoading(true)
+                }
+                WorkInfo.State.SUCCEEDED -> {
+                    // Deliberately do NOT clear the loading state: the screen
+                    // is about to finish, and re-enabling the button first
+                    // leaves a brief window where it looks tappable again.
+                    buyCreditsViewModel.pruneTopUpWork()
+                    log.info(
+                        "SDK top-up credited; new balance {}",
+                        work.outputData.getLong(PerformTopUpWorker.KEY_NEW_BALANCE, -1)
+                    )
+                    onSdkTopUpSuccess()
+                }
+                WorkInfo.State.FAILED -> {
+                    enterAmountFragment?.setContinueLoading(false)
+                    buyCreditsViewModel.pruneTopUpWork()
+                    val ambiguous = work.outputData.getBoolean(PerformTopUpWorker.KEY_AMBIGUOUS, false)
+                    val reason = work.outputData.getString(BaseWorker.KEY_ERROR_MESSAGE) ?: "top-up failed"
+                    log.warn("SDK top-up failed (ambiguous={}): {}", ambiguous, reason)
+                    lifecycleScope.launch {
+                        if (ambiguous) showSdkTopUpAmbiguousDialog() else showFailureDialog(Exception(reason))
+                    }
+                }
+                WorkInfo.State.CANCELLED -> enterAmountFragment?.setContinueLoading(false)
             }
         }
     }

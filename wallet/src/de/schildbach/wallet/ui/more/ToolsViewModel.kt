@@ -32,6 +32,7 @@ import de.schildbach.wallet.service.DashjDiagnosticSyncState
 import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -268,6 +269,25 @@ class ToolsViewModel @Inject constructor(
     }
 
     suspend fun setCreditsExplained() = dashPayConfig.set(DashPayConfig.CREDIT_INFO_SHOWN, true)
+
+    /**
+     * Persist "the credits explainer has been seen" from a scope that
+     * OUTLIVES the dialog. Writing it inside the sheet's own lifecycle
+     * scope loses the race when the user dismisses immediately — the
+     * coroutine is cancelled before the DataStore write lands and the
+     * explainer re-appears on the next visit (observed on device).
+     * [NonCancellable] also protects it from this ViewModel being cleared
+     * as the Buy Credits screen launches.
+     */
+    fun markCreditsExplained() {
+        viewModelScope.launch(NonCancellable) {
+            try {
+                setCreditsExplained()
+            } catch (e: Exception) {
+                log.warn("failed to persist the credits-explainer flag", e)
+            }
+        }
+    }
 
     suspend fun creditsExplained() = dashPayConfig.get(DashPayConfig.CREDIT_INFO_SHOWN) ?: false
 

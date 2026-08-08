@@ -173,6 +173,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.setOnClickListener {
+            if (binding.continueProgress.isVisible) return@setOnClickListener
             val dashAmount = binding.amountView.dashAmount
             val fiatAmount = binding.amountView.fiatAmount
             viewModel.onContinueEvent.value = Pair(dashAmount, fiatAmount)
@@ -189,6 +190,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
 
         viewModel.canContinue.observe(viewLifecycleOwner) { canContinue ->
+            if (continueLoading) return@observe
             binding.continueBtn.isEnabled = if (!didAuthorize && requirePinForBalance && !viewModel.blockContinue) {
                 viewModel.amount.value?.isPositive == true
             } else {
@@ -213,6 +215,27 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
             binding.errorLabel.isVisible = errorText.isNotEmpty()
         }
     }
+
+    /**
+     * Show a progress circle on the continue button and DISABLE it — for
+     * hosts whose action runs asynchronously after the tap. The disabled
+     * state is sticky: [canContinue] emissions cannot re-enable the button
+     * while loading (that observer would otherwise flip it back on within
+     * milliseconds).
+     */
+    fun setContinueLoading(loading: Boolean) {
+        continueLoading = loading
+        lifecycleScope.launchWhenStarted {
+            binding.continueProgress.isVisible = loading
+            binding.continueBtn.text = if (loading) "" else getString(R.string.button_continue)
+            // isEnabled alone gives the app's standard disabled look: the
+            // button theme already maps it to `disabledBackgroundColor`.
+            binding.continueBtn.isEnabled = !loading
+        }
+    }
+
+    /** True while [setContinueLoading] holds the button in its busy state. */
+    private var continueLoading = false
 
     fun applyMaxAmount() {
         lifecycleScope.launchWhenStarted {
