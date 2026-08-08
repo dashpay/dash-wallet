@@ -128,6 +128,25 @@ internal fun isBoundWalletStale(latchedFingerprint: String?, currentFingerprint:
     currentFingerprint != null && latchedFingerprint != currentFingerprint
 
 /**
+ * One line describing a deferred-contact-account drain pass, for EVERY
+ * outcome including the two that do no work.
+ *
+ * Silence is not an acceptable outcome here. wallet.log is the only artifact a
+ * remote tester can send back and its appender is INFO+, so a drain that
+ * logged the empty and unbound cases at debug read exactly like a drain that
+ * was never wired — which is what the first field report of this fix could not
+ * distinguish. Every line therefore carries `queued=`, so its presence proves
+ * the pass ran and its absence proves it did not.
+ */
+internal fun describeContactDrain(report: DashPayContactDrainReport): String = when {
+    !report.bound -> "queued=n/a — SDK wallet not loaded yet, nothing attempted"
+    report.queuedBefore == 0 -> "queued=0 built=0 stillQueued=0 — nothing deferred"
+    else -> "queued=${report.queuedBefore} built=${report.built} " +
+        "stillQueued=${report.queuedAfter} (blocked or still draining), " +
+        "drainScheduled=${report.drainScheduled}"
+}
+
+/**
  * Phase 3f production wiring (`docs/kotlin-sdk-migration-plan.md`): make
  * the Kotlin-SDK wallet binding ([DashSdkService.bindAppWallet]) and
  * identity discovery ([DashSdkService.discoverIdentities]) actually happen
@@ -588,28 +607,22 @@ class SdkWalletBinder internal constructor(
      * drain") and then nothing, so a queue that never drains is invisible
      * after the session that filled it.
      *
+     * Reports on EVERY pass, at INFO, including the empty and unbound cases
+     * ([describeContactDrain]) — wallet.log's appender is INFO+, so the
+     * earlier debug-level "queue empty" / "not loaded yet" branches were
+     * indistinguishable from the drain never running at all, which is exactly
+     * the question a tester's log has to answer.
+     *
      * Never throws: an unavailable drain (locked device, seed verify) is a
      * normal state and the queue survives for the next pass.
      */
     private suspend fun drainDeferredAccountBuilds(walletId: String) {
         try {
             val report = sdkService.drainDashPayContactAccountBuilds(walletId)
-            when {
-                !report.bound -> log.debug(
-                    "DashPay account-build drain: SDK wallet {}… not loaded yet",
-                    walletId.take(8)
-                )
-                report.queuedBefore == 0 -> log.debug(
-                    "DashPay account-build drain on {}…: queue empty, nothing deferred",
-                    walletId.take(8)
-                )
-                else -> log.info(
-                    "DashPay account-build drain on {}…: queued={} built={} stillQueued={} " +
-                        "(blocked or still draining), drainScheduled={}",
-                    walletId.take(8), report.queuedBefore, report.built, report.queuedAfter,
-                    report.drainScheduled
-                )
-            }
+            log.info(
+                "DashPay account-build drain on {}…: {}",
+                walletId.take(8), describeContactDrain(report)
+            )
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn(

@@ -1210,6 +1210,56 @@ class SdkWalletBinderTest {
     }
 
     @Test
+    fun provisioning_backfillGateSaysSkip_drainsEvenWhenTheQueueIsEmpty() = runBlocking {
+        // The live S21 log showed the gate's SKIPPING REWIND line and then
+        // NOTHING from the drain, which reads identically whether the drain
+        // was unwired or merely found an empty queue (deferredContactBuilds=0
+        // on that device — it was the latter). The pass must run, and say so,
+        // regardless of what it finds.
+        val sdk = readySdk()
+        sdk.onDrain = { _ ->
+            DashPayContactDrainReport(
+                bound = true, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
+            )
+        }
+        val gate = FakeBackfillGate(shouldRun = false)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.drainCalls)
+        assertEquals(walletId, sdk.lastDrainWalletId)
+    }
+
+    @Test
+    fun drainReport_saysQueuedOnEveryOutcome_soAnAbsentLineMeansTheDrainDidNotRun() {
+        val empty = describeContactDrain(
+            DashPayContactDrainReport(
+                bound = true, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
+            )
+        )
+        val unbound = describeContactDrain(
+            DashPayContactDrainReport(
+                bound = false, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
+            )
+        )
+        val worked = describeContactDrain(
+            DashPayContactDrainReport(
+                bound = true, queuedBefore = 182, drainScheduled = true, queuedAfter = 6
+            )
+        )
+        // The grep a tester's log is read with.
+        assertTrue(empty.contains("queued="))
+        assertTrue(unbound.contains("queued="))
+        assertTrue(worked.contains("queued=182"))
+        assertTrue(worked.contains("built=176"))
+        assertTrue(worked.contains("stillQueued=6"))
+        // And the three outcomes must not read alike.
+        assertEquals(3, setOf(empty, unbound, worked).size)
+    }
+
+    @Test
     fun provisioning_drainFailure_isContainedLikeTheRestOfThePass() = runBlocking {
         val sdk = readySdk()
         sdk.onDrain = { _ -> error("keystore unavailable") }
