@@ -32,7 +32,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -58,6 +60,7 @@ import java.io.IOException
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardingBinding
 import de.schildbach.wallet_test.databinding.ActivityOnboardingPermLockBinding
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.OnboardingState
@@ -185,6 +188,16 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
         OnboardingState.init(walletApplication.configuration)
         OnboardingState.clear()
+
+        // A Reset Wallet is still destroying data. This screen is where the
+        // wipe parks the user the moment they confirm it — before anything is
+        // deleted — so none of the routing below applies yet: the wallet file
+        // may still be on disk, the wallet object may still be in memory, and
+        // both are on their way out. Show the reset and wait for it.
+        if (walletApplication.isWipeInProgress) {
+            showWipeInProgressScreen()
+            return
+        }
 
         // Degraded launch (wallet file exists but no wallet object): either the
         // load itself failed past recovery (e.g. OOM on a very large wallet) or
@@ -362,6 +375,41 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private fun onboarding() {
         initViewModel()
+    }
+
+    /**
+     * The reset's own screen. It replaces the progress dialog that used to sit
+     * on the Security screen: that dialog left the whole wallet UI live behind
+     * it, so a mid-wipe auto-logout took the user through the lock screen and
+     * straight back into a wallet whose file and keys had already been
+     * deleted — the "it didn't actually reset" report.
+     *
+     * No onboarding controls are wired up here, deliberately: creating or
+     * restoring a wallet while the previous one is still being torn down would
+     * race the teardown.
+     */
+    private fun showWipeInProgressScreen() {
+        log.info("reset in progress — holding onboarding until the wipe finishes")
+        binding.composeContainer.setContent {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp, 10.dp, 20.dp, 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                CircularProgressIndicator()
+                Text(
+                    text = stringResource(R.string.reset_wallet_text),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        lifecycleScope.launch {
+            walletApplication.wipeInProgress.first { !it }
+            log.info("reset finished — re-running the onboarding routing")
+            recreate()
+        }
     }
 
     /**

@@ -20,11 +20,16 @@
 package de.schildbach.wallet
 
 import androidx.work.WorkManager
+import de.schildbach.wallet.util.WalletWipeSequence
+import de.schildbach.wallet.util.WalletWipeState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.BaseConfig
 import org.slf4j.LoggerFactory
 
@@ -32,39 +37,117 @@ object WalletApplicationExt {
     private val log = LoggerFactory.getLogger(WalletApplicationExt::class.java)
 
     /**
-     * Clears every live [BaseConfig]-backed DataStore through its API — one
-     * atomic edit that resets memory AND disk together — and returns the file
-     * names cleared (e.g. "dashpay.preferences_pb"). Called from the Java wipe
-     * path ([WalletApplication.finalizeWipe] -> clearDatastorePrefs), which then
-     * file-deletes only the datastore files NOT in the returned set: configs
-     * never instantiated this process have no live in-memory cache, so raw file
-     * deletion is safe for them, while deleting a live config's file
-     * out-of-band desynchronizes its cache from disk (see [BaseConfig]).
+     * Owns the wipe resumed at launch. Deliberately NOT a scope that anything
+     * else can cancel: the wipe has already destroyed part of the wallet by
+     * the time it runs, so it has to reach the end.
      */
-    fun clearLiveConfigs(): Set<String> = runBlocking {
-        BaseConfig.clearAllLiveInstances()
+    private val wipeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Phase 1-2 of Reset Wallet, on the caller's (main) thread: record the
+     * wipe so a mid-wipe process death is repairable, hand the UI off to
+     * onboarding, and only then let the destructive teardown start.
+     *
+     * The hand-off goes through the application context on purpose. The old
+     * order ran it last, from the post-wipe callback on a background
+     * dispatcher, against the fragment that had asked for the reset — by then
+     * that fragment had been detached for two minutes and the process died
+     * with "Fragment SecurityFragment not attached to Activity".
+     */
+    fun WalletApplication.beginWalletWipe() {
+        WalletWipeSequence.begin(
+            markPending = { WalletWipeState.begin(filesDir) },
+            handOffUi = {
+                setWipeInProgress(true)
+                restartService.performRestart(this, true, false)
+            }
+        )
     }
 
     /**
-     * Clear databases
-     *
-     * @param isWalletWipe This is true for Reset Wallet, false for Rescan Blockchain
-     *
-     * The wipe path BLOCKS until every store is cleared: `finalizeWipe()`
-     * nulls the wallet, invokes the post-wipe callback and lets the
-     * process die right after this call, so a fire-and-forget launch
-     * races process death — observed live as DashPay identity/contact/
-     * notification data surviving a Reset Wallet and resurrecting the
-     * DashPay UI on the next (fresh) wallet. The rescan path keeps the
-     * async launch (it runs during service start and its data is
-     * re-syncable either way).
+     * Phase 3-5 of Reset Wallet: detach the in-memory wallet, destroy
+     * everything behind it, clear the marker. Suspends rather than blocking —
+     * it is called from the blockchain service's teardown coroutine, and the
+     * SDK cleanup inside it ran for nearly two minutes on a live device.
      */
-    fun WalletApplication.clearDatabases(isWalletWipe: Boolean) {
-        if (isWalletWipe) {
-            runBlocking { clearDatabasesInner(isWalletWipe = true) }
-        } else {
-            CoroutineScope(Dispatchers.IO).launch { clearDatabasesInner(isWalletWipe = false) }
+    suspend fun WalletApplication.finishWalletWipe() {
+        try {
+            // A failure here must not become an uncaught exception in the
+            // service-teardown coroutine that calls this — the process dying
+            // in the middle of a wipe is the failure mode being fixed. The
+            // marker stays behind instead, and the next launch re-runs it.
+            runCatching {
+                WalletWipeSequence.finish(
+                    pending = { WalletWipeState.isPending(filesDir) },
+                    detachWallet = { withContext(Dispatchers.Main) { detachWalletForWipe() } },
+                    destroy = { destroyWalletData() },
+                    markComplete = { WalletWipeState.complete(filesDir) }
+                )
+            }.onFailure {
+                rethrowCancellation(it)
+                log.error("Reset Wallet did not finish — the next launch will complete it", it)
+            }
+        } finally {
+            // The UI is waiting on this flag whether the wipe finished or
+            // threw; a launch that finds the marker still there re-runs the
+            // wipe from the top.
+            withContext(NonCancellable) {
+                withContext(Dispatchers.Main) { setWipeInProgress(false) }
+            }
         }
+    }
+
+    /**
+     * Called from `Application.onCreate` when the marker says the previous
+     * process died mid-wipe. The wallet load is skipped for this launch, so
+     * the only ordering left to honour is destroy-then-clear-marker.
+     */
+    fun WalletApplication.resumeInterruptedWipe() {
+        log.warn("a previous Reset Wallet did not finish — completing it now; this launch does not load a wallet")
+        setWipeInProgress(true)
+        wipeScope.launch { finishWalletWipe() }
+    }
+
+    private suspend fun WalletApplication.destroyWalletData() {
+        destroyWalletFiles()
+        // Live DataStore-backed configs must be cleared through their API (one
+        // atomic memory+disk edit) before the leftover files are deleted:
+        // deleting a LIVE DataStore's file out-of-band leaves its in-memory
+        // cache populated while disk is empty. Files with no live instance
+        // this process have no cache, so raw deletion is safe for them.
+        val apiCleared = runCatching { BaseConfig.clearAllLiveInstances() }
+            .onFailure { rethrowCancellation(it); log.warn("live-config clear failed during wipe", it) }
+            .getOrDefault(emptySet())
+        clearDatastorePrefFiles(apiCleared)
+        notifyWalletWipeListeners()
+        destroyWalletSecrets()
+        clearDatabasesInner(isWalletWipe = true)
+    }
+
+    /**
+     * The wipe listeners are `suspend () -> Unit` crossing a Java boundary,
+     * where they are only expressible as their compiled `Function1<Continuation, Any?>`
+     * form. Calling them used to mean `runBlocking` per listener on a
+     * dispatcher thread; here they are simply awaited.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun WalletApplication.notifyWalletWipeListeners() {
+        for (listener in wipeListeners) {
+            runCatching { (listener as suspend () -> Unit).invoke() }
+                .onFailure { rethrowCancellation(it); log.error("wallet-wipe listener failed", it) }
+        }
+    }
+
+    /**
+     * Clear the databases a blockchain RESCAN invalidates. Fire-and-forget on
+     * purpose: it runs during service start, the process is not going away,
+     * and every store it touches is re-syncable. The wipe path does NOT come
+     * through here — it awaits [clearDatabasesInner] instead, because data
+     * surviving a Reset Wallet resurrects the previous wallet's DashPay UI on
+     * the next (fresh) wallet.
+     */
+    fun WalletApplication.clearDatabasesForRescan() {
+        CoroutineScope(Dispatchers.IO).launch { clearDatabasesInner(isWalletWipe = false) }
     }
 
     /**
