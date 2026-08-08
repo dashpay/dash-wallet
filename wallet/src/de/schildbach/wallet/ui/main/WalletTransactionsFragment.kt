@@ -425,6 +425,15 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         }
 
+        // The hello card greets the user by name, and the identity record's
+        // username can be the DPNS-NORMALIZED label ("br1an-s21") rather than
+        // the one they typed. The local profile keeps the human label (the
+        // domain document's `.label`), so feed it in as the preferred display
+        // form — see HistoryHeaderAdapter.helloCardUsername.
+        viewModel.dashPayProfile.observe(viewLifecycleOwner) { profile ->
+            header.profileUsername = profile?.username
+        }
+
         // Transient retry-status hint on the identity processing tile —
         // why the current step is taking longer than usual (e.g. platform
         // consensus core height lagging a fresh funding tx; no IS lock

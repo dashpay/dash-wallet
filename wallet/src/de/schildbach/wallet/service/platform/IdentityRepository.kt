@@ -25,6 +25,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TOP_CONTACT_COUNT
 import de.schildbach.wallet.ui.dashpay.UserAlert
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.Companion.UPGRADE_IDENTITY_REQUIRED
+import de.schildbach.wallet.ui.dashpay.utils.preferDisplayLabel
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -413,23 +414,41 @@ class IdentityRepositoryImpl @Inject constructor(
             identity = blockchainIdentity.identity
             registrationStatus = blockchainIdentity.registrationStatus
             if (blockchainIdentity.currentUsername != null) {
-                username = blockchainIdentity.primaryUsername
+                // dashj's recoverUsernames() rewrites primaryUsername /
+                // secondaryUsername / currentUsername to the DPNS NORMALIZED
+                // label (DomainDocument.normalizedLabel — o→0, i/l→1), and
+                // that is the KEY every wrapper map is keyed on
+                // (usernameStatuses, usernameSalts). So the recovered value
+                // stays the lookup key for saltForUsername /
+                // statusOfUsername / getUsernameRequestStatus /
+                // getUsernameVotingStart below — unchanged.
+                //
+                // The RECORD's username fields, though, are what the UI
+                // renders (the home hello card, the More-screen requested-
+                // username tile). Copying the normalized label into them is
+                // what greeted the user with "Hello br1an-s21," after they
+                // registered `brian-s21`. Keep the display label the record
+                // already holds whenever it normalizes to the recovered one
+                // — same DPNS name, human spelling; anything else still
+                // loses to the on-chain value.
+                val recoveredPrimary = blockchainIdentity.primaryUsername
+                username = recoveredPrimary?.let { preferDisplayLabel(username, it, Names::normalizeString) }
                 if (blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED) {
                     preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
                     usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
                 }
-                val requestStatus = blockchainIdentity.getUsernameRequestStatus(username!!)
+                val requestStatus = blockchainIdentity.getUsernameRequestStatus(recoveredPrimary!!)
                 if (requestStatus != UsernameRequestStatus.NONE) {
                     usernameRequested = requestStatus
                 }
-                val votingStart = blockchainIdentity.getUsernameVotingStart(username!!)
+                val votingStart = blockchainIdentity.getUsernameVotingStart(recoveredPrimary)
                 if (votingStart != -1L) {
                     votingPeriodStart = votingStart
                 }
 
                 log.info("creation: blockchainIdentity.secondaryUsername = {}", blockchainIdentity.secondaryUsername)
                 blockchainIdentity.secondaryUsername?.let { name ->
-                    usernameSecondary = name
+                    usernameSecondary = preferDisplayLabel(usernameSecondary, name, Names::normalizeString)
                     usernameSecondaryStatus = blockchainIdentity.statusOfUsername(name)
                     log.info("creation: secondary username: {}, usernameSecondaryStatus = {}", name, usernameSecondaryStatus)
                     preorderSaltSecondary = blockchainIdentity.saltForUsername(name, false)
@@ -981,7 +1000,21 @@ class IdentityRepositoryImpl @Inject constructor(
     override suspend fun recoverDashPayProfile(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             if (platform.hasApp("dashpay")) {
-                getUsername()?.let { username ->
+                getUsername()?.let { recovered ->
+                    // getUsername() returns the wrapper's currentUsername, which
+                    // recoverUsernames() left as the DPNS NORMALIZED label. The
+                    // profile's `username` is a DISPLAY field (More screen,
+                    // contact rows, invite details, transaction rows), so prefer
+                    // the human label the identity record already holds when it
+                    // names this same DPNS entry. The contact-profile sync later
+                    // rewrites it from the domain document's `.label` anyway —
+                    // this just stops the normalized form being visible in the
+                    // meantime.
+                    val username = preferDisplayLabel(
+                        loadBlockchainIdentityBaseData().username,
+                        recovered,
+                        Names::normalizeString
+                    )
                     // recovery will only get the information and place it in the database
                     val profile = blockchainIdentity.getProfile()
 

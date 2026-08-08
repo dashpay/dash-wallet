@@ -31,6 +31,7 @@ import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
+import de.schildbach.wallet.ui.dashpay.utils.preferDisplayLabel
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.work.BaseWorker
@@ -40,6 +41,7 @@ import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
+import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.IOException
@@ -175,8 +177,21 @@ class UpdateProfileWorker @AssistedInject constructor(
             }
         }
 
+        // getUniqueUsername() is the first key of the wrapper's usernameStatuses
+        // map, which recoverUsernames() keys on the DPNS NORMALIZED label —
+        // persisting it here replaced the profile's DISPLAY username with the
+        // folded form ("br1an-s21") on every profile edit, until the next
+        // contact-profile sync rewrote it from the domain document's `.label`.
+        // The username is local-only (broadcastUpdatedProfile carries just
+        // displayName/publicMessage/avatar on chain), so prefer the human label
+        // the existing profile row already holds for the same DPNS name.
+        val recoveredUsername = blockchainIdentity.getUniqueUsername()
         val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
-                blockchainIdentity.getUniqueUsername(),
+                preferDisplayLabel(
+                    identityRepository.getLocalUserProfile()?.username,
+                    recoveredUsername,
+                    Names::normalizeString
+                ),
                 displayName,
                 publicMessage,
                 avatarUrl,

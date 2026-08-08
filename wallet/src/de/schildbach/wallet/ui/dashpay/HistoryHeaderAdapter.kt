@@ -28,8 +28,10 @@ import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.ui.dashpay.utils.preferDisplayLabel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HistoryHeaderViewBinding
+import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 
 /**
@@ -103,6 +105,34 @@ internal fun joinDashPayEligible(
         !hideJoinDashPayCard
 }
 
+/**
+ * The name to greet the user with in the hello card ("Hello %s,") — pure and
+ * host-testable.
+ *
+ * [recordUsername] is the identity record's username (or, for a dual
+ * creation, its instant secondary). dashj's `recoverUsernames()` rewrites
+ * `BlockchainIdentity.primaryUsername` / `secondaryUsername` to the DPNS
+ * NORMALIZED label and `IdentityRepository.updateBlockchainIdentityData`
+ * copies that into the record, so on any wallet whose record was refreshed
+ * before this was fixed the card greeted the user with the folded form —
+ * observed live as "Hello br1an-s21," after registering `brian-s21` (and
+ * earlier on testnet as "Hello br1antest63a"), while the profile screen
+ * showed the name correctly.
+ *
+ * [profileUsername] is the local DashPay profile's username, which the
+ * contact-profile sync builds from the domain document's `.label` — the
+ * human form. It wins whenever it provably names the same DPNS entry, which
+ * both repairs already-damaged records and leaves a healthy record (already
+ * the display form) untouched. A profile carrying a DIFFERENT name — the
+ * dual-creation case, where the profile still holds the contested primary
+ * while this card greets the instant secondary — never wins.
+ */
+internal fun helloCardUsername(
+    recordUsername: String?,
+    profileUsername: String?,
+    normalize: (String) -> String
+): String? = recordUsername?.let { preferDisplayLabel(profileUsername, it, normalize) }
+
 class HistoryHeaderAdapter(
     private val preferences: SharedPreferences
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -174,6 +204,21 @@ class HistoryHeaderAdapter(
                 bindInvitation(invitation, value)
                 bindBlockchainIdentity(blockchainIdentityData)
                 bindCanJoinDashPay(canJoinDashPay)
+            }
+        }
+
+    /**
+     * The local DashPay profile's username — the HUMAN label, taken from the
+     * domain document's `.label` by the contact-profile sync. Fed by the
+     * fragment so the hello card can greet the user with the name they typed
+     * instead of the DPNS-normalized form the identity record may hold (see
+     * [helloCardUsername]). Null until the profile exists.
+     */
+    var profileUsername: String? = null
+        set(value) {
+            field = value
+            if (::binding.isInitialized) {
+                bindBlockchainIdentity(blockchainIdentityData)
             }
         }
 
@@ -368,12 +413,12 @@ class HistoryHeaderAdapter(
                     // screen's voting tile (see helloCardEligible).
                     binding.identityCreation.title.text = binding.root.context.getString(
                         R.string.processing_done_title,
-                        instantUsername
+                        displayUsername(instantUsername)
                     )
                     binding.identityCreation.subtitle.setText(R.string.processing_done_subtitle)
                 } else {
                     binding.identityCreation.title.text = binding.root.context.getString(R.string.processing_done_title,
-                        blockchainIdentityData.username)
+                        displayUsername(blockchainIdentityData.username))
                     binding.identityCreation.subtitle.setText(R.string.processing_voting_subtitle)
                 }
             }
@@ -382,7 +427,7 @@ class HistoryHeaderAdapter(
                 binding.identityCreation.forwardArrow.visibility = View.VISIBLE
                 binding.identityCreation.progress.visibility = View.GONE
                 binding.identityCreation.title.text = binding.root.context.getString(R.string.processing_done_title,
-                    blockchainIdentityData.username)
+                    displayUsername(blockchainIdentityData.username))
                 binding.identityCreation.subtitle.setText(R.string.processing_done_subtitle)
             }
             IdentityCreationState.DONE_AND_DISMISS -> {
@@ -390,6 +435,10 @@ class HistoryHeaderAdapter(
             }
         }
     }
+
+    /** The greeting name for [name], preferring the profile's human label. */
+    private fun displayUsername(name: String?): String? =
+        helloCardUsername(name, profileUsername, Names::normalizeString)
 
     private fun bindCanJoinDashPay(canJoin: Boolean) {
         if (!shouldShowJoinDashPay(canJoin)) {
