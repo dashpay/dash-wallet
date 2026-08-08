@@ -31,8 +31,9 @@ import org.robolectric.annotation.Config
 
 /**
  * SQL-level regression tests for
- * [SdkAssetLockFundingPreflight.queryEligibleAssetLockDuffs]: the EXACT
- * production query ([ELIGIBLE_ASSET_LOCK_DUFFS_SQL]) runs against an
+ * [SdkAssetLockFundingPreflight.queryAssetLockFundingEvidence]: the EXACT
+ * production queries ([ELIGIBLE_ASSET_LOCK_DUFFS_SQL] and
+ * [UNCLASSIFIED_ASSET_LOCK_DUFFS_SQL]) run against an
  * in-memory instance of the AAR's own Room schema
  * ([org.dashfoundation.dashsdk.persistence.DashDatabase]), seeded with
  * rows shaped like the on-device evidence (S21 `dash-sdk.db`, build
@@ -87,11 +88,15 @@ class SdkAssetLockFundingPreflightQueryTest {
         db.close()
     }
 
-    private fun eligibleDuffs(): Long = runBlocking {
+    private fun evidence(): AssetLockFundingEvidence = runBlocking {
         requireNotNull(
-            SdkAssetLockFundingPreflight.queryEligibleAssetLockDuffs(db, walletIdHex)
+            SdkAssetLockFundingPreflight.queryAssetLockFundingEvidence(db, walletIdHex)
         )
     }
+
+    private fun eligibleDuffs(): Long = evidence().eligibleDuffs
+
+    private fun unclassifiedDuffs(): Long = evidence().unclassifiedDuffs
 
     // ── the defect: IS-locked funds must be eligible within seconds ──────
 
@@ -232,6 +237,109 @@ class SdkAssetLockFundingPreflightQueryTest {
         insertTxo(outpoint(10), amount = 80_000_000L, address = "addr-foreign", isConfirmed = true, txid = null)
 
         assertEquals(0L, eligibleDuffs())
+    }
+
+    // ── the pre-block mirror gap (S21 mainnet, 11.10.67) ─────────────────
+
+    @Test
+    fun preBlockReceive_isUnclassified_notAProvenShortfall() {
+        // The exact on-device shape at 17:20 on 2026-08-08: the engine had
+        // reported the 0.09401442 DASH receive AND its InstantSend lock, but
+        // the mirror carried only the txo row — no core_addresses row (that
+        // arrived with the block at 17:27), no finality flag, and
+        // transactions.context still 0 because the AAR never writes context 1
+        // for an IS lock. The eligible sum is therefore 0, and reading that 0
+        // as a shortfall refused a visibly funded wallet for nine minutes.
+        val txid = txid(20)
+        insertTx(txid, context = 0)
+        insertTxo(
+            outpoint(20),
+            amount = 9_401_442L,
+            address = "Xuka4REzrzDVDxy32zDhR2tk1t3LtNXXdy",
+            isConfirmed = false,
+            txid = txid,
+            accountId = null
+        )
+
+        val evidence = evidence()
+        assertEquals(0L, evidence.eligibleDuffs)
+        assertEquals(9_401_442L, evidence.unclassifiedDuffs)
+        // 0.03 DASH username fee: unknown, NOT refused.
+        assertEquals(null, assetLockFundingVerdict(evidence, 3_000_000L))
+        // 0.25 DASH contested fee: genuinely out of reach either way.
+        assertEquals(false, assetLockFundingVerdict(evidence, 25_000_000L))
+    }
+
+    @Test
+    fun classifiedShortfall_staysAProvenShortfall_theS22Gate() {
+        // The S22 repro the preflight exists for: the mirror HAS classified
+        // the wallet — 1449 duffs of final BIP44 dust, nothing pending — so
+        // the 0.03 fee is provably unfundable and must still gate.
+        insertAddress("addr-dust", BIP44_ACCOUNT_ROW_ID)
+        insertTxo(outpoint(21), amount = 1_449L, address = "addr-dust", isConfirmed = true, txid = null)
+
+        val evidence = evidence()
+        assertEquals(1_449L, evidence.eligibleDuffs)
+        assertEquals(0L, evidence.unclassifiedDuffs)
+        assertEquals(false, assetLockFundingVerdict(evidence, 3_000_000L))
+    }
+
+    @Test
+    fun unclassifiedExcludesForeignAccountValue() {
+        // Scope is a settled fact, not a mirror gap: an unconfirmed output on
+        // a non-BIP44-account-0 account is neither eligible NOR a reason to
+        // withhold a verdict — the asset lock will never fund from it.
+        val txid = txid(22)
+        insertTx(txid, context = 0)
+        insertAddress("addr-foreign-pending", FOREIGN_ACCOUNT_ROW_ID)
+        insertTxo(
+            outpoint(22),
+            amount = 80_000_000L,
+            address = "addr-foreign-pending",
+            isConfirmed = false,
+            txid = txid
+        )
+
+        assertEquals(0L, eligibleDuffs())
+        assertEquals(0L, unclassifiedDuffs())
+    }
+
+    @Test
+    fun eligibleAndUnclassifiedNeverDoubleCount() {
+        // The two sums are exact complements over the same rows: a final
+        // account-0 output belongs to one bucket only.
+        insertAddress("addr-final", BIP44_ACCOUNT_ROW_ID)
+        insertTxo(outpoint(23), amount = 5_000_000L, address = "addr-final", isConfirmed = true, txid = null)
+        insertTxo(outpoint(24), amount = 7_000_000L, address = "addr-final", isConfirmed = false, txid = null)
+
+        assertEquals(5_000_000L, eligibleDuffs())
+        assertEquals(7_000_000L, unclassifiedDuffs())
+    }
+
+    @Test
+    fun spentAndReservedRowsAreInNeitherBucket() {
+        // The unclassified sum must not resurrect value the engine cannot
+        // spend at all — it only forgives the mirror's classification lag.
+        insertAddress("addr-unspendable", BIP44_ACCOUNT_ROW_ID)
+        insertTxo(
+            outpoint(25),
+            amount = 11_000_000L,
+            address = "addr-unspendable",
+            isConfirmed = false,
+            isSpent = true,
+            txid = null
+        )
+        insertTxo(
+            outpoint(26),
+            amount = 13_000_000L,
+            address = "addr-unspendable",
+            isConfirmed = false,
+            isLocked = true,
+            txid = null
+        )
+
+        assertEquals(0L, eligibleDuffs())
+        assertEquals(0L, unclassifiedDuffs())
     }
 
     // ── the untouched exclusions stay in force ───────────────────────────

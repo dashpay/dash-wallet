@@ -55,6 +55,37 @@ internal const val TX_CONTEXT_INSTANT_SEND = 1
 internal const val TX_CONTEXT_CHAIN_LOCKED = 3
 
 /**
+ * The join spine both asset-lock queries below share, so they stay exact
+ * complements of one another over the SAME row set. Every join is LEFT:
+ * a term that needs a missing row must evaluate to false for that row, not
+ * silently drop it (the account join was the one that dropped a pre-block
+ * receive outright — see [UNCLASSIFIED_ASSET_LOCK_DUFFS_SQL]).
+ */
+private const val ASSET_LOCK_TXO_JOINS =
+    "FROM txos t " +
+        "LEFT JOIN core_addresses ca ON ca.address = t.address " +
+        "LEFT JOIN accounts a ON a.id = COALESCE(t.accountId, ca.accountId) " +
+        "LEFT JOIN transactions tx ON tx.txid = t.txid"
+
+/** Rows the engine could spend at all: unspent, not mid-spend, unreserved, non-coinbase. */
+private const val UNSPENT_SELECTABLE_TERMS =
+    "t.isSpent = 0 AND t.spendingTxid IS NULL AND t.isLocked = 0 AND t.isCoinbase = 0"
+
+/**
+ * Finality as the MIRROR can express it. `COALESCE` keeps the term
+ * three-valued-free (a txo whose `transactions` row is absent must read
+ * false, not NULL — otherwise `NOT (...)` swallows the row instead of
+ * negating it).
+ */
+private const val MIRROR_FINAL_TERM =
+    "(t.isConfirmed = 1 OR t.isInstantLocked = 1 " +
+        "OR COALESCE(tx.context, -1) IN ($TX_CONTEXT_INSTANT_SEND, $TX_CONTEXT_CHAIN_LOCKED))"
+
+/** The one account a non-shielded asset lock funds from: Standard/BIP44, index 0. */
+private const val BIP44_ACCOUNT_0_TERM =
+    "a.accountType = 0 AND a.standardTag = 0 AND a.accountIndex = 0"
+
+/**
  * The asset-lock eligibility SQL over the SDK's Room mirror — extracted as
  * a constant so the host-level regression tests run the EXACT production
  * query against the AAR's own schema. See the [SdkAssetLockFundingPreflight]
@@ -66,21 +97,65 @@ internal const val TX_CONTEXT_CHAIN_LOCKED = 3
  * Android `txos.accountId` is NULL on every row (on-device evidence), so
  * the `core_addresses` address join is the live path, but a future AAR
  * that starts populating the column must not break attribution when an
- * address row is missing (hence the LEFT joins; a row with NEITHER
- * resolvable stays excluded — the engine can't route what it can't
- * attribute).
+ * address row is missing (hence the LEFT joins). A row with NEITHER
+ * resolvable is not eligible — but it is not a shortfall either; it falls
+ * to [UNCLASSIFIED_ASSET_LOCK_DUFFS_SQL], because on Android an
+ * unattributable row is what a not-yet-mined receive looks like, not a
+ * coin the engine has refused to route.
  */
 internal const val ELIGIBLE_ASSET_LOCK_DUFFS_SQL =
-    "SELECT COALESCE(SUM(t.amount), 0) FROM txos t " +
-        "LEFT JOIN core_addresses ca ON ca.address = t.address " +
-        "JOIN accounts a ON a.id = COALESCE(t.accountId, ca.accountId) " +
-        "LEFT JOIN transactions tx ON tx.txid = t.txid " +
+    "SELECT COALESCE(SUM(t.amount), 0) $ASSET_LOCK_TXO_JOINS " +
         "WHERE t.walletId = ? " +
-        "AND t.isSpent = 0 AND t.spendingTxid IS NULL " +
-        "AND t.isLocked = 0 AND t.isCoinbase = 0 " +
-        "AND (t.isConfirmed = 1 OR t.isInstantLocked = 1 " +
-        "OR tx.context IN ($TX_CONTEXT_INSTANT_SEND, $TX_CONTEXT_CHAIN_LOCKED)) " +
-        "AND a.accountType = 0 AND a.standardTag = 0 AND a.accountIndex = 0"
+        "AND $UNSPENT_SELECTABLE_TERMS " +
+        "AND $MIRROR_FINAL_TERM " +
+        "AND $BIP44_ACCOUNT_0_TERM"
+
+/**
+ * The complement of [ELIGIBLE_ASSET_LOCK_DUFFS_SQL] over the same rows:
+ * unspent wallet value the eligibility query dropped ONLY because the
+ * mirror has not classified it yet — either no finality signal has been
+ * written, or no account row exists to attribute it through. Deliberately
+ * excludes anything attributed to a NON-BIP44-account-0 account: that is a
+ * settled fact about scope, not a gap in the mirror.
+ *
+ * Exists because the mirror describes a PRE-BLOCK receive not at all
+ * (S21 mainnet, 11.10.67, wallet holding one 0.09401442 DASH receive):
+ * the engine reported the transaction at 17:18:28 and its InstantSend lock
+ * 0.6s later, yet `core_addresses` — the only attribution route on Android,
+ * `txos.accountId` being permanently NULL — was not written until the block
+ * landed at 17:27:16, and no finality signal flipped before then either
+ * (`txos.isInstantLocked` is dead, and `transactions.context` went 0 → 3,
+ * never through 1). For those nine minutes the eligibility sum was 0 and
+ * every asset-lock-funded flow refused a visibly funded wallet.
+ *
+ * A zero sum from a mirror that cannot yet classify the wallet's coins is
+ * not evidence of a shortfall — see [assetLockFundingVerdict].
+ */
+internal const val UNCLASSIFIED_ASSET_LOCK_DUFFS_SQL =
+    "SELECT COALESCE(SUM(t.amount), 0) $ASSET_LOCK_TXO_JOINS " +
+        "WHERE t.walletId = ? " +
+        "AND $UNSPENT_SELECTABLE_TERMS " +
+        "AND NOT $MIRROR_FINAL_TERM " +
+        "AND (a.id IS NULL OR ($BIP44_ACCOUNT_0_TERM))"
+
+/**
+ * What the mirror can say about asset-lock fundability, as TWO numbers —
+ * because "eligible = 0" and "eligible = 1449" are different kinds of
+ * statement and the gate must not treat them alike.
+ */
+data class AssetLockFundingEvidence(
+    /**
+     * Final, BIP44-account-0 duffs — value the engine's coin selection
+     * would certainly accept ([ELIGIBLE_ASSET_LOCK_DUFFS_SQL]).
+     */
+    val eligibleDuffs: Long,
+    /**
+     * Unspent duffs the mirror holds but cannot yet classify
+     * ([UNCLASSIFIED_ASSET_LOCK_DUFFS_SQL]) — value that may or may not be
+     * selectable; only the engine knows.
+     */
+    val unclassifiedDuffs: Long
+)
 
 /**
  * Pure coverage predicate for the preflight (host-JVM testable): can
@@ -92,6 +167,36 @@ internal fun assetLockFundingCovers(
     requiredDuffs: Long,
     headroomDuffs: Long = ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS
 ): Boolean = eligibleDuffs >= requiredDuffs + headroomDuffs
+
+/**
+ * The preflight's THREE-valued verdict for a lock of [requiredDuffs] —
+ * `true` fundable, `false` a proven shortfall, `null` no evidence either
+ * way (callers fail open).
+ *
+ * The `null` arm is the whole point: a shortfall is only PROVEN when the
+ * mirror has classified enough of the wallet to rule the funding out. As
+ * long as unclassified value could close the gap, the mirror is simply
+ * behind the engine (see [UNCLASSIFIED_ASSET_LOCK_DUFFS_SQL]) and the
+ * preflight must say nothing — the real build stays the authority.
+ *
+ * This keeps the S22 gate that motivated the preflight: there the mirror
+ * had classified the wallet down to 1449 duffs of dust against a 0.03 DASH
+ * fee, with nothing unclassified left to close a 3 000 000-duff gap, so the
+ * verdict is still `false`.
+ */
+internal fun assetLockFundingVerdict(
+    evidence: AssetLockFundingEvidence,
+    requiredDuffs: Long,
+    headroomDuffs: Long = ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS
+): Boolean? = when {
+    assetLockFundingCovers(evidence.eligibleDuffs, requiredDuffs, headroomDuffs) -> true
+    assetLockFundingCovers(
+        evidence.eligibleDuffs + evidence.unclassifiedDuffs,
+        requiredDuffs,
+        headroomDuffs
+    ) -> null
+    else -> false
+}
 
 /**
  * PRE-FLIGHT funding-eligibility check for every SDK operation funded by a
@@ -162,6 +267,22 @@ internal fun assetLockFundingCovers(
  *   engine reports `InsufficientFunds` from the eligible SUM vs
  *   target+fee (`coin_selection.rs`), which is what this reproduces.
  *
+ * ## Why the eligible sum alone is NOT the verdict
+ *
+ * The mirror does not describe a PRE-BLOCK receive at all — not its
+ * finality and not its account. Both are written only when the transaction
+ * is mined, so for the whole mempool window the eligibility sum over a
+ * freshly funded wallet is 0 no matter how much the wallet holds and no
+ * matter that the engine has already IS-locked it. Reading that 0 as a
+ * shortfall refused username creation, invitations and top-ups on every
+ * fresh wallet for a full block (S21 mainnet, 11.10.67 — see
+ * [UNCLASSIFIED_ASSET_LOCK_DUFFS_SQL] for the timestamped trace).
+ *
+ * So the preflight reports EVIDENCE, not a number: the eligible sum
+ * together with the unspent value the mirror could not classify. Only when
+ * the classified part rules the funding out is there a shortfall to gate
+ * on — [assetLockFundingVerdict].
+ *
  * ## Fail-open contract
  *
  * READ-ONLY and advisory: never broadcasts, never reserves, never touches
@@ -181,11 +302,11 @@ class SdkAssetLockFundingPreflight internal constructor(
      */
     private val cutoverCommitted: suspend () -> Boolean,
     /**
-     * The asset-lock-ELIGIBLE duffs on BIP44 account 0 (see class KDoc for
-     * the predicate), or `null` when unavailable. Production wiring runs
-     * the SQL against the SDK's Room database.
+     * The mirror's [AssetLockFundingEvidence] for the bound wallet, or
+     * `null` when unavailable. Production wiring runs the two SQL passes
+     * against the SDK's Room database.
      */
-    private val eligibleDuffsQuery: suspend () -> Long?
+    private val evidenceQuery: suspend () -> AssetLockFundingEvidence?
 ) {
     @Inject
     constructor(
@@ -193,8 +314,8 @@ class SdkAssetLockFundingPreflight internal constructor(
         sdkService: DashSdkService
     ) : this(
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
-        eligibleDuffsQuery = {
-            queryEligibleAssetLockDuffs(
+        evidenceQuery = {
+            queryAssetLockFundingEvidence(
                 sdkService.databaseOrNull(),
                 sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()
             )
@@ -202,11 +323,12 @@ class SdkAssetLockFundingPreflight internal constructor(
     )
 
     /**
-     * The asset-lock-eligible duffs, or `null` when the preflight does not
-     * apply (pre-cutover) or has no evidence (SDK/DB unavailable, read
-     * failure) — callers MUST fail open on `null`. Never throws.
+     * What the mirror can say about asset-lock fundability, or `null` when
+     * the preflight does not apply (pre-cutover) or has no evidence
+     * (SDK/DB unavailable, read failure) — callers MUST fail open on
+     * `null`. Never throws.
      */
-    suspend fun eligibleAssetLockFundingDuffsOrNull(): Long? {
+    suspend fun assetLockFundingEvidenceOrNull(): AssetLockFundingEvidence? {
         val committed = try {
             cutoverCommitted()
         } catch (t: Throwable) {
@@ -216,7 +338,7 @@ class SdkAssetLockFundingPreflight internal constructor(
         }
         if (!committed) return null
         return try {
-            eligibleDuffsQuery()
+            evidenceQuery()
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("asset-lock funding preflight: eligibility read failed; fail open", t)
@@ -230,56 +352,62 @@ class SdkAssetLockFundingPreflight internal constructor(
      * A `false` is logged with the figures for on-device forensics.
      */
     suspend fun canFundAssetLockDuffs(requiredDuffs: Long): Boolean? {
-        val eligible = eligibleAssetLockFundingDuffsOrNull() ?: return null
-        val covers = assetLockFundingCovers(eligible, requiredDuffs)
-        if (!covers) {
+        val evidence = assetLockFundingEvidenceOrNull() ?: return null
+        val verdict = assetLockFundingVerdict(evidence, requiredDuffs)
+        if (verdict == false) {
             log.info(
                 "asset-lock funding preflight FAILED: eligible {} duffs on BIP44 account 0 " +
-                    "(final: confirmed/IS-locked, unlocked, mature) cannot cover {} + {} duffs headroom",
-                eligible,
+                    "(final: confirmed/IS-locked, unlocked, mature) plus {} unclassified duffs " +
+                    "cannot cover {} + {} duffs headroom",
+                evidence.eligibleDuffs,
+                evidence.unclassifiedDuffs,
                 requiredDuffs,
                 ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS
             )
         }
-        return covers
+        return verdict
     }
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkAssetLockFundingPreflight::class.java)
 
         /**
-         * One read-only SQL pass over the SDK's Room mirror (same
-         * `openHelper` raw-query precedent as
-         * [CutoverUiDataService]'s unspent-sum probe). Returns `null` when
-         * the DB or the bound wallet id is unavailable. The INNER `accounts`
-         * join drops rows with no resolvable account (via either
-         * attribution route) — the SDK's own restore builder skips exactly
-         * those rows ("a UTXO the wallet can't attribute can't be routed"),
-         * so the engine never funds from them either.
+         * Both read-only SQL passes over the SDK's Room mirror (same
+         * `openHelper` raw-query precedent as [CutoverUiDataService]'s
+         * unspent-sum probe), in ONE IO hop. Returns `null` when the DB or
+         * the bound wallet id is unavailable.
          *
          * Coinbase maturity: phone wallets essentially never hold coinbase
          * outputs; rather than plumb a chain-tip read for the `height+100`
          * rule, coinbase rows are excluded outright (conservative — can
          * only under-count, never over-count).
          */
-        internal suspend fun queryEligibleAssetLockDuffs(
+        internal suspend fun queryAssetLockFundingEvidence(
             database: org.dashfoundation.dashsdk.persistence.DashDatabase?,
             walletIdHex: String?
-        ): Long? {
+        ): AssetLockFundingEvidence? {
             val db = database ?: return null
             val walletId = walletIdHex?.let { walletIdFromHex(it) } ?: return null
             return withContext(Dispatchers.IO) {
-                db.openHelper.readableDatabase.query(
-                    // The asset-lock eligibility predicate — see the class KDoc
-                    // for the source-level trace of every term, and the
-                    // constant's KDoc for the dead-`isInstantLocked` and
-                    // NULL-`accountId` mirror realities it compensates for.
-                    androidx.sqlite.db.SimpleSQLiteQuery(
-                        ELIGIBLE_ASSET_LOCK_DUFFS_SQL,
-                        arrayOf<Any?>(walletId)
-                    )
-                ).use { cursor -> if (cursor.moveToFirst()) cursor.getLong(0) else 0L }
+                AssetLockFundingEvidence(
+                    eligibleDuffs = sumDuffs(db, ELIGIBLE_ASSET_LOCK_DUFFS_SQL, walletId),
+                    unclassifiedDuffs = sumDuffs(db, UNCLASSIFIED_ASSET_LOCK_DUFFS_SQL, walletId)
+                )
             }
+        }
+
+        private fun sumDuffs(
+            db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+            sql: String,
+            walletId: ByteArray
+        ): Long {
+            return db.openHelper.readableDatabase.query(
+                // See the class KDoc for the source-level trace of every term,
+                // and the constants' KDoc for the dead-`isInstantLocked`,
+                // NULL-`accountId` and pre-block mirror realities they
+                // compensate for.
+                androidx.sqlite.db.SimpleSQLiteQuery(sql, arrayOf<Any?>(walletId))
+            ).use { cursor -> if (cursor.moveToFirst()) cursor.getLong(0) else 0L }
         }
     }
 }
