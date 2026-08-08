@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service
 
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -126,6 +127,54 @@ class TxDisplayCacheRebuildGuardTest {
         val decision = postCutover(sdkRecordCount = null, displayRowCount = 4_810)
         assertEquals(CacheRebuildAction.NONE, decision.action)
         assertTrue(decision.reason.contains("unavailable"))
+    }
+
+    // ── Waiting for the SDK count (fix 3) ─────────────────────────────
+
+    @Test
+    fun sdkCountThatArrivesAfterTheBindIsWaitedFor() = runBlocking {
+        // The live failure: the check is edge-triggered and fires ~3 s BEFORE
+        // the cutover tx pipeline binds, so the one-shot read always missed
+        // and every device reported "SDK=unavailable records" forever.
+        var reads = 0
+        var announced = 0
+        val count = awaitSdkRecordCount(
+            polls = 5,
+            intervalMs = 0,
+            onFirstMiss = { announced++ },
+            read = { if (++reads < 3) null else 28_291 }
+        )
+        assertEquals(28_291, count)
+        assertEquals(3, reads)
+        assertEquals(1, announced)
+    }
+
+    @Test
+    fun sdkCountThatNeverArrivesGivesUpRatherThanWaitingForever() = runBlocking {
+        var reads = 0
+        val count = awaitSdkRecordCount(
+            polls = 4,
+            intervalMs = 0,
+            read = { reads++; null }
+        )
+        assertEquals(null, count)
+        // One eager read plus one per poll — a bounded window, so a wallet the
+        // SDK never binds (flags off, orphaned wallet) still frees the check.
+        assertEquals(5, reads)
+    }
+
+    @Test
+    fun sdkCountAlreadyAvailableIsNotAnnouncedAsAWait() = runBlocking {
+        var announced = 0
+        val count = awaitSdkRecordCount(
+            polls = 5,
+            intervalMs = 0,
+            onFirstMiss = { announced++ },
+            read = { 0 }
+        )
+        // Zero is an ANSWER (a genuinely empty SDK wallet), never a miss.
+        assertEquals(0, count)
+        assertEquals(0, announced)
     }
 
     @Test
