@@ -1149,6 +1149,48 @@ data class SdkBalanceSplitDuffs(val confirmed: Long, val unconfirmed: Long) {
     val total: Long get() = confirmed + unconfirmed
 }
 
+/**
+ * One observation of the SDK's deferred contact-account-build queue: the
+ * queued [count] and how many CONSECUTIVE refreshes (beyond the one that
+ * first saw it) have returned that same count ([unchangedReads], saturated
+ * at [DEFERRED_BUILDS_SETTLED_READS]). Input to [deferredBuildsSettled].
+ */
+internal data class DeferredBuildObservation(
+    val count: Int = 0,
+    val unchangedReads: Int = 0
+)
+
+/**
+ * Whether the deferred contact-account-build queue counts as SETTLED for the
+ * purpose of persisting [org.dash.wallet.common.data.WalletUIConfig.LAST_TOTAL_BALANCE]:
+ *
+ * - drained ([count] == 0) — provably nothing pending, settled immediately;
+ * - PINNED — the same non-zero count observed across
+ *   [DEFERRED_BUILDS_SETTLED_READS] consecutive refreshes. Some queue entries
+ *   never complete (the SDK re-queues them on every drain pass without ever
+ *   marking them broken — observed live: a sender key-purpose mismatch the
+ *   drain can never resolve), and the app cannot see WHY an entry is queued.
+ *   A count that has stopped moving is the only available evidence that the
+ *   queue is stuck rather than draining — and on such a wallet a bare
+ *   `count == 0` gate would block the persist FOREVER, freezing the launch
+ *   seed on a stale figure (the very staleness the gate exists to prevent).
+ *
+ * A count still MOVING (each refresh differs from the last) is an active
+ * drain: every completed build can add previously-unmatched receives to the
+ * total, so the figure is still provably incomplete and must not be
+ * persisted. Pure — host-testable.
+ */
+internal fun deferredBuildsSettled(count: Int, unchangedReads: Int): Boolean =
+    count == 0 || unchangedReads >= DEFERRED_BUILDS_SETTLED_READS
+
+/**
+ * Consecutive unchanged refreshes (at the balance pipeline's
+ * [CutoverUiDataService.REFRESH_INTERVAL_MS] cadence) after which a non-zero
+ * deferred-build count reads as PINNED — ~3 minutes: several SDK drain passes
+ * fit in the window, so a queue that was genuinely draining would have moved.
+ */
+internal const val DEFERRED_BUILDS_SETTLED_READS = 3
+
 /** Production [CutoverUiSource]: the live SDK Room DB, reactive. */
 internal class DashSdkCutoverUiSource(
     private val service: DashSdkService
@@ -1663,8 +1705,14 @@ class CutoverUiDataService internal constructor(
      * a contact already sent us is still unmatched and the balance is short by
      * it. Null = unknown (never treated as "none pending"); 0 = the queue is
      * provably drained. Read on the balance pipeline's own cadence, and the
-     * gate on persisting [WalletUIConfig.LAST_TOTAL_BALANCE].
-     * Default null-returning: the fake-fed tests have no SDK queue.
+     * gate on persisting [WalletUIConfig.LAST_TOTAL_BALANCE] — via
+     * [deferredBuildsSettled], NOT a bare `== 0`: some builds are queued
+     * FOREVER (the SDK retries entries it can never complete — e.g. a sender
+     * key-purpose mismatch — without ever marking them broken), and the app
+     * cannot see WHY an entry is queued, so a count that has stopped MOVING
+     * is the only stuck-vs-draining signal available (see
+     * [refreshDeferredContactBuilds]). Default null-returning: the fake-fed
+     * tests have no SDK queue.
      */
     private val deferredContactBuildCount: suspend (String) -> Int? = { null },
     /**
@@ -2083,11 +2131,15 @@ class CutoverUiDataService internal constructor(
     private val _lastKnownTotalBalance = MutableStateFlow<Coin?>(null)
 
     /**
-     * Known-unresolved DashPay contact account builds ([deferredContactBuildCount]),
-     * refreshed on the balance cadence. 0 means "provably none queued" — an
-     * unknown/failed read leaves the previous value rather than claiming zero.
+     * Known-unresolved DashPay contact account builds ([deferredContactBuildCount])
+     * plus how many consecutive refreshes have observed that same count,
+     * refreshed on the balance cadence. count 0 means "provably none queued";
+     * an unknown/failed read leaves the previous observation rather than
+     * claiming zero. The unchanged-read streak is what lets
+     * [deferredBuildsSettled] tell a PERMANENTLY STUCK queue (count pinned,
+     * never drains) from an actively draining one (count moving).
      */
-    private val _deferredContactBuilds = MutableStateFlow(0)
+    private val _deferredContactBuilds = MutableStateFlow(DeferredBuildObservation())
 
     /**
      * The cutover-aware total-balance feed:
@@ -2316,8 +2368,10 @@ class CutoverUiDataService internal constructor(
 
     /**
      * Re-read the queued DashPay contact account builds. An unknown result
-     * (no probe wired, SDK down, read failed) leaves the last value alone —
-     * claiming zero would unlock the balance persist on no evidence.
+     * (no probe wired, SDK down, read failed) leaves the last observation
+     * alone — claiming zero would unlock the balance persist on no evidence,
+     * and counting it as an unchanged read would advance the settled streak
+     * on no evidence.
      */
     private suspend fun refreshDeferredContactBuilds(walletIdHex: String) {
         val pending = try {
@@ -2328,12 +2382,37 @@ class CutoverUiDataService internal constructor(
             null
         } ?: return
         val previous = _deferredContactBuilds.value
-        _deferredContactBuilds.value = pending
-        if (previous != pending) {
+        val next = if (pending == previous.count) {
+            // Saturating: only the threshold crossing matters, and an
+            // unbounded counter would eventually overflow on a long session.
+            previous.copy(
+                unchangedReads = (previous.unchangedReads + 1)
+                    .coerceAtMost(DEFERRED_BUILDS_SETTLED_READS)
+            )
+        } else {
+            DeferredBuildObservation(count = pending)
+        }
+        _deferredContactBuilds.value = next
+        if (previous.count != pending) {
             log.info(
                 "deferred DashPay contact account builds: {} (was {}) — the balance {} be " +
                     "persisted as the next launch's last-known figure",
-                pending, previous, if (pending == 0) "may" else "will NOT"
+                pending, previous.count,
+                if (deferredBuildsSettled(next.count, next.unchangedReads)) "may" else "will NOT"
+            )
+        } else if (pending != 0 &&
+            next.unchangedReads == DEFERRED_BUILDS_SETTLED_READS &&
+            previous.unchangedReads < DEFERRED_BUILDS_SETTLED_READS
+        ) {
+            // The Joel shape: entries the SDK re-queues forever (it cannot mark
+            // them broken, and the app cannot see why they are queued). A count
+            // that has stopped moving is settled — blocking the persist any
+            // longer would freeze the launch seed on a stale figure for good.
+            log.info(
+                "deferred DashPay contact account builds pinned at {} across {} consecutive " +
+                    "reads — treating the queue as settled (stuck, not draining); the balance " +
+                    "may be persisted as the next launch's last-known figure",
+                pending, next.unchangedReads
             )
         }
     }
@@ -2385,13 +2464,22 @@ class CutoverUiDataService internal constructor(
         // every later launch open on a wrong (too low) balance.
         val synced = _l1Synced.value
         // …and a caught-up scan is not on its own evidence that the figure is
-        // WHOLE. While DashPay contact account builds are still queued
+        // WHOLE. While DashPay contact account builds are still DRAINING
         // ([_deferredContactBuilds]) the contacts' receiving addresses are not
         // in the watched script set, so payments they sent us have not been
         // matched yet and the total is understated by exactly those. Persisting
-        // it seeds every later launch with a figure known to be short.
+        // it seeds every later launch with a figure known to be short. But a
+        // bare `count == 0` gate is NOT the right test: some queue entries are
+        // permanently stuck (the SDK retries them forever without marking them
+        // broken), and on such a wallet a zero-only gate would block the
+        // persist for the wallet's whole life — the launch seed would freeze
+        // on a stale figure, the exact staleness this gate exists to prevent.
+        // So the gate is SETTLED-ness ([deferredBuildsSettled]): drained, or
+        // pinned at the same non-zero count long enough to prove nothing is
+        // moving.
         val deferredBuilds = _deferredContactBuilds.value
-        val persist = synced && deferredBuilds == 0
+        val persist = synced &&
+            deferredBuildsSettled(deferredBuilds.count, deferredBuilds.unchangedReads)
         // One line per published figure (changes only — the ticker republishes
         // the same value every REFRESH_INTERVAL_MS). Carries what decides what
         // the user actually SEES: while !synced the header holds the last-known
@@ -2399,8 +2487,9 @@ class CutoverUiDataService internal constructor(
         if (previous?.value != duffs) {
             log.info(
                 "SDK balance published: {} duffs (was {}) | l1Synced={} deferredContactBuilds={} " +
-                    "persistedAsLastKnown={} lastKnown={}",
-                duffs, previous?.value ?: "none", synced, deferredBuilds, persist,
+                    "(unchangedReads={}) persistedAsLastKnown={} lastKnown={}",
+                duffs, previous?.value ?: "none", synced, deferredBuilds.count,
+                deferredBuilds.unchangedReads, persist,
                 _lastKnownTotalBalance.value?.value ?: "none"
             )
         }

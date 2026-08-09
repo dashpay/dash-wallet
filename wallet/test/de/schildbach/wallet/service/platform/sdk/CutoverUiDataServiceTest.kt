@@ -791,6 +791,8 @@ class CutoverUiDataServiceTest {
         txEvents: Flow<L1TxEvent> = kotlinx.coroutines.flow.emptyFlow(),
         l1Synced: Flow<Boolean> = flowOf(true),
         deferredContactBuilds: Int? = null,
+        /** When non-null, the deferred-build probe calls THIS per read (overrides [deferredContactBuilds]). */
+        deferredContactBuildFeed: (suspend () -> Int?)? = null,
         /** When non-null, backs BOTH the IS-lock persist and the persisted-lock read (restart-safe store fake). */
         persistedIsLocks: MutableSet<String>? = null
     ) = CutoverUiDataService(
@@ -804,7 +806,9 @@ class CutoverUiDataServiceTest {
         notifyCoinsReceived = notify,
         txEvents = txEvents,
         l1Synced = l1Synced,
-        deferredContactBuildCount = { deferredContactBuilds },
+        deferredContactBuildCount = {
+            if (deferredContactBuildFeed != null) deferredContactBuildFeed() else deferredContactBuilds
+        },
         persistInstantLock = { txid, _ -> persistedIsLocks?.add(txid) },
         loadPersistedInstantLocks = { txids ->
             persistedIsLocks?.let { store -> txids.filterTo(mutableSetOf()) { it in store } } ?: emptySet()
@@ -902,6 +906,9 @@ class CutoverUiDataServiceTest {
         // addresses are not in the watched script set, so payments they sent
         // us are unmatched and the total is short by exactly those. Persisting
         // it would seed every later launch with a figure known to be wrong.
+        // (A count PINNED long enough reads as settled/stuck and unblocks the
+        // persist — see the permanentlyStuck test — but a freshly observed
+        // non-zero count has not earned that yet.)
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
         val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
 
@@ -947,6 +954,68 @@ class CutoverUiDataServiceTest {
         runCurrent()
 
         coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L) }
+    }
+
+    @Test
+    fun postCutover_permanentlyStuckContactBuilds_settleAfterStableReads_thenPersist() = runTest {
+        // The Joel shape: the SDK re-queues entries it can never complete (a
+        // sender key-purpose mismatch it never marks broken), so the count is
+        // pinned at 3 FOREVER. A bare `== 0` gate would block the persist for
+        // the wallet's whole life — the launch seed would freeze on a stale
+        // figure, the exact staleness the gate exists to prevent. A count that
+        // has stopped moving must therefore read as settled.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuildFeed = { 3 }
+        )
+        service.start()
+        runCurrent()
+
+        // The live figure publishes immediately; the pinned count has not yet
+        // proven itself settled, so nothing is persisted.
+        assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+
+        // Still within the settling window after one more refresh.
+        testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+        runCurrent()
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+
+        // Enough consecutive unchanged reads: the queue is settled (stuck, not
+        // draining) and the balance persists again.
+        repeat(DEFERRED_BUILDS_SETTLED_READS + 1) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L) }
+    }
+
+    @Test
+    fun postCutover_activelyDrainingContactBuilds_neverPersistWhileTheCountMoves() = runTest {
+        // A SHRINKING count is an active drain: every completed build can add
+        // previously-unmatched receives to the total, so the figure is still
+        // provably incomplete — stability must not be inferred from any single
+        // read, only from the count having stopped moving.
+        val remaining = java.util.concurrent.atomic.AtomicInteger(60)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig,
+            deferredContactBuildFeed = { remaining.getAndDecrement() }
+        )
+        service.start()
+        runCurrent()
+        repeat(DEFERRED_BUILDS_SETTLED_READS + 3) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
     }
 
     @Test
