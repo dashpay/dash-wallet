@@ -27,7 +27,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.ui.invite.InvitationFragmentViewModel
+import de.schildbach.wallet.ui.invite.InviteCreationFailureKind
+import de.schildbach.wallet.ui.invite.classifyInviteCreationFailure
+import de.schildbach.wallet.ui.invite.inviteRetryAllowed
 import de.schildbach.wallet.ui.more.tools.ConfirmTopupDialogViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmTopupBinding
@@ -56,6 +60,26 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
     // Invite…" forever for shielded invites).
     private val invitationFragmentViewModel by activityViewModels<InvitationFragmentViewModel>()
     private val args by navArgs<ConfirmInviteDialogFragmentArgs>()
+
+    /**
+     * CREATE attempts that have failed in this dialog (a cancelled
+     * authentication is deliberately NOT one — the user may re-try auth
+     * freely). Feeds [inviteRetryAllowed] so the confirm → authorize →
+     * create cycle always terminates in a clear error instead of the
+     * observed unbounded re-prompt (a contested invite deterministically
+     * bounced by the SDK's invitation-amount cap re-ran the full
+     * confirm/authorize cycle on every tap, failing identically each time).
+     */
+    private var failedCreateAttempts = 0
+
+    /**
+     * Latched once [inviteRetryAllowed] says no more attempts may run —
+     * either a failure retrying can never fix (deterministic rejection, or
+     * an ambiguous outcome that must not be double-broadcast) or the
+     * transient-failure attempt budget is spent. [setCreatingUi] keeps the
+     * confirm button disabled from then on; only dismiss remains.
+     */
+    private var retryBlocked = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -121,13 +145,9 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                         val contested = inviteAmount.value >=
                             de.schildbach.wallet.Constants.DASH_PAY_FEE_CONTESTED.value
                         when (val result = invitationFragmentViewModel.createShieldedInvite(contested)) {
-                            is de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast ->
-                                result.value.user
+                            is SdkWriteResult.Broadcast -> result.value.user
                             else -> {
-                                binding.confirmMessage.text =
-                                    getString(R.string.error_sending_invite_transaction)
-                                binding.confirmMessage.isVisible = true
-                                setCreatingUi(false)
+                                onCreateFailed(classifyInviteCreationFailure(result), inviteAmount)
                                 return@launch
                             }
                         }
@@ -141,13 +161,9 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                         val contested = inviteAmount.value >=
                             de.schildbach.wallet.Constants.DASH_PAY_FEE_CONTESTED.value
                         when (val result = invitationFragmentViewModel.createL1Invite(contested)) {
-                            is de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast ->
-                                result.value.user
+                            is SdkWriteResult.Broadcast -> result.value.user
                             else -> {
-                                binding.confirmMessage.text =
-                                    getString(R.string.error_sending_invite_transaction)
-                                binding.confirmMessage.isVisible = true
-                                setCreatingUi(false)
+                                onCreateFailed(classifyInviteCreationFailure(result), inviteAmount)
                                 return@launch
                             }
                         }
@@ -159,9 +175,9 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                     )
                 } catch (e: Exception) {
                     log.info("error sending transaction:", e)
-                    binding.confirmMessage.text = getString(R.string.error_sending_invite_transaction)
-                    binding.confirmMessage.isVisible = true
-                    setCreatingUi(false)
+                    // No SdkWriteResult to classify (dashj path, or a failure
+                    // outside the create call) — treat as transient, bounded.
+                    onCreateFailed(InviteCreationFailureKind.UNREACHABLE, Coin.valueOf(args.amount))
                 }
             }
         }
@@ -181,13 +197,52 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
     }
 
     /**
+     * One failed CREATE attempt: count it, pick the classified, actionable
+     * message ([InviteCreationFailureKind] — an insufficient-funds failure, a
+     * deterministic rejection, a possibly-landed spend, and a transient
+     * network failure each tell the user something different to DO), and
+     * latch [retryBlocked] once [inviteRetryAllowed] says the cycle is over —
+     * so the dialog can never become the observed unbounded
+     * confirm/authorize loop.
+     */
+    private fun onCreateFailed(kind: InviteCreationFailureKind, inviteAmount: Coin) {
+        failedCreateAttempts++
+        val retryAllowed = inviteRetryAllowed(kind, failedCreateAttempts)
+        log.warn(
+            "invite creation failed: kind={} attempt={} retryAllowed={}",
+            kind, failedCreateAttempts, retryAllowed
+        )
+        binding.confirmMessage.text = when (kind) {
+            InviteCreationFailureKind.INSUFFICIENT_FUNDS ->
+                getString(R.string.invitation_cant_afford_message, inviteAmount.toFriendlyString())
+            InviteCreationFailureKind.REJECTED ->
+                getString(R.string.invitation_creation_rejected)
+            InviteCreationFailureKind.POSSIBLY_CREATED ->
+                getString(R.string.invitation_creation_possibly_created)
+            InviteCreationFailureKind.UNREACHABLE ->
+                if (retryAllowed) {
+                    getString(R.string.invitation_creation_unreachable)
+                } else {
+                    getString(R.string.invitation_creation_no_more_attempts)
+                }
+        }
+        binding.confirmMessage.isVisible = true
+        if (!retryAllowed) {
+            retryBlocked = true
+        }
+        setCreatingUi(false)
+    }
+
+    /**
      * Toggle the invite-creation in-flight UI: show/hide the progress row and
      * disable/enable the confirm + dismiss buttons so the ~30s spend cannot be
-     * re-triggered or dismissed mid-flight (Fix C).
+     * re-triggered or dismissed mid-flight (Fix C). Once [retryBlocked] is
+     * latched the confirm button stays disabled for the dialog's remaining
+     * life — only dismiss comes back.
      */
     private fun setCreatingUi(inProgress: Boolean) {
         binding.creationProgress.isVisible = inProgress
-        binding.confirmBtn.isEnabled = !inProgress
+        binding.confirmBtn.isEnabled = !inProgress && !retryBlocked
         binding.dismissBtn.isEnabled = !inProgress
     }
 

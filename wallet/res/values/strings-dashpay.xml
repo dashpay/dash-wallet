@@ -594,6 +594,15 @@
     <string name="invitation_creating_progress_wip">Creating Invitation...</string>
     <string name="invitation_fee_confirm_and_pay_button">Confirm and pay</string>
     <string name="error_sending_invite_transaction">Error sending invite transaction</string>
+    <!-- Invite-creation failures, classified so the user knows what to DO
+         (see InviteCreationFailureKind): a deterministic network rejection
+         (retrying reruns the same validation and can never succeed), a
+         transient failure worth retrying, the same after the attempt budget
+         is spent, and an ambiguous outcome that must never be retried. -->
+    <string name="invitation_creation_rejected">The Dash network rejected this invitation, so trying again will not help. Please try a different invitation type, or update the app if the problem continues.</string>
+    <string name="invitation_creation_unreachable">Unable to reach the Dash network. Check your connection and try again.</string>
+    <string name="invitation_creation_no_more_attempts">Unable to reach the Dash network. Please close this window and try again later.</string>
+    <string name="invitation_creation_possibly_created">The invitation may already have been created. Check your invitation history before trying again.</string>
     <string name="request_username_invitation_only_noncontested_message">You can only create a non-contested username using this invitation</string>
     <!-- Shown in place of the definite "only non-contested" notice when the
          invitation's funding amount cannot be read, so the app genuinely does
