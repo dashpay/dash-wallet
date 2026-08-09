@@ -1015,15 +1015,16 @@ interface CutoverUiSource {
 
     /**
      * ONE-SHOT post-cutover MAX-SENDABLE display figure in duffs
-     * ([maxSendableDuffs] over the manager's per-account balance
-     * snapshot): BIP44 spendable + Σ sweepable receival accounts'
-     * confirmed net of the per-sweep fee headroom — what the send-all
-     * (sweep-then-drain, [SdkL1SendService]) actually delivers, before
-     * the final drain's own fee. The wallet-wide total overstates this
-     * whenever a DashPay contact's receival account holds funds the
-     * BIP44 drain cannot see. Null when unavailable (no snapshot / no
-     * BIP44 row) — the caller falls back to the wallet-wide total.
-     * Default null: sources without account-level balances.
+     * ([pooledSpendableDuffs] over the manager's per-account balance
+     * snapshot): the spendable sum over exactly the accounts the pooled
+     * `ALL_SPENDABLE` drain funds — BIP44 + BIP32 + every DashPay
+     * receival account, delivered in ONE transaction ([SdkL1SendService],
+     * v41int19 dashpay/platform#4329) before the drain's own fee. The
+     * wallet-wide total overstates this whenever the CoinJoin account
+     * holds funds the pooled drain deliberately excludes. Null when
+     * unavailable (no snapshot / no BIP44 row) — the caller falls back to
+     * the wallet-wide total. Default null: sources without account-level
+     * balances.
      */
     suspend fun currentMaxSendableDuffs(walletIdHex: String): Long? = null
 
@@ -1204,11 +1205,11 @@ internal class DashSdkCutoverUiSource(
 
     override suspend fun currentMaxSendableDuffs(walletIdHex: String): Long? {
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
-        // The same per-account snapshot the send path's receival
-        // enumeration reads (PlatformWalletManager.accountBalances);
-        // maxSendableDuffs returns null on a missing/malformed snapshot
-        // and the service then falls back to the wallet-wide total.
-        return maxSendableDuffs(manager().accountBalances(walletId))
+        // The same per-account snapshot (and the same parse) the send
+        // path's drain floor reads (PlatformWalletManager.accountBalances →
+        // pooledSpendableDuffs); null on a missing/malformed snapshot and
+        // the service then falls back to the wallet-wide total.
+        return pooledSpendableDuffs(manager().accountBalances(walletId))
     }
 
     override suspend fun currentBalanceSplitDuffs(walletIdHex: String): SdkBalanceSplitDuffs {
@@ -1631,6 +1632,27 @@ class CutoverUiDataService internal constructor(
      * Default null-returning: the fake-fed tests have no SDK queue.
      */
     private val deferredContactBuildCount: suspend (String) -> Int? = { null },
+    /**
+     * PERSIST one engine-reported IS lock (display-hex txid, observation
+     * epoch-millis) into the APP-OWNED `instant_send_locks` table
+     * ([de.schildbach.wallet.database.dao.InstantSendLockDao]) — the SDK's own
+     * mirror never records the lock (`txos.isInstantLocked` is dead and
+     * `transactions.context` goes 0→3 without passing 1), so this is the only
+     * RESTART-SAFE IS-lock evidence readers can join against: the asset-lock
+     * funding preflight counts these txids as final, and
+     * [loadPersistedInstantLocks] lets any later display pass apply a lock
+     * whose event raced (or predated) the row insert. Default no-op for the
+     * snapshot-only tests.
+     */
+    private val persistInstantLock: suspend (String, Long) -> Unit = { _, _ -> },
+    /**
+     * The subset of the given display-hex txids with a PERSISTED IS lock —
+     * the read side of [persistInstantLock], consulted by [syncDisplayCache]
+     * to lift a still-PENDING record to INSTANT_LOCKED before planning (the
+     * mirror itself never reports the lock). Default empty for the
+     * snapshot-only tests.
+     */
+    private val loadPersistedInstantLocks: suspend (Collection<String>) -> Set<String> = { emptySet() },
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val refreshIntervalMs: Long = REFRESH_INTERVAL_MS,
     private val walletBindRetryMs: Long = WALLET_BIND_RETRY_MS,
@@ -1661,7 +1683,8 @@ class CutoverUiDataService internal constructor(
         l1ShadowSyncService: L1ShadowSyncService,
         l1SyncStatusService: de.schildbach.wallet.service.L1SyncStatusService,
         assetLockKindResolver: AssetLockKindResolver,
-        sdkTxContactResolver: SdkTxContactResolver
+        sdkTxContactResolver: SdkTxContactResolver,
+        instantSendLockDao: de.schildbach.wallet.database.dao.InstantSendLockDao
     ) : this(
         source = DashSdkCutoverUiSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1683,6 +1706,19 @@ class CutoverUiDataService internal constructor(
         // expression that had to be kept in lockstep by hand.
         l1Synced = l1SyncStatusService.sdkScanCaughtUp,
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
+        persistInstantLock = { txidHex, lockedAtMs ->
+            instantSendLockDao.insert(
+                de.schildbach.wallet.database.entity.InstantSendLockEntry(txidHex, lockedAtMs)
+            )
+            // Opportunistic retention prune — locks are only needed for the
+            // pre-block window (the mirror records finality once the block
+            // lands); the table stays a handful of rows.
+            instantSendLockDao.deleteOlderThan(lockedAtMs - IS_LOCK_RETENTION_MS)
+        },
+        loadPersistedInstantLocks = { txids ->
+            // Chunked: SQLite's IN-clause variable cap is 999.
+            txids.chunked(500).flatMapTo(mutableSetOf()) { instantSendLockDao.getLockedTxIds(it) }
+        },
         resolveString = { resId -> context.getString(resId) },
         notifyCoinsReceived = { duffs ->
             notificationService.showNotification(
@@ -2487,11 +2523,33 @@ class CutoverUiDataService internal constructor(
     }
 
     private suspend fun applyInstantLock(txidHex: String) {
+        // PERSIST the lock FIRST, unconditionally — before any of the display
+        // early-returns below. The engine's IS-lock event is otherwise
+        // ephemeral (the SDK mirror never records it: `txos.isInstantLocked`
+        // is dead and `transactions.context` skips 1), and this write is what
+        // (a) lets the asset-lock funding preflight count the coins as final
+        // and (b) lets a LATER display pass apply the lock when this event
+        // arrived before the row existed (the observed live miss: locked in
+        // 3s, row stuck "Processing" until the block). Survives restart.
+        try {
+            persistInstantLock(txidHex, nowMs())
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.error("IS-lock persist failed for {} — readers stay blind to this lock", txidHex, t)
+        }
         try {
             val grouped = txGroupCacheDao.getGroupsForTxIds(listOf(txidHex))
                 .any { it.isMultiTxGroupRow }
             if (grouped) return
-            val existing = txDisplayCacheDao.getEntriesByIds(listOf(txidHex)).firstOrNull() ?: return
+            val existing = txDisplayCacheDao.getEntriesByIds(listOf(txidHex)).firstOrNull()
+            if (existing == null) {
+                // No row yet (the lock event beat the Detected/snapshot
+                // insert). Not a miss anymore: the insert pass consults the
+                // just-persisted lock (syncDisplayCache's status lift) and is
+                // born without "Processing".
+                log.info("engine IS lock for {} — no display row yet; persisted for the insert pass", txidHex)
+                return
+            }
             val updated = planL1InstantLockRowUpdate(existing, resolveString) ?: return
             txDisplayCacheDao.insertAll(listOf(updated))
             displayCacheRefreshBus.markSdkAuthoritative(setOf(txidHex))
@@ -2542,6 +2600,38 @@ class CutoverUiDataService internal constructor(
             // settled (the negative caches were already busted in the request).
             if (reResolveRequested.compareAndSet(true, false)) {
                 terminalResolvedTxids.clear()
+            }
+            // LIFT still-PENDING records whose IS lock is already PERSISTED
+            // ([persistInstantLock]) to INSTANT_LOCKED before planning. The
+            // mirror itself never reports the lock (`transactions.context`
+            // goes 0→3 without passing 1 and `txos.isInstantLocked` is dead),
+            // so without this a record whose InstantLocked event raced the row
+            // insert — or a record re-read after a process restart — plans as
+            // PENDING and the row shows/keeps "Processing" until the block
+            // (observed live: locked in 3s, label stuck ~2.5min). Fail-soft:
+            // a failed read simply lifts nothing this pass.
+            @Suppress("NAME_SHADOWING")
+            val records = run {
+                val pendingTxids = records.filter { it.status == L1TxUiStatus.PENDING }.map { it.txidHex }
+                if (pendingTxids.isEmpty()) return@run records
+                val locked = try {
+                    loadPersistedInstantLocks(pendingTxids)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("persisted IS-lock read failed; pending statuses unlifted this pass", t)
+                    emptySet()
+                }
+                if (locked.isEmpty()) {
+                    records
+                } else {
+                    records.map {
+                        if (it.status == L1TxUiStatus.PENDING && it.txidHex in locked) {
+                            it.copy(status = L1TxUiStatus.INSTANT_LOCKED)
+                        } else {
+                            it
+                        }
+                    }
+                }
             }
             val txids = records.map { it.txidHex }
             // Chunked: SQLite's IN-clause variable cap is 999.
@@ -2831,6 +2921,14 @@ class CutoverUiDataService internal constructor(
 
         /** [terminalResolvedTxids] cap — eldest-evicted (an evicted row just re-verifies, idempotent). */
         internal const val TERMINAL_RESOLVED_MAX = 4_096
+
+        /**
+         * Retention for persisted IS locks ([persistInstantLock]) — locks are
+         * only NEEDED for the pre-block window (~minutes; the mirror records
+         * finality itself once the block lands), so 7 days is deep margin for
+         * a chainlock stall while keeping the table a handful of rows.
+         */
+        internal const val IS_LOCK_RETENTION_MS = 7L * 24 * 60 * 60 * 1000
 
         /** Insertion-ordered set that evicts its eldest entry beyond [maxSize]. */
         private fun boundedSet(maxSize: Int): MutableSet<String> =

@@ -88,15 +88,19 @@ class SdkAssetLockFundingPreflightQueryTest {
         db.close()
     }
 
-    private fun evidence(): AssetLockFundingEvidence = runBlocking {
+    private fun evidence(persistedLocks: List<String> = emptyList()): AssetLockFundingEvidence = runBlocking {
         requireNotNull(
-            SdkAssetLockFundingPreflight.queryAssetLockFundingEvidence(db, walletIdHex)
+            SdkAssetLockFundingPreflight.queryAssetLockFundingEvidence(db, walletIdHex, persistedLocks)
         )
     }
 
     private fun eligibleDuffs(): Long = evidence().eligibleDuffs
 
     private fun unclassifiedDuffs(): Long = evidence().unclassifiedDuffs
+
+    /** Display-order (byte-reversed) lowercase hex of a wire txid — the persisted-lock key format. */
+    private fun displayHexOfTxid(wireTxid: ByteArray): String =
+        wireTxid.reversedArray().joinToString("") { "%02x".format(it) }
 
     // ── the defect: IS-locked funds must be eligible within seconds ──────
 
@@ -218,7 +222,10 @@ class SdkAssetLockFundingPreflightQueryTest {
     @Test
     fun unattributableRow_staysExcluded() {
         // NEITHER accountId nor an address row: the engine can't route what
-        // it can't attribute — must not count.
+        // it can't attribute — must not count as ELIGIBLE. It does count as
+        // UNCLASSIFIED (the complement invariant: an unattributable row is a
+        // mirror gap, not a settled exclusion — dropping it from both sums
+        // would let the classified remainder fabricate a false shortfall).
         insertTxo(
             outpoint(9),
             amount = 90_000_000L,
@@ -229,6 +236,7 @@ class SdkAssetLockFundingPreflightQueryTest {
         )
 
         assertEquals(0L, eligibleDuffs())
+        assertEquals(90_000_000L, unclassifiedDuffs())
     }
 
     @Test
@@ -340,6 +348,114 @@ class SdkAssetLockFundingPreflightQueryTest {
 
         assertEquals(0L, eligibleDuffs())
         assertEquals(0L, unclassifiedDuffs())
+    }
+
+    // ── app-persisted IS-lock evidence (the instant_send_locks join) ─────
+
+    @Test
+    fun persistedIsLock_makesAttributedPreBlockReceiveEligible() {
+        // The pre-block window with the ADDRESS already known (a receive to an
+        // already-registered address): the mirror has the account attribution
+        // but NO finality signal — context still 0, flags dead. Without the
+        // app-persisted lock this value is merely unclassified (fail open);
+        // WITH it the coins read as final BIP44 funds: a confident YES.
+        val txid = txid(30)
+        insertTx(txid, context = 0)
+        insertAddress("addr-lock", BIP44_ACCOUNT_ROW_ID)
+        insertTxo(outpoint(30), amount = 9_401_442L, address = "addr-lock", isConfirmed = false, txid = txid)
+
+        val baseline = evidence()
+        assertEquals(0L, baseline.eligibleDuffs)
+        assertEquals(9_401_442L, baseline.unclassifiedDuffs)
+        assertEquals(null, assetLockFundingVerdict(baseline, 3_000_000L))
+
+        val locked = evidence(persistedLocks = listOf(displayHexOfTxid(txid)))
+        assertEquals(9_401_442L, locked.eligibleDuffs)
+        assertEquals(0L, locked.unclassifiedDuffs)
+        assertEquals(true, assetLockFundingVerdict(locked, 3_000_000L))
+    }
+
+    @Test
+    fun persistedIsLock_unattributedRowStaysUnclassified_neverAShortfall() {
+        // The S21 shape: lock persisted seconds after the receive, but
+        // core_addresses (the only attribution route) is only written with
+        // the block. Final-but-unattributable must fall to UNCLASSIFIED —
+        // under the historical complement shape it satisfied NEITHER query,
+        // vanishing from both sums and fabricating a false "proven
+        // shortfall" on a visibly funded wallet.
+        val txid = txid(31)
+        insertTx(txid, context = 0)
+        insertTxo(
+            outpoint(31),
+            amount = 9_401_442L,
+            address = "addr-not-registered-yet",
+            isConfirmed = false,
+            txid = txid,
+            accountId = null
+        )
+
+        val locked = evidence(persistedLocks = listOf(displayHexOfTxid(txid)))
+        assertEquals(0L, locked.eligibleDuffs)
+        assertEquals(9_401_442L, locked.unclassifiedDuffs)
+        // Fail open (unknown), NEVER a refusal of a funded wallet.
+        assertEquals(null, assetLockFundingVerdict(locked, 3_000_000L))
+    }
+
+    @Test
+    fun persistedIsLock_foreignAccountValueStaysExcluded() {
+        // Scope stays a settled fact even with a lock: a locked output on a
+        // non-BIP44-account-0 account is neither eligible nor unclassified.
+        val txid = txid(32)
+        insertTx(txid, context = 0)
+        insertAddress("addr-foreign-locked", FOREIGN_ACCOUNT_ROW_ID)
+        insertTxo(outpoint(32), amount = 80_000_000L, address = "addr-foreign-locked", isConfirmed = false, txid = txid)
+
+        val locked = evidence(persistedLocks = listOf(displayHexOfTxid(txid)))
+        assertEquals(0L, locked.eligibleDuffs)
+        assertEquals(0L, locked.unclassifiedDuffs)
+    }
+
+    @Test
+    fun persistedIsLock_forADifferentTxidChangesNothing() {
+        val txid = txid(33)
+        insertTx(txid, context = 0)
+        insertAddress("addr-other-lock", BIP44_ACCOUNT_ROW_ID)
+        insertTxo(outpoint(33), amount = 5_000_000L, address = "addr-other-lock", isConfirmed = false, txid = txid)
+
+        val locked = evidence(persistedLocks = listOf(displayHexOfTxid(txid(99))))
+        assertEquals(0L, locked.eligibleDuffs)
+        assertEquals(5_000_000L, locked.unclassifiedDuffs)
+    }
+
+    @Test
+    fun persistedIsLock_malformedTxidIsDroppedNotFatal() {
+        insertAddress("addr-ok", BIP44_ACCOUNT_ROW_ID)
+        insertTxo(outpoint(34), amount = 1_000_000L, address = "addr-ok", isConfirmed = true, txid = null)
+
+        val locked = evidence(persistedLocks = listOf("zz-not-hex", "abcd"))
+        assertEquals(1_000_000L, locked.eligibleDuffs)
+        assertEquals(0L, locked.unclassifiedDuffs)
+    }
+
+    @Test
+    fun persistedIsLock_spentRowStaysExcluded() {
+        // The lock is finality evidence, never spendability evidence: a spent
+        // (or reserved) output must not resurface because its tx was locked.
+        val txid = txid(35)
+        insertTx(txid, context = 0)
+        insertAddress("addr-spent-locked", BIP44_ACCOUNT_ROW_ID)
+        insertTxo(
+            outpoint(35),
+            amount = 2_000_000L,
+            address = "addr-spent-locked",
+            isConfirmed = false,
+            isSpent = true,
+            txid = txid
+        )
+
+        val locked = evidence(persistedLocks = listOf(displayHexOfTxid(txid)))
+        assertEquals(0L, locked.eligibleDuffs)
+        assertEquals(0L, locked.unclassifiedDuffs)
     }
 
     // ── the untouched exclusions stay in force ───────────────────────────

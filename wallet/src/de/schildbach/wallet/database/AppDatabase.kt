@@ -25,6 +25,7 @@ import de.schildbach.wallet.database.dao.TxGroupCacheDao
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.ImportedMasternodeKey
+import de.schildbach.wallet.database.entity.InstantSendLockEntry
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
@@ -65,9 +66,10 @@ import org.dash.wallet.integrations.maya.data.SwapOrderDao
         TopUp::class,
         TxDisplayCacheEntry::class,
         TxGroupCacheEntry::class,
-        SwapOrder::class
+        SwapOrder::class,
+        InstantSendLockEntry::class
     ],
-    version = 21, // if increasing version, we need migrations to preserve tx/addr metadata,
+    version = 22, // if increasing version, we need migrations to preserve tx/addr metadata,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class, BlockchainStateRoomConverters::class)
@@ -91,4 +93,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun txDisplayCacheDao(): TxDisplayCacheDao
     abstract fun txGroupCacheDao(): TxGroupCacheDao
     abstract fun swapOrderDao(): SwapOrderDao
+    abstract fun instantSendLockDao(): InstantSendLockDao
 }

@@ -768,7 +768,9 @@ class CutoverUiDataServiceTest {
         notify: (Long) -> Unit = {},
         txEvents: Flow<L1TxEvent> = kotlinx.coroutines.flow.emptyFlow(),
         l1Synced: Flow<Boolean> = flowOf(true),
-        deferredContactBuilds: Int? = null
+        deferredContactBuilds: Int? = null,
+        /** When non-null, backs BOTH the IS-lock persist and the persisted-lock read (restart-safe store fake). */
+        persistedIsLocks: MutableSet<String>? = null
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -781,6 +783,10 @@ class CutoverUiDataServiceTest {
         txEvents = txEvents,
         l1Synced = l1Synced,
         deferredContactBuildCount = { deferredContactBuilds },
+        persistInstantLock = { txid, _ -> persistedIsLocks?.add(txid) },
+        loadPersistedInstantLocks = { txids ->
+            persistedIsLocks?.let { store -> txids.filterTo(mutableSetOf()) { it in store } } ?: emptySet()
+        },
         nowMs = { now }
     )
 
@@ -1289,6 +1295,111 @@ class CutoverUiDataServiceTest {
         runCurrent()
         assertTrue(store.isEmpty())
         coVerify(exactly = 0) { displayDao.insertAll(any()) }
+    }
+
+    // ── persisted IS locks (restart-safe lock evidence, Fix: display + preflight readers) ──
+
+    @Test
+    fun engineEvent_isLockIsPersisted_evenWhenNoRowExistsYet() = runTest {
+        // The lock event may beat the Detected insert (observed live: locked
+        // in 3s, row stuck "Processing" ~2.5min). The lock FACT must be
+        // persisted unconditionally — before any display early-return — so
+        // the preflight and later display passes can read it.
+        val txid = displayHex(13)
+        val persisted = mutableSetOf<String>()
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+
+        val service = buildService(
+            source = FakeSource(records = MutableStateFlow(emptyList())),
+            dashPayConfig = configWithState("CUT_OVER"),
+            scope = backgroundScope,
+            displayDao = displayDao, groupDao = groupDao, txEvents = events,
+            persistedIsLocks = persisted
+        )
+        service.start()
+        runCurrent()
+
+        events.emit(L1TxEvent.InstantLocked(txid))
+        runCurrent()
+        assertEquals(setOf(txid), persisted)
+        assertTrue(store.isEmpty()) // no row to flip — yet
+    }
+
+    @Test
+    fun engineEvent_isLockBeforeDetected_rowIsBornWithoutProcessing() = runTest {
+        // Lock event FIRST (row absent, display flip a no-op), Detected
+        // second: the insert pass must consult the persisted lock and be
+        // born locked — no "Processing" that nothing would ever clear.
+        val txid = displayHex(14)
+        val persisted = mutableSetOf<String>()
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+
+        val service = buildService(
+            source = FakeSource(records = MutableStateFlow(emptyList())),
+            dashPayConfig = configWithState("CUT_OVER"),
+            scope = backgroundScope,
+            displayDao = displayDao, groupDao = groupDao, txEvents = events,
+            persistedIsLocks = persisted
+        )
+        service.start()
+        runCurrent()
+
+        events.emit(L1TxEvent.InstantLocked(txid))
+        runCurrent()
+        events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
+        runCurrent()
+
+        val row = store.getValue(txid)
+        assertEquals(resolve(R.string.transaction_row_status_received), row.title)
+        assertEquals("", row.statusText)
+    }
+
+    @Test
+    fun persistedIsLock_survivesRestart_snapshotPassClearsProcessing() = runTest {
+        // Process restart after the lock but before the block: the row was
+        // cached "Processing", the engine re-fires no events, and the SDK
+        // mirror still reads context=0 (it never records the lock). The
+        // snapshot pass must apply the PERSISTED lock — title/status settle
+        // without waiting for the block.
+        val txid = displayHex(15)
+        val persisted = mutableSetOf(txid) // survived from the previous process
+        val store = mutableMapOf(
+            txid to cacheEntry(
+                rowId = txid,
+                title = resolve(R.string.transaction_row_status_received),
+                statusText = resolve(R.string.transaction_row_status_processing),
+                filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+            ).copy(
+                valueSatoshis = 1_000_000L,
+                iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+                iconBgType = TxDisplayCacheEntry.BG_RECEIVED
+            )
+        )
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao,
+            persistedIsLocks = persisted
+        )
+        service.start()
+        runCurrent()
+
+        // The mirror's own record still claims PENDING (context=0).
+        source.records.value = listOf(record(firstByte = 15, net = 1_000_000L, context = 0, direction = 0))
+        runCurrent()
+        assertEquals("", store.getValue(txid).statusText)
     }
 
     @Test

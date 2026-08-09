@@ -27,7 +27,7 @@ import javax.inject.Singleton
 /**
  * Fee headroom, in duffs, required ON TOP of the asset-lock amount for the
  * funding-eligibility preflight to report "fundable". Same sizing rationale
- * as [RECEIVAL_FALLBACK_FEE_HEADROOM_DUFFS]: at the asset-lock builder's
+ * as [SEND_ALL_FEE_RESERVE_DUFFS]: at the asset-lock builder's
  * default rate (`DEFAULT_FEE_PER_KB` = 1000 duffs/kB) the fee is
  * `~44 + 148·n_inputs` duffs, so 10 000 covers ~67 inputs — far beyond a
  * typical wallet. A wallet that exceeds it anyway fails the REAL build
@@ -81,6 +81,32 @@ private const val MIRROR_FINAL_TERM =
     "(t.isConfirmed = 1 OR t.isInstantLocked = 1 " +
         "OR COALESCE(tx.context, -1) IN ($TX_CONTEXT_INSTANT_SEND, $TX_CONTEXT_CHAIN_LOCKED))"
 
+/**
+ * Finality EXTENDED with the app's own persisted IS-lock evidence
+ * (`instant_send_locks`, written by
+ * [CutoverUiDataService.applyInstantLock] the moment the engine reports a
+ * lock): the mirror's own finality terms OR `t.txid` in the given number of
+ * bound wire-order txid blobs. With [lockCount] = 0 this IS
+ * [MIRROR_FINAL_TERM] — the pre-existing query, byte-identical.
+ *
+ * This is what tightens the pre-block fail-open: an IS-locked receive used
+ * to be invisible to the mirror for a whole block (`txos.isInstantLocked`
+ * dead, `transactions.context` 0→3 skipping 1), so a freshly funded wallet
+ * read as "no evidence" and every caller failed open. With the persisted
+ * lock joined in, the same wallet reads as ELIGIBLE — a confident yes —
+ * while a wallet whose classified funds genuinely cannot cover the lock
+ * still gates.
+ */
+private fun mirrorFinalTermSql(lockCount: Int): String =
+    if (lockCount == 0) {
+        MIRROR_FINAL_TERM
+    } else {
+        val placeholders = (1..lockCount).joinToString(",") { "?" }
+        "(t.isConfirmed = 1 OR t.isInstantLocked = 1 " +
+            "OR COALESCE(tx.context, -1) IN ($TX_CONTEXT_INSTANT_SEND, $TX_CONTEXT_CHAIN_LOCKED) " +
+            "OR t.txid IN ($placeholders))"
+    }
+
 /** The one account a non-shielded asset lock funds from: Standard/BIP44, index 0. */
 private const val BIP44_ACCOUNT_0_TERM =
     "a.accountType = 0 AND a.standardTag = 0 AND a.accountIndex = 0"
@@ -103,11 +129,18 @@ private const val BIP44_ACCOUNT_0_TERM =
  * unattributable row is what a not-yet-mined receive looks like, not a
  * coin the engine has refused to route.
  */
-internal const val ELIGIBLE_ASSET_LOCK_DUFFS_SQL =
+internal val ELIGIBLE_ASSET_LOCK_DUFFS_SQL = eligibleAssetLockDuffsSql(lockCount = 0)
+
+/**
+ * The eligibility sum with [lockCount] persisted IS-lock txid blobs bound
+ * into the finality term ([mirrorFinalTermSql]) — args: walletId, then the
+ * wire-order txid blobs. `lockCount = 0` is the pre-existing constant.
+ */
+internal fun eligibleAssetLockDuffsSql(lockCount: Int): String =
     "SELECT COALESCE(SUM(t.amount), 0) $ASSET_LOCK_TXO_JOINS " +
         "WHERE t.walletId = ? " +
         "AND $UNSPENT_SELECTABLE_TERMS " +
-        "AND $MIRROR_FINAL_TERM " +
+        "AND ${mirrorFinalTermSql(lockCount)} " +
         "AND $BIP44_ACCOUNT_0_TERM"
 
 /**
@@ -131,12 +164,32 @@ internal const val ELIGIBLE_ASSET_LOCK_DUFFS_SQL =
  * A zero sum from a mirror that cannot yet classify the wallet's coins is
  * not evidence of a shortfall — see [assetLockFundingVerdict].
  */
-internal const val UNCLASSIFIED_ASSET_LOCK_DUFFS_SQL =
+internal val UNCLASSIFIED_ASSET_LOCK_DUFFS_SQL = unclassifiedAssetLockDuffsSql(lockCount = 0)
+
+/**
+ * The unclassified sum with the SAME [lockCount] lock blobs as
+ * [eligibleAssetLockDuffsSql] (args: walletId, then the wire-order txid
+ * blobs), keeping the two queries EXACT COMPLEMENTS over the unspent
+ * selectable rows minus settled non-BIP44 attributions:
+ *
+ * `a.id IS NULL` (unattributable — the pre-block shape) counts REGARDLESS
+ * of finality, and an attributed BIP44-account-0 row counts only while NOT
+ * final. Structured this way (instead of the historical
+ * `NOT final AND (a.id IS NULL OR bip44)`) because the persisted IS-lock
+ * evidence makes "final but not yet attributable" a REACHABLE state: the
+ * lock lands seconds after the receive while `core_addresses` is only
+ * written with the block. Under the historical shape such a row satisfied
+ * neither query — vanishing from BOTH sums and fabricating a false "proven
+ * shortfall" on a visibly funded wallet — whereas it is exactly the
+ * "mirror knows the coin is final but cannot yet route it" case the
+ * unclassified bucket exists for ([assetLockFundingVerdict] then answers
+ * `null`, fail open, as before).
+ */
+internal fun unclassifiedAssetLockDuffsSql(lockCount: Int): String =
     "SELECT COALESCE(SUM(t.amount), 0) $ASSET_LOCK_TXO_JOINS " +
         "WHERE t.walletId = ? " +
         "AND $UNSPENT_SELECTABLE_TERMS " +
-        "AND NOT $MIRROR_FINAL_TERM " +
-        "AND (a.id IS NULL OR ($BIP44_ACCOUNT_0_TERM))"
+        "AND (a.id IS NULL OR (($BIP44_ACCOUNT_0_TERM) AND NOT ${mirrorFinalTermSql(lockCount)}))"
 
 /**
  * What the mirror can say about asset-lock fundability, as TWO numbers —
@@ -311,13 +364,27 @@ class SdkAssetLockFundingPreflight internal constructor(
     @Inject
     constructor(
         sdkL1SendService: SdkL1SendService,
-        sdkService: DashSdkService
+        sdkService: DashSdkService,
+        instantSendLockDao: de.schildbach.wallet.database.dao.InstantSendLockDao
     ) : this(
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
         evidenceQuery = {
             queryAssetLockFundingEvidence(
                 sdkService.databaseOrNull(),
-                sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()
+                sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull(),
+                // The app's own persisted IS-lock evidence (CutoverUiDataService
+                // writes it the moment the engine reports a lock) — folded into
+                // the finality term so a pre-block IS-locked receive counts as
+                // FINAL instead of failing open. Fail-soft: a failed read just
+                // means no locks are joined this evaluation (the pre-fix
+                // behaviour), never a blocked flow.
+                persistedLockTxidsHex = try {
+                    instantSendLockDao.getMostRecentTxIds(MAX_PREFLIGHT_LOCK_TXIDS)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("persisted IS-lock read failed; preflight evaluates without lock evidence", t)
+                    emptyList()
+                }
             )
         }
     )
@@ -372,6 +439,15 @@ class SdkAssetLockFundingPreflight internal constructor(
         private val log = LoggerFactory.getLogger(SdkAssetLockFundingPreflight::class.java)
 
         /**
+         * Cap on persisted IS-lock txids bound into one query — the lock
+         * blobs share SQLite's 999-variable budget with the walletId.
+         * Locks only matter for the pre-block window, so even a burst of
+         * receives sits far under this; anything truncated merely falls to
+         * the unclassified bucket (fail open), never a false shortfall.
+         */
+        internal const val MAX_PREFLIGHT_LOCK_TXIDS = 500
+
+        /**
          * Both read-only SQL passes over the SDK's Room mirror (same
          * `openHelper` raw-query precedent as [CutoverUiDataService]'s
          * unspent-sum probe), in ONE IO hop. Returns `null` when the DB or
@@ -384,14 +460,30 @@ class SdkAssetLockFundingPreflight internal constructor(
          */
         internal suspend fun queryAssetLockFundingEvidence(
             database: org.dashfoundation.dashsdk.persistence.DashDatabase?,
-            walletIdHex: String?
+            walletIdHex: String?,
+            /**
+             * Display-hex txids with an APP-PERSISTED IS lock
+             * ([de.schildbach.wallet.database.dao.InstantSendLockDao]) —
+             * joined into the finality term as wire-order blobs so IS-locked
+             * coins count as final DURING the pre-block window the mirror
+             * cannot describe. Bounded by [MAX_PREFLIGHT_LOCK_TXIDS];
+             * over-supply is truncated (omitted locks merely fall back to
+             * unclassified = fail open, never a false shortfall).
+             */
+            persistedLockTxidsHex: List<String> = emptyList()
         ): AssetLockFundingEvidence? {
             val db = database ?: return null
             val walletId = walletIdHex?.let { walletIdFromHex(it) } ?: return null
+            // Display-order hex → the wire-order 32-byte blobs `txos.txid` stores
+            // (same convention as CutoverUiSource.coinJoinFundedTxids). Malformed
+            // entries are dropped rather than failing the whole preflight.
+            val lockBlobs = persistedLockTxidsHex
+                .take(MAX_PREFLIGHT_LOCK_TXIDS)
+                .mapNotNull { hexToBytesOrNull(it.lowercase())?.takeIf { b -> b.size == 32 }?.reversedArray() }
             return withContext(Dispatchers.IO) {
                 AssetLockFundingEvidence(
-                    eligibleDuffs = sumDuffs(db, ELIGIBLE_ASSET_LOCK_DUFFS_SQL, walletId),
-                    unclassifiedDuffs = sumDuffs(db, UNCLASSIFIED_ASSET_LOCK_DUFFS_SQL, walletId)
+                    eligibleDuffs = sumDuffs(db, eligibleAssetLockDuffsSql(lockBlobs.size), walletId, lockBlobs),
+                    unclassifiedDuffs = sumDuffs(db, unclassifiedAssetLockDuffsSql(lockBlobs.size), walletId, lockBlobs)
                 )
             }
         }
@@ -399,14 +491,18 @@ class SdkAssetLockFundingPreflight internal constructor(
         private fun sumDuffs(
             db: org.dashfoundation.dashsdk.persistence.DashDatabase,
             sql: String,
-            walletId: ByteArray
+            walletId: ByteArray,
+            lockBlobs: List<ByteArray> = emptyList()
         ): Long {
+            val args = ArrayList<Any?>(1 + lockBlobs.size)
+            args.add(walletId)
+            args.addAll(lockBlobs)
             return db.openHelper.readableDatabase.query(
                 // See the class KDoc for the source-level trace of every term,
                 // and the constants' KDoc for the dead-`isInstantLocked`,
                 // NULL-`accountId` and pre-block mirror realities they
                 // compensate for.
-                androidx.sqlite.db.SimpleSQLiteQuery(sql, arrayOf<Any?>(walletId))
+                androidx.sqlite.db.SimpleSQLiteQuery(sql, args.toTypedArray())
             ).use { cursor -> if (cursor.moveToFirst()) cursor.getLong(0) else 0L }
         }
     }
