@@ -56,11 +56,14 @@ class SdkL1SendServiceTest {
         var onSendAll: (String, String, Long) -> String = { _, _, _ ->
             throw IllegalStateException("send-all not stubbed")
         },
-        var onSweepReceival: () -> Long = { 0L }
+        // Interface default: enumeration unavailable → the service uses the
+        // flat SEND_ALL_FEE_RESERVE_DUFFS fallback reserve.
+        var onPooledUtxoCount: () -> Int? = { null }
     ) : SdkL1SendSource {
         var boundCalls = 0
         var sendCalls = 0
         var spendableCalls = 0
+        var pooledUtxoCountCalls = 0
         var sendAllCalls = 0
         var lockAcquisitions = 0
         var insideLock = false
@@ -69,9 +72,6 @@ class SdkL1SendServiceTest {
         var lastAddress: String? = null
         var lastAmountDuffs: Long? = null
         val sendAllFloors = mutableListOf<Long>()
-        var sweepReceivalCalls = 0
-        var spendableCallsAtSweep = -1
-        var sweepInsideLock = false
 
         override suspend fun boundWalletIdOrNull(): String? {
             boundCalls++
@@ -106,11 +106,9 @@ class SdkL1SendServiceTest {
             return onSpendable()
         }
 
-        override suspend fun sweepReceivalAccountsForSendAll(walletIdHex: String): Long {
-            sweepReceivalCalls++
-            spendableCallsAtSweep = spendableCalls
-            sweepInsideLock = insideLock
-            return onSweepReceival()
+        override suspend fun pooledSpendableUtxoCount(walletIdHex: String): Int? {
+            pooledUtxoCountCalls++
+            return onPooledUtxoCount()
         }
 
         override suspend fun sendAllToAddress(
@@ -735,8 +733,19 @@ class SdkL1SendServiceTest {
 
     @Test
     fun sendAllShortfall_matchesOnlyTheEngineInsufficientAtFeeBuildFailure() {
-        // The retryable signature: WalletOperation + FFI build prefix +
-        // key-wallet's InsufficientFunds Display text.
+        // TYPED arm (v41int19, the pooled atomic finalize's selector
+        // shortfall — FFI code 22): the message carries no key-wallet
+        // "Insufficient funds" Display text, so without the typed arm the
+        // adjust-down retry would silently never fire on new AARs.
+        assertTrue(
+            isSendAllShortfall(
+                DashSdkError.PlatformWallet.CoreInsufficientFunds(
+                    "insufficient unreserved Core funds: available 5000000, required 5001480"
+                )
+            )
+        )
+        // LEGACY arm: WalletOperation + FFI build prefix + key-wallet's
+        // InsufficientFunds Display text (the v1 split surface's wrapping).
         assertTrue(
             isSendAllShortfall(
                 DashSdkError.PlatformWallet.WalletOperation(
@@ -765,12 +774,37 @@ class SdkL1SendServiceTest {
         )
         assertFalse(isSendAllShortfall(DashSdkError.NetworkError("Insufficient funds")))
         assertFalse(isSendAllShortfall(RuntimeException("transaction build failed: Insufficient funds")))
+        // A typed build refusal that is NOT a shortfall must not retry either.
+        assertFalse(
+            isSendAllShortfall(DashSdkError.PlatformWallet.TransactionBuild("recipient below dust"))
+        )
         // Every retryable shortfall MUST classify NotBroadcast (the no-
         // double-broadcast proof the single retry rests on).
         val shortfall = DashSdkError.PlatformWallet.WalletOperation(
             "transaction build failed: Insufficient funds: available 1, required 2"
         )
         assertTrue(classifyCoreSendFailure(shortfall) is SdkWriteResult.NotBroadcast)
+        val typedShortfall = DashSdkError.PlatformWallet.CoreInsufficientFunds(
+            "insufficient unreserved Core funds: available 1, required 2"
+        )
+        assertTrue(classifyCoreSendFailure(typedShortfall) is SdkWriteResult.NotBroadcast)
+    }
+
+    // ── Send-all fee reserve: the iOS size-based model ───────────────────
+
+    @Test
+    fun sendAllFeeReserve_isSizeBased_withTheFlatFallback() {
+        // Model: (10 + n·148 + 68) bytes at 1 duff/byte, +50%.
+        assertEquals((10L + 0L * 148L + 68L) * 3L / 2L, sendAllFeeReserveDuffs(0))
+        assertEquals((10L + 1L * 148L + 68L) * 3L / 2L, sendAllFeeReserveDuffs(1))
+        assertEquals((10L + 10L * 148L + 68L) * 3L / 2L, sendAllFeeReserveDuffs(10))
+        // A 200-input wallet needs far more than the old flat reserve —
+        // the exact case dashwallet-ios#928 fixed.
+        assertEquals((10L + 200L * 148L + 68L) * 3L / 2L, sendAllFeeReserveDuffs(200))
+        assertTrue(sendAllFeeReserveDuffs(200) > SEND_ALL_FEE_RESERVE_DUFFS)
+        // Enumeration unavailable → the flat fallback, never a failure.
+        assertEquals(SEND_ALL_FEE_RESERVE_DUFFS, sendAllFeeReserveDuffs(null))
+        assertEquals(SEND_ALL_FEE_RESERVE_DUFFS, sendAllFeeReserveDuffs(-1))
     }
 
     // ── Step B: send-all (drain) — post-cutover orchestration ────────────
@@ -789,7 +823,9 @@ class SdkL1SendServiceTest {
             .sendToAddress(validAddress, amount, emptyWallet = true)
         assertEquals(SdkWriteResult.Broadcast(txid), result)
         // The drain ran INSTEAD of the plain send, floored at
-        // spendable − reserve (the iOS-validated max pattern).
+        // spendable − reserve (the iOS-validated max pattern); with the
+        // UTXO enumeration unavailable (the fake's default) the reserve is
+        // the flat fallback constant.
         assertEquals(0, source.sendCalls)
         assertEquals(1, source.sendAllCalls)
         assertEquals(listOf(5_000_000L - SEND_ALL_FEE_RESERVE_DUFFS), source.sendAllFloors)
@@ -801,6 +837,37 @@ class SdkL1SendServiceTest {
         // Post-broadcast hooks fire exactly like a plain send.
         assertEquals(1, selfSpendMarks)
         assertEquals(listOf(txid), bridgedTxids)
+    }
+
+    @Test
+    fun sendAll_withAPooledUtxoCount_usesTheSizeBasedReserve() = runBlocking {
+        // The iOS #928 model: the reserve is sized from the pooled UNSPENT
+        // output count, so a many-input wallet's floor leaves room for the
+        // real fee instead of failing the first attempt on the flat reserve.
+        val source = drainReadySource(spendable = 100_000_000L)
+        source.onPooledUtxoCount = { 200 }
+        val result = service(source, enabled = false, cutoverState = "CUT_OVER")
+            .sendToAddress(validAddress, amount, emptyWallet = true)
+        assertEquals(SdkWriteResult.Broadcast(txid), result)
+        assertEquals(1, source.pooledUtxoCountCalls)
+        assertEquals(
+            listOf(100_000_000L - sendAllFeeReserveDuffs(200)),
+            source.sendAllFloors
+        )
+    }
+
+    @Test
+    fun sendAll_pooledUtxoCountThrow_fallsBackToTheFlatReserve() = runBlocking {
+        // The count read is advisory: a throwing source must not fail the
+        // send — the service treats it like an unavailable enumeration and
+        // uses the flat reserve. (The production source already contains its
+        // own failures to null; this covers a source that leaks the throw.)
+        val source = drainReadySource(spendable = 5_000_000L)
+        source.onPooledUtxoCount = { throw IllegalStateException("room unavailable") }
+        val result = service(source, enabled = false, cutoverState = "CUT_OVER")
+            .sendToAddress(validAddress, amount, emptyWallet = true)
+        assertEquals(SdkWriteResult.Broadcast(txid), result)
+        assertEquals(listOf(5_000_000L - SEND_ALL_FEE_RESERVE_DUFFS), source.sendAllFloors)
     }
 
     // ── Step B fix round: the app-locked-output drain guard ──────────────
@@ -1025,98 +1092,6 @@ class SdkL1SendServiceTest {
         assertEquals(0, selfSpendMarks)
     }
 
-    // ── MAX-send completeness: receival sweep-all before the drain ───────
-
-    @Test
-    fun sendAll_sweepsReceivalAccounts_beforeTheFloorRead_thenDrains() = runBlocking {
-        // The on-device bug: the BIP44 drain cannot see DashPay
-        // receival-account funds and self-limits WITHOUT failing, so a MAX
-        // send quietly left the contact-received funds behind. The sweep-all
-        // pass must run before the floor's balance read (so the floor covers
-        // the swept funds) and outside the core-send lock (its own txs are
-        // self-sends; only the drain serializes).
-        val source = drainReadySource(spendable = 7_000_000L)
-        source.onSweepReceival = { 2_000_000L }
-        val result = service(source, enabled = false, cutoverState = "CUT_OVER")
-            .sendToAddress(validAddress, amount, emptyWallet = true)
-        assertEquals(SdkWriteResult.Broadcast(txid), result)
-        assertEquals(1, source.sweepReceivalCalls)
-        assertEquals("sweep must precede the floor's balance read", 0, source.spendableCallsAtSweep)
-        assertFalse(source.sweepInsideLock)
-        assertEquals(listOf(7_000_000L - SEND_ALL_FEE_RESERVE_DUFFS), source.sendAllFloors)
-        assertEquals(1, source.lockAcquisitions)
-        assertEquals(1, selfSpendMarks)
-    }
-
-    @Test
-    fun sendAll_sweepFailure_isNotBroadcast_andTheDrainNeverRuns() = runBlocking {
-        // Draining anyway after a failed sweep would repeat the
-        // silent-shortchange bug (deliver less than the quoted max), so a
-        // sweep failure fails the send closed: NotBroadcast (the payment was
-        // never built; broadcast sweeps are self-sends — funds safe), no
-        // balance read, no drain attempt, no lock, no hooks.
-        val source = drainReadySource()
-        source.onSweepReceival = { throw IllegalStateException("sweep broadcast failed") }
-        val result = service(source, enabled = false, cutoverState = "CUT_OVER")
-            .sendToAddress(validAddress, amount, emptyWallet = true)
-        assertTrue(result is SdkWriteResult.NotBroadcast)
-        assertTrue(
-            "reason must say the funds are safe",
-            (result as SdkWriteResult.NotBroadcast).reason.contains("funds are safe")
-        )
-        assertEquals(0, source.spendableCalls)
-        assertEquals(0, source.sendAllCalls)
-        assertEquals(0, source.lockAcquisitions)
-        assertEquals(0, selfSpendMarks)
-        assertTrue(bridgedTxids.isEmpty())
-    }
-
-    @Test
-    fun plainSend_neverRunsTheSendAllSweep() = runBlocking {
-        // The plain path's receival handling is the SHORTFALL fallback inside
-        // the source (single-account, then consolidation) — never the
-        // send-all sweep pass.
-        val source = readySource()
-        val result = service(source).sendToAddress(validAddress, amount, emptyWallet = false)
-        assertTrue(result is SdkWriteResult.Broadcast)
-        assertEquals(0, source.sweepReceivalCalls)
-    }
-
-    @Test
-    fun sendAll_beforeBroadcastThrow_alsoSkipsTheSweeps() = runBlocking {
-        // The call-site pre-send conditions may throw to ask the user
-        // (LeftoverBalanceException → confirm dialog); NOTHING may have been
-        // broadcast by then — the receival self-sweeps included, or a
-        // cancelled confirm would already have de-linked the receival funds.
-        val source = drainReadySource()
-        source.onSweepReceival = { 1_000_000L }
-        val boom = IllegalStateException("leftover balance")
-        try {
-            service(source, enabled = false, cutoverState = "CUT_OVER")
-                .sendToAddress(validAddress, amount, emptyWallet = true) { throw boom }
-            fail("expected the beforeBroadcast throw to propagate")
-        } catch (e: IllegalStateException) {
-            assertSame(boom, e)
-        }
-        assertEquals(0, source.sweepReceivalCalls)
-        assertEquals(0, source.sendAllCalls)
-    }
-
-    @Test
-    fun sendAll_lockGuardAndGate_blockBeforeAnySweep() = runBlocking {
-        // The fail-closed drain guards run before the sweeps: a blocked
-        // drain must not have consolidated the receival accounts first.
-        val locked = drainReadySource()
-        service(locked, enabled = false, cutoverState = "CUT_OVER", hasAppLockedOutputs = { true })
-            .sendToAddress(validAddress, amount, emptyWallet = true)
-        assertEquals(0, locked.sweepReceivalCalls)
-
-        val gateClosed = drainReadySource()
-        service(gateClosed, enabled = false, cutoverState = "CUT_OVER", progress = { ShadowSyncProgress.IDLE })
-            .sendToAddress(validAddress, amount, emptyWallet = true)
-        assertEquals(0, gateClosed.sweepReceivalCalls)
-    }
-
     @Test
     fun plainSend_neverTouchesTheDrainSurface() = runBlocking {
         val source = readySource()
@@ -1131,7 +1106,7 @@ class SdkL1SendServiceTest {
 
     @Test
     fun pinnedSdk_exposesTheDrainBindings_theJavaShimAndMutexRelyOn() {
-        // AAR-bump canary (pin-don't-track), asserting the v41int11 shape:
+        // AAR-bump canary (pin-don't-track), asserting the v41int19 shape:
         // the drain shim (CoreSendAllNative, Java on purpose) reaches the
         // SDK's internal builder through the JVM-level $sdk_release mangling
         // of the PINNED dash-sdk-android binary. javac catches a rename only
@@ -1142,30 +1117,45 @@ class SdkL1SendServiceTest {
         val builder = org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder::class.java
         val accountType = org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType::class.java
         val strategy = org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.SelectionStrategy::class.java
-        val coreTx = org.dashfoundation.dashsdk.wallet.CoreTransaction::class.java
+        val finalizedTx = org.dashfoundation.dashsdk.wallet.FinalizedCoreTransaction::class.java
 
-        // The exact members CoreSendAllNative.buildSignBroadcastDrain links.
+        // The exact members CoreSendAllNative.buildSignBroadcastDrain links:
+        // new → addOutput → setSelectionStrategy → finalizeAtomic (the
+        // concurrency-safe v2 surface — #4323 removed the setFunding +
+        // buildSigned split from the supported path).
         builder.getConstructor(org.dashfoundation.dashsdk.Network::class.java)
         builder.getMethod("addOutput\$sdk_release", String::class.java, Long::class.javaPrimitiveType)
         builder.getMethod("setSelectionStrategy\$sdk_release", strategy)
-        builder.getMethod("setFunding\$sdk_release", mpw, accountType, Int::class.javaPrimitiveType)
         assertEquals(
-            coreTx,
+            finalizedTx,
             builder.getMethod(
-                "buildSigned\$sdk_release",
+                "finalizeAtomic\$sdk_release",
                 mpw, accountType, Int::class.javaPrimitiveType, Long::class.javaPrimitiveType
             ).returnType
         )
-        // …and the broadcast leg.
+        // …and the broadcast leg (public, no mangling).
         val coreWallet = mpw.getMethod("coreWallet").returnType
         assertEquals(org.dashfoundation.dashsdk.wallet.ManagedCoreWallet::class.java, coreWallet)
-        coreWallet.getMethod("broadcastTransaction", coreTx)
+        coreWallet.getMethod("broadcastTransaction", finalizedTx)
 
         // The strategy knob's Kotlin-side FFI value must stay 5 = All
         // (CoreSelectionStrategyFFI::All in rs-platform-wallet-ffi).
         assertEquals(
             5,
             org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.SelectionStrategy.ALL.ffiValue
+        )
+
+        // The POOLED funding selector (dashpay/platform#4329): the user-facing
+        // send-all drains ALL_SPENDABLE (FFI value 3 =
+        // CoreAccountTypeFFI::AllSpendable), and the public send surface
+        // defaults to the pooled set too — both enums must keep it.
+        assertEquals(
+            3,
+            org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.ALL_SPENDABLE.ffiValue
+        )
+        assertEquals(
+            3,
+            org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet.AccountType.ALL_SPENDABLE.ffiValue
         )
 
         // Drain serialization is APP-owned (SdkL1SendService.coreSendMutex /
@@ -1182,32 +1172,7 @@ class SdkL1SendServiceTest {
                     "re-audit the app-owned withCoreSendLock contract before bumping the pin"
             )
         } catch (expected: NoSuchMethodException) {
-            // v41int11 shape: no SDK-side mutex accessor.
+            // v41int11+ shape: no SDK-side mutex accessor.
         }
-
-        // The funding-path plain-send surface the Kotlin side links
-        // (SdkL1SendService → ManagedPlatformWallet.buildSignedPaymentWithToken,
-        // suspend → mangled with a trailing Continuation at the JVM level)…
-        mpw.getMethod(
-            "buildSignedPaymentWithToken",
-            java.util.List::class.java,
-            Long::class.javaPrimitiveType,
-            Long::class.javaPrimitiveType,
-            String::class.java,
-            kotlin.coroutines.Continuation::class.java
-        )
-        // …and its JNI binding, whose NAME is the runtime link contract
-        // (a rename only surfaces as UnsatisfiedLinkError at first send).
-        val jni = Class.forName("org.dashfoundation.dashsdk.ffi.WalletManagerNative")
-            .getDeclaredMethod(
-                "coreWalletBuildSignedPaymentWithToken",
-                Long::class.javaPrimitiveType,
-                ByteArray::class.java,
-                Long::class.javaPrimitiveType,
-                Long::class.javaPrimitiveType,
-                String::class.java
-            )
-        assertTrue(java.lang.reflect.Modifier.isNative(jni.modifiers))
-        assertEquals(ByteArray::class.java, jni.returnType)
     }
 }

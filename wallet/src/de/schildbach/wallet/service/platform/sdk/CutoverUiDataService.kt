@@ -1926,13 +1926,13 @@ class CutoverUiDataService internal constructor(
 
     /**
      * The SDK's live MAX-SENDABLE figure ([CutoverUiSource.currentMaxSendableDuffs]:
-     * BIP44 spendable + sweepable receival confirmed net of per-sweep fee
-     * headroom — what the sweep-then-drain send-all actually delivers,
-     * gross of the final drain fee), or null while the cutover UI feed is
-     * inactive OR the account-level snapshot is unavailable (in which
-     * case [overlayMaxSendableBalance] falls back to [sdkTotalBalance]).
-     * Refreshed with the native split ([refreshNativeSplit]: initial
-     * seed, engine tx events, ticker).
+     * the pooled `ALL_SPENDABLE` spendable sum — BIP44 + BIP32 + every
+     * DashPay receival account, what the ONE-transaction pooled drain
+     * actually delivers, gross of the drain fee; CoinJoin excluded), or
+     * null while the cutover UI feed is inactive OR the account-level
+     * snapshot is unavailable (in which case [overlayMaxSendableBalance]
+     * falls back to [sdkTotalBalance]). Refreshed with the native split
+     * ([refreshNativeSplit]: initial seed, engine tx events, ticker).
      */
     val sdkMaxSendable: StateFlow<Coin?> = _sdkMaxSendable.asStateFlow()
 
@@ -2079,11 +2079,11 @@ class CutoverUiDataService internal constructor(
      * Pre-cutover both SDK sides are permanently null, so the dashj
      * max-output value passes through unchanged (byte-identical).
      * Post-cutover the account-aware max-sendable figure wins — the
-     * wallet-wide total counts DashPay receival funds at face value while
-     * the send-all delivers them net of the per-account sweep-fee
-     * headroom, so the total would (slightly) overstate the true Max —
-     * with the wallet-wide total as the fallback whenever the
-     * account-level snapshot is unavailable (never a frozen dashj 0).
+     * wallet-wide total counts CoinJoin funds the pooled `ALL_SPENDABLE`
+     * drain deliberately excludes, so the total would overstate the true
+     * Max whenever mixed funds exist — with the wallet-wide total as the
+     * fallback whenever the account-level snapshot is unavailable (never
+     * a frozen dashj 0).
      */
     fun overlayMaxSendableBalance(dashjBalance: Flow<Coin>): Flow<Coin> =
         combine(_sdkMaxSendable, _sdkTotalBalance, dashjBalance) { maxSendable, total, dashj ->

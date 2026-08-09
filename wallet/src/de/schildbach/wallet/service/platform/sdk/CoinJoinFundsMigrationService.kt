@@ -99,7 +99,7 @@ fun coinJoinBalanceOrNull(wallet: Wallet): Coin? =
  * carries the account `index` through) and written into the JSON as
  * `e.type_tag as u8` by the JNI bridge's `walletManagerAccountBalances`
  * (rs-unified-sdk-jni `dashpay.rs`) — the same snapshot
- * [parseReceivalFundingAccounts] and [parseBip44ConfirmedDuffs] read.
+ * [pooledSpendableDuffs] and [parseBip44SpendableDuffs] read.
  *
  * NOT to be confused with the transaction BUILDER's account-type selector,
  * `CoreTransactionBuilder.AccountType.COIN_JOIN`, whose numeric value is 2 —
