@@ -24,6 +24,35 @@ import kotlinx.coroutines.withContext
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 
 /**
+ * SQL fragment: the `txos` row aliased [alias] is FOREIGN — its address belongs
+ * to a watch-only DIP-15 external friendship account
+ * (`accounts.accountType = 13`, `dashpayExternalAccount`): the derivation chain
+ * WE pay a contact on, whose private keys only the CONTACT holds. The SDK
+ * mirrors those outputs into `txos` so an outgoing contact payment is
+ * displayable/attributable, but they are NEVER this wallet's money — and their
+ * `isSpent` can only ever be flipped by the CONTACT's own spend, so from this
+ * wallet's point of view the row stays "unspent" forever.
+ *
+ * Verified live (S22 testnet `s22test63b`, 11.10.73): the 0.69998912 drain
+ * output to the contact sat in `txos` as `isSpent = 0` on a type-13 account,
+ * so every ownership-naive read over the mirror (SUM → the 1.69998912 ↔ 1.0
+ * balance duel, COUNT, membership, isMine) silently counted the contact's
+ * money as ours. Any read that means "this wallet's outputs" must exclude
+ * these rows with `AND NOT (${txoIsForeignSql("t")})`.
+ *
+ * The classification routes through `core_addresses` (PK = address, its
+ * `accountId` is populated) rather than `txos.accountId` because the
+ * persistence layer writes friendship TXOs with a NULL `accountId` — the same
+ * verified fallback [SdkTxContactResolver.signedNetsFor] uses. A row whose
+ * address maps to no account (or no `core_addresses` row at all) is treated as
+ * owned — the pre-existing behavior for unclassifiable rows.
+ */
+internal fun txoIsForeignSql(alias: String): String =
+    "EXISTS (SELECT 1 FROM core_addresses fca JOIN accounts fa ON fa.id = fca.accountId " +
+        "WHERE fca.address = $alias.address " +
+        "AND fa.accountType = ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL})"
+
+/**
  * BOUNDED reader over the Kotlin SDK's L1 Room store (`txos` +
  * `transactions`) for the post-cutover display/seam pipelines — the fix for
  * the release-blocking scalability defect where every snapshot rebuild

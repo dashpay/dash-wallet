@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.isActive
@@ -1015,9 +1016,16 @@ interface CutoverUiSource {
     suspend fun boundWalletIdOrNull(): String?
 
     /**
-     * Live total L1 balance of the wallet in duffs — the sum of unspent
-     * TXO rows, i.e. the same output set dashj's `getBalance(ESTIMATED)`
-     * sums (parity-proven by the shadow harness).
+     * Live total L1 balance of the wallet in duffs — the SDK's NATIVE-ledger
+     * figure (`balance()` = confirmed + unconfirmed, the same read
+     * [currentBalanceSplitDuffs] serves), re-read whenever the Room `txos`
+     * mirror changes so the header updates the moment the SPV loop lands a
+     * change. The mirror only ever TRIGGERS this flow, never VALUES it: the
+     * mirror legitimately carries rows that are NOT this wallet's money (the
+     * DIP-15 `dashpayExternalAccount` outputs of a payment TO a contact — see
+     * [txoIsForeignSql]), so a SQL SUM over it is a second, wrong truth that
+     * dueled the native reads in the header (observed live: 1.69998912 ↔
+     * 1.00000000 once a minute after a sent contact payment).
      */
     fun observeTotalDuffs(walletIdHex: String): Flow<Long>
 
@@ -1217,25 +1225,31 @@ internal class DashSdkCutoverUiSource(
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
         val db = database()
         // Trigger on any txos-table change (Room re-emits the count on every
-        // invalidation, value-changed or not), but SUM in SQL — the old path
-        // materialized every unspent TXO entity per change just to add up one
-        // column (the unbounded-read class the multi-day-sync review flagged).
+        // invalidation, value-changed or not), but read the FIGURE from the
+        // SDK's NATIVE ledger — the same `balance()` read every other
+        // publisher of [CutoverUiDataService.updateSdkBalance] uses, so the
+        // balance pipeline has ONE truth. The old SQL SUM over the mirror
+        // (`WHERE isSpent = 0`) was a second truth, and a wrong one: the
+        // mirror carries watch-only DIP-15 contact-payment outputs
+        // ([txoIsForeignSql] — the CONTACT's money, `isSpent` frozen at 0
+        // until THEY spend it), so after a sent contact payment the sum
+        // counted the payment as still ours and dueled the native reads in
+        // the header (observed live on S22 testnet 11.10.73: 169998912 ↔
+        // 100000000 duffs, alternating publications once a minute).
         emitAll(
-            db.txoDao().countByWallet(walletId).map { queryUnspentSumDuffs(db, walletId) }
+            db.txoDao().countByWallet(walletId).mapNotNull {
+                try {
+                    currentBalanceSplitDuffs(walletIdHex).total
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    // Skip this emission rather than kill the flow or publish a
+                    // guess (transient: wallet unloading mid-reset/restore) —
+                    // the balance pipeline's event/ticker lane re-reads anyway.
+                    log.warn("native balance read on txos change failed; emission skipped", t)
+                    null
+                }
+            }
         )
-    }
-
-    private suspend fun queryUnspentSumDuffs(
-        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
-        walletId: ByteArray
-    ): Long = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        db.openHelper.readableDatabase.query(
-            androidx.sqlite.db.SimpleSQLiteQuery(
-                // Same predicate as the DAO's observeUnspentByWallet (isSpent = 0).
-                "SELECT COALESCE(SUM(amount), 0) FROM txos WHERE walletId = ? AND isSpent = 0",
-                arrayOf<Any?>(walletId)
-            )
-        ).use { cursor -> if (cursor.moveToFirst()) cursor.getLong(0) else 0L }
     }
 
     override suspend fun currentTotalDuffs(walletIdHex: String): Long =
@@ -1247,12 +1261,20 @@ internal class DashSdkCutoverUiSource(
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             db.openHelper.readableDatabase.query(
                 androidx.sqlite.db.SimpleSQLiteQuery(
-                    // COUNT over EXACTLY the predicate queryUnspentSumDuffs sums,
-                    // so the count and the total describe the same output set —
-                    // which is the invariant dashj's calculateAllSpendCandidates
-                    // / getBalance(ESTIMATED) pair has, and what
+                    // COUNT over the wallet's OWN unspent outputs — the same set
+                    // whose amounts the native balance() total sums, which is the
+                    // invariant dashj's calculateAllSpendCandidates /
+                    // getBalance(ESTIMATED) pair has, and what
                     // WalletDataProvider.spendableUtxoCount is contracted to.
-                    "SELECT COUNT(*) FROM txos WHERE walletId = ? AND isSpent = 0",
+                    // Watch-only DIP-15 contact-payment rows are excluded
+                    // ([txoIsForeignSql]): they are the CONTACT's money, dashj
+                    // never counted them as spend candidates, and their isSpent
+                    // stays 0 forever from this wallet's point of view — without
+                    // the exclusion the count overstated by one per sent contact
+                    // payment (and the shielded max-fee reserve sized itself from
+                    // that count).
+                    "SELECT COUNT(*) FROM txos t WHERE t.walletId = ? AND t.isSpent = 0 " +
+                        "AND NOT (${txoIsForeignSql("t")})",
                     arrayOf<Any?>(walletId)
                 )
             ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
@@ -2329,15 +2351,16 @@ class CutoverUiDataService internal constructor(
             if (t is CancellationException) throw t
             log.warn("initial SDK balance split read failed", t)
         }
-        // Belt-and-suspenders (Bug D). The Room-observable source
-        // (observeUnspentByWallet) re-emits only on `txos` Room invalidation.
-        // A SELF-AUTHORED send settles by a Rust-side spent-TXO write that does
-        // NOT re-fire that Room flow, so after a max-send the balance override
-        // could stay stale (non-zero) even though the store already reads 0
-        // (the L1Parity `.first()` probe correctly sees 0). Keep the Room source
-        // AND additionally re-read a one-shot snapshot on each engine tx event
-        // (a self-spend emits Detected) and each ticker tick — guaranteeing a
-        // re-read after a spend regardless of Room invalidation.
+        // Belt-and-suspenders (Bug D). The Room-TRIGGERED source
+        // (observeTotalDuffs — native balance() re-read per `txos`
+        // invalidation) only fires on Room invalidation. A SELF-AUTHORED send
+        // settles by a Rust-side spent-TXO write that does NOT re-fire that
+        // Room flow, so after a max-send the balance override could stay stale
+        // (non-zero) even though the ledger already reads 0. Keep the
+        // Room-triggered source AND additionally re-read a one-shot snapshot
+        // on each engine tx event (a self-spend emits Detected) and each
+        // ticker tick — guaranteeing a re-read after a spend regardless of
+        // Room invalidation. All three lanes read the SAME native balance().
         launch {
             source.observeTotalDuffs(walletIdHex)
                 .distinctUntilChanged()
