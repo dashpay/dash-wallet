@@ -628,8 +628,12 @@ class CutoverUiDataServiceTest {
             title = resolve(R.string.transaction_row_status_sent)
         ) // helper defaults: −1_000_000, ICON_SENT, FLAG_SENT
         val nonDefinitive = listOf(
-            // Internal / CoinJoin self-moves are not plain sends.
-            record(firstByte = 9, net = -5_000_000, context = 3, direction = 2),
+            // CoinJoin self-moves are not plain sends. (An INTERNAL-direction
+            // record is deliberately NOT in this list anymore: it now
+            // corrects a plain row to the internal/transfer shape — the
+            // self-send classification fix; see
+            // syncPlan_internalRecordNeverReshapesAContactAttributedRow and
+            // snapshotInternalRecord_correctsAPlainCachedRow for its guards.)
             record(firstByte = 9, net = -5_000_000, context = 3, direction = 3),
             // A zero-net record (e.g. a 2-participant testnet mixing round claims nothing).
             record(firstByte = 9, net = 0, context = 3, direction = 1)
@@ -682,6 +686,24 @@ class CutoverUiDataServiceTest {
         assertTrue(plan.inserts.isEmpty())
         assertTrue(plan.updates.isEmpty())
         assertTrue(plan.notifyIncoming.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_internalRecordNeverReshapesAContactAttributedRow() {
+        // A contact-attributed row means the tx was a PAYMENT (DIP-15
+        // friendship match), not a self-move — an INTERNAL-direction record
+        // must never strip the attribution or the send/receive shape.
+        val r = record(firstByte = 9, net = -200, context = 3, direction = 2)
+        val existing = cacheEntry(
+            rowId = displayHex(9),
+            title = resolve(R.string.transaction_row_status_received),
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+        ).copy(contactUserId = "user-1", contactUsername = "alice")
+
+        val plan = planL1DisplaySync(
+            listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now
+        )
+        assertTrue(plan.updates.isEmpty())
     }
 
     // ── The gate + data-source switch ─────────────────────────────────
@@ -1212,18 +1234,23 @@ class CutoverUiDataServiceTest {
         runCurrent()
 
         // 1) Mempool sighting: the row renders IMMEDIATELY as a pending
-        //    receive and the coins-received notification fires — no block.
+        //    receive — no block. The coins-received PUSH waits out the
+        //    self-spend sibling grace (the row never does), then fires.
         events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
         runCurrent()
         val pending = store.getValue(txid)
         assertEquals(resolve(R.string.transaction_row_status_received), pending.title)
         assertEquals(resolve(R.string.transaction_row_status_processing), pending.statusText)
         assertEquals(1_000_000L, pending.valueSatoshis)
-        assertEquals(listOf(1_000_000L), notified)
+        assertTrue(notified.isEmpty()) // deferred, not dropped…
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
+        runCurrent()
+        assertEquals(listOf(1_000_000L), notified) // …fires after the grace
 
-        // 2) A duplicate detection (multi-account tx / mempool re-emit)
+        // 2) A duplicate detection (mempool re-emit)
         //    neither duplicates the row nor re-notifies.
         events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
         runCurrent()
         assertEquals(1, store.size)
         assertEquals(1, notified.size)
@@ -1434,11 +1461,13 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
-    fun engineEvent_selfSpendOutgoingFirstSuppressesReceiveNotification() = runTest {
+    fun engineEvent_selfSpendOutgoingFirst_rendersInternalAndNeverNotifies() = runTest {
         // One tx touching two accounts of the same wallet: the engine emits
         // one Detected per account (same txid). Outgoing sibling first →
-        // the row is born "Sending" and the Incoming sibling must neither
-        // retitle it nor fire a coins-received notification.
+        // the row is born "Sending"; the Incoming sibling proves the tx is
+        // wallet-INTERNAL, so the row corrects to the internal/transfer
+        // shape with the COMBINED net (out + in = −fee) and no
+        // coins-received notification ever fires.
         val txid = displayHex(11)
         val store = mutableMapOf<String, TxDisplayCacheEntry>()
         val displayDao = statefulDisplayDao(store)
@@ -1456,13 +1485,22 @@ class CutoverUiDataServiceTest {
         service.start()
         runCurrent()
 
-        events.emit(L1TxEvent.Detected(txid, -1_000_146L, 146L, contextCode = 0, directionCode = 1))
+        events.emit(L1TxEvent.Detected(txid, -900_146L, 146L, contextCode = 0, directionCode = 1))
         runCurrent()
+        assertEquals(resolve(R.string.transaction_row_status_sending), store.getValue(txid).title)
+        val bornTime = store.getValue(txid).time
+
         events.emit(L1TxEvent.Detected(txid, 900_000L, null, contextCode = 0, directionCode = 0))
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
         runCurrent()
 
         assertEquals(1, store.size)
-        assertEquals(resolve(R.string.transaction_row_status_sending), store.getValue(txid).title)
+        val row = store.getValue(txid)
+        assertEquals(resolve(R.string.transaction_row_status_sent_internally), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
+        assertEquals(0, row.filterFlags)
+        assertEquals(-146L, row.valueSatoshis) // combined net = the fee
+        assertEquals(bornTime, row.time) // the tx's own timestamp is kept
         assertTrue(notified.isEmpty())
 
         // Even a later snapshot re-sighting (row briefly dropped by a cache
@@ -1474,11 +1512,13 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
-    fun engineEvent_selfSpendIncomingFirstNotifiesOnce_documentedLimitation() = runTest {
-        // Incoming sibling first: with the single sequential collector
-        // there is no sibling signal to wait on, so the notification fires
-        // (documented limitation — unreachable today with a single BIP44
-        // account). The Outgoing sibling must still not double anything.
+    fun engineEvent_selfSpendIncomingFirst_correctsRowAndCancelsNotification() = runTest {
+        // Incoming sibling first — the previously-documented limitation
+        // ("Received +X for money that never left the wallet" + a push for
+        // the user's own funds, observed live). The row is born "Received"
+        // (instant render), but the PUSH waits out the sibling grace; the
+        // Outgoing sibling then classifies the tx INTERNAL, corrects the
+        // row and cancels the pending notification.
         val txid = displayHex(12)
         val store = mutableMapOf<String, TxDisplayCacheEntry>()
         val displayDao = statefulDisplayDao(store)
@@ -1498,13 +1538,67 @@ class CutoverUiDataServiceTest {
 
         events.emit(L1TxEvent.Detected(txid, 900_000L, null, contextCode = 0, directionCode = 0))
         runCurrent()
-        assertEquals(listOf(900_000L), notified)
         assertEquals(resolve(R.string.transaction_row_status_received), store.getValue(txid).title)
+        assertTrue(notified.isEmpty()) // push deferred through the grace
+        val bornTime = store.getValue(txid).time
 
-        events.emit(L1TxEvent.Detected(txid, -1_000_146L, 146L, contextCode = 0, directionCode = 1))
+        events.emit(L1TxEvent.Detected(txid, -900_146L, 146L, contextCode = 0, directionCode = 1))
         runCurrent()
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
+        runCurrent()
+
         assertEquals(1, store.size)
-        assertEquals(1, notified.size)
+        val row = store.getValue(txid)
+        assertEquals(resolve(R.string.transaction_row_status_sent_internally), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, row.iconBgType)
+        assertEquals(0, row.filterFlags)
+        assertEquals(-146L, row.valueSatoshis) // combined net, not the +0.009 partial
+        assertEquals("", row.statusText)
+        assertEquals(bornTime, row.time) // the tx's own timestamp is kept
+        assertTrue(notified.isEmpty()) // the pending push was cancelled
+    }
+
+    @Test
+    fun snapshotInternalRecord_correctsAPlainCachedRow() = runTest {
+        // The generic (non-event) closure of the same blind spot: when the
+        // SDK's own DEFINITIVE record says INTERNAL but the cached row was
+        // authored as a plain receive (events missed — e.g. restart between
+        // siblings, or a dashj-era misread), the snapshot pass corrects it.
+        val txid = displayHex(21)
+        val store = mutableMapOf(
+            txid to cacheEntry(
+                rowId = txid,
+                title = resolve(R.string.transaction_row_status_received),
+                filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+            ).copy(
+                valueSatoshis = 500_000L,
+                iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+                iconBgType = TxDisplayCacheEntry.BG_RECEIVED
+            )
+        )
+        val bornTime = store.getValue(txid).time
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+
+        source.records.value = listOf(record(firstByte = 21, net = -200L, context = 3, direction = 2))
+        runCurrent()
+
+        val row = store.getValue(txid)
+        assertEquals(resolve(R.string.transaction_row_status_sent_internally), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
+        assertEquals(0, row.filterFlags)
+        assertEquals(-200L, row.valueSatoshis)
+        assertEquals(bornTime, row.time)
     }
 
     @Test

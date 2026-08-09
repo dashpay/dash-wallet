@@ -465,10 +465,13 @@ internal fun planL1DisplaySync(
     // SNAPSHOT feed) — one wallet-wide row per txid, and therefore DEFINITIVE for a
     // plain row's direction/amount. False for the engine's instant tx feed, whose
     // Detected events are PER-ACCOUNT: one multi-account self-spend emits both an
-    // OUTGOING and an INCOMING event for the same txid, so an event record must never
-    // re-shape an EXISTING row (the outgoing-born "Sending" row wins — see
-    // [CutoverUiDataService.seenEventDirections]). Inserts and the surgical
-    // status/kind/contact edges still apply to both feeds.
+    // OUTGOING and an INCOMING event for the same txid, so a single event record's
+    // plain direction must never re-shape an EXISTING row. Inserts and the surgical
+    // status/kind/contact edges still apply to both feeds — as does the INTERNAL
+    // re-shape: an INTERNAL-direction record (either the SDK's own classification or
+    // the event pipeline's both-siblings-seen reshape, see
+    // [CutoverUiDataService.seenEventDirections]) corrects a plain cached row to the
+    // internal/transfer shape regardless of feed.
     restampFromDefinitiveRecord: Boolean = true
 ): L1DisplaySyncPlan {
     val inserts = mutableListOf<TxDisplayCacheEntry>()
@@ -625,6 +628,38 @@ internal fun planL1DisplaySync(
                     filterFlags = plan.filterFlags
                 )
             }
+        }
+        // Re-shape a PLAIN cached row into an INTERNAL (self-transfer) row once the
+        // record is known INTERNAL. The SDK classifies PER ACCOUNT, so one
+        // wallet-internal tx (e.g. an account sweep) emits BOTH an outgoing and an
+        // incoming event for the same txid, and whichever landed first authored the
+        // row as "Sending"/"Received" — observed live as "Received +0.5" rows (and a
+        // coins-received notification) for money that never left the wallet. When the
+        // sibling pair is recognized ([CutoverUiDataService.handleTxEvent] reshapes
+        // the record to INTERNAL with the combined net) — or when the SDK's own
+        // definitive record says INTERNAL — the cached plain row is corrected to the
+        // internal/transfer shape. The row's own TIME is deliberately preserved (the
+        // second event must not restamp the first sighting's timestamp), as are memo,
+        // rate and every other non-display column. Carve-outs: asset-lock kinds
+        // (their own re-stamp above owns the shape), contact rows (attribution means
+        // it was a payment, not a self-move), rows with richer-than-plain titles, and
+        // the service/gift-card/error/CoinJoin rows already `continue`d above.
+        // Idempotent: once the row reads "Internal" its title is no longer plain and
+        // this block never fires again.
+        if (record.direction == L1TxUiDirection.INTERNAL &&
+            kindByTxid[record.txidHex] == null &&
+            contact == null &&
+            updated.contactUserId == null &&
+            updated.title in plainDirectionTitles
+        ) {
+            updated = updated.copy(
+                title = resolve(plan.titleRes),
+                iconType = plan.iconType,
+                iconBgType = plan.iconBgType,
+                filterFlags = plan.filterFlags,
+                valueSatoshis = plan.valueDuffs,
+                statusText = ""
+            )
         }
         // Re-stamp a PLAIN (non-contact, non-asset-lock) row whose cached display shape
         // DISAGREES with the SDK's definitive record. Post-cutover the SDK's
@@ -1800,35 +1835,56 @@ class CutoverUiDataService internal constructor(
     private val reResolveRequested = AtomicBoolean(false)
 
     /**
-     * Directions seen per txid across engine [L1TxEvent.Detected] events —
-     * the multi-account SELF-SPEND guard. The engine emits one Detected
-     * per affected account (per-account net_amount/direction), so a tx
-     * spending account A → paying account B of the SAME wallet produces
-     * two same-txid events; without this, the Incoming sibling would fire
-     * a "coins received" notification for an internal transfer. When an
-     * Incoming event finds an Outgoing sibling already recorded here, its
-     * notification is suppressed (the row itself is already structurally
-     * deduped by txid — the Outgoing-born row wins and keeps its
-     * "Sending"/"Sent" title).
-     *
-     * KNOWN LIMITATION (Incoming-FIRST ordering): if the engine emits the
-     * Incoming sibling first, the row titles "Received" and the
-     * notification fires before the Outgoing sibling is seen — with the
-     * single sequential collector there is no sibling signal to wait on
-     * without delaying every genuine receive, so the first-order case is
-     * accepted. Reachability today is nil: the app binds a single BIP44
-     * account, so no tx can touch two accounts of the same SDK wallet.
-     * When CoinJoin/identity-funding accounts land, the worst case is one
-     * spurious notification and a mis-titled row that the direction-aware
-     * Room record does not rewrite (status-only updates) — cosmetic, never
-     * a balance error. Insertion-ordered and capped ([SEEN_TX_DIRECTIONS_MAX],
-     * eldest evicted) so a long-lived process cannot grow it unboundedly.
-     * Only ever touched from [txPipeline]'s sequential collector.
+     * Per-direction engine nets seen per txid across [L1TxEvent.Detected]
+     * events — the multi-account SELF-SPEND (INTERNAL) detector. The engine
+     * classifies PER ACCOUNT, so one wallet-internal tx (an account sweep, a
+     * spend from account A paying account B of the SAME wallet) emits BOTH an
+     * OUTGOING and an INCOMING Detected for the same txid. The moment this
+     * map holds both directions for a txid, [handleTxEvent] classifies the tx
+     * INTERNAL — ORDER-INDEPENDENTLY:
+     * - outgoing-first: the incoming sibling reshapes the "Sending" row to
+     *   "Internal" and never notifies;
+     * - incoming-first: the "Received" row is corrected to "Internal" when
+     *   the outgoing sibling lands, and the coins-received notification —
+     *   which is DEFERRED by [SELF_SPEND_NOTIFY_GRACE_MS] for exactly this
+     *   reason ([pendingNotifyJobs]) — is cancelled before it fires.
+     * The per-direction NETS are kept (not just membership) so the internal
+     * row can display the tx's true wallet-wide net (out + in ≈ −fee)
+     * instead of one account's partial view — the "Received +0.5 that never
+     * left the wallet" live bug. (This detector deliberately replaced the
+     * old outgoing-first-only suppression set, whose KNOWN-LIMITATION note
+     * rested on "no tx can touch two accounts of one SDK wallet" — untrue
+     * since pooled funding/account sweeps.)
+     * Insertion-ordered and capped ([SEEN_TX_DIRECTIONS_MAX], eldest
+     * evicted) so a long-lived process cannot grow it unboundedly. Only ever
+     * touched from [txPipeline]'s sequential collector.
      */
     private val seenEventDirections =
-        object : LinkedHashMap<String, MutableSet<L1TxUiDirection>>() {
+        object : LinkedHashMap<String, MutableMap<L1TxUiDirection, Long>>() {
             override fun removeEldestEntry(
-                eldest: MutableMap.MutableEntry<String, MutableSet<L1TxUiDirection>>
+                eldest: MutableMap.MutableEntry<String, MutableMap<L1TxUiDirection, Long>>
+            ): Boolean = size > SEEN_TX_DIRECTIONS_MAX
+        }
+
+    /**
+     * Deferred coins-received notifications per txid ([scheduleDeferredCoinsReceivedNotify]).
+     * An engine-event-born incoming insert notifies only after
+     * [SELF_SPEND_NOTIFY_GRACE_MS], so an OUTGOING sibling event landing
+     * within the grace (the engine emits the pair back-to-back while
+     * processing one tx) cancels the job — otherwise the user gets a
+     * "coins received" push for their own internal transfer, which cannot
+     * be retracted once shown. Snapshot-born notifications (SDK-discovered
+     * history, wallet-wide records) stay immediate. Map mutations happen
+     * only on [txPipeline]'s sequential collector; the launched job itself
+     * touches no shared state (cancellation is the only interaction).
+     * Bounded eldest-evicted (an evicted entry merely becomes
+     * non-cancellable — with the cap at [SEEN_TX_DIRECTIONS_MAX] and a
+     * seconds-long grace that is unreachable in practice).
+     */
+    private val pendingNotifyJobs =
+        object : LinkedHashMap<String, kotlinx.coroutines.Job>() {
+            override fun removeEldestEntry(
+                eldest: MutableMap.MutableEntry<String, kotlinx.coroutines.Job>
             ): Boolean = size > SEEN_TX_DIRECTIONS_MAX
         }
 
@@ -2457,18 +2513,23 @@ class CutoverUiDataService internal constructor(
     /**
      * Apply one engine tx event ahead of Room persistence:
      * - [L1TxEvent.Detected] → the SAME planner pass as a snapshot, fed a
-     *   single event-built record. Row absent → PENDING insert (+
-     *   coins-received notification for a fresh incoming tx); row present
-     *   (Room got there first, or a re-emit) → at most a surgical status
-     *   update — never a duplicate row, never a second notification.
-     *   Multi-account self-spend guard: an Incoming event whose txid
-     *   already saw an Outgoing sibling event never notifies (see
-     *   [seenEventDirections] for the design and the Incoming-first
-     *   limitation).
-     * - [L1TxEvent.InstantLocked] → [planL1InstantLockRowUpdate] on the
+     *   single event-built record. Row absent → PENDING insert (+ a
+     *   grace-deferred coins-received notification for a fresh incoming
+     *   tx); row present (Room got there first, or a re-emit) → at most a
+     *   surgical status update — never a duplicate row, never a second
+     *   notification.
+     *   Multi-account self-spend (INTERNAL) classification, ORDER-
+     *   INDEPENDENT: the moment BOTH directions of one txid have been seen
+     *   ([seenEventDirections]) the tx is wallet-internal — the record is
+     *   reshaped to INTERNAL carrying the COMBINED net (out + in ≈ −fee),
+     *   the row renders/corrects to the "Internal" transfer shape (keeping
+     *   its own timestamp), and the coins-received notification is
+     *   suppressed (outgoing-first) or its deferred job cancelled
+     *   (incoming-first — see [pendingNotifyJobs]).
+     * - [L1TxEvent.InstantLocked] → persist the lock (restart-safe — see
+     *   [persistInstantLock]) then [planL1InstantLockRowUpdate] on the
      *   existing row (grouped dashj-era rows excluded, mirroring the
-     *   planner). Row absent → no-op; the Room snapshot reconciles later
-     *   (the lock is already in the record's context by then).
+     *   planner). Row absent → the persisted lock lifts the later insert.
      */
     private suspend fun handleTxEvent(event: L1TxEvent) {
         when (event) {
@@ -2477,7 +2538,7 @@ class CutoverUiDataService internal constructor(
                     "engine detected tx {} pre-block (context={}, net={} duffs) — syncing display row now",
                     event.txidHex, event.contextCode, event.netAmountDuffs
                 )
-                val record = l1TxUiRecordFromEvent(event, nowMs())
+                var record = l1TxUiRecordFromEvent(event, nowMs())
                 // Capture the engine's authoritative signed wallet net for this txid
                 // — the source of truth for a contact row's direction/amount, since
                 // the SDK's persisted `transactions.netAmount` is wrong for a
@@ -2497,25 +2558,53 @@ class CutoverUiDataService internal constructor(
                 if (priorNet == null || event.netAmountDuffs < priorNet) {
                     engineNetByTxid[record.txidHex] = event.netAmountDuffs
                 }
-                val siblings = seenEventDirections.getOrPut(record.txidHex) { mutableSetOf() }
-                if (record.direction == L1TxUiDirection.INCOMING &&
-                    L1TxUiDirection.OUTGOING in siblings
+                // Record this direction's net, then classify: BOTH directions
+                // seen for one txid = a wallet-internal tx (the engine emits
+                // one Detected per affected ACCOUNT — see [seenEventDirections]).
+                val siblingNets = seenEventDirections.getOrPut(record.txidHex) { mutableMapOf() }
+                if (record.direction == L1TxUiDirection.INCOMING ||
+                    record.direction == L1TxUiDirection.OUTGOING
                 ) {
-                    // Same-wallet self-spend: the Outgoing sibling event for
-                    // this txid already arrived, so this "receive" is an
-                    // internal transfer — pre-claim the notification slot so
-                    // neither this pass nor a later snapshot pass announces
-                    // it (seeding notifiedTxIds is exactly its semantics:
-                    // "this txid must never notify again this process").
+                    // A re-emit of the same direction keeps the FIRST net (the
+                    // engine's original per-account figure).
+                    siblingNets.putIfAbsent(record.direction, event.netAmountDuffs)
+                }
+                val outgoingNet = siblingNets[L1TxUiDirection.OUTGOING]
+                val incomingNet = siblingNets[L1TxUiDirection.INCOMING]
+                if (outgoingNet != null && incomingNet != null) {
+                    // Wallet-internal: money moved between accounts of THIS
+                    // wallet. Suppress the notification in BOTH orders — claim
+                    // the once-per-process slot (outgoing-first: the incoming
+                    // sibling never schedules) and cancel any deferred job the
+                    // incoming-first sibling already scheduled (the grace in
+                    // [scheduleDeferredCoinsReceivedNotify] exists for exactly
+                    // this moment).
+                    pendingNotifyJobs.remove(record.txidHex)?.cancel()
                     if (notifiedTxIds.add(record.txidHex)) {
                         log.info(
-                            "tx {} has an outgoing sibling event (same-wallet self-spend) — " +
+                            "tx {} touched both directions of this wallet (self-spend) — " +
                                 "suppressing the coins-received notification",
                             record.txidHex
                         )
                     }
+                    // Reshape to INTERNAL with the COMBINED wallet net
+                    // (out + in ≈ −fee): the planner then inserts an
+                    // "Internal" row, or corrects the plain "Sending"/
+                    // "Received" row the first sibling authored — keeping the
+                    // row's own timestamp (see planL1DisplaySync's INTERNAL
+                    // re-shape).
+                    val combinedNet = outgoingNet + incomingNet
+                    if (record.direction != L1TxUiDirection.INTERNAL) {
+                        log.info(
+                            "tx {} classified INTERNAL (outgoing {} + incoming {} = {} duffs)",
+                            record.txidHex, outgoingNet, incomingNet, combinedNet
+                        )
+                        record = record.copy(
+                            direction = L1TxUiDirection.INTERNAL,
+                            netAmountDuffs = combinedNet
+                        )
+                    }
                 }
-                siblings += record.direction
                 syncDisplayCache(listOf(record), fromEngineEvent = true)
             }
             is L1TxEvent.InstantLocked -> applyInstantLock(event.txidHex)
@@ -2559,6 +2648,31 @@ class CutoverUiDataService internal constructor(
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.error("IS-lock display refresh failed for {}", txidHex, t)
+        }
+    }
+
+    /**
+     * Schedule one engine-event-born coins-received push after
+     * [SELF_SPEND_NOTIFY_GRACE_MS]. Called only from [txPipeline]'s
+     * sequential collector (which also owns the map and the cancellation in
+     * [handleTxEvent]); the launched job touches no shared state — it either
+     * fires or gets cancelled by the txid's OUTGOING sibling event. The
+     * txid's [notifiedTxIds] slot was already claimed by the caller, so no
+     * later pass can double-schedule.
+     */
+    private fun scheduleDeferredCoinsReceivedNotify(txidHex: String, duffs: Long) {
+        // Opportunistic cleanup of fired/cancelled jobs (map mutations stay
+        // on the sequential collector — the jobs themselves never touch it).
+        pendingNotifyJobs.entries.removeAll { it.value.isCompleted }
+        log.info(
+            "engine-detected receive {} ({} duffs) — notifying in {}ms unless an outgoing " +
+                "sibling classifies it internal",
+            txidHex, duffs, SELF_SPEND_NOTIFY_GRACE_MS
+        )
+        pendingNotifyJobs[txidHex] = scope.launch {
+            delay(SELF_SPEND_NOTIFY_GRACE_MS)
+            runCatching { notifyCoinsReceived(duffs) }
+                .onFailure { log.warn("coins-received notification failed for {}", txidHex, it) }
         }
     }
 
@@ -2885,9 +2999,20 @@ class CutoverUiDataService internal constructor(
             }
             for ((txidHex, duffs) in plan.notifyIncoming) {
                 if (!notifiedTxIds.add(txidHex)) continue // once per txid per process
-                log.info("SDK-discovered receive {} ({} duffs) — notifying", txidHex, duffs)
-                runCatching { notifyCoinsReceived(duffs) }
-                    .onFailure { log.warn("coins-received notification failed for {}", txidHex, it) }
+                if (fromEngineEvent) {
+                    // The engine's Detected events are PER-ACCOUNT: a wallet-
+                    // internal tx (account sweep) emits an OUTGOING sibling for
+                    // the same txid moments before/after this incoming one.
+                    // Defer the push through a short grace so the sibling can
+                    // cancel it ([handleTxEvent]) — a shown notification for
+                    // the user's own funds cannot be retracted. The row itself
+                    // already rendered instantly; only the push waits.
+                    scheduleDeferredCoinsReceivedNotify(txidHex, duffs)
+                } else {
+                    log.info("SDK-discovered receive {} ({} duffs) — notifying", txidHex, duffs)
+                    runCatching { notifyCoinsReceived(duffs) }
+                        .onFailure { log.warn("coins-received notification failed for {}", txidHex, it) }
+                }
             }
 
             // Mark rows now TERMINAL for resolution: CHAINLOCKED, contact-
@@ -2918,6 +3043,17 @@ class CutoverUiDataService internal constructor(
         internal const val TX_FEED_RETRY_MS = 5_000L
         /** [seenEventDirections] cap — eldest-evicted; ~64 chars/txid keeps this a few KB. */
         internal const val SEEN_TX_DIRECTIONS_MAX = 1_000
+
+        /**
+         * Grace before an engine-event-born coins-received push fires
+         * ([scheduleDeferredCoinsReceivedNotify]) — long enough for the
+         * OUTGOING sibling of a wallet-internal tx to arrive and cancel it
+         * (the engine emits the per-account pair back-to-back while
+         * processing one tx, so the real gap is milliseconds), short enough
+         * that a genuine receive's push still feels immediate. The display
+         * row itself never waits.
+         */
+        internal const val SELF_SPEND_NOTIFY_GRACE_MS = 2_000L
 
         /** [terminalResolvedTxids] cap — eldest-evicted (an evicted row just re-verifies, idempotent). */
         internal const val TERMINAL_RESOLVED_MAX = 4_096
