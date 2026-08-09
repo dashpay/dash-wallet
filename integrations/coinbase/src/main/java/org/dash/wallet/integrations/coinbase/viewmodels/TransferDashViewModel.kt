@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.R
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
@@ -257,12 +258,15 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    fun reviewTransfer(dashValue: String) {
+    fun reviewTransfer(dashValue: String) = viewModelScope.launch {
+        // Off-main: reviewTransfer is called from a Main-thread observer, and
+        // the underlying freshReceiveAddress() forces a synchronous
+        // full-wallet save; the callback below still fires on Main.
         val sendTransactionToWalletParams = SendTransactionToWalletParams(
             dashValue,
             Constants.DASH_CURRENCY,
             UUID.randomUUID().toString(),
-            walletDataProvider.freshReceiveAddressString(),
+            walletDataProvider.freshReceiveAddressStringOffMain(),
             CoinbaseConstants.TRANSACTION_TYPE_SEND
         )
 

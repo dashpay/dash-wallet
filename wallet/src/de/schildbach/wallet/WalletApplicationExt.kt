@@ -211,8 +211,31 @@ object WalletApplicationExt {
         if (t is CancellationException) throw t
     }
 
-    fun WalletApplication.clearCachedAddresses(): Unit = runBlocking {
-        exchangeIntegrationProvider.clearCachedAddresses()
+    /**
+     * Owns fire-and-forget startup housekeeping. Separate from [wipeScope]
+     * (whose never-cancel semantics are wipe-specific) but the same shape:
+     * supervisor + IO, nothing else can cancel it.
+     */
+    private val startupHousekeepingScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Fire-and-forget: the caller sits on the MAIN thread inside
+     * Application.onCreate's integrations stage, and this used to
+     * `runBlocking` two DataStore edits there — main-thread disk I/O on
+     * every cold launch. Nothing in startup depends on the clear having
+     * completed (it only prevents stale per-currency deposit addresses from
+     * being REUSED later in the session), so it now runs on a background
+     * scope. Never throws.
+     */
+    fun WalletApplication.clearCachedAddresses() {
+        startupHousekeepingScope.launch {
+            try {
+                exchangeIntegrationProvider.clearCachedAddresses()
+            } catch (t: Throwable) {
+                rethrowCancellation(t)
+                log.warn("failed to clear cached exchange deposit addresses", t)
+            }
+        }
     }
 
     /**

@@ -17,8 +17,10 @@
 
 package org.dash.wallet.common
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.transactions.filters.LockedTransaction
@@ -26,6 +28,23 @@ import org.dash.wallet.common.transactions.filters.LockedTransaction
 // ---------------------------------------------------------------------------------------------
 // Convenience adapters over the neutral WalletDataProvider facade.
 // ---------------------------------------------------------------------------------------------
+
+/**
+ * Issue a fresh receive address OFF the calling thread.
+ *
+ * The wallet-module implementation of [WalletDataProvider.freshReceiveAddressString]
+ * (dashj `freshReceiveAddress()`) issues a key and then forces a SYNCHRONOUS
+ * full-wallet save — measured 1.2s of main-thread block on a wallet with 215
+ * DashPay friend key chains — so it must never run on the main thread. This
+ * helper imposes [Dispatchers.IO] at the seam; feature/integration callers in
+ * coroutines (which typically run on the Main dispatcher) should use it
+ * instead of calling [WalletDataProvider.freshReceiveAddressString] directly.
+ *
+ * An extension (not an interface method) so test fakes/mocks that stub
+ * `freshReceiveAddressString()` keep working unchanged.
+ */
+suspend fun WalletDataProvider.freshReceiveAddressStringOffMain(): String =
+    withContext(Dispatchers.IO) { freshReceiveAddressString() }
 
 /** [WalletDataProvider.observeTotalBalance] as neutral [Dash] amounts. */
 fun WalletDataProvider.observeTotalDashBalance(): Flow<Dash> = observeTotalBalance()

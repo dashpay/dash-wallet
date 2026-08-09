@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.money.dashToFiat
@@ -135,12 +136,14 @@ class CoinbaseBuyDashViewModel @Inject constructor(
         coinBaseRepository.placeBuyOrder(params)
     }
 
-    fun getTransferDashParams(): SendTransactionToWalletParams {
+    suspend fun getTransferDashParams(): SendTransactionToWalletParams {
         return SendTransactionToWalletParams(
             amount = uiState.value.dashAmount.toPlainString(),
             currency = Constants.DASH_CURRENCY,
             idem = UUID.randomUUID().toString(),
-            to = walletDataProvider.freshReceiveAddressString(),
+            // Off-main: the caller launches this from lifecycleScope (Main), and the
+            // underlying freshReceiveAddress() forces a synchronous full-wallet save.
+            to = walletDataProvider.freshReceiveAddressStringOffMain(),
             type = CoinbaseConstants.TRANSACTION_TYPE_SEND
         )
     }

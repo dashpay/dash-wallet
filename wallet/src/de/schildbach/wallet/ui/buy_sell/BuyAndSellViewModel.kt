@@ -37,6 +37,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.data.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
@@ -270,7 +271,9 @@ class BuyAndSellViewModel @Inject constructor(
     suspend fun topperBuyUrl(walletName: String): String {
         return topperClient.getOnRampUrl(
             walletUIConfig.getExchangeCurrencyCode(),
-            walletData.freshReceiveAddressString(),
+            // Off-main: callers launch this from lifecycleScope (Main), and
+            // dashj's freshReceiveAddress() forces a synchronous full-wallet save.
+            walletData.freshReceiveAddressStringOffMain(),
             walletName
         )
     }

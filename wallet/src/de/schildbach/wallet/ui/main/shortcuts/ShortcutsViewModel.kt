@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.data.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
@@ -210,7 +211,9 @@ class ShortcutsViewModel @Inject constructor(
     suspend fun getTopperUrl(walletName: String): String {
         return topperClient.getOnRampUrl(
             walletUIConfig.getExchangeCurrencyCode(),
-            walletData.freshReceiveAddressString(),
+            // Off-main: callers launch this from lifecycleScope (Main), and
+            // dashj's freshReceiveAddress() forces a synchronous full-wallet save.
+            walletData.freshReceiveAddressStringOffMain(),
             walletName
         )
     }

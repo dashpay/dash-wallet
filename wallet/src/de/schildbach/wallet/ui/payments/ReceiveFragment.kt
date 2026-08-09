@@ -24,12 +24,15 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentReceiveBinding
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.data.freshReceiveAddressOffMain
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
@@ -79,9 +82,15 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             val dashAmount = it.first
             val fiatAmount = it.second
-            val address = walletData.freshReceiveAddress()
-            val dialogFragment = ReceiveDetailsDialog.createDialog(address, dashAmount.toDashjCoin(), fiatAmount?.toDashjFiat())
-            dialogFragment.show(requireActivity())
+            // OFF THE MAIN THREAD: this observer runs on Main, and dashj's
+            // freshReceiveAddress() forces a synchronous full-wallet save
+            // (measured 1.2s at 215 friend chains) — see freshReceiveAddressOffMain.
+            viewLifecycleOwner.lifecycleScope.launch {
+                val address = walletData.freshReceiveAddressOffMain()
+                val dialogFragment =
+                    ReceiveDetailsDialog.createDialog(address, dashAmount.toDashjCoin(), fiatAmount?.toDashjFiat())
+                dialogFragment.show(requireActivity())
+            }
         }
     }
 

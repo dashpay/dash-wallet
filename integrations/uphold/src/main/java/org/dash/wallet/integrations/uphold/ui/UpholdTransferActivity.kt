@@ -34,6 +34,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.MoneyFormat
@@ -136,8 +137,10 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         }
     }
 
-    private fun showPaymentConfirmation(amount: Dash) {
-        val receiveAddress = walletDataProvider.freshReceiveAddressString()
+    private fun showPaymentConfirmation(amount: Dash) = lifecycleScope.launch {
+        // Off-main: this is reached from a Main-thread observer, and dashj's
+        // freshReceiveAddress() forces a synchronous full-wallet save.
+        val receiveAddress = walletDataProvider.freshReceiveAddressStringOffMain()
 
         withdrawalDialog = UpholdWithdrawalHelper(
             BigDecimal(balance.toPlainString()),
@@ -176,7 +179,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
                 }
             }
         )
-        withdrawalDialog.transfer(this, receiveAddress, BigDecimal(amount.toPlainString()), false)
+        withdrawalDialog.transfer(this@UpholdTransferActivity, receiveAddress, BigDecimal(amount.toPlainString()), false)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

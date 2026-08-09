@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.money.Dash
@@ -189,7 +190,9 @@ class UpholdViewModel @Inject constructor(
     suspend fun topperBuyUrl(walletName: String): String {
         return topperClient.getOnRampUrl(
             walletUIConfig.getExchangeCurrencyCode(),
-            walletData.freshReceiveAddressString(),
+            // Off-main: callers launch this from lifecycleScope (Main), and the
+            // underlying freshReceiveAddress() forces a synchronous full-wallet save.
+            walletData.freshReceiveAddressStringOffMain(),
             walletName
         )
     }
