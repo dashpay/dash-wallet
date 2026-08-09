@@ -93,14 +93,16 @@ class SdkTxStoreWalkerTest {
 
     private fun walker(
         pageRows: Int = 1_000,
-        tailRows: Int = 32
+        tailRows: Int = 32,
+        payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts
     ) = SdkTxStoreWalker(
         db = db,
         walletId = walletId,
         pageTxoRows = pageRows,
         tailRows = tailRows,
         pageThrottleMs = 0L,
-        onQuery = { queryLog += it }
+        onQuery = { queryLog += it },
+        payloadFacts = payloadFacts
     )
 
     /** Deterministic 32-byte wire txid for index [n]. */
@@ -351,5 +353,346 @@ class SdkTxStoreWalkerTest {
         val all = walker(pageRows = 512).allRecordsNow()
         assertEquals(2_500, all.size)
         assertEquals(2_500, all.map { it.txidHex }.toSet().size)
+    }
+
+    // ── Misattributed-record reattribution + foreign-row exclusion ────
+    //
+    // Replica of the live S22 testnet corruption (s22test63b, 11.10.73):
+    // the SDK stored EVERY tx `direction=0 (incoming)` with a positive
+    // netAmount — including a drain that PAID a contact (its only output
+    // sits on the watch-only type-13 dashpayExternalAccount) and two
+    // account sweeps that never left the wallet. The walker must serve the
+    // corrected shapes, and the contact-side rows must grant no ownership
+    // or membership.
+
+    private val bip44Account = 100L
+    private val recvAccount = 114L // type 12: contact pays US — our money
+    private val extAccount = 115L // type 13: we pay the CONTACT — their money
+
+    private fun insertAccount(id: Long, type: Int) {
+        exec(
+            "INSERT INTO accounts (id, walletId, accountType, accountIndex, accountTypeName, " +
+                "balanceConfirmed, balanceUnconfirmed, externalHighestUsed, internalHighestUsed, " +
+                "standardTag, registrationIndex, keyClass, userIdentityId, friendIdentityId, " +
+                "createdAt, lastUpdated) VALUES (?, ?, ?, 0, '', 0, 0, 0, 0, 0, 0, 0, ?, ?, 0, 0)",
+            id,
+            walletId,
+            type,
+            ByteArray(32).also { it[0] = id.toByte() },
+            ByteArray(32).also { it[0] = id.toByte(); it[1] = 1 }
+        )
+    }
+
+    private fun insertCoreAddress(address: String, accountId: Long) {
+        exec(
+            "INSERT INTO core_addresses (address, publicKey, poolTypeTag, addressIndex, " +
+                "derivationPath, isUsed, firstSeenHeight, lastSeenHeight, balance, createdAt, " +
+                "lastUpdated, accountId) VALUES (?, ?, 0, 0, '', 1, 0, 0, 0, 0, 0, ?)",
+            address,
+            ByteArray(0),
+            accountId
+        )
+    }
+
+    private fun insertTx(id: ByteArray, direction: Int, netAmount: Long, payload: ByteArray, firstSeen: Long) {
+        exec(
+            "INSERT INTO transactions (txid, transactionData, context, blockHeight, blockTimestamp, " +
+                "blockPosition, hasBlockPosition, direction, transactionType, transactionTypeKind, " +
+                "netAmount, label, firstSeen, createdAt, lastUpdated) " +
+                "VALUES (?, ?, 3, 0, 0, 0, 0, ?, 'Standard', 0, ?, '', ?, 0, 0)",
+            id,
+            payload,
+            direction,
+            netAmount,
+            firstSeen
+        )
+    }
+
+    private var outpointSeed = 100
+
+    private fun insertTxo(
+        txid: ByteArray,
+        vout: Int,
+        amount: Long,
+        address: String,
+        spendingTxid: ByteArray? = null
+    ) {
+        exec(
+            "INSERT INTO txos (outpoint, vout, amount, address, scriptPubKey, height, isCoinbase, " +
+                "isConfirmed, isInstantLocked, isLocked, isSpent, createdAt, lastUpdated, walletId, " +
+                "txid, spendingTxid, spendingInputIndex, accountId, coreAddressId) " +
+                "VALUES (?, ?, ?, ?, ?, 0, 0, 1, 0, 0, ?, 0, 0, ?, ?, ?, NULL, NULL, ?)",
+            ByteArray(36).also { it[0] = (outpointSeed and 0xff).toByte(); it[1] = (outpointSeed++ shr 8).toByte(); it[35] = 7 },
+            vout,
+            amount,
+            address,
+            ByteArray(0),
+            if (spendingTxid != null) 1 else 0,
+            walletId,
+            txid,
+            spendingTxid,
+            address
+        )
+    }
+
+    /**
+     * The S22 store shape. Amounts follow the live wallet: a 0.5 contact
+     * receive, a sweep of it into BIP44 (fee 226), a drain of the sweep
+     * outputs paying the contact (fee 636), a 1.0 faucet receive — every
+     * `transactions` row stored `direction=0` with a positive net, exactly
+     * as pulled from the device. [contactSpendsDrainOutput] additionally
+     * appends the CONTACT's own later spend of the drain output.
+     */
+    private fun seedS22Shape(): S22Txids {
+        insertAccount(bip44Account, 0)
+        insertAccount(recvAccount, 12)
+        insertAccount(extAccount, 13)
+        insertCoreAddress("bip44_0", bip44Account)
+        insertCoreAddress("bip44_1", bip44Account)
+        insertCoreAddress("chg_0", bip44Account)
+        insertCoreAddress("recv12_a", recvAccount)
+        insertCoreAddress("ext13_a", extAccount)
+
+        val receive = txid(11)
+        val sweep = txid(12)
+        val drain = txid(13)
+        val faucet = txid(14)
+
+        // Transactions first (txos.txid/spendingTxid both FK-reference them):
+        // - the contact paid us 0.5 on the type-12 receiving chain (OUR money);
+        // - the sweep moved it to BIP44, never leaving the wallet — stored as
+        //   a +0.49999774 "receive" of its own outputs (the live corruption);
+        // - the drain paid the CONTACT (single output on the watch-only
+        //   type-13 chain) — stored as a +0.49999138 "receive" of the
+        //   contact's money;
+        // - the faucet receive is a genuine incoming tx, must stay untouched.
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTx(sweep, direction = 0, netAmount = 49_999_774, payload = byteArrayOf(2), firstSeen = 1_700_000_002)
+        insertTx(drain, direction = 0, netAmount = 49_999_138, payload = byteArrayOf(3), firstSeen = 1_700_000_003)
+        insertTx(faucet, direction = 0, netAmount = 100_000_000, payload = ByteArray(0), firstSeen = 1_700_000_004)
+
+        insertTxo(receive, 1, 50_000_000, "recv12_a", spendingTxid = sweep)
+        insertTxo(sweep, 0, 49_990_000, "bip44_0", spendingTxid = drain)
+        insertTxo(sweep, 1, 9_774, "chg_0", spendingTxid = drain)
+        insertTxo(drain, 0, 49_999_138, "ext13_a")
+        insertTxo(faucet, 0, 100_000_000, "bip44_1")
+
+        return S22Txids(receive, sweep, drain, faucet)
+    }
+
+    private data class S22Txids(
+        val receive: ByteArray,
+        val sweep: ByteArray,
+        val drain: ByteArray,
+        val faucet: ByteArray
+    )
+
+    /** The contact spends the drain output from THEIR wallet — not our tx. */
+    private fun contactSpendsDrainOutput(drain: ByteArray): ByteArray {
+        val contactSpend = txid(15)
+        insertTx(contactSpend, direction = 0, netAmount = 49_998_500, payload = ByteArray(0), firstSeen = 1_700_000_005)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", contactSpend, drain)
+        return contactSpend
+    }
+
+    /** Deterministic facts for the marker payloads [seedS22Shape] writes. */
+    private val markerPayloadFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+        when (payload.firstOrNull()?.toInt()) {
+            2 -> TxPayloadFacts(outputsTotalDuffs = 49_999_774, outputCount = 2, inputCount = 1)
+            3 -> TxPayloadFacts(outputsTotalDuffs = 49_999_138, outputCount = 1, inputCount = 2)
+            else -> null
+        }
+    }
+
+    @Test
+    fun reattribution_s22Shape_sweepInternal_drainOutgoing_receivesUntouched() = runBlocking {
+        val ids = seedS22Shape()
+        val w = walker(payloadFacts = markerPayloadFacts)
+
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        // The sweep: every output returned to owned addresses → INTERNAL,
+        // net = −fee, fee recovered (payload proves all inputs were ours).
+        val sweep = requireNotNull(byHex[displayHexOf(ids.sweep)])
+        assertEquals(L1TxUiDirection.INTERNAL, sweep.direction)
+        assertEquals(-226L, sweep.netAmountDuffs)
+        assertEquals(226L, sweep.feeDuffs)
+
+        // The drain: its only output is the CONTACT's → OUTGOING, net =
+        // −(inputs we spent), fee = inputs − outputs.
+        val drain = requireNotNull(byHex[displayHexOf(ids.drain)])
+        assertEquals(L1TxUiDirection.OUTGOING, drain.direction)
+        assertEquals(-49_999_774L, drain.netAmountDuffs)
+        assertEquals(636L, drain.feeDuffs)
+
+        // Genuine receives keep their stored shape.
+        val receive = requireNotNull(byHex[displayHexOf(ids.receive)])
+        assertEquals(L1TxUiDirection.INCOMING, receive.direction)
+        assertEquals(50_000_000L, receive.netAmountDuffs)
+        val faucet = requireNotNull(byHex[displayHexOf(ids.faucet)])
+        assertEquals(L1TxUiDirection.INCOMING, faucet.direction)
+        assertEquals(100_000_000L, faucet.netAmountDuffs)
+    }
+
+    @Test
+    fun reattribution_withoutPayloadFacts_sweepDegradesToOutgoing_neverInternal() = runBlocking {
+        val ids = seedS22Shape()
+        // No payload facts at all: internal-vs-send cannot be proven, so the
+        // sweep must degrade to OUTGOING (sign-correct) — never stay a fake
+        // "Received", never claim INTERNAL without proof.
+        val w = walker(payloadFacts = { null })
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        val sweep = requireNotNull(byHex[displayHexOf(ids.sweep)])
+        assertEquals(L1TxUiDirection.OUTGOING, sweep.direction)
+        assertEquals(-226L, sweep.netAmountDuffs)
+        val drain = requireNotNull(byHex[displayHexOf(ids.drain)])
+        assertEquals(L1TxUiDirection.OUTGOING, drain.direction)
+        assertEquals(-49_999_774L, drain.netAmountDuffs)
+    }
+
+    @Test
+    fun foreignRows_grantNoOwnershipOrMembership() = runBlocking {
+        val ids = seedS22Shape()
+        val contactSpend = contactSpendsDrainOutput(ids.drain)
+        val w = walker(payloadFacts = markerPayloadFacts)
+
+        // The contact-side output is not OURS…
+        assertFalse(w.isMineOutpoint(displayHexOf(ids.drain), 0))
+        // …but the wallet's own outputs are.
+        assertTrue(w.isMineOutpoint(displayHexOf(ids.sweep), 0))
+        assertTrue(w.isMineOutpoint(displayHexOf(ids.sweep), 1))
+
+        // The contact's own spend of it is THEIR activity: never enumerated…
+        val walked = HashSet<String>()
+        w.walkAll { page -> page.forEach { walked += it.txidHex } }
+        assertFalse(displayHexOf(contactSpend) in walked)
+        // …never a point-readable wallet record…
+        assertNull(w.recordFor(displayHexOf(contactSpend)))
+        // …and never in the recent tail.
+        assertTrue(w.tailRecords().none { it.txidHex == displayHexOf(contactSpend) })
+        // The wallet's own txs all remain members.
+        for (member in listOf(ids.receive, ids.sweep, ids.drain, ids.faucet)) {
+            assertTrue(displayHexOf(member) in walked)
+        }
+    }
+
+    @Test
+    fun reattribution_pointLookup_servesTheCorrectedShape() = runBlocking {
+        val ids = seedS22Shape()
+        val w = walker(payloadFacts = markerPayloadFacts)
+        val drain = requireNotNull(w.recordFor(displayHexOf(ids.drain)))
+        assertEquals(L1TxUiDirection.OUTGOING, drain.direction)
+        assertEquals(-49_999_774L, drain.netAmountDuffs)
+        val sweep = requireNotNull(w.recordFor(displayHexOf(ids.sweep)))
+        assertEquals(L1TxUiDirection.INTERNAL, sweep.direction)
+    }
+
+    // ── reattributeIncomingRecord (pure) ──────────────────────────────
+
+    private fun incomingRecord(net: Long) = l1TxUiRecord(
+        txidWireBytes = txid(77),
+        netAmountDuffs = net,
+        feeDuffs = null,
+        contextCode = 3,
+        directionCode = 0,
+        firstSeenSec = 1_700_000_000,
+        blockTimestampSec = 0
+    )
+
+    @Test
+    fun reattribute_noOwnedSpend_returnsRecordUntouched() {
+        val r = incomingRecord(100)
+        assertEquals(r, reattributeIncomingRecord(r, 0, 0, 100, 0, null))
+    }
+
+    @Test
+    fun reattribute_netStillPositive_keepsIncomingButCorrectsNet() {
+        // A co-funded receive: we spent 100 of our own but gained 400 —
+        // genuinely incoming, only the stored net (which counted foreign
+        // outputs) is corrected.
+        val r = incomingRecord(900)
+        val out = reattributeIncomingRecord(r, 1, 100, 500, 400, null)
+        assertEquals(L1TxUiDirection.INCOMING, out.direction)
+        assertEquals(400L, out.netAmountDuffs)
+    }
+
+    @Test
+    fun reattribute_feeOnlyWhenPayloadProvesAllInputsOurs() {
+        val r = incomingRecord(500)
+        // Payload says 3 inputs, we only spent 2 rows: someone else co-funded
+        // — the outputs/inputs difference is NOT our fee.
+        val coFunded = reattributeIncomingRecord(
+            r, 2, 1_000, 500, 0,
+            TxPayloadFacts(outputsTotalDuffs = 900, outputCount = 2, inputCount = 3)
+        )
+        assertEquals(L1TxUiDirection.OUTGOING, coFunded.direction)
+        assertNull(coFunded.feeDuffs)
+        // Same shape but all inputs ours → fee = spent − outputs.
+        val allOurs = reattributeIncomingRecord(
+            r, 3, 1_000, 500, 0,
+            TxPayloadFacts(outputsTotalDuffs = 900, outputCount = 2, inputCount = 3)
+        )
+        assertEquals(100L, allOurs.feeDuffs)
+    }
+
+    @Test
+    fun reattribute_internalRequiresEveryOutputOwned() {
+        val r = incomingRecord(500)
+        // All outputs owned (payload total == owned funded) → INTERNAL.
+        val internal = reattributeIncomingRecord(
+            r, 1, 1_000, 990, 0,
+            TxPayloadFacts(outputsTotalDuffs = 990, outputCount = 2, inputCount = 1)
+        )
+        assertEquals(L1TxUiDirection.INTERNAL, internal.direction)
+        assertEquals(-10L, internal.netAmountDuffs)
+        // One output value missing from the mirror → an external send.
+        val send = reattributeIncomingRecord(
+            r, 1, 1_000, 400, 0,
+            TxPayloadFacts(outputsTotalDuffs = 990, outputCount = 2, inputCount = 1)
+        )
+        assertEquals(L1TxUiDirection.OUTGOING, send.direction)
+        assertEquals(-600L, send.netAmountDuffs)
+        // A foreign (contact) output present → OUTGOING even if the mirror
+        // sums happen to line up.
+        val contactPay = reattributeIncomingRecord(
+            r, 1, 1_000, 0, 990,
+            TxPayloadFacts(outputsTotalDuffs = 990, outputCount = 1, inputCount = 1)
+        )
+        assertEquals(L1TxUiDirection.OUTGOING, contactPay.direction)
+        assertEquals(-1_000L, contactPay.netAmountDuffs)
+    }
+
+    // ── dashjPayloadFacts against the REAL device payloads ────────────
+
+    /** The S22 drain `5538f908…` exactly as pulled from `dash-sdk.db`: 4 inputs, one 0.69998912 output. */
+    private val realDrainPayloadHex =
+        "0300000004940BFC85D8D4A0A9BB70BB47AF508945DDCB4AB1FBA0EE6BF2780AFA6C4D86F1000000006B48304502" +
+            "21008F83D2AC1EAE44619F5D70964B115FEF4CF895D36D7954621A29DA37E1B0413402206354850A86C9B714" +
+            "5F6B475B6DEACEC41740706C8C9AEAC2C7D189253F15D1F3012103EC1D737702CCDB3132638ABA4FB7374586" +
+            "79676564B74CCD4EC44F0D396D8F63FFFFFFFF940BFC85D8D4A0A9BB70BB47AF508945DDCB4AB1FBA0EE6BF2" +
+            "780AFA6C4D86F1010000006B483045022100C6EED361E986191D129923616673E94288253AE3572FED4DC3FC" +
+            "0FC27A74DFFD0220057A4E343EA35EA985226339CEAE31DCBE6661507075FF0DD569E6635083A0680121036E" +
+            "247D793057F6B8157AE2FAD0A3303C0906DD9CF099B7A34BCC7190FC20CBBCFFFFFFFFBAFCD5EC2CEA426E6D" +
+            "BC1E742BFDE57E4DA879F6572EA313D110C2FFDF0449EB000000006B483045022100AB0D51A71AEDFD91A269" +
+            "62D731325D71725A5DBC568DD1011598062F8309130C022020515A9F117C08C0F62F2AB1EDDFAD1D379DB429" +
+            "77E4C3DED9CFD19772ACB979012103ABA9BCB27FE823605F4E88F53727332CD8C498D1B6CBEBEB4073E43752" +
+            "6F65CBFFFFFFFFBAFCD5EC2CEA426E6DBC1E742BFDE57E4DA879F6572EA313D110C2FFDF0449EB010000006A" +
+            "47304402207D4E24ACC491F956D8DB3A0707D541191684D44FA83D2323823B14BF5999E41002205611F39A0C" +
+            "0B615E54E87CC61A1D3ADB49A6ACD68573B5A09E321B814F8BB3A501210383549EA9B29BA857C983C9D78A5D" +
+            "C3BECA1B5BD5FC6FBAC838E5F77D8FCA24EFFFFFFFFF0140192C04000000001976A9140FF03CDA88402842A4" +
+            "8B5EA94E037B236CC09DBA88AC00000000"
+
+    @Test
+    fun dashjPayloadFacts_parsesTheRealDrainPayload() {
+        val payload = realDrainPayloadHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        val facts = requireNotNull(dashjPayloadFacts(payload)) { "real payload failed to parse" }
+        assertEquals(69_998_912L, facts.outputsTotalDuffs)
+        assertEquals(1, facts.outputCount)
+        assertEquals(4, facts.inputCount)
+        // Garbage never parses to facts.
+        assertNull(dashjPayloadFacts(ByteArray(0)))
+        assertNull(dashjPayloadFacts(byteArrayOf(1, 2, 3)))
     }
 }

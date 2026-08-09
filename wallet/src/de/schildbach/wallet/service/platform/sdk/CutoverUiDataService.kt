@@ -1289,13 +1289,20 @@ internal class DashSdkCutoverUiSource(
                 androidx.sqlite.db.SimpleSQLiteQuery(
                     // Wallet membership is the TXO join and the record set is the
                     // UNION of funded and spent txids — the SAME convention
-                    // observeWalletTxRecords/SdkTxStoreWalker enumerate and the
-                    // parity probe (L1ShadowSource.sdkTxCount) counts, so this
+                    // observeWalletTxRecords/SdkTxStoreWalker enumerate, so this
                     // number and the rows the pipeline writes describe one set.
+                    // Foreign (watch-only contact-payment) rows grant no
+                    // membership, mirroring the walker ([txoIsForeignSql]) —
+                    // without the same exclusion here, a contact's own later
+                    // spend of a payment we sent would count as a record the
+                    // display cache can never hold, and the completeness check
+                    // (decideCacheRebuild) would demand reconciles forever.
                     "SELECT COUNT(*) FROM (" +
-                        "SELECT txid AS t FROM txos WHERE walletId = ? AND txid IS NOT NULL " +
+                        "SELECT t.txid AS x FROM txos t WHERE t.walletId = ? AND t.txid IS NOT NULL " +
+                        "AND NOT (${txoIsForeignSql("t")}) " +
                         "UNION " +
-                        "SELECT spendingTxid AS t FROM txos WHERE walletId = ? AND spendingTxid IS NOT NULL)",
+                        "SELECT t2.spendingTxid AS x FROM txos t2 WHERE t2.walletId = ? " +
+                        "AND t2.spendingTxid IS NOT NULL AND NOT (${txoIsForeignSql("t2")}))",
                     arrayOf<Any?>(walletId, walletId)
                 )
             ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else null }
