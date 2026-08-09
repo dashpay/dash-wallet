@@ -8,7 +8,7 @@ buildscript {
         // truth for both the dependency coordinate (wallet/build.gradle) and the
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
         // cutover hands L1 ownership to the SDK.
-        dashSdkVersion = '0.1.0-v41int19-SNAPSHOT'
+        dashSdkVersion = '0.1.0-v41int20-SNAPSHOT'
         dppVersion = "4.0.0"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
