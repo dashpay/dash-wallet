@@ -17,8 +17,8 @@
 package de.schildbach.wallet.service.platform.sdk;
 
 import org.dashfoundation.dashsdk.Network;
-import org.dashfoundation.dashsdk.wallet.CoreTransaction;
 import org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder;
+import org.dashfoundation.dashsdk.wallet.FinalizedCoreTransaction;
 import org.dashfoundation.dashsdk.wallet.ManagedCoreWallet;
 import org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet;
 
@@ -28,36 +28,39 @@ import org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet;
  *
  * <p>The Kotlin SDK's public send surface
  * ({@code ManagedPlatformWallet.sendToAddresses}) never exposes the
- * builder's drain strategy: the split builder API is {@code internal} to
- * the SDK module (the pinned v41int2 AAR exposes no {@code coreSendMutex} —
- * serialization of the drain is the app's own per-source lock, see
- * {@code SdkL1SendSource.withCoreSendLock}). The JNI knob IS already
- * bound —
+ * builder's drain strategy: the builder API is {@code internal} to the SDK
+ * module. The JNI knob IS already bound —
  * {@code WalletManagerNative.coreTxBuilderSetSelectionStrategy} with
  * {@code CoreTransactionBuilder.SelectionStrategy.ALL} (FFI value 5 →
  * {@code CoreSelectionStrategyFFI::All} → key-wallet
  * {@code SelectionStrategy::All}) — so this shim drives the same builder
- * sequence {@code sendToAddresses} uses, plus that one extra setter.
+ * sequence {@code sendToAddresses} uses ({@code new → addOutput →
+ * finalizeAtomic → broadcast}), plus that one extra setter.
+ *
+ * <p>Since v41int19 (dashpay/platform#4329) the builder is consumed through
+ * {@code finalizeAtomic}: Rust performs funding selection and ReservationSet
+ * insertion in ONE indivisible operation under the wallet-manager lock,
+ * drops the lock, and only then invokes the mnemonic resolver — the
+ * concurrency-safe replacement for the removed {@code setFunding} +
+ * {@code buildSigned} split (#4323; the deprecated shims still linked, but
+ * the split path is not concurrency-safe and is not used here anymore).
  *
  * <p>This is a JAVA class on purpose: Kotlin resolves the SDK's
  * {@code internal} declarations through Kotlin metadata and refuses the
  * call, but at the JVM level the members are public with the stable
- * {@code $sdk_release} mangling of the PINNED AAR
- * ({@code org.dashj:dash-sdk-android:0.1.0-SNAPSHOT} — pin-don't-track per
- * the upstream-adoption guardrails), and javac links against the bytecode
+ * {@code $sdk_release} mangling of the PINNED AAR (pin-don't-track per the
+ * upstream-adoption guardrails), and javac links against the bytecode
  * directly. If a future AAR changes the module name or visibility, this
  * class fails to COMPILE — a loud, pre-runtime canary.
- *
- * <p>NOT routed through the legacy key-wallet-ffi transaction-build path:
- * that path hardcodes BranchAndBound selection
- * ({@code key-wallet-ffi/src/transaction.rs}) and the strategy knob does
- * not apply there. The {@code core_wallet_tx_builder_*} path used here is
- * the one where the knob is honored.
  *
  * <p>Drain semantics (key-wallet {@code coin_selection.rs} /
  * {@code transaction_builder.rs}, {@code SelectionStrategy::All}):
  * <ul>
- *   <li>every spendable UTXO of the account is selected as an input;</li>
+ *   <li>every spendable UTXO of the funding set is selected as an input —
+ *       for the user-facing send-all that set is the POOLED
+ *       {@code ALL_SPENDABLE} accounts (BIP44 + BIP32 + every DashPay
+ *       contact-receiving account; CoinJoin and watch-only stay out), so
+ *       the whole max send is ONE transaction (#4329);</li>
  *   <li>exactly ONE output is allowed; its value is OVERWRITTEN by the
  *       engine to {@code total_input - fee} — the caller's amount is a
  *       floor, not the deliverable;</li>
@@ -66,8 +69,9 @@ import org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet;
  *   <li>the caller's output amount still participates in the
  *       {@code total_input < amount + fee} guard, so it acts as a
  *       DELIVER-AT-LEAST floor: a floor above {@code total - fee} fails the
- *       build with "Insufficient funds" (pre-broadcast) — the adjust-down
- *       retry hook the Kotlin side uses.</li>
+ *       build pre-broadcast with the typed insufficient-funds shortfall —
+ *       the adjust-down retry hook the Kotlin side uses
+ *       ({@code isSendAllShortfall}).</li>
  * </ul>
  *
  * <p>CONCURRENCY CONTRACT: callers MUST serialize this whole call under the
@@ -76,38 +80,42 @@ import org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet;
  * {@code kotlinx.coroutines.sync.Mutex}, ONE acquisition spanning the drain
  * attempt AND its adjust-down retry, so a concurrent plain send cannot
  * change the drained balance between attempts). This is an APP-side lock,
- * NOT a mutex owned by the SDK binary — the pinned v41int2 AAR exposes no
- * {@code coreSendMutex} field or accessor. The cross-path double-select
- * backstop for two concurrent same-account builds (the builder's setFunding
- * and buildSigned are two separate FFI calls) is the Rust engine's atomic
- * UTXO reservation, which the app lock complements but does not replace.
+ * NOT a mutex owned by the SDK binary. The cross-path double-select
+ * backstop is the atomic select+reserve inside {@code finalizeAtomic}
+ * itself (the wallet-manager lock), which the app lock complements but does
+ * not replace.
  *
  * <p>SELECTION CAVEAT (why {@link SdkL1SendService} guards the drain):
  * {@code SelectionStrategy::All} selects EVERY spendable UTXO and the FFI
- * exposes NO lock/exclusion API (key-wallet {@code Utxo.is_locked} is
- * false on every creation path; {@code set_funding} seeds ALL account
- * UTXOs) — app-side dashj locks ({@code Wallet.lockOutput}, the CrowdNode
- * account outputs) are invisible here, so the Kotlin caller must refuse
- * the drain while any exist. Upstream fix: an SDK UTXO lock/exclusion API
- * (iOS's {@code add_inputs_from_outpoints} binding is the porting
- * candidate).
+ * exposes NO lock/exclusion API — app-side dashj locks
+ * ({@code Wallet.lockOutput}, the CrowdNode account outputs) are invisible
+ * here, so the Kotlin caller must refuse the drain while any exist.
+ * Upstream fix: an SDK UTXO lock/exclusion API (iOS's
+ * {@code add_inputs_from_outpoints} binding is the porting candidate).
  *
  * <p>Failure classification: every native failure surfaces as the same
  * {@code DashSDKException} the normal send path produces; the Kotlin caller
  * wraps this call in {@code mapNativeErrors}, so
  * {@code classifyCoreSendFailure}'s decision table applies unchanged
  * (build/funding failures → provably pre-broadcast; broadcast outcomes keep
- * their existing semantics, including released UTXO reservations on a
- * definitive rejection).
+ * their existing semantics). A definitive broadcast rejection releases the
+ * reservation {@code finalizeAtomic} took; a failure BETWEEN the successful
+ * finalize and the broadcast (a {@code coreWallet()} handle failure,
+ * process death) leaves the reservation to its engine-side TTL — no funds
+ * move, but those inputs are unavailable to new SDK builds for the TTL
+ * window (the accepted KNOWN LOW in the classifyCoreSendFailure KDoc).
  */
 final class CoreSendAllNative {
 
     private CoreSendAllNative() {}
 
     /**
-     * Build, sign and broadcast a send-all (drain) of BIP44 account 0 to
-     * {@code addressBase58}: all spendable inputs, single output worth
-     * everything minus the engine-computed fee, no change.
+     * Build, sign and broadcast a send-all (drain) of the POOLED
+     * {@code ALL_SPENDABLE} funding set to {@code addressBase58}: all
+     * spendable inputs of BIP44 + BIP32 + every DashPay receival account in
+     * ONE transaction, single output worth everything minus the
+     * engine-computed fee, no change. CoinJoin is NOT drained — that stays
+     * the separate, explicit {@link #buildSignBroadcastDrainCoinJoin} flow.
      *
      * @param wallet the bound SDK wallet (same seed/coins as dashj).
      * @param network the app network; output address is re-validated
@@ -116,7 +124,8 @@ final class CoreSendAllNative {
      * @param floorDuffs deliver-at-least floor in duffs (must be positive —
      *     the JNI boundary rejects {@code <= 0}). The engine overwrites the
      *     output value with {@code total - fee}; if that is below this
-     *     floor the build fails pre-broadcast with "Insufficient funds".
+     *     floor the build fails pre-broadcast with the typed
+     *     insufficient-funds shortfall.
      * @param coreSignerHandle the manager's {@code MnemonicResolverHandle};
      *     no private key crosses the boundary.
      * @return the broadcast txid as lowercase hex.
@@ -134,7 +143,7 @@ final class CoreSendAllNative {
                 addressBase58,
                 floorDuffs,
                 coreSignerHandle,
-                CoreTransactionBuilder.AccountType.BIP44
+                CoreTransactionBuilder.AccountType.ALL_SPENDABLE
         );
     }
 
@@ -145,20 +154,18 @@ final class CoreSendAllNative {
      * half of the post-upgrade mixed-funds migration.
      *
      * <p>PRIVACY INVARIANT: the builder is pointed at ONE account
-     * ({@code AccountType.COIN_JOIN}, index 0). key-wallet's
-     * {@code set_funding} seeds the input set from that account's UTXO map
-     * alone (rs-platform-wallet {@code wallet/core/transaction.rs} →
-     * {@code accounts.coinjoin_accounts.get_mut(&index)}), so BIP44 coins
-     * cannot be co-spent — this is emphatically NOT the multi-account union
-     * that was rejected in review. It DOES de-mix: the resulting transaction
-     * publicly links the CoinJoin outputs to the destination BIP44 address,
-     * which is why the UI must say so before the user picks it.
+     * ({@code AccountType.COIN_JOIN}, index 0); the atomic finalizer seeds
+     * the input set from that account's UTXO map alone, so BIP44 coins
+     * cannot be co-spent — this is emphatically NOT the {@code ALL_SPENDABLE}
+     * pool (which itself deliberately excludes CoinJoin: crossing that
+     * privacy domain stays an explicit user choice). It DOES de-mix: the
+     * resulting transaction publicly links the CoinJoin outputs to the
+     * destination BIP44 address, which is why the UI must say so before the
+     * user picks it.
      *
      * <p>{@code SelectionStrategy::All} means no change output is emitted at
      * all, so the "non-Standard accounts cannot derive change" limitation
-     * never applies (key-wallet's {@code set_funding} takes the CoinJoin
-     * change address with {@code .ok()} and the ALL strategy drops it before
-     * fee sizing). The account is therefore left EMPTY, which is what makes
+     * never applies. The account is therefore left EMPTY, which is what makes
      * the migration prompt one-shot.
      *
      * <p>{@code addressBase58} MUST be an address the SAME wallet owns on
@@ -193,36 +200,33 @@ final class CoreSendAllNative {
             long coreSignerHandle,
             CoreTransactionBuilder.AccountType accountType
     ) {
-        CoreTransaction signed = null;
-        // Same shape as ManagedPlatformWallet.sendToAddresses: buildSigned
+        FinalizedCoreTransaction finalized = null;
+        // Same shape as ManagedPlatformWallet.sendToAddresses: finalizeAtomic
         // consumes the builder; close() in finally safely destroys it on the
-        // pre-build failure paths and is a no-op once consumed.
+        // pre-finalize failure paths and is a no-op once consumed.
         CoreTransactionBuilder builder = new CoreTransactionBuilder(network);
         try {
             builder.addOutput$sdk_release(addressBase58, floorDuffs);
             builder.setSelectionStrategy$sdk_release(CoreTransactionBuilder.SelectionStrategy.ALL);
-            builder.setFunding$sdk_release(wallet, accountType, 0);
-            signed = builder.buildSigned$sdk_release(
+            // ONE indivisible native operation: select + reserve the inputs
+            // under the wallet-manager lock, then sign via the resolver.
+            finalized = builder.finalizeAtomic$sdk_release(
                     wallet,
                     accountType,
                     0,
                     coreSignerHandle
             );
-            // KNOWN LOW (accepted): a failure BETWEEN the successful
-            // buildSigned above and the broadcast below (coreWallet() handle
-            // failure, cancellation, process death) leaks the UTXO
-            // reservation buildSigned took until its engine-side TTL expires
-            // — no funds move (nothing broadcast, classified NotBroadcast),
-            // but those inputs are unavailable to new SDK builds for the TTL
-            // window. See the classifyCoreSendFailure KDoc.
             try (ManagedCoreWallet core = wallet.coreWallet()) {
-                // The signed tx carries its funding account, so a failed
-                // broadcast releases the UTXO reservation buildSigned took.
-                return core.broadcastTransaction(signed);
+                // broadcastTransaction(FinalizedCoreTransaction) consumes the
+                // finalized handle; a definitive rejection releases the UTXO
+                // reservation finalizeAtomic took.
+                return core.broadcastTransaction(finalized);
             }
         } finally {
-            if (signed != null) {
-                signed.close();
+            // No-ops once consumed (broadcast took the handle); real releases
+            // on the pre-broadcast failure paths.
+            if (finalized != null) {
+                finalized.close();
             }
             builder.close();
         }
