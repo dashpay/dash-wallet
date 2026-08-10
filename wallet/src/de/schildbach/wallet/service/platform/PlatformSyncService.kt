@@ -105,6 +105,9 @@ import org.slf4j.MarkerFactory
 import java.util.Date
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.coroutines.coroutineContext
 import javax.inject.Inject
 import kotlin.math.min
 import kotlin.random.Random
@@ -168,6 +171,16 @@ interface PlatformSyncService {
     suspend fun discoverAndRecoverIdentity(): Boolean
 
     suspend fun updateContactRequests(initialSync: Boolean = false)
+
+    /**
+     * Fire-and-forget [updateContactRequests] pass on the sync scope. For
+     * callers that want local contact state reconciled soon but must not
+     * block or fail on it — e.g. the post-send reconcile fallback in
+     * [PlatformBroadcastService], which defers to contact sync when the
+     * just-broadcast request cannot be fetched back promptly. No-ops into
+     * the "already running" guard when a pass is in flight.
+     */
+    fun requestContactUpdate()
     fun postUpdateBloomFilters()
     suspend fun updateUsernameRequestsWithVotes()
     suspend fun updateUsernameRequestWithVotes(username: String)
@@ -245,6 +258,19 @@ class PlatformSynchronizationService @Inject constructor(
         val STOP_SYNC_JOIN_TIMEOUT = 5.seconds
 
         /**
+         * How long the [updatingContacts] guard may be held before a new
+         * [updateContactRequests] caller declares the holder hung, cancels it
+         * and takes over. Generous on purpose: an initial sync on a large
+         * wallet (hundreds of contacts, per-contact profile fetches) may
+         * legitimately run for many minutes, and a healthy pass being
+         * cancelled here would restart contact sync from scratch. The failure
+         * this bounds was previously UNBOUNDED: a pass wedged inside a
+         * platform call held the guard until app restart, with every later
+         * attempt logging "already running" and returning.
+         */
+        const val CONTACT_SYNC_STALE_TAKEOVER_MS = 30 * 60 * 1000L
+
+        /**
          * Whether the dashpay DATA CONTRACT itself is loaded — a strictly
          * stronger condition than `hasApp("dashpay")`, which only checks the
          * app REGISTRATION (contract id) is configured. Rebuilding a
@@ -273,6 +299,22 @@ class PlatformSynchronizationService @Inject constructor(
     private val contactUpdateRetryPolicy = ContactUpdateRetryPolicy()
     private var contactUpdateRetryJob: Job? = null
     private val updatingContacts = AtomicBoolean(false)
+
+    /**
+     * Owner ([Job]) and claim time of the in-flight [updateContactRequests]
+     * pass. Together they make the [updatingContacts] guard recoverable and
+     * release-safe: a caller that finds the guard held longer than
+     * [CONTACT_SYNC_STALE_TAKEOVER_MS] cancels the recorded owner and takes
+     * over, and the finally-block release CASes on the owner so a cancelled
+     * pass's late unwind cannot clear the flag out from under its successor
+     * (the same CAS also stops the first finisher of two RecoveryComplete-
+     * overlapped passes from releasing the guard while the second still runs).
+     */
+    private val updatingContactsOwner = AtomicReference<Job?>(null)
+    private val updatingContactsSince = AtomicLong(0L)
+
+    /** Clock behind the [updatingContacts] staleness arithmetic — a test seam. */
+    internal var contactSyncClock: () -> Long = { System.currentTimeMillis() }
     private val preDownloadBlocks = AtomicBoolean(false)
     private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
 
@@ -549,6 +591,8 @@ class PlatformSynchronizationService @Inject constructor(
 
         // Reset the in-memory sync state so a post-reset restart starts clean.
         updatingContacts.set(false)
+        updatingContactsOwner.set(null)
+        updatingContactsSince.set(0L)
         preDownloadBlocks.set(false)
         lastPreBlockStage = PreBlockStage.None
         hasCheckedTopups = false
@@ -576,9 +620,28 @@ class PlatformSynchronizationService @Inject constructor(
         // only allow this method to execute once at a time
         // allow it to continue if the last state was recovery complete
         if (updatingContacts.get() && lastPreBlockStage != PreBlockStage.RecoveryComplete) {
-            log.info("updateContactRequests is already running: {}", lastPreBlockStage)
-            return
+            val since = updatingContactsSince.get()
+            val heldMs = contactSyncClock() - since
+            if (since == 0L || heldMs <= CONTACT_SYNC_STALE_TAKEOVER_MS) {
+                log.info("updateContactRequests is already running: {}", lastPreBlockStage)
+                return
+            }
+            // The guard has been held far beyond any healthy pass: the holder
+            // is hung (observed live: a pass wedged inside a platform call
+            // held the guard until app restart — "already running: None" on
+            // every later attempt). Cancel it and take over; the ownership
+            // CAS in this function's finally keeps the hung pass's late
+            // release from clobbering the claim made just below.
+            log.warn(
+                "updateContactRequests guard held for {} ms (stage {}); cancelling the stale pass and taking over",
+                heldMs,
+                lastPreBlockStage
+            )
+            updatingContactsOwner.get()?.cancel(
+                CancellationException("contact sync pass held the guard past ${CONTACT_SYNC_STALE_TAKEOVER_MS} ms; taken over")
+            )
         }
+        val thisPass = coroutineContext[Job]
 
         if (!platform.hasApp("dashpay")) {
             log.info("update contacts not completed because there is no dashpay contract")
@@ -665,6 +728,8 @@ class PlatformSynchronizationService @Inject constructor(
                 0L
             }
 
+            updatingContactsOwner.set(thisPass)
+            updatingContactsSince.set(contactSyncClock())
             updatingContacts.set(true)
             updateSyncStatus(PreBlockStage.Starting)
             updateSyncStatus(PreBlockStage.Initialization)
@@ -865,7 +930,13 @@ class PlatformSynchronizationService @Inject constructor(
             // minutes). Bounded — see scheduleContactUpdateRetry.
             scheduleContactUpdateRetry(initialSync)
         } finally {
-            updatingContacts.set(false)
+            // Release only while this pass still owns the guard: after a
+            // stale takeover (or a RecoveryComplete overlap) the guard
+            // belongs to a newer pass, whose claim must survive this unwind.
+            if (updatingContactsOwner.compareAndSet(thisPass, null)) {
+                updatingContactsSince.set(0L)
+                updatingContacts.set(false)
+            }
 
             counterForReport++
             if (counterForReport % 8 == 0) {
@@ -921,6 +992,19 @@ class PlatformSynchronizationService @Inject constructor(
             }
             log.info("retrying contact update after earlier failure")
             updateContactRequests(initialSync)
+        }
+    }
+
+    override fun requestContactUpdate() {
+        syncScope.launch {
+            try {
+                updateContactRequests(initialSync = false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Fire-and-forget by contract; the periodic sync will retry.
+                log.warn("requested contact update failed", e)
+            }
         }
     }
 
