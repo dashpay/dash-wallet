@@ -100,6 +100,10 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
         // when the capability is off there is nothing to retry — offering the
         // button would just reproduce the same failure
         // (CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED).
+        // The MessageStatusException exclusion matters: that is an API-path
+        // failure (a rejected signed message), which is still live and worth
+        // retrying via retryOnlineSignUp. Only a non-API signup error would
+        // re-enter the fenced-off senders and re-throw immediately.
         val signUpRetryRetired = !CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED &&
             viewModel.signUpStatus == SignUpStatus.Error &&
             viewModel.crowdNodeError !is MessageStatusException

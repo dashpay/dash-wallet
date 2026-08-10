@@ -287,6 +287,17 @@ internal suspend fun signMessageViaSdk(
         // FFI code 31: the bound wallet holds no private key for this
         // address. The one case the dashj implementation answered with an
         // empty string.
+        //
+        // TODO(signing): this may be TRANSIENT after a wallet restore. The
+        //  SDK wallet derives its own address set as it syncs, so until that
+        //  catches up with dashj's discovery an address dashj already knows
+        //  can be genuinely absent SDK-side, and a CrowdNode signature for it
+        //  fails until the sync completes. A widen-the-lookahead-and-retry
+        //  heal is under consideration on the integration line; whether this
+        //  is a real limitation at all is still disputed. Deliberately NOT
+        //  worked around here — a retry or fallback added at this layer would
+        //  mask the distinction between "not ours yet" and "not ours", which
+        //  is exactly the distinction the fail-closed contract depends on.
         signingLog.error("signMessage: no signing key for address", ex)
         throw MessageSigningException(
             MessageSigningException.Reason.SIGNING_KEY_UNAVAILABLE,

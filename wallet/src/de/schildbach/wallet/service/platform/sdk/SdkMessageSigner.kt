@@ -25,6 +25,25 @@ import javax.inject.Inject
  * [de.schildbach.wallet.security.SecurityFunctions.signMessage] and its
  * error mapping stay host-JVM unit-testable — the real call needs
  * `libdash_sdk`. Same shape as [SdkL1SendSource].
+ *
+ * ## Signing performs NO user authentication
+ *
+ * There is no PIN or biometric prompt anywhere on this path. The SDK's
+ * mnemonic resolver reads the seed Rust-side from its own Keystore-backed
+ * storage, so a signature is produced silently from whatever code path asks
+ * for one. This is a real change from the dashj implementation that
+ * preceded it, which had to retrieve the PIN-derived password and derive
+ * the wallet's encryption key on every call and therefore could not run
+ * without the user having authenticated at some point.
+ *
+ * A signature is an authorization token to the server that verifies it, so
+ * **callers whose signatures authorize sensitive server-side actions own the
+ * authentication gate.** Today that means CrowdNode's two call sites, both
+ * gated in the UI ahead of the call: the withdrawal request
+ * (`TransferFragment.continueTransfer`) and the email registration
+ * (`OnlineAccountEmailFragment.continueCreating`). Any new caller must make
+ * the same decision deliberately rather than inheriting a prompt that no
+ * longer exists.
  */
 interface SdkMessageSigner {
     /**
