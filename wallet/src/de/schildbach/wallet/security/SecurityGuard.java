@@ -116,6 +116,10 @@ public class SecurityGuard {
     }
 
     private void logState() {
+        // Never log preference VALUES here: they are the encrypted wallet-password
+        // and PIN key blobs, and this line lands in wallet.log and every support
+        // report. Key names plus value sizes carry the diagnostic signal this dump
+        // exists for (which entries are missing/empty) without the material.
         if (BuildConfig.DEBUG) {
             StringBuffer buffer = new StringBuffer();
             buffer.append("Security Guard Preferences:\n");
@@ -124,7 +128,7 @@ public class SecurityGuard {
                 @Override
                 public void accept(String s, Object o) {
                     buffer.append("  ").append(s).append(":");
-                    buffer.append(o.toString());
+                    buffer.append(o == null ? "null" : "[redacted, " + o.toString().length() + " chars]");
                     buffer.append("\n");
                 }
             });
