@@ -69,7 +69,11 @@ fun createApproveConnectionDialog(
         val isLoading = approveResult is ConnectionsViewModel.ApproveResult.Loading
 
         DisposableEffect(Unit) {
-            onDispose { onDismiss() }
+            onDispose {
+                // Clear any error so a later scan doesn't open the sheet showing a stale failure.
+                viewModel.resetApproveResult()
+                onDismiss()
+            }
         }
 
         LaunchedEffect(approveResult) {
@@ -83,9 +87,11 @@ fun createApproveConnectionDialog(
                     viewModel.resetApproveResult()
                 }
                 is ConnectionsViewModel.ApproveResult.Error -> {
+                    // Re-enable interaction but KEEP the result: it carries the message shown
+                    // below. Retrying moves it to Loading, and dismissing clears it above —
+                    // resetting here would blank the reason before the user could read it.
                     dialog.dialog?.setCancelable(true)
                     dialog.dialog?.setCanceledOnTouchOutside(true)
-                    viewModel.resetApproveResult()
                 }
                 is ConnectionsViewModel.ApproveResult.Idle -> Unit
             }
@@ -95,6 +101,9 @@ fun createApproveConnectionDialog(
             ApproveConnectionContent(
                 request = request,
                 isLoading = isLoading,
+                errorMessage = (approveResult as? ConnectionsViewModel.ApproveResult.Error)?.let {
+                    stringResource(R.string.dash_connect_error, it.message ?: "")
+                },
                 onApprove = {
                     if (!isLoading) {
                         viewModel.approvePendingRequest()
@@ -120,6 +129,8 @@ fun createApproveConnectionDialog(
 internal fun ApproveConnectionContent(
     request: ConnectionRequest,
     isLoading: Boolean = false,
+    /** Shown above the buttons when the approval failed; null while idle or in progress. */
+    errorMessage: String? = null,
     onApprove: () -> Unit = {},
     onDeny: () -> Unit = {}
 ) {
@@ -211,6 +222,17 @@ internal fun ApproveConnectionContent(
                 PermissionRow(
                     icon = R.drawable.ic_connections_xmark_circle,
                     text = stringResource(R.string.dash_connect_approve_no_withdraw_funds)
+                )
+            }
+
+            // Why the approval failed. Without this the sheet just becomes interactive again
+            // and the user has no idea what went wrong.
+            errorMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = MyTheme.Typography.BodyMedium,
+                    color = colors.red,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -318,4 +340,13 @@ private fun ApproveConnectionContentPreview() {
 @Composable
 private fun ApproveConnectionContentLoadingPreview() {
     ApproveConnectionContent(request = previewRequest, isLoading = true)
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ApproveConnectionContentErrorPreview() {
+    ApproveConnectionContent(
+        request = previewRequest,
+        errorMessage = "Could not complete the DashConnect request: state transition was not accepted"
+    )
 }

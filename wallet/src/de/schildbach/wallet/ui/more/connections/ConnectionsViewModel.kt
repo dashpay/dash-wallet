@@ -102,9 +102,11 @@ class ConnectionsViewModel @Inject constructor(
                 when (val payload = repository.parseQr(qrContent)) {
                     is DashConnectQr.Login -> {
                         pendingLoginRequest = payload.request
-                        _uiState.update {
-                            it.copy(pendingRequest = toConnectionRequest(payload.request))
-                        }
+                        // Resolve BEFORE update {}: that is a compare-and-set retry loop, and
+                        // toConnectionRequest makes two Platform round trips — a CAS retry would
+                        // repeat them (and could observe different results between attempts).
+                        val request = toConnectionRequest(payload.request)
+                        _uiState.update { it.copy(pendingRequest = request) }
                         _scanOutcome.value = ScanOutcome.ConnectionRequested
                     }
                     is DashConnectQr.KeyRegistration -> {
