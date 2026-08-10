@@ -295,7 +295,28 @@ internal fun planL1TxRow(
         timestampMs = record.timestampMs,
         isIncoming = false
     )
-    L1TxUiDirection.INCOMING -> if (assetLockKind == AssetLockKind.UNSHIELD) {
+    L1TxUiDirection.INCOMING -> if (assetLockKind == AssetLockKind.UNSHIELD_EXTERNAL) {
+        // A FOREIGN pool's AssetUnlock paying this wallet: at the Core level
+        // a plain incoming payment, so it keeps full receive semantics —
+        // green inbound arrow, Received bucket, coins-received notification —
+        // under the "Unshielded" label (product decision: label by what the
+        // transaction IS, arrow by whose money moved).
+        L1TxRowPlan(
+            rowId = record.txidHex,
+            titleRes = assetLockTitleRes(assetLockKind),
+            statusRes = if (record.status == L1TxUiStatus.PENDING) {
+                R.string.transaction_row_status_processing
+            } else {
+                -1
+            },
+            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+            iconBgType = TxDisplayCacheEntry.BG_RECEIVED,
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED,
+            valueDuffs = record.netAmountDuffs,
+            timestampMs = record.timestampMs,
+            isIncoming = true
+        )
+    } else if (assetLockKind == AssetLockKind.UNSHIELD) {
         // The unshield/withdraw (AssetUnlock) returns pool funds to the
         // transparent wallet — the SDK records it INCOMING, but it is a
         // self-move, not an external receive. Relabel it "Unshielded" and
@@ -358,6 +379,9 @@ internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     AssetLockKind.INVITE -> R.string.transaction_row_invitation
     AssetLockKind.SHIELD -> R.string.transaction_row_shielded
     AssetLockKind.UNSHIELD -> R.string.transaction_row_unshielded
+    // Same label as the self-move — the arrow, not the title, carries the
+    // internal/external distinction (product decision, 2026-08-10).
+    AssetLockKind.UNSHIELD_EXTERNAL -> R.string.transaction_row_unshielded
 }
 
 /**
@@ -2973,13 +2997,16 @@ class CutoverUiDataService internal constructor(
                         resolveAssetLockKind(record.txidHex)?.let { kindByTxid[record.txidHex] = it }
                     L1TxUiDirection.INCOMING ->
                         // The unshield/withdraw (AssetUnlock, transactionTypeKind
-                        // == 7) is recorded INCOMING but is a self-move — relabel
-                        // it "Unshielded" and suppress its coins-received
-                        // notification. Only the UNSHIELD classification is
-                        // accepted here; a genuine external receive stays
-                        // "Received" (the resolver returns null for it).
-                        if (resolveAssetLockKind(record.txidHex) == AssetLockKind.UNSHIELD) {
-                            kindByTxid[record.txidHex] = AssetLockKind.UNSHIELD
+                        // == 7) is recorded INCOMING. Our OWN pool's payout is a
+                        // self-move (relabel "Unshielded", suppress the
+                        // coins-received notification); a FOREIGN pool's payout
+                        // keeps receive semantics under the same label. Both
+                        // classifications are accepted here; a plain external
+                        // receive stays "Received" (the resolver returns null).
+                        when (val kind = resolveAssetLockKind(record.txidHex)) {
+                            AssetLockKind.UNSHIELD,
+                            AssetLockKind.UNSHIELD_EXTERNAL -> kindByTxid[record.txidHex] = kind
+                            else -> {}
                         }
                     else -> {}
                 }

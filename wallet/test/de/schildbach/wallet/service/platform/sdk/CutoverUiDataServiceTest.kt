@@ -215,6 +215,24 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun rowPlan_externalUnshieldKeepsReceiveSemantics() {
+        // A FOREIGN pool's AssetUnlock paying this wallet (field case: an
+        // unshield from a different seed) is a genuine receive: same
+        // "Unshielded" label as the self-move, but the green inbound arrow,
+        // Received treatment and the coins-received notification.
+        val plan = planL1TxRow(
+            record(net = 300_000, context = 1, direction = 0),
+            AssetLockKind.UNSHIELD_EXTERNAL
+        )
+        assertEquals(R.string.transaction_row_unshielded, plan.titleRes)
+        assertEquals(TxDisplayCacheEntry.ICON_RECEIVED, plan.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_RECEIVED, plan.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, plan.filterFlags)
+        assertEquals(300_000L, plan.valueDuffs)
+        assertTrue(plan.isIncoming)
+    }
+
+    @Test
     fun rowPlan_feeKindsKeepSentArrow() {
         val upgrade = planL1TxRow(
             record(net = -500_000, context = 1, direction = 2),
