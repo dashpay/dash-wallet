@@ -1699,6 +1699,16 @@ class CutoverUiDataService internal constructor(
      */
     private val resolveWalletNets: suspend (Set<String>) -> Map<String, Long> = { emptyMap() },
     /**
+     * Whether this wallet's own (foreign-excluded) TXOs are involved in the
+     * given txid at all ([SdkTxContactResolver.ownedInvolvementFor]): the
+     * gate that keeps a CONTACT's own spend of coins we merely watch (DIP-15
+     * external friendship account) from being ingested as OUR outgoing event
+     * — see [handleTxEvent]'s negative-event validation. `false` = definitive
+     * not-our-money, `null` = mirror can't answer yet. Default null (tests
+     * without a mirror keep the pre-existing trust-the-event behavior).
+     */
+    private val resolveOwnedInvolvement: suspend (String) -> Boolean? = { null },
+    /**
      * The engine's instant tx feed ([L1ShadowSyncService.txEvents]) —
      * mempool detections and IS locks, consumed by [txPipeline] ahead of
      * the Room snapshot so receives render pre-block. Empty by default
@@ -1809,6 +1819,7 @@ class CutoverUiDataService internal constructor(
         resolveAssetLockKind = { txDisplayHex -> assetLockKindResolver.kindFor(txDisplayHex) },
         resolveContact = { txDisplayHex -> sdkTxContactResolver.contactFor(txDisplayHex) },
         resolveWalletNets = { txids -> sdkTxContactResolver.signedNetsFor(txids) },
+        resolveOwnedInvolvement = { txid -> sdkTxContactResolver.ownedInvolvementFor(txid) },
         clearContactResolutionCaches = { sdkTxContactResolver.clearNegativeCache() },
         txEvents = l1ShadowSyncService.txEvents,
         isTxFeedTapActive = { l1ShadowSyncService.isTapActive },
@@ -2658,6 +2669,62 @@ class CutoverUiDataService internal constructor(
                     event.txidHex, event.contextCode, event.netAmountDuffs
                 )
                 var record = l1TxUiRecordFromEvent(event, nowMs())
+                // NEGATIVE-EVENT VALIDATION (verified live, S21 testnet 11.10.74):
+                // Detected events are PER-ACCOUNT and carry NO account identity, so
+                // an OUTGOING event may not be OUR money moving at all — it fires
+                // identically when a CONTACT spends coins we merely watch on the
+                // DIP-15 external friendship account. Observed: the contact's
+                // pooled max-send both PAID us 0.5 (its true shape, store record
+                // +49999660 INCOMING) and spent the 0.2 we had previously paid
+                // them; the engine emitted a −0.2 OUTGOING sibling, negative-wins
+                // captured it as the authoritative net, the pair misclassified as
+                // self-spend INTERNAL, and the row rendered "Sent −0.2" for money
+                // we RECEIVED. Validate every negative event against the
+                // foreign-excluded TXO mirror before letting it participate:
+                //  - no owned involvement at all → the tx never touched our money
+                //    (a contact spending watched coins to anyone) — drop the event
+                //    entirely, authoring NO row (unchecked, this shape authors a
+                //    phantom "Sent" row for a tx that isn't ours);
+                //  - owned involvement with a POSITIVE store net → we net-gained:
+                //    the negative sibling is watch-only noise on a genuine receive
+                //    — drop it, letting the incoming sibling author "Received"
+                //    with its true amount (and keeping its notification);
+                //  - owned involvement with a negative/unknown net → a genuine
+                //    send or self-spend — proceed unchanged (the sender-side
+                //    friendship flow and INTERNAL classification are untouched:
+                //    their funding-account spend always has owned involvement and
+                //    a negative store net).
+                // `null` involvement = the mirror hasn't persisted the tx yet;
+                // one short retry, then fail open to the pre-existing behavior
+                // (a wrong shape then self-heals at the next confirmed-net pass —
+                // see syncDisplayCache's TXO-net precedence).
+                if (event.netAmountDuffs < 0) {
+                    var involvement = resolveOwnedInvolvement(record.txidHex)
+                    if (involvement == null) {
+                        delay(NEGATIVE_EVENT_MIRROR_RETRY_MS)
+                        involvement = resolveOwnedInvolvement(record.txidHex)
+                    }
+                    if (involvement == false) {
+                        log.info(
+                            "engine OUTGOING event for {} ({} duffs) has NO owned-TXO involvement — " +
+                                "a contact spent coins this wallet only watches; event dropped, no row",
+                            record.txidHex, event.netAmountDuffs
+                        )
+                        return
+                    }
+                    if (involvement == true) {
+                        val storeNet = resolveWalletNets(setOf(record.txidHex))[record.txidHex]
+                        if (storeNet != null && storeNet > 0) {
+                            log.info(
+                                "engine OUTGOING event for {} ({} duffs) contradicts the " +
+                                    "foreign-excluded store net (+{} duffs) — watch-only spend " +
+                                    "noise on a genuine receive; event dropped",
+                                record.txidHex, event.netAmountDuffs, storeNet
+                            )
+                            return
+                        }
+                    }
+                }
                 // Capture the engine's authoritative signed wallet net for this txid
                 // — the source of truth for a contact row's direction/amount, since
                 // the SDK's persisted `transactions.netAmount` is wrong for a
@@ -2672,7 +2739,10 @@ class CutoverUiDataService internal constructor(
                 // the +amount sibling clobber the correct negative net and the row
                 // rendered as RECEIVED +0.05. Keeping the minimum keeps the funding
                 // account's net regardless of event order; genuine receives only ever
-                // see one positive event, so they are unaffected.
+                // see one positive event, so they are unaffected. Negative events
+                // reaching this point have passed the owned-involvement validation
+                // above, so a contact's watch-only spend can no longer poison the
+                // minimum.
                 val priorNet = engineNetByTxid[record.txidHex]
                 if (priorNet == null || event.netAmountDuffs < priorNet) {
                     engineNetByTxid[record.txidHex] = event.netAmountDuffs
@@ -3070,14 +3140,15 @@ class CutoverUiDataService internal constructor(
                 val txoNet = signedNetByTxid[txid] // TXO-derived (confirmed txs only)
                 val liveNet = engineNetByTxid[txid]
                 when {
-                    // Both known → take the MORE NEGATIVE. For a send both equal
-                    // −(amount+fee) so this is a no-op; it only bites when one side
-                    // is polluted positive (a stale +payment engine sibling, or a
-                    // TXO snapshot caught mid-write with the spent marks missing) —
-                    // the funding-side negative net is the display-true one either
-                    // way. A genuine receive has both positive and equal.
-                    txoNet != null && liveNet != null ->
-                        signedNetByTxid[txid] = minOf(txoNet, liveNet)
+                    // Both known → the CONFIRMED TXO-derived net wins outright.
+                    // It is only ever computed for confirmed/IS-locked txs (spent
+                    // marks guaranteed written, watch-only foreign rows excluded),
+                    // so it is direction-true for BOTH shapes the live net can get
+                    // wrong: a stale +payment engine sibling on a send, AND a
+                    // watch-only −spend sibling on a receive (verified live, S21
+                    // 11.10.74: minOf here kept a contact's −0.2 watch-only spend
+                    // over the true +0.5 receive net, pinning the poisoned row for
+                    // the whole process lifetime).
                     txoNet != null -> { /* already stored */ }
                     liveNet != null -> signedNetByTxid[txid] = liveNet
                     else -> if (noNetWarnedTxids.add(txid)) {
@@ -3154,6 +3225,14 @@ class CutoverUiDataService internal constructor(
 
     companion object {
         internal const val REFRESH_INTERVAL_MS = 60_000L
+
+        /**
+         * One retry's grace for the TXO mirror to persist a just-detected tx
+         * before a NEGATIVE engine event is accepted at face value (see
+         * [handleTxEvent]'s owned-involvement validation). Only negative
+         * events with an unanswered probe ever wait, and only once.
+         */
+        internal const val NEGATIVE_EVENT_MIRROR_RETRY_MS = 400L
 
         /** Grace before an activation's first full reconcile walk — see [reconcileInitialDelayMs]. */
         internal const val RECONCILE_INITIAL_DELAY_MS = 10_000L

@@ -794,7 +794,17 @@ class CutoverUiDataServiceTest {
         /** When non-null, the deferred-build probe calls THIS per read (overrides [deferredContactBuilds]). */
         deferredContactBuildFeed: (suspend () -> Int?)? = null,
         /** When non-null, backs BOTH the IS-lock persist and the persisted-lock read (restart-safe store fake). */
-        persistedIsLocks: MutableSet<String>? = null
+        persistedIsLocks: MutableSet<String>? = null,
+        /**
+         * Owned-TXO involvement per txid for the negative-event validation.
+         * Default `true`: the pre-existing event tests all model THIS wallet's
+         * own money moving (sends/self-spends), for which the mirror answers
+         * "owned" — and `true` short-circuits the mirror-retry delay a `null`
+         * would incur. Noise-drop tests override per scenario.
+         */
+        ownedInvolvement: suspend (String) -> Boolean? = { true },
+        /** Foreign-excluded store nets for the negative-event validation and contact rows. */
+        walletNets: suspend (Set<String>) -> Map<String, Long> = { emptyMap() }
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -813,6 +823,8 @@ class CutoverUiDataServiceTest {
         loadPersistedInstantLocks = { txids ->
             persistedIsLocks?.let { store -> txids.filterTo(mutableSetOf()) { it in store } } ?: emptySet()
         },
+        resolveOwnedInvolvement = ownedInvolvement,
+        resolveWalletNets = walletNets,
         nowMs = { now }
     )
 
@@ -1626,6 +1638,123 @@ class CutoverUiDataServiceTest {
         assertEquals("", row.statusText)
         assertEquals(bornTime, row.time) // the tx's own timestamp is kept
         assertTrue(notified.isEmpty()) // the pending push was cancelled
+    }
+
+    @Test
+    fun engineEvent_watchOnlySpendNoise_droppedAndReceiveKeepsShapeAndNotification() = runTest {
+        // The receive-side twin of the self-spend pair (verified live, S21
+        // testnet 11.10.74): a CONTACT's pooled send both pays this wallet
+        // AND spends coins the wallet merely watches on the DIP-15 external
+        // friendship account. The engine emits an OUTGOING sibling for the
+        // watch-only account — with no account identity on the event. Owned
+        // involvement is true (we were paid) but the foreign-excluded store
+        // net is POSITIVE, proving the negative sibling is watch-only noise:
+        // it must be dropped, the row must stay "Received" with the TRUE
+        // amount, and the coins-received notification must still fire (the
+        // old code classified self-spend INTERNAL, suppressed the push, and
+        // rendered "Sent −0.2" for money that was received).
+        val txid = displayHex(13)
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val notified = mutableListOf<Long>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao,
+            notify = { notified += it }, txEvents = events,
+            ownedInvolvement = { true },
+            walletNets = { txids -> txids.associateWith { 49_999_660L } }
+        )
+        service.start()
+        runCurrent()
+
+        // Incoming sibling first (the on-device order): row born "Received".
+        events.emit(L1TxEvent.Detected(txid, 49_999_660L, null, contextCode = 0, directionCode = 0))
+        runCurrent()
+        assertEquals(resolve(R.string.transaction_row_status_received), store.getValue(txid).title)
+
+        // Watch-only OUTGOING sibling: contradicted by the positive store
+        // net → dropped. No INTERNAL reshape, no notification suppression.
+        events.emit(L1TxEvent.Detected(txid, -20_000_000L, null, contextCode = 0, directionCode = 1))
+        runCurrent()
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
+        runCurrent()
+
+        assertEquals(1, store.size)
+        val row = store.getValue(txid)
+        assertEquals(resolve(R.string.transaction_row_status_received), row.title)
+        assertEquals(49_999_660L, row.valueSatoshis)
+        assertEquals(listOf(49_999_660L), notified) // the genuine receive still announces
+    }
+
+    @Test
+    fun engineEvent_pureWatchOnlySpend_authorsNoRowAtAll() = runTest {
+        // A contact spends coins this wallet only watches, paying someone
+        // ELSE entirely: the engine still emits an OUTGOING event to us, but
+        // the tx never touched our money (owned involvement definitively
+        // false). Unchecked, this authors a phantom "Sent" row; it must be
+        // dropped with no row and no notification.
+        val txid = displayHex(14)
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val notified = mutableListOf<Long>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao,
+            notify = { notified += it }, txEvents = events,
+            ownedInvolvement = { false }
+        )
+        service.start()
+        runCurrent()
+
+        events.emit(L1TxEvent.Detected(txid, -20_000_000L, null, contextCode = 0, directionCode = 1))
+        runCurrent()
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
+        runCurrent()
+
+        assertTrue(store.isEmpty())
+        assertTrue(notified.isEmpty())
+    }
+
+    @Test
+    fun engineEvent_negativeWithUnansweredMirror_retriesOnceThenFailsOpen() = runTest {
+        // Mirror can't answer (null) on the first probe: the event waits one
+        // bounded retry; a second null fails OPEN to the pre-existing
+        // behavior (genuine sends must never be swallowed by a slow mirror).
+        val txid = displayHex(15)
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val probes = mutableListOf<String>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao, txEvents = events,
+            ownedInvolvement = { probes += it; null }
+        )
+        service.start()
+        runCurrent()
+
+        events.emit(L1TxEvent.Detected(txid, -900_146L, 146L, contextCode = 0, directionCode = 1))
+        runCurrent()
+        assertTrue(store.isEmpty()) // still inside the mirror-retry grace
+        testScheduler.advanceTimeBy(CutoverUiDataService.NEGATIVE_EVENT_MIRROR_RETRY_MS + 1)
+        runCurrent()
+
+        assertEquals(2, probes.size)
+        assertEquals(resolve(R.string.transaction_row_status_sending), store.getValue(txid).title)
     }
 
     @Test
