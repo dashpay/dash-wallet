@@ -23,9 +23,11 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.service.platform.sdk.DashPayBackfillGate
 import de.schildbach.wallet.service.platform.sdk.DashPayBackfillGateImpl
+import de.schildbach.wallet.service.platform.sdk.DashSdkMessageSigner
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.DashSdkServiceImpl
 import de.schildbach.wallet.service.platform.sdk.PlatformMnemonicProvider
+import de.schildbach.wallet.service.platform.sdk.SdkMessageSigner
 import de.schildbach.wallet.service.platform.sdk.SecurityGuardMnemonicProvider
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceServiceImpl
@@ -81,4 +83,17 @@ abstract class PlatformSdkModule {
     abstract fun bindShieldedBalanceService(
         service: ShieldedBalanceServiceImpl
     ): ShieldedBalanceService
+
+    /**
+     * The SDK message-signing seam behind
+     * [de.schildbach.wallet.security.SecurityFunctions.signMessage] (the
+     * CrowdNode `RegisterEmail` / `Withdrawal` request signatures). Lazy
+     * like the rest: the SDK only boots if a signature is actually
+     * requested.
+     */
+    @Singleton
+    @Binds
+    abstract fun bindSdkMessageSigner(
+        signer: DashSdkMessageSigner
+    ): SdkMessageSigner
 }
