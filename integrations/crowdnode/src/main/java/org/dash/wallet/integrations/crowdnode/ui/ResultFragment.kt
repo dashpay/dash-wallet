@@ -38,6 +38,7 @@ import org.dash.wallet.integrations.crowdnode.databinding.FragmentResultBinding
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -95,7 +96,16 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             setErrorMessage(it)
         }
 
-        if (viewModel.crowdNodeError?.isInsufficientMoney == true ||
+        // Retrying a signup would re-enter the retired on-chain senders, so
+        // when the capability is off there is nothing to retry — offering the
+        // button would just reproduce the same failure
+        // (CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED).
+        val signUpRetryRetired = !CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED &&
+            viewModel.signUpStatus == SignUpStatus.Error &&
+            viewModel.crowdNodeError !is MessageStatusException
+
+        if (signUpRetryRetired ||
+            viewModel.crowdNodeError?.isInsufficientMoney == true ||
             viewModel.crowdNodeError?.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true ||
             viewModel.crowdNodeError?.message == CrowdNodeException.CONFIRMATION_ERROR
         ) {

@@ -23,6 +23,26 @@ import org.dash.wallet.common.money.DashNetworks
 import org.dash.wallet.common.money.MoneyFormat
 
 object CrowdNodeConstants {
+    /**
+     * Master switch for the on-chain signup and deposit flows.
+     *
+     * CrowdNode has disabled account creation and deposits service-side and
+     * every remaining user is served by the API path, so the dashj senders
+     * behind these flows are retired
+     * ([org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi]).
+     * Flipping this to `true` would re-expose the UI, but the senders would
+     * still refuse — re-enabling for real means restoring those code paths
+     * as well.
+     *
+     * Withdrawals, balances, history and wallet restore are NOT affected and
+     * must keep working for existing accounts.
+     *
+     * This replaces the ad-hoc `isVisible = false` lines that previously
+     * hid these affordances one by one, so the whole capability is now
+     * flippable from a single place.
+     */
+    const val SIGNUP_AND_DEPOSITS_ENABLED = false
+
     private const val CROWDNODE_TESTNET_ADDRESS = "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
     private const val CROWDNODE_MAINNET_ADDRESS = "XjbaGWaGnvEtuQAUoBgDxJWe8ZNv45upG2"
 
