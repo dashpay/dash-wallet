@@ -513,6 +513,15 @@ open class DashPayConfig @Inject constructor(
         val DASHPAY_BACKFILL_PENDING_FINGERPRINT = stringPreferencesKey("dashpay_backfill_pending_fingerprint")
 
         /**
+         * One-shot version marker for the migration address-window heal
+         * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder]
+         * step 4c): once the SDK wallet's gap limits are widened and the
+         * backfill coverage invalidated, this records the heal version so
+         * later binds don't repeat the widening or force another rewind.
+         */
+        val SDK_GAP_WIDENED_VERSION = intPreferencesKey("sdk_gap_widened_version")
+
+        /**
          * A provisioning pass ARMED but not yet accounted for: written by
          * the gate BEFORE it lets a provisioning pass run, recording the
          * pre-pass durable synced height (TARGET) and the contact set the

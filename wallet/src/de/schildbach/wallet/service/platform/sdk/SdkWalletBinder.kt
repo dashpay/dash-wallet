@@ -828,6 +828,16 @@ class SdkWalletBinder internal constructor(
         // self-heal. Best-effort: a prune failure must not fail the bind.
         pruneOrphanSdkWallets(walletId)
 
+        // 4c. One-shot migration heal: widen the SDK's address-pool windows
+        // to the Rust max and invalidate the recorded backfill coverage so
+        // the next gate pass REWINDS and re-matches history against the
+        // widened script set. Heals the migrated-wallet frontier gap:
+        // dashj (or any same-seed client) spending past the SDK's derived
+        // window made the change — and every descendant transaction —
+        // invisible to the scan. Best-effort and re-tried on the next bind
+        // until it succeeds once; must never fail the bind.
+        maybeWidenAddressWindows(walletId)
+
         // 5. Attach the existing on-chain identity so the SDK can derive
         //    its keys (identity index 0 — key-parity note in SdkDashPayWrites).
         val userId = identity.userId
@@ -947,6 +957,48 @@ class SdkWalletBinder internal constructor(
         }
     }
 
+    /**
+     * Step 4c — the one-shot migration address-window heal.
+     *
+     * Widens the SDK wallet's standard-family gap limits to the Rust max
+     * ([DashSdkService.widenAddressWindows]) and, on success, invalidates
+     * the recorded DIP-15 backfill coverage so the gate's next consult
+     * forces a full rewind: the re-scan then matches history against the
+     * widened script set, recovering transactions whose addresses sat past
+     * the old window (the same-seed-client frontier gap observed in the
+     * field). Guarded by [DashPayConfig.SDK_GAP_WIDENED_VERSION] so the
+     * widening + forced rewind happen ONCE per heal version, not per
+     * launch; a failed attempt records nothing and retries on the next
+     * bind. Never throws — the bind must survive this step failing.
+     */
+    private suspend fun maybeWidenAddressWindows(walletIdHex: String) {
+        try {
+            val done = dashPayConfig.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) ?: 0
+            if (done >= GAP_WIDEN_HEAL_VERSION) return
+            if (!sdkService.widenAddressWindows(walletIdHex)) {
+                log.warn("address-window heal did not complete; will retry next bind")
+                return
+            }
+            // Invalidate the coverage record LAST, only after the windows
+            // provably widened: the forced rewind is only worth its ~full
+            // re-scan when the wider script set is in place to profit.
+            dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR)
+            dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH)
+            dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT)
+            dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED)
+            dashPayConfig.set(DashPayConfig.SDK_GAP_WIDENED_VERSION, GAP_WIDEN_HEAL_VERSION)
+            log.info(
+                "address-window heal v{} applied on {}…: gaps widened, backfill coverage " +
+                    "invalidated — next gate pass rewinds with the widened script set",
+                GAP_WIDEN_HEAL_VERSION, walletIdHex.take(8)
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("address-window heal failed; will retry next bind", t)
+        }
+    }
+
     private suspend fun anyFlagEnabled(): Boolean = try {
         dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) == true ||
             dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) == true ||
@@ -979,6 +1031,14 @@ class SdkWalletBinder internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkWalletBinder::class.java)
+
+        /**
+         * Version of the one-shot address-window heal
+         * ([maybeWidenAddressWindows]). Bump to re-run the widening + the
+         * forced coverage rewind on wallets that already healed at a lower
+         * version.
+         */
+        internal const val GAP_WIDEN_HEAL_VERSION = 1
 
         /**
          * Cadence and budget for [watchArmedBackfillRewind]. The window the

@@ -85,6 +85,14 @@ class SdkWalletBinderTest {
         override fun walletManagerOrNull(): PlatformWalletManager? = null
         override suspend fun resolveUsername(name: String): String? = null
 
+        /** Address-window heal hook — default success. NOT in [totalCalls]. */
+        var onWiden: suspend (String) -> Boolean = { true }
+        var widenCalls = 0
+        override suspend fun widenAddressWindows(walletIdHex: String): Boolean {
+            widenCalls++
+            return onWiden(walletIdHex)
+        }
+
         override suspend fun bindAppWallet(seedWords: List<String>, birthTimeSecs: Long?): String {
             bindCalls++
             lastBirthTime = birthTimeSecs
@@ -1521,5 +1529,84 @@ class SdkWalletBinderTest {
         binder.provisionContactAccountsInBackground(force = true).join() // must not throw
 
         assertEquals(1, sdk.provisionCalls)
+    }
+
+    // -- Step 4c: one-shot address-window heal ------------------------------
+
+    /** A config whose gap-widened version behaves like the real store. */
+    private fun healConfig(recordedVersion: Int? = null): Pair<DashPayConfig, () -> Int?> {
+        var recorded: Int? = recordedVersion
+        val config = dashPayConfig(readsFlag = true)
+        coEvery { config.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) } answers { recorded }
+        coEvery {
+            config.set(DashPayConfig.SDK_GAP_WIDENED_VERSION, any())
+        } answers { recorded = secondArg() }
+        coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) } returns Unit
+        coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH) } returns Unit
+        coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) } returns Unit
+        coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED) } returns Unit
+        return config to { recorded }
+    }
+
+    @Test
+    fun bind_widensAddressWindowsOnce_thenInvalidatesBackfillCoverage() = runBlocking {
+        val sdk = readySdk()
+        val (config, recordedVersion) = healConfig()
+        val binder = binder(sdk, config = config, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.widenCalls)
+        assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
+        // Coverage invalidated so the backfill gate's next consult rewinds
+        // and re-matches history against the widened script set.
+        coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+        coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH) }
+        coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) }
+        coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED) }
+
+        // The recorded version latches ACROSS launches: a fresh binder
+        // (same config store) must not widen again.
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.widenCalls)
+    }
+
+    @Test
+    fun bind_failedWiden_recordsNothing_retriesNextPass() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { false }
+        val (config, recordedVersion) = healConfig()
+        val binder = binder(sdk, config = config, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.widenCalls)
+        // Nothing recorded, coverage untouched — a rewind without widened
+        // windows would burn a full re-scan for nothing.
+        assertNull(recordedVersion())
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH) }
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) }
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED) }
+
+        // Retried on the next LAUNCH (the in-process `completed` latch
+        // skips re-binding until then — a fresh binder models the restart);
+        // succeeds and records the version this time.
+        sdk.onWiden = { true }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(2, sdk.widenCalls)
+        assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
+    }
+
+    @Test
+    fun bind_alreadyHealed_skipsWidening() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(0, sdk.widenCalls)
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
     }
 }

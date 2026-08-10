@@ -289,6 +289,30 @@ interface DashSdkService {
     fun databaseOrNull(): org.dashfoundation.dashsdk.persistence.DashDatabase?
 
     /**
+     * Widen the SDK wallet's address-pool gap limits to the Rust-side
+     * maximum (1000) on the standard families (BIP44 / BIP32 / CoinJoin,
+     * account 0), deriving the addresses the wider windows require.
+     *
+     * The migration heal for a wallet whose usage frontier advanced
+     * OUTSIDE the SDK's watched window: dashj (or any same-seed client)
+     * kept spending, its change landed past the SDK's derived window, the
+     * compact-filter scan never matched it, and every descendant
+     * transaction was invisible (observed in the field as "synced but
+     * wrong balance / history stops at a date"). Widening alone covers
+     * frontiers up to 1000 past the SDK's own used-index; deeper
+     * frontiers are swept by the follow-up rescan, whose found
+     * transactions mark indices used and roll the window forward ahead
+     * of the scan. Callers pair this with a backfill-coverage
+     * invalidation so the next gate pass rewinds and re-matches history
+     * against the widened script set.
+     *
+     * Returns true when every PRESENT account widened (a family the
+     * wallet simply doesn't have is skipped, not a failure); false when
+     * the wallet isn't loaded or any present account failed.
+     */
+    suspend fun widenAddressWindows(walletIdHex: String): Boolean
+
+    /**
      * The activated wallet manager for the app's network, or null if
      * [ensureStarted] has not completed.
      */

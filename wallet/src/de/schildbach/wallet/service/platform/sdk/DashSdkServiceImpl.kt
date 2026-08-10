@@ -769,6 +769,51 @@ class DashSdkServiceImpl @Inject constructor(
         return drainContactCryptoQueue(managed, walletId, walletIdHex)
     }
 
+    override suspend fun widenAddressWindows(walletIdHex: String): Boolean = try {
+        ensureStarted()
+        val manager = runtime?.walletManager
+        val managed = manager?.wallets?.value?.get(walletIdHex)
+        if (managed == null) {
+            log.warn("widenAddressWindows: SDK wallet {}… not loaded", walletIdHex.take(8))
+            false
+        } else {
+            var allPresentWidened = true
+            managed.coreWallet().use { core ->
+                for (family in listOf(
+                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP44,
+                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP32,
+                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.COIN_JOIN,
+                )) {
+                    try {
+                        core.setGapLimit(family, 0, MIGRATION_GAP_LIMIT)
+                        log.info(
+                            "widenAddressWindows: {} account 0 gap -> {} on {}…",
+                            family, MIGRATION_GAP_LIMIT, walletIdHex.take(8)
+                        )
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        // A family this wallet simply doesn't have is a skip,
+                        // not a failure (the FFI reports it as a not-found).
+                        val missing = e.message?.contains("not found", ignoreCase = true) == true
+                        if (missing) {
+                            log.info("widenAddressWindows: no {} account 0 — skipped", family)
+                        } else {
+                            log.warn("widenAddressWindows: {} account 0 failed: {}", family, e.message)
+                            allPresentWidened = false
+                        }
+                    }
+                }
+            }
+            allPresentWidened
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("widenAddressWindows failed: {}", e.message)
+        false
+    }
+
     override suspend fun dashPayPendingAccountBuilds(walletIdHex: String): Int? = try {
         ensureStarted()
         val manager = runtime?.walletManager
@@ -1015,6 +1060,15 @@ class DashSdkServiceImpl @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(DashSdkServiceImpl::class.java)
+
+        /**
+         * Gap limit the migration heal widens each standard account to —
+         * the Rust-side MAX_GAP_LIMIT. See
+         * [DashSdkService.widenAddressWindows] for why 1000 covers
+         * arbitrarily deep frontiers once the rescan's mark-used roll
+         * kicks in.
+         */
+        internal const val MIGRATION_GAP_LIMIT = 1000
 
         /**
          * Room-row display name stamped on the one SDK wallet bound from
