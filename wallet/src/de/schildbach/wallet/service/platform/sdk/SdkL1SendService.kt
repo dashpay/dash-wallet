@@ -813,7 +813,11 @@ internal class DashSdkL1SendSource(
         // builder defaults for fee rate / selection strategy / change handling
         // (setFunding sets inputs AND the change address Rust-side), signed via
         // the manager's mnemonic resolver — no private key crosses the
-        // boundary. BIP44 account 0 is sendToAddresses' default.
+        // boundary. Funding is the SDK's pooled default (AccountType
+        // .ALL_SPENDABLE): BIP44 + BIP32 + every DashPay contact-receiving
+        // account, with change returning to BIP44. Deliberately not narrowed
+        // to one family — a send should be able to reach the user's whole
+        // spendable balance.
         return try {
             wallet.sendToAddresses(
                 recipients = listOf(addressBase58 to amountDuffs),
@@ -1326,7 +1330,9 @@ internal class DashSdkL1SendSource(
             opReturnData = memo,
             preserveOutputOrder = true,
             changeToFirstInput = true,
-            // A DRAIN spends every BIP44 UTXO and has the engine set the vault
+            // A DRAIN spends every spendable UTXO the pooled default reaches —
+            // BIP44 + BIP32 + every DashPay contact-receiving account — and
+            // has the engine set the vault
             // output to (total inputs - fee), memo bytes priced in, no change:
             // `vaultDuffs` is ignored. That is what a MAX deposit means, and it
             // removes the guess the probe-measured path had to make.
@@ -2177,9 +2183,12 @@ class SdkL1SendService internal constructor(
         val gate = probeSendGate()
         check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
         // FAIL-CLOSED GUARD (funds-critical), drain only: a drain selects
-        // every spendable UTXO and the FFI has no exclusion API, so with any
-        // app-locked output present (CrowdNode) it would sweep protected funds
-        // into a vault — irreversibly, once broadcast. Enforced HERE, in the
+        // every spendable UTXO the pooled default reaches — BIP44 + BIP32 +
+        // every DashPay contact-receiving account — and the FFI has no
+        // exclusion API, so with any app-locked output present (CrowdNode) it
+        // would sweep protected funds into a vault, irreversibly once
+        // broadcast. The guard is WALLET-WIDE, not per-account, so it still
+        // covers the sweep after the pooled default widened it. Enforced HERE, in the
         // primitive, rather than trusting the caller to have measured first:
         // [maxMayaDepositDuffs] does check, and [MayaBlockchainApiImpl] does
         // call it, but that is a call-site convention and a convention is one
