@@ -34,6 +34,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withStarted
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.money.Coin
@@ -225,12 +226,14 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
      */
     fun setContinueLoading(loading: Boolean) {
         continueLoading = loading
-        lifecycleScope.launchWhenStarted {
-            binding.continueProgress.isVisible = loading
-            binding.continueBtn.text = if (loading) "" else getString(R.string.button_continue)
-            // isEnabled alone gives the app's standard disabled look: the
-            // button theme already maps it to `disabledBackgroundColor`.
-            binding.continueBtn.isEnabled = !loading
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.lifecycle.withStarted {
+                binding.continueProgress.isVisible = loading
+                binding.continueBtn.text = if (loading) "" else getString(R.string.button_continue)
+                // isEnabled alone gives the app's standard disabled look: the
+                // button theme already maps it to `disabledBackgroundColor`.
+                binding.continueBtn.isEnabled = !loading
+            }
         }
     }
 

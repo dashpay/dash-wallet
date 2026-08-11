@@ -36,6 +36,7 @@ import coil.transform.RoundedCornersTransformation
 import org.dash.wallet.common.ui.components.MerchantNameIcon
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.service.platform.sdk.AssetLockKind
 import de.schildbach.wallet.service.platform.sdk.L1TxUiStatus
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import de.schildbach.wallet.service.platform.sdk.assetLockTitleRes
@@ -122,7 +123,7 @@ class TransactionResultViewBinder(
     private var outputAddresses: List<Address> = listOf()
     private var outputAssetLocks = listOf<String>()
     /** Non-null after [bindSdkDetail] of a Platform-funding asset lock. */
-    private var sdkAssetLockKind: de.schildbach.wallet.service.platform.sdk.AssetLockKind? = null
+    private var sdkAssetLockKind: AssetLockKind? = null
 
     fun bind(
         tx: Transaction,
@@ -353,7 +354,7 @@ class TransactionResultViewBinder(
             // An SDK-era top-up's OP_RETURN is the Platform-credits burn —
             // label it like the dashj path does, not as a raw script. The
             // credited state is refreshed by [setSdkTopUpState].
-            opReturnView.text = if (sdkAssetLockKind == de.schildbach.wallet.service.platform.sdk.AssetLockKind.TOPUP) {
+            opReturnView.text = if (sdkAssetLockKind == AssetLockKind.TOPUP) {
                 context.getString(R.string.platform_credits_not_transferred)
             } else {
                 "OP RETURN"
@@ -680,7 +681,7 @@ class TransactionResultViewBinder(
      * SDK's recovery queue = credited). No-op for non-top-up details.
      */
     fun setSdkTopUpState(error: Boolean, completed: Boolean) {
-        if (sdkAssetLockKind != de.schildbach.wallet.service.platform.sdk.AssetLockKind.TOPUP) return
+        if (sdkAssetLockKind != AssetLockKind.TOPUP) return
         binding.transactionOutputOpReturnsContainer.removeAllViews()
         binding.transactionOutputOpReturnsContainer.isVisible = true
         val opReturnView = LayoutInflater.from(context).inflate(

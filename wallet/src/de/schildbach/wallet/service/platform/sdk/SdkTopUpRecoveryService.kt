@@ -295,6 +295,12 @@ class SdkTopUpRecoveryService internal constructor(
      * known to be an SDK top-up that means CREDITED. Null when unknowable
      * (SDK not running / surface unreadable). No-boot, read-only — safe
      * from UI screens.
+     *
+     * RESTORE CAVEAT: after a phrase restore the tracked-lock table starts
+     * empty, so an actually-unclaimed top-up also reads "no pending lock"
+     * here. Display-only signal — never gate a spend or a retry on it.
+     * Chain rediscovery of tracked locks (pending platform change) will
+     * make the restored table truthful.
      */
     suspend fun isTopUpPending(txDisplayHex: String): Boolean? = try {
         if (!sdkIsStarted()) {

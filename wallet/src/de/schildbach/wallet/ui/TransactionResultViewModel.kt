@@ -303,6 +303,11 @@ class TransactionResultViewModel @Inject constructor(
      * row): true = credited, false = still pending (its lock awaits the
      * credit transfer in the SDK's recovery queue), null = not an SDK
      * top-up or state unknowable (SDK down). Read-only and no-boot.
+     *
+     * "True" here means "no pending lock found" — after a phrase restore
+     * the tracked-lock table is empty, so an unclaimed top-up ALSO reads
+     * as credited until chain rediscovery lands. Trust it for labels,
+     * nothing stronger.
      */
     suspend fun sdkTopUpCredited(txId: Sha256Hash): Boolean? {
         val txHex = txId.toString()
