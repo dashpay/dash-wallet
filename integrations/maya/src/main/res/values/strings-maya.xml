@@ -402,6 +402,7 @@
     <string name="dex_error_generic">Something went wrong setting up your swap. Please try again.</string>
     <string name="dex_error_missing_details">Swap details are missing. Please go back and enter an amount.</string>
     <string name="dex_error_no_route">This amount can\'t be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount.</string>
+    <string name="dex_error_amount_too_small">This amount is below the minimum for this swap. Please enter a larger amount.</string>
     <string name="dex_error_blacklisted">%1$s can\'t be swapped at the moment.</string>
     <string name="dex_error_validation">We couldn\'t set up your swap. Please check the amount and address, then try again.</string>
     <string name="dex_error_unavailable">Swaps are temporarily unavailable. Please try again later.</string>

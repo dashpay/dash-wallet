@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.view.MenuItem
@@ -25,6 +26,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import android.widget.ViewSwitcher
+import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
@@ -132,8 +134,12 @@ class SetPinActivity : InteractionAwareActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            // no-op on API 35+, where edge-to-edge is enforced
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            @Suppress("DEPRECATION")
+            window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
+        }
         setContentView(R.layout.activity_set_pin)
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -148,6 +154,10 @@ class SetPinActivity : InteractionAwareActivity() {
 
         initView()
         initViewModel()
+
+        onBackPressedDispatcher.addCallback(this) {
+            handleBackNavigation()
+        }
 
         if (viewModel.walletData.wallet == null) {
             showErrorDialog(false, NullPointerException("wallet is null in SetPinActivity"))
@@ -542,8 +552,7 @@ class SetPinActivity : InteractionAwareActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
+    private fun handleBackNavigation() {
         when {
             pin.size > 0 -> setState(state)
             state == State.CONFIRM_PIN -> setState(State.SET_PIN)
