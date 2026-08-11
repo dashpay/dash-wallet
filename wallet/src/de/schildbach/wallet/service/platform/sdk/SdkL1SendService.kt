@@ -261,6 +261,52 @@ internal fun sendAllFloorDuffs(
 ): Long = (spendableDuffs - reserveDuffs).coerceAtLeast(1L)
 
 /**
+ * The fee reserve to withhold from a MAX Maya deposit, mirroring the
+ * shielded max-shield reserve
+ * ([de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve]) rather than
+ * inventing a second sizing rule.
+ *
+ * A max deposit selects (essentially) every spendable UTXO, so the fee is
+ * bounded by transaction size: ~148 vbytes per input, plus the deposit's own
+ * outputs — vault (~34) + the OP_RETURN carrying [memoSizeBytes] + change
+ * (~34) + overhead — doubled as a safety margin. Unlike the shielded
+ * formula's flat 300-byte allowance this can size the data carrier exactly,
+ * because a Maya quote always knows its memo length.
+ *
+ * Over-reserving is LOSSLESS: the deposit is a fixed-amount send, so the
+ * builder returns the unused remainder as change. Under-reserving is the
+ * failing direction — the build comes up short at fee and is refused — so
+ * [spendableUtxoCount] must be the POST-CUTOVER overlaid count
+ * (`CutoverUiDataService`), never the held dashj wallet's frozen one, and the
+ * result is clamped to a 1000-duff minimum so a degenerate count still
+ * reserves something meaningful.
+ *
+ * ## Why a reserve rather than a drain
+ *
+ * A drain (`SelectionStrategy.ALL`) produced a transaction with NO
+ * wallet-owned output — vault, data carrier, no change. Compact block filters
+ * match on wallet script pubkeys only, so such a transaction is never matched
+ * in a block, its context never reaches `CONTEXT_IN_BLOCK`, and the wallet
+ * counts the spent inputs as spendable forever (mainnet `a5c99aec…`,
+ * `1f608a9a…`). Leaving change restores a wallet-owned output, so the deposit
+ * confirms and settles like any other send. Revisit once the SDK computes MAX
+ * internally in the wallet engine — at which point the engine, not this
+ * arithmetic, should own the amount.
+ */
+/**
+ * The input count a MAX Maya reserve is sized for at minimum. Guards against a
+ * frozen/stale post-cutover UTXO count under-reserving: over-reserving leaves a
+ * little more behind as change, under-reserving refuses the deposit.
+ */
+internal const val MAYA_MAX_RESERVE_MIN_INPUTS = 64
+
+internal fun mayaMaxFeeReserveDuffs(spendableUtxoCount: Int, memoSizeBytes: Int): Long {
+    val inputBytes = spendableUtxoCount.coerceAtLeast(0).toLong() * 148L
+    val outputBytes = 34L + memoSizeBytes.coerceAtLeast(0).toLong() + 11L + 34L + 10L
+    return ((inputBytes + outputBytes) * 2L).coerceAtLeast(1000L)
+}
+
+/**
  * True iff [t] is the engine's insufficient-at-fee build failure — the ONE
  * failure the send-all path may retry with a lower floor. By construction
  * a subset of [classifyCoreSendFailure]'s NotBroadcast arm (WalletOperation
@@ -662,8 +708,7 @@ interface SdkL1SendSource {
         walletIdHex: String,
         vaultAddressBase58: String,
         vaultDuffs: Long,
-        memo: ByteArray,
-        drain: Boolean = false
+        memo: ByteArray
     ): SdkDeferredPayment =
         throw UnsupportedOperationException("Maya deposit build not supported by this source")
 
@@ -1310,8 +1355,7 @@ internal class DashSdkL1SendSource(
         walletIdHex: String,
         vaultAddressBase58: String,
         vaultDuffs: Long,
-        memo: ByteArray,
-        drain: Boolean
+        memo: ByteArray
     ): SdkDeferredPayment {
         val manager = manager()
         val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
@@ -1320,27 +1364,20 @@ internal class DashSdkL1SendSource(
         // the vault recipient SDK-side, so preserveOutputOrder yields the
         // documented vault=VOUT0 / memo=VOUT1 shape; an over-long memo
         // throws pre-reservation.
-        // A drain supplies NO amount: the engine sets the vault output to
-        // (total inputs − fee), so 0 is the honest value to pass and anything
-        // else would be a number the engine discards.
+        // Every deposit names its own amount, max included: a MAX deposit is
+        // `spendable − reserve` ([maxMayaDepositDuffs]), an ordinary
+        // fixed-amount send. No SelectionStrategy override, so the build keeps
+        // a change output — which is what lets compact block filters match it
+        // and the transaction settle (see [mayaMaxFeeReserveDuffs] for why a
+        // changeless drain could not). Reinstate the drain only when the SDK
+        // computes MAX internally in the wallet engine.
         val signed = wallet.buildSignedPayment(
             recipients = listOf(vaultAddressBase58 to vaultDuffs),
             network = toSdkNetwork(Constants.NETWORK_PARAMETERS),
             coreSignerHandle = manager.mnemonicResolverHandle,
             opReturnData = memo,
             preserveOutputOrder = true,
-            changeToFirstInput = true,
-            // A DRAIN spends every spendable UTXO the pooled default reaches —
-            // BIP44 + BIP32 + every DashPay contact-receiving account — and
-            // has the engine set the vault
-            // output to (total inputs - fee), memo bytes priced in, no change:
-            // `vaultDuffs` is ignored. That is what a MAX deposit means, and it
-            // removes the guess the probe-measured path had to make.
-            selectionStrategy = if (drain) {
-                org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.SelectionStrategy.ALL
-            } else {
-                null
-            }
+            changeToFirstInput = true
         )
         return SdkDeferredPayment(
             signed.txidHex,
@@ -1578,6 +1615,20 @@ class SdkL1SendService internal constructor(
      */
     private val hasAppLockedSpendableOutputs: () -> Boolean = { true },
     /**
+     * Spendable UTXO count, for sizing the MAX Maya deposit's fee reserve
+     * ([mayaMaxFeeReserveDuffs]).
+     *
+     * SDK-only by construction: [CutoverUiSource.currentSpendableUtxoCount],
+     * a COUNT over exactly the `txos` rows whose amounts the balance sums.
+     * NOT dashj's `calculateAllSpendCandidates` — this branch deletes that leg.
+     *
+     * Falls back to [MAYA_MAX_RESERVE_MIN_INPUTS] when the count is
+     * unavailable: over-reserving is lossless (the remainder returns as
+     * change) whereas under-reserving refuses the deposit, so the fallback
+     * errs high.
+     */
+    private val spendableUtxoCount: suspend (String) -> Int = { MAYA_MAX_RESERVE_MIN_INPUTS },
+    /**
      * CoinJoin-drain guard ([drainCoinJoinAccountTo]), the narrow sibling of
      * [hasAppLockedSpendableOutputs]: does the held dashj wallet track any
      * app-locked output ON THE DIP-9 CoinJoin keychain? The CoinJoin drain
@@ -1652,6 +1703,15 @@ class SdkL1SendService internal constructor(
             wallet == null || wallet.calculateAllSpendCandidates(true, true).any {
                 wallet.isLockedOutput(it.outPointFor)
             }
+        },
+        spendableUtxoCount = { walletIdHex ->
+            // Same SDK source the cutover UI reads, constructed from the
+            // DashSdkService this service already injects — so no new DI edge
+            // and no cycle (CutoverUiDataService does not depend on this
+            // service). Null means "unavailable", not "zero", so fall back
+            // high rather than under-reserving.
+            DashSdkCutoverUiSource(sdkService).currentSpendableUtxoCount(walletIdHex)
+                ?: MAYA_MAX_RESERVE_MIN_INPUTS
         },
         hasAppLockedCoinJoinOutputs = {
             // Narrow the same dashj-authoritative lock check to the CoinJoin
@@ -2049,34 +2109,40 @@ class SdkL1SendService internal constructor(
     }
 
     /**
-     * The largest amount a MAYACHAIN deposit can pay a vault right now: what
-     * a DRAIN of the funding account delivers, read off the engine.
+     * The largest amount a MAYACHAIN deposit can pay a vault right now:
+     * spendable balance MINUS a fee reserve ([mayaMaxFeeReserveDuffs]).
      *
-     * Nothing here is estimated and nothing is withheld. A max deposit IS a
-     * drain, so this builds one — same builder, same three options, the
-     * wallet's own address standing in for the vault — and reads the
-     * deliverable amount the engine reports, then releases the reservation.
-     * The engine sets that output to `total inputs − fee` itself, with this
-     * memo's bytes priced in and no change, so the quote and the deposit that
-     * follows perform the identical computation and cannot disagree.
+     * The deposit built from this figure is an ORDINARY fixed-amount send, not
+     * a drain: the app names the amount and the transaction pays exactly that,
+     * so quote and payment are equal by construction — there is no
+     * under-delivery gap for NEAR Intents to refuse. The reserve's unused
+     * remainder comes back as change, which is what makes over-reserving
+     * lossless. Same system as the shielded max-shield reserve and Buy
+     * Credits; a MAX sell therefore leaves a small remnant rather than
+     * emptying the wallet to zero, which is deliberate and not surfaced.
      *
-     * That equality is the point. The retired model subtracted a guessed fee
-     * and a change-headroom constant from the wallet-wide spendable balance,
-     * which could only ever approximate what the deposit would really pay. A
-     * quote that comes in OVER the real deliverable makes the deposit pay the
-     * vault less than quoted, and NEAR Intents refuses under-delivery (~1h
-     * wait, then a refund minus 0.001 DASH). Do not reintroduce a headroom or
-     * reserve constant here: it would reopen exactly that gap.
+     * ## Why not a drain
      *
-     * [memoSizeBytes] defaults to the 80-byte OP_RETURN ceiling, so a shorter
-     * real memo can only leave the real transaction smaller and its
-     * deliverable no lower than quoted.
+     * A drain (`SelectionStrategy.ALL`) delivered `total − fee` with no change
+     * — and therefore no wallet-owned output at all. Compact block filters
+     * match wallet script pubkeys only, so that transaction is never matched
+     * in a block, its context never reaches `CONTEXT_IN_BLOCK`, and the wallet
+     * keeps counting the spent inputs as spendable (mainnet `a5c99aec…`,
+     * `1f608a9a…`: balance inflated by the whole deposit, row stuck on
+     * "Sending" forever). Change restores that output and the deposit settles
+     * like any other send.
      *
-     * Returns 0 when no drain is fundable at all — the engine's typed
-     * refusal when the inputs cannot cover the fee, which is precisely
-     * "nothing depositable" (the caller surfaces "not enough funds" rather
-     * than quoting a negative amount). Throws like [buildDeferredMayaDeposit]
-     * on gate/bind failures.
+     * Revisit when the SDK computes MAX internally in the wallet engine — the
+     * engine should own the amount, not this arithmetic. Until then, do not
+     * reintroduce `SelectionStrategy.ALL` here.
+     *
+     * [memoSizeBytes] defaults to the 80-byte OP_RETURN ceiling and sizes the
+     * reserve's data carrier, so a shorter real memo only over-reserves
+     * slightly — the safe direction.
+     *
+     * Returns 0 when the reserve exceeds the spendable balance (the caller
+     * surfaces "not enough funds" rather than quoting a negative amount).
+     * Throws like [buildDeferredMayaDeposit] on gate/bind failures.
      */
     suspend fun maxMayaDepositDuffs(memoSizeBytes: Int = MAX_MAYA_MEMO_BYTES): Long {
         require(memoSizeBytes in 1..MAX_MAYA_MEMO_BYTES) {
@@ -2087,63 +2153,32 @@ class SdkL1SendService internal constructor(
         }
         val gate = probeSendGate()
         check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
-        // FAIL-CLOSED (funds-critical): a max deposit drains the funding
-        // account outright, so coin selection will reach app-locked outputs
-        // (CrowdNode) — which [spendableBalanceDuffs] deliberately INCLUDES
-        // and the FFI cannot be told to exclude. Same guard the send-all
-        // drain applies, for the same reason: refuse to quote rather than
-        // sweep protected funds into a swap. A partial (non-max) deposit
-        // keeps the ordinary send's exposure.
+        // FAIL-CLOSED (funds-critical): a max deposit selects (essentially)
+        // every spendable UTXO, so coin selection reaches app-locked outputs
+        // (CrowdNode) — which [spendableBalanceDuffs] deliberately INCLUDES and
+        // the FFI cannot be told to exclude. Sweep-scale is what matters here,
+        // not whether the build is technically a drain: withholding a fee
+        // reserve leaves change but still spends the locked coins. Same guard
+        // the send-all path applies, for the same reason: refuse to quote
+        // rather than sweep protected funds into a swap. A partial (non-max)
+        // deposit keeps the ordinary send's exposure.
         //
-        // [buildDeferredMayaDeposit] enforces this too, for every drain caller.
-        // Do NOT delete this copy as redundant: the probe below runs inside a
-        // catch-all that converts any failure into a quote of 0, so relying on
-        // the primitive alone would turn "refuse, you hold locked funds" into
-        // a silent "your maximum is 0".
+        // [buildDeferredMayaDeposit] enforces this too, for every max caller.
+        // Do NOT delete this copy as redundant: quoting must refuse loudly
+        // here, rather than let a later build failure read as "your maximum
+        // is 0".
         check(!hasProtectedOutputs("l1MayaMaxDeposit")) {
             "wallet has app-locked outputs (CrowdNode); a max swap deposit would spend them"
         }
-        // MEASURE BY DRAINING, don't estimate. A max deposit IS a drain, so
-        // build one and read what the engine says it delivers: every BIP44 UTXO
-        // selected, this memo's bytes priced into the fee, no change. That is
-        // the same computation the real deposit will perform, so quote and
-        // deposit cannot disagree — which subtracting a guessed fee and a
-        // change-headroom constant from the wallet-wide spendable could not
-        // promise. The probe is built to an OWN address; the destination does
-        // not change the fee (same P2PKH output size as a vault), and it is
-        // released immediately either way.
-        val probeAddress = checkNotNull(source.unusedExternalAddress(walletIdHex)) {
-            "no SDK address available to size a Maya deposit"
-        }
-        val probe = try {
-            source.buildDeferredMayaDeposit(
-                walletIdHex,
-                probeAddress,
-                0L, // ignored under a drain
-                ByteArray(memoSizeBytes),
-                drain = true
-            )
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            // The engine refuses a drain whose inputs cannot cover the fee
-            // (typed InsufficientFunds), which is exactly "nothing depositable"
-            // — the floor the probe-reserve constant used to approximate.
-            log.info("SDK l1MayaMaxDeposit: no drain is fundable; max deposit 0 ({})", t.message)
-            return 0L
-        }
-        val max = try {
-            probe.deliverableDuffs
-        } finally {
-            // NonCancellable: the probe holds a real engine reservation, and
-            // leaving it to the TTL sweep would make the very next real build
-            // fail to fund.
-            withContext(NonCancellable) { releaseDeferredPayment(probe) }
-        }
+        val spendable = source.spendableBalanceDuffs(walletIdHex)
+        val utxoCount = spendableUtxoCount(walletIdHex)
+        val reserve = mayaMaxFeeReserveDuffs(utxoCount, memoSizeBytes)
+        val max = (spendable - reserve).coerceAtLeast(0L)
         log.info(
-            "SDK l1MayaMaxDeposit: drain-measured max deposit {} duffs (fee {}, {}-byte memo)",
-            max, probe.feeDuffs, memoSizeBytes
+            "SDK l1MayaMaxDeposit: max deposit {} duffs (spendable {}, reserve {}, {} utxos, {}-byte memo)",
+            max, spendable, reserve, utxoCount, memoSizeBytes
         )
-        return max.coerceAtLeast(0L)
+        return max
     }
 
     /**
@@ -2156,20 +2191,22 @@ class SdkL1SendService internal constructor(
      * [memo] must fit the 80-byte OP_RETURN standardness limit — checked
      * here (and re-checked engine-side) BEFORE anything is reserved.
      *
-     * Under [drain] this refuses outright when the wallet holds app-locked
-     * outputs (CrowdNode), the same fail-closed guard the send-all drain
-     * applies — see the check in the body for why it lives here rather than
-     * at the call site.
+     * Under [isMaxDeposit] this refuses outright when the wallet holds
+     * app-locked outputs (CrowdNode), the same fail-closed guard the send-all
+     * path applies — see the check in the body for why it lives here rather
+     * than at the call site. The flag marks SWEEP SCALE, not a drain: a max
+     * deposit is an ordinary fixed-amount send of `spendable − reserve`
+     * ([maxMayaDepositDuffs]), so it still names its amount and still leaves
+     * change.
      */
     suspend fun buildDeferredMayaDeposit(
         vaultAddressBase58: String,
         vaultDuffs: Long,
         memo: ByteArray,
-        drain: Boolean = false
+        isMaxDeposit: Boolean = false
     ): SdkDeferredPayment {
-        // A drain has the engine compute the vault output, so no amount is
-        // supplied; every other build must name a positive one.
-        check(drain || vaultDuffs > 0) { "Maya vault amount must be positive, got $vaultDuffs" }
+        // Every build names its own amount now, max included.
+        check(vaultDuffs > 0) { "Maya vault amount must be positive, got $vaultDuffs" }
         val vault = vaultAddressBase58.trim()
         check(vault.isNotEmpty() && addressValidSafe(vault)) {
             "Maya vault address is malformed or for the wrong network"
@@ -2182,33 +2219,34 @@ class SdkL1SendService internal constructor(
         }
         val gate = probeSendGate()
         check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
-        // FAIL-CLOSED GUARD (funds-critical), drain only: a drain selects
-        // every spendable UTXO the pooled default reaches — BIP44 + BIP32 +
-        // every DashPay contact-receiving account — and the FFI has no
-        // exclusion API, so with any app-locked output present (CrowdNode) it
-        // would sweep protected funds into a vault, irreversibly once
-        // broadcast. The guard is WALLET-WIDE, not per-account, so it still
-        // covers the sweep after the pooled default widened it. Enforced HERE, in the
-        // primitive, rather than trusting the caller to have measured first:
-        // [maxMayaDepositDuffs] does check, and [MayaBlockchainApiImpl] does
-        // call it, but that is a call-site convention and a convention is one
-        // refactor away from being skipped. A partial (non-max) deposit is not
-        // guarded — it keeps the ordinary send's exposure, unchanged.
+        // FAIL-CLOSED GUARD (funds-critical), max deposits only: a max deposit
+        // selects (essentially) every spendable UTXO the pooled default reaches
+        // — BIP44 + BIP32 + every DashPay contact-receiving account — and the
+        // FFI has no exclusion API, so with any app-locked output present
+        // (CrowdNode) it would sweep protected funds into a vault, irreversibly
+        // once broadcast. Withholding a fee reserve leaves change but does NOT
+        // narrow which coins are selected, so the guard applies exactly as it
+        // did to the drain. It is WALLET-WIDE, not per-account, so it still
+        // covers the sweep after the pooled default widened it. Enforced HERE,
+        // in the primitive, rather than trusting the caller to have measured
+        // first: [maxMayaDepositDuffs] does check, and [MayaBlockchainApiImpl]
+        // does call it, but that is a call-site convention and a convention is
+        // one refactor away from being skipped. A partial (non-max) deposit is
+        // not guarded — it keeps the ordinary send's exposure, unchanged.
         //
-        // [maxMayaDepositDuffs] keeps its own copy of this check deliberately:
-        // its probe runs inside a catch-all that turns any failure into a
-        // quote of 0, which would silently swallow this refusal.
-        if (drain) {
+        // [maxMayaDepositDuffs] keeps its own copy of this check deliberately,
+        // so quoting refuses loudly instead of degrading to "your maximum is 0".
+        if (isMaxDeposit) {
             check(!hasProtectedOutputs("l1DeferredMayaBuild")) {
                 "wallet has app-locked outputs (CrowdNode); a max swap deposit would spend them"
             }
         }
-        val payment = source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo, drain)
+        val payment = source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo)
         log.info(
             "SDK l1DeferredMayaBuild: built {} ({} duffs to the vault{}, {}-byte memo, fee {} duffs), inputs reserved",
             payment.txidHex,
-            if (drain) payment.deliverableDuffs else vaultDuffs,
-            if (drain) " by DRAIN (engine-computed)" else "",
+            vaultDuffs,
+            if (isMaxDeposit) " (MAX, spendable − reserve)" else "",
             memo.size,
             payment.feeDuffs
         )

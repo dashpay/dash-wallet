@@ -129,32 +129,6 @@ internal fun verifyMayaDepositShape(
     return null
 }
 
-/**
- * The vault amount [verifyMayaDepositShape] must find at VOUT0.
- *
- * For an ordinary sell the app chose the amount, so the quote IS the
- * expectation and any deviation is a defect.
- *
- * A MAX sell is a DRAIN: the ENGINE sets the vault output to
- * (total inputs − fee), so the app never supplied that number and the quote
- * is only a FLOOR — which is exactly how the two guards around the build
- * treat it (both abort on `<`, never on `>`). Holding the shape check to
- * the quote instead would reject a drain that legitimately delivers MORE
- * than quoted, which is what the balance moving between quote and build
- * normally produces.
- *
- * So a max sell is verified against [drainDeliverableDuffs] — the value Rust
- * computed from the REGISTERED transaction. That keeps the check exact
- * rather than loosening it to a range, and makes it a genuine cross-check:
- * the decoded host bytes must agree with what the engine registered, and a
- * disagreement between those two is precisely the failure the check exists
- * to catch.
- */
-internal fun expectedVaultDuffs(
-    isMaxSell: Boolean,
-    quotedDuffs: Long,
-    drainDeliverableDuffs: Long
-): Long = if (isMaxSell) drainDeliverableDuffs else quotedDuffs
 
 /**
  * Wallet-module implementation of the Maya integration's [MayaBlockchainApi]:
@@ -180,12 +154,14 @@ internal fun expectedVaultDuffs(
  *   the first deposit did reach the network — the BIP70 field-test lesson)
  *   and the error tells the user not to retry.
  *
- * MAX sells never under-deliver: the quote is set to [maxSwapDepositAmount],
- * which is a drain measured through the engine rather than balance arithmetic,
- * and the deposit that follows runs the same drain. Before broadcasting, the
- * amount the SIGNED transaction actually delivers is checked against the quote
- * — not a re-measurement, so nothing that moved in between can defeat it — and
- * a shortfall aborts rather than quietly paying the vault less than quoted.
+ * MAX sells never under-deliver: the quote is [maxSwapDepositAmount], which is
+ * `spendable − fee reserve`, and the deposit then pays exactly that as an
+ * ordinary fixed-amount send — quote and payment are equal by construction, so
+ * there is no gap for NEAR Intents to refuse. The reserve's unused remainder
+ * returns as change, which also keeps a wallet-owned output in the transaction
+ * so it confirms and settles normally (a changeless drain did not — see
+ * `mayaMaxFeeReserveDuffs`). A balance drop between quote and build is caught
+ * by the pre-build re-measurement.
  */
 class MayaBlockchainApiImpl @Inject constructor(
     private val sdkL1SendService: SdkL1SendService,
@@ -345,51 +321,26 @@ class MayaBlockchainApiImpl @Inject constructor(
             }
 
             // Build + sign with the funding inputs RESERVED, no broadcast.
-            // A MAX sell builds as a DRAIN: the engine sets the vault output to
-            // (total inputs - fee) with no change, so the deposit delivers the
-            // whole account rather than an amount the app derived separately.
+            // A MAX sell is an ORDINARY fixed-amount send of
+            // `spendable − reserve` (maxMayaDepositDuffs), not a drain — so it
+            // names its amount like any other deposit and leaves change. The
+            // flag only marks sweep scale, for the app-locked-output guard.
             val payment = sdkL1SendService.buildDeferredMayaDeposit(
                 swapTradeUIModel.vaultAddress,
                 vaultDuffs,
                 memoBytes,
-                drain = swapTradeUIModel.maximum
+                isMaxDeposit = swapTradeUIModel.maximum
             )
-
-            // A drain's amount is the ENGINE's, so check the built transaction
-            // against the quote before deciding to broadcast. The pre-build
-            // guard above compared a re-measurement; this compares THIS signed
-            // transaction — the one that would actually go to the vault — and
-            // so cannot be defeated by anything that moved in between. Paying
-            // the vault less than quoted is under-delivery: Maya would execute
-            // a swap the user never agreed to, and NEAR Intents refuses it
-            // outright (~1h wait, then a refund minus 0.001 DASH).
-            if (swapTradeUIModel.maximum && payment.deliverableDuffs < vaultDuffs) {
-                log.warn(
-                    "maya max sell aborted after build: the drain delivers {} duffs, below the quoted {}",
-                    payment.deliverableDuffs, vaultDuffs
-                )
-                sdkL1SendService.releaseDeferredPayment(payment)
-                return ResponseResource.Failure(
-                    MayaException(
-                        "wallet balance changed; the deposit would fall below the quoted " +
-                            "amount — please request a new quote"
-                    ),
-                    false,
-                    0,
-                    null
-                )
-            }
 
             // Assert the deposit shape from the signed bytes BEFORE any
             // broadcast decision — a mis-shaped deposit to a Maya vault
             // strands funds. Decoded with the SDK's own consensus decoder;
             // a decode failure counts as a failed shape check (released,
             // recoverable), never as a broadcastable pass.
-            val depositDuffs = expectedVaultDuffs(
-                isMaxSell = swapTradeUIModel.maximum,
-                quotedDuffs = vaultDuffs,
-                drainDeliverableDuffs = payment.deliverableDuffs
-            )
+            // The app chose the amount for every deposit now, max included, so
+            // the quote IS the expectation and the shape check stays an exact
+            // comparison against it.
+            val depositDuffs = vaultDuffs
             val shapeError = try {
                 verifyMayaDepositShape(
                     TransactionDecoder.decode(payment.rawTxBytes, toSdkNetwork(Constants.NETWORK_PARAMETERS)),
