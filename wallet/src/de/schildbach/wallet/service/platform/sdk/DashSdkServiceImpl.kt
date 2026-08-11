@@ -814,6 +814,38 @@ class DashSdkServiceImpl @Inject constructor(
         false
     }
 
+    override suspend fun armSpvRescan(walletIdHex: String, birthTimeSecs: Long?): Boolean = try {
+        ensureStarted()
+        val manager = runtime?.walletManager
+        val walletId = walletIdFromHex(walletIdHex)
+        if (manager == null || walletId == null) {
+            log.warn("armSpvRescan: SDK manager missing or bad wallet id {}…", walletIdHex.take(8))
+            false
+        } else {
+            // Same time→height mapping the bind used for this wallet's
+            // birthHeight (dashj checkpoints; resolver contains its own
+            // failures → 0u/genesis), so the rescan floor can never sit
+            // ABOVE where the wallet's history starts.
+            val birthHeight = sdkBirthHeightFor(birthTimeSecs) { time ->
+                BirthHeightResolver(
+                    networkParameters = Constants.NETWORK_PARAMETERS,
+                    openCheckpoints = { context.assets.open(Constants.Files.CHECKPOINTS_FILENAME) }
+                ).resolve(time)
+            }
+            manager.rescanSpvFilters(walletId, birthHeight.toInt())
+            log.info(
+                "armSpvRescan: filter watermark rewind to {} armed on {}…",
+                birthHeight, walletIdHex.take(8)
+            )
+            true
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("armSpvRescan failed on {}…: {}", walletIdHex.take(8), e.message)
+        false
+    }
+
     override suspend fun dashPayPendingAccountBuilds(walletIdHex: String): Int? = try {
         ensureStarted()
         val manager = runtime?.walletManager

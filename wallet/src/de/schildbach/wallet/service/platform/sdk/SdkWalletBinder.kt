@@ -979,6 +979,16 @@ class SdkWalletBinder internal constructor(
                 log.warn("address-window heal did not complete; will retry next bind")
                 return
             }
+            // Retroactivity: rewind the SPV filter watermark to the wallet's
+            // birth DIRECTLY, not only via the DashPay backfill gate — the
+            // gate's rewind rides the contact-provisioning pass, which never
+            // runs on a wallet without a platform identity, and the frontier
+            // gap does not require one. Double-arming on identity wallets is
+            // harmless: the Rust side never moves the watermark forward.
+            if (!sdkService.armSpvRescan(walletIdHex, resolveBirthTimeSecs())) {
+                log.warn("address-window heal: rescan arm failed; will retry next bind")
+                return
+            }
             // Invalidate the coverage record LAST, only after the windows
             // provably widened: the forced rewind is only worth its ~full
             // re-scan when the wider script set is in place to profit.
@@ -1036,9 +1046,12 @@ class SdkWalletBinder internal constructor(
          * Version of the one-shot address-window heal
          * ([maybeWidenAddressWindows]). Bump to re-run the widening + the
          * forced coverage rewind on wallets that already healed at a lower
-         * version.
+         * version. v2 = v1 + the direct SPV watermark rewind
+         * ([DashSdkService.armSpvRescan]) — v1 relied on the DashPay
+         * backfill gate for retroactivity, which identity-less wallets
+         * never run (v1 shipped only in local QA 11.10.78).
          */
-        internal const val GAP_WIDEN_HEAL_VERSION = 1
+        internal const val GAP_WIDEN_HEAL_VERSION = 2
 
         /**
          * Cadence and budget for [watchArmedBackfillRewind]. The window the

@@ -313,6 +313,19 @@ interface DashSdkService {
     suspend fun widenAddressWindows(walletIdHex: String): Boolean
 
     /**
+     * Rewind the SDK wallet's SPV filter watermark to the wallet's birth
+     * height so the engine re-downloads and re-matches BIP158 filters
+     * against the CURRENT script set — the follow-up to
+     * [widenAddressWindows] that makes the widened windows retroactive.
+     * The Rust side never moves the watermark FORWARD (an at-or-ahead
+     * target is a successful no-op), so arming is idempotent and safe to
+     * combine with the DashPay backfill gate's own rewind on identity
+     * wallets. Returns false when the wallet is not loaded or the request
+     * failed.
+     */
+    suspend fun armSpvRescan(walletIdHex: String, birthTimeSecs: Long?): Boolean
+
+    /**
      * The activated wallet manager for the app's network, or null if
      * [ensureStarted] has not completed.
      */

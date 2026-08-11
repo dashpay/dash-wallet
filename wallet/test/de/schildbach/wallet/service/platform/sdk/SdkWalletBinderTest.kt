@@ -85,12 +85,18 @@ class SdkWalletBinderTest {
         override fun walletManagerOrNull(): PlatformWalletManager? = null
         override suspend fun resolveUsername(name: String): String? = null
 
-        /** Address-window heal hook — default success. NOT in [totalCalls]. */
+        /** Address-window heal hooks — default success. NOT in [totalCalls]. */
         var onWiden: suspend (String) -> Boolean = { true }
         var widenCalls = 0
         override suspend fun widenAddressWindows(walletIdHex: String): Boolean {
             widenCalls++
             return onWiden(walletIdHex)
+        }
+        var onArmRescan: suspend (String, Long?) -> Boolean = { _, _ -> true }
+        var armRescanCalls = 0
+        override suspend fun armSpvRescan(walletIdHex: String, birthTimeSecs: Long?): Boolean {
+            armRescanCalls++
+            return onArmRescan(walletIdHex, birthTimeSecs)
         }
 
         override suspend fun bindAppWallet(seedWords: List<String>, birthTimeSecs: Long?): String {
@@ -1557,6 +1563,9 @@ class SdkWalletBinderTest {
         binder.bindIfEnabled(unlock)
 
         assertEquals(1, sdk.widenCalls)
+        // The heal is retroactive on its own: the SPV watermark rewind is
+        // armed directly (identity-less wallets never run the DashPay gate).
+        assertEquals(1, sdk.armRescanCalls)
         assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
         // Coverage invalidated so the backfill gate's next consult rewinds
         // and re-matches history against the widened script set.
@@ -1607,6 +1616,28 @@ class SdkWalletBinderTest {
         binder.bindIfEnabled(unlock)
 
         assertEquals(0, sdk.widenCalls)
+        assertEquals(0, sdk.armRescanCalls)
         coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+    }
+
+    @Test
+    fun bind_failedRescanArm_recordsNothing_retriesNextLaunch() = runBlocking {
+        // Widening alone is not the heal: without the watermark rewind the
+        // wider windows are only prospective. A failed arm must leave the
+        // version unrecorded so the next launch retries the whole step.
+        val sdk = readySdk()
+        sdk.onArmRescan = { _, _ -> false }
+        val (config, recordedVersion) = healConfig()
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.widenCalls)
+        assertEquals(1, sdk.armRescanCalls)
+        assertNull(recordedVersion())
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+
+        sdk.onArmRescan = { _, _ -> true }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(2, sdk.armRescanCalls)
+        assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
     }
 }
