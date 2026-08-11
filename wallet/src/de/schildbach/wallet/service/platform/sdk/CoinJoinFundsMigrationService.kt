@@ -108,6 +108,16 @@ fun coinJoinBalanceOrNull(wallet: Wallet): Coin? =
 internal const val ACCOUNT_TYPE_TAG_COIN_JOIN = 1
 
 /**
+ * TEMPORARY kill-switch for the mixed-funds migration prompt — see the
+ * suppression note at the top of [CoinJoinFundsMigrationService.shouldPrompt]
+ * for why it is on and the two conditions for turning it back off. Checked by
+ * both the prompt gate and the dialog's own
+ * [de.schildbach.wallet.ui.migration.MixedFundsMigrationDialogFragment.showOnce],
+ * so no code path can show the sheet while this is true.
+ */
+const val MIXED_FUNDS_PROMPT_HARD_SUPPRESSED = true
+
+/**
  * The SDK engine's CONFIRMED balance of the DIP-9 CoinJoin account 0 from
  * the `accountBalances` JSON snapshot, in duffs — or null when it cannot be
  * affirmatively read (null/empty/malformed input, or no CoinJoin index-0 row
@@ -402,6 +412,17 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * before the flag lands.
      */
     suspend fun shouldPrompt(): Boolean {
+        // TEMPORARY HARD SUPPRESSION (Brian, 2026-08-11): never show the
+        // mixed-funds prompt — no logic, no exceptions. The COMBINE drain it
+        // offers produced a committed-but-never-propagated transaction in the
+        // field (mainnet tx 0a884b1d…, ~75.6 DASH stuck on a permanent
+        // "Sending" row; funds safe but wallet wedged), so the prompt must
+        // not offer it to anyone. Re-enable ONLY after (1) the current
+        // mainnet field test completes AND (2) the drain fee/broadcast fixes
+        // land and pass a fresh testnet-wallet round. Flip
+        // [MIXED_FUNDS_PROMPT_HARD_SUPPRESSED] to false to restore the
+        // normal gating below (which is left intact and still unit-tested).
+        if (MIXED_FUNDS_PROMPT_HARD_SUPPRESSED) return false
         val alreadyHandled = try {
             dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) == true
         } catch (t: Throwable) {
