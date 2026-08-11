@@ -20,6 +20,7 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.isTransactionPending
@@ -93,7 +94,9 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                             amount = result.value.displayInputAmount,
                             currency = result.value.displayInputCurrency,
                             idem = UUID.randomUUID().toString(),
-                            to = walletDataProvider.freshReceiveAddressString(),
+                            // Off-main: this launch runs on Main, and the underlying
+                            // freshReceiveAddress() forces a synchronous full-wallet save.
+                            to = walletDataProvider.freshReceiveAddressStringOffMain(),
                             type = CoinbaseConstants.TRANSACTION_TYPE_SEND
                         ).apply {
                             commitSwapTradeSuccessState.value = this

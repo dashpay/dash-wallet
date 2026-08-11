@@ -480,6 +480,25 @@ open class DashPayConfig @Inject constructor(
         val DASHPAY_BACKFILL_CONTACT_FINGERPRINT = stringPreferencesKey("dashpay_backfill_contact_fingerprint")
 
         /**
+         * Whether COVERED_FLOOR was DIRECTLY OBSERVED (the durable synced
+         * height seen after the SDK's rewind) rather than ASSUMED from a pass
+         * that produced no rewind at all.
+         *
+         * The two are not interchangeable. An observed floor is authoritative:
+         * the SDK chose it, so the fact that some contact's core height sits
+         * below it only reflects the SDK subsetting by direction and
+         * establishment. An ASSUMED floor is just "the tip at the moment we
+         * concluded there was nothing to do" — and if that conclusion was
+         * wrong, it silently claims coverage over history that was never
+         * re-scanned with the contact addresses watched.
+         *
+         * Absent on records written before this flag existed, which are
+         * treated as ASSUMED so a wallet already carrying a bad floor
+         * re-validates once instead of staying stuck forever.
+         */
+        val DASHPAY_BACKFILL_COVERAGE_OBSERVED = booleanPreferencesKey("dashpay_backfill_coverage_observed")
+
+        /**
          * An OBSERVED, still-running backfill: the SDK lowered the durable
          * synced height to PENDING_FLOOR from PENDING_TARGET, and the scan has
          * not yet climbed back to PENDING_TARGET. Persisted (not in-memory)
@@ -492,6 +511,15 @@ open class DashPayConfig @Inject constructor(
         val DASHPAY_BACKFILL_PENDING_FLOOR = longPreferencesKey("dashpay_backfill_pending_floor")
         val DASHPAY_BACKFILL_PENDING_TARGET = longPreferencesKey("dashpay_backfill_pending_target")
         val DASHPAY_BACKFILL_PENDING_FINGERPRINT = stringPreferencesKey("dashpay_backfill_pending_fingerprint")
+
+        /**
+         * One-shot version marker for the migration address-window heal
+         * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder]
+         * step 4c): once the SDK wallet's gap limits are widened and the
+         * backfill coverage invalidated, this records the heal version so
+         * later binds don't repeat the widening or force another rewind.
+         */
+        val SDK_GAP_WIDENED_VERSION = intPreferencesKey("sdk_gap_widened_version")
 
         /**
          * A provisioning pass ARMED but not yet accounted for: written by

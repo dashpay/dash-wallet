@@ -59,6 +59,11 @@ class AssetLockKindResolverNegativeCacheTest {
     private val db = mockk<DashDatabase> {
         every { transactionDao() } returns transactionDao
         every { assetLockDao() } returns assetLockDao
+        // No shielded activity recorded → any kind-7 resolves to the
+        // EXTERNAL (foreign-pool) unshield in these tests.
+        every { shieldedDao() } returns mockk {
+            coEvery { getAllActivity() } returns emptyList()
+        }
     }
     private val sdkService = mockk<DashSdkService> {
         every { databaseOrNull() } returns db
@@ -89,9 +94,11 @@ class AssetLockKindResolverNegativeCacheTest {
 
         // Pass 2: the wallet-changeset callback has now recorded kind 7. Because
         // the transient null was NOT negative-cached, this pass re-probes and the
-        // row resolves to UNSHIELD (→ "Unshielded" re-stamp downstream).
+        // row resolves to an unshield kind (→ "Unshielded" re-stamp downstream).
+        // With no shielded activity recorded here, ownership evidence is absent,
+        // so it is the EXTERNAL (foreign-pool) variant.
         coEvery { transactionDao.transactionKindForDisplayTxid(hex) } returns 7
-        assertEquals(AssetLockKind.UNSHIELD, resolver.kindFor(hex))
+        assertEquals(AssetLockKind.UNSHIELD_EXTERNAL, resolver.kindFor(hex))
 
         // Proof the second pass actually re-probed the ledger (not served a pin).
         coVerify(exactly = 2) { transactionDao.transactionKindForDisplayTxid(hex) }

@@ -372,7 +372,7 @@
 
     <string name="sync_status_wait">Please wait for the sync to complete</string>
     <string name="sync_status_syncing_sub_title">with Dash blockchain</string>
-    <string name="sync_status_unable_to_connect">Unable to connect</string>
+    <string name="sync_status_unable_to_connect">Unable to connect to the Dash network</string>
     <string name="sync_status_check_connection">Check your connection</string>
     <string name="sync_status_sync_title">Sync</string>
     <string name="sync_status_sync_completed">Completed</string>

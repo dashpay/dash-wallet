@@ -220,39 +220,12 @@ class SdkTxContactResolver @Inject constructor(
     suspend fun signedNetsFor(txDisplayHexes: Set<String>): Map<String, Long> {
         if (txDisplayHexes.isEmpty()) return emptyMap()
         return try {
-            val db = sdkService.databaseOrNull() ?: return emptyMap<String, Long>().also {
-                log.warn(
-                    "TXO-net skipped: SDK database not started — {} contact tx(s) stay unverified this pass",
-                    txDisplayHexes.size
-                )
-            }
-            val loadedWalletIds = sdkService.walletManagerOrNull()?.wallets?.value?.keys ?: emptySet()
-            val walletIdHex = loadedWalletIds.singleOrNull() ?: return emptyMap<String, Long>().also {
-                log.warn(
-                    "TXO-net skipped: cannot pick the bound SDK wallet ({} loaded — post-restore " +
-                        "orphan not pruned yet?) — {} contact tx(s) stay unverified this pass",
-                    loadedWalletIds.size, txDisplayHexes.size
-                )
-            }
-            val walletId = walletIdFromHex(walletIdHex) ?: return emptyMap<String, Long>().also {
-                log.warn("TXO-net skipped: malformed SDK wallet id")
-            }
-            // Watch-only external friendship accounts — their TXOs are the contact's
-            // funds, never this wallet's (see KDoc).
-            val externalAccountIds = db.accountDao().observeByWallet(walletId).first()
-                .filter { it.accountType == ACCOUNT_TYPE_DASHPAY_EXTERNAL }
-                .map { it.id }
-                .toSet()
-            // Addresses OWNED by the external (watch-only, contact's) accounts —
-            // the classification fallback for TXOs persisted with a NULL accountId
-            // (see KDoc). `core_addresses` is keyed by address and its accountId is
-            // populated even when the TXO's is not. One small read per external
-            // account (one per friendship).
-            val externalAddresses = HashSet<String>()
-            for (accountId in externalAccountIds) {
-                db.coreAddressDao().observeByAccount(accountId).first()
-                    .mapTo(externalAddresses) { it.address }
-            }
+            val ctx = foreignExclusionContext("${txDisplayHexes.size} contact tx(s) stay unverified this pass")
+                ?: return emptyMap()
+            val db = ctx.db
+            val walletId = ctx.walletId
+            val externalAccountIds = ctx.externalAccountIds
+            val externalAddresses = ctx.externalAddresses
             // BOUNDED TXO read (multi-day-sync fix): the old code materialized the
             // ENTIRE wallet `txos` table (observeByWallet(walletId).first()) on every
             // pass just to sum a handful of contact txids — on a very large wallet
@@ -316,6 +289,109 @@ class SdkTxContactResolver @Inject constructor(
         } catch (t: Throwable) {
             log.warn("TXO-net computation failed; contact rows fall back to the record net", t)
             emptyMap()
+        }
+    }
+
+    /**
+     * Everything a foreign-excluded (`NOT` watch-only external friendship
+     * account) read of the TXO mirror needs: the started DB, the single bound
+     * wallet id, and the external-account exclusion sets. Null (with a warn
+     * carrying [skipDetail]) whenever any prerequisite is missing — callers
+     * keep their retry-next-pass semantics.
+     */
+    private class ForeignExclusionContext(
+        val db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        val walletId: ByteArray,
+        val externalAccountIds: Set<Long>,
+        val externalAddresses: Set<String>
+    )
+
+    private suspend fun foreignExclusionContext(skipDetail: String): ForeignExclusionContext? {
+        val db = sdkService.databaseOrNull() ?: return null.also {
+            log.warn("TXO read skipped: SDK database not started — {}", skipDetail)
+        }
+        val loadedWalletIds = sdkService.walletManagerOrNull()?.wallets?.value?.keys ?: emptySet()
+        val walletIdHex = loadedWalletIds.singleOrNull() ?: return null.also {
+            log.warn(
+                "TXO read skipped: cannot pick the bound SDK wallet ({} loaded — post-restore " +
+                    "orphan not pruned yet?) — {}",
+                loadedWalletIds.size, skipDetail
+            )
+        }
+        val walletId = walletIdFromHex(walletIdHex) ?: return null.also {
+            log.warn("TXO read skipped: malformed SDK wallet id")
+        }
+        // Watch-only external friendship accounts — their TXOs are the contact's
+        // funds, never this wallet's (see KDoc).
+        val externalAccountIds = db.accountDao().observeByWallet(walletId).first()
+            .filter { it.accountType == ACCOUNT_TYPE_DASHPAY_EXTERNAL }
+            .map { it.id }
+            .toSet()
+        // Addresses OWNED by the external (watch-only, contact's) accounts —
+        // the classification fallback for TXOs persisted with a NULL accountId
+        // (see KDoc). `core_addresses` is keyed by address and its accountId is
+        // populated even when the TXO's is not. One small read per external
+        // account (one per friendship).
+        val externalAddresses = HashSet<String>()
+        for (accountId in externalAccountIds) {
+            db.coreAddressDao().observeByAccount(accountId).first()
+                .mapTo(externalAddresses) { it.address }
+        }
+        return ForeignExclusionContext(db, walletId, externalAccountIds, externalAddresses)
+    }
+
+    /**
+     * Whether THIS WALLET's own (foreign-excluded) TXOs are involved in the
+     * given tx at all — funded by it OR spent by it. The engine's per-account
+     * `Detected` events carry no account identity, so an event alone cannot
+     * distinguish this wallet's money moving from a CONTACT spending the
+     * coins we merely watch on the DIP-15 external friendship account
+     * (verified live, S21 testnet 11.10.74: a contact's pooled max-send spent
+     * the 0.2 we had paid them, the engine emitted an OUTGOING −0.2 event to
+     * us, and the display authored "Sent −0.2" for a tx that actually PAID us
+     * 0.5). This is the missing discriminator: `false` = the tx never touched
+     * our money (any negative event for it is watch-only noise); `null` = the
+     * mirror can't answer right now (DB not started / wallet unresolved /
+     * rows not yet persisted — the caller should retry or fall back).
+     */
+    suspend fun ownedInvolvementFor(txDisplayHex: String): Boolean? {
+        return try {
+            val ctx = foreignExclusionContext("tx $txDisplayHex owned-involvement unknown") ?: return null
+            val wire = hexToBytesOrNull(txDisplayHex)?.reversedArray() ?: return null
+            var sawAnyRow = false
+            var sawOwnedRow = false
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val sql = "SELECT amount, accountId, coreAddressId, address " +
+                    "FROM txos WHERE walletId = ? AND (txid = ? OR spendingTxid = ?)"
+                ctx.db.openHelper.readableDatabase.query(
+                    androidx.sqlite.db.SimpleSQLiteQuery(sql, arrayOf(ctx.walletId, wire, wire))
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        sawAnyRow = true
+                        val accountId = if (cursor.isNull(1)) null else cursor.getLong(1)
+                        val coreAddressId = if (cursor.isNull(2)) null else cursor.getString(2)
+                        val address = if (cursor.isNull(3)) null else cursor.getString(3)
+                        // Same exclusion rules as signedNetsFor (see KDoc).
+                        if (accountId != null && accountId in ctx.externalAccountIds) continue
+                        if (accountId == null && (coreAddressId ?: address) in ctx.externalAddresses) continue
+                        sawOwnedRow = true
+                        break
+                    }
+                }
+            }
+            when {
+                sawOwnedRow -> true
+                // Rows exist but every one is the contact's watch-only money —
+                // a DEFINITIVE "not our tx". No rows at all stays null: the
+                // mirror may simply not have persisted this tx yet.
+                sawAnyRow -> false
+                else -> null
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("owned-involvement probe failed for {}", txDisplayHex, t)
+            null
         }
     }
 

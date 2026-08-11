@@ -326,6 +326,16 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.syncStatus.map { it.isSynced }.distinctUntilChanged().collect { isSynced ->
                 header.isSynced = isSynced
+                // The Join DashPay tile only becomes eligible once the scan
+                // finishes (HistoryHeaderAdapter.joinDashPayEligible), and the
+                // adapter re-binds itself above. But on a wallet with no
+                // displayed rows the whole list may currently be hidden behind
+                // the "no transactions" view — a decision only re-taken on a
+                // paging load-state emission, which may never arrive. Re-take
+                // it here so the tile actually becomes visible on completion.
+                if (!header.isEmpty()) {
+                    showTransactionList()
+                }
                 if (inviteHandlerViewModel.isUsingInvite) {
                     // Re-drives the invite through validation on every sync-state
                     // change: an invite checked mid-scan gets the provisional
@@ -412,7 +422,28 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             if (identity != null) {
                 (requireActivity() as? LockScreenActivity)?.imitateUserInteraction()
                 header.blockchainIdentityData = identity
+                // Same reason as the sync and canJoin observers below: the identity
+                // record decides the processing/error/welcome tile AND the accept-
+                // invitation row, so it can turn the header from empty to non-empty.
+                // While the "no transactions" view is up the whole list — header
+                // included — is hidden, and that decision is otherwise only re-taken
+                // on a paging load-state emission, which a record change does not
+                // produce. Without this a wallet showing no rows (a filter that
+                // matches nothing, or a wallet with no history yet) renders the
+                // creation tile into a hidden list.
+                if (!header.isEmpty()) {
+                    showTransactionList()
+                }
             }
+        }
+
+        // The hello card greets the user by name, and the identity record's
+        // username can be the DPNS-NORMALIZED label ("br1an-s21") rather than
+        // the one they typed. The local profile keeps the human label (the
+        // domain document's `.label`), so feed it in as the preferred display
+        // form — see HistoryHeaderAdapter.helloCardUsername.
+        viewModel.dashPayProfile.observe(viewLifecycleOwner) { profile ->
+            header.profileUsername = profile?.username
         }
 
         // Transient retry-status hint on the identity processing tile —
@@ -445,6 +476,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         viewModel.isAbleToCreateIdentity.observe(viewLifecycleOwner) { canJoinDashPay ->
             header.canJoinDashPay = canJoinDashPay && header.invitation == null
+            // Same reason as the sync collector above: this flag can turn the
+            // header from empty to non-empty while the "no transactions" view
+            // is up, and that view's decision is not otherwise re-taken.
+            if (!header.isEmpty()) {
+                showTransactionList()
+            }
         }
 
         val myListener = { onLockScreenDeactivated() }

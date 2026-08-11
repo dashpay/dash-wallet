@@ -107,6 +107,42 @@ data class DashPayContactProvisionReport(
 )
 
 /**
+ * Outcome of one [DashSdkService.drainDashPayContactAccountBuilds] pass — the
+ * signer-backed drain that turns the SDK's DEFERRED contact-crypto queue into
+ * registered DIP-15 accounts.
+ *
+ * ## Why the drain needs its own entry point
+ *
+ * The queue is filled by the DashPay sweep ("Deferred DashPay account build:
+ * enqueued for the signer-backed drain") and persists across launches, but the
+ * only thing that drained it was step 2 of
+ * [DashSdkService.provisionDashPayContactAccounts] — which the app-side
+ * backfill gate skips on most launches, deliberately, because the SWEEP in
+ * step 1 rewinds the SPV synced height. A drain does no such rewind, so it can
+ * and must run every launch: until it does, the contacts' receiving addresses
+ * are not in the watched script set, their payments never match a filter, and
+ * the balance is understated by exactly those payments.
+ */
+data class DashPayContactDrainReport(
+    /** False when no SDK wallet is loaded for the given id — nothing attempted. */
+    val bound: Boolean,
+    /** Entries queued when the pass started. */
+    val queuedBefore: Int,
+    /** Whether this pass scheduled the background drain (only when [queuedBefore] > 0). */
+    val drainScheduled: Boolean,
+    /**
+     * Entries still queued when the pass stopped observing. A drain runs in
+     * the background, so this is "not built WITHIN the observation window" —
+     * either genuinely blocked (the contact's key-purpose mismatch, a broken
+     * channel) or simply still in flight.
+     */
+    val queuedAfter: Int
+) {
+    /** Entries that left the queue while this pass watched. */
+    val built: Int get() = (queuedBefore - queuedAfter).coerceAtLeast(0)
+}
+
+/**
  * The two read-only signals the app-side DIP-15 backfill gate
  * ([DashPayBackfillGate]) needs to tell "the coreHeight backfill is still
  * running" from "it has provably finished", WITHOUT any SDK change.
@@ -150,11 +186,31 @@ data class DashPayBackfillSignals(
      */
     val contactCoreHeightFloor: Long?,
     /** How many contact requests the SDK has persisted for the owner (diagnostics). */
-    val contactRequestCount: Int
+    val contactRequestCount: Int,
+    /**
+     * `min(coreHeightCreatedAt)` over the RECEIVED (`isOutgoing == false`)
+     * contact requests only — the subset that yields
+     * `dashpayReceivingFunds` accounts, and therefore the only subset whose
+     * history the DIP-15 rewind exists to re-scan.
+     *
+     * Unlike [contactCoreHeightFloor] this one IS load-bearing, in exactly
+     * one direction: it can only ever REFUSE to conclude "there was nothing
+     * to backfill". A contact request received at a core height below the
+     * height about to be recorded as covered means a rewind was OWED, so a
+     * pass that produced none proves the rewind was suppressed or has not
+     * persisted — never that it was unnecessary. It is never used to record
+     * coverage, only to withhold it, so a wrong value costs a re-scan and
+     * cannot lose payments.
+     *
+     * Null when the SDK is not started or holds no RECEIVED contact requests
+     * for the owner — in which case no rewind is owed and the conclusion is
+     * unobstructed.
+     */
+    val receivedContactCoreHeightFloor: Long? = null
 ) {
     companion object {
         /** Nothing observable — the gate treats this as "must re-run". */
-        val UNKNOWN = DashPayBackfillSignals(null, null, 0)
+        val UNKNOWN = DashPayBackfillSignals(null, null, 0, null)
     }
 }
 
@@ -231,6 +287,43 @@ interface DashSdkService {
      * persistence bridge.
      */
     fun databaseOrNull(): org.dashfoundation.dashsdk.persistence.DashDatabase?
+
+    /**
+     * Widen the SDK wallet's address-pool gap limits to the Rust-side
+     * maximum (1000) on the standard families (BIP44 / BIP32 / CoinJoin,
+     * account 0), deriving the addresses the wider windows require.
+     *
+     * The migration heal for a wallet whose usage frontier advanced
+     * OUTSIDE the SDK's watched window: dashj (or any same-seed client)
+     * kept spending, its change landed past the SDK's derived window, the
+     * compact-filter scan never matched it, and every descendant
+     * transaction was invisible (observed in the field as "synced but
+     * wrong balance / history stops at a date"). Widening alone covers
+     * frontiers up to 1000 past the SDK's own used-index; deeper
+     * frontiers are swept by the follow-up rescan, whose found
+     * transactions mark indices used and roll the window forward ahead
+     * of the scan. Callers pair this with a backfill-coverage
+     * invalidation so the next gate pass rewinds and re-matches history
+     * against the widened script set.
+     *
+     * Returns true when every PRESENT account widened (a family the
+     * wallet simply doesn't have is skipped, not a failure); false when
+     * the wallet isn't loaded or any present account failed.
+     */
+    suspend fun widenAddressWindows(walletIdHex: String): Boolean
+
+    /**
+     * Rewind the SDK wallet's SPV filter watermark to the wallet's birth
+     * height so the engine re-downloads and re-matches BIP158 filters
+     * against the CURRENT script set — the follow-up to
+     * [widenAddressWindows] that makes the widened windows retroactive.
+     * The Rust side never moves the watermark FORWARD (an at-or-ahead
+     * target is a successful no-op), so arming is idempotent and safe to
+     * combine with the DashPay backfill gate's own rewind on identity
+     * wallets. Returns false when the wallet is not loaded or the request
+     * failed.
+     */
+    suspend fun armSpvRescan(walletIdHex: String, birthTimeSecs: Long?): Boolean
 
     /**
      * The activated wallet manager for the app's network, or null if
@@ -479,6 +572,31 @@ interface DashSdkService {
      * @param walletIdHex the bound wallet id ([bindAppWallet]'s return).
      */
     suspend fun provisionDashPayContactAccounts(walletIdHex: String): DashPayContactProvisionReport
+
+    /**
+     * Run the signer-backed drain of the DEFERRED contact-crypto queue ALONE
+     * — step 2 of [provisionDashPayContactAccounts] without the sweep — and
+     * observe the outcome for a bounded window so the pass can report how many
+     * builds were queued, built and left. See [DashPayContactDrainReport] for
+     * why this must be reachable independently of the sweep.
+     *
+     * Idempotent and cheap: with an empty queue it costs one count read and
+     * schedules nothing. The Rust-side drain is single-flight, so overlapping
+     * calls collapse. Never throws — a drain that cannot run right now (locked
+     * device / seed-verify failure) leaves the queue for the next pass.
+     *
+     * @param walletIdHex the bound wallet id ([bindAppWallet]'s return).
+     */
+    suspend fun drainDashPayContactAccountBuilds(walletIdHex: String): DashPayContactDrainReport
+
+    /**
+     * How many DashPay contact ACCOUNT BUILDS are queued for [walletIdHex]
+     * right now (`contactCryptoPendingCount`) — a plain read, no drain, no
+     * sweep, no network. Null when the SDK is not started / the wallet is not
+     * loaded / the read failed: "unknown", which callers must not treat as
+     * "none queued".
+     */
+    suspend fun dashPayPendingAccountBuilds(walletIdHex: String): Int?
 
     /**
      * Read-only snapshot of the two signals the app-side DIP-15 backfill

@@ -146,6 +146,105 @@ internal fun inviteFeeGate(
     }
 }
 
+/**
+ * Why an SDK-routed invite creation failed, bucketed by what the user can DO
+ * about it — the confirm dialog's error copy and retry gate both key off
+ * this. Before it existed every failure collapsed into one generic "Error
+ * sending invite transaction" with the buttons re-enabled, so a
+ * DETERMINISTIC rejection (observed live: a contested 0.25 invite bounced
+ * by the SDK's 0.05 invitation-amount cap on every single attempt) read as
+ * an endless confirm → authorize → fail loop with no way to tell why.
+ */
+internal enum class InviteCreationFailureKind {
+    /** The wallet cannot fund the invite — actionable (add/settle funds). */
+    INSUFFICIENT_FUNDS,
+
+    /**
+     * A deterministic pre-broadcast rejection (validation/rule failure —
+     * e.g. the invitation-amount cap). Retrying reruns the same validation
+     * with the same inputs; it can NEVER succeed.
+     */
+    REJECTED,
+
+    /**
+     * [SdkWriteResult.Ambiguous]: the spend MAY have landed. The
+     * no-double-broadcast contract forbids retrying — a second attempt could
+     * fund a duplicate voucher.
+     */
+    POSSIBLY_CREATED,
+
+    /** Anything transient-looking (network, SDK bootstrap, …) — retryable, bounded. */
+    UNREACHABLE
+}
+
+/**
+ * Classify a FAILED [SdkWriteResult] (never call with [SdkWriteResult.Broadcast]).
+ *
+ * [SdkWriteResult.Ambiguous] is [InviteCreationFailureKind.POSSIBLY_CREATED]
+ * unconditionally. For [SdkWriteResult.NotBroadcast] the SDK exposes no
+ * typed error taxonomy app-side, so this matches the reason plus the cause
+ * chain's messages — the same message-matching contract
+ * `classifyBroadcastFailure` already relies on (its insufficient-funds /
+ * validation-failure reason strings are matched here by construction):
+ * - insufficient funds / coin selection → [InviteCreationFailureKind.INSUFFICIENT_FUNDS];
+ * - deterministic refusals (FFI input/identity validation — including the
+ *   invitation-amount cap's "Invalid identity data" — plus this-session
+ *   impossibilities like the flag/cutover gates) → [InviteCreationFailureKind.REJECTED];
+ * - everything else → [InviteCreationFailureKind.UNREACHABLE] (bounded retry).
+ * Pure — host-testable.
+ */
+internal fun classifyInviteCreationFailure(result: SdkWriteResult<*>): InviteCreationFailureKind {
+    val notBroadcast = when (result) {
+        is SdkWriteResult.Broadcast -> throw IllegalArgumentException("not a failure: $result")
+        is SdkWriteResult.Ambiguous -> return InviteCreationFailureKind.POSSIBLY_CREATED
+        is SdkWriteResult.NotBroadcast -> result
+    }
+    val text = buildString {
+        append(notBroadcast.reason)
+        var cause: Throwable? = notBroadcast.cause
+        var depth = 0
+        while (cause != null && depth < 4) {
+            append(' ').append(cause.message ?: "")
+            cause = cause.cause
+            depth++
+        }
+    }.lowercase()
+    return when {
+        "insufficient funds" in text || "coin selection" in text ->
+            InviteCreationFailureKind.INSUFFICIENT_FUNDS
+        "invalid identity data" in text ||
+            "exceeds the cap" in text ||
+            "validation failure" in text ||
+            "flag off" in text ||
+            "cutover not committed" in text ||
+            "invite fee unavailable" in text ||
+            "no local user profile" in text ->
+            InviteCreationFailureKind.REJECTED
+        else -> InviteCreationFailureKind.UNREACHABLE
+    }
+}
+
+/**
+ * The confirm dialog's retry gate: whether ANOTHER confirm → authorize →
+ * create attempt may run after [failedAttempts] have already failed.
+ * Deterministic rejections and possibly-landed spends block immediately
+ * (retry cannot help / must not happen); transient failures get
+ * [MAX_INVITE_CREATE_ATTEMPTS] total attempts so the cycle always
+ * terminates in a clear error instead of an unbounded re-prompt. A
+ * CANCELLED authentication is deliberately not an attempt — the caller
+ * never counts it. Pure — host-testable.
+ */
+internal fun inviteRetryAllowed(kind: InviteCreationFailureKind, failedAttempts: Int): Boolean =
+    when (kind) {
+        InviteCreationFailureKind.REJECTED,
+        InviteCreationFailureKind.POSSIBLY_CREATED -> false
+        InviteCreationFailureKind.INSUFFICIENT_FUNDS,
+        InviteCreationFailureKind.UNREACHABLE -> failedAttempts < MAX_INVITE_CREATE_ATTEMPTS
+    }
+
+/** Total create attempts the confirm dialog allows for transient failures. */
+internal const val MAX_INVITE_CREATE_ATTEMPTS = 3
+
 @ExperimentalCoroutinesApi
 @HiltViewModel
 open class InvitationFragmentViewModel @Inject constructor(

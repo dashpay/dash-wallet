@@ -19,6 +19,11 @@ package de.schildbach.wallet.service
 
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.junit.Assert.assertEquals
@@ -38,6 +43,7 @@ import java.util.EnumSet
  * header's blinking "Syncing balance" label and `CutoverUiDataService`'s
  * balance hold, which must flip in the same instant.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class L1SyncStatusServiceTest {
 
     private fun progress(
@@ -45,8 +51,9 @@ class L1SyncStatusServiceTest {
         headerHeight: Long = 1_514_660,
         headerTarget: Long = 1_514_660,
         filterHeight: Long = 1_400_000,
-        filterTarget: Long = 1_514_660
-    ) = ShadowSyncProgress(phase, 0.0, headerHeight, headerTarget, filterHeight, filterTarget)
+        filterTarget: Long = 1_514_660,
+        mnListHeight: Long = 0
+    ) = ShadowSyncProgress(phase, 0.0, headerHeight, headerTarget, filterHeight, filterTarget, mnListHeight)
 
     private fun dashjState(
         percentageSync: Int,
@@ -285,5 +292,118 @@ class L1SyncStatusServiceTest {
                 mergeL1SyncUiStatus(sdkOwnsL1 = true, sdkProgress = p, dashjState = null).isSynced
             )
         }
+    }
+
+    // ── Platform (masternode-list) starvation — the outage the L1 signals
+    //    cannot see (observed live: banner self-cleared while the masternode
+    //    list was still empty and DAPI had made zero calls for 33 minutes) ──
+
+    /** A caught-up scan: filters within tolerance of the header tip. */
+    private fun caughtUp(mnListHeight: Long = 0) =
+        progress(phase = ShadowSyncPhase.MASTERNODES, filterHeight = 1_514_659, mnListHeight = mnListHeight)
+
+    @Test
+    fun platformStarved_firesOnlyForAnL1SyncedSdkWalletWithNoMnListAnywhere() {
+        // The incident shape: SDK regime, scan caught up (header shows
+        // "synced"), masternode list never obtained — live feed AND row at 0.
+        assertTrue(platformMasternodeListStarved(true, caughtUp(), dashjState(percentageSync = 100)))
+        // A missing row is no masternode knowledge either.
+        assertTrue(platformMasternodeListStarved(true, caughtUp(), null))
+
+        // dashj regime: not this signal's business.
+        assertFalse(platformMasternodeListStarved(false, caughtUp(), dashjState(percentageSync = 100)))
+        // Mid-scan: the masternode list is legitimately still pending.
+        assertFalse(platformMasternodeListStarved(true, progress(), dashjState(percentageSync = 50)))
+        // A live masternode height clears it…
+        assertFalse(
+            platformMasternodeListStarved(
+                true, caughtUp(mnListHeight = 1_514_000), dashjState(percentageSync = 100)
+            )
+        )
+        // …and so does the persisted row's (warm start of a healthy wallet:
+        // the live feed reads 0 for a while, but the row remembers).
+        assertFalse(
+            platformMasternodeListStarved(
+                true, caughtUp(), dashjState(percentageSync = 100, mnlistHeight = 1_514_000)
+            )
+        )
+    }
+
+    @Test
+    fun merge_platformStarvation_drivesTheBanner_regardlessOfACleanRow() {
+        // The L1-derived impediment self-clears within a block interval of
+        // each appearance post-sync (every new block resets the stall clock),
+        // so the starvation verdict must be able to hold the banner up on its
+        // own, over a row with NO impediment recorded.
+        val clean = dashjState(percentageSync = 100)
+        assertTrue(
+            mergeL1SyncUiStatus(true, caughtUp(), clean, platformStarved = true).isFailed
+        )
+        // Default keeps every pre-existing call site byte-identical.
+        assertFalse(mergeL1SyncUiStatus(true, caughtUp(), clean).isFailed)
+    }
+
+    @Test
+    fun sustainedStarvation_startupBlipNeverFlashesTheBanner() = runTest {
+        // The masternode list is legitimately absent for a while right after
+        // the scan catches up — a condition shorter than the grace must never
+        // surface.
+        val starved = MutableSharedFlow<Boolean>()
+        val seen = mutableListOf<Boolean>()
+        val job = launch { sustainedPlatformStarvation(starved, graceMs = 1_000).collect { seen += it } }
+        runCurrent()
+        starved.emit(true)
+        testScheduler.advanceTimeBy(999)
+        runCurrent()
+        starved.emit(false)
+        testScheduler.advanceTimeBy(5_000)
+        runCurrent()
+        assertFalse(seen.contains(true))
+        job.cancel()
+    }
+
+    @Test
+    fun sustainedStarvation_reportsAfterTheGrace_andHoldsUntilRecovery() = runTest {
+        val starved = MutableSharedFlow<Boolean>()
+        val seen = mutableListOf<Boolean>()
+        val job = launch { sustainedPlatformStarvation(starved, graceMs = 1_000).collect { seen += it } }
+        runCurrent()
+        starved.emit(true)
+        testScheduler.advanceTimeBy(1_001)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        // Upstream re-emissions of the SAME verdict (the progress feed ticks
+        // every second) must not reset or clear anything — the banner holds
+        // while the condition holds. This is the self-clearing bug's exact
+        // regression guard.
+        starved.emit(true)
+        testScheduler.advanceTimeBy(10_000)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        // Recovery (a masternode list finally lands) clears immediately.
+        starved.emit(false)
+        runCurrent()
+        assertEquals(false, seen.last())
+        job.cancel()
+    }
+
+    @Test
+    fun sustainedStarvation_reEmissionDuringTheGraceDoesNotRestartTheClock() = runTest {
+        val starved = MutableSharedFlow<Boolean>()
+        val seen = mutableListOf<Boolean>()
+        val job = launch { sustainedPlatformStarvation(starved, graceMs = 1_000).collect { seen += it } }
+        runCurrent()
+        starved.emit(true)
+        testScheduler.advanceTimeBy(600)
+        runCurrent()
+        // The 1 Hz progress feed re-derives the same verdict mid-grace…
+        starved.emit(true)
+        testScheduler.advanceTimeBy(600)
+        runCurrent()
+        // …and the report still lands one grace after the FIRST observation.
+        assertEquals(true, seen.last())
+        job.cancel()
     }
 }

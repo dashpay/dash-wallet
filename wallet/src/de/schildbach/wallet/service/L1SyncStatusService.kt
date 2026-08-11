@@ -22,10 +22,19 @@ import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import de.schildbach.wallet.service.platform.sdk.shadowSyncPercent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.BlockchainStateProvider
 import javax.inject.Inject
@@ -89,16 +98,95 @@ internal fun dashjSyncPercentage(state: BlockchainState?): Int = when {
  * unconditionally from a dashj-only field ALONGSIDE a branched sync feed,
  * which post-cutover could paint the error pane from a stale dashj
  * impediment.)
+ *
+ * [platformStarved] ORs in the sustained masternode-list starvation verdict
+ * ([platformMasternodeListStarved] held past its grace window) — a
+ * PLATFORM-side outage the L1 signals above cannot see. The progress-stall
+ * impediment's clock is reset by ANY progress change, and post-sync every
+ * new block ticks the header/filter heights, so an engine stuck without a
+ * masternode list (no DAPI possible) reads as "not stalled" within about a
+ * block interval of each banner appearance — observed live: the banner
+ * cleared on its own while the masternode list was still empty and DAPI had
+ * made zero calls for over half an hour. The starvation verdict holds for
+ * as long as its condition does, so the banner cannot self-clear while the
+ * outage persists.
  */
 internal fun mergeL1SyncUiStatus(
     sdkOwnsL1: Boolean,
     sdkProgress: ShadowSyncProgress,
-    dashjState: BlockchainState?
+    dashjState: BlockchainState?,
+    platformStarved: Boolean = false
 ): L1SyncUiStatus = L1SyncUiStatus(
     isSynced = if (sdkOwnsL1) sdkL1ScanCaughtUp(sdkProgress) else dashjState?.isSynced() == true,
     percentage = if (sdkOwnsL1) shadowSyncPercent(sdkProgress) else dashjSyncPercentage(dashjState),
-    isFailed = dashjState?.syncFailed() == true
+    isFailed = dashjState?.syncFailed() == true || platformStarved
 )
+
+/**
+ * The INSTANTANEOUS masternode-list starvation condition: the SDK owns L1,
+ * the wallet-relevant scan has caught up (the header shows "synced"), and
+ * neither the live engine feed nor the persisted row has EVER seen a
+ * masternode list — meaning no quorum knowledge and no DAPI address list,
+ * so every Platform feature is unreachable regardless of how healthy the
+ * L1 chain looks. Pure — host-testable.
+ *
+ * Uses the max of the live and persisted heights, exactly like
+ * [mergeL1SyncDetail]: on a warm start of a HEALTHY wallet the engine's
+ * live height is legitimately 0 for a while, but the row (preserved on the
+ * don't-regress-on-unknown rule) still carries the previous session's
+ * height — so only wallets that have never synced a masternode list at all
+ * (the stranded-fresh-wallet shape) can satisfy this.
+ *
+ * Held-time is deliberately NOT part of this predicate — the caller wraps
+ * it in [sustainedPlatformStarvation] so a normal startup (where the list
+ * is legitimately absent for a couple of minutes after the scan catches
+ * up) never flashes the banner.
+ */
+internal fun platformMasternodeListStarved(
+    sdkOwnsL1: Boolean,
+    sdkProgress: ShadowSyncProgress,
+    dashjState: BlockchainState?
+): Boolean = sdkOwnsL1 &&
+    sdkL1ScanCaughtUp(sdkProgress) &&
+    maxOf(sdkProgress.mnListHeight, (dashjState?.mnlistHeight ?: 0).toLong()) <= 0L
+
+/**
+ * How long the instantaneous starvation condition must HOLD before it is
+ * reported ([sustainedPlatformStarvation]). On a healthy fresh install the
+ * masternode list lands within a couple of minutes of the filter scan
+ * catching up, so five sustained minutes without one — while the L1 chain
+ * is fully synced — is a real outage, not startup latency. (The observed
+ * stranded wallet sat listless for hours.)
+ */
+internal const val PLATFORM_MNLIST_STARVATION_GRACE_MS = 5 * 60_000L
+
+/**
+ * Debounce the instantaneous starvation condition into the REPORTED one:
+ * true only once [starved] has held for [graceMs], false the instant it
+ * stops holding. The leading `emit(false)` keeps downstream `combine`s
+ * flowing during the grace window; [distinctUntilChanged] on the input
+ * keeps upstream re-emissions of the same verdict from restarting the
+ * clock (the exact self-clearing bug this exists to fix — see
+ * [mergeL1SyncUiStatus]).
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal fun sustainedPlatformStarvation(
+    starved: Flow<Boolean>,
+    graceMs: Long = PLATFORM_MNLIST_STARVATION_GRACE_MS
+): Flow<Boolean> = starved
+    .distinctUntilChanged()
+    .flatMapLatest { isStarved ->
+        if (isStarved) {
+            flow {
+                emit(false)
+                delay(graceMs)
+                emit(true)
+            }
+        } else {
+            flowOf(false)
+        }
+    }
+    .distinctUntilChanged()
 
 /**
  * Neutral chain-sync stage for the DETAIL readout (Tools → Network
@@ -245,7 +333,8 @@ internal fun mergeL1SyncDetail(
 class L1SyncStatusService @Inject constructor(
     cutoverCoordinator: CutoverCoordinator,
     l1ShadowSyncService: L1ShadowSyncService,
-    blockchainStateProvider: BlockchainStateProvider
+    blockchainStateProvider: BlockchainStateProvider,
+    scope: CoroutineScope
 ) {
     /**
      * [sdkL1ScanCaughtUp] over the live SDK progress feed — published so
@@ -255,14 +344,45 @@ class L1SyncStatusService @Inject constructor(
     val sdkScanCaughtUp: Flow<Boolean> =
         l1ShadowSyncService.progress.map(::sdkL1ScanCaughtUp).distinctUntilChanged()
 
-    /** The engine-agnostic L1 sync status every sync-aware screen renders. */
-    val status: Flow<L1SyncUiStatus> =
+    /**
+     * The SUSTAINED platform-outage verdict ([platformMasternodeListStarved]
+     * held past [PLATFORM_MNLIST_STARVATION_GRACE_MS]): an L1-synced wallet
+     * that has never obtained a masternode list has no DAPI reachability at
+     * all — a failure the L1-derived impediment cannot see (and, post-sync,
+     * actively clears within a block interval; see [mergeL1SyncUiStatus]).
+     *
+     * Held EAGERLY in the service's own long-lived [scope], NOT per
+     * subscription: [status]'s downstream is screen-scoped
+     * (`MainViewModel.syncStatus` uses `WhileSubscribed`), and a grace clock
+     * that restarted on every navigation back to the home screen would need
+     * the user to sit still for the whole grace before the outage ever
+     * surfaced.
+     */
+    private val platformStarvedSustained: StateFlow<Boolean> = sustainedPlatformStarvation(
         combine(
             cutoverCoordinator.sdkOwnsL1Flow(),
             l1ShadowSyncService.progress,
             blockchainStateProvider.observeState()
         ) { sdkOwnsL1, progress, state ->
-            mergeL1SyncUiStatus(sdkOwnsL1, progress, state)
+            platformMasternodeListStarved(sdkOwnsL1, progress, state)
+        }
+    ).catch { e ->
+        // Fail-open to the pre-existing (L1-impediment-only) behavior — an
+        // eager collector on the app scope must never take the process down.
+        org.slf4j.LoggerFactory.getLogger(L1SyncStatusService::class.java)
+            .warn("platform-starvation feed failed; banner falls back to the L1 impediment", e)
+        emit(false)
+    }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    /** The engine-agnostic L1 sync status every sync-aware screen renders. */
+    val status: Flow<L1SyncUiStatus> =
+        combine(
+            cutoverCoordinator.sdkOwnsL1Flow(),
+            l1ShadowSyncService.progress,
+            blockchainStateProvider.observeState(),
+            platformStarvedSustained
+        ) { sdkOwnsL1, progress, state, platformStarved ->
+            mergeL1SyncUiStatus(sdkOwnsL1, progress, state, platformStarved)
         }.distinctUntilChanged()
 
     /**

@@ -36,8 +36,9 @@ import de.schildbach.wallet.service.platform.PlatformHealth
 import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.data.InvitationLinkData
-import de.schildbach.wallet.service.platform.sdk.ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS
+import de.schildbach.wallet.service.platform.sdk.AssetLockFundingEvidence
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
+import de.schildbach.wallet.service.platform.sdk.assetLockFundingVerdict
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
@@ -606,22 +607,23 @@ class RequestUserNameViewModel @Inject constructor(
         get() = _walletBalance
 
     /**
-     * PRE-FLIGHT funding-eligibility snapshot: the duffs the SDK's
-     * asset-lock coin selection could actually fund an identity with
-     * (final BIP44-account-0 coins — see [SdkAssetLockFundingPreflight]),
-     * or null when the preflight does not apply (pre-cutover / no
-     * evidence — fail OPEN, the display-balance gate alone decides).
-     * Refreshed asynchronously on entry, on every balance change, and on
-     * a modest poll while the settling row is showing (finality flips with
-     * no balance-amount change — see [SETTLING_ELIGIBILITY_POLL_MS]);
-     * [recomputeBalanceGate] re-resolves the gate when it lands — the
-     * same async-gate-input pattern the shielded sync status uses.
+     * PRE-FLIGHT funding-eligibility snapshot: what the SDK mirror can say
+     * about the coins the asset-lock selection could fund an identity with
+     * (see [SdkAssetLockFundingPreflight]), or null when the preflight does
+     * not apply (pre-cutover / no evidence — fail OPEN, the display-balance
+     * gate alone decides). Refreshed asynchronously on entry, on every
+     * balance change, and on a modest poll while the settling row is showing
+     * (finality flips with no balance-amount change — see
+     * [SETTLING_ELIGIBILITY_POLL_MS]); [recomputeBalanceGate] re-resolves the
+     * gate when it lands — the same async-gate-input pattern the shielded
+     * sync status uses.
+     *
      * Prevents the observed S22 failure mode: display balance ~0.994
      * (a non-final/out-of-account output) passed the old gate, then the
      * real build bounced "Insufficient funds: available 1449" after the
      * user had already picked a name and sat through the ~30s dialog.
      */
-    private val _assetLockEligibleDuffs = MutableStateFlow<Long?>(null)
+    private val _assetLockFundingEvidence = MutableStateFlow<AssetLockFundingEvidence?>(null)
 
     /** One refresh in flight at a time (entry + every balance emission would stack). */
     private var assetLockEligibilityRefreshing = false
@@ -637,9 +639,9 @@ class RequestUserNameViewModel @Inject constructor(
                 // DB read to Dispatchers.IO internally, and keeping this
                 // call in the caller's context makes the refresh
                 // deterministic under the host-JVM tests' unconfined main.
-                val eligible = assetLockFundingPreflight.eligibleAssetLockFundingDuffsOrNull()
-                if (_assetLockEligibleDuffs.value != eligible) {
-                    _assetLockEligibleDuffs.value = eligible
+                val evidence = assetLockFundingPreflight.assetLockFundingEvidenceOrNull()
+                if (_assetLockFundingEvidence.value != evidence) {
+                    _assetLockFundingEvidence.value = evidence
                     recomputeBalanceGate()
                 }
             } finally {
@@ -652,13 +654,16 @@ class RequestUserNameViewModel @Inject constructor(
 
     /**
      * Whether a fresh asset lock for [fee] would find enough ELIGIBLE
-     * funds ([_assetLockEligibleDuffs] + the shared fee headroom). True
+     * funds ([_assetLockFundingEvidence] + the shared fee headroom). True
      * when the preflight has no evidence (fail open) — the real build
-     * stays the authority; only a computed shortfall gates.
+     * stays the authority; only a PROVEN shortfall gates, which is why
+     * this routes through [assetLockFundingVerdict] rather than comparing
+     * the eligible sum itself (a mirror that has not yet classified the
+     * wallet's coins reports 0, and 0 is not a shortfall).
      */
     private fun assetLockFundingEligible(fee: Coin): Boolean {
-        val eligible = _assetLockEligibleDuffs.value ?: return true
-        return eligible >= fee.value + ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS
+        val evidence = _assetLockFundingEvidence.value ?: return true
+        return assetLockFundingVerdict(evidence, fee.value) ?: true
     }
 
     private var createUsernameArgs: CreateUsernameArgs? = null
@@ -1444,7 +1449,8 @@ class RequestUserNameViewModel @Inject constructor(
             log.info(
                 "username balance gate failed for '{}': source={} contestable={} required={} DASH " +
                     "(walletBalance={} identityCredits={} inviteBalance={} shieldedBalance={} " +
-                    "shieldedSync={} assetLockEligibleDuffs={} settling={})",
+                    "shieldedSync={} assetLockEligibleDuffs={} assetLockUnclassifiedDuffs={} " +
+                    "settling={})",
                 username,
                 paymentSource,
                 contestable,
@@ -1454,7 +1460,8 @@ class RequestUserNameViewModel @Inject constructor(
                 inviteBalance.toPlainString(),
                 _shieldedBalance.value.toPlainString(),
                 _shieldedSyncStatus.value,
-                _assetLockEligibleDuffs.value,
+                _assetLockFundingEvidence.value?.eligibleDuffs,
+                _assetLockFundingEvidence.value?.unclassifiedDuffs,
                 fundsSettling
             )
         }

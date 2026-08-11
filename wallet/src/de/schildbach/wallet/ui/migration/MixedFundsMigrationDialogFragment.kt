@@ -242,6 +242,10 @@ class MixedFundsMigrationDialogFragment :
          * lifecycle churn a startup trigger goes through.
          */
         fun showOnce(activity: FragmentActivity) {
+            // TEMPORARY: hard-suppressed at BOTH the prompt gate and here so
+            // no caller (startup trigger, resume re-show, pending flag) can
+            // present the sheet — see the note on the constant.
+            if (de.schildbach.wallet.service.platform.sdk.MIXED_FUNDS_PROMPT_HARD_SUPPRESSED) return
             val fm = activity.supportFragmentManager
             if (fm.isStateSaved || fm.findFragmentByTag(TAG) != null) return
             MixedFundsMigrationDialogFragment().show(fm, TAG)

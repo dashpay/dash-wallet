@@ -171,16 +171,17 @@ import de.schildbach.wallet.util.ProcessExitReasons;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
 import de.schildbach.wallet.util.WalletFileSizeGuard;
 import de.schildbach.wallet.util.WalletLoadBudget;
+import de.schildbach.wallet.util.WalletWipeState;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 import kotlin.Deprecated;
 import kotlin.Unit;
 import kotlin.coroutines.Continuation;
-import kotlin.jvm.functions.Function0;
 import kotlin.jvm.functions.Function1;
 import kotlinx.coroutines.flow.Flow;
 import kotlinx.coroutines.flow.FlowKt;
 import kotlinx.coroutines.flow.MutableStateFlow;
+import kotlinx.coroutines.flow.StateFlow;
 import kotlinx.coroutines.flow.StateFlowKt;
 
 /**
@@ -229,7 +230,15 @@ public class WalletApplication extends MultiDexApplication
 
     private AutoLogout autoLogout;
     private AnrSupervisor anrSupervisor;
-    private Function0 afterWipeFunction;
+
+    /**
+     * True from the moment the user confirms Reset Wallet until the wipe has
+     * destroyed everything. While it is set the app owns no presentable
+     * wallet, so the UI must show the reset in progress rather than route into
+     * onboarding (the wallet file may still be there) or into the wallet
+     * itself (its data is being deleted underneath it).
+     */
+    private final MutableStateFlow<Boolean> wipeInProgress = StateFlowKt.MutableStateFlow(false);
 
     @Inject
     RestartService restartService;
@@ -375,7 +384,13 @@ public class WalletApplication extends MultiDexApplication
         registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_CONFIG_LOADED, "CONFIG_LOADED");
-        if (walletFileExists()) {
+        if (WalletWipeState.INSTANCE.isPending(getFilesDir())) {
+            // The previous process died inside a Reset Wallet. What is left on
+            // disk is a half-destroyed wallet, and loading it would present it
+            // as the user's own. Finish the wipe instead — it is idempotent,
+            // and it is the only path to a state the user can act on.
+            WalletApplicationExt.INSTANCE.resumeInterruptedWipe(this);
+        } else if (walletFileExists()) {
             if (StartupBreadcrumbs.isSafeModeAdvised()) {
                 // Crash-loop breaker: the last two launches died before the
                 // main UI. Skip the wallet load and every engine start so the
@@ -935,7 +950,7 @@ public class WalletApplication extends MultiDexApplication
             log.info("failed to finish reset earlier, performing now...");
             deleteBlockchainFiles();
             Toast.makeText(this, "finishing blockchain rescan", Toast.LENGTH_LONG).show();
-            WalletApplicationExt.INSTANCE.clearDatabases(this, false);
+            WalletApplicationExt.INSTANCE.clearDatabasesForRescan(this);
             config.clearResetBlockchainPending();
         }
 
@@ -1491,19 +1506,17 @@ public class WalletApplication extends MultiDexApplication
         }
     }
 
-    private void clearDatastorePrefs() {
-        // Clear live DataStore-backed configs through their API first: deleting the
-        // backing file of a LIVE DataStore out-of-band leaves its in-memory cache
-        // populated while disk is empty (memory/disk desync — observed live as the
-        // debug SDK flags never reseeding after a Reset Wallet and datastore files
-        // recreated with a random subset of keys). The API-level clear resets
-        // memory and disk atomically.
-        final Set<String> apiCleared = WalletApplicationExt.INSTANCE.clearLiveConfigs();
-
-        // File-delete only the datastore files with no live DataStore instance
-        // (configs never instantiated this process have no in-memory cache, so raw
-        // deletion is safe for them). Deleting an api-cleared file here would
-        // desynchronize its live cache again.
+    /**
+     * File-delete only the datastore files with no live DataStore instance
+     * (configs never instantiated this process have no in-memory cache, so raw
+     * deletion is safe for them). The caller must already have cleared the
+     * LIVE instances through their API and pass their file names in
+     * {@code apiCleared}: deleting a live DataStore's file out-of-band leaves
+     * its in-memory cache populated while disk is empty (observed live as the
+     * debug SDK flags never reseeding after a Reset Wallet, and datastore files
+     * recreated with a random subset of keys).
+     */
+    public void clearDatastorePrefFiles(@NonNull Set<String> apiCleared) {
         final List<String> fileDeleted = new ArrayList<>();
         final File folder = new File(getFilesDir(), Constants.Files.DATASTORE_PREFS_DIRECTORY);
 
@@ -1705,30 +1718,79 @@ public class WalletApplication extends MultiDexApplication
 
     /**
      * Removes all the data and restarts the app showing onboarding screen.
+     *
+     * Only starts the wipe: it records it, hands the UI over to onboarding and
+     * asks the blockchain service to shut down. The destruction itself runs in
+     * the service's teardown coroutine
+     * ({@link WalletApplicationExt#finishWalletWipe}) and takes minutes on a
+     * mainnet wallet, so callers get no completion callback — a callback that
+     * outlives the screen it was created on is what crashed this path before
+     * (Fragment.startActivity on a fragment detached two minutes earlier).
      */
-    public void triggerWipe(Function0 afterWipeFunction) {
+    public void triggerWipe() {
         log.info("Removing all the data and restarting the app.");
-        this.afterWipeFunction = afterWipeFunction;
+        WalletApplicationExt.INSTANCE.beginWalletWipe(this);
         startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
+    }
+
+    /** @see #wipeInProgress */
+    @NonNull
+    public StateFlow<Boolean> getWipeInProgress() {
+        return wipeInProgress;
+    }
+
+    /** @see #wipeInProgress */
+    public boolean isWipeInProgress() {
+        return Boolean.TRUE.equals(wipeInProgress.getValue());
+    }
+
+    /** @see #wipeInProgress */
+    public void setWipeInProgress(boolean inProgress) {
+        wipeInProgress.setValue(inProgress);
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public void shutdownAndDeleteWallet() {
         if (walletFile.exists()) {
-            wallet.shutdownAutosaveAndWait();
+            // A wipe resumed at launch never loaded a wallet, so there may be
+            // no autosave to shut down — the file still has to go.
+            if (wallet != null) {
+                wallet.shutdownAutosaveAndWait();
+            }
             walletFile.delete();
         }
     }
 
-    public void finalizeWipe() {
+    /**
+     * Wipe phase 3: the in-memory wallet leaves the app, BEFORE the data
+     * behind it is deleted. Nulling it last is what let the old wallet stay on
+     * screen — balances, history, DashPay — for the whole two minutes its
+     * databases were being destroyed.
+     */
+    public void detachWalletForWipe() {
+        log.info("removing wallet from memory during wipe");
+        wallet = null;
+        walletStateFlow.setValue(null);
+        authenticationGroupExtension = null;
+        if (walletBalanceObserver != null) {
+            walletBalanceObserver.close();
+            walletBalanceObserver = null;
+        }
+    }
+
+    /** Wipe phase 4a: scheduled work, the wallet file and the app config. */
+    public void destroyWalletFiles() {
         cancelScheduledStartBlockchainService();
         WorkManager.getInstance(this.getApplicationContext()).cancelAllWork();
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
-        clearDatastorePrefs();
+    }
+
+    /** Wipe phase 4c: the secrets and the last of the per-wallet preferences. */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public void destroyWalletSecrets() {
         clearWebCookies();
-        notifyWalletWipe();
         PinRetryController.getInstance().clearPinFailPrefs();
         MnemonicCodeExt.clearWordlistPath(this);
         // TODO: get rid of a separate file for this pref
@@ -1737,7 +1799,6 @@ public class WalletApplication extends MultiDexApplication
         try {
             SecurityGuard.getInstance().removeKeys();
         } catch (GeneralSecurityException | IOException e) {
-            e.printStackTrace();
             log.warn("error occurred when removing security keys", e);
         }
 
@@ -1745,39 +1806,16 @@ public class WalletApplication extends MultiDexApplication
         if (walletBackupFile.exists()) {
             walletBackupFile.delete();
         }
+    }
 
-        // clear data on wallet reset
-        WalletApplicationExt.INSTANCE.clearDatabases(this, true);
-        // wallet must be null for the OnboardingActivity flow
-        log.info("removing wallet from memory during wipe");
-        wallet = null;
-        walletStateFlow.setValue(null);
-        authenticationGroupExtension = null;
-        walletBalanceObserver.close();
-        walletBalanceObserver = null;
-        if (afterWipeFunction != null)
-            afterWipeFunction.invoke();
-        afterWipeFunction = null;
+    /** The wipe listeners, for the coroutine that awaits them. */
+    @NonNull
+    public List<Function1<? super Continuation<? super Unit>, ?>> getWipeListeners() {
+        return new ArrayList<>(wipeListeners);
     }
 
     public AnalyticsService getAnalyticsService() {
         return analyticsService;
-    }
-
-    private void notifyWalletWipe() {
-        // Since these are now suspended listeners, we need to call them in a blocking way
-        // to ensure all clearing operations complete before proceeding
-        for (Function1<? super Continuation<? super Unit>, ?> listener : wipeListeners) {
-            try {
-                // Call the suspended function synchronously using runBlocking
-                kotlinx.coroutines.BuildersKt.runBlocking(
-                    kotlinx.coroutines.Dispatchers.getIO(),
-                    (scope, continuation) -> listener.invoke(continuation)
-                );
-            } catch (Exception e) {
-                log.error("Error in wallet wipe listener", e);
-            }
-        }
     }
 
     @NonNull

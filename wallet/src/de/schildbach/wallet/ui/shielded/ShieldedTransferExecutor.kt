@@ -569,6 +569,30 @@ class ShieldedTransferExecutor @Inject constructor(
         return true
     }
 
+    /**
+     * QA-only destination override for the unshield flow: DEBUG builds read a
+     * Core address from `files/debug_unshield_to` and unshield THERE instead
+     * of to this wallet's own fresh receive address. This is how a FOREIGN
+     * AssetUnlock (another wallet's pool paying this address — the
+     * multi-client scenario a tester hit in the field) is produced on demand
+     * between two QA devices:
+     * `adb shell "run-as <appId> sh -c 'echo <addr> > files/debug_unshield_to'"`.
+     * Absent file (or any read failure, or a non-debug build) → normal
+     * self-withdraw, byte-for-byte the previous behavior.
+     */
+    private fun debugUnshieldDestinationOverride(): String? {
+        if (!de.schildbach.wallet_test.BuildConfig.DEBUG) return null
+        return try {
+            java.io.File(appContext.filesDir, "debug_unshield_to")
+                .takeIf { it.isFile }
+                ?.readText()?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.also { log.warn("QA debug override active: unshielding to {}", it) }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** One spend attempt against the service — the ~30s Halo 2 proof + broadcast. */
     private suspend fun attemptSpend(
         direction: ShieldedTransferDirection,
@@ -579,7 +603,8 @@ class ShieldedTransferExecutor @Inject constructor(
                 shieldedBalanceService.shieldFromWallet(amount)
             ShieldedTransferDirection.FromShielded ->
                 shieldedBalanceService.withdrawToCore(
-                    walletDataProvider.freshReceiveAddressString(),
+                    debugUnshieldDestinationOverride()
+                        ?: walletDataProvider.freshReceiveAddressString(),
                     amount
                 )
         }

@@ -99,13 +99,23 @@ fun coinJoinBalanceOrNull(wallet: Wallet): Coin? =
  * carries the account `index` through) and written into the JSON as
  * `e.type_tag as u8` by the JNI bridge's `walletManagerAccountBalances`
  * (rs-unified-sdk-jni `dashpay.rs`) — the same snapshot
- * [parseReceivalFundingAccounts] and [parseBip44ConfirmedDuffs] read.
+ * [pooledSpendableDuffs] and [parseBip44SpendableDuffs] read.
  *
  * NOT to be confused with the transaction BUILDER's account-type selector,
  * `CoreTransactionBuilder.AccountType.COIN_JOIN`, whose numeric value is 2 —
  * that enum (0 BIP44, 1 BIP32, 2 CoinJoin) never appears in this JSON.
  */
 internal const val ACCOUNT_TYPE_TAG_COIN_JOIN = 1
+
+/**
+ * TEMPORARY kill-switch for the mixed-funds migration prompt — see the
+ * suppression note at the top of [CoinJoinFundsMigrationService.shouldPrompt]
+ * for why it is on and the two conditions for turning it back off. Checked by
+ * both the prompt gate and the dialog's own
+ * [de.schildbach.wallet.ui.migration.MixedFundsMigrationDialogFragment.showOnce],
+ * so no code path can show the sheet while this is true.
+ */
+const val MIXED_FUNDS_PROMPT_HARD_SUPPRESSED = true
 
 /**
  * The SDK engine's CONFIRMED balance of the DIP-9 CoinJoin account 0 from
@@ -402,6 +412,17 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * before the flag lands.
      */
     suspend fun shouldPrompt(): Boolean {
+        // TEMPORARY HARD SUPPRESSION (Brian, 2026-08-11): never show the
+        // mixed-funds prompt — no logic, no exceptions. The COMBINE drain it
+        // offers produced a committed-but-never-propagated transaction in the
+        // field (mainnet tx 0a884b1d…, ~75.6 DASH stuck on a permanent
+        // "Sending" row; funds safe but wallet wedged), so the prompt must
+        // not offer it to anyone. Re-enable ONLY after (1) the current
+        // mainnet field test completes AND (2) the drain fee/broadcast fixes
+        // land and pass a fresh testnet-wallet round. Flip
+        // [MIXED_FUNDS_PROMPT_HARD_SUPPRESSED] to false to restore the
+        // normal gating below (which is left intact and still unit-tested).
+        if (MIXED_FUNDS_PROMPT_HARD_SUPPRESSED) return false
         val alreadyHandled = try {
             dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) == true
         } catch (t: Throwable) {
@@ -488,7 +509,15 @@ class CoinJoinFundsMigrationService @Inject constructor(
         val destination = try {
             // A FRESH address, not the current one: reusing an address the
             // user has already published would link the mixed coins to it.
-            walletData.freshReceiveAddressString()
+            //
+            // OFF THE MAIN THREAD, deliberately: dashj's freshReceiveAddress()
+            // issues a key and then forces a SYNCHRONOUS full-wallet save, and
+            // that save re-serializes every DashPay friend key chain. Measured
+            // on a 215-chain wallet that is a 1.3 s main-thread block, and on a
+            // slower device with a larger wallet ~7 s — long enough that a
+            // tester read it as a hang and force-quit mid-migration. The caller
+            // runs on Main, so the dispatcher has to be imposed here.
+            withContext(Dispatchers.IO) { walletData.freshReceiveAddressString() }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("mixed-funds migration: could not derive an own receive address", t)

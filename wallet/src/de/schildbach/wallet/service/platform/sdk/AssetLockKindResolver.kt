@@ -35,7 +35,23 @@ import javax.inject.Singleton
  * mislabel them "Internal"/"mixing" instead of the Platform action they
  * funded.
  */
-enum class AssetLockKind { UPGRADE, TOPUP, INVITE, SHIELD, UNSHIELD }
+enum class AssetLockKind {
+    UPGRADE, TOPUP, INVITE, SHIELD,
+
+    /** An AssetUnlock THIS wallet's shielded pool paid out — a self-move. */
+    UNSHIELD,
+
+    /**
+     * An AssetUnlock from a FOREIGN pool paying this wallet — at the Core
+     * level a plain incoming payment, and it must keep receive semantics
+     * (green inbound arrow, coins-received notification) under the
+     * "Unshielded" label. Field case: a tester funded a different seed in a
+     * desktop wallet, shielded there, and unshielded a piece back to this
+     * wallet — the unconditional kind-7 → self-move treatment relabelled a
+     * genuine external receive.
+     */
+    UNSHIELD_EXTERNAL
+}
 
 /**
  * SDK `transactions.transactionKind` value for an AssetUnlock — the
@@ -44,6 +60,17 @@ enum class AssetLockKind { UPGRADE, TOPUP, INVITE, SHIELD, UNSHIELD }
  * transactions table rather than the funding-type table.
  */
 private const val ASSET_UNLOCK_TRANSACTION_KIND = 7
+
+/**
+ * `ShieldedActivityKind::tag` values (see [org.dashfoundation.dashsdk
+ * .persistence.entities.ShieldedActivityEntity]) for the two activity kinds
+ * this wallet writes when ITS OWN pool pays out to a Core address. Activity
+ * rows are derived from the wallet's own notes/nullifiers, so a foreign
+ * unshield writes none — their presence is the ownership evidence behind
+ * [AssetLockKind.UNSHIELD] vs [AssetLockKind.UNSHIELD_EXTERNAL].
+ */
+private const val SHIELDED_ACTIVITY_TAG_UNSHIELD = 4
+private const val SHIELDED_ACTIVITY_TAG_WITHDRAWAL = 5
 
 /**
  * SDK `asset_locks.fundingType` values (see the DAO seam doc): the durable
@@ -259,9 +286,19 @@ class AssetLockKindResolver @Inject constructor(
             // UNSHIELD FIRST — the AssetUnlock (withdraw/unshield) has NO
             // asset_locks row and the SDK records it as an INCOMING transfer,
             // so neither the app-side records nor fundingTypeForTxid below can
-            // see it. It is classified only from the transactions table.
+            // see it. It is classified only from the transactions table — and
+            // the tx shape alone cannot say WHOSE pool paid: that comes from
+            // this wallet's own shielded activity (see [isOwnUnshield]).
             if (txKind == ASSET_UNLOCK_TRANSACTION_KIND) {
-                return AssetLockKind.UNSHIELD
+                return if (db != null && isOwnUnshield(db, hex)) {
+                    AssetLockKind.UNSHIELD
+                } else {
+                    // No ownership evidence (including any read failure):
+                    // fail toward the receive semantics — a self-move shown
+                    // as a receive is the safer wrong, the reverse silently
+                    // suppresses a genuine payment.
+                    AssetLockKind.UNSHIELD_EXTERNAL
+                }
             }
 
             // UPGRADE — the identity-funding asset lock. Stored form is
@@ -309,7 +346,99 @@ class AssetLockKindResolver @Inject constructor(
         }
     }
 
+    /**
+     * Whether this AssetUnlock was authored by THIS wallet's shielded pool.
+     *
+     * Evidence: our own unshield/withdraw writes a `shielded_activities` row
+     * (kind tag Unshield/Withdrawal) whose `counterparty` carries the Core
+     * destination script — activity rows are derived from OUR notes and
+     * nullifiers, so a foreign pool's unshield writes none. The probe reads
+     * this tx's credited payout addresses from the `txos` mirror (raw query;
+     * the AAR DAO has no per-txid select) and matches their 20-byte pubkey
+     * hashes against those counterparty scripts.
+     *
+     * Address reuse is the theoretical false-positive (an old own-unshield to
+     * an address a foreign unshield later also pays); own-unshields go to
+     * fresh receive addresses, so it is accepted as negligible. Any failure
+     * returns false — see the call site for the fail direction.
+     */
+    private suspend fun isOwnUnshield(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        displayHex: String
+    ): Boolean = try {
+        val activities = db.shieldedDao().getAllActivity()
+        val payoutCounterparties = activities.asSequence()
+            .filter {
+                it.kindTag == SHIELDED_ACTIVITY_TAG_UNSHIELD ||
+                    it.kindTag == SHIELDED_ACTIVITY_TAG_WITHDRAWAL
+            }
+            .map { it.counterparty }
+            .filter { it.isNotEmpty() }
+            .toList()
+        if (payoutCounterparties.isEmpty()) {
+            false
+        } else {
+            val wireTxid = hexToBytesOrNull(displayHex)?.reversedArray()
+            val payoutAddresses = ArrayList<String>(2)
+            if (wireTxid != null) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    db.openHelper.readableDatabase.query(
+                        androidx.sqlite.db.SimpleSQLiteQuery(
+                            "SELECT address FROM txos WHERE txid = ?",
+                            arrayOf(wireTxid)
+                        )
+                    ).use { cursor ->
+                        while (cursor.moveToNext()) {
+                            if (!cursor.isNull(0)) payoutAddresses.add(cursor.getString(0))
+                        }
+                    }
+                }
+            }
+            unshieldPayoutMatchesOwnActivity(payoutAddresses, payoutCounterparties)
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("own-unshield probe failed for {}; treating as external", displayHex, t)
+        false
+    }
+
     companion object {
         private val log = LoggerFactory.getLogger(AssetLockKindResolver::class.java)
     }
+}
+
+/**
+ * Pure core of the own-unshield evidence match: does any credited payout
+ * address of the AssetUnlock hash-match a counterparty script this wallet's
+ * own Unshield/Withdrawal activity recorded? Malformed addresses are
+ * skipped (never matched).
+ */
+internal fun unshieldPayoutMatchesOwnActivity(
+    payoutAddresses: List<String>,
+    ownPayoutCounterparties: List<ByteArray>
+): Boolean {
+    for (address in payoutAddresses) {
+        val hash160 = try {
+            // versioned payload = [version, 20-byte hash]; checksum verified.
+            org.bitcoinj.core.Base58.decodeChecked(address).copyOfRange(1, 21)
+        } catch (e: Exception) {
+            continue
+        }
+        if (hash160.size != 20) continue
+        if (ownPayoutCounterparties.any { it.containsSubArray(hash160) }) return true
+    }
+    return false
+}
+
+/** Byte-level contains: whether [needle] occurs contiguously in this array. */
+internal fun ByteArray.containsSubArray(needle: ByteArray): Boolean {
+    if (needle.isEmpty() || needle.size > size) return false
+    outer@ for (start in 0..size - needle.size) {
+        for (j in needle.indices) {
+            if (this[start + j] != needle[j]) continue@outer
+        }
+        return true
+    }
+    return false
 }

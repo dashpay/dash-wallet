@@ -36,11 +36,15 @@ import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.database.entity.TxGroupCacheEntry
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.CutoverState
+import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
+import de.schildbach.wallet.service.platform.sdk.dashjEngineMayStart
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinTxWrapperFactory
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.CoroutineScope
@@ -51,6 +55,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -91,6 +96,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -105,11 +111,25 @@ class TxDisplayCacheService @Inject constructor(
     private val platformRepo: PlatformRepo,
     private val identityRepo: IdentityRepository,
     private val blockchainStateProvider: BlockchainStateProvider,
-    private val displayCacheRefreshBus: DisplayCacheRefreshBus
+    private val displayCacheRefreshBus: DisplayCacheRefreshBus,
+    private val dashPayConfig: DashPayConfig,
+    // Lazy: this service is constructed on the home screen's critical path,
+    // while CutoverUiDataService pulls in the whole SDK graph. Only the
+    // completeness check (a background coroutine) ever resolves it.
+    private val cutoverUiDataService: dagger.Lazy<CutoverUiDataService>
 ) {
 
     companion object {
         private const val BATCHING_PERIOD = 500L
+
+        /**
+         * How long the sync-complete check waits for the SDK's record count
+         * before giving up ([SDK_RECORD_COUNT_WAIT_POLLS] × interval = 2 min).
+         * The bind it is waiting on took ~3 s on the S21; the window is sized
+         * for a cold start on a slow device, not for a bind that never comes.
+         */
+        private const val SDK_RECORD_COUNT_WAIT_POLLS = 24
+        private const val SDK_RECORD_COUNT_WAIT_INTERVAL_MS = 5_000L
         private val log = LoggerFactory.getLogger(TxDisplayCacheService::class.java)
     }
 
@@ -507,63 +527,143 @@ class TxDisplayCacheService @Inject constructor(
     /**
      * Called when blockchain sync transitions from replaying to synced.
      *
-     * Two independent inconsistencies can leave the display stale:
-     *   1. **Missing group-cache entries** — the group cache has fewer individual tx rows
-     *      than the wallet (`walletTxCount > cachedTxCount`).  This happens when the
-     *      previous session was killed before its replay finished and the incremental
-     *      update path (`updateWrappedListForTransactions`) never saw those txs.
-     *   2. **Display / group-cache mismatch** — the group cache was updated incrementally
-     *      (all tx entries are present) but the display cache was not fully written, so it
-     *      has fewer rows than there are distinct groups.  This can occur when all replayed
-     *      txs merged into existing CoinJoin date-groups (REPLACE instead of INSERT in
-     *      `tx_display_cache`) while the underlying tx membership changed.
-     *
-     * Either condition triggers a full rebuild.
+     * Measures the display cache against whichever engine actually OWNS the
+     * transactions right now, and asks that engine — never the other one — to
+     * close a gap it finds. See [decideCacheRebuild] for the two rule sets and
+     * why the post-cutover one could not be expressed in dashj terms.
      */
     private fun rebuildIfCacheIncomplete() {
+        // Single-flight: post-cutover a pass can park for up to two minutes
+        // waiting for the SDK count, and a second trigger arriving in that
+        // window would measure the same thing and duplicate the remedy.
+        if (!completenessCheckInFlight.compareAndSet(false, true)) return
         serviceScope.launch {
-            // If the wallet isn't loaded yet (blockchain state can fire before the wallet
-            // is restored from disk), suspend until it becomes available.
-            val wallet = walletData.wallet
-                ?: walletData.observeWallet().filterNotNull().first()
-            val walletTxCount = wallet.getTransactionCount(true)
-            val cachedTxCount = txGroupCacheDao.getTotalTxCount()
-            val groupCount = txGroupCacheDao.getGroupCount()
-            val displayRowCount = txDisplayCacheDao.getCount()
+            try {
+                // If the wallet isn't loaded yet (blockchain state can fire before the wallet
+                // is restored from disk), suspend until it becomes available.
+                val wallet = walletData.wallet
+                    ?: walletData.observeWallet().filterNotNull().first()
+                val cutoverCommitted = cutoverCommittedOrUnknown()
+                // Post-cutover the SDK owns the transactions, so its record count IS
+                // the measurement — and it only resolves once the cutover tx pipeline
+                // is running, which is after the SDK bind and therefore after this
+                // check's own trigger (the first blockchain-state observation, ~3 s
+                // earlier on the S21). That trigger is an edge that never comes back,
+                // so answering "unavailable" once meant the check never ran at all
+                // for the whole session. Wait for the pipeline rather than reporting
+                // a permanent unknown.
+                val sdkRecordCount = if (cutoverCommitted) {
+                    awaitSdkRecordCount(
+                        polls = SDK_RECORD_COUNT_WAIT_POLLS,
+                        intervalMs = SDK_RECORD_COUNT_WAIT_INTERVAL_MS,
+                        onFirstMiss = {
+                            log.info(
+                                "sync-complete check: SDK record count not available yet (the " +
+                                    "cutover tx pipeline binds after this trigger) — waiting up to {}s",
+                                SDK_RECORD_COUNT_WAIT_POLLS * SDK_RECORD_COUNT_WAIT_INTERVAL_MS / 1000
+                            )
+                        },
+                        read = { sdkRecordCountOrNull() }
+                    )
+                } else {
+                    null
+                }
+                // Read AFTER the wait so every number in the decision describes
+                // the same moment as the SDK count it is compared against.
+                val walletTxCount = wallet.getTransactionCount(true)
+                val cachedTxCount = txGroupCacheDao.getTotalTxCount()
+                val groupCount = txGroupCacheDao.getGroupCount()
+                val displayRowCount = txDisplayCacheDao.getCount()
 
-            // Fresh install / post-wipe: nothing in the wallet and nothing cached.
-            if (walletTxCount == 0 && cachedTxCount == 0 && displayRowCount == 0) {
-                return@launch
-            }
-            
-            val txsMissing = walletTxCount > cachedTxCount
-            val displayIncomplete = displayRowCount < groupCount
-            val needsRebuild = txsMissing || displayIncomplete
-
-            log.info(
-                "Sync complete: wallet={} txs | group cache={} txs/{} groups | display={} rows — {}",
-                walletTxCount, cachedTxCount, groupCount, displayRowCount,
-                if (needsRebuild)
-                    "rebuilding (txsMissing=$txsMissing, displayIncomplete=$displayIncomplete)"
-                else
-                    "cache is complete"
-            )
-            if (needsRebuild) {
-                forceRebuildTransactionCache()
+                val decision = decideCacheRebuild(
+                    cutoverCommitted = cutoverCommitted,
+                    sdkRecordCount = sdkRecordCount,
+                    walletTxCount = walletTxCount,
+                    cachedTxCount = cachedTxCount,
+                    groupCount = groupCount,
+                    displayRowCount = displayRowCount
+                )
+                log.info(
+                    "Sync complete (cutoverCommitted={}): SDK={} records | dashj wallet={} txs | " +
+                        "group cache={} txs/{} groups | display={} rows — {}",
+                    cutoverCommitted, sdkRecordCount ?: "unavailable", walletTxCount,
+                    cachedTxCount, groupCount, displayRowCount, decision.reason
+                )
+                when (decision.action) {
+                    CacheRebuildAction.NONE -> Unit
+                    CacheRebuildAction.DASHJ_REBUILD -> forceRebuildTransactionCache()
+                    // The SDK owns the rows post-cutover, so the remedy is its own
+                    // idempotent full reconcile walk — the dashj rebuild would erase
+                    // them ([forceRebuildTransactionCache] refuses for that reason).
+                    // A walk requested while the pipeline is still priming its first
+                    // rows is not wrong, only early: it is the same idempotent pass
+                    // the 60s ticker runs, so it costs one walk.
+                    CacheRebuildAction.SDK_RECONCILE ->
+                        runCatching { cutoverUiDataService.get().requestFullReconcile() }
+                            .onFailure { log.warn("could not request an SDK reconcile pass", it) }
+                }
+            } finally {
+                completenessCheckInFlight.set(false)
             }
         }
     }
 
+    /** Guards [rebuildIfCacheIncomplete]'s bounded wait against a second trigger. */
+    private val completenessCheckInFlight = AtomicBoolean(false)
+
     /**
-     * Wipes both caches and triggers a full rebuild from the current wallet state.
+     * The persisted cutover verdict, through the SAME predicate the send path
+     * and [CutoverUiDataService] evaluate. Reads the store rather than
+     * [CutoverUiDataService.isCutoverActive] so the answer is correct before
+     * the SDK pipelines have started.
+     *
+     * A read failure reports COMMITTED — the direction that refuses a
+     * destructive dashj rebuild it cannot prove is safe. The refusal only
+     * bites when the dashj wallet is also empty, where a rebuild has nothing
+     * to rebuild anyway.
+     */
+    private suspend fun cutoverCommittedOrUnknown(): Boolean = try {
+        !dashjEngineMayStart(CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)))
+    } catch (e: Exception) {
+        log.warn("could not read the cutover state; treating it as committed", e)
+        true
+    }
+
+    /** The SDK's own wallet-relevant record count, or null when unavailable. */
+    private suspend fun sdkRecordCountOrNull(): Int? = try {
+        cutoverUiDataService.get().sdkWalletRecordCount()
+    } catch (e: Exception) {
+        log.warn("SDK record-count read failed; skipping the completeness check", e)
+        null
+    }
+
+    /**
+     * Wipes both caches and rebuilds them from the dashj wallet.
+     *
+     * REFUSES to run post-cutover on a held dashj wallet — see
+     * [dashjRebuildWouldEraseHistory]. Reachable from the home screen (a long
+     * press on the History title offers "refresh"), so the refusal has to be
+     * structural, not a convention.
      */
     fun forceRebuildTransactionCache() {
         serviceScope.launch {
+            val wallet = walletData.wallet ?: return@launch
+            val dashjTxCount = wallet.getTransactionCount(true)
+            if (dashjRebuildWouldEraseHistory(cutoverCommittedOrUnknown(), dashjTxCount)) {
+                log.error(
+                    "REFUSING to rebuild the transaction cache: the cutover is committed and the " +
+                        "dashj wallet holds 0 transactions, so rebuilding from it would wipe all " +
+                        "{} display rows / {} group rows and leave the history permanently empty " +
+                        "(the SDK owns the transactions now, and nothing re-populates a wiped " +
+                        "dashj-sourced cache)",
+                    txDisplayCacheDao.getCount(), txGroupCacheDao.getTotalTxCount()
+                )
+                return@launch
+            }
             txDisplayCacheDao.deleteAll()
             txGroupCacheDao.deleteAll()
             wrappedTransactionList = emptyList()
             _txDataSource.value = TxDataSource.Empty
-            val wallet = walletData.wallet ?: return@launch
             val filter = TxDirectionFilter(_currentFilter.value, wallet)
             rebuildWrappedList(filter)
         }
@@ -1410,4 +1510,126 @@ internal fun mergeDisplayEntryPreservingSdkStamped(
         )
     }
     return result
+}
+
+/**
+ * Whether rebuilding the display/group caches from the dashj wallet would
+ * DESTROY the user's visible history rather than refresh it.
+ *
+ * Post-cutover the dashj wallet is held with zero transactions while the SDK
+ * feeds the caches, so a rebuild from it wipes both tables and re-populates
+ * them from nothing — and no dashj-sourced path ever fills them again.
+ */
+internal fun dashjRebuildWouldEraseHistory(cutoverCommitted: Boolean, dashjTxCount: Int): Boolean =
+    cutoverCommitted && dashjTxCount == 0
+
+/**
+ * Read [read] until it yields a count, up to [polls] retries [intervalMs]
+ * apart; null means it stayed unavailable for the whole window.
+ *
+ * The sync-complete completeness check is edge-triggered (replaying→synced, or
+ * the first already-synced observation) and post-cutover its only measurement
+ * is the SDK's record count — which does not resolve until the cutover tx
+ * pipeline has bound, a few seconds AFTER that edge. Reading once therefore
+ * reported a permanent "unavailable" and the check silently never ran; the
+ * edge does not come back to give it a second chance. [onFirstMiss] is invoked
+ * once, only if the first read misses, so the wait is visible in the log
+ * without a line on the common path where the count is already there.
+ */
+internal suspend fun awaitSdkRecordCount(
+    polls: Int,
+    intervalMs: Long,
+    onFirstMiss: () -> Unit = {},
+    read: suspend () -> Int?
+): Int? {
+    read()?.let { return it }
+    onFirstMiss()
+    repeat(polls) {
+        delay(intervalMs)
+        read()?.let { return it }
+    }
+    return null
+}
+
+/** What [decideCacheRebuild] asks the caller to do about an incomplete cache. */
+internal enum class CacheRebuildAction { NONE, DASHJ_REBUILD, SDK_RECONCILE }
+
+/** A [CacheRebuildAction] with the counts that justified it, for the log line. */
+internal data class CacheRebuildDecision(
+    val action: CacheRebuildAction,
+    val reason: String
+)
+
+/**
+ * Decide whether the display cache is missing rows, measured against the
+ * engine that OWNS the transactions.
+ *
+ * ## Post-cutover ([cutoverCommitted])
+ *
+ * Every row comes from the SDK ([CutoverUiDataService]), so the only source
+ * with anything to compare against is the SDK's own wallet-relevant record
+ * count. The dashj numbers below cannot express this: dashj is held at zero
+ * transactions, so `walletTxCount > cachedTxCount` is `0 > n` and
+ * `displayRowCount < groupCount` compares SDK-written display rows against a
+ * group cache the SDK never writes — both permanently false, which is why the
+ * check reported "cache is complete" over a frozen list.
+ *
+ * Records collapse into rows at most (per-day historical-mixing groups), so
+ * FEWER rows than records is the only detectable gap and the comparison never
+ * fires the other way.
+ *
+ * ## Pre-cutover
+ *
+ * Unchanged, and it is the dashj wallet that owns the rows:
+ *   1. **Missing group-cache entries** — the group cache has fewer individual tx
+ *      rows than the wallet (`walletTxCount > cachedTxCount`). Happens when the
+ *      previous session was killed before its replay finished and the
+ *      incremental update path never saw those txs.
+ *   2. **Display / group-cache mismatch** — all tx entries are present but the
+ *      display cache was not fully written, so it has fewer rows than there are
+ *      distinct groups. Occurs when replayed txs merged into existing CoinJoin
+ *      date-groups while the underlying tx membership changed.
+ */
+internal fun decideCacheRebuild(
+    cutoverCommitted: Boolean,
+    sdkRecordCount: Int?,
+    walletTxCount: Int,
+    cachedTxCount: Int,
+    groupCount: Int,
+    displayRowCount: Int
+): CacheRebuildDecision {
+    if (cutoverCommitted) {
+        if (sdkRecordCount == null) {
+            return CacheRebuildDecision(
+                CacheRebuildAction.NONE,
+                "SDK record count unavailable — cannot judge completeness this pass"
+            )
+        }
+        if (sdkRecordCount > displayRowCount) {
+            return CacheRebuildDecision(
+                CacheRebuildAction.SDK_RECONCILE,
+                "display cache is missing rows (SDK holds $sdkRecordCount records, display has " +
+                    "$displayRowCount rows) — requesting an SDK reconcile pass"
+            )
+        }
+        return CacheRebuildDecision(
+            CacheRebuildAction.NONE,
+            "cache is complete (SDK holds $sdkRecordCount records, display has $displayRowCount rows)"
+        )
+    }
+
+    // Fresh install / post-wipe: nothing in the wallet and nothing cached.
+    if (walletTxCount == 0 && cachedTxCount == 0 && displayRowCount == 0) {
+        return CacheRebuildDecision(CacheRebuildAction.NONE, "nothing in the wallet and nothing cached")
+    }
+    val txsMissing = walletTxCount > cachedTxCount
+    val displayIncomplete = displayRowCount < groupCount
+    return if (txsMissing || displayIncomplete) {
+        CacheRebuildDecision(
+            CacheRebuildAction.DASHJ_REBUILD,
+            "rebuilding (txsMissing=$txsMissing, displayIncomplete=$displayIncomplete)"
+        )
+    } else {
+        CacheRebuildDecision(CacheRebuildAction.NONE, "cache is complete")
+    }
 }

@@ -215,6 +215,24 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun rowPlan_externalUnshieldKeepsReceiveSemantics() {
+        // A FOREIGN pool's AssetUnlock paying this wallet (field case: an
+        // unshield from a different seed) is a genuine receive: same
+        // "Unshielded" label as the self-move, but the green inbound arrow,
+        // Received treatment and the coins-received notification.
+        val plan = planL1TxRow(
+            record(net = 300_000, context = 1, direction = 0),
+            AssetLockKind.UNSHIELD_EXTERNAL
+        )
+        assertEquals(R.string.transaction_row_unshielded, plan.titleRes)
+        assertEquals(TxDisplayCacheEntry.ICON_RECEIVED, plan.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_RECEIVED, plan.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, plan.filterFlags)
+        assertEquals(300_000L, plan.valueDuffs)
+        assertTrue(plan.isIncoming)
+    }
+
+    @Test
     fun rowPlan_feeKindsKeepSentArrow() {
         val upgrade = planL1TxRow(
             record(net = -500_000, context = 1, direction = 2),
@@ -628,8 +646,12 @@ class CutoverUiDataServiceTest {
             title = resolve(R.string.transaction_row_status_sent)
         ) // helper defaults: −1_000_000, ICON_SENT, FLAG_SENT
         val nonDefinitive = listOf(
-            // Internal / CoinJoin self-moves are not plain sends.
-            record(firstByte = 9, net = -5_000_000, context = 3, direction = 2),
+            // CoinJoin self-moves are not plain sends. (An INTERNAL-direction
+            // record is deliberately NOT in this list anymore: it now
+            // corrects a plain row to the internal/transfer shape — the
+            // self-send classification fix; see
+            // syncPlan_internalRecordNeverReshapesAContactAttributedRow and
+            // snapshotInternalRecord_correctsAPlainCachedRow for its guards.)
             record(firstByte = 9, net = -5_000_000, context = 3, direction = 3),
             // A zero-net record (e.g. a 2-participant testnet mixing round claims nothing).
             record(firstByte = 9, net = 0, context = 3, direction = 1)
@@ -682,6 +704,24 @@ class CutoverUiDataServiceTest {
         assertTrue(plan.inserts.isEmpty())
         assertTrue(plan.updates.isEmpty())
         assertTrue(plan.notifyIncoming.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_internalRecordNeverReshapesAContactAttributedRow() {
+        // A contact-attributed row means the tx was a PAYMENT (DIP-15
+        // friendship match), not a self-move — an INTERNAL-direction record
+        // must never strip the attribution or the send/receive shape.
+        val r = record(firstByte = 9, net = -200, context = 3, direction = 2)
+        val existing = cacheEntry(
+            rowId = displayHex(9),
+            title = resolve(R.string.transaction_row_status_received),
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+        ).copy(contactUserId = "user-1", contactUsername = "alice")
+
+        val plan = planL1DisplaySync(
+            listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now
+        )
+        assertTrue(plan.updates.isEmpty())
     }
 
     // ── The gate + data-source switch ─────────────────────────────────
@@ -767,7 +807,22 @@ class CutoverUiDataServiceTest {
         walletUIConfig: WalletUIConfig = mockk(relaxed = true),
         notify: (Long) -> Unit = {},
         txEvents: Flow<L1TxEvent> = kotlinx.coroutines.flow.emptyFlow(),
-        l1Synced: Flow<Boolean> = flowOf(true)
+        l1Synced: Flow<Boolean> = flowOf(true),
+        deferredContactBuilds: Int? = null,
+        /** When non-null, the deferred-build probe calls THIS per read (overrides [deferredContactBuilds]). */
+        deferredContactBuildFeed: (suspend () -> Int?)? = null,
+        /** When non-null, backs BOTH the IS-lock persist and the persisted-lock read (restart-safe store fake). */
+        persistedIsLocks: MutableSet<String>? = null,
+        /**
+         * Owned-TXO involvement per txid for the negative-event validation.
+         * Default `true`: the pre-existing event tests all model THIS wallet's
+         * own money moving (sends/self-spends), for which the mirror answers
+         * "owned" — and `true` short-circuits the mirror-retry delay a `null`
+         * would incur. Noise-drop tests override per scenario.
+         */
+        ownedInvolvement: suspend (String) -> Boolean? = { true },
+        /** Foreign-excluded store nets for the negative-event validation and contact rows. */
+        walletNets: suspend (Set<String>) -> Map<String, Long> = { emptyMap() }
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -779,6 +834,15 @@ class CutoverUiDataServiceTest {
         notifyCoinsReceived = notify,
         txEvents = txEvents,
         l1Synced = l1Synced,
+        deferredContactBuildCount = {
+            if (deferredContactBuildFeed != null) deferredContactBuildFeed() else deferredContactBuilds
+        },
+        persistInstantLock = { txid, _ -> persistedIsLocks?.add(txid) },
+        loadPersistedInstantLocks = { txids ->
+            persistedIsLocks?.let { store -> txids.filterTo(mutableSetOf()) { it in store } } ?: emptySet()
+        },
+        resolveOwnedInvolvement = ownedInvolvement,
+        resolveWalletNets = walletNets,
         nowMs = { now }
     )
 
@@ -862,6 +926,125 @@ class CutoverUiDataServiceTest {
         assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
         // And the partial is NEVER written back over the seed (the
         // compounding bug: it would poison the next launch's last-known).
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_deferredContactBuilds_publishTheBalanceButDoNotPersistIt() = runTest {
+        // A caught-up scan is not evidence that the figure is WHOLE: while
+        // DashPay contact account builds are queued, those contacts' receiving
+        // addresses are not in the watched script set, so payments they sent
+        // us are unmatched and the total is short by exactly those. Persisting
+        // it would seed every later launch with a figure known to be wrong.
+        // (A count PINNED long enough reads as settled/stuck and unblocks the
+        // persist — see the permanentlyStuck test — but a freshly observed
+        // non-zero count has not earned that yet.)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuilds = 6
+        )
+        service.start()
+        runCurrent()
+
+        // The live figure is still published — the header must not freeze.
+        assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_drainedContactBuilds_persistTheBalanceAgain() = runTest {
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuilds = 0
+        )
+        service.start()
+        runCurrent()
+
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L) }
+    }
+
+    @Test
+    fun postCutover_unknownDeferredCount_keepsPersisting() = runTest {
+        // An unavailable probe is not evidence of a deferral; treating it as
+        // one would stop the last-known seed being maintained forever.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuilds = null
+        )
+        service.start()
+        runCurrent()
+
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L) }
+    }
+
+    @Test
+    fun postCutover_permanentlyStuckContactBuilds_settleAfterStableReads_thenPersist() = runTest {
+        // The Joel shape: the SDK re-queues entries it can never complete (a
+        // sender key-purpose mismatch it never marks broken), so the count is
+        // pinned at 3 FOREVER. A bare `== 0` gate would block the persist for
+        // the wallet's whole life — the launch seed would freeze on a stale
+        // figure, the exact staleness the gate exists to prevent. A count that
+        // has stopped moving must therefore read as settled.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuildFeed = { 3 }
+        )
+        service.start()
+        runCurrent()
+
+        // The live figure publishes immediately; the pinned count has not yet
+        // proven itself settled, so nothing is persisted.
+        assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+
+        // Still within the settling window after one more refresh.
+        testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+        runCurrent()
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+
+        // Enough consecutive unchanged reads: the queue is settled (stuck, not
+        // draining) and the balance persists again.
+        repeat(DEFERRED_BUILDS_SETTLED_READS + 1) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L) }
+    }
+
+    @Test
+    fun postCutover_activelyDrainingContactBuilds_neverPersistWhileTheCountMoves() = runTest {
+        // A SHRINKING count is an active drain: every completed build can add
+        // previously-unmatched receives to the total, so the figure is still
+        // provably incomplete — stability must not be inferred from any single
+        // read, only from the count having stopped moving.
+        val remaining = java.util.concurrent.atomic.AtomicInteger(60)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig,
+            deferredContactBuildFeed = { remaining.getAndDecrement() }
+        )
+        service.start()
+        runCurrent()
+        repeat(DEFERRED_BUILDS_SETTLED_READS + 3) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
     }
 
@@ -1150,18 +1333,23 @@ class CutoverUiDataServiceTest {
         runCurrent()
 
         // 1) Mempool sighting: the row renders IMMEDIATELY as a pending
-        //    receive and the coins-received notification fires — no block.
+        //    receive — no block. The coins-received PUSH waits out the
+        //    self-spend sibling grace (the row never does), then fires.
         events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
         runCurrent()
         val pending = store.getValue(txid)
         assertEquals(resolve(R.string.transaction_row_status_received), pending.title)
         assertEquals(resolve(R.string.transaction_row_status_processing), pending.statusText)
         assertEquals(1_000_000L, pending.valueSatoshis)
-        assertEquals(listOf(1_000_000L), notified)
+        assertTrue(notified.isEmpty()) // deferred, not dropped…
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
+        runCurrent()
+        assertEquals(listOf(1_000_000L), notified) // …fires after the grace
 
-        // 2) A duplicate detection (multi-account tx / mempool re-emit)
+        // 2) A duplicate detection (mempool re-emit)
         //    neither duplicates the row nor re-notifies.
         events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
         runCurrent()
         assertEquals(1, store.size)
         assertEquals(1, notified.size)
@@ -1235,6 +1423,111 @@ class CutoverUiDataServiceTest {
         coVerify(exactly = 0) { displayDao.insertAll(any()) }
     }
 
+    // ── persisted IS locks (restart-safe lock evidence, Fix: display + preflight readers) ──
+
+    @Test
+    fun engineEvent_isLockIsPersisted_evenWhenNoRowExistsYet() = runTest {
+        // The lock event may beat the Detected insert (observed live: locked
+        // in 3s, row stuck "Processing" ~2.5min). The lock FACT must be
+        // persisted unconditionally — before any display early-return — so
+        // the preflight and later display passes can read it.
+        val txid = displayHex(13)
+        val persisted = mutableSetOf<String>()
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+
+        val service = buildService(
+            source = FakeSource(records = MutableStateFlow(emptyList())),
+            dashPayConfig = configWithState("CUT_OVER"),
+            scope = backgroundScope,
+            displayDao = displayDao, groupDao = groupDao, txEvents = events,
+            persistedIsLocks = persisted
+        )
+        service.start()
+        runCurrent()
+
+        events.emit(L1TxEvent.InstantLocked(txid))
+        runCurrent()
+        assertEquals(setOf(txid), persisted)
+        assertTrue(store.isEmpty()) // no row to flip — yet
+    }
+
+    @Test
+    fun engineEvent_isLockBeforeDetected_rowIsBornWithoutProcessing() = runTest {
+        // Lock event FIRST (row absent, display flip a no-op), Detected
+        // second: the insert pass must consult the persisted lock and be
+        // born locked — no "Processing" that nothing would ever clear.
+        val txid = displayHex(14)
+        val persisted = mutableSetOf<String>()
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+
+        val service = buildService(
+            source = FakeSource(records = MutableStateFlow(emptyList())),
+            dashPayConfig = configWithState("CUT_OVER"),
+            scope = backgroundScope,
+            displayDao = displayDao, groupDao = groupDao, txEvents = events,
+            persistedIsLocks = persisted
+        )
+        service.start()
+        runCurrent()
+
+        events.emit(L1TxEvent.InstantLocked(txid))
+        runCurrent()
+        events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
+        runCurrent()
+
+        val row = store.getValue(txid)
+        assertEquals(resolve(R.string.transaction_row_status_received), row.title)
+        assertEquals("", row.statusText)
+    }
+
+    @Test
+    fun persistedIsLock_survivesRestart_snapshotPassClearsProcessing() = runTest {
+        // Process restart after the lock but before the block: the row was
+        // cached "Processing", the engine re-fires no events, and the SDK
+        // mirror still reads context=0 (it never records the lock). The
+        // snapshot pass must apply the PERSISTED lock — title/status settle
+        // without waiting for the block.
+        val txid = displayHex(15)
+        val persisted = mutableSetOf(txid) // survived from the previous process
+        val store = mutableMapOf(
+            txid to cacheEntry(
+                rowId = txid,
+                title = resolve(R.string.transaction_row_status_received),
+                statusText = resolve(R.string.transaction_row_status_processing),
+                filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+            ).copy(
+                valueSatoshis = 1_000_000L,
+                iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+                iconBgType = TxDisplayCacheEntry.BG_RECEIVED
+            )
+        )
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao,
+            persistedIsLocks = persisted
+        )
+        service.start()
+        runCurrent()
+
+        // The mirror's own record still claims PENDING (context=0).
+        source.records.value = listOf(record(firstByte = 15, net = 1_000_000L, context = 0, direction = 0))
+        runCurrent()
+        assertEquals("", store.getValue(txid).statusText)
+    }
+
     @Test
     fun engineEvent_droppedIsLockBlockSnapshotClearsProcessing() = runTest {
         // Detected(mempool) → islock DROPPED → Room snapshot lands the tx
@@ -1267,11 +1560,13 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
-    fun engineEvent_selfSpendOutgoingFirstSuppressesReceiveNotification() = runTest {
+    fun engineEvent_selfSpendOutgoingFirst_rendersInternalAndNeverNotifies() = runTest {
         // One tx touching two accounts of the same wallet: the engine emits
         // one Detected per account (same txid). Outgoing sibling first →
-        // the row is born "Sending" and the Incoming sibling must neither
-        // retitle it nor fire a coins-received notification.
+        // the row is born "Sending"; the Incoming sibling proves the tx is
+        // wallet-INTERNAL, so the row corrects to the internal/transfer
+        // shape with the COMBINED net (out + in = −fee) and no
+        // coins-received notification ever fires.
         val txid = displayHex(11)
         val store = mutableMapOf<String, TxDisplayCacheEntry>()
         val displayDao = statefulDisplayDao(store)
@@ -1289,13 +1584,22 @@ class CutoverUiDataServiceTest {
         service.start()
         runCurrent()
 
-        events.emit(L1TxEvent.Detected(txid, -1_000_146L, 146L, contextCode = 0, directionCode = 1))
+        events.emit(L1TxEvent.Detected(txid, -900_146L, 146L, contextCode = 0, directionCode = 1))
         runCurrent()
+        assertEquals(resolve(R.string.transaction_row_status_sending), store.getValue(txid).title)
+        val bornTime = store.getValue(txid).time
+
         events.emit(L1TxEvent.Detected(txid, 900_000L, null, contextCode = 0, directionCode = 0))
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
         runCurrent()
 
         assertEquals(1, store.size)
-        assertEquals(resolve(R.string.transaction_row_status_sending), store.getValue(txid).title)
+        val row = store.getValue(txid)
+        assertEquals(resolve(R.string.transaction_row_status_sent_internally), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
+        assertEquals(0, row.filterFlags)
+        assertEquals(-146L, row.valueSatoshis) // combined net = the fee
+        assertEquals(bornTime, row.time) // the tx's own timestamp is kept
         assertTrue(notified.isEmpty())
 
         // Even a later snapshot re-sighting (row briefly dropped by a cache
@@ -1307,11 +1611,13 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
-    fun engineEvent_selfSpendIncomingFirstNotifiesOnce_documentedLimitation() = runTest {
-        // Incoming sibling first: with the single sequential collector
-        // there is no sibling signal to wait on, so the notification fires
-        // (documented limitation — unreachable today with a single BIP44
-        // account). The Outgoing sibling must still not double anything.
+    fun engineEvent_selfSpendIncomingFirst_correctsRowAndCancelsNotification() = runTest {
+        // Incoming sibling first — the previously-documented limitation
+        // ("Received +X for money that never left the wallet" + a push for
+        // the user's own funds, observed live). The row is born "Received"
+        // (instant render), but the PUSH waits out the sibling grace; the
+        // Outgoing sibling then classifies the tx INTERNAL, corrects the
+        // row and cancels the pending notification.
         val txid = displayHex(12)
         val store = mutableMapOf<String, TxDisplayCacheEntry>()
         val displayDao = statefulDisplayDao(store)
@@ -1331,13 +1637,184 @@ class CutoverUiDataServiceTest {
 
         events.emit(L1TxEvent.Detected(txid, 900_000L, null, contextCode = 0, directionCode = 0))
         runCurrent()
-        assertEquals(listOf(900_000L), notified)
+        assertEquals(resolve(R.string.transaction_row_status_received), store.getValue(txid).title)
+        assertTrue(notified.isEmpty()) // push deferred through the grace
+        val bornTime = store.getValue(txid).time
+
+        events.emit(L1TxEvent.Detected(txid, -900_146L, 146L, contextCode = 0, directionCode = 1))
+        runCurrent()
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
+        runCurrent()
+
+        assertEquals(1, store.size)
+        val row = store.getValue(txid)
+        assertEquals(resolve(R.string.transaction_row_status_sent_internally), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, row.iconBgType)
+        assertEquals(0, row.filterFlags)
+        assertEquals(-146L, row.valueSatoshis) // combined net, not the +0.009 partial
+        assertEquals("", row.statusText)
+        assertEquals(bornTime, row.time) // the tx's own timestamp is kept
+        assertTrue(notified.isEmpty()) // the pending push was cancelled
+    }
+
+    @Test
+    fun engineEvent_watchOnlySpendNoise_droppedAndReceiveKeepsShapeAndNotification() = runTest {
+        // The receive-side twin of the self-spend pair (verified live, S21
+        // testnet 11.10.74): a CONTACT's pooled send both pays this wallet
+        // AND spends coins the wallet merely watches on the DIP-15 external
+        // friendship account. The engine emits an OUTGOING sibling for the
+        // watch-only account — with no account identity on the event. Owned
+        // involvement is true (we were paid) but the foreign-excluded store
+        // net is POSITIVE, proving the negative sibling is watch-only noise:
+        // it must be dropped, the row must stay "Received" with the TRUE
+        // amount, and the coins-received notification must still fire (the
+        // old code classified self-spend INTERNAL, suppressed the push, and
+        // rendered "Sent −0.2" for money that was received).
+        val txid = displayHex(13)
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val notified = mutableListOf<Long>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao,
+            notify = { notified += it }, txEvents = events,
+            ownedInvolvement = { true },
+            walletNets = { txids -> txids.associateWith { 49_999_660L } }
+        )
+        service.start()
+        runCurrent()
+
+        // Incoming sibling first (the on-device order): row born "Received".
+        events.emit(L1TxEvent.Detected(txid, 49_999_660L, null, contextCode = 0, directionCode = 0))
+        runCurrent()
         assertEquals(resolve(R.string.transaction_row_status_received), store.getValue(txid).title)
 
-        events.emit(L1TxEvent.Detected(txid, -1_000_146L, 146L, contextCode = 0, directionCode = 1))
+        // Watch-only OUTGOING sibling: contradicted by the positive store
+        // net → dropped. No INTERNAL reshape, no notification suppression.
+        events.emit(L1TxEvent.Detected(txid, -20_000_000L, null, contextCode = 0, directionCode = 1))
         runCurrent()
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
+        runCurrent()
+
         assertEquals(1, store.size)
-        assertEquals(1, notified.size)
+        val row = store.getValue(txid)
+        assertEquals(resolve(R.string.transaction_row_status_received), row.title)
+        assertEquals(49_999_660L, row.valueSatoshis)
+        assertEquals(listOf(49_999_660L), notified) // the genuine receive still announces
+    }
+
+    @Test
+    fun engineEvent_pureWatchOnlySpend_authorsNoRowAtAll() = runTest {
+        // A contact spends coins this wallet only watches, paying someone
+        // ELSE entirely: the engine still emits an OUTGOING event to us, but
+        // the tx never touched our money (owned involvement definitively
+        // false). Unchecked, this authors a phantom "Sent" row; it must be
+        // dropped with no row and no notification.
+        val txid = displayHex(14)
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val notified = mutableListOf<Long>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao,
+            notify = { notified += it }, txEvents = events,
+            ownedInvolvement = { false }
+        )
+        service.start()
+        runCurrent()
+
+        events.emit(L1TxEvent.Detected(txid, -20_000_000L, null, contextCode = 0, directionCode = 1))
+        runCurrent()
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS + 1)
+        runCurrent()
+
+        assertTrue(store.isEmpty())
+        assertTrue(notified.isEmpty())
+    }
+
+    @Test
+    fun engineEvent_negativeWithUnansweredMirror_retriesOnceThenFailsOpen() = runTest {
+        // Mirror can't answer (null) on the first probe: the event waits one
+        // bounded retry; a second null fails OPEN to the pre-existing
+        // behavior (genuine sends must never be swallowed by a slow mirror).
+        val txid = displayHex(15)
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val probes = mutableListOf<String>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao, txEvents = events,
+            ownedInvolvement = { probes += it; null }
+        )
+        service.start()
+        runCurrent()
+
+        events.emit(L1TxEvent.Detected(txid, -900_146L, 146L, contextCode = 0, directionCode = 1))
+        runCurrent()
+        assertTrue(store.isEmpty()) // still inside the mirror-retry grace
+        testScheduler.advanceTimeBy(CutoverUiDataService.NEGATIVE_EVENT_MIRROR_RETRY_MS + 1)
+        runCurrent()
+
+        assertEquals(2, probes.size)
+        assertEquals(resolve(R.string.transaction_row_status_sending), store.getValue(txid).title)
+    }
+
+    @Test
+    fun snapshotInternalRecord_correctsAPlainCachedRow() = runTest {
+        // The generic (non-event) closure of the same blind spot: when the
+        // SDK's own DEFINITIVE record says INTERNAL but the cached row was
+        // authored as a plain receive (events missed — e.g. restart between
+        // siblings, or a dashj-era misread), the snapshot pass corrects it.
+        val txid = displayHex(21)
+        val store = mutableMapOf(
+            txid to cacheEntry(
+                rowId = txid,
+                title = resolve(R.string.transaction_row_status_received),
+                filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+            ).copy(
+                valueSatoshis = 500_000L,
+                iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+                iconBgType = TxDisplayCacheEntry.BG_RECEIVED
+            )
+        )
+        val bornTime = store.getValue(txid).time
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+
+        source.records.value = listOf(record(firstByte = 21, net = -200L, context = 3, direction = 2))
+        runCurrent()
+
+        val row = store.getValue(txid)
+        assertEquals(resolve(R.string.transaction_row_status_sent_internally), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
+        assertEquals(0, row.filterFlags)
+        assertEquals(-200L, row.valueSatoshis)
+        assertEquals(bornTime, row.time)
     }
 
     @Test

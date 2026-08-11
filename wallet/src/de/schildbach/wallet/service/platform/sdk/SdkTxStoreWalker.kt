@@ -24,6 +24,136 @@ import kotlinx.coroutines.withContext
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 
 /**
+ * SQL fragment: the `txos` row aliased [alias] is FOREIGN — its address belongs
+ * to a watch-only DIP-15 external friendship account
+ * (`accounts.accountType = 13`, `dashpayExternalAccount`): the derivation chain
+ * WE pay a contact on, whose private keys only the CONTACT holds. The SDK
+ * mirrors those outputs into `txos` so an outgoing contact payment is
+ * displayable/attributable, but they are NEVER this wallet's money — and their
+ * `isSpent` can only ever be flipped by the CONTACT's own spend, so from this
+ * wallet's point of view the row stays "unspent" forever.
+ *
+ * Verified live (S22 testnet `s22test63b`, 11.10.73): the 0.69998912 drain
+ * output to the contact sat in `txos` as `isSpent = 0` on a type-13 account,
+ * so every ownership-naive read over the mirror (SUM → the 1.69998912 ↔ 1.0
+ * balance duel, COUNT, membership, isMine) silently counted the contact's
+ * money as ours. Any read that means "this wallet's outputs" must exclude
+ * these rows with `AND NOT (${txoIsForeignSql("t")})`.
+ *
+ * The classification routes through `core_addresses` (PK = address, its
+ * `accountId` is populated) rather than `txos.accountId` because the
+ * persistence layer writes friendship TXOs with a NULL `accountId` — the same
+ * verified fallback [SdkTxContactResolver.signedNetsFor] uses. A row whose
+ * address maps to no account (or no `core_addresses` row at all) is treated as
+ * owned — the pre-existing behavior for unclassifiable rows.
+ */
+internal fun txoIsForeignSql(alias: String): String =
+    "EXISTS (SELECT 1 FROM core_addresses fca JOIN accounts fa ON fa.id = fca.accountId " +
+        "WHERE fca.address = $alias.address " +
+        "AND fa.accountType = ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL})"
+
+/**
+ * The real output/input shape of one transaction, parsed from the SDK store's
+ * raw `transactionData` payload — the only ground truth that can tell a
+ * wallet-internal self-move (EVERY output returns to owned addresses) apart
+ * from an external send with change (some output value leaves the watched
+ * set, so it never appears in `txos` at all).
+ */
+internal data class TxPayloadFacts(
+    val outputsTotalDuffs: Long,
+    val outputCount: Int,
+    val inputCount: Int
+)
+
+/**
+ * Production [TxPayloadFacts] source: parse the consensus payload with dashj
+ * (the same `Transaction(params, raw)` parse [SdkTxContactResolver] performs
+ * on these very blobs). Null on any parse failure — the caller then degrades
+ * to the payload-free classification (OUTGOING, never INTERNAL).
+ */
+internal fun dashjPayloadFacts(payload: ByteArray): TxPayloadFacts? = try {
+    val tx = org.bitcoinj.core.Transaction(de.schildbach.wallet.Constants.NETWORK_PARAMETERS, payload)
+    TxPayloadFacts(
+        outputsTotalDuffs = tx.outputs.sumOf { it.value.value },
+        outputCount = tx.outputs.size,
+        inputCount = tx.inputs.size
+    )
+} catch (t: Throwable) {
+    null
+}
+
+/**
+ * Correct one PROVABLY-MISATTRIBUTED stored record. The SDK's persisted
+ * `transactions.direction`/`netAmount` columns come pre-computed from the
+ * Rust side, which counts outputs funded on the watch-only DIP-15
+ * `dashpayExternalAccount` ([txoIsForeignSql]) as wallet receives — verified
+ * live (S22 testnet, 11.10.73): a 4-input drain that PAID a contact
+ * 0.69998912 was stored `direction=0 (incoming), netAmount=+69998912`, and
+ * two account sweeps that never left the wallet were stored as incoming
+ * receives of their own outputs. Rows authored from those records rendered
+ * "Received" for money that was sent away, and no reconcile could ever fix
+ * them because the "definitive" record itself was wrong.
+ *
+ * The caller only invokes this for records whose stored shape is IMPOSSIBLE:
+ * `direction == INCOMING` on a Standard (classic) tx that demonstrably SPENT
+ * the wallet's own TXOs ([spentOwnedDuffs] > 0 over the foreign-excluded
+ * mirror — an incoming tx never spends our outputs). The truth is then
+ * recomputed from the TXO mirror's (correct, verified) linkage:
+ *
+ *  - `net = fundedOwned − spentOwned` — the wallet's own Σout−Σin, the same
+ *    convention [SdkTxContactResolver.signedNetsFor] computes;
+ *  - net < 0 and EVERY output returns to owned addresses
+ *    (`payload.outputsTotalDuffs == fundedOwnedDuffs`, no foreign output) →
+ *    INTERNAL (the sweep shape, net ≈ −fee);
+ *  - net < 0 otherwise → OUTGOING (value left the wallet: a foreign
+ *    contact-payment output, or outputs absent from the mirror entirely);
+ *  - net ≥ 0 → genuinely incoming after all (a co-funded receive) — the
+ *    direction stands, only the net is corrected.
+ *
+ * The fee is recovered (`spentOwned − outputsTotal`) only when the payload
+ * proves ALL inputs were ours (`inputCount == spentOwnedCount`) — otherwise
+ * other participants funded part of the tx and the difference is not our fee.
+ * Pure — host-testable.
+ */
+internal fun reattributeIncomingRecord(
+    record: L1TxUiRecord,
+    spentOwnedCount: Int,
+    spentOwnedDuffs: Long,
+    fundedOwnedDuffs: Long,
+    fundedForeignDuffs: Long,
+    payload: TxPayloadFacts?
+): L1TxUiRecord {
+    if (spentOwnedDuffs <= 0L) return record
+    val net = fundedOwnedDuffs - spentOwnedDuffs
+    if (net >= 0L) {
+        return if (record.netAmountDuffs == net) record else record.copy(netAmountDuffs = net)
+    }
+    val allInputsOurs = payload != null && payload.inputCount == spentOwnedCount
+    val fee = if (payload != null && allInputsOurs && spentOwnedDuffs >= payload.outputsTotalDuffs) {
+        spentOwnedDuffs - payload.outputsTotalDuffs
+    } else {
+        null
+    }
+    val internal = fundedForeignDuffs == 0L && payload != null &&
+        payload.outputsTotalDuffs == fundedOwnedDuffs
+    return record.copy(
+        direction = if (internal) L1TxUiDirection.INTERNAL else L1TxUiDirection.OUTGOING,
+        netAmountDuffs = net,
+        feeDuffs = fee ?: record.feeDuffs
+    )
+}
+
+/**
+ * Rust `TransactionType` discriminant for a classic (Standard) transaction —
+ * the ONLY kind [reattributeIncomingRecord] is applied to. Special kinds
+ * (asset lock/unlock, provider registrations, coinbase) keep their stored
+ * record untouched: their display shape is owned by the asset-lock kind
+ * resolver / special-kind paths, and `0xFF` (the not-yet-populated sentinel)
+ * could be any of them.
+ */
+internal const val TX_TYPE_KIND_STANDARD = 0
+
+/**
  * BOUNDED reader over the Kotlin SDK's L1 Room store (`txos` +
  * `transactions`) for the post-cutover display/seam pipelines — the fix for
  * the release-blocking scalability defect where every snapshot rebuild
@@ -51,9 +181,19 @@ import org.dashfoundation.dashsdk.persistence.DashDatabase
  *   suspend for [pageThrottleMs] between pages so a full walk over an
  *   arbitrarily large table never saturates a core or blocks first frame.
  *
- * Wallet membership rule is unchanged from the old snapshot code: a
- * transaction is wallet-relevant iff it FUNDED a wallet TXO (`txos.txid`)
- * or SPENT one (`txos.spendingTxid`).
+ * Wallet membership rule: a transaction is wallet-relevant iff it FUNDED a
+ * wallet-OWNED TXO (`txos.txid`) or SPENT one (`txos.spendingTxid`).
+ * Watch-only DIP-15 contact-payment rows ([txoIsForeignSql]) are excluded
+ * from membership on BOTH sides: a tx whose only mirror trace is the
+ * contact-side output it funded (or spent — the CONTACT's own later spend of
+ * such an output) is the contact's activity, not this wallet's, and
+ * enumerating it produced garbage "Received" rows from the misattributed
+ * store records (see [reattributeIncomingRecord]).
+ *
+ * Records materialized here are additionally REATTRIBUTED when the stored
+ * direction is provably wrong ([reattributeIncomingRecord]) — every consumer
+ * (display pipeline, reconcile walk, seam point reads) sees the corrected
+ * shape from one place.
  *
  * NOT thread-safe: watermark/fingerprint state is confined to the single
  * collector that owns the walker (each flow builds its own instance). The
@@ -62,6 +202,9 @@ import org.dashfoundation.dashsdk.persistence.DashDatabase
  *
  * @param onQuery test hook, invoked once per SQL statement issued — the
  *        query-count spy the paging/skip regression tests assert against.
+ * @param payloadFacts the [TxPayloadFacts] source for [reattributeIncomingRecord]'s
+ *        internal-vs-outgoing discrimination (production: [dashjPayloadFacts];
+ *        tests inject a deterministic fake).
  */
 internal class SdkTxStoreWalker(
     private val db: DashDatabase,
@@ -69,7 +212,8 @@ internal class SdkTxStoreWalker(
     private val pageTxoRows: Int = PAGE_TXO_ROWS,
     private val tailRows: Int = RECENT_TAIL_ROWS,
     private val pageThrottleMs: Long = PAGE_THROTTLE_MS,
-    private val onQuery: ((String) -> Unit)? = null
+    private val onQuery: ((String) -> Unit)? = null,
+    private val payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts
 ) {
 
     /**
@@ -155,10 +299,17 @@ internal class SdkTxStoreWalker(
 
     private class TxoRefPage(val fundedOrSpentWire: LinkedHashMap<String, ByteArray>, val rows: Int, val maxRowid: Long)
 
-    /** One keyset page of wallet TXO refs past [afterRowid] — at most [pageTxoRows] rows. */
+    /**
+     * One keyset page of wallet TXO refs past [afterRowid] — at most
+     * [pageTxoRows] rows. FOREIGN rows ([txoIsForeignSql]) still count toward
+     * the page/watermark (paging semantics unchanged) but contribute NO refs:
+     * neither the tx that funded the contact's output nor the contact's own
+     * later spend of it gains wallet membership through such a row.
+     */
     private fun queryTxoPage(afterRowid: Long): TxoRefPage =
         rawQuery(
-            "SELECT rowid, txid, spendingTxid FROM txos WHERE walletId = ? AND rowid > ? " +
+            "SELECT rowid, txid, spendingTxid, (${txoIsForeignSql("txos")}) " +
+                "FROM txos WHERE walletId = ? AND rowid > ? " +
                 "ORDER BY rowid ASC LIMIT $pageTxoRows",
             arrayOf(walletId, afterRowid)
         ) { c ->
@@ -168,77 +319,202 @@ internal class SdkTxStoreWalker(
             while (c.moveToNext()) {
                 rows++
                 maxRowid = c.getLong(0)
+                if (c.getInt(3) != 0) continue // foreign: no membership refs
                 if (!c.isNull(1)) c.getBlob(1).let { wire[wireHexOf(it)] = it }
                 if (!c.isNull(2)) c.getBlob(2).let { wire[wireHexOf(it)] = it }
             }
             TxoRefPage(wire, rows, maxRowid)
         }
 
-    private class TxRowPage(val records: List<L1TxUiRecord>, val txidWireByHex: Map<String, ByteArray>, val rows: Int, val maxRowid: Long)
+    /**
+     * One materialized `transactions` row plus the side facts the
+     * reattribution pass needs ([reattributeIncomingRecord]): the stored type
+     * kind and the owned-spend aggregates (computed IN the row query as
+     * correlated subqueries, so the pass adds no statements for the common
+     * all-clean case).
+     */
+    private class RecordRow(
+        val record: L1TxUiRecord,
+        val wireTxid: ByteArray,
+        val typeKind: Int,
+        val spentOwnedCount: Int,
+        val spentOwnedDuffs: Long
+    )
+
+    /** The shared row projection of [queryTxPage]/[queryTxRecords]/[recordFor]. */
+    private fun recordRowFrom(c: android.database.Cursor, startCol: Int): RecordRow {
+        val txid = c.getBlob(startCol)
+        return RecordRow(
+            record = l1TxUiRecord(
+                txidWireBytes = txid,
+                netAmountDuffs = c.getLong(startCol + 1),
+                feeDuffs = if (c.isNull(startCol + 2)) null else c.getLong(startCol + 2),
+                contextCode = c.getInt(startCol + 3),
+                directionCode = c.getInt(startCol + 4),
+                firstSeenSec = c.getLong(startCol + 5),
+                blockTimestampSec = c.getInt(startCol + 6)
+            ),
+            wireTxid = txid,
+            typeKind = c.getInt(startCol + 7),
+            spentOwnedCount = c.getInt(startCol + 8),
+            spentOwnedDuffs = c.getLong(startCol + 9)
+        )
+    }
+
+    /**
+     * The record columns + reattribution facts, aliased `tx`. The two
+     * correlated subqueries aggregate the wallet's OWN TXOs this tx spent
+     * (foreign rows excluded) — indexed on `spendingTxid`, so a tx that
+     * spent nothing costs two index misses.
+     */
+    private fun recordColumnsSql(): String =
+        "tx.txid, tx.netAmount, tx.fee, tx.context, tx.direction, tx.firstSeen, " +
+            "tx.blockTimestamp, tx.transactionTypeKind, " +
+            "(SELECT COUNT(*) FROM txos t WHERE t.walletId = ? AND t.spendingTxid = tx.txid " +
+            "AND NOT (${txoIsForeignSql("t")})), " +
+            "(SELECT COALESCE(SUM(t.amount), 0) FROM txos t WHERE t.walletId = ? " +
+            "AND t.spendingTxid = tx.txid AND NOT (${txoIsForeignSql("t")}))"
+
+    private class TxRowPage(val rows: List<RecordRow>, val txidWireByHex: Map<String, ByteArray>, val rowCount: Int, val maxRowid: Long)
 
     /** One keyset page of `transactions` rows past [afterRowid] (payload column deliberately excluded). */
     private fun queryTxPage(afterRowid: Long): TxRowPage =
         rawQuery(
-            "SELECT rowid, txid, netAmount, fee, context, direction, firstSeen, blockTimestamp " +
-                "FROM transactions WHERE rowid > ? ORDER BY rowid ASC LIMIT $pageTxoRows",
-            arrayOf(afterRowid)
+            "SELECT tx.rowid, ${recordColumnsSql()} " +
+                "FROM transactions tx WHERE tx.rowid > ? ORDER BY tx.rowid ASC LIMIT $pageTxoRows",
+            arrayOf(walletId, walletId, afterRowid)
         ) { c ->
-            val records = ArrayList<L1TxUiRecord>()
+            val rows = ArrayList<RecordRow>()
             val wireByHex = HashMap<String, ByteArray>()
-            var rows = 0
+            var rowCount = 0
             var maxRowid = afterRowid
             while (c.moveToNext()) {
-                rows++
+                rowCount++
                 maxRowid = c.getLong(0)
-                val txid = c.getBlob(1)
-                val record = l1TxUiRecord(
-                    txidWireBytes = txid,
-                    netAmountDuffs = c.getLong(2),
-                    feeDuffs = if (c.isNull(3)) null else c.getLong(3),
-                    contextCode = c.getInt(4),
-                    directionCode = c.getInt(5),
-                    firstSeenSec = c.getLong(6),
-                    blockTimestampSec = c.getInt(7)
-                )
-                records += record
-                wireByHex[record.txidHex] = txid
+                val row = recordRowFrom(c, startCol = 1)
+                rows += row
+                wireByHex[row.record.txidHex] = row.wireTxid
             }
-            TxRowPage(records, wireByHex, rows, maxRowid)
+            TxRowPage(rows, wireByHex, rowCount, maxRowid)
         }
 
     /**
      * The wallet-relevant `transactions` rows for [wireTxids] (no payload
-     * column), chunked under SQLite's 999-variable cap and sorted
-     * `firstSeen DESC` for parity with the store's DAO ordering. Bounded by
-     * the caller: every caller passes at most one page's worth of txids.
+     * column), reattributed ([reattributeIncomingRecord]), chunked under
+     * SQLite's 999-variable cap and sorted `firstSeen DESC` for parity with
+     * the store's DAO ordering. Bounded by the caller: every caller passes at
+     * most one page's worth of txids.
      */
     private fun queryTxRecords(wireTxids: Collection<ByteArray>): List<L1TxUiRecord> {
-        val out = ArrayList<L1TxUiRecord>(wireTxids.size)
+        val rows = ArrayList<RecordRow>(wireTxids.size)
         for (chunk in wireTxids.chunked(TXID_IN_CHUNK)) {
             val placeholders = chunk.joinToString(",") { "?" }
+            val args = ArrayList<Any?>(2 + chunk.size)
+            args.add(walletId)
+            args.add(walletId)
+            args.addAll(chunk)
             rawQuery(
-                "SELECT txid, netAmount, fee, context, direction, firstSeen, blockTimestamp " +
-                    "FROM transactions WHERE txid IN ($placeholders)",
-                chunk.toTypedArray<Any?>()
+                "SELECT ${recordColumnsSql()} FROM transactions tx WHERE tx.txid IN ($placeholders)",
+                args.toTypedArray()
             ) { c ->
-                while (c.moveToNext()) {
-                    out += l1TxUiRecord(
-                        txidWireBytes = c.getBlob(0),
-                        netAmountDuffs = c.getLong(1),
-                        feeDuffs = if (c.isNull(2)) null else c.getLong(2),
-                        contextCode = c.getInt(3),
-                        directionCode = c.getInt(4),
-                        firstSeenSec = c.getLong(5),
-                        blockTimestampSec = c.getInt(6)
-                    )
-                }
+                while (c.moveToNext()) rows += recordRowFrom(c, startCol = 0)
             }
         }
+        val out = ArrayList(reattributed(rows))
         out.sortByDescending { it.timestampMs }
         return out
     }
 
-    /** Which of [txidWireByHex]'s txids fund or spend a wallet TXO — chunked membership probe. */
+    // ── Reattribution of provably-wrong stored records ────────────────
+
+    /**
+     * Apply [reattributeIncomingRecord] to the rows whose stored shape is
+     * impossible (a Standard tx recorded INCOMING that spent the wallet's own
+     * TXOs). Costs nothing when no row is flagged; a flagged set pays one
+     * chunked funded-split aggregate plus one chunked payload fetch
+     * (internal-vs-send discrimination and fee recovery both need the tx's
+     * real shape — see [TxPayloadFacts]).
+     */
+    private fun reattributed(rows: List<RecordRow>): List<L1TxUiRecord> {
+        val flagged = rows.filter {
+            it.record.direction == L1TxUiDirection.INCOMING &&
+                it.typeKind == TX_TYPE_KIND_STANDARD &&
+                it.spentOwnedDuffs > 0L
+        }
+        if (flagged.isEmpty()) return rows.map { it.record }
+
+        val fundedOwned = HashMap<String, Long>()
+        val fundedForeign = HashMap<String, Long>()
+        for (chunk in flagged.chunked(TXID_IN_CHUNK)) {
+            val placeholders = chunk.joinToString(",") { "?" }
+            val args = ArrayList<Any?>(1 + chunk.size)
+            args.add(walletId)
+            chunk.forEach { args.add(it.wireTxid) }
+            rawQuery(
+                "SELECT t.txid, " +
+                    "SUM(CASE WHEN ${txoIsForeignSql("t")} THEN 0 ELSE t.amount END), " +
+                    "SUM(CASE WHEN ${txoIsForeignSql("t")} THEN t.amount ELSE 0 END) " +
+                    "FROM txos t WHERE t.walletId = ? AND t.txid IN ($placeholders) GROUP BY t.txid",
+                args.toTypedArray()
+            ) { c ->
+                while (c.moveToNext()) {
+                    val hex = displayHexOf(c.getBlob(0))
+                    fundedOwned[hex] = c.getLong(1)
+                    fundedForeign[hex] = c.getLong(2)
+                }
+            }
+        }
+
+        // Payload facts for every flagged row: the no-foreign-output subset
+        // needs them for internal-vs-send discrimination, and ALL flagged rows
+        // need them for fee recovery ([reattributeIncomingRecord]).
+        val facts = HashMap<String, TxPayloadFacts>()
+        for (chunk in flagged.chunked(TXID_IN_CHUNK)) {
+            val placeholders = chunk.joinToString(",") { "?" }
+            rawQuery(
+                "SELECT txid, transactionData FROM transactions WHERE txid IN ($placeholders)",
+                chunk.map<RecordRow, Any?> { it.wireTxid }.toTypedArray()
+            ) { c ->
+                while (c.moveToNext()) {
+                    if (c.isNull(1)) continue
+                    payloadFacts(c.getBlob(1))?.let { facts[displayHexOf(c.getBlob(0))] = it }
+                }
+            }
+        }
+
+        val correctedByHex = HashMap<String, L1TxUiRecord>(flagged.size)
+        for (row in flagged) {
+            val hex = row.record.txidHex
+            val corrected = reattributeIncomingRecord(
+                record = row.record,
+                spentOwnedCount = row.spentOwnedCount,
+                spentOwnedDuffs = row.spentOwnedDuffs,
+                fundedOwnedDuffs = fundedOwned[hex] ?: 0L,
+                fundedForeignDuffs = fundedForeign[hex] ?: 0L,
+                payload = facts[hex]
+            )
+            correctedByHex[hex] = corrected
+            if (corrected.direction != row.record.direction &&
+                reattributionLogged.add(hex)
+            ) {
+                log.info(
+                    "stored SDK record for {} reattributed {} → {} (stored net {} → {} duffs; " +
+                        "spentOwned={} over {} input(s), fundedOwned={}, fundedForeign={})",
+                    hex, row.record.direction, corrected.direction,
+                    row.record.netAmountDuffs, corrected.netAmountDuffs,
+                    row.spentOwnedDuffs, row.spentOwnedCount,
+                    fundedOwned[hex] ?: 0L, fundedForeign[hex] ?: 0L
+                )
+            }
+        }
+        return rows.map { correctedByHex[it.record.txidHex] ?: it.record }
+    }
+
+    /**
+     * Which of [txidWireByHex]'s txids fund or spend a wallet-OWNED TXO —
+     * chunked membership probe (foreign rows grant no membership, matching
+     * [queryTxoPage]'s ref rule).
+     */
     private fun walletRelevantSubset(txidWireByHex: Map<String, ByteArray>): Set<String> {
         if (txidWireByHex.isEmpty()) return emptySet()
         val relevant = HashSet<String>()
@@ -248,11 +524,13 @@ internal class SdkTxStoreWalker(
             args.add(walletId)
             chunk.forEach { args.add(it.value) }
             rawQuery(
-                "SELECT DISTINCT txid FROM txos WHERE walletId = ? AND txid IN ($placeholders)",
+                "SELECT DISTINCT t.txid FROM txos t WHERE t.walletId = ? AND t.txid IN ($placeholders) " +
+                    "AND NOT (${txoIsForeignSql("t")})",
                 args.toTypedArray()
             ) { c -> while (c.moveToNext()) if (!c.isNull(0)) relevant += displayHexOf(c.getBlob(0)) }
             rawQuery(
-                "SELECT DISTINCT spendingTxid FROM txos WHERE walletId = ? AND spendingTxid IN ($placeholders)",
+                "SELECT DISTINCT t.spendingTxid FROM txos t WHERE t.walletId = ? " +
+                    "AND t.spendingTxid IN ($placeholders) AND NOT (${txoIsForeignSql("t")})",
                 args.toTypedArray()
             ) { c -> while (c.moveToNext()) if (!c.isNull(0)) relevant += displayHexOf(c.getBlob(0)) }
         }
@@ -275,7 +553,8 @@ internal class SdkTxStoreWalker(
         val wire = LinkedHashMap<String, ByteArray>()
         val overSample = tailRows * 4
         rawQuery(
-            "SELECT txid FROM txos WHERE walletId = ? AND txid IS NOT NULL ORDER BY rowid DESC LIMIT $overSample",
+            "SELECT t.txid FROM txos t WHERE t.walletId = ? AND t.txid IS NOT NULL " +
+                "AND NOT (${txoIsForeignSql("t")}) ORDER BY t.rowid DESC LIMIT $overSample",
             arrayOf(walletId)
         ) { c ->
             while (c.moveToNext() && wire.size < tailRows) {
@@ -285,8 +564,8 @@ internal class SdkTxStoreWalker(
         }
         val fundedCap = wire.size + tailRows
         rawQuery(
-            "SELECT spendingTxid FROM txos WHERE walletId = ? AND spendingTxid IS NOT NULL " +
-                "ORDER BY rowid DESC LIMIT $overSample",
+            "SELECT t.spendingTxid FROM txos t WHERE t.walletId = ? AND t.spendingTxid IS NOT NULL " +
+                "AND NOT (${txoIsForeignSql("t")}) ORDER BY t.rowid DESC LIMIT $overSample",
             arrayOf(walletId)
         ) { c ->
             while (c.moveToNext() && wire.size < fundedCap) {
@@ -333,16 +612,18 @@ internal class SdkTxStoreWalker(
             delay(pageThrottleMs)
         }
 
-        // New transaction rows (membership-filtered).
+        // New transaction rows (membership-filtered, then reattributed —
+        // only the wallet-relevant subset pays the reattribution probes).
         while (true) {
             val page = withContext(Dispatchers.IO) { queryTxPage(txWatermark) }
-            if (page.rows == 0) break
+            if (page.rowCount == 0) break
             txWatermark = page.maxRowid
             val relevant = withContext(Dispatchers.IO) { walletRelevantSubset(page.txidWireByHex) }
             if (relevant.isNotEmpty()) {
-                onPage(page.records.filter { it.txidHex in relevant })
+                val rows = page.rows.filter { it.record.txidHex in relevant }
+                onPage(withContext(Dispatchers.IO) { reattributed(rows) })
             }
-            if (page.rows < pageTxoRows) break
+            if (page.rowCount < pageTxoRows) break
             delay(pageThrottleMs)
         }
 
@@ -397,34 +678,34 @@ internal class SdkTxStoreWalker(
     fun recordFor(displayHex: String): L1TxUiRecord? {
         val wire = hexToBytesOrNull(displayHex.lowercase())?.reversedArray() ?: return null
         val relevant = rawQuery(
-            "SELECT EXISTS(SELECT 1 FROM txos WHERE walletId = ? AND txid = ?) " +
-                "OR EXISTS(SELECT 1 FROM txos WHERE walletId = ? AND spendingTxid = ?)",
+            "SELECT EXISTS(SELECT 1 FROM txos t WHERE t.walletId = ? AND t.txid = ? " +
+                "AND NOT (${txoIsForeignSql("t")})) " +
+                "OR EXISTS(SELECT 1 FROM txos t2 WHERE t2.walletId = ? AND t2.spendingTxid = ? " +
+                "AND NOT (${txoIsForeignSql("t2")}))",
             arrayOf(walletId, wire, walletId, wire)
         ) { c -> c.moveToFirst() && c.getLong(0) != 0L }
         if (!relevant) return null
-        return rawQuery(
-            "SELECT txid, netAmount, fee, context, direction, firstSeen, blockTimestamp " +
-                "FROM transactions WHERE txid = ? LIMIT 1",
-            arrayOf(wire)
+        val row = rawQuery(
+            "SELECT ${recordColumnsSql()} FROM transactions tx WHERE tx.txid = ? LIMIT 1",
+            arrayOf(walletId, walletId, wire)
         ) { c ->
             if (!c.moveToFirst()) return@rawQuery null
-            l1TxUiRecord(
-                txidWireBytes = c.getBlob(0),
-                netAmountDuffs = c.getLong(1),
-                feeDuffs = if (c.isNull(2)) null else c.getLong(2),
-                contextCode = c.getInt(3),
-                directionCode = c.getInt(4),
-                firstSeenSec = c.getLong(5),
-                blockTimestampSec = c.getInt(6)
-            )
-        }
+            recordRowFrom(c, startCol = 0)
+        } ?: return null
+        return reattributed(listOf(row)).single()
     }
 
-    /** Whether the wallet owns output `displayHex:vout` — one indexed EXISTS. */
+    /**
+     * Whether the wallet owns output `displayHex:vout` — one indexed EXISTS.
+     * A watch-only contact-payment output ([txoIsForeignSql]) is NOT mine:
+     * dashj's `isMine` (the seam contract) means spendable-by-this-wallet,
+     * and the contact's money never is.
+     */
     fun isMineOutpoint(displayHex: String, vout: Int): Boolean {
         val wire = hexToBytesOrNull(displayHex.lowercase())?.reversedArray() ?: return false
         return rawQuery(
-            "SELECT EXISTS(SELECT 1 FROM txos WHERE walletId = ? AND txid = ? AND vout = ?)",
+            "SELECT EXISTS(SELECT 1 FROM txos t WHERE t.walletId = ? AND t.txid = ? AND t.vout = ? " +
+                "AND NOT (${txoIsForeignSql("t")}))",
             arrayOf(walletId, wire, vout)
         ) { c -> c.moveToFirst() && c.getLong(0) != 0L }
     }
@@ -465,6 +746,24 @@ internal class SdkTxStoreWalker(
     }
 
     companion object {
+        private val log = org.slf4j.LoggerFactory.getLogger(SdkTxStoreWalker::class.java)
+
+        /**
+         * Direction-changing reattributions already logged, process-wide
+         * (walker instances are transient — one per walk/flow — so a
+         * per-instance set would re-log every txid once a minute forever).
+         * Bounded; an evicted txid merely re-logs, it never re-corrupts.
+         */
+        private val reattributionLogged: MutableSet<String> =
+            java.util.Collections.synchronizedSet(
+                java.util.Collections.newSetFromMap(
+                    object : LinkedHashMap<String, Boolean>() {
+                        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>): Boolean =
+                            size > 1_024
+                    }
+                )
+            )
+
         /** TXO rows per keyset page — the bounded window every walk reads at a time. */
         const val PAGE_TXO_ROWS = 1_000
 

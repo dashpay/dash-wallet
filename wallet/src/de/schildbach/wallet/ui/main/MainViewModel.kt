@@ -271,6 +271,24 @@ class MainViewModel @Inject constructor(
      * activity/ViewModel recreation or lock-unlock until a choice is made
      * (see [recheckMixedFundsMigrationPrompt]).
      */
+    /**
+     * TEMPORARY KILL SWITCH for the mixed-funds prompt.
+     *
+     * Both choices the sheet offers route through
+     * [CoinJoinFundsMigrationService.combineIntoUnmixedBalance], which takes its
+     * destination from dashj's `freshReceiveAddress()` — and that forces a
+     * SYNCHRONOUS full-wallet save on the calling thread. On the main thread,
+     * on a wallet whose save re-serializes every DashPay friend key chain, that
+     * is a multi-second freeze (~7 s measured on a 215-chain mainnet wallet,
+     * which the tester read as a hang and force-quit).
+     *
+     * Suppressing the PROMPT touches neither the migration nor its persisted
+     * state: the in-flight and done markers keep their meaning, so flipping
+     * this back to false restores the previous behaviour exactly. Remove once
+     * the address allocation is off the main thread.
+     */
+    private val mixedFundsPromptSuppressed = true
+
     val showMixedFundsMigration = SingleLiveEvent<Unit>()
 
     /**
@@ -303,13 +321,15 @@ class MainViewModel @Inject constructor(
      * `ContactsBasedLiveData`: that class registers its contacts-updated listener
      * only while something observes it, so a contact request that arrived while the
      * user was on another screen never triggered a recount. The service keeps the
-     * value current regardless of what is on screen; this LiveData just republishes
-     * whatever it holds the moment an observer attaches.
+     * value current regardless of what is on screen.
+     *
+     * Exposed as the service's own StateFlow rather than through `asLiveData()`:
+     * that wrapper stops collecting a few seconds after its last observer
+     * detaches and keeps serving the value it had then, so the bell could render
+     * the pre-navigation count for a beat on the way back to the home screen.
      */
-    val notificationCountData: LiveData<Int> =
-        contactRequestNotificationService.unseenNotificationCount.asLiveData()
-    val notificationCount: Int
-        get() = notificationCountData.value ?: 0
+    val notificationCount: StateFlow<Int> =
+        contactRequestNotificationService.unseenNotificationCount
 
     private var contactRequestTimer: AnalyticsTimer? = null
 
@@ -409,7 +429,7 @@ class MainViewModel @Inject constructor(
         blockchainStateProvider.observeState()
             .filterNotNull()
             .onEach {
-                if (mixedFundsPromptShownThisSession) return@onEach
+                if (mixedFundsPromptShownThisSession || mixedFundsPromptSuppressed) return@onEach
                 // A persisted IN-FLIGHT marker re-shows the sheet in its
                 // post-choice PROCESSING presentation (a broadcast whose
                 // result is not user-visible yet — e.g. the lock screen tore
@@ -894,6 +914,7 @@ class MainViewModel @Inject constructor(
      * lands (marker cleared) this is a no-op.
      */
     fun recheckMixedFundsMigrationPrompt() {
+        if (mixedFundsPromptSuppressed) return
         viewModelScope.launch {
             try {
                 // The in-flight marker re-shows the PROCESSING presentation

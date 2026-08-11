@@ -211,14 +211,16 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
 
     private fun doReset() {
         viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
-        val dialog = AdaptiveDialog.progress(getString(R.string.reset_wallet_text))
-        dialog.show(requireActivity())
         (requireActivity() as AbstractBindServiceActivity).doUnbindService()
-        viewModel.triggerWipe() {
-            dialog.dismissAllowingStateLoss()
-            startActivity(OnboardingActivity.createIntent(requireContext()))
-            requireActivity().finishAffinity()
-        }
+        // Nothing is posted back here on completion. The wipe hands the UI
+        // over to OnboardingActivity itself, before it destroys anything, and
+        // then runs for minutes — this fragment and its activity are long gone
+        // by the time it finishes. The old completion callback called
+        // startActivity() on this fragment from a background dispatcher and
+        // took the process down with "Fragment SecurityFragment not attached
+        // to Activity"; the progress it showed is now owned by the screen that
+        // survives the wipe.
+        viewModel.triggerWipe()
     }
 
     private fun showSeed(seed: Array<String>) {

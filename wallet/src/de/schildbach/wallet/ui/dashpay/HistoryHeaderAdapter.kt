@@ -28,8 +28,10 @@ import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.ui.dashpay.utils.preferDisplayLabel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HistoryHeaderViewBinding
+import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 
 /**
@@ -67,6 +69,104 @@ internal fun helloCardEligible(
                 !blockchainIdentityData.creationCompleteDismissed
             )
 }
+
+/**
+ * Pure "Join DashPay" tile visibility gate (host-JVM unit-testable, same
+ * pattern as [helloCardEligible]).
+ *
+ * The tile is an ENTRY POINT into identity creation, so it must not be
+ * offered while the L1 scan is still running: mid-sync the balance and
+ * history are incomplete, and identity creation needs confirmed,
+ * attributable funds — a user who taps through mid-restore is told they
+ * cannot afford a username they can in fact afford.
+ *
+ * The sync factor used to live in `MainViewModel.combineLatestData()`, which
+ * feeds `isAbleToCreateIdentity`; it is commented out there
+ * (`/*isSynced &&*/`) along with its `_isBlockchainSynced` MediatorLiveData
+ * source, so `canJoin` alone carries no sync information. The More screen
+ * compensates locally (`MoreFragment.updateJoinDashPaySyncState`, driven by
+ * the same `MainViewModel.syncStatus.isSynced`); this header did not, which
+ * is the defect. [isSynced] here is fed from that same authoritative signal.
+ *
+ * Unlike the More screen — which greys the row and shows a "still syncing"
+ * line, as the sibling accept-invitation row in this header also does — the
+ * home tile is HIDDEN while unsynced: it is an unsolicited nudge rather than
+ * a row the user navigated to, so a disabled nudge is just noise.
+ */
+internal fun joinDashPayEligible(
+    creationState: IdentityCreationState?,
+    canJoin: Boolean,
+    isSynced: Boolean,
+    hideJoinDashPayCard: Boolean
+): Boolean {
+    return creationState == IdentityCreationState.NONE &&
+        canJoin &&
+        isSynced &&
+        !hideJoinDashPayCard
+}
+
+/**
+ * Pure accept-invitation row gate, as [headerIsEmpty] has always applied it.
+ *
+ * [creationInProgress] is null when no identity record has been observed yet,
+ * and that answers false here — i.e. the row does not count towards a
+ * non-empty header. Note `bindInvitation` treats a null record differently
+ * (it shows the row): pre-existing, left alone deliberately, since changing
+ * it changes what the header renders rather than when it is re-evaluated.
+ */
+internal fun acceptInvitationEligible(
+    hasInvitation: Boolean,
+    creationInProgress: Boolean?
+): Boolean = hasInvitation && creationInProgress == false
+
+/**
+ * Whether the home header would render NOTHING — pure, so the callers that
+ * have to re-take the "no transactions" decision can be reasoned about (and
+ * tested) without a bound view.
+ *
+ * This matters because `WalletTransactionsFragment.showEmptyView()` hides the
+ * whole transaction list, header included. Every input below can flip this
+ * answer, and none of them produces a paging load-state emission, so each of
+ * their observers has to re-take that decision itself.
+ */
+internal fun headerIsEmpty(
+    identity: BlockchainIdentityBaseData?,
+    hasInvitation: Boolean,
+    canJoinDashPay: Boolean,
+    isSynced: Boolean,
+    hideJoinDashPayCard: Boolean,
+    votingDualDismissed: Boolean
+): Boolean = !acceptInvitationEligible(hasInvitation, identity?.creationInProgress) &&
+    !joinDashPayEligible(identity?.creationState, canJoinDashPay, isSynced, hideJoinDashPayCard) &&
+    (identity == null || !helloCardEligible(identity, votingDualDismissed))
+
+/**
+ * The name to greet the user with in the hello card ("Hello %s,") — pure and
+ * host-testable.
+ *
+ * [recordUsername] is the identity record's username (or, for a dual
+ * creation, its instant secondary). dashj's `recoverUsernames()` rewrites
+ * `BlockchainIdentity.primaryUsername` / `secondaryUsername` to the DPNS
+ * NORMALIZED label and `IdentityRepository.updateBlockchainIdentityData`
+ * copies that into the record, so on any wallet whose record was refreshed
+ * before this was fixed the card greeted the user with the folded form —
+ * observed live as "Hello br1an-s21," after registering `brian-s21` (and
+ * earlier on testnet as "Hello br1antest63a"), while the profile screen
+ * showed the name correctly.
+ *
+ * [profileUsername] is the local DashPay profile's username, which the
+ * contact-profile sync builds from the domain document's `.label` — the
+ * human form. It wins whenever it provably names the same DPNS entry, which
+ * both repairs already-damaged records and leaves a healthy record (already
+ * the display form) untouched. A profile carrying a DIFFERENT name — the
+ * dual-creation case, where the profile still holds the contested primary
+ * while this card greets the instant secondary — never wins.
+ */
+internal fun helloCardUsername(
+    recordUsername: String?,
+    profileUsername: String?,
+    normalize: (String) -> String
+): String? = recordUsername?.let { preferDisplayLabel(profileUsername, it, normalize) }
 
 class HistoryHeaderAdapter(
     private val preferences: SharedPreferences
@@ -123,6 +223,14 @@ class HistoryHeaderAdapter(
             }
         }
 
+    /**
+     * L1 scan completion, fed from `MainViewModel.syncStatus.isSynced`.
+     * Gates BOTH the accept-invitation row (greyed + "still syncing") and,
+     * since it is an entry point into identity creation, the Join DashPay
+     * tile (hidden outright — see [joinDashPayEligible]). The setter
+     * re-binds every tile, so the Join tile appears the moment the scan
+     * finishes rather than waiting for an unrelated header update.
+     */
     var isSynced: Boolean = false
         set(value) {
             field = value
@@ -131,6 +239,21 @@ class HistoryHeaderAdapter(
                 bindInvitation(invitation, value)
                 bindBlockchainIdentity(blockchainIdentityData)
                 bindCanJoinDashPay(canJoinDashPay)
+            }
+        }
+
+    /**
+     * The local DashPay profile's username — the HUMAN label, taken from the
+     * domain document's `.label` by the contact-profile sync. Fed by the
+     * fragment so the hello card can greet the user with the name they typed
+     * instead of the DPNS-normalized form the identity record may hold (see
+     * [helloCardUsername]). Null until the profile exists.
+     */
+    var profileUsername: String? = null
+        set(value) {
+            field = value
+            if (::binding.isInitialized) {
+                bindBlockchainIdentity(blockchainIdentityData)
             }
         }
 
@@ -325,12 +448,12 @@ class HistoryHeaderAdapter(
                     // screen's voting tile (see helloCardEligible).
                     binding.identityCreation.title.text = binding.root.context.getString(
                         R.string.processing_done_title,
-                        instantUsername
+                        displayUsername(instantUsername)
                     )
                     binding.identityCreation.subtitle.setText(R.string.processing_done_subtitle)
                 } else {
                     binding.identityCreation.title.text = binding.root.context.getString(R.string.processing_done_title,
-                        blockchainIdentityData.username)
+                        displayUsername(blockchainIdentityData.username))
                     binding.identityCreation.subtitle.setText(R.string.processing_voting_subtitle)
                 }
             }
@@ -339,7 +462,7 @@ class HistoryHeaderAdapter(
                 binding.identityCreation.forwardArrow.visibility = View.VISIBLE
                 binding.identityCreation.progress.visibility = View.GONE
                 binding.identityCreation.title.text = binding.root.context.getString(R.string.processing_done_title,
-                    blockchainIdentityData.username)
+                    displayUsername(blockchainIdentityData.username))
                 binding.identityCreation.subtitle.setText(R.string.processing_done_subtitle)
             }
             IdentityCreationState.DONE_AND_DISMISS -> {
@@ -347,6 +470,10 @@ class HistoryHeaderAdapter(
             }
         }
     }
+
+    /** The greeting name for [name], preferring the profile's human label. */
+    private fun displayUsername(name: String?): String? =
+        helloCardUsername(name, profileUsername, Names::normalizeString)
 
     private fun bindCanJoinDashPay(canJoin: Boolean) {
         if (!shouldShowJoinDashPay(canJoin)) {
@@ -381,17 +508,24 @@ class HistoryHeaderAdapter(
     }
 
     private fun shouldShowJoinDashPay(canJoin: Boolean): Boolean {
-        val hideJoinDashPay = preferences.getBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, false)
-        return blockchainIdentityData?.creationState == IdentityCreationState.NONE && canJoin && !hideJoinDashPay
+        return joinDashPayEligible(
+            creationState = blockchainIdentityData?.creationState,
+            canJoin = canJoin,
+            isSynced = isSynced,
+            hideJoinDashPayCard = preferences.getBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, false)
+        )
     }
 
     private fun shouldShowAcceptInvitation(invitation: InvitationLinkData?, isSynced: Boolean): Boolean {
-        return invitation != null && blockchainIdentityData?.creationInProgress == false
+        return acceptInvitationEligible(invitation != null, blockchainIdentityData?.creationInProgress)
     }
 
-    fun isEmpty(): Boolean {
-        return !shouldShowAcceptInvitation(invitation, isSynced) &&
-                !shouldShowJoinDashPay(canJoinDashPay) &&
-                (blockchainIdentityData == null || !shouldShowHelloCard(blockchainIdentityData!!))
-    }
+    fun isEmpty(): Boolean = headerIsEmpty(
+        identity = blockchainIdentityData,
+        hasInvitation = invitation != null,
+        canJoinDashPay = canJoinDashPay,
+        isSynced = isSynced,
+        hideJoinDashPayCard = preferences.getBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, false),
+        votingDualDismissed = preferences.getBoolean(PREFS_KEY_HIDE_VOTING_DUAL_HELLO_CARD, false)
+    )
 }

@@ -239,6 +239,22 @@ open class LockScreenActivity : SecureActivity() {
 
     override fun onStart() {
         super.onStart()
+
+        // A Reset Wallet is destroying this wallet's data. Nothing below may
+        // run: not the unlock (its keys are being deleted), not
+        // startBlockchainService() (the service is shutting down to perform
+        // the wipe), and above all not the wallet screen itself. The reset
+        // clears the task to onboarding when it starts, but the system can
+        // still restore a wallet activity — after a process death mid-wipe, or
+        // from recents — and on S22 the auto-logout did exactly this: it put
+        // the lock screen up at 22:39:11, the user authenticated, and landed
+        // back on a wallet whose file and keystore secrets were already gone.
+        if (walletApplication.isWipeInProgress) {
+            log.warn("reset in progress — leaving {} for onboarding", javaClass.simpleName)
+            restartService.performRestart(this, true)
+            return
+        }
+
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         val showLockScreen = !keepUnlocked && configuration.autoLogoutEnabled &&

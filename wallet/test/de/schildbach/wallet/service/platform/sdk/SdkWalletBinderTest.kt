@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.wallet.Wallet
 import de.schildbach.wallet.data.WalletData
+import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dashfoundation.dashsdk.Sdk
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
 import org.dashj.platform.dpp.identifier.Identifier
@@ -83,6 +84,20 @@ class SdkWalletBinderTest {
         override fun databaseOrNull(): org.dashfoundation.dashsdk.persistence.DashDatabase? = null
         override fun walletManagerOrNull(): PlatformWalletManager? = null
         override suspend fun resolveUsername(name: String): String? = null
+
+        /** Address-window heal hooks — default success. NOT in [totalCalls]. */
+        var onWiden: suspend (String) -> Boolean = { true }
+        var widenCalls = 0
+        override suspend fun widenAddressWindows(walletIdHex: String): Boolean {
+            widenCalls++
+            return onWiden(walletIdHex)
+        }
+        var onArmRescan: suspend (String, Long?) -> Boolean = { _, _ -> true }
+        var armRescanCalls = 0
+        override suspend fun armSpvRescan(walletIdHex: String, birthTimeSecs: Long?): Boolean {
+            armRescanCalls++
+            return onArmRescan(walletIdHex, birthTimeSecs)
+        }
 
         override suspend fun bindAppWallet(seedWords: List<String>, birthTimeSecs: Long?): String {
             bindCalls++
@@ -137,6 +152,25 @@ class SdkWalletBinderTest {
             lastProvisionWalletId = walletIdHex
             return onProvision(walletIdHex)
         }
+
+        var drainCalls = 0
+        var lastDrainWalletId: String? = null
+        var onDrain: suspend (String) -> DashPayContactDrainReport = { _ ->
+            DashPayContactDrainReport(
+                bound = true, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
+            )
+        }
+        override suspend fun drainDashPayContactAccountBuilds(
+            walletIdHex: String
+        ): DashPayContactDrainReport {
+            drainCalls++
+            lastDrainWalletId = walletIdHex
+            return onDrain(walletIdHex)
+        }
+
+        var pendingAccountBuilds: Int? = null
+        override suspend fun dashPayPendingAccountBuilds(walletIdHex: String): Int? =
+            pendingAccountBuilds
 
         /**
          * Backfill signals the gate reads. Default UNKNOWN → the gate can
@@ -225,6 +259,23 @@ class SdkWalletBinderTest {
     private fun walletData(): WalletData = mockk { every { wallet } returns null }
 
     /**
+     * A [WalletData] whose dashj wallet reports [earliestKeyCreationTimeSecs]
+     * — the ONLY birth signal the binder used to read, and the one a seed
+     * restore stamps with the 2015 [sentinelSecs] sentinel.
+     */
+    private fun walletDataWithKeyTime(earliestKeyCreationTimeSecs: Long): WalletData {
+        val dashjWallet: Wallet = mockk {
+            every { watchingKey.pubKeyHash } returns ByteArray(20)
+            every { earliestKeyCreationTime } returns earliestKeyCreationTimeSecs
+        }
+        return mockk { every { wallet } returns dashjWallet }
+    }
+
+    /** The persisted wallet creation date; null = the user never chose one. */
+    private fun blockchainServiceConfig(creationDateSecs: Long?): BlockchainServiceConfig =
+        mockk { coEvery { getWalletCreationDate() } returns creationDateSecs }
+
+    /**
      * A dashj wallet whose watching key hashes to a fingerprint derived
      * from [seedByte] — two wallets fingerprint equal iff their seed bytes
      * match, mirroring the deterministic seed → watching-key relationship
@@ -243,6 +294,7 @@ class SdkWalletBinderTest {
         config: DashPayConfig = dashPayConfig(readsFlag = true),
         supportsPlatform: Boolean = true,
         walletData: WalletData = walletData(),
+        serviceConfig: BlockchainServiceConfig = blockchainServiceConfig(null),
         now: () -> Long = { System.currentTimeMillis() },
         backfillGate: DashPayBackfillGate = DashPayBackfillGate.ALWAYS_RUN,
         backfillWatchIntervalMs: Long = 5L,
@@ -253,6 +305,7 @@ class SdkWalletBinderTest {
         identityConfig = identity,
         dashPayConfig = config,
         walletData = walletData,
+        blockchainServiceConfig = serviceConfig,
         scope = scope,
         supportsPlatform = { supportsPlatform },
         now = now,
@@ -302,6 +355,20 @@ class SdkWalletBinderTest {
         override suspend fun isRewindAccountedFor(): Boolean {
             accountedForCalls++
             return accountedFor
+        }
+
+        /** Set true to have the no-rewind conclusion succeed when the watch reaches it. */
+        var concludesNoRewind: Boolean = false
+        var concludeCalls = 0
+
+        override suspend fun concludeNoRewindObserved(
+            walletIdHex: String,
+            ownerIdentityId: ByteArray,
+            ownerUserId: String
+        ): Boolean {
+            concludeCalls++
+            if (concludesNoRewind) accountedFor = true
+            return concludesNoRewind
         }
     }
 
@@ -483,6 +550,98 @@ class SdkWalletBinderTest {
         assertNull(sdk.lastBirthTime)
         // The identity probed is the one from BlockchainIdentityConfig.
         assertEquals(userId, Identifier.from(sdk.lastIdentityId!!).toString())
+    }
+
+    // ── Wallet birth time: the chosen restore date must reach the SDK ────
+
+    /**
+     * `DashWalletFactory.restoreWalletFromSeed` stamps EVERY restored seed
+     * with this 2015 value ("the wallet creation time should always be the
+     * oldest possible time"), so a restored wallet's own
+     * `earliestKeyCreationTime` says nothing about when the wallet was
+     * really created — it is a floor, not a measurement.
+     */
+    private val sentinelSecs = de.schildbach.wallet.Constants.EARLIEST_HD_SEED_CREATION_TIME
+
+    /** A date a tester could pick on the restore screen: 2023-07-22. */
+    private val chosenDateSecs = 1_690_000_000L
+
+    @Test
+    fun chosenRestoreDate_reachesBindAppWallet() = runBlocking {
+        // The regression: a restore with a date chosen still handed the
+        // resolver the 2015 sentinel (observed on mainnet as
+        // "resolved birth time 1427610960 … birthHeight=239040"), because
+        // the binder read only the wallet and the picked date lives in
+        // BlockchainServiceConfig.
+        val sdk = readySdk()
+        val binder = binder(
+            sdk,
+            walletData = walletDataWithKeyTime(sentinelSecs),
+            serviceConfig = blockchainServiceConfig(chosenDateSecs),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(chosenDateSecs, sdk.lastBirthTime)
+    }
+
+    @Test
+    fun noRestoreDateChosen_keepsTheEarliestPossibleBirthTime() = runBlocking {
+        // "I don't know when I created it": nothing is persisted, so the
+        // binder must still hand over the earliest-possible sentinel —
+        // a full scan is the correct answer here, and anything LATER
+        // would risk hiding transactions.
+        val sdk = readySdk()
+        val binder = binder(
+            sdk,
+            walletData = walletDataWithKeyTime(sentinelSecs),
+            serviceConfig = blockchainServiceConfig(null),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(sentinelSecs, sdk.lastBirthTime)
+    }
+
+    @Test
+    fun birthTime_prefersTheChosenDateOverTheRestoreSentinel() {
+        assertEquals(chosenDateSecs, sdkWalletBirthTimeSecs(chosenDateSecs, sentinelSecs))
+    }
+
+    @Test
+    fun birthTime_unknownDateFallsBackToTheSentinel() {
+        assertEquals(sentinelSecs, sdkWalletBirthTimeSecs(null, sentinelSecs))
+    }
+
+    @Test
+    fun birthTime_aSentinelValuedConfigIsNotInformation() {
+        // BlockchainServiceConfig already nulls the sentinel, but a caller
+        // that passes it raw must not be treated as a real choice either.
+        assertEquals(sentinelSecs, sdkWalletBirthTimeSecs(sentinelSecs, sentinelSecs))
+    }
+
+    @Test
+    fun birthTime_neverSkipsPastARealWalletKeyTime() {
+        // Restore-from-backup: the protobuf carries a genuine key creation
+        // time (2020). A later user-entered date must NOT move the scan
+        // start forward past it — that would silently hide 2020-2023
+        // transactions. The earliest real signal wins.
+        val realKeyTimeSecs = 1_580_000_000L // 2020-01-26
+        assertEquals(realKeyTimeSecs, sdkWalletBirthTimeSecs(chosenDateSecs, realKeyTimeSecs))
+    }
+
+    @Test
+    fun birthTime_chosenDateWinsWhenItIsEarlierThanTheWalletKeyTime() {
+        val realKeyTimeSecs = 1_700_000_000L // 2023-11-14
+        assertEquals(chosenDateSecs, sdkWalletBirthTimeSecs(chosenDateSecs, realKeyTimeSecs))
+    }
+
+    @Test
+    fun birthTime_noWalletAndNoDateStaysUnknown() {
+        // Unknown => bindAppWallet maps null to birthHeight 0 (genesis).
+        assertNull(sdkWalletBirthTimeSecs(null, null))
     }
 
     @Test
@@ -1151,6 +1310,111 @@ class SdkWalletBinderTest {
     }
 
     @Test
+    fun provisioning_backfillGateSaysSkip_stillDrainsTheDeferredAccountBuilds() = runBlocking {
+        // The queue and the sweep are separate concerns: the gate skips the
+        // SWEEP because it rewinds the SPV synced height, but a contact's
+        // account build left queued keeps that contact's receiving addresses
+        // out of the watched script set, so their payments never match a
+        // filter and the balance stays short. Observed live: 182 builds
+        // deferred, 176 accounts registered, and no drain after the first
+        // session because every later launch took this skip path.
+        val sdk = readySdk()
+        sdk.onDrain = { _ ->
+            DashPayContactDrainReport(
+                bound = true, queuedBefore = 182, drainScheduled = true, queuedAfter = 6
+            )
+        }
+        val gate = FakeBackfillGate(shouldRun = false)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(0, sdk.provisionCalls)
+        assertEquals(1, sdk.drainCalls)
+        assertEquals(walletId, sdk.lastDrainWalletId)
+    }
+
+    @Test
+    fun provisioning_backfillGateSaysSkip_drainsEvenWhenTheQueueIsEmpty() = runBlocking {
+        // The live S21 log showed the gate's SKIPPING REWIND line and then
+        // NOTHING from the drain, which reads identically whether the drain
+        // was unwired or merely found an empty queue (deferredContactBuilds=0
+        // on that device — it was the latter). The pass must run, and say so,
+        // regardless of what it finds.
+        val sdk = readySdk()
+        sdk.onDrain = { _ ->
+            DashPayContactDrainReport(
+                bound = true, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
+            )
+        }
+        val gate = FakeBackfillGate(shouldRun = false)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.drainCalls)
+        assertEquals(walletId, sdk.lastDrainWalletId)
+    }
+
+    @Test
+    fun drainReport_saysQueuedOnEveryOutcome_soAnAbsentLineMeansTheDrainDidNotRun() {
+        val empty = describeContactDrain(
+            DashPayContactDrainReport(
+                bound = true, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
+            )
+        )
+        val unbound = describeContactDrain(
+            DashPayContactDrainReport(
+                bound = false, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
+            )
+        )
+        val worked = describeContactDrain(
+            DashPayContactDrainReport(
+                bound = true, queuedBefore = 182, drainScheduled = true, queuedAfter = 6
+            )
+        )
+        // The grep a tester's log is read with.
+        assertTrue(empty.contains("queued="))
+        assertTrue(unbound.contains("queued="))
+        assertTrue(worked.contains("queued=182"))
+        assertTrue(worked.contains("built=176"))
+        assertTrue(worked.contains("stillQueued=6"))
+        // And the three outcomes must not read alike.
+        assertEquals(3, setOf(empty, unbound, worked).size)
+    }
+
+    @Test
+    fun provisioning_drainFailure_isContainedLikeTheRestOfThePass() = runBlocking {
+        val sdk = readySdk()
+        sdk.onDrain = { _ -> error("keystore unavailable") }
+        val gate = FakeBackfillGate(shouldRun = false)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.drainCalls)
+    }
+
+    @Test
+    fun provisioning_backfillGateSaysRun_leavesTheDrainToTheSweepPass() = runBlocking {
+        // provisionDashPayContactAccounts already schedules and observes the
+        // drain as its step 2 — the skip path is the only one that needed its
+        // own, so a permitted pass must not drain twice.
+        val sdk = readySdk()
+        val gate = FakeBackfillGate(shouldRun = true)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.provisionCalls)
+        assertEquals(0, sdk.drainCalls)
+    }
+
+    @Test
     fun provisioning_backfillGateSaysRun_provisionsAndReportsTheOutcomeBack() = runBlocking {
         val sdk = readySdk()
         val gate = FakeBackfillGate(shouldRun = true)
@@ -1208,6 +1472,43 @@ class SdkWalletBinderTest {
     }
 
     @Test
+    fun provisioning_armedRewindThatNeverLands_concludesNoRewindAndStops() = runBlocking {
+        // The wallet that needs no backfill at all. Nothing is ever accounted
+        // for, so without a conclusion the watch would spin out its whole
+        // budget and every later launch would re-provision forever. The
+        // conclusion may only be reached after the quiet-observation window.
+        val sdk = readySdk()
+        val gate = FakeBackfillGate(
+            shouldRun = true,
+            armed = BackfillArmed(targetHeight = 1_529_377L, contactFingerprint = "fp"),
+            accountedFor = false
+        )
+        gate.concludesNoRewind = true
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        // Before the window elapses the watch must NOT conclude.
+        delay(15)
+        assertEquals(
+            "must not conclude before the quiet-observation window elapses",
+            0,
+            gate.concludeCalls
+        )
+
+        delay(60)
+        assertTrue("should have concluded once the window elapsed", gate.concludeCalls >= 1)
+        val evaluatesAtConclusion = gate.evaluateCalls
+        delay(40)
+        assertEquals(
+            "the watch should stop once the no-rewind conclusion is recorded",
+            evaluatesAtConclusion,
+            gate.evaluateCalls
+        )
+    }
+
+    @Test
     fun provisioning_noRewindArmed_startsNoWatch() = runBlocking {
         // A pass that armed nothing has nothing to observe, so the poll must
         // not run at all — it would be pure battery cost on a healthy wallet.
@@ -1234,5 +1535,109 @@ class SdkWalletBinderTest {
         binder.provisionContactAccountsInBackground(force = true).join() // must not throw
 
         assertEquals(1, sdk.provisionCalls)
+    }
+
+    // -- Step 4c: one-shot address-window heal ------------------------------
+
+    /** A config whose gap-widened version behaves like the real store. */
+    private fun healConfig(recordedVersion: Int? = null): Pair<DashPayConfig, () -> Int?> {
+        var recorded: Int? = recordedVersion
+        val config = dashPayConfig(readsFlag = true)
+        coEvery { config.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) } answers { recorded }
+        coEvery {
+            config.set(DashPayConfig.SDK_GAP_WIDENED_VERSION, any())
+        } answers { recorded = secondArg() }
+        coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) } returns Unit
+        coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH) } returns Unit
+        coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) } returns Unit
+        coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED) } returns Unit
+        return config to { recorded }
+    }
+
+    @Test
+    fun bind_widensAddressWindowsOnce_thenInvalidatesBackfillCoverage() = runBlocking {
+        val sdk = readySdk()
+        val (config, recordedVersion) = healConfig()
+        val binder = binder(sdk, config = config, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.widenCalls)
+        // The heal is retroactive on its own: the SPV watermark rewind is
+        // armed directly (identity-less wallets never run the DashPay gate).
+        assertEquals(1, sdk.armRescanCalls)
+        assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
+        // Coverage invalidated so the backfill gate's next consult rewinds
+        // and re-matches history against the widened script set.
+        coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+        coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH) }
+        coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) }
+        coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED) }
+
+        // The recorded version latches ACROSS launches: a fresh binder
+        // (same config store) must not widen again.
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.widenCalls)
+    }
+
+    @Test
+    fun bind_failedWiden_recordsNothing_retriesNextPass() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { false }
+        val (config, recordedVersion) = healConfig()
+        val binder = binder(sdk, config = config, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.widenCalls)
+        // Nothing recorded, coverage untouched — a rewind without widened
+        // windows would burn a full re-scan for nothing.
+        assertNull(recordedVersion())
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH) }
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) }
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED) }
+
+        // Retried on the next LAUNCH (the in-process `completed` latch
+        // skips re-binding until then — a fresh binder models the restart);
+        // succeeds and records the version this time.
+        sdk.onWiden = { true }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(2, sdk.widenCalls)
+        assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
+    }
+
+    @Test
+    fun bind_alreadyHealed_skipsWidening() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(0, sdk.widenCalls)
+        assertEquals(0, sdk.armRescanCalls)
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+    }
+
+    @Test
+    fun bind_failedRescanArm_recordsNothing_retriesNextLaunch() = runBlocking {
+        // Widening alone is not the heal: without the watermark rewind the
+        // wider windows are only prospective. A failed arm must leave the
+        // version unrecorded so the next launch retries the whole step.
+        val sdk = readySdk()
+        sdk.onArmRescan = { _, _ -> false }
+        val (config, recordedVersion) = healConfig()
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.widenCalls)
+        assertEquals(1, sdk.armRescanCalls)
+        assertNull(recordedVersion())
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+
+        sdk.onArmRescan = { _, _ -> true }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(2, sdk.armRescanCalls)
+        assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
     }
 }

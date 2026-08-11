@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.data.WalletUIConfig
@@ -393,12 +394,14 @@ class CrowdNodeViewModel @Inject constructor(
         analytics.logEvent(eventName, mapOf())
     }
 
-    private fun getOrCreateAccountAddress(): String {
+    private suspend fun getOrCreateAccountAddress(): String {
         return crowdNodeApi.accountAddress ?: createNewAccountAddress()
     }
 
-    private fun createNewAccountAddress(): String {
-        val address = walletDataProvider.freshReceiveAddressString()
+    private suspend fun createNewAccountAddress(): String {
+        // Off-main: reached from Main-dispatched viewModelScope coroutines, and
+        // the underlying freshReceiveAddress() forces a synchronous full-wallet save.
+        val address = walletDataProvider.freshReceiveAddressStringOffMain()
         globalConfig.crowdNodeAccountAddress = address
 
         return address

@@ -54,7 +54,8 @@ import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.WalletApplicationExt.clearDatabases
+import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRescan
+import de.schildbach.wallet.WalletApplicationExt.finishWalletWipe
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.AddressBookProvider
 import de.schildbach.wallet.database.dao.BlockchainStateDao
@@ -2501,10 +2502,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         // wipe path safe on every build type (no-op when already
                         // stopped, as on release where shutdown() stopped them).
                         platformSyncService.stopSdkEngines()
-                        application.finalizeWipe()
+                        // Suspends for as long as the wipe takes (nearly two
+                        // minutes of SDK cleanup on a live mainnet wallet)
+                        // WITHOUT blocking this dispatcher thread, which is
+                        // what the old runBlocking clear did.
+                        application.finishWalletWipe()
+                    } else {
+                        //Clear the blockchain identity
+                        application.clearDatabasesForRescan()
                     }
-                    //Clear the blockchain identity
-                    application.clearDatabases(false)
                     resetBlockchainState()
                 }
                 log.info("closing bootstrap streams")

@@ -24,6 +24,7 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.service.platform.PlatformHealth
 import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.service.platform.sdk.AssetLockFundingEvidence
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
@@ -123,16 +124,25 @@ class RequestUserNameViewModelTest {
      * Asset-lock funding PREFLIGHT (the S22 "display balance passed, the
      * real build bounced" gate). Default `null` = no evidence → fail OPEN,
      * so every pre-existing expectation is unchanged; the settling tests
-     * override it with a concrete eligible sum.
+     * override it with concrete evidence.
      */
-    private val assetLockEligibleDuffs = MutableStateFlow<Long?>(null)
+    private val assetLockFundingEvidence = MutableStateFlow<AssetLockFundingEvidence?>(null)
+
+    /**
+     * Set the preflight's CLASSIFIED evidence: the mirror has attributed
+     * and finalized the whole wallet down to [eligibleDuffs], with nothing
+     * left pending — the shape that proves a shortfall.
+     */
+    private fun classifiedEvidence(eligibleDuffs: Long) {
+        assetLockFundingEvidence.value = AssetLockFundingEvidence(eligibleDuffs, 0L)
+    }
 
     /** Preflight read count — the settling-poll cadence assertions. */
     private var eligibilityReads = 0
     private val assetLockFundingPreflight = mockk<SdkAssetLockFundingPreflight> {
-        coEvery { eligibleAssetLockFundingDuffsOrNull() } answers {
+        coEvery { assetLockFundingEvidenceOrNull() } answers {
             eligibilityReads++
-            assetLockEligibleDuffs.value
+            assetLockFundingEvidence.value
         }
     }
 
@@ -440,7 +450,7 @@ class RequestUserNameViewModelTest {
         // BIP44 coins) are 1449 duffs of dust — the old gate let the user
         // pick a name and sit through the ~30s dialog before the build
         // bounced "Insufficient funds: available 1449, required 3000000".
-        assetLockEligibleDuffs.value = 1_449L
+        classifiedEvidence(1_449L)
         walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
         val viewModel = viewModel()
 
@@ -452,9 +462,57 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
+    fun checkUsernameValid_dashSource_freshlyFundedWallet_passes_nonContested() = runVmTest {
+        // S21 mainnet, 11.10.67: a wallet holding one 0.09401442 DASH
+        // receive was refused "You need at least 0.03 spendable Dash to
+        // create a username" for the nine minutes between the engine
+        // IS-locking the receive and the block landing — the SDK mirror
+        // writes neither the account attribution nor any finality signal
+        // before the block, so the preflight's eligible sum was 0 and the
+        // gate read that 0 as a proven shortfall. Unclassified value that
+        // could cover the fee means the mirror is behind the engine, not
+        // that the wallet is short.
+        assetLockFundingEvidence.value = AssetLockFundingEvidence(
+            eligibleDuffs = 0L,
+            unclassifiedDuffs = 9_401_442L
+        )
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(9_401_442L)
+        val viewModel = viewModel()
+
+        viewModel.checkUsernameValid("brian-s21", UsernameType.Primary)
+
+        val state = viewModel.uiState.value
+        assertFalse("brian-s21 must be non-contested", state.usernameContestable)
+        assertEquals("0.03", state.requiredAmount)
+        assertTrue(state.enoughBalance)
+        assertFalse(state.fundsSettling)
+    }
+
+    @Test
+    fun checkUsernameValid_dashSource_freshlyFundedWallet_passes_contested() = runVmTest {
+        // The same pre-block mirror state at the 0.25 DASH contested fee:
+        // a wallet comfortably above the threshold must not be refused
+        // either (the S21 log failed both, at 0.03 and at 0.25).
+        assetLockFundingEvidence.value = AssetLockFundingEvidence(
+            eligibleDuffs = 0L,
+            unclassifiedDuffs = 50_000_000L
+        )
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(50_000_000L)
+        val viewModel = viewModel()
+
+        viewModel.checkUsernameValid("brian", UsernameType.Primary)
+
+        val state = viewModel.uiState.value
+        assertTrue("brian must be contested", state.usernameContestable)
+        assertEquals("0.25", state.requiredAmount)
+        assertTrue(state.enoughBalance)
+        assertFalse(state.fundsSettling)
+    }
+
+    @Test
     fun checkUsernameValid_dashSource_eligibleFunds_pass() = runVmTest {
         // Eligible sum covers fee + headroom → the gate opens normally.
-        assetLockEligibleDuffs.value = 99_400_000L
+        classifiedEvidence(99_400_000L)
         walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
         val viewModel = viewModel()
 
@@ -470,7 +528,7 @@ class RequestUserNameViewModelTest {
         // Preflight has no evidence (pre-cutover / SDK unavailable) — the
         // display-balance gate alone decides; the flow must never be
         // blocked on an unrelated hiccup.
-        assetLockEligibleDuffs.value = null
+        assetLockFundingEvidence.value = null
         walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
         val viewModel = viewModel()
 
@@ -487,13 +545,13 @@ class RequestUserNameViewModelTest {
         // balance emission re-reads the eligibility and the gate must
         // self-correct without retyping — the same async-input recompute
         // contract the shielded status gate has.
-        assetLockEligibleDuffs.value = 1_449L
+        classifiedEvidence(1_449L)
         walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
         val viewModel = viewModel()
         viewModel.checkUsernameValid("alice2", de.schildbach.wallet.ui.username.UsernameType.Primary)
         assertTrue(viewModel.uiState.value.fundsSettling)
 
-        assetLockEligibleDuffs.value = 99_400_000L
+        classifiedEvidence(99_400_000L)
         walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_001L)
 
         val state = viewModel.uiState.value
@@ -510,14 +568,14 @@ class RequestUserNameViewModelTest {
         // stayed stale until the user left and re-entered the screen. The
         // settling-state poll must re-read the preflight and clear the gate
         // in place.
-        assetLockEligibleDuffs.value = 1_449L
+        classifiedEvidence(1_449L)
         walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
         val viewModel = viewModel()
         viewModel.checkUsernameValid("alice2", de.schildbach.wallet.ui.username.UsernameType.Primary)
         assertTrue(viewModel.uiState.value.fundsSettling)
 
         // Finality flips on the SDK mirror; NO walletBalanceFlow emission.
-        assetLockEligibleDuffs.value = 99_400_000L
+        classifiedEvidence(99_400_000L)
         dispatcher.scheduler.advanceTimeBy(RequestUserNameViewModel.SETTLING_ELIGIBILITY_POLL_MS + 1)
         dispatcher.scheduler.runCurrent()
 
@@ -530,13 +588,13 @@ class RequestUserNameViewModelTest {
     fun checkUsernameValid_dashSource_settlingPoll_stopsOnceTheGateClears() = runVmTest {
         // The poll exists only while the settling row shows — once the gate
         // resolves, ticks must stop (no idle background DB reads).
-        assetLockEligibleDuffs.value = 1_449L
+        classifiedEvidence(1_449L)
         walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(99_400_000L)
         val viewModel = viewModel()
         viewModel.checkUsernameValid("alice2", de.schildbach.wallet.ui.username.UsernameType.Primary)
         assertTrue(viewModel.uiState.value.fundsSettling)
 
-        assetLockEligibleDuffs.value = 99_400_000L
+        classifiedEvidence(99_400_000L)
         dispatcher.scheduler.advanceTimeBy(RequestUserNameViewModel.SETTLING_ELIGIBILITY_POLL_MS + 1)
         dispatcher.scheduler.runCurrent()
         assertFalse(viewModel.uiState.value.fundsSettling)

@@ -34,6 +34,8 @@ import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.KeyId
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.evolution.EvolutionContact
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bouncycastle.crypto.params.KeyParameter
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -92,6 +94,15 @@ class PlatformDocumentBroadcastService @Inject constructor(
 ) : PlatformBroadcastService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformDocumentBroadcastService::class.java)
+
+        /**
+         * Hard cap on the post-send reconcile fetch. The send has already
+         * succeeded when this runs, so the only thing at stake is whether the
+         * bookkeeping happens now or on the next contact sync — never worth
+         * minutes of spinner. Propagation normally resolves in the first
+         * watch attempt or two (~1-3 s).
+         */
+        const val SDK_SEND_RECONCILE_CAP_MS = 30_000L
     }
 
     @Throws(Exception::class)
@@ -152,23 +163,60 @@ class PlatformDocumentBroadcastService @Inject constructor(
             is SdkWriteResult.Broadcast -> {
                 log.info("contact request sent via Kotlin SDK; reconciling from platform")
                 // The SDK confirmed the broadcast, so the document is
-                // committed; watch fetches it (with retries for propagation).
-                val document = platform.contactRequests.watchContactRequest(
-                    Identifier.from(blockchainIdentity.uniqueIdString),
-                    Identifier.from(toUserId),
-                    10,
-                    1000,
-                    RetryDelayType.LINEAR
-                ) ?: throw IllegalStateException(
-                    "contact request was broadcast via the Kotlin SDK but could not be retrieved " +
-                        "from platform; local state will reconcile on the next contact sync"
+                // committed and NOTHING on this reconcile path may fail or
+                // stall the operation. The uncapped watch below used to grind
+                // for minutes (legacy CBOR identity-cache rejections driving
+                // fetch retries and repeated quorum searches) with the user
+                // on a spinner — and then THROW — for a send that had
+                // already succeeded.
+                val document = try {
+                    withTimeoutOrNull(SDK_SEND_RECONCILE_CAP_MS) {
+                        platform.contactRequests.watchContactRequest(
+                            Identifier.from(blockchainIdentity.uniqueIdString),
+                            Identifier.from(toUserId),
+                            10,
+                            1000,
+                            RetryDelayType.LINEAR
+                        )
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("post-send reconcile fetch failed; deferring to contact sync (non-fatal)", e)
+                    null
+                }
+                if (document != null) {
+                    return finalizeSentContactRequest(
+                        ContactRequest(document),
+                        blockchainIdentity,
+                        potentialContactIdentity!!,
+                        toUserId,
+                        encryptionKey
+                    )
+                }
+                // Success-with-deferred-reconcile: the request is on Platform
+                // but could not be fetched back in time. The contact sync pass
+                // performs this exact bookkeeping (row insert, DIP-15 sending
+                // keychain, listeners) from the fetched document — prompt it
+                // and report success. The returned row is provisional, for the
+                // caller's success payload (userId/toUserId) only; it is NOT
+                // persisted — the persisted row must come from the real
+                // document, which carries the key indices and accountReference.
+                log.warn(
+                    "contact request is on Platform but was not reconciled within {} ms; deferring to contact sync",
+                    SDK_SEND_RECONCILE_CAP_MS
                 )
-                return finalizeSentContactRequest(
-                    ContactRequest(document),
-                    blockchainIdentity,
-                    potentialContactIdentity!!,
-                    toUserId,
-                    encryptionKey
+                platformSyncService.requestContactUpdate()
+                return DashPayContactRequest(
+                    userId = blockchainIdentity.uniqueIdString,
+                    toUserId = toUserId,
+                    accountReference = 0,
+                    encryptedPublicKey = ByteArray(0),
+                    senderKeyIndex = 0,
+                    recipientKeyIndex = 0,
+                    timestamp = System.currentTimeMillis(),
+                    encryptedAccountLabel = null,
+                    autoAcceptProof = null
                 )
             }
             is SdkWriteResult.Ambiguous -> {

@@ -31,11 +31,57 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.util.NativeLogBridge
+import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * The birth time (Unix SECONDS) to hand [DashSdkService.bindAppWallet],
+ * which maps it to the SDK `birthHeight` via [BirthHeightResolver].
+ *
+ * ## Why the dashj wallet alone is not the answer
+ *
+ * [org.bitcoinj.wallet.Wallet.getEarliestKeyCreationTime] is NOT a real
+ * birth time for a seed restore: `DashWalletFactory.restoreWalletFromSeed`
+ * deliberately stamps every restored seed with
+ * [Constants.EARLIEST_HD_SEED_CREATION_TIME] ("always the oldest possible
+ * time", 2015-03-29) so dashj can never miss history. The wallet birth
+ * date the user picks on the restore screen is persisted SEPARATELY, in
+ * [BlockchainServiceConfig.getWalletCreationDate] — which is exactly what
+ * dashj's own fresh-store checkpointing reads
+ * (`BlockchainServiceImpl`: `serviceConfig.getWalletCreationDate() ?:
+ * wallet.earliestKeyCreationTime`). Reading only the wallet therefore
+ * handed the resolver the 2015 sentinel on EVERY restore, i.e. a full
+ * mainnet chain scan no matter which date was chosen.
+ *
+ * ## Rule: the earliest REAL signal, sentinel as the floor
+ *
+ * A value only carries information when it is strictly later than the
+ * sentinel — [BlockchainServiceConfig.getWalletCreationDate] already
+ * nulls the sentinel itself, and the wallet's time is filtered the same
+ * way here (the rule [de.schildbach.wallet.ui.more.ToolsViewModel] uses).
+ * Of the informative values we take the MINIMUM, not a precedence order:
+ * a wallet restored from a protobuf backup carries a genuine key
+ * creation time, and a later user-entered date must never be allowed to
+ * skip past it. When neither is informative — the "user does not know
+ * the date" path — we fall back to the raw wallet time, i.e. the 2015
+ * sentinel, which resolves to the earliest possible HD-wallet height.
+ * Scanning too early only costs time; scanning too late hides funds.
+ */
+internal fun sdkWalletBirthTimeSecs(
+    configuredCreationDateSecs: Long?,
+    walletEarliestKeyCreationTimeSecs: Long?
+): Long? {
+    val sentinel = Constants.EARLIEST_HD_SEED_CREATION_TIME
+    val informative = listOfNotNull(
+        configuredCreationDateSecs,
+        walletEarliestKeyCreationTimeSecs
+    ).filter { it > sentinel }
+    return informative.minOrNull() ?: walletEarliestKeyCreationTimeSecs
+}
 
 /**
  * The NON-INTERACTIVE wallet-unlock recipe shared by every background
@@ -128,6 +174,25 @@ internal fun isBoundWalletStale(latchedFingerprint: String?, currentFingerprint:
     currentFingerprint != null && latchedFingerprint != currentFingerprint
 
 /**
+ * One line describing a deferred-contact-account drain pass, for EVERY
+ * outcome including the two that do no work.
+ *
+ * Silence is not an acceptable outcome here. wallet.log is the only artifact a
+ * remote tester can send back and its appender is INFO+, so a drain that
+ * logged the empty and unbound cases at debug read exactly like a drain that
+ * was never wired — which is what the first field report of this fix could not
+ * distinguish. Every line therefore carries `queued=`, so its presence proves
+ * the pass ran and its absence proves it did not.
+ */
+internal fun describeContactDrain(report: DashPayContactDrainReport): String = when {
+    !report.bound -> "queued=n/a — SDK wallet not loaded yet, nothing attempted"
+    report.queuedBefore == 0 -> "queued=0 built=0 stillQueued=0 — nothing deferred"
+    else -> "queued=${report.queuedBefore} built=${report.built} " +
+        "stillQueued=${report.queuedAfter} (blocked or still draining), " +
+        "drainScheduled=${report.drainScheduled}"
+}
+
+/**
  * Phase 3f production wiring (`docs/kotlin-sdk-migration-plan.md`): make
  * the Kotlin-SDK wallet binding ([DashSdkService.bindAppWallet]) and
  * identity discovery ([DashSdkService.discoverIdentities]) actually happen
@@ -213,6 +278,10 @@ class SdkWalletBinder internal constructor(
     private val identityConfig: BlockchainIdentityConfig,
     private val dashPayConfig: DashPayConfig,
     private val walletData: WalletData,
+    // Holds the wallet creation date the user picks on the restore screen
+    // (and in Settings → Rescan). See [sdkWalletBirthTimeSecs] for why the
+    // dashj wallet's own earliestKeyCreationTime cannot answer this.
+    private val blockchainServiceConfig: BlockchainServiceConfig,
     private val scope: CoroutineScope,
     private val supportsPlatform: () -> Boolean,
     // Injectable clock so the friend-chain provisioning throttle is
@@ -233,6 +302,7 @@ class SdkWalletBinder internal constructor(
         identityConfig: BlockchainIdentityConfig,
         dashPayConfig: DashPayConfig,
         walletData: WalletData,
+        blockchainServiceConfig: BlockchainServiceConfig,
         scope: CoroutineScope,
         backfillGate: DashPayBackfillGate
     ) : this(
@@ -241,6 +311,7 @@ class SdkWalletBinder internal constructor(
         identityConfig = identityConfig,
         dashPayConfig = dashPayConfig,
         walletData = walletData,
+        blockchainServiceConfig = blockchainServiceConfig,
         scope = scope,
         supportsPlatform = { Constants.SUPPORTS_PLATFORM },
         backfillGate = backfillGate
@@ -434,7 +505,7 @@ class SdkWalletBinder internal constructor(
         if (!backfillWatchRunning.compareAndSet(false, true)) return
         scope.launch {
             try {
-                repeat(BACKFILL_WATCH_MAX_POLLS) {
+                repeat(BACKFILL_WATCH_MAX_POLLS) { poll ->
                     delay(backfillWatchIntervalMs)
                     try {
                         if (backfillGate.isRewindAccountedFor()) return@launch
@@ -443,6 +514,20 @@ class SdkWalletBinder internal constructor(
                         // the unaccounted-marker branch is not reachable.
                         backfillGate.evaluate(walletId, identityId, userId)
                         if (backfillGate.isRewindAccountedFor()) return@launch
+                        // Still nothing accounted for after a sustained window
+                        // of polling — and this loop would have exited the
+                        // moment anything was. That is the evidence that no
+                        // rewind is coming, which no single after-read can
+                        // provide. Without concluding here, a wallet that
+                        // needed no backfill re-provisions on every launch
+                        // forever, because the settled-sweep path it would
+                        // otherwise take is unreachable while the SDK
+                        // re-enqueues every contact's account build per launch.
+                        if (poll + 1 >= BACKFILL_NO_REWIND_CONCLUSION_POLLS &&
+                            backfillGate.concludeNoRewindObserved(walletId, identityId, userId)
+                        ) {
+                            return@launch
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -500,7 +585,18 @@ class SdkWalletBinder internal constructor(
                 var armedRewind = false
                 if (identityId != null) {
                     val decision = backfillGate.evaluate(walletId, identityId, userId)
-                    if (!decision.shouldRun) return
+                    if (!decision.shouldRun) {
+                        // The gate skips the SWEEP (it rewinds the SPV synced
+                        // height), never the DRAIN. Those are separate: a
+                        // contact's receiving account that is still queued has
+                        // no addresses in the watched script set, so their
+                        // payments never match a filter and the balance stays
+                        // short — and before this, the queue was only ever
+                        // drained on a pass the gate allowed through, i.e. on
+                        // almost no launch after the first.
+                        drainDeferredAccountBuilds(walletId)
+                        return
+                    }
                     armedRewind = decision.armedToWrite != null
                 }
 
@@ -550,6 +646,40 @@ class SdkWalletBinder internal constructor(
             log.warn(
                 "DashPay friend-chain provisioning pass failed; SDK contact-payment " +
                     "discovery may lag until the next pass",
+                t
+            )
+        }
+    }
+
+    /**
+     * Drain the SDK's deferred DashPay account-build queue and say what
+     * happened — queued / built / still queued. The counts are the only view
+     * the app has of that queue: the SDK logs an enqueue per contact
+     * ("Deferred DashPay account build: enqueued for the signer-backed
+     * drain") and then nothing, so a queue that never drains is invisible
+     * after the session that filled it.
+     *
+     * Reports on EVERY pass, at INFO, including the empty and unbound cases
+     * ([describeContactDrain]) — wallet.log's appender is INFO+, so the
+     * earlier debug-level "queue empty" / "not loaded yet" branches were
+     * indistinguishable from the drain never running at all, which is exactly
+     * the question a tester's log has to answer.
+     *
+     * Never throws: an unavailable drain (locked device, seed verify) is a
+     * normal state and the queue survives for the next pass.
+     */
+    private suspend fun drainDeferredAccountBuilds(walletId: String) {
+        try {
+            val report = sdkService.drainDashPayContactAccountBuilds(walletId)
+            log.info(
+                "DashPay account-build drain on {}…: {}",
+                walletId.take(8), describeContactDrain(report)
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn(
+                "DashPay account-build drain failed; the contacts' receiving addresses stay " +
+                    "unwatched until the next pass",
                 t
             )
         }
@@ -617,6 +747,27 @@ class SdkWalletBinder internal constructor(
         )
     }
 
+    /**
+     * The birth time handed to [DashSdkService.bindAppWallet]: the wallet
+     * creation date the user picked during the restore (persisted in
+     * [BlockchainServiceConfig], the same store dashj's own checkpointing
+     * reads) combined with the dashj wallet's key time by
+     * [sdkWalletBirthTimeSecs]. A config read failure degrades to the
+     * wallet time alone — never to a value LATER than what we would
+     * otherwise have used.
+     */
+    private suspend fun resolveBirthTimeSecs(): Long? {
+        val configured = try {
+            blockchainServiceConfig.getWalletCreationDate()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("wallet creation date unreadable; falling back to the wallet's key time", e)
+            null
+        }
+        return sdkWalletBirthTimeSecs(configured, walletData.wallet?.earliestKeyCreationTime)
+    }
+
     /** One pass; caller holds [mutex]. Throws freely — [bindIfEnabled] contains the fallout. */
     private suspend fun bindLocked(unlockProvider: suspend () -> WalletUnlock?) {
         // 1. Flags (both default OFF). Read failure = off.
@@ -659,7 +810,7 @@ class SdkWalletBinder internal constructor(
             // Decrypt + hand off; the words are function-local and the
             // reference dies with this call (see PlatformMnemonicProvider).
             val words = mnemonicProvider.getMnemonicWords(unlock)
-            val birthTimeSecs = walletData.wallet?.earliestKeyCreationTime
+            val birthTimeSecs = resolveBirthTimeSecs()
             sdkService.bindAppWallet(words, birthTimeSecs).also {
                 boundWalletIdHex = it
                 boundWalletFingerprint = fingerprint
@@ -676,6 +827,16 @@ class SdkWalletBinder internal constructor(
         // unusable by definition; removing it (removeWallet cascade) is the
         // self-heal. Best-effort: a prune failure must not fail the bind.
         pruneOrphanSdkWallets(walletId)
+
+        // 4c. One-shot migration heal: widen the SDK's address-pool windows
+        // to the Rust max and invalidate the recorded backfill coverage so
+        // the next gate pass REWINDS and re-matches history against the
+        // widened script set. Heals the migrated-wallet frontier gap:
+        // dashj (or any same-seed client) spending past the SDK's derived
+        // window made the change — and every descendant transaction —
+        // invisible to the scan. Best-effort and re-tried on the next bind
+        // until it succeeds once; must never fail the bind.
+        maybeWidenAddressWindows(walletId)
 
         // 5. Attach the existing on-chain identity so the SDK can derive
         //    its keys (identity index 0 — key-parity note in SdkDashPayWrites).
@@ -796,6 +957,58 @@ class SdkWalletBinder internal constructor(
         }
     }
 
+    /**
+     * Step 4c — the one-shot migration address-window heal.
+     *
+     * Widens the SDK wallet's standard-family gap limits to the Rust max
+     * ([DashSdkService.widenAddressWindows]) and, on success, invalidates
+     * the recorded DIP-15 backfill coverage so the gate's next consult
+     * forces a full rewind: the re-scan then matches history against the
+     * widened script set, recovering transactions whose addresses sat past
+     * the old window (the same-seed-client frontier gap observed in the
+     * field). Guarded by [DashPayConfig.SDK_GAP_WIDENED_VERSION] so the
+     * widening + forced rewind happen ONCE per heal version, not per
+     * launch; a failed attempt records nothing and retries on the next
+     * bind. Never throws — the bind must survive this step failing.
+     */
+    private suspend fun maybeWidenAddressWindows(walletIdHex: String) {
+        try {
+            val done = dashPayConfig.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) ?: 0
+            if (done >= GAP_WIDEN_HEAL_VERSION) return
+            if (!sdkService.widenAddressWindows(walletIdHex)) {
+                log.warn("address-window heal did not complete; will retry next bind")
+                return
+            }
+            // Retroactivity: rewind the SPV filter watermark to the wallet's
+            // birth DIRECTLY, not only via the DashPay backfill gate — the
+            // gate's rewind rides the contact-provisioning pass, which never
+            // runs on a wallet without a platform identity, and the frontier
+            // gap does not require one. Double-arming on identity wallets is
+            // harmless: the Rust side never moves the watermark forward.
+            if (!sdkService.armSpvRescan(walletIdHex, resolveBirthTimeSecs())) {
+                log.warn("address-window heal: rescan arm failed; will retry next bind")
+                return
+            }
+            // Invalidate the coverage record LAST, only after the windows
+            // provably widened: the forced rewind is only worth its ~full
+            // re-scan when the wider script set is in place to profit.
+            dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR)
+            dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH)
+            dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT)
+            dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED)
+            dashPayConfig.set(DashPayConfig.SDK_GAP_WIDENED_VERSION, GAP_WIDEN_HEAL_VERSION)
+            log.info(
+                "address-window heal v{} applied on {}…: gaps widened, backfill coverage " +
+                    "invalidated — next gate pass rewinds with the widened script set",
+                GAP_WIDEN_HEAL_VERSION, walletIdHex.take(8)
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("address-window heal failed; will retry next bind", t)
+        }
+    }
+
     private suspend fun anyFlagEnabled(): Boolean = try {
         dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) == true ||
             dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) == true ||
@@ -830,6 +1043,17 @@ class SdkWalletBinder internal constructor(
         private val log = LoggerFactory.getLogger(SdkWalletBinder::class.java)
 
         /**
+         * Version of the one-shot address-window heal
+         * ([maybeWidenAddressWindows]). Bump to re-run the widening + the
+         * forced coverage rewind on wallets that already healed at a lower
+         * version. v2 = v1 + the direct SPV watermark rewind
+         * ([DashSdkService.armSpvRescan]) — v1 relied on the DashPay
+         * backfill gate for retroactivity, which identity-less wallets
+         * never run (v1 shipped only in local QA 11.10.78).
+         */
+        internal const val GAP_WIDEN_HEAL_VERSION = 2
+
+        /**
          * Cadence and budget for [watchArmedBackfillRewind]. The window the
          * watch has to catch is bounded by how long the re-scan takes to climb
          * back past the armed height — ~15 min on the field wallet that
@@ -839,6 +1063,15 @@ class SdkWalletBinder internal constructor(
          */
         internal const val BACKFILL_WATCH_INTERVAL_MS = 60_000L
         internal const val BACKFILL_WATCH_MAX_POLLS = 45
+
+        /**
+         * Polls of quiet observation before the watch concludes the armed pass
+         * needed no rewind. Must comfortably exceed how long the SDK takes to
+         * make a rewind durable — 9–60 s by its own accounting, 102 s measured
+         * on the wallet this was diagnosed against — because concluding early
+         * would record coverage over a range that is about to be rewound.
+         */
+        internal const val BACKFILL_NO_REWIND_CONCLUSION_POLLS = 5
 
         /**
          * Floor between non-forced friend-chain provisioning passes. The

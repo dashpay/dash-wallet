@@ -610,7 +610,25 @@ public class SweepWalletFragment extends Fragment {
     private void handleSweep() {
         setState(State.PREPARATION);
 
-        final Address receivingAddress = application.getWallet().freshReceiveAddress();
+        // OFF THE MAIN THREAD: this runs from the confirm-button click, and
+        // dashj's freshReceiveAddress() forces a synchronous full-wallet save
+        // of the MAIN wallet (measured 1.2s at 215 DashPay friend chains).
+        // Fetch the address on the background handler, then hop back to the
+        // main handler for the SendRequest/UI continuation (so the
+        // SendCoinsOfflineTask callbacks keep their main-looper affinity).
+        backgroundHandler.post(() -> {
+            org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+            final Address receivingAddress = application.getWallet().freshReceiveAddress();
+            handler.post(() -> {
+                if (!isAdded()) {
+                    return;
+                }
+                continueSweep(receivingAddress);
+            });
+        });
+    }
+
+    private void continueSweep(final Address receivingAddress) {
         final SendRequest sendRequest = SendRequest.emptyWallet(receivingAddress);
 
         sendRequest.feePerKb = fees.get(FeeCategory.ECONOMIC);
