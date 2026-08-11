@@ -35,6 +35,7 @@ import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.schildbach.wallet.Constants
 import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashWalletTheme
@@ -191,12 +192,14 @@ private fun ToolsScreenContent(
                     action = onCsvExportClick
                 )
 
-                // Connections (DashConnect)
-                MenuItem(
-                    title = stringResource(R.string.dash_connect_connections_title),
-                    icon = R.drawable.ic_menu_connections,
-                    action = onConnectionsClick
-                )
+                if (Constants.SUPPORTS_CONNECT) {
+                    // Connections (DashConnect)
+                    MenuItem(
+                        title = stringResource(R.string.dash_connect_connections_title),
+                        icon = R.drawable.ic_menu_connections,
+                        action = onConnectionsClick
+                    )
+                }
             }
 
             if (uiState.hasUsername) {

@@ -159,8 +159,10 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     }
 
     private fun handleString(input: String) {
-        if (DashConnectUri.isKeyUri(input) || DashConnectUri.isStUri(input)) {
-            // DashConnect QR (dash-key:/dash-st:) — handled by the Connections screen
+        if (Constants.SUPPORTS_CONNECT && (DashConnectUri.isKeyUri(input) || DashConnectUri.isStUri(input))) {
+            // DashConnect QR (dash-key:/dash-st:) — handled by the Connections screen. Where the
+            // feature is off (prod) these URIs fall through to the normal unrecognised-QR error
+            // rather than opening a screen that only reports the feature is unavailable.
             safeNavigate(PaymentsFragmentDirections.paymentsToConnections(input))
             return
         }
