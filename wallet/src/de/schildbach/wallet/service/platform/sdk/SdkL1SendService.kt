@@ -2043,30 +2043,34 @@ class SdkL1SendService internal constructor(
     }
 
     /**
-     * The largest amount a MAYACHAIN deposit can pay a vault right now:
-     * spendable balance MINUS the deposit's own mining fee MINUS a small
-     * change-output headroom.
+     * The largest amount a MAYACHAIN deposit can pay a vault right now: what
+     * a DRAIN of the funding account delivers, read off the engine.
      *
-     * The fee is MEASURED, not guessed: a throwaway deposit is built through
-     * the real engine (same builder, same three options, the wallet's own
-     * address as a size stand-in) and its reported fee read off the
-     * reservation, which is then released. An estimate must never come in
-     * UNDER the real fee — a quote derived from a too-small reserve makes the
-     * deposit pay the vault less than quoted, and NEAR Intents refuses
-     * under-delivery (~1h wait, then a refund minus 0.001 DASH), so the
-     * measurement is deliberately biased high:
+     * Nothing here is estimated and nothing is withheld. A max deposit IS a
+     * drain, so this builds one — same builder, same three options, the
+     * wallet's own address standing in for the vault — and reads the
+     * deliverable amount the engine reports, then releases the reservation.
+     * The engine sets that output to `total inputs − fee` itself, with this
+     * memo's bytes priced in and no change, so the quote and the deposit that
+     * follows perform the identical computation and cannot disagree.
      *
-     * - [memoSizeBytes] defaults to the 80-byte OP_RETURN ceiling, so a
-     *   shorter real memo can only make the real transaction smaller;
-     * - the probe keeps a change output (as the real deposit will, thanks to
-     *   the headroom), so the measured size matches the real one instead of
-     *   under-counting by an output;
-     * - [MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS] of headroom keeps that change
-     *   output comfortably above dust rather than at the threshold.
+     * That equality is the point. The retired model subtracted a guessed fee
+     * and a change-headroom constant from the wallet-wide spendable balance,
+     * which could only ever approximate what the deposit would really pay. A
+     * quote that comes in OVER the real deliverable makes the deposit pay the
+     * vault less than quoted, and NEAR Intents refuses under-delivery (~1h
+     * wait, then a refund minus 0.001 DASH). Do not reintroduce a headroom or
+     * reserve constant here: it would reopen exactly that gap.
      *
-     * Returns 0 when the balance cannot cover a deposit at all (the caller
-     * surfaces "not enough funds" rather than quoting a negative amount).
-     * Throws like [buildDeferredMayaDeposit] on gate/bind failures.
+     * [memoSizeBytes] defaults to the 80-byte OP_RETURN ceiling, so a shorter
+     * real memo can only leave the real transaction smaller and its
+     * deliverable no lower than quoted.
+     *
+     * Returns 0 when no drain is fundable at all — the engine's typed
+     * refusal when the inputs cannot cover the fee, which is precisely
+     * "nothing depositable" (the caller surfaces "not enough funds" rather
+     * than quoting a negative amount). Throws like [buildDeferredMayaDeposit]
+     * on gate/bind failures.
      */
     suspend fun maxMayaDepositDuffs(memoSizeBytes: Int = MAX_MAYA_MEMO_BYTES): Long {
         require(memoSizeBytes in 1..MAX_MAYA_MEMO_BYTES) {
@@ -2077,13 +2081,19 @@ class SdkL1SendService internal constructor(
         }
         val gate = probeSendGate()
         check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
-        // FAIL-CLOSED (funds-critical): a max deposit spends all but
-        // [MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS] of the wallet, so coin
-        // selection will reach app-locked outputs (CrowdNode) — which
-        // [spendableBalanceDuffs] deliberately INCLUDES and the FFI cannot be
-        // told to exclude. Same guard the send-all drain applies, for the same
-        // reason: refuse to quote rather than sweep protected funds into a
-        // swap. A partial (non-max) deposit keeps the ordinary send's exposure.
+        // FAIL-CLOSED (funds-critical): a max deposit drains the funding
+        // account outright, so coin selection will reach app-locked outputs
+        // (CrowdNode) — which [spendableBalanceDuffs] deliberately INCLUDES
+        // and the FFI cannot be told to exclude. Same guard the send-all
+        // drain applies, for the same reason: refuse to quote rather than
+        // sweep protected funds into a swap. A partial (non-max) deposit
+        // keeps the ordinary send's exposure.
+        //
+        // [buildDeferredMayaDeposit] enforces this too, for every drain caller.
+        // Do NOT delete this copy as redundant: the probe below runs inside a
+        // catch-all that converts any failure into a quote of 0, so relying on
+        // the primitive alone would turn "refuse, you hold locked funds" into
+        // a silent "your maximum is 0".
         check(!hasProtectedOutputs("l1MayaMaxDeposit")) {
             "wallet has app-locked outputs (CrowdNode); a max swap deposit would spend them"
         }
@@ -2139,6 +2149,11 @@ class SdkL1SendService internal constructor(
      * [broadcastDeferredPayment] or abandons via [releaseDeferredPayment].
      * [memo] must fit the 80-byte OP_RETURN standardness limit — checked
      * here (and re-checked engine-side) BEFORE anything is reserved.
+     *
+     * Under [drain] this refuses outright when the wallet holds app-locked
+     * outputs (CrowdNode), the same fail-closed guard the send-all drain
+     * applies — see the check in the body for why it lives here rather than
+     * at the call site.
      */
     suspend fun buildDeferredMayaDeposit(
         vaultAddressBase58: String,
@@ -2161,6 +2176,24 @@ class SdkL1SendService internal constructor(
         }
         val gate = probeSendGate()
         check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        // FAIL-CLOSED GUARD (funds-critical), drain only: a drain selects
+        // every spendable UTXO and the FFI has no exclusion API, so with any
+        // app-locked output present (CrowdNode) it would sweep protected funds
+        // into a vault — irreversibly, once broadcast. Enforced HERE, in the
+        // primitive, rather than trusting the caller to have measured first:
+        // [maxMayaDepositDuffs] does check, and [MayaBlockchainApiImpl] does
+        // call it, but that is a call-site convention and a convention is one
+        // refactor away from being skipped. A partial (non-max) deposit is not
+        // guarded — it keeps the ordinary send's exposure, unchanged.
+        //
+        // [maxMayaDepositDuffs] keeps its own copy of this check deliberately:
+        // its probe runs inside a catch-all that turns any failure into a
+        // quote of 0, which would silently swallow this refusal.
+        if (drain) {
+            check(!hasProtectedOutputs("l1DeferredMayaBuild")) {
+                "wallet has app-locked outputs (CrowdNode); a max swap deposit would spend them"
+            }
+        }
         val payment = source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo, drain)
         log.info(
             "SDK l1DeferredMayaBuild: built {} ({} duffs to the vault{}, {}-byte memo, fee {} duffs), inputs reserved",
@@ -2323,23 +2356,5 @@ class SdkL1SendService internal constructor(
          * engine's `DEFAULT_MAX_OP_RETURN_BYTES`, which re-checks).
          */
         const val MAX_MAYA_MEMO_BYTES = 80
-
-        /**
-         * Held back from the probe deposit in [maxMayaDepositDuffs] so it is
-         * fundable AND carries a change output (matching the real deposit's
-         * shape, so the measured fee is not an output short). Never reaches a
-         * quote: only the MEASURED fee plus
-         * [MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS] is withheld from the user.
-         */
-        private const val MAYA_DEPOSIT_PROBE_RESERVE_DUFFS = 20_000L
-
-        /**
-         * Left in the wallet by a max Maya deposit, on top of the measured
-         * fee: the deposit's change output must stay clear of the dust
-         * threshold (546 duffs), and a couple of duffs of slack absorbs a
-         * shorter-than-worst-case memo. 0.00001 DASH — negligible to the
-         * user, and it makes UNDER-reserving impossible.
-         */
-        private const val MAYA_DEPOSIT_CHANGE_HEADROOM_DUFFS = 1_000L
     }
 }

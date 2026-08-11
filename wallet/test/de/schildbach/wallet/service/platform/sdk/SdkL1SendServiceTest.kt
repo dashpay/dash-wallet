@@ -1327,16 +1327,16 @@ class SdkL1SendServiceTest {
 
     @Test
     fun maxMayaDepositNeverGoesNegative() = runBlocking {
-        // A fee larger than what is left after the probe reserve would make the
-        // arithmetic negative; the caller must see 0 ("not enough funds"),
-        // never a negative quote.
+        // A fee larger than the inputs leaves the drain with nothing to
+        // deliver; the caller must see 0 ("not enough funds"), never a
+        // negative quote.
         val source = mayaSource(spendable = 20_001L, feeDuffs = 25_000L)
         assertEquals(0L, service(source).maxMayaDepositDuffs())
     }
 
     @Test
     fun maxMayaDepositRefusesWhileAppLockedOutputsExist() = runBlocking {
-        // A max deposit spends all but the headroom, so selection would reach
+        // A max deposit drains the account, so selection would reach
         // CrowdNode-locked outputs — the same fail-closed refusal the send-all
         // drain applies. Nothing may be built or measured.
         val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
@@ -1374,6 +1374,48 @@ class SdkL1SendServiceTest {
             assertTrue(e.message!!.contains("app-locked"))
         }
         assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun drainDepositRefusesAppLockedOutputsWithoutAnyPriorMeasurement() = runBlocking {
+        // The guard belongs to the PRIMITIVE, not to the call-site convention
+        // of measuring first. A caller that goes straight to a drain build —
+        // which no current caller does, but which one refactor could — must
+        // still be refused, with nothing reserved.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val svc = service(source, hasAppLockedOutputs = { true })
+        try {
+            svc.buildDeferredMayaDeposit(validAddress, 0L, ByteArray(40), drain = true)
+            fail("expected a direct drain build to be refused while app-locked outputs exist")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("app-locked"))
+        }
+        assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun drainDepositRefusesSeamRegisteredLocksWithoutAnyPriorMeasurement() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val registry = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        try {
+            service(source, seamRegistry = registry)
+                .buildDeferredMayaDeposit(validAddress, 0L, ByteArray(40), drain = true)
+            fail("expected a direct drain build to be refused while seam locks exist")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("app-locked"))
+        }
+        assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun partialDepositIsNotBlockedByAppLockedOutputs() = runBlocking {
+        // Only a DRAIN is guarded. A partial deposit keeps the ordinary send's
+        // exposure — guarding it too would block ordinary swaps for anyone
+        // holding a CrowdNode balance.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val svc = service(source, hasAppLockedOutputs = { true })
+        svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), drain = false)
+        assertEquals(1, source.mayaBuildCalls)
     }
 
     @Test

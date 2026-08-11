@@ -135,7 +135,10 @@ class MayaConversionPreviewViewModel @Inject constructor(
                     val locked = try {
                         withTimeoutOrNull(IS_LOCK_TIMEOUT_MS) {
                             walletDataProvider.waitUntilLocked(txId)
-                        } != null
+                            // Reached only if the lock arrived in time;
+                            // a timeout yields null instead.
+                            true
+                        } ?: false
                     } catch (e: Exception) {
                         log.warn("could not watch maya swap tx {} for a lock", txId, e)
                         false

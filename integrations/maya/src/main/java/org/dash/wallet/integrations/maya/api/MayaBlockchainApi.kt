@@ -49,16 +49,18 @@ interface MayaBlockchainApi {
     ): ResponseResource<SwapTradeUIModel>
 
     /**
-     * The largest amount a swap deposit can pay a vault right now: spendable
-     * balance minus the deposit's own mining fee (MEASURED through the real
-     * SDK builder, never estimated by the retired dashj engine) minus a small
-     * change-output headroom.
+     * The largest amount a swap deposit can pay a vault right now: what a
+     * DRAIN of the funding account delivers, measured through the real SDK
+     * builder and reported by the engine — never estimated, and never reduced
+     * by a headroom or reserve constant.
      *
-     * Quote a MAX sell at exactly this figure. The measurement is biased HIGH
-     * — worst-case memo size, change output included — because a reserve that
-     * came in under the real fee would make the deposit pay less than quoted,
-     * and NEAR Intents refuses under-delivery (~1h wait, then a refund minus
-     * 0.001 DASH). [Dash.ZERO] when the balance cannot fund a deposit at all.
+     * Quote a MAX sell at exactly this figure. The deposit that follows runs
+     * the identical drain, so quote and payment agree by construction rather
+     * than by a margin chosen to be safe. A quote above the real deliverable
+     * would make the deposit pay less than quoted, and NEAR Intents refuses
+     * under-delivery (~1h wait, then a refund minus 0.001 DASH).
+     *
+     * [Dash.ZERO] when no drain is fundable at all.
      */
     suspend fun maxSwapDepositAmount(): Dash
 }

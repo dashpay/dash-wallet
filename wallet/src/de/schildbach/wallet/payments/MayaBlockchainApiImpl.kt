@@ -179,10 +179,12 @@ internal fun expectedVaultDuffs(
  *   the first deposit did reach the network — the BIP70 field-test lesson)
  *   and the error tells the user not to retry.
  *
- * MAX sells never under-deliver: the quote is set to [maxSwapDepositAmount]
- * (balance − a MEASURED fee − change headroom), the deposit pays exactly that,
- * and a balance drop between quote and build aborts instead of quietly paying
- * the vault less than quoted.
+ * MAX sells never under-deliver: the quote is set to [maxSwapDepositAmount],
+ * which is a drain measured through the engine rather than balance arithmetic,
+ * and the deposit that follows runs the same drain. Before broadcasting, the
+ * amount the SIGNED transaction actually delivers is checked against the quote
+ * — not a re-measurement, so nothing that moved in between can defeat it — and
+ * a shortfall aborts rather than quietly paying the vault less than quoted.
  */
 class MayaBlockchainApiImpl @Inject constructor(
     private val sdkL1SendService: SdkL1SendService,
@@ -310,8 +312,8 @@ class MayaBlockchainApiImpl @Inject constructor(
 
             val vaultDuffs = quotedDuffs
 
-            // A MAX sell was quoted at the measured maximum deposit (balance −
-            // measured fee − headroom). Re-measure with the REAL memo before
+            // A MAX sell was quoted at the drain-measured maximum deposit.
+            // Re-measure with the REAL memo before
             // building: if the spendable balance dropped since the quote, the
             // deposit can no longer pay the quoted amount, and paying the vault
             // LESS than quoted is never acceptable — NEAR Intents refuses
@@ -421,6 +423,16 @@ class MayaBlockchainApiImpl @Inject constructor(
             log.info("maya swap deposit {}: broadcasting ({} duffs to the vault)", payment.txidHex, depositDuffs)
             return when (val result = sdkL1SendService.broadcastDeferredPayment(payment)) {
                 is SdkWriteResult.Broadcast -> {
+                    // The mirrored reservation locks are deliberately NOT
+                    // cleared here. It looks like a leak — the deposit
+                    // succeeded, so why keep holding its inputs? — but
+                    // post-cutover the held dashj wallet never learns that
+                    // these outpoints were spent. If the display bridge below
+                    // returns NotBridged, that stale lock is the only thing
+                    // stopping the mixer from selecting a coin that is already
+                    // gone. Clearing them would trade a harmless stale lock for
+                    // a double-selected input, so leave them.
+                    //
                     // Synchronous display bridge (same mechanism as every SDK
                     // send) so the confirmation screen's InstantSend watch and
                     // the tx list see the deposit immediately. Non-fatal: the
