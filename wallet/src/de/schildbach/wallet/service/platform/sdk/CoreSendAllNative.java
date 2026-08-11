@@ -107,6 +107,18 @@ import org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet;
  */
 final class CoreSendAllNative {
 
+    /**
+     * Fee rate for drain builds, in duffs/kB — deliberately 2× the network's
+     * 1000 duffs/kB relay minimum. Drains sweep every UTXO of an account, so
+     * the transaction can be very large and the default rate prices it right
+     * AT the relay edge, where an actual-vs-estimated size difference of a
+     * few bytes pushes the effective rate below some nodes' minimum and the
+     * transaction is accepted locally but never mined (observed in the
+     * field). The absolute cost of the margin is negligible even on jumbo
+     * consolidations (~12k extra duffs on a 12 kB transaction).
+     */
+    static final long DRAIN_FEE_RATE_DUFFS_PER_KB = 2_000L;
+
     private CoreSendAllNative() {}
 
     /**
@@ -208,6 +220,19 @@ final class CoreSendAllNative {
         try {
             builder.addOutput$sdk_release(addressBase58, floorDuffs);
             builder.setSelectionStrategy$sdk_release(CoreTransactionBuilder.SelectionStrategy.ALL);
+            // Relay-safety margin for drains. A drain sweeps EVERY UTXO of
+            // the account, so the transaction can be enormous (a field
+            // CoinJoin drain: ~80 inputs, ~12 kB), and the builder's default
+            // rate prices it within rounding error of the 1000 duffs/kB
+            // relay minimum — the signed size only has to come out slightly
+            // larger than the builder's estimate for the effective rate to
+            // dip BELOW the minimum on some nodes. That exact edge produced
+            // a committed-but-never-mined transaction in the field (a few
+            // nodes accepted, the rest refused, mempools evicted it, and the
+            // wallet showed "Sending" forever). Doubling the rate costs
+            // ~12k duffs (< $0.01) on even the jumbo case and clears every
+            // node's minimum with margin regardless of size-estimate drift.
+            builder.setFeeRate$sdk_release(DRAIN_FEE_RATE_DUFFS_PER_KB);
             // ONE indivisible native operation: select + reserve the inputs
             // under the wallet-manager lock, then sign via the resolver.
             finalized = builder.finalizeAtomic$sdk_release(
