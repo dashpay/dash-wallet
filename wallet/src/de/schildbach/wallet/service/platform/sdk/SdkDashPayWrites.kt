@@ -155,6 +155,20 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // replaces the auth window and gives this a typed error.
     t.message?.contains("User not authenticated") == true ->
         SdkWriteResult.NotBroadcast("signing failure (pre-broadcast): Keystore auth window expired", t)
+    // TYPED funding shortfalls — checked BEFORE the message arms because
+    // engine message text drifts across AAR lines while the type cannot.
+    // CoreInsufficientFunds (FFI 22) is the atomic Core selection;
+    // AssetLockInsufficientFunds (FFI 29) is the asset-lock coin selection
+    // (asset_lock/build.rs map_builder_error promotes every builder
+    // shortfall shape to it, including the zero-candidate NoUtxosAvailable).
+    // Both are raised while BUILDING, strictly pre-broadcast, nothing
+    // submitted and the selection released — retryable with a smaller
+    // amount. The message arms below stay as the fallback for AAR lines
+    // that still surface these as WalletOperation strings.
+    t is DashSdkError.PlatformWallet.CoreInsufficientFunds ->
+        SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_BUILD_SHORTFALL, t)
+    t is DashSdkError.PlatformWallet.AssetLockInsufficientFunds ->
+        SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION, t)
     // Coin selection / insufficient funds happens during transaction BUILDING,
     // strictly before any broadcast — nothing was submitted. Surfaced as a
     // WalletOperation error carrying the reason in the message (observed live:

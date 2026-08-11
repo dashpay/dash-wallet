@@ -240,6 +240,44 @@ class SdkDashPayWritesTest {
     }
 
     @Test
+    fun classify_typedShortfalls_areNotBroadcast_withRetryableReasons() {
+        // The int19+ AAR line raises TYPED shortfall errors where older
+        // lines used WalletOperation message strings. Both types must land
+        // on the NAMED retryable reasons the MAX top-up's one-shot
+        // fee-adjusted retry keys off — a typed shortfall classified as
+        // Ambiguous (or as an unnamed NotBroadcast reason) silently disables
+        // that retry, which is exactly how the first live MAX test failed
+        // on a message-shape mismatch. The classification must hold even if
+        // a future engine empties the message text: the TYPE alone decides.
+        val typedShapes = mapOf<Throwable, String>(
+            DashSdkError.PlatformWallet.CoreInsufficientFunds(
+                "Insufficient funds: available 100000, required 200000"
+            ) to REASON_PRE_BROADCAST_BUILD_SHORTFALL,
+            DashSdkError.PlatformWallet.AssetLockInsufficientFunds(
+                "asset lock coin selection is short: available 58999510 duffs, " +
+                    "required 58999510 duffs"
+            ) to REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION,
+            // Message drift armor: same types, unrecognizable message.
+            DashSdkError.PlatformWallet.CoreInsufficientFunds(
+                ""
+            ) to REASON_PRE_BROADCAST_BUILD_SHORTFALL,
+            DashSdkError.PlatformWallet.AssetLockInsufficientFunds(
+                "future engine wording"
+            ) to REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION
+        )
+        for ((error, expectedReason) in typedShapes) {
+            val result = classifyBroadcastFailure(error)
+            assertTrue(
+                "${error.javaClass.simpleName}(${error.message}) must be NotBroadcast",
+                result is SdkWriteResult.NotBroadcast
+            )
+            result as SdkWriteResult.NotBroadcast
+            assertEquals(expectedReason, result.reason)
+            assertSame(error, result.cause)
+        }
+    }
+
+    @Test
     fun classify_shieldedBuildInputValidation_isNotBroadcast() {
         // The live invite-claim failure: a pre-v13 0.3 DASH invite note was
         // requested as the exit denomination, and rs-platform-wallet's
