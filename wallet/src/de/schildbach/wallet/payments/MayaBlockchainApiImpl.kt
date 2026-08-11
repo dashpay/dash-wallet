@@ -33,6 +33,7 @@ import org.dash.wallet.integrations.maya.api.MayaException
 import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.keywallet.DecodedTransaction
 import org.dashfoundation.dashsdk.keywallet.TransactionDecoder
 import org.slf4j.Logger
@@ -503,13 +504,19 @@ class MayaBlockchainApiImpl @Inject constructor(
     }
 
     /**
-     * The engine's pre-broadcast funding shortfall, however it is phrased
-     * across the build layers (key-wallet's `Insufficient funds` Display
-     * inside the FFI's build-failure wrapper). Only ever consulted for
+     * The engine's pre-broadcast funding shortfall. Only ever consulted for
      * throws from the BUILD step, which never broadcasts.
+     *
+     * Matched on the TYPE — [DashSdkError.PlatformWallet.CoreInsufficientFunds],
+     * FFI code 22 — not on message text. The string form was written when the
+     * shortfall reached us only as key-wallet's `Insufficient funds` Display
+     * wrapped in a build failure; the SDK types it now, and a matcher keyed on
+     * wording silently stops recognising a shortfall the moment that wording
+     * changes, turning "not enough funds" into an opaque swap failure. The
+     * cause chain is still walked: the typed error can arrive wrapped.
      */
     private fun isInsufficientFunds(t: Throwable): Boolean =
         generateSequence(t) { it.cause?.takeIf { cause -> cause !== it } }
             .take(5)
-            .any { it.message?.contains("insufficient funds", ignoreCase = true) == true }
+            .any { it is DashSdkError.PlatformWallet.CoreInsufficientFunds }
 }
