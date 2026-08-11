@@ -91,14 +91,15 @@ class BuyCreditsViewModel @Inject constructor(
         PerformTopUpOperation(walletApplication).enqueue(amountDuffs, isMaxSpend)
     }
 
-    /** Live status of the unique purchase work (empty until first use). */
+    /**
+     * Live status of the unique purchase work (empty until first use).
+     * Delivers the last FINISHED run to a fresh observer too — the screen
+     * gates on having seen an active state, rather than pruning (a
+     * WorkManager prune is app-global and would erase finished work states
+     * other features still observe by tag).
+     */
     fun topUpWorkStatus(): LiveData<List<WorkInfo>> =
         PerformTopUpOperation.status(walletApplication)
-
-    /** Forget finished runs so an old outcome cannot re-fire on re-entry. */
-    fun pruneTopUpWork() {
-        PerformTopUpOperation(walletApplication).prune()
-    }
 
     /**
      * PRE-FLIGHT funding-eligibility for an SDK top-up of [amountDuffs]:

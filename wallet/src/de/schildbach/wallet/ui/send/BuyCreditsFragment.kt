@@ -24,16 +24,31 @@ class BuyCreditsFragment : SendCoinsFragment() {
     companion object {
         private val log = LoggerFactory.getLogger(BuyCreditsFragment::class.java)
 
-        /** The smallest top-up this screen accepts (exclusive bound). */
-        private val MIN_TOP_UP = Coin.valueOf(50_000)
+        /**
+         * The smallest top-up this screen accepts (INCLUSIVE bound) — the
+         * same figure the worker refuses to adjust below, which is the FFI's
+         * inclusive MIN_TOP_UP_DUFFS floor. Anything the screen lets through
+         * must be an amount Platform accepts.
+         */
+        private val MIN_TOP_UP = Coin.valueOf(PerformTopUpWorker.PLATFORM_TOP_UP_FLOOR_DUFFS)
     }
 
     private val buyCreditsViewModel by viewModels<BuyCreditsViewModel>()
 
+    /**
+     * Set once THIS view has seen the purchase actually running. WorkManager
+     * replays the last finished unique work to a new observer, so a terminal
+     * state delivered before any active state is a leftover from a previous
+     * visit — acting on it would re-fire the failure dialog (or finish the
+     * screen) on entry. This gate is what the old global pruneWork() bought,
+     * without erasing every other feature's finished work records.
+     */
+    private var sawActiveTopUp = false
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.paymentHeader.setTitle(getString(R.string.credit_balance_button_buy))
-        enterAmountViewModel.setMinAmount(MIN_TOP_UP)
+        enterAmountViewModel.setMinAmount(MIN_TOP_UP, isIncludedMin = true)
         binding.paymentHeader.setPreposition("")
         viewModel.isAssetLock = true
 
@@ -57,6 +72,11 @@ class BuyCreditsFragment : SendCoinsFragment() {
                 }
             }
         }
+        // Observe from view creation, ONCE per view: re-observing on every
+        // purchase stacked observers (two failure dialogs on the second
+        // failed purchase in one session), and observing only after Continue
+        // hid the spinner from a user re-entering mid-purchase.
+        observeTopUpWork()
     }
 
     override fun updateView() {
@@ -69,10 +89,10 @@ class BuyCreditsFragment : SendCoinsFragment() {
         }
 
         // Below the top-up minimum the Continue button greys out; say WHY
-        // instead of leaving the user guessing (the amount must exceed the
-        // minimum — the button enables above it, not at it).
+        // instead of leaving the user guessing (the button enables AT the
+        // minimum — inclusive, matching the FFI floor).
         val entered = enterAmountViewModel.amount.value
-        if (entered != null && entered.isPositive && entered.isLessThanOrEqualTo(MIN_TOP_UP)) {
+        if (entered != null && entered.isPositive && entered.isLessThan(MIN_TOP_UP)) {
             enterAmountFragment?.setError(
                 getString(R.string.buy_credits_below_minimum, MIN_TOP_UP.toFriendlyString())
             )
@@ -187,7 +207,6 @@ class BuyCreditsFragment : SendCoinsFragment() {
             return
         }
         buyCreditsViewModel.startTopUp(amountDuffs, isMaxSpend)
-        observeTopUpWork()
     }
 
     private fun observeTopUpWork() {
@@ -195,6 +214,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
             val work = infos.lastOrNull() ?: return@observe
             when (work.state) {
                 WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> {
+                    sawActiveTopUp = true
                     // Progress circle on the Send button for as long as the
                     // purchase is actually running — the screen must stay
                     // busy until the work reaches a terminal state, because
@@ -208,10 +228,10 @@ class BuyCreditsFragment : SendCoinsFragment() {
                     enterAmountFragment?.setContinueLoading(true)
                 }
                 WorkInfo.State.SUCCEEDED -> {
+                    if (!sawActiveTopUp) return@observe
                     // Deliberately do NOT clear the loading state: the screen
                     // is about to finish, and re-enabling the button first
                     // leaves a brief window where it looks tappable again.
-                    buyCreditsViewModel.pruneTopUpWork()
                     log.info(
                         "SDK top-up credited; new balance {}",
                         work.outputData.getLong(PerformTopUpWorker.KEY_NEW_BALANCE, -1)
@@ -219,8 +239,8 @@ class BuyCreditsFragment : SendCoinsFragment() {
                     onSdkTopUpSuccess()
                 }
                 WorkInfo.State.FAILED -> {
+                    if (!sawActiveTopUp) return@observe
                     enterAmountFragment?.setContinueLoading(false)
-                    buyCreditsViewModel.pruneTopUpWork()
                     val ambiguous = work.outputData.getBoolean(PerformTopUpWorker.KEY_AMBIGUOUS, false)
                     val reason = work.outputData.getString(BaseWorker.KEY_ERROR_MESSAGE) ?: "top-up failed"
                     log.warn("SDK top-up failed (ambiguous={}): {}", ambiguous, reason)

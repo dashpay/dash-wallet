@@ -144,7 +144,9 @@ class PerformTopUpWorker @AssistedInject constructor(
             }
             val reserve = utxoCount?.let(::assetLockMaxFeeReserve)
             val adjusted = reserve?.let { amountDuffs - it.duffs }
-            if (adjusted != null && adjusted > PLATFORM_TOP_UP_FLOOR_DUFFS) {
+            // The FFI floor is INCLUSIVE (`amount < MIN_TOP_UP_DUFFS` rejects),
+            // so exactly 50,500 duffs is a valid retry.
+            if (adjusted != null && adjusted >= PLATFORM_TOP_UP_FLOOR_DUFFS) {
                 sentDuffs = adjusted
                 log.info(
                     "max top-up auto-adjusting for the L1 asset-lock fee: requested {} duffs, " +
@@ -163,7 +165,7 @@ class PerformTopUpWorker @AssistedInject constructor(
                 }
             } else if (adjusted != null) {
                 log.warn(
-                    "max top-up not auto-adjusting: {} duffs after the fee reserve is at or " +
+                    "max top-up not auto-adjusting: {} duffs after the fee reserve is " +
                         "below Platform's {}-duff top-up floor",
                     adjusted,
                     PLATFORM_TOP_UP_FLOOR_DUFFS

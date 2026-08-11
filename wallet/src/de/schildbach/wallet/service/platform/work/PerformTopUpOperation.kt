@@ -60,9 +60,4 @@ class PerformTopUpOperation(private val application: Application) {
         WorkManager.getInstance(application)
             .enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.KEEP, request)
     }
-
-    /** Drop finished runs so a past outcome cannot re-fire on the next visit. */
-    fun prune() {
-        WorkManager.getInstance(application).pruneWork()
-    }
 }
