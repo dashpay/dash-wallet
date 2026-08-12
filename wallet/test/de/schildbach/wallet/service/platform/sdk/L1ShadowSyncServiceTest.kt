@@ -1774,6 +1774,74 @@ class L1ShadowSyncServiceTest {
         )
     }
 
+    // ── WalletBalanceFacts (the settle-edge balance snapshot) ─────────
+
+    /** One flat per-account row in the SDK's accountBalances JSON shape. */
+    private fun accountJson(
+        typeTag: Int,
+        confirmed: Long,
+        unconfirmed: Long = 0,
+        standardTag: Int = 0,
+        index: Int = 0
+    ): String =
+        "{\"typeTag\":$typeTag,\"standardTag\":$standardTag,\"index\":$index," +
+            "\"registrationIndex\":0,\"keyClass\":0," +
+            "\"userIdentityId\":\"${"00".repeat(32)}\",\"friendIdentityId\":\"${"00".repeat(32)}\"," +
+            "\"confirmed\":$confirmed,\"unconfirmed\":$unconfirmed,\"immature\":0,\"locked\":0," +
+            "\"keysUsed\":35,\"keysTotal\":1000}"
+
+    @Test
+    fun parseAccountBalanceMap_aggregatesFamilies_handlesEmptyAndGarbage() {
+        val json = "[" +
+            accountJson(typeTag = 0, confirmed = 4_800_000_000L, unconfirmed = 86_000_000L) + "," +
+            accountJson(typeTag = 1, confirmed = 5_400_000_000L) + "," +
+            // Two contact-receiving accounts must AGGREGATE into one family.
+            accountJson(typeTag = 12, confirmed = 30_000_000L, index = 0) + "," +
+            accountJson(typeTag = 12, confirmed = 12_000_000L, index = 1) + "," +
+            accountJson(typeTag = 13, confirmed = 69_998_912L) + "," +
+            accountJson(typeTag = 0, confirmed = 7L, standardTag = 1) + // BIP32 variant
+            "]"
+        assertEquals(
+            linkedMapOf(
+                "bip44" to 4_886_000_000L,
+                "coinjoin" to 5_400_000_000L,
+                "dashpayReceiving" to 42_000_000L,
+                "dashpayExternal" to 69_998_912L,
+                "bip32" to 7L
+            ),
+            parseAccountBalanceMap(json)
+        )
+        // Empty wallet: an empty map (renders "{}"), not unavailable.
+        assertEquals(emptyMap<String, Long>(), parseAccountBalanceMap("[]"))
+        // Nothing parseable: null — the line prints "unavailable", never a guess.
+        assertNull(parseAccountBalanceMap("not json at all"))
+        assertNull(parseAccountBalanceMap("{\"noTypeTagHere\":1}"))
+    }
+
+    @Test
+    fun walletBalanceFactsLine_fullLine_andUnavailableComponents() {
+        assertEquals(
+            "WalletBalanceFacts: total=4886000000 " +
+                "accounts={bip44:4886000000, coinjoin:0} " +
+                "confirmed=4800000000 unconfirmed=86000000 txCount=6284",
+            walletBalanceFactsLine(
+                WalletBalanceFacts(
+                    totalDuffs = 4_886_000_000L,
+                    confirmedDuffs = 4_800_000_000L,
+                    unconfirmedDuffs = 86_000_000L,
+                    accountFamilies = linkedMapOf("bip44" to 4_886_000_000L, "coinjoin" to 0L),
+                    txCount = 6_284
+                )
+            )
+        )
+        // Every unreadable surface prints the literal `unavailable`.
+        assertEquals(
+            "WalletBalanceFacts: total=unavailable accounts=unavailable " +
+                "confirmed=unavailable unconfirmed=unavailable txCount=unavailable",
+            walletBalanceFactsLine(WalletBalanceFacts(null, null, null, null, null))
+        )
+    }
+
     @Test
     fun parseL1SyncHeightAdvanced_extractsTheCommittedHeight_ignoresOtherEvents() {
         assertEquals(

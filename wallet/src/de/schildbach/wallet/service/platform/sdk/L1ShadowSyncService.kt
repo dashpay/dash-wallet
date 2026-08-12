@@ -396,6 +396,117 @@ internal fun replayMemTelemetryLine(
     if (settled) " SETTLED" else ""
 )
 
+// ── Wallet-balance facts (rescan before/after diagnostics) ────────────
+
+/**
+ * One settle-edge balance snapshot for the `WalletBalanceFacts` log line
+ * ([walletBalanceFactsLine]) — the instrument for the field rescan
+ * experiment: (a) does a rescan recover the missing balance (before/after
+ * total diff), (b) which account family holds what (the CoinJoin
+ * classification question), (c) tx count against the display baseline —
+ * all from a log pull, no incoming transaction needed.
+ *
+ * Every field is nullable: null = that surface could not be read this
+ * time and prints as the literal `unavailable` — never a guessed number.
+ *
+ * @property totalDuffs confirmed+unconfirmed from the SDK wallet's native
+ *   `balance()` — the SAME read every publisher of
+ *   `CutoverUiDataService.updateSdkBalance` uses, so the line's total is
+ *   the figure the header shows.
+ * @property accountFamilies per-account-family (confirmed+unconfirmed)
+ *   duffs, aggregated over accounts of the same family, parsed from the
+ *   SDK's `PlatformWalletManager.accountBalances` JSON
+ *   ([parseAccountBalanceMap]).
+ * @property txCount raw `COUNT(*)` over the SDK store's `transactions`
+ *   table (the walker's DB-access pattern).
+ */
+internal data class WalletBalanceFacts(
+    val totalDuffs: Long?,
+    val confirmedDuffs: Long?,
+    val unconfirmedDuffs: Long?,
+    val accountFamilies: Map<String, Long>?,
+    val txCount: Int?
+)
+
+/**
+ * Compact family name for an SDK account `typeTag` (+ `standardTag` for
+ * the type-0 BIP44/BIP32 split) — the account-type vocabulary of the
+ * SDK's own `accountTypeName` mapping, shortened for the one-line log.
+ * `dashpayExternal` (type 13) is the watch-only contact-payment chain —
+ * the CONTACT's money ([txoIsForeignSql]) — deliberately included and
+ * distinguishable by name, since money "hiding" there is one of the
+ * misclassification hypotheses the snapshot exists to test.
+ */
+internal fun sdkAccountFamilyName(typeTag: Int, standardTag: Int): String = when (typeTag) {
+    0 -> if (standardTag == 1) "bip32" else "bip44"
+    1 -> "coinjoin"
+    2 -> "identityRegistration"
+    3 -> "identityTopUp"
+    4 -> "identityTopUpUnbound"
+    5 -> "identityInvitation"
+    6 -> "assetLockTopUp"
+    7 -> "assetLockShieldedTopUp"
+    8 -> "providerVoting"
+    9 -> "providerOwner"
+    10 -> "providerOperator"
+    11 -> "providerPlatform"
+    12 -> "dashpayReceiving"
+    13 -> "dashpayExternal"
+    14 -> "platformPayment"
+    15 -> "identityAuthEcdsa"
+    16 -> "identityAuthBls"
+    else -> "type$typeTag"
+}
+
+/** One flat per-account object inside the `accountBalances` JSON array. */
+private val ACCOUNT_BALANCE_OBJECT = Regex("""\{[^{}]*\}""")
+
+/**
+ * Parse the SDK's `accountBalances` JSON array (flat per-account objects
+ * carrying `typeTag`, `standardTag`, `confirmed`, `unconfirmed`, … — see
+ * `DashpayNative.walletManagerAccountBalances`) into a per-family
+ * (confirmed+unconfirmed) duffs map, aggregated over same-family accounts
+ * in store order. Returns an empty map for an empty wallet (`[]`), null
+ * when nothing parseable — the caller prints `unavailable`, never a
+ * guess. Deliberately regex-extracted rather than org.json: the payload
+ * is a fixed machine-generated flat shape, and this keeps the parser pure
+ * and host-JVM testable.
+ */
+internal fun parseAccountBalanceMap(json: String): Map<String, Long>? {
+    val entries = LinkedHashMap<String, Long>()
+    var sawAny = false
+    fun long(obj: String, field: String): Long? =
+        Regex("\"$field\"\\s*:\\s*(-?\\d+)").find(obj)?.groupValues?.get(1)?.toLongOrNull()
+    for (m in ACCOUNT_BALANCE_OBJECT.findAll(json)) {
+        val obj = m.value
+        val typeTag = long(obj, "typeTag")?.toInt() ?: continue
+        sawAny = true
+        val name = sdkAccountFamilyName(typeTag, long(obj, "standardTag")?.toInt() ?: 0)
+        entries.merge(name, (long(obj, "confirmed") ?: 0L) + (long(obj, "unconfirmed") ?: 0L), Long::plus)
+    }
+    return when {
+        sawAny -> entries
+        json.trim() == "[]" -> emptyMap()
+        else -> null
+    }
+}
+
+/**
+ * The one-line `WalletBalanceFacts` summary — greppable on the tag;
+ * unavailable surfaces print the literal `unavailable`. Pure —
+ * host-testable.
+ */
+internal fun walletBalanceFactsLine(f: WalletBalanceFacts): String {
+    val accounts = f.accountFamilies
+        ?.entries?.joinToString(", ") { (name, duffs) -> "$name:$duffs" }
+        ?.let { "{$it}" }
+        ?: "unavailable"
+    return "WalletBalanceFacts: total=${f.totalDuffs ?: "unavailable"} accounts=$accounts " +
+        "confirmed=${f.confirmedDuffs ?: "unavailable"} " +
+        "unconfirmed=${f.unconfirmedDuffs ?: "unavailable"} " +
+        "txCount=${f.txCount ?: "unavailable"}"
+}
+
 // ── Wallet-history facts (restore birth-date calibration) ─────────────
 
 /**
@@ -1188,6 +1299,22 @@ interface L1ShadowSource {
     /** Distinct wallet-relevant tx count from the SDK's TXO store. */
     suspend fun sdkTxCount(walletIdHex: String): Int
 
+    /**
+     * The SDK's per-account balance snapshot as its raw JSON array string
+     * (`PlatformWalletManager.accountBalances` — flat per-account objects,
+     * see [parseAccountBalanceMap]), or null when unavailable. Default null
+     * so test fakes stay source-compatible.
+     */
+    suspend fun sdkAccountBalancesJson(walletIdHex: String): String? = null
+
+    /**
+     * Raw `COUNT(*)` over the SDK store's `transactions` table (NOT the
+     * wallet-scoped distinct count [sdkTxCount] computes — the balance-facts
+     * line wants the store's own row count for baseline comparison), or
+     * null when unavailable. Default null for test fakes.
+     */
+    suspend fun sdkStoredTxRowCount(): Int? = null
+
     /** (ESTIMATED, AVAILABLE) duffs from the dashj wallet, or null when it isn't loaded. */
     suspend fun dashjBalanceDuffs(): Pair<Long, Long>?
 
@@ -1321,6 +1448,20 @@ internal class DashSdkL1ShadowSource(
                     arrayOf<Any?>(walletId, walletId)
                 )
             ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+        }
+    }
+
+    override suspend fun sdkAccountBalancesJson(walletIdHex: String): String? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        return manager().accountBalances(walletId)
+    }
+
+    override suspend fun sdkStoredTxRowCount(): Int? {
+        val db = database()
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            db.openHelper.readableDatabase.query(
+                androidx.sqlite.db.SimpleSQLiteQuery("SELECT COUNT(*) FROM transactions")
+            ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else null }
         }
     }
 
@@ -1545,7 +1686,15 @@ class L1ShadowSyncService internal constructor(
      * The production wiring reads the display DB + the SDK store + the
      * dashj wallet — see the @Inject constructor.
      */
-    private val historyFacts: (suspend () -> WalletHistoryFacts)? = null
+    private val historyFacts: (suspend () -> WalletHistoryFacts)? = null,
+    /**
+     * Enables the settle-edge `WalletBalanceFacts` snapshot
+     * ([logWalletBalanceFacts]). Tests' default false keeps the snapshot's
+     * [L1ShadowSource.sdkBalanceDuffs] read from polluting the fakes'
+     * probe counters (the parity tests count that exact call); the @Inject
+     * constructor turns it on.
+     */
+    private val balanceFactsEnabled: Boolean = false
 ) {
     @Inject
     constructor(
@@ -1595,7 +1744,8 @@ class L1ShadowSyncService internal constructor(
                 },
                 dashjEarliestKeyTimeSecs = walletData.wallet?.earliestKeyCreationTime
             )
-        }
+        },
+        balanceFactsEnabled = true
     )
 
     /** Serializes [startIfEnabled]/[stop] — the single-flight guarantee. */
@@ -1835,6 +1985,60 @@ class L1ShadowSyncService internal constructor(
         }
     }
 
+    /**
+     * Contain one component read of the balance-facts snapshot: null on
+     * failure (the line prints `unavailable` for it), cancellation
+     * propagates. One WARN per failed component, so a single dead surface
+     * never hides the others.
+     */
+    private suspend fun <T> balanceFactOrNull(what: String, block: suspend () -> T?): T? = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("WalletBalanceFacts: {} read failed (printed as unavailable)", what, t)
+        null
+    }
+
+    /**
+     * Emit one `WalletBalanceFacts` snapshot line ([walletBalanceFactsLine])
+     * — called at every sync-settle edge, and once at shadow start when the
+     * engine is ALREADY caught up (so a rescan run logs a BEFORE line at
+     * launch and an AFTER line at the post-replay settle; the before/after
+     * total diff answers whether the rescan recovered missing funds, the
+     * per-family map answers where they sit). All reads are local
+     * (native balance(), manager account snapshot, one COUNT(*)) and run on
+     * their own IO dispatchers inside the source; every component is
+     * failure-contained ([balanceFactOrNull]) — the line always prints,
+     * with `unavailable` for whatever could not be read. Never throws
+     * (except cancellation).
+     */
+    private suspend fun logWalletBalanceFacts() {
+        if (!balanceFactsEnabled) return
+        val walletIdHex = runningWalletIdHex.value ?: return
+        try {
+            val split = balanceFactOrNull("native balance") { source.sdkBalanceDuffs(walletIdHex) }
+            val accountFamilies = balanceFactOrNull("account balances") {
+                source.sdkAccountBalancesJson(walletIdHex)
+            }?.let(::parseAccountBalanceMap)
+            val txCount = balanceFactOrNull("tx row count") { source.sdkStoredTxRowCount() }
+            log.info(
+                walletBalanceFactsLine(
+                    WalletBalanceFacts(
+                        totalDuffs = split?.let { it.first + it.second },
+                        confirmedDuffs = split?.first,
+                        unconfirmedDuffs = split?.second,
+                        accountFamilies = accountFamilies,
+                        txCount = txCount
+                    )
+                )
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("WalletBalanceFacts snapshot failed", t)
+        }
+    }
+
     /** The settle-edge re-log for a startup that found the display DB empty. */
     private suspend fun maybeLogHistoryFactsAtSettle() {
         if (!historyFactsAwaitingSettle) return
@@ -2004,6 +2208,7 @@ class L1ShadowSyncService internal constructor(
         var lastPhase = ShadowSyncPhase.IDLE
         var lastTelemetryMs = 0L
         var telemetryActive = false
+        var balanceFactsStartLogged = false
         while (currentCoroutineContext().isActive) {
             try {
                 source.spvProgress().collect { data ->
@@ -2069,6 +2274,16 @@ class L1ShadowSyncService internal constructor(
                         // restore) re-logs the real WalletHistoryFacts line
                         // now that the first sync has settled.
                         maybeLogHistoryFactsAtSettle()
+                        // Every settle edge gets a balance snapshot — the
+                        // AFTER line of a rescan run.
+                        balanceFactsStartLogged = true
+                        logWalletBalanceFacts()
+                    } else if (!balanceFactsStartLogged) {
+                        // The engine was ALREADY caught up when this monitor
+                        // session began (no replay edge will fire): log the
+                        // rescan experiment's BEFORE snapshot once.
+                        balanceFactsStartLogged = true
+                        logWalletBalanceFacts()
                     }
                     lastPhase = mapped.phase
                 }
