@@ -357,6 +357,45 @@ internal fun shadowProgressLine(p: ShadowSyncProgress): String = String.format(
     p.walletSyncedHeight
 )
 
+/**
+ * Whether the engine is ACTIVELY syncing/replaying, for the replay memory
+ * telemetry ([replayMemTelemetryLine]): not caught up on the drain-aware
+ * predicate — the scan position trails the tip, the phase never reached a
+ * caught-up state, OR the block/tx pipeline provably lags
+ * ([ShadowSyncProgress.blockPipelineLagging] — the phase can hold SYNCED
+ * right through an armed replay). Exactly the negation of the shared
+ * caught-up predicate (`sdkL1ScanCaughtUp`), spelled out here so the
+ * telemetry stops the moment "synced" settles for the UI too. Pure —
+ * host-testable.
+ */
+internal val ShadowSyncProgress.replayActive: Boolean get() =
+    !(synced || scanCaughtUpToTip) || blockPipelineLagging
+
+/**
+ * One structured `ReplayMemTelemetry` line: process memory (native heap
+ * from `android.os.Debug`, JVM heap from `Runtime`) against the engine's
+ * replay position — the instrument that localizes the native-heap surge
+ * curve against engine progress from a plain log pull, no SDK change.
+ * Emitted every ~30s while [replayActive] holds, plus ONE final line
+ * (` SETTLED` suffix) when the replay settles. Greps cleanly on the tag.
+ * Pure — host-testable.
+ */
+internal fun replayMemTelemetryLine(
+    p: ShadowSyncProgress,
+    nativeHeapAllocatedBytes: Long,
+    nativeHeapSizeBytes: Long,
+    jvmUsedBytes: Long,
+    jvmMaxBytes: Long,
+    settled: Boolean = false
+): String = String.format(
+    Locale.US,
+    "ReplayMemTelemetry phase=%s nativeHeapAllocated=%d nativeHeapSize=%d jvmUsed=%d jvmMax=%d " +
+        "headers %d/%d filters %d wallet %d%s",
+    p.phase, nativeHeapAllocatedBytes, nativeHeapSizeBytes, jvmUsedBytes, jvmMaxBytes,
+    p.headerHeight, p.headerTarget, p.filterHeight, p.walletSyncedHeight,
+    if (settled) " SETTLED" else ""
+)
+
 // ── Parity probe shapes ───────────────────────────────────────────────
 
 /**
@@ -1833,6 +1872,8 @@ class L1ShadowSyncService internal constructor(
     private suspend fun monitorProgress() {
         var lastLogMs = 0L
         var lastPhase = ShadowSyncPhase.IDLE
+        var lastTelemetryMs = 0L
+        var telemetryActive = false
         while (currentCoroutineContext().isActive) {
             try {
                 source.spvProgress().collect { data ->
@@ -1879,6 +1920,22 @@ class L1ShadowSyncService internal constructor(
                         log.info(shadowProgressLine(mapped))
                         lastLogMs = now
                     }
+                    // Replay memory telemetry: one structured line per
+                    // [progressLogIntervalMs] while the engine is actively
+                    // syncing/replaying, riding this same 1 Hz feed (no new
+                    // ticker/thread), plus one final SETTLED line the moment
+                    // the caught-up predicate holds — the instrument for
+                    // localizing the native-heap surge against progress.
+                    if (mapped.replayActive) {
+                        if (now - lastTelemetryMs >= progressLogIntervalMs) {
+                            lastTelemetryMs = now
+                            logReplayMemTelemetry(mapped, settled = false)
+                        }
+                        telemetryActive = true
+                    } else if (telemetryActive) {
+                        telemetryActive = false
+                        logReplayMemTelemetry(mapped, settled = true)
+                    }
                     lastPhase = mapped.phase
                 }
                 return // upstream flow completed normally
@@ -1888,6 +1945,27 @@ class L1ShadowSyncService internal constructor(
                 delay(LOOP_RETRY_DELAY_MS)
             }
         }
+    }
+
+    /**
+     * Emit one [replayMemTelemetryLine] with the CURRENT process memory:
+     * native heap from `android.os.Debug` (the surge under investigation
+     * lives there — the Rust engine allocates natively), JVM heap from
+     * [Runtime]. Host-JVM tests run with `returnDefaultValues` so the
+     * Debug statics read 0 there; the line itself is pure and tested.
+     */
+    private fun logReplayMemTelemetry(p: ShadowSyncProgress, settled: Boolean) {
+        val rt = Runtime.getRuntime()
+        log.info(
+            replayMemTelemetryLine(
+                p,
+                nativeHeapAllocatedBytes = android.os.Debug.getNativeHeapAllocatedSize(),
+                nativeHeapSizeBytes = android.os.Debug.getNativeHeapSize(),
+                jvmUsedBytes = rt.totalMemory() - rt.freeMemory(),
+                jvmMaxBytes = rt.maxMemory(),
+                settled = settled
+            )
+        )
     }
 
     /**

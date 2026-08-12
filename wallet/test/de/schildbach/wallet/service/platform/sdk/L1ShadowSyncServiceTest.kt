@@ -1679,6 +1679,53 @@ class L1ShadowSyncServiceTest {
         assertTrue(drained.scanCaughtUpToTip)
     }
 
+    // ── Replay memory telemetry (pure parts) ──────────────────────────
+
+    @Test
+    fun replayActive_holdsWhileSyncingOrPipelineLagging_dropsAtSettle() {
+        val atTip = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 1.0,
+            headerHeight = 1_514_660, headerTarget = 1_514_660,
+            filterHeight = 1_514_659, filterTarget = 1_514_660
+        )
+        // Mid-scan: active.
+        assertTrue(atTip.copy(filterHeight = 1_200_000).replayActive)
+        // SDK-latched SYNCED but the block pipeline provably lags: STILL active
+        // (the armed-replay shape the phase check alone would miss).
+        assertTrue(
+            atTip.copy(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_200_000).replayActive
+        )
+        // Caught up (drain-aware): not active — telemetry stops at the same
+        // instant the UI's "synced" settles.
+        assertFalse(atTip.replayActive)
+        assertFalse(atTip.copy(walletSyncedHeight = 1_514_659).replayActive)
+        assertFalse(ShadowSyncProgress(ShadowSyncPhase.SYNCED, 1.0, 100, 100, 100, 100).replayActive)
+    }
+
+    @Test
+    fun replayMemTelemetryLine_structuredAndGreppable_settledSuffixOnFinalLine() {
+        val p = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.7,
+            headerHeight = 2_137_000, headerTarget = 2_137_100,
+            filterHeight = 1_800_000, filterTarget = 2_137_100,
+            mnListHeight = 0, walletSyncedHeight = 1_790_000
+        )
+        assertEquals(
+            "ReplayMemTelemetry phase=FILTERS nativeHeapAllocated=123456789 " +
+                "nativeHeapSize=234567890 jvmUsed=50000000 jvmMax=536870912 " +
+                "headers 2137000/2137100 filters 1800000 wallet 1790000",
+            replayMemTelemetryLine(p, 123_456_789, 234_567_890, 50_000_000, 536_870_912)
+        )
+        assertEquals(
+            "ReplayMemTelemetry phase=SYNCED nativeHeapAllocated=1 nativeHeapSize=2 " +
+                "jvmUsed=3 jvmMax=4 headers 100/100 filters 100 wallet 100 SETTLED",
+            replayMemTelemetryLine(
+                ShadowSyncProgress(ShadowSyncPhase.SYNCED, 1.0, 100, 100, 100, 100, 0, 100),
+                1, 2, 3, 4, settled = true
+            )
+        )
+    }
+
     @Test
     fun parseL1SyncHeightAdvanced_extractsTheCommittedHeight_ignoresOtherEvents() {
         assertEquals(
