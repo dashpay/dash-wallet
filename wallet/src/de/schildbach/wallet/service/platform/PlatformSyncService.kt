@@ -616,6 +616,13 @@ class PlatformSynchronizationService @Inject constructor(
         if (!identityRepository.hasBlockchainIdentity || walletApplication.wallet == null) {
             return
         }
+        // Restore safety net: a registration-time SDK identity discovery
+        // that failed (signer not attached yet — "External signable wallet
+        // has no private key") is never retried by the SDK itself; without
+        // a managed identity every contact pass below yields nothing (the
+        // field 44-minute REQUESTED_NAME_CHECKING stall). Bounded +
+        // backoff'd inside; no-op once managed/exhausted.
+        sdkWalletBinder.maybeRetryIdentityDiscovery()
         log.info("updateContactRequests($initialSync) checking if can run")
         // only allow this method to execute once at a time
         // allow it to continue if the last state was recovery complete

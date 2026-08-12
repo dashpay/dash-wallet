@@ -1640,4 +1640,104 @@ class SdkWalletBinderTest {
         assertEquals(2, sdk.armRescanCalls)
         assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
     }
+
+    // ── Bounded identity-discovery retry (restore safety net) ────────────
+
+    @Test
+    fun discoveryRetry_inertBeforeAnyBind() = runBlocking {
+        // No bind pass has handed the seed to the SDK — the signer cannot be
+        // attached, so the retry must not touch the SDK at all.
+        val sdk = FakeSdkService()
+        val binder = binder(sdk, scope = this)
+
+        binder.maybeRetryIdentityDiscovery()
+
+        assertEquals(0, sdk.totalCalls)
+    }
+
+    @Test
+    fun discoveryRetry_recoversARegistrationTimeFailure() = runBlocking {
+        // The field restore: registration-time discovery failed (signer not
+        // attached), the bind pass's own scan found nothing and LATCHED, and
+        // nothing ever retried — 44 minutes of no contact sync. The bounded
+        // retry must re-run the scan on later platform-sync passes and stop
+        // once the identity attaches.
+        var clock = 0L
+        val sdk = FakeSdkService()
+        sdk.onBind = { _, _ -> walletId }
+        var attachAfterCalls = Int.MAX_VALUE // signer gap: scans find nothing yet
+        sdk.managed = { _, _ -> sdk.discoverCalls >= attachAfterCalls }
+        sdk.onDiscover = { _, _ -> emptyList() }
+        val binder = binder(sdk, now = { clock }, scope = this)
+        binder.bindIfEnabled(unlock)
+        val callsAfterBind = sdk.discoverCalls
+        assertEquals(1, callsAfterBind) // the bind pass's own (failed) scan
+
+        // Retry 1 fires immediately; the identity is still not found.
+        binder.maybeRetryIdentityDiscovery()
+        assertEquals(callsAfterBind + 1, sdk.discoverCalls)
+
+        // Inside the backoff window: no new scan.
+        binder.maybeRetryIdentityDiscovery()
+        assertEquals(callsAfterBind + 1, sdk.discoverCalls)
+
+        // Window elapsed AND the signer gap has healed: the next scan attaches
+        // and the keys are healed like the bind pass would.
+        clock += SdkWalletBinder.DISCOVERY_RETRY_BASE_DELAY_MS
+        attachAfterCalls = sdk.discoverCalls + 1
+        binder.maybeRetryIdentityDiscovery()
+        assertEquals(callsAfterBind + 2, sdk.discoverCalls)
+        assertEquals(1, sdk.healCalls)
+
+        // Settled: no further scans, ever.
+        clock += 60 * 60_000L
+        binder.maybeRetryIdentityDiscovery()
+        assertEquals(callsAfterBind + 2, sdk.discoverCalls)
+    }
+
+    @Test
+    fun discoveryRetry_boundedAndStopsAfterMaxAttempts() = runBlocking {
+        // A genuinely-absent identity (deterministic scan miss) must stop
+        // costing Platform queries: the attempt cap is the permanent stop.
+        var clock = 0L
+        val sdk = FakeSdkService()
+        sdk.onBind = { _, _ -> walletId }
+        sdk.managed = { _, _ -> false }
+        sdk.onDiscover = { _, _ -> emptyList() }
+        val binder = binder(sdk, now = { clock }, scope = this)
+        binder.bindIfEnabled(unlock)
+        val callsAfterBind = sdk.discoverCalls
+
+        repeat(SdkWalletBinder.DISCOVERY_RETRY_MAX_ATTEMPTS + 3) {
+            binder.maybeRetryIdentityDiscovery()
+            clock += SdkWalletBinder.DISCOVERY_RETRY_MAX_DELAY_MS
+        }
+
+        assertEquals(
+            callsAfterBind + SdkWalletBinder.DISCOVERY_RETRY_MAX_ATTEMPTS,
+            sdk.discoverCalls
+        )
+    }
+
+    @Test
+    fun discoveryRetry_throwingScanCountsAsAnAttemptAndRetries() = runBlocking {
+        // A thrown scan (SDK restarting, network) is contained, counts toward
+        // the bound, and the next window retries.
+        var clock = 0L
+        val sdk = FakeSdkService()
+        sdk.onBind = { _, _ -> walletId }
+        sdk.managed = { _, _ -> false }
+        sdk.onDiscover = { _, _ -> emptyList() }
+        val binder = binder(sdk, now = { clock }, scope = this)
+        binder.bindIfEnabled(unlock)
+        val callsAfterBind = sdk.discoverCalls
+
+        sdk.onDiscover = { _, _ -> error("SDK wallet not loaded") }
+        binder.maybeRetryIdentityDiscovery() // attempt 1: throws, contained
+        assertEquals(callsAfterBind + 1, sdk.discoverCalls)
+
+        clock += SdkWalletBinder.DISCOVERY_RETRY_MAX_DELAY_MS
+        binder.maybeRetryIdentityDiscovery() // attempt 2 still fires
+        assertEquals(callsAfterBind + 2, sdk.discoverCalls)
+    }
 }
