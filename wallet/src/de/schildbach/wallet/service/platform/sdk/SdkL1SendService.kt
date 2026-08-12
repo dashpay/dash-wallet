@@ -141,23 +141,19 @@ internal fun classifyCoreSendFailure(t: Throwable): SdkWriteResult<Nothing> = wh
         SdkWriteResult.NotBroadcast(
             "core send failed pre-broadcast (funding-account shortfall): ${t.message}", t
         )
-    // Typed build refusal (code 32, v41int14). Every `buildSignedPayment` /
-    // builder rejection that is neither a shortfall nor a signing failure:
-    // the REQUEST is at fault (a verbatim retry fails identically) and the
-    // rejection is strictly pre-broadcast — the tx was never assembled or
-    // never left the builder. Supersedes the WalletOperation message-prefix
-    // rule below for new AARs.
-    t is DashSdkError.PlatformWallet.TransactionBuild ->
-        SdkWriteResult.NotBroadcast("core send failed pre-broadcast (transaction build): ${t.message}", t)
-    // Typed signing failure (code 33, v41int14). The request was VALID and
-    // the tx fully assembled — only the input signatures could not be
-    // produced (Keystore/Keychain mnemonic locked or missing). The native
-    // layer released the build's input reservation before returning, so
-    // nothing reached the wire and the IDENTICAL send may be resubmitted
-    // once the signer is unlocked. Keyed by [L1_SIGNER_LOCKED_REASON] so the
-    // send UI surfaces "unlock to continue", never a hard payment failure
-    // (dashpay/platform#4256).
-    t is DashSdkError.PlatformWallet.TransactionSigning ->
+    // NOTE: the typed `TransactionBuild` (code 32) arm was dropped on the
+    // v4.2-dev SDK line — its owning PRs (#4310/#4311) closed unmerged, so the
+    // code lapsed. A build refusal now falls through to the WalletOperation
+    // message-prefix rule below, the same path used before the typed arm
+    // existed; behavior is unchanged for the reachable case.
+    //
+    // Signing failure: the merged line surfaces this as `SigningKeyUnavailable`
+    // (code 31) — the signer holds no usable private key for a requested public
+    // key (Keystore/Keychain mnemonic locked or missing). Nothing reached the
+    // wire and the IDENTICAL send may be resubmitted once the signer is
+    // unlocked. Keyed by [L1_SIGNER_LOCKED_REASON] so the send UI surfaces
+    // "unlock to continue", never a hard payment failure.
+    t is DashSdkError.PlatformWallet.SigningKeyUnavailable ->
         SdkWriteResult.NotBroadcast("$L1_SIGNER_LOCKED_REASON — retryable after unlock: ${t.message}", t)
     // Typed definitive broadcast rejection (code 26, v41int14) — the
     // DEFINITIVE counterpart of TransactionBroadcastUnconfirmed (20): Core
