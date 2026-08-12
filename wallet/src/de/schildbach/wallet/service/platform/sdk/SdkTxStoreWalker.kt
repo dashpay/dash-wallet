@@ -193,7 +193,9 @@ internal const val TX_TYPE_KIND_STANDARD = 0
  * Records materialized here are additionally REATTRIBUTED when the stored
  * direction is provably wrong ([reattributeIncomingRecord]) — every consumer
  * (display pipeline, reconcile walk, seam point reads) sees the corrected
- * shape from one place.
+ * shape from one place — and each correction is persisted back into the
+ * store exactly once ([persistCorrections]), so an already-corrected record
+ * is never re-processed on later passes or later launches.
  *
  * NOT thread-safe: watermark/fingerprint state is confined to the single
  * collector that owns the walker (each flow builds its own instance). The
@@ -431,9 +433,28 @@ internal class SdkTxStoreWalker(
      * Apply [reattributeIncomingRecord] to the rows whose stored shape is
      * impossible (a Standard tx recorded INCOMING that spent the wallet's own
      * TXOs). Costs nothing when no row is flagged; a flagged set pays one
-     * chunked funded-split aggregate plus one chunked payload fetch
-     * (internal-vs-send discrimination and fee recovery both need the tx's
-     * real shape — see [TxPayloadFacts]).
+     * chunked funded-split aggregate plus (for the net<0 subset only) one
+     * chunked payload fetch (internal-vs-send discrimination and fee recovery
+     * need the tx's real shape — see [TxPayloadFacts]).
+     *
+     * ## Durable — corrections are WRITTEN BACK to the store
+     *
+     * A computed correction is persisted into the SDK's own `transactions`
+     * row ([persistCorrections]), so the corrected row itself is the durable
+     * per-record "already attributed" flag: on every later pass — this
+     * process or any future launch — the row no longer matches the flag
+     * condition (`direction == INCOMING`) and costs NOTHING beyond the
+     * correlated subqueries every row pays. Before this, the same ~1.4k
+     * provably-wrong records were re-flagged, re-aggregated and re-parsed on
+     * EVERY reconcile walk of every launch (field log: three identical
+     * ~1.5k-line reattribution storms across three launches).
+     *
+     * Wipe/restore and armed-rescan re-runs need NO invalidation plumbing:
+     * the only thing that can restore the wrong stored shape is the engine
+     * itself rewriting the row (a re-scan re-persisting the misattributed
+     * Rust record), which re-satisfies the flag condition and is simply
+     * re-corrected and re-persisted — the invalidation is structural, not
+     * keyed off time or a rescan marker.
      */
     private fun reattributed(rows: List<RecordRow>): List<L1TxUiRecord> {
         val flagged = rows.filter {
@@ -465,11 +486,17 @@ internal class SdkTxStoreWalker(
             }
         }
 
-        // Payload facts for every flagged row: the no-foreign-output subset
-        // needs them for internal-vs-send discrimination, and ALL flagged rows
-        // need them for fee recovery ([reattributeIncomingRecord]).
+        // Payload facts only for flagged rows whose recomputed net is
+        // NEGATIVE: [reattributeIncomingRecord]'s net>=0 branch (a co-funded
+        // receive — direction stands, only the net is corrected) never
+        // consults the payload, and those rows stay flagged forever (their
+        // stored direction legitimately remains INCOMING), so fetching +
+        // dashj-parsing their payloads every pass was pure waste.
+        val needsFacts = flagged.filter {
+            (fundedOwned[it.record.txidHex] ?: 0L) - it.spentOwnedDuffs < 0L
+        }
         val facts = HashMap<String, TxPayloadFacts>()
-        for (chunk in flagged.chunked(TXID_IN_CHUNK)) {
+        for (chunk in needsFacts.chunked(TXID_IN_CHUNK)) {
             val placeholders = chunk.joinToString(",") { "?" }
             rawQuery(
                 "SELECT txid, transactionData FROM transactions WHERE txid IN ($placeholders)",
@@ -483,6 +510,7 @@ internal class SdkTxStoreWalker(
         }
 
         val correctedByHex = HashMap<String, L1TxUiRecord>(flagged.size)
+        val toPersist = ArrayList<Pair<RecordRow, L1TxUiRecord>>()
         for (row in flagged) {
             val hex = row.record.txidHex
             val corrected = reattributeIncomingRecord(
@@ -494,6 +522,7 @@ internal class SdkTxStoreWalker(
                 payload = facts[hex]
             )
             correctedByHex[hex] = corrected
+            if (corrected != row.record) toPersist += row to corrected
             if (corrected.direction != row.record.direction &&
                 reattributionLogged.add(hex)
             ) {
@@ -507,7 +536,67 @@ internal class SdkTxStoreWalker(
                 )
             }
         }
+        persistCorrections(toPersist)
         return rows.map { correctedByHex[it.record.txidHex] ?: it.record }
+    }
+
+    /** The SDK `transactions.direction` column code for [d] — the 0..3 convention [l1TxUiRecord] reads. */
+    private fun directionCode(d: L1TxUiDirection): Int = when (d) {
+        L1TxUiDirection.INCOMING -> 0
+        L1TxUiDirection.OUTGOING -> 1
+        L1TxUiDirection.INTERNAL -> 2
+        L1TxUiDirection.COINJOIN -> 3
+    }
+
+    /**
+     * Write computed corrections back to the SDK's `transactions` rows —
+     * the durable stop for the every-launch reattribution churn (see
+     * [reattributed]'s KDoc). Compare-and-set on the OLD (direction, net):
+     * a row the engine concurrently rewrote no longer matches and is left
+     * alone (the next pass re-evaluates the fresh shape). One transaction
+     * per batch; a failed write only costs re-correcting in memory next
+     * pass — the read path never depends on the write having landed.
+     * Precedent for app-side raw writes to this store:
+     * [L1ShadowSource.clearSdkL1Rows]'s reset deletes.
+     */
+    private fun persistCorrections(corrections: List<Pair<RecordRow, L1TxUiRecord>>) {
+        if (corrections.isEmpty()) return
+        try {
+            val writable = db.openHelper.writableDatabase
+            writable.beginTransaction()
+            try {
+                for ((row, corrected) in corrections) {
+                    val sql = "UPDATE transactions SET direction = ?, netAmount = ?, fee = ? " +
+                        "WHERE txid = ? AND direction = ? AND netAmount = ?"
+                    onQuery?.invoke(sql)
+                    writable.execSQL(
+                        sql,
+                        arrayOf(
+                            directionCode(corrected.direction),
+                            corrected.netAmountDuffs,
+                            corrected.feeDuffs,
+                            row.wireTxid,
+                            directionCode(row.record.direction),
+                            row.record.netAmountDuffs
+                        )
+                    )
+                }
+                writable.setTransactionSuccessful()
+            } finally {
+                writable.endTransaction()
+            }
+            log.info(
+                "persisted {} reattribution correction(s) into the SDK store — these records " +
+                    "are attributed durably and will not be re-processed",
+                corrections.size
+            )
+        } catch (t: Throwable) {
+            log.warn(
+                "failed to persist reattribution corrections; the corrected shapes still " +
+                    "served from memory, re-corrected next pass",
+                t
+            )
+        }
     }
 
     /**

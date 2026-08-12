@@ -589,6 +589,72 @@ class SdkTxStoreWalkerTest {
         assertEquals(L1TxUiDirection.INTERNAL, sweep.direction)
     }
 
+    // ── Durable write-back: corrected once, never re-processed ────────
+
+    /** Raw (direction, netAmount, fee) of one stored `transactions` row. */
+    private fun storedShape(txid: ByteArray): Triple<Int, Long, Long?> =
+        db.openHelper.readableDatabase.query(
+            androidx.sqlite.db.SimpleSQLiteQuery(
+                "SELECT direction, netAmount, fee FROM transactions WHERE txid = ?",
+                arrayOf<Any?>(txid)
+            )
+        ).use { c ->
+            assertTrue(c.moveToFirst())
+            Triple(c.getInt(0), c.getLong(1), if (c.isNull(2)) null else c.getLong(2))
+        }
+
+    @Test
+    fun reattribution_persistsCorrectionsDurably_nextLaunchDoesNoReattributionWork() = runBlocking {
+        val ids = seedS22Shape()
+        walker(payloadFacts = markerPayloadFacts).walkAll { }
+
+        // The corrections landed in the STORE (the durable per-record flag):
+        // sweep → INTERNAL(2) net=−fee fee recovered; drain → OUTGOING(1).
+        assertEquals(Triple(2, -226L, 226L), storedShape(ids.sweep))
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+        // Genuine receives untouched.
+        assertEquals(Triple(0, 50_000_000L, null), storedShape(ids.receive))
+        assertEquals(Triple(0, 100_000_000L, null), storedShape(ids.faucet))
+
+        // "Next launch": a FRESH walker instance (no in-memory state). The
+        // rows no longer match the flag condition, so the walk issues NO
+        // reattribution statements — no funded-split aggregate, no payload
+        // fetch, no UPDATE — the every-launch storm is gone.
+        val w2 = walker(payloadFacts = { error("payload parse must not run on a corrected store") })
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w2.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        assertTrue(queryLog.none { it.contains("transactionData") })
+        assertTrue(queryLog.none { it.contains("GROUP BY t.txid") })
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        // …and the served shapes are still the corrected ones.
+        assertEquals(L1TxUiDirection.INTERNAL, byHex[displayHexOf(ids.sweep)]?.direction)
+        assertEquals(L1TxUiDirection.OUTGOING, byHex[displayHexOf(ids.drain)]?.direction)
+        assertEquals(L1TxUiDirection.INCOMING, byHex[displayHexOf(ids.faucet)]?.direction)
+    }
+
+    @Test
+    fun reattribution_engineRewriteReflagsAndRecorrects() = runBlocking {
+        // The wipe/restore/armed-rescan re-run contract: when the engine
+        // re-persists the misattributed Rust record (the only way the wrong
+        // shape can come back), the walker must re-correct AND re-persist —
+        // no invalidation plumbing, the flag condition is structural.
+        val ids = seedS22Shape()
+        walker(payloadFacts = markerPayloadFacts).walkAll { }
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+
+        // Engine rewrite: the rescan re-stores the wrong INCOMING shape.
+        exec(
+            "UPDATE transactions SET direction = 0, netAmount = 49999138, fee = NULL WHERE txid = ?",
+            ids.drain
+        )
+
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = markerPayloadFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        assertEquals(L1TxUiDirection.OUTGOING, byHex[displayHexOf(ids.drain)]?.direction)
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+    }
+
     // ── reattributeIncomingRecord (pure) ──────────────────────────────
 
     private fun incomingRecord(net: Long) = l1TxUiRecord(
