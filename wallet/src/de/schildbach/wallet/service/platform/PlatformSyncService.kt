@@ -448,6 +448,13 @@ class PlatformSynchronizationService @Inject constructor(
         if (runFirstUpdateBlocking) {
             updateContactRequests(true)
         }
+        // Idempotent re-arm: initSync is reachable from several triggers (the
+        // dashj preBlockDownload listener, identity creation, identity restore,
+        // and the post-cutover synced hook in BlockchainServiceImpl). Cancel any
+        // previous tickers first so a second trigger within one service lifetime
+        // can never stack a duplicate poll.
+        platformSyncJob?.cancel(CancellationException("re-arming the platform sync ticker"))
+        txMetadataJob?.cancel(CancellationException("re-arming the tx metadata ticker"))
         platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY)
             .onEach { updateContactRequests() }
             .launchIn(syncScope)

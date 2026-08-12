@@ -2862,6 +2862,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * path still owns discovery, so this never double-runs it. Idempotent: fires at
      * most once via [postCutoverIdentityRecoveryTriggered], reset only on failure so a
      * later synced notification can retry.
+     *
+     * FIX 2 (the dark notification bell): discovery alone left the PERIODIC
+     * contact-request poll unarmed for the rest of the session. Pre-cutover the
+     * 15-second [PlatformSyncService.updateContactRequests] ticker is armed by
+     * `initSync(true)` at the end of [PlatformSyncService.preBlockDownload] — which
+     * never runs once the cutover is committed — and the recovery branch arms it in
+     * RestoreIdentityWorker. A normal post-cutover launch of a wallet with an
+     * existing identity hit NEITHER path, so a contact request arriving mid-session
+     * was never fetched: the (fully reactive) home-screen bell had no DB change to
+     * react to, and a fresh contact payment's DIP-15 attribution had no friendship
+     * keychain to match, until a screen visit forced a one-shot pass
+     * (ContactsFragment / NotificationsFragment → `updateDashPayState()`). Mirror
+     * the preBlockDownload contract here: when no recovery was enqueued, arm the
+     * ticker. When a recovery WAS enqueued, RestoreIdentityWorker arms it at the
+     * end, exactly as before. `updateContactRequests` self-gates on having an
+     * identity, so arming on an identity-less wallet is a cheap no-op — the same
+     * behavior preBlockDownload has always had.
      */
     private fun maybeRecoverIdentityPostCutover(blockchainState: BlockchainState?) {
         if (!dashjHeldByCutover) return // pre-cutover: the dashj peerGroup path owns discovery
@@ -2872,7 +2889,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         log.info("cutover committed and SDK L1 scan synced — triggering identity/contacts discovery")
         serviceScope.launch {
             try {
-                platformSyncService.discoverAndRecoverIdentity()
+                val recoveryEnqueued = platformSyncService.discoverAndRecoverIdentity()
+                if (!recoveryEnqueued) {
+                    // Arm the periodic contact-request poll (see FIX 2 in the KDoc).
+                    // The one-shot updateContactRequests(true) inside
+                    // discoverAndRecoverIdentity's else-branch already ran, so no
+                    // blocking first update is requested here.
+                    platformSyncService.initSync()
+                }
             } catch (e: Exception) {
                 log.error("post-cutover identity discovery/recovery failed", e)
                 postCutoverIdentityRecoveryTriggered.set(false) // allow a later synced tick to retry
