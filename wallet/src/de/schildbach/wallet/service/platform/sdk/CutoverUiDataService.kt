@@ -1486,7 +1486,17 @@ internal class DashSdkCutoverUiSource(
         db: org.dashfoundation.dashsdk.persistence.DashDatabase,
         walletId: ByteArray
     ): Flow<Unit> =
-        combine(db.txoDao().countByWallet(walletId), db.transactionDao().count()) { _, _ -> }
+        combine(
+            db.txoDao().countByWallet(walletId),
+            db.transactionDao().count(),
+            // pending_inputs: the outpoints an in-flight local spend RESERVED at
+            // broadcast — the walker's display-side spent evidence pre-confirm
+            // ([SdkTxStoreWalker]'s pending aggregates). A reservation landing
+            // after the spender's tx row was already drained changes neither of
+            // the two tables above, so without this trigger the corrected shape
+            // would wait for the 60s reconcile.
+            db.documentDao().countPendingInputs()
+        ) { _, _, _ -> }
 
     /**
      * Contains-only view over the wallet's TXO outpoint set — one indexed
