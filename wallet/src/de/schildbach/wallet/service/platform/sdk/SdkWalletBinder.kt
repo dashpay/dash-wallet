@@ -1009,6 +1009,46 @@ class SdkWalletBinder internal constructor(
         }
     }
 
+    /**
+     * The SDK half of the user-facing "Reset/Rescan blockchain" action.
+     *
+     * Post-cutover the reset's dashj work (delete the SPV block/header
+     * stores, clear the display DB) is an SDK NO-OP: the engine keeps its
+     * `WalletEntity.syncedHeight` watermark and stays SYNCED, so the user
+     * sees nothing happen (field 13:10:04Z on the mainnet device).
+     * This arms the SAME SPV filter-watermark rewind the address-window
+     * heal uses ([DashSdkService.armSpvRescan]) so the reset actually
+     * replays SDK history — from the persisted wallet-creation date when
+     * the user picked one on the rescan dialog ([resolveBirthTimeSecs]
+     * reads the store `SettingsFragment` just wrote), else the wallet's
+     * birth. The arm also starts the last-known-balance persist hold
+     * ([DashSdkService.spvRescanArmedWithin]), so a mid-replay partial
+     * figure can never be persisted as the launch seed.
+     *
+     * Uses the binder's bound wallet id when a bind pass latched one this
+     * process, else the single loaded SDK wallet. Returns whether the arm
+     * ran; never throws.
+     */
+    suspend fun armSpvRescanForBlockchainReset(): Boolean = try {
+        val walletIdHex = boundWalletIdHex ?: sdkService.loadedWalletIds().singleOrNull()
+        if (walletIdHex == null) {
+            log.info("blockchain-reset rescan skipped: no SDK wallet bound or loaded")
+            false
+        } else {
+            val armed = sdkService.armSpvRescan(walletIdHex, resolveBirthTimeSecs())
+            log.info(
+                "blockchain-reset rescan arm on {}…: armed={}",
+                walletIdHex.take(8), armed
+            )
+            armed
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("blockchain-reset rescan arm failed", t)
+        false
+    }
+
     private suspend fun anyFlagEnabled(): Boolean = try {
         dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) == true ||
             dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) == true ||

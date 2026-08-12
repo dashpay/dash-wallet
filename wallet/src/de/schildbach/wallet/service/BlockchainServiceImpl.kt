@@ -90,6 +90,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
@@ -281,6 +282,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Inject lateinit var txDisplayCacheDao: de.schildbach.wallet.database.dao.TxDisplayCacheDao
     @Inject lateinit var dashPayConfig: de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
     @Inject lateinit var l1ShadowSyncService: de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+    @Inject lateinit var sdkWalletBinder: de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
     @Inject lateinit var dashjDiagnosticSyncState: DashjDiagnosticSyncState
 
     /**
@@ -2214,6 +2216,26 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
+    /**
+     * The SDK half of ACTION_RESET_BLOCKCHAIN: when the SDK owns L1
+     * (cutover committed + SDK L1 engine enabled), arm the SPV filter
+     * rescan ([SdkWalletBinder.armSpvRescanForBlockchainReset]) so the
+     * user-facing reset replays SDK history too — pre-cutover behavior is
+     * untouched (dashj's own file wipe + replay is the whole reset there,
+     * and a shadow-only SDK must not be forced through a full rescan).
+     * Never throws; a failed arm only costs the user a retried reset.
+     */
+    private suspend fun armSdkRescanForResetIfCutOver() {
+        try {
+            if (!cutoverCoordinator.sdkOwnsL1Flow().first()) return
+            sdkWalletBinder.armSpvRescanForBlockchainReset()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("SDK rescan arm for blockchain reset failed", t)
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         log.info(".onStartCommand($intent)")
         super.onStartCommand(intent, flags, startId)
@@ -2247,6 +2269,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } else if (BlockchainService.ACTION_RESET_BLOCKCHAIN == action) {
                     log.info("will remove blockchain on service shutdown")
                     resetBlockchainOnShutdown = true
+                    // Post-cutover the dashj-store wipe below is an SDK no-op
+                    // (the engine keeps its watermark and stays SYNCED — the
+                    // field reset where "nothing happened"): also arm the SDK
+                    // filter rescan so the reset actually replays SDK history.
+                    // The arm's persist hold + the drained-predicate keep the
+                    // last-known balance from being overwritten mid-replay.
+                    armSdkRescanForResetIfCutOver()
                     stopSelf()
                 } else if (BlockchainService.ACTION_WIPE_WALLET == action) {
                     log.info("will remove blockchain and delete walletFile on service shutdown")
