@@ -1585,7 +1585,9 @@ class L1ShadowSyncServiceTest {
         filters: SpvSubProgress? = sub(SpvSyncState.SYNCED, 100, 100)
     ) = SpvSyncProgressData(
         overallState = SpvSyncState.SYNCING,
-        overallPercentage = 50.0,
+        // The SDK's overall percentage is a 0..1 fraction (dash-spv
+        // SyncProgress::percentage averages ProgressPercentage fractions).
+        overallPercentage = 0.5,
         headers = headers,
         filterHeaders = filterHeaders,
         filters = filters,
@@ -1636,15 +1638,65 @@ class L1ShadowSyncServiceTest {
                 filters = sub(SpvSyncState.SYNCING, 50, 200)
             )
         )
-        assertEquals(50.0, mapped.overallPercent, 0.0)
+        assertEquals(0.5, mapped.overallPercent, 0.0)
         assertEquals(200, mapped.headerHeight)
         assertEquals(200, mapped.headerTarget)
         assertEquals(50, mapped.filterHeight)
         assertEquals(200, mapped.filterTarget)
+        // The line scales the 0..1 fraction ×100 (the field log's "0.7%" was
+        // really 70%) and carries the committed wallet cursor.
         assertEquals(
-            "L1Shadow phase=FILTERS 50.0% headers 200/200 filters 50/200",
+            "L1Shadow phase=FILTERS 50.0% headers 200/200 filters 50/200 wallet 0",
             shadowProgressLine(mapped)
         )
+        assertEquals(
+            "L1Shadow phase=FILTERS 50.0% headers 200/200 filters 50/200 wallet 199",
+            shadowProgressLine(mapped.copy(walletSyncedHeight = 199))
+        )
+    }
+
+    // ── The committed-cursor drain predicate + its event parser ───────
+
+    @Test
+    fun scanCaughtUpToTip_requiresTheBlockPipelineDrained() {
+        val filtersAtTip = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 1.0,
+            headerHeight = 1_514_660, headerTarget = 1_514_660,
+            filterHeight = 1_514_659, filterTarget = 1_514_660
+        )
+        // No cursor evidence (0): pre-change behavior — caught up.
+        assertTrue(filtersAtTip.scanCaughtUpToTip)
+        assertFalse(filtersAtTip.blockPipelineLagging)
+        // Cursor provably behind the tip: the engine is still downloading /
+        // processing matched blocks — NOT caught up (the premature-synced
+        // field incident).
+        val churning = filtersAtTip.copy(walletSyncedHeight = 1_200_000)
+        assertTrue(churning.blockPipelineLagging)
+        assertFalse(churning.scanCaughtUpToTip)
+        // Cursor within SCAN_TIP_TOLERANCE_BLOCKS of the tip: drained.
+        val drained = filtersAtTip.copy(walletSyncedHeight = 1_514_658)
+        assertFalse(drained.blockPipelineLagging)
+        assertTrue(drained.scanCaughtUpToTip)
+    }
+
+    @Test
+    fun parseL1SyncHeightAdvanced_extractsTheCommittedHeight_ignoresOtherEvents() {
+        assertEquals(
+            1_514_321L,
+            parseL1SyncHeightAdvanced(
+                "SyncHeightAdvanced { wallet_id: WalletId([205, 205, 205]), height: 1514321 }"
+            )
+        )
+        // BlockProcessed carries a height too, but a block's own height says
+        // nothing about the batch being committed — must not feed the cursor.
+        assertNull(
+            parseL1SyncHeightAdvanced(
+                "BlockProcessed { wallet_id: WalletId([205]), height: 1514321, chain_lock: None }"
+            )
+        )
+        assertNull(parseL1SyncHeightAdvanced(detectedDebug()))
+        assertNull(parseL1SyncHeightAdvanced("SyncHeightAdvanced { wallet_id: WalletId([1]) }"))
+        assertNull(parseL1SyncHeightAdvanced("SyncHeightAdvanced { height: 0 }"))
     }
 
     // ── kotlinSyncLabel (home-screen debug indicator) ─────────────────

@@ -52,8 +52,12 @@ class L1SyncStatusServiceTest {
         headerTarget: Long = 1_514_660,
         filterHeight: Long = 1_400_000,
         filterTarget: Long = 1_514_660,
-        mnListHeight: Long = 0
-    ) = ShadowSyncProgress(phase, 0.0, headerHeight, headerTarget, filterHeight, filterTarget, mnListHeight)
+        mnListHeight: Long = 0,
+        walletSyncedHeight: Long = 0
+    ) = ShadowSyncProgress(
+        phase, 0.0, headerHeight, headerTarget, filterHeight, filterTarget, mnListHeight,
+        walletSyncedHeight
+    )
 
     private fun dashjState(
         percentageSync: Int,
@@ -88,6 +92,39 @@ class L1SyncStatusServiceTest {
         )
         assertTrue(sdkL1ScanCaughtUp(progress(phase = ShadowSyncPhase.SYNCED)))
         assertFalse("a genuine mid-scan is not caught up", sdkL1ScanCaughtUp(progress()))
+    }
+
+    @Test
+    fun sdkCaughtUp_blocksWhileTheBlockPipelineProvablyLags() {
+        // The field incident: filters sub-progress at the tip (position-wise
+        // "synced") one minute into a three-hour replay while the engine was
+        // still downloading/processing the matched blocks — the committed
+        // wallet cursor trailing the header tip is the only Kotlin-visible
+        // evidence of that churn, and it must hold the gate closed.
+        assertFalse(
+            "filters at tip but the committed cursor far behind = still churning",
+            sdkL1ScanCaughtUp(
+                progress(filterHeight = 1_514_659, walletSyncedHeight = 1_200_000)
+            )
+        )
+        // The SDK's own latched SYNCED phase is gated the same way — it was
+        // observed holding SYNCED right through an armed replay.
+        assertFalse(
+            sdkL1ScanCaughtUp(
+                progress(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_200_000)
+            )
+        )
+        // A cursor within tolerance of the tip is drained: caught up.
+        assertTrue(
+            sdkL1ScanCaughtUp(
+                progress(filterHeight = 1_514_659, walletSyncedHeight = 1_514_658)
+            )
+        )
+        // An UNKNOWN cursor (0 — no event/seed evidence) must never deadlock
+        // the gate: pre-change behavior applies.
+        assertTrue(
+            sdkL1ScanCaughtUp(progress(filterHeight = 1_514_659, walletSyncedHeight = 0))
+        )
     }
 
     // ── dashj's own percentage rule ───────────────────────────────────

@@ -116,7 +116,26 @@ data class ShadowSyncProgress(
      * masternode-height-only changes it previously conflated, pre-cutover
      * too (verified benign: every collector dedups downstream).
      */
-    val mnListHeight: Long = 0
+    val mnListHeight: Long = 0,
+    /**
+     * The wallet's COMMITTED scan cursor — the height through which the
+     * engine's block-download/tx-processing pipeline has actually DRAINED,
+     * not merely the filter scan position. 0 = unknown (no evidence yet).
+     *
+     * Fed by [L1ShadowSyncService] from the engine's
+     * `WalletEvent::SyncHeightAdvanced` events ("the filter pipeline
+     * committed a batch covering blocks up to height" — the commit lands
+     * AFTER the batch's matched blocks were processed through the wallet),
+     * seeded at shadow start from the SDK's durable `WalletEntity.syncedHeight`
+     * watermark. This is the only Kotlin-visible view of the engine's
+     * requested-vs-processed block state: the typed FFI progress
+     * ([SpvSyncProgressData]) carries headers/filterHeaders/filters/
+     * masternodes but NOT the dash-spv `BlocksProgress` sub-phase, whose
+     * churn the field incident hid behind a "synced" filter scan.
+     * LATEST-WINS, not monotonic: an armed rescan rewinds the cursor and
+     * the follow-up events legitimately re-climb from the rewound floor.
+     */
+    val walletSyncedHeight: Long = 0
 ) {
     /** The shadow chain is fully synced — parity mismatches count as real from here. */
     val synced: Boolean get() = phase == ShadowSyncPhase.SYNCED
@@ -168,11 +187,37 @@ data class ShadowSyncProgress(
      * mid-scan (filters thousands of blocks behind, or the engine
      * IDLE/ERROR/still on headers) trails far outside the tolerance and
      * keeps the gate closed (fail-closed).
+     *
+     * ALSO requires the block/tx pipeline not to be PROVABLY lagging
+     * ([blockPipelineLagging]) — the field incident this closes: the
+     * filters sub-progress reported Synced (scan position at tip) one
+     * minute into a three-hour replay while the engine's block
+     * download/processing pipeline was still churning through the matched
+     * blocks, so the app declared l1Synced=true and persisted a partial
+     * 48.86 DASH as the last-known balance.
      */
     val scanCaughtUpToTip: Boolean get() =
         headerTarget > 0 && headerHeight >= headerTarget &&
             filterTarget > 0 &&
-            headerTarget - filterHeight <= SCAN_TIP_TOLERANCE_BLOCKS
+            headerTarget - filterHeight <= SCAN_TIP_TOLERANCE_BLOCKS &&
+            !blockPipelineLagging
+
+    /**
+     * The engine's block-download/tx-processing pipeline DEMONSTRABLY
+     * trails the header tip: the wallet's committed scan cursor
+     * ([walletSyncedHeight]) is known AND more than
+     * [SCAN_TIP_TOLERANCE_BLOCKS] behind [headerTarget]. Evidence-based on
+     * purpose — an UNKNOWN cursor (0, e.g. before the first
+     * `SyncHeightAdvanced` event of a session whose durable watermark seed
+     * failed) does NOT count as lagging, so the predicate can never
+     * deadlock "synced" when the signal is missing; during any real
+     * replay/scan the engine commits batches continuously, so the cursor
+     * is live within seconds and the lag is visible for the churn's whole
+     * duration.
+     */
+    val blockPipelineLagging: Boolean get() =
+        headerTarget > 0 && walletSyncedHeight > 0 &&
+            headerTarget - walletSyncedHeight > SCAN_TIP_TOLERANCE_BLOCKS
 
     /**
      * The shadow SPV's best knowledge of the NETWORK chain tip, 0 when the
@@ -297,11 +342,19 @@ internal fun toShadowSyncProgress(data: SpvSyncProgressData): ShadowSyncProgress
     )
 }
 
-/** The throttled `L1Shadow` one-line progress summary. Pure for tests. */
+/**
+ * The throttled `L1Shadow` one-line progress summary. Pure for tests.
+ * [ShadowSyncProgress.overallPercent] is the SDK's 0..1 fraction, so it is
+ * scaled ×100 here (the line used to print the raw fraction — the field
+ * log's "phase=FILTERS 0.7%" was really 70%). Also carries the committed
+ * wallet cursor ([ShadowSyncProgress.walletSyncedHeight]) so a
+ * filters-at-tip-but-blocks-churning state is visible in one line.
+ */
 internal fun shadowProgressLine(p: ShadowSyncProgress): String = String.format(
     Locale.US,
-    "L1Shadow phase=%s %.1f%% headers %d/%d filters %d/%d",
-    p.phase, p.overallPercent, p.headerHeight, p.headerTarget, p.filterHeight, p.filterTarget
+    "L1Shadow phase=%s %.1f%% headers %d/%d filters %d/%d wallet %d",
+    p.phase, p.overallPercent * 100, p.headerHeight, p.headerTarget, p.filterHeight, p.filterTarget,
+    p.walletSyncedHeight
 )
 
 // ── Parity probe shapes ───────────────────────────────────────────────
@@ -974,6 +1027,29 @@ private val CHAIN_LOCK_HEIGHT = Regex("""\bchain_lock:\s*(?:Some\(\s*)?ChainLock
 fun parseL1ChainLockHeight(eventDebug: String): Int? =
     CHAIN_LOCK_HEIGHT.find(eventDebug)?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it > 0 }
 
+/**
+ * The `height` of a `WalletEvent::SyncHeightAdvanced` Debug string —
+ * "the wallet's scan cursor advanced because the filter pipeline committed
+ * a batch covering blocks up to `height`" (key-wallet-manager events.rs).
+ * The commit lands AFTER the batch's matched blocks were processed through
+ * the wallet, so this height is the drained-through watermark the
+ * caught-up predicate needs ([ShadowSyncProgress.walletSyncedHeight]).
+ * Anchored on the variant name: `height:` also appears in `BlockProcessed`
+ * / `BlockInfo`, which must not feed the cursor (a block's own height says
+ * nothing about the batch being committed). Null for every other event and
+ * for anything that fails to parse. Pure — host-testable.
+ */
+fun parseL1SyncHeightAdvanced(eventDebug: String): Long? =
+    if (eventDebug.startsWith("SyncHeightAdvanced")) {
+        SYNC_HEIGHT_ADVANCED_HEIGHT.find(eventDebug)?.groupValues?.get(1)?.toLongOrNull()
+            ?.takeIf { it > 0 }
+    } else {
+        null
+    }
+
+/** `SyncHeightAdvanced { wallet_id: .., height: N }` — the only `height:` field in that variant. */
+private val SYNC_HEIGHT_ADVANCED_HEIGHT = Regex("""\bheight:\s*(\d+)""")
+
 // ── Source seam ───────────────────────────────────────────────────────
 
 /**
@@ -1009,6 +1085,15 @@ interface L1ShadowSource {
      * source-compatible; the production source overrides.
      */
     fun walletEventStrings(): Flow<String> = kotlinx.coroutines.flow.emptyFlow()
+
+    /**
+     * The wallet's DURABLE filter-scan watermark (`WalletEntity.syncedHeight`
+     * from the SDK's Room `wallets` row), or null when unknown — the seed
+     * for [ShadowSyncProgress.walletSyncedHeight] before the session's
+     * first `SyncHeightAdvanced` event lands. Default null so test fakes
+     * stay source-compatible (null = no evidence, never treated as lagging).
+     */
+    suspend fun sdkWalletSyncedHeight(walletIdHex: String): Long? = null
 
     /** (confirmed, unconfirmed) duffs from the SDK wallet's lock-free L1 balance. */
     suspend fun sdkBalanceDuffs(walletIdHex: String): Pair<Long, Long>
@@ -1116,6 +1201,11 @@ internal class DashSdkL1ShadowSource(
                 .filterIsInstance<org.dashfoundation.dashsdk.wallet.WalletSyncEvent.Generic>()
                 .map { it.debug }
         )
+    }
+
+    override suspend fun sdkWalletSyncedHeight(walletIdHex: String): Long? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        return database().walletDao().getByWalletId(walletId)?.syncedHeight?.toLong()
     }
 
     override suspend fun sdkBalanceDuffs(walletIdHex: String): Pair<Long, Long> {
@@ -1445,6 +1535,19 @@ class L1ShadowSyncService internal constructor(
     val chainLockHeight: StateFlow<Int> = _chainLockHeight.asStateFlow()
 
     /**
+     * The wallet's committed scan cursor for
+     * [ShadowSyncProgress.walletSyncedHeight]: seeded from the durable
+     * `WalletEntity.syncedHeight` at shadow start
+     * ([L1ShadowSource.sdkWalletSyncedHeight]), then LATEST-WINS updated
+     * from `SyncHeightAdvanced` events ([parseL1SyncHeightAdvanced]) — not
+     * monotonic, because an armed rescan rewinds the engine cursor and the
+     * follow-up events re-climb from the rewound floor (a max() here would
+     * hide exactly the replay churn the drain predicate exists to see).
+     * 0 = unknown. Reset on [stop]; re-seeded on the next start.
+     */
+    private val _engineWalletSyncedHeight = MutableStateFlow(0L)
+
+    /**
      * Whether the wallet-event tap coroutine feeding [txEvents] is live.
      * Observability seam for [CutoverUiDataService]: the tap is gated on
      * USE_KOTLIN_SDK_L1_SHADOW ([startIfEnabled]) while the cutover UI
@@ -1604,6 +1707,16 @@ class L1ShadowSyncService internal constructor(
                     source.startSpv(dataDir.absolutePath)
                 }
                 runningWalletIdHex.value = walletIdHex
+                // Seed the committed-cursor tracker from the durable
+                // watermark so the drain predicate has evidence before the
+                // session's first SyncHeightAdvanced event; a failed read
+                // leaves 0 (= unknown, never treated as lagging).
+                _engineWalletSyncedHeight.value = runCatching {
+                    source.sdkWalletSyncedHeight(walletIdHex) ?: 0L
+                }.getOrElse { t ->
+                    log.warn("durable syncedHeight seed read failed; cursor starts unknown", t)
+                    0L
+                }
                 lastProbeHeartbeatMs = nowMs()
                 monitorJob = scope.launch { monitorProgress() }.logCompletion("progress monitor")
                 parityJob = scope.launch { parityLoop(walletIdHex) }.logCompletion("parity probe loop")
@@ -1642,6 +1755,7 @@ class L1ShadowSyncService internal constructor(
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             _progress.value = ShadowSyncProgress.IDLE
+            _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
             log.info("L1 shadow sync stopped")
         }
     }
@@ -1722,7 +1836,13 @@ class L1ShadowSyncService internal constructor(
         while (currentCoroutineContext().isActive) {
             try {
                 source.spvProgress().collect { data ->
+                    // Carry the committed wallet cursor (seeded durable
+                    // watermark, live SyncHeightAdvanced events) so the
+                    // caught-up predicate can see block/tx-pipeline churn
+                    // the typed SPV progress hides (fed at ≤1s staleness —
+                    // this feed ticks at 1 Hz while SPV runs).
                     val mapped = toShadowSyncProgress(data)
+                        .copy(walletSyncedHeight = _engineWalletSyncedHeight.value)
                     _progress.value = mapped
                     // Verification verdict from the chain state: still
                     // scanning until SYNCED, then "probing" until a parity
@@ -1792,6 +1912,13 @@ class L1ShadowSyncService internal constructor(
                             _chainLockHeight.value = height
                             log.info("L1 engine chainlock height {} -> {}", previous, height)
                         }
+                    }
+                    // Committed-cursor feed for the drain predicate.
+                    // LATEST-WINS (see [_engineWalletSyncedHeight]): after an
+                    // armed rescan the first event is legitimately LOWER than
+                    // the tracked value and must replace it.
+                    parseL1SyncHeightAdvanced(debug)?.let { height ->
+                        _engineWalletSyncedHeight.value = height
                     }
                     val event = parseL1TxEvent(debug) ?: return@collect
                     log.info("L1 engine tx event: {}", event)

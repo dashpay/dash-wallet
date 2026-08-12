@@ -71,9 +71,17 @@ data class L1SyncUiStatus(
  * Uses [ShadowSyncProgress.scanCaughtUpToTip], not the SDK's never-latching
  * `synced`/phase == SYNCED: a live SPV perpetually chasing the moving tip
  * would otherwise read as un-synced forever. Pure — host-testable.
+ *
+ * The `synced` (SDK-latched SYNCED phase) arm is ALSO gated on the block
+ * pipeline not provably lagging ([ShadowSyncProgress.blockPipelineLagging]):
+ * the engine's overall phase was observed holding SYNCED while an armed
+ * rescan replayed the whole filter range and the block/tx pipeline was
+ * still churning — the premature l1Synced=true that persisted a partial
+ * balance in the field. An UNKNOWN cursor never counts as lagging, so this
+ * cannot deadlock a genuinely-at-tip wallet (see the predicate's KDoc).
  */
 fun sdkL1ScanCaughtUp(progress: ShadowSyncProgress): Boolean =
-    progress.synced || progress.scanCaughtUpToTip
+    (progress.synced || progress.scanCaughtUpToTip) && !progress.blockPipelineLagging
 
 /**
  * dashj's own header percentage, replicating the historical rule that a

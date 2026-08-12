@@ -808,6 +808,7 @@ class CutoverUiDataServiceTest {
         notify: (Long) -> Unit = {},
         txEvents: Flow<L1TxEvent> = kotlinx.coroutines.flow.emptyFlow(),
         l1Synced: Flow<Boolean> = flowOf(true),
+        rescanRecentlyArmed: () -> Boolean = { false },
         deferredContactBuilds: Int? = null,
         /** When non-null, the deferred-build probe calls THIS per read (overrides [deferredContactBuilds]). */
         deferredContactBuildFeed: (suspend () -> Int?)? = null,
@@ -834,6 +835,7 @@ class CutoverUiDataServiceTest {
         notifyCoinsReceived = notify,
         txEvents = txEvents,
         l1Synced = l1Synced,
+        rescanRecentlyArmed = rescanRecentlyArmed,
         deferredContactBuildCount = {
             if (deferredContactBuildFeed != null) deferredContactBuildFeed() else deferredContactBuilds
         },
@@ -926,6 +928,28 @@ class CutoverUiDataServiceTest {
         assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
         // And the partial is NEVER written back over the seed (the
         // compounding bug: it would poison the next launch's last-known).
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_armedRescan_publishesTheBalanceButDoesNotPersistIt() = runTest {
+        // The app just armed an SPV rescan/replay (heal v2, reset blockchain).
+        // Until the engine reflects the watermark rewind the caught-up gate
+        // still reads true — the field window that persisted a partial 48.86
+        // as last-known. The armed marker must hold the persist by itself.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(true),
+            rescanRecentlyArmed = { true }
+        )
+        service.start()
+        runCurrent()
+
+        // The live figure still publishes for display…
+        assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
+        // …but is never written back as the launch seed.
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
     }
 

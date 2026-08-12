@@ -1762,6 +1762,19 @@ class CutoverUiDataService internal constructor(
      */
     private val l1Synced: Flow<Boolean> = flowOf(true),
     /**
+     * Whether an APP-ARMED SPV rescan/replay was armed recently
+     * ([DashSdkService.spvRescanArmedWithin] over
+     * [RESCAN_ARM_PERSIST_HOLD_MS]) — the second guard on persisting
+     * [WalletUIConfig.LAST_TOTAL_BALANCE]: the app KNOWS it armed a
+     * replay (heal v2's widen+rescan, the reset-blockchain rescan), and
+     * between arming and the engine's progress reflecting the rewind the
+     * [l1Synced] gate still reads true, exactly the window the field
+     * incident persisted a partial figure in. Display publishing is NOT
+     * gated on this — only the durable last-known seed is. Default false
+     * for the fake-fed tests.
+     */
+    private val rescanRecentlyArmed: () -> Boolean = { false },
+    /**
      * How many DashPay contact ACCOUNT BUILDS the SDK still has queued for
      * the given wallet — the receive-side DIP-15 accounts whose addresses are
      * not in the watched script set until they are registered, so any payment
@@ -1852,6 +1865,7 @@ class CutoverUiDataService internal constructor(
         // this was a second hand-copied `synced || scanCaughtUpToTip`
         // expression that had to be kept in lockstep by hand.
         l1Synced = l1SyncStatusService.sdkScanCaughtUp,
+        rescanRecentlyArmed = { sdkService.spvRescanArmedWithin(RESCAN_ARM_PERSIST_HOLD_MS) },
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
         persistInstantLock = { txidHex, lockedAtMs ->
             instantSendLockDao.insert(
@@ -2543,7 +2557,14 @@ class CutoverUiDataService internal constructor(
         // pinned at the same non-zero count long enough to prove nothing is
         // moving.
         val deferredBuilds = _deferredContactBuilds.value
-        val persist = synced &&
+        // …and an app-armed rescan/replay in flight makes the figure
+        // untrustworthy even while the caught-up gate still reads true —
+        // the engine takes up to a filter-loop tick to reflect the armed
+        // watermark rewind, after which !synced takes over the hold. The
+        // window only guards the DURABLE seed; display publishing above is
+        // unaffected (see [rescanRecentlyArmed]).
+        val armedRescanHold = rescanRecentlyArmed()
+        val persist = synced && !armedRescanHold &&
             deferredBuildsSettled(deferredBuilds.count, deferredBuilds.unchangedReads)
         // One line per published figure (changes only — the ticker republishes
         // the same value every REFRESH_INTERVAL_MS). Carries what decides what
@@ -2551,9 +2572,9 @@ class CutoverUiDataService internal constructor(
         // figure instead of this one ([overlayTotalBalance]).
         if (previous?.value != duffs) {
             log.info(
-                "SDK balance published: {} duffs (was {}) | l1Synced={} deferredContactBuilds={} " +
-                    "(unchangedReads={}) persistedAsLastKnown={} lastKnown={}",
-                duffs, previous?.value ?: "none", synced, deferredBuilds.count,
+                "SDK balance published: {} duffs (was {}) | l1Synced={} rescanArmedHold={} " +
+                    "deferredContactBuilds={} (unchangedReads={}) persistedAsLastKnown={} lastKnown={}",
+                duffs, previous?.value ?: "none", synced, armedRescanHold, deferredBuilds.count,
                 deferredBuilds.unchangedReads, persist,
                 _lastKnownTotalBalance.value?.value ?: "none"
             )
@@ -3252,6 +3273,17 @@ class CutoverUiDataService internal constructor(
 
     companion object {
         internal const val REFRESH_INTERVAL_MS = 60_000L
+
+        /**
+         * How long after an app-armed SPV rescan the last-known-balance
+         * persist stays held ([rescanRecentlyArmed]). Sized to cover the
+         * arm→engine-reflects latency with margin (the watermark rewind
+         * lands on a filter-loop tick — 9–60s observed in the field), after
+         * which the ordinary not-caught-up gate carries the hold for the
+         * replay's whole duration. Over-holding only delays refreshing the
+         * launch seed; under-holding re-opens the partial-persist window.
+         */
+        internal const val RESCAN_ARM_PERSIST_HOLD_MS = 5 * 60_000L
 
         /**
          * One retry's grace for the TXO mirror to persist a just-detected tx
