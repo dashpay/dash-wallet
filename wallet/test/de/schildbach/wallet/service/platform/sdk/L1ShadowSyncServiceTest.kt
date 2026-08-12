@@ -1726,6 +1726,54 @@ class L1ShadowSyncServiceTest {
         )
     }
 
+    // ── WalletHistoryFacts (the startup first-use log line) ───────────
+
+    @Test
+    fun walletHistoryFactsLine_fullLine_isoDatesAndGreppableTag() {
+        // 2016-08-19T21:54:32Z = 1471643672s; 2015-03-29T00:00:00Z = 1427587200s.
+        assertEquals(
+            "WalletHistoryFacts: oldestTx=2016-08-19T21:54:32Z height=522871 count=6284 " +
+                "dashjEarliestKeyTime=2015-03-29T00:00:00Z",
+            walletHistoryFactsLine(
+                WalletHistoryFacts(
+                    oldestTxTimeMs = 1_471_643_672_000L,
+                    txCount = 6_284,
+                    firstUseHeight = 522_871,
+                    dashjEarliestKeyTimeSecs = 1_427_587_200L
+                )
+            )
+        )
+        // Unknown height / no dashj wallet: named unknowns, never zeros.
+        assertEquals(
+            "WalletHistoryFacts: oldestTx=2016-08-19T21:54:32Z height=unknown count=1 " +
+                "dashjEarliestKeyTime=unknown",
+            walletHistoryFactsLine(
+                WalletHistoryFacts(
+                    oldestTxTimeMs = 1_471_643_672_000L,
+                    txCount = 1,
+                    firstUseHeight = null,
+                    dashjEarliestKeyTimeSecs = null
+                )
+            )
+        )
+    }
+
+    @Test
+    fun walletHistoryFactsLine_emptyDisplayDb_announcesTheSettleFollowUp() {
+        assertEquals(
+            "WalletHistoryFacts: displayDbEmpty count=0 " +
+                "dashjEarliestKeyTime=2015-03-29T00:00:00Z (real line follows at first sync settle)",
+            walletHistoryFactsLine(
+                WalletHistoryFacts(
+                    oldestTxTimeMs = null,
+                    txCount = 0,
+                    firstUseHeight = null,
+                    dashjEarliestKeyTimeSecs = 1_427_587_200L
+                )
+            )
+        )
+    }
+
     @Test
     fun parseL1SyncHeightAdvanced_extractsTheCommittedHeight_ignoresOtherEvents() {
         assertEquals(

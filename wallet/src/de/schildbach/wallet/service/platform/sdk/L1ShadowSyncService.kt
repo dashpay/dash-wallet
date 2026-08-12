@@ -396,6 +396,54 @@ internal fun replayMemTelemetryLine(
     if (settled) " SETTLED" else ""
 )
 
+// ── Wallet-history facts (restore birth-date calibration) ─────────────
+
+/**
+ * The wallet's first-use evidence for the one-shot startup
+ * `WalletHistoryFacts` log line ([walletHistoryFactsLine]). Purpose: the
+ * field wallet restores with the EARLIEST_HD_SEED_CREATION_TIME fallback
+ * birth time (2015-03-29), forcing an 11-year filter scan — the next log
+ * pull must reveal the wallet's TRUE first-use date so the restore
+ * birth-date recommendation can be calibrated.
+ *
+ * @property oldestTxTimeMs `MIN(time)` over the display DB
+ *   (`tx_display_cache`), null when the cache is empty (fresh restore,
+ *   pre-sync).
+ * @property txCount display-DB row count.
+ * @property firstUseHeight `MIN(blockHeight)` over the SDK store's
+ *   `transactions` rows with a known height — the display DB carries no
+ *   heights, and this minimum IS the birth-height floor the calibration
+ *   needs. Null when unknown (no synced rows yet / SDK not started).
+ * @property dashjEarliestKeyTimeSecs the dashj wallet's
+ *   `earliestKeyCreationTime` (epoch SECONDS), for cross-checking what the
+ *   restore actually used as its scan floor. Null when the wallet isn't
+ *   loaded.
+ */
+internal data class WalletHistoryFacts(
+    val oldestTxTimeMs: Long?,
+    val txCount: Int,
+    val firstUseHeight: Long?,
+    val dashjEarliestKeyTimeSecs: Long?
+)
+
+/**
+ * The one-line `WalletHistoryFacts` summary — greppable on the tag, ISO
+ * dates. Empty display DB reads `displayDbEmpty` (the caller re-logs the
+ * real line at the first sync-settle edge). Pure — host-testable.
+ */
+internal fun walletHistoryFactsLine(f: WalletHistoryFacts): String {
+    val dashjTime = f.dashjEarliestKeyTimeSecs
+        ?.let { java.time.Instant.ofEpochSecond(it).toString() } ?: "unknown"
+    return if (f.oldestTxTimeMs == null || f.txCount == 0) {
+        "WalletHistoryFacts: displayDbEmpty count=${f.txCount} " +
+            "dashjEarliestKeyTime=$dashjTime (real line follows at first sync settle)"
+    } else {
+        "WalletHistoryFacts: oldestTx=${java.time.Instant.ofEpochMilli(f.oldestTxTimeMs)} " +
+            "height=${f.firstUseHeight ?: "unknown"} count=${f.txCount} " +
+            "dashjEarliestKeyTime=$dashjTime"
+    }
+}
+
 // ── Parity probe shapes ───────────────────────────────────────────────
 
 /**
@@ -1490,7 +1538,14 @@ class L1ShadowSyncService internal constructor(
     private val watchdogIntervalMs: Long = WATCHDOG_INTERVAL_MS,
     private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS,
     /** Wallet-recreation collaborators; null (tests' default) disables [recoverByRecreatingWallet]. */
-    private val recreator: ShadowWalletRecreator? = null
+    private val recreator: ShadowWalletRecreator? = null,
+    /**
+     * One-shot [WalletHistoryFacts] reader for the startup
+     * `WalletHistoryFacts` line; null (tests' default) disables the log.
+     * The production wiring reads the display DB + the SDK store + the
+     * dashj wallet — see the @Inject constructor.
+     */
+    private val historyFacts: (suspend () -> WalletHistoryFacts)? = null
 ) {
     @Inject
     constructor(
@@ -1503,7 +1558,8 @@ class L1ShadowSyncService internal constructor(
         // Provider breaks the Dagger cycle: ShieldedBalanceServiceImpl's
         // @Inject constructor takes L1ShadowSyncService (funding gate).
         shieldedBalanceService: javax.inject.Provider<ShieldedBalanceService>,
-        nonInteractiveWalletUnlock: NonInteractiveWalletUnlock
+        nonInteractiveWalletUnlock: NonInteractiveWalletUnlock,
+        txDisplayCacheDao: de.schildbach.wallet.database.dao.TxDisplayCacheDao
     ) : this(
         source = DashSdkL1ShadowSource(sdkService, walletData),
         dashPayConfig = dashPayConfig,
@@ -1518,7 +1574,28 @@ class L1ShadowSyncService internal constructor(
             binder = sdkWalletBinder,
             shielded = { shieldedBalanceService.get() },
             unlock = nonInteractiveWalletUnlock
-        )
+        ),
+        historyFacts = {
+            WalletHistoryFacts(
+                oldestTxTimeMs = txDisplayCacheDao.oldestTimeMs(),
+                txCount = txDisplayCacheDao.getCount(),
+                // The display DB carries no heights: the first-use height
+                // floor comes from the SDK store's transactions rows (the
+                // table is not wallet-scoped, but this app binds one wallet).
+                firstUseHeight = sdkService.databaseOrNull()?.let { db ->
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        db.openHelper.readableDatabase.query(
+                            androidx.sqlite.db.SimpleSQLiteQuery(
+                                "SELECT MIN(blockHeight) FROM transactions WHERE blockHeight > 0"
+                            )
+                        ).use { c ->
+                            if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else null
+                        }
+                    }
+                },
+                dashjEarliestKeyTimeSecs = walletData.wallet?.earliestKeyCreationTime
+            )
+        }
     )
 
     /** Serializes [startIfEnabled]/[stop] — the single-flight guarantee. */
@@ -1721,6 +1798,56 @@ class L1ShadowSyncService internal constructor(
     /** The auto-reset decision state (see [ShadowResetDecider] for the table). */
     private val resetDecider = ShadowResetDecider()
 
+    /** Once-per-process latch for the startup `WalletHistoryFacts` line. */
+    @Volatile
+    private var historyFactsLogged = false
+
+    /**
+     * The display DB was EMPTY when the startup facts line logged (fresh
+     * restore, pre-sync) — re-log the real line once at the first
+     * sync-settle edge (the same edge the replay memory telemetry uses).
+     */
+    @Volatile
+    private var historyFactsAwaitingSettle = false
+
+    /**
+     * Log the one-shot `WalletHistoryFacts` line ([walletHistoryFactsLine])
+     * — once per process, at wallet load (the shadow start that follows the
+     * bind), never on a sync tick. An empty display DB logs its empty state
+     * and arms the settle-edge re-log ([maybeLogHistoryFactsAtSettle]). A
+     * failed read un-latches so the next start trigger retries. Never
+     * throws (except cancellation).
+     */
+    private suspend fun logWalletHistoryFactsOnce() {
+        val read = historyFacts ?: return
+        if (historyFactsLogged) return
+        historyFactsLogged = true
+        try {
+            val facts = read()
+            log.info(walletHistoryFactsLine(facts))
+            if (facts.oldestTxTimeMs == null || facts.txCount == 0) {
+                historyFactsAwaitingSettle = true
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            historyFactsLogged = false
+            log.warn("WalletHistoryFacts read failed; will retry on the next shadow start", t)
+        }
+    }
+
+    /** The settle-edge re-log for a startup that found the display DB empty. */
+    private suspend fun maybeLogHistoryFactsAtSettle() {
+        if (!historyFactsAwaitingSettle) return
+        historyFactsAwaitingSettle = false
+        val read = historyFacts ?: return
+        try {
+            log.info(walletHistoryFactsLine(read()))
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("WalletHistoryFacts settle-edge read failed", t)
+        }
+    }
+
     /** Fire-and-forget [startIfEnabled] for call sites that must not wait. */
     fun startInBackground(): Job = scope.launch { startIfEnabled() }
 
@@ -1766,6 +1893,9 @@ class L1ShadowSyncService internal constructor(
                         "debug-only instrumentation — two SPV engines are now running",
                     walletIdHex.take(8), dataDir.absolutePath
                 )
+                // One-shot wallet-history facts at wallet load (once per
+                // process; runs after this mutex-held block returns).
+                scope.launch { logWalletHistoryFactsOnce() }
                 true
             }
         } catch (t: Throwable) {
@@ -1935,6 +2065,10 @@ class L1ShadowSyncService internal constructor(
                     } else if (telemetryActive) {
                         telemetryActive = false
                         logReplayMemTelemetry(mapped, settled = true)
+                        // A startup that found the display DB empty (fresh
+                        // restore) re-logs the real WalletHistoryFacts line
+                        // now that the first sync has settled.
+                        maybeLogHistoryFactsAtSettle()
                     }
                     lastPhase = mapped.phase
                 }
