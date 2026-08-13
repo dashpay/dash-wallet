@@ -40,14 +40,18 @@ class ContactDerivationFactsTest {
                 accountRefToContact = 133448798,
                 accountRefFromContact = 67507117,
                 derivationPath = "M/9H/5H/15H/0H/1234/5678",
-                receivingAddresses = listOf("yVNhzVxgA6J1Vze3mLv9RQaFdwitVzb7nd", "ybiRq8Ecxk7TgRgj57V5G2bMdPW7jB6Utd")
+                receivingAddresses = listOf("yVNhzVxgA6J1Vze3mLv9RQaFdwitVzb7nd", "ybiRq8Ecxk7TgRgj57V5G2bMdPW7jB6Utd"),
+                sendingPath = "M/9H/5H/15H/67507117H/5678/1234",
+                sendingAddresses = listOf("yWzRnHYCPqNQeCVpErgAyPFcqA8t9J1u2N")
             )
         )
         assertEquals(
             "ContactDerivationFacts: contact=4Zq4x62TE8UfF5PqB1ByJhkSHYQ8Kmc4wG2yqQqXyMkN " +
                 "username=splawik21 accountRefToContact=133448798 accountRefFromContact=67507117 " +
                 "path=M/9H/5H/15H/0H/1234/5678 " +
-                "receiving=[yVNhzVxgA6J1Vze3mLv9RQaFdwitVzb7nd,ybiRq8Ecxk7TgRgj57V5G2bMdPW7jB6Utd]",
+                "receiving=[yVNhzVxgA6J1Vze3mLv9RQaFdwitVzb7nd,ybiRq8Ecxk7TgRgj57V5G2bMdPW7jB6Utd] " +
+                "sendingPath=M/9H/5H/15H/67507117H/5678/1234 " +
+                "sending=[yWzRnHYCPqNQeCVpErgAyPFcqA8t9J1u2N]",
             line
         )
     }
@@ -77,7 +81,7 @@ class ContactDerivationFactsTest {
         assertEquals(
             "ContactDerivationFacts: contact=4Zq4x62TE8UfF5PqB1ByJhkSHYQ8Kmc4wG2yqQqXyMkN " +
                 "username=unavailable accountRefToContact=unavailable accountRefFromContact=unavailable " +
-                "path=unavailable receiving=unavailable",
+                "path=unavailable receiving=unavailable sendingPath=unavailable sending=unavailable",
             line
         )
     }
@@ -91,7 +95,7 @@ class ContactDerivationFactsTest {
         val empty = contactDerivationFactsLine(
             ContactDerivationFacts("id", "alice", 0, 0, "M/9H", emptyList())
         )
-        assertTrue(empty.endsWith("receiving=[]"))
+        assertTrue(empty.contains(" receiving=[] "))
     }
 
     /** accountReference 0 is a real value, not a missing one. */
@@ -102,6 +106,31 @@ class ContactDerivationFactsTest {
         )
         assertTrue(line.contains("accountRefToContact=0"))
         assertTrue(line.contains("accountRefFromContact=0"))
+    }
+
+    /**
+     * The two directions must be separately readable: a wallet with no request
+     * FROM the contact has no sending chain to derive from (their xpub is what
+     * that request carries), and that must print as `unavailable` while the
+     * receiving side still reports its addresses. This is the exact shape of
+     * splawik's three outgoing-only rows.
+     */
+    @Test
+    fun `an outgoing-only contact reports receiving addresses and no sending ones`() {
+        val line = contactDerivationFactsLine(
+            ContactDerivationFacts(
+                contactIdentityId = "id",
+                username = "ryszard1951",
+                accountRefToContact = 133448798,
+                accountRefFromContact = null,
+                derivationPath = "M/9H/5H/15H/0H/1234/5678",
+                receivingAddresses = listOf("yVNhzVxgA6J1Vze3mLv9RQaFdwitVzb7nd"),
+                sendingPath = null,
+                sendingAddresses = null
+            )
+        )
+        assertTrue(line.contains("receiving=[yVNhzVxgA6J1Vze3mLv9RQaFdwitVzb7nd]"))
+        assertTrue(line.endsWith("sendingPath=unavailable sending=unavailable"))
     }
 
     /** The cap keeps the line readable while still covering a payer's first picks. */

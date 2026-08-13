@@ -23,9 +23,11 @@ import kotlinx.coroutines.CancellationException
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Context
 import org.bitcoinj.crypto.ChildNumber
+import org.bitcoinj.crypto.DeterministicKey
 import org.bitcoinj.crypto.HDKeyDerivation
 import org.bitcoinj.crypto.HDUtils
 import org.bitcoinj.evolution.EvolutionContact
+import org.bitcoinj.wallet.FriendChainAccess
 import org.bitcoinj.wallet.FriendKeyChain
 import org.bitcoinj.wallet.Wallet
 import org.slf4j.LoggerFactory
@@ -74,6 +76,13 @@ import java.util.concurrent.atomic.AtomicBoolean
  *   receiving-chain xpub for this contact, index 0 upward. Capped
  *   ([MAX_LOGGED_ADDRESSES]) so the line stays readable. Empty list = the
  *   chain exists but nothing could be derived; null = no receiving keychain.
+ * @property sendingPath the dashj `SENDING_CHAIN` contact path, formatted —
+ *   rooted the other way round (`.../theirAccountReference'/their-id/our-id`),
+ *   so the two paths in one line make the direction unambiguous.
+ * @property sendingAddresses the first few addresses WE would pay this
+ *   contact at, derived read-only from the xpub THEY published in the
+ *   request they authored to us. Same cap. Null = no sending keychain (no
+ *   request from them, so nothing to derive from).
  */
 internal data class ContactDerivationFacts(
     val contactIdentityId: String,
@@ -81,7 +90,9 @@ internal data class ContactDerivationFacts(
     val accountRefToContact: Int?,
     val accountRefFromContact: Int?,
     val derivationPath: String?,
-    val receivingAddresses: List<String>?
+    val receivingAddresses: List<String>?,
+    val sendingPath: String? = null,
+    val sendingAddresses: List<String>? = null
 )
 
 /** Keeps the per-contact line readable; index 0 upward is what a payer uses first. */
@@ -93,16 +104,15 @@ internal const val MAX_LOGGED_ADDRESSES = 5
  * host-testable.
  */
 internal fun contactDerivationFactsLine(f: ContactDerivationFacts): String {
-    val addresses = f.receivingAddresses
-        ?.joinToString(",")
-        ?.let { "[$it]" }
-        ?: "unavailable"
+    fun List<String>?.render(): String = this?.joinToString(",")?.let { "[$it]" } ?: "unavailable"
     return "ContactDerivationFacts: contact=${f.contactIdentityId} " +
         "username=${f.username ?: "unavailable"} " +
         "accountRefToContact=${f.accountRefToContact ?: "unavailable"} " +
         "accountRefFromContact=${f.accountRefFromContact ?: "unavailable"} " +
         "path=${f.derivationPath ?: "unavailable"} " +
-        "receiving=$addresses"
+        "receiving=${f.receivingAddresses.render()} " +
+        "sendingPath=${f.sendingPath ?: "unavailable"} " +
+        "sending=${f.sendingAddresses.render()}"
 }
 
 /**
@@ -140,8 +150,10 @@ internal object ContactDerivationFactsLogger {
             val contactIds = (toContact.keys + fromContact.keys).toSortedSet()
 
             log.info(
-                "ContactDerivationFacts: BEGIN identity={} contacts={} (receiving chain = the addresses a " +
-                    "contact pays US at; derived read-only from the published xpub, max {} per contact)",
+                "ContactDerivationFacts: BEGIN identity={} contacts={} (receiving = the addresses a " +
+                    "contact pays US at, from OUR xpub in the request we authored; sending = the " +
+                    "addresses WE pay them at, from THEIR xpub in the request they authored — both " +
+                    "derived read-only from published xpubs, max {} per contact per direction)",
                 ourIdentityId, contactIds.size, MAX_LOGGED_ADDRESSES
             )
             for (contactId in contactIds) {
@@ -192,25 +204,72 @@ internal object ContactDerivationFactsLogger {
             if (!wallet.hasReceivingKeyChain(contact)) {
                 null
             } else {
-                val accountKey = wallet.getReceivingExtendedPublicKey(contact)
-                (0 until MAX_LOGGED_ADDRESSES).map { index ->
-                    Address.fromKey(
-                        wallet.params,
-                        HDKeyDerivation.deriveChildKey(accountKey, ChildNumber(index, false))
-                    ).toBase58()
-                }
+                deriveFirstAddresses(wallet, wallet.getReceivingExtendedPublicKey(contact))
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             null
         }
+
+        // The MIRROR direction — the addresses WE pay this contact at.
+        //
+        // DIP-15 (verified against FriendKeyChain.getContactPath's bytecode):
+        // the SENDING chain is rooted `.../friendAccountReference'/friend-id/
+        // our-id`, the exact reverse of the receiving chain, and its keys come
+        // from the xpub the CONTACT published in the request THEY authored to
+        // us. So the chain is keyed on their accountReference — the same
+        // EvolutionContact shape PlatformSyncService.checkAndAddReceivedRequest
+        // builds when it creates the chain — and it cannot be re-derived from
+        // our seed; the stored watch-only chain is the only source. Without
+        // this we cannot check our derivation against what a third-party
+        // client actually paid.
+        val sendingContact = fromContactRef?.let {
+            EvolutionContact(ourIdentityId, 0, contactId, it)
+        }
+        val sendingPath = sendingContact?.let {
+            try {
+                HDUtils.formatPath(
+                    FriendKeyChain.getContactPath(
+                        wallet.params, it, FriendKeyChain.KeyChainType.SENDING_CHAIN
+                    )
+                )
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                null
+            }
+        }
+        val sendingAddresses = sendingContact?.let {
+            try {
+                // Read-only by construction: the chain's already-published
+                // extended PUBLIC key, never an issuance entry point (see
+                // FriendChainAccess for why dashj's own public sending API
+                // cannot be used here).
+                FriendChainAccess.sendingExtendedPublicKeyOrNull(wallet, it)
+                    ?.let { xpub -> deriveFirstAddresses(wallet, xpub) }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                null
+            }
+        }
+
         return ContactDerivationFacts(
             contactIdentityId = contactId,
             username = username,
             accountRefToContact = toContactRef,
             accountRefFromContact = fromContactRef,
             derivationPath = path,
-            receivingAddresses = addresses
+            receivingAddresses = addresses,
+            sendingPath = sendingPath,
+            sendingAddresses = sendingAddresses
         )
     }
+
+    /** [MAX_LOGGED_ADDRESSES] addresses from index 0 up — pure key arithmetic. */
+    private fun deriveFirstAddresses(wallet: Wallet, accountKey: DeterministicKey): List<String> =
+        (0 until MAX_LOGGED_ADDRESSES).map { index ->
+            Address.fromKey(
+                wallet.params,
+                HDKeyDerivation.deriveChildKey(accountKey, ChildNumber(index, false))
+            ).toBase58()
+        }
 }
