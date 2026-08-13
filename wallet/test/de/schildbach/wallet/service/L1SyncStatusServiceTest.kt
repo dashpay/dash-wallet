@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service
 
+import de.schildbach.wallet.service.platform.sdk.DashPayBackfillStatus
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -532,5 +533,155 @@ class L1SyncStatusServiceTest {
         assertFalse(status.terms.value.settled)
         status.setApplicable(false)
         assertTrue(status.terms.value.settled)
+    }
+
+
+    // ── S21 regression: the indicator that never cleared ─────────────────
+
+    /**
+     * DEVICE REGRESSION (S21, 11.10.87 testnet, identity + 8 contact
+     * requests): "Syncing balance" showed permanently, minutes after L1
+     * reported SYNCED, while the balance itself rendered correctly.
+     *
+     * The gate's log line was the tell — every sub-condition benign, and it
+     * STILL declined to record:
+     *
+     *   backfill pass outcome: no rewind observed, but the pass is not
+     *   conclusive (firstPassInProcess=false, syncErrors=0, pendingBuilds=0,
+     *   drainScheduled=false); recording nothing
+     *
+     * That is by design: the gate clears an armed marker only by OBSERVING a
+     * rewind or recording coverage, and it refuses to record coverage while
+     * any received contact predates the height. On a wallet whose coverage is
+     * already correct the marker is therefore PERMANENT — and the indicator
+     * was keyed on its absence.
+     */
+    @Test
+    fun correctCoverage_settlesEvenThoughTheGateStaysArmedForever() {
+        // The exact device state: the ledger is complete (nothing replaying,
+        // no registration outstanding) while the bookkeeping stays armed.
+        val status = DashPayBackfillStatus(
+            armed = true,
+            replaying = false,
+            registrationOutstanding = false
+        )
+        assertTrue("an unproven armed marker is not missing money", !status.ledgerIncomplete)
+
+        val terms = DashPaySyncStatus()
+        terms.setApplicable(true)
+        terms.contactSyncFinished()
+        terms.setAccountBuildsSettled(true)          // pendingBuilds=0
+        terms.setBackfillSettled(!status.ledgerIncomplete)
+        assertTrue("the DashPay term must settle on this wallet", terms.terms.value.settled)
+
+        val ui = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = caughtUp(),
+            dashjState = null,
+            dashPaySynced = terms.terms.value.settled
+        )
+        assertTrue("the indicator must clear", ui.isFullySynced)
+    }
+
+    /** Positive evidence of missing money still holds the indicator. */
+    @Test
+    fun realIncompletenessStillHoldsTheIndicator() {
+        assertTrue(
+            DashPayBackfillStatus(armed = false, replaying = true).ledgerIncomplete
+        )
+        assertTrue(
+            DashPayBackfillStatus(
+                armed = false,
+                replaying = false,
+                registrationOutstanding = true
+            ).ledgerIncomplete
+        )
+    }
+
+    /**
+     * The DURABLE seed keeps the strict test — an unproven armed marker still
+     * blocks LAST_TOTAL_BALANCE, which is the 11.10.86 field incident (a
+     * bip44-only figure persisted as the launch seed at 17:23:58).
+     */
+    @Test
+    fun theDurableSeedStillTreatsAnArmedMarkerAsUnsettled() {
+        assertFalse(DashPayBackfillStatus(armed = true, replaying = false).settled)
+        assertFalse(
+            DashPayBackfillStatus(
+                armed = false,
+                replaying = false,
+                registrationOutstanding = true
+            ).settled
+        )
+        assertTrue(DashPayBackfillStatus.SETTLED.settled)
+    }
+
+    // ── the belt-and-braces ceiling ──────────────────────────────────────
+
+    /**
+     * HARD REQUIREMENT: no producer may hold the indicator indefinitely. Even
+     * a term that is stuck false forever is overridden once the ceiling
+     * passes — an indicator that never clears is worse than one that clears
+     * early.
+     */
+    @Test
+    fun theDashPayTermCanNeverHoldTheIndicatorPastTheCeiling() = runTest {
+        val stuck = MutableSharedFlow<Boolean>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncSettledWithDeadline(stuck, deadlineMs = 1_000).collect { seen += it }
+        }
+        runCurrent()
+        stuck.emit(false)
+        runCurrent()
+        assertEquals(false, seen.last())
+
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals("the ceiling must release the indicator", true, seen.last())
+        job.cancel()
+    }
+
+    /** Settling normally reports at once, without waiting for the ceiling. */
+    @Test
+    fun settlingBeforeTheCeilingReportsImmediately() = runTest {
+        val feed = MutableSharedFlow<Boolean>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncSettledWithDeadline(feed, deadlineMs = 10_000).collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(false)
+        testScheduler.advanceTimeBy(500)
+        runCurrent()
+        assertEquals(false, seen.last())
+
+        feed.emit(true)
+        runCurrent()
+        assertEquals(true, seen.last())
+        job.cancel()
+    }
+
+    /**
+     * A producer republishing the SAME unsettled verdict (the balance
+     * pipeline fans these out on a 60 s cadence) must not restart the
+     * ceiling clock — otherwise the ceiling could never be reached.
+     */
+    @Test
+    fun republishingTheSameVerdictDoesNotRestartTheCeiling() = runTest {
+        val feed = MutableSharedFlow<Boolean>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncSettledWithDeadline(feed, deadlineMs = 1_000).collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(false)
+        testScheduler.advanceTimeBy(600)
+        runCurrent()
+        feed.emit(false)
+        testScheduler.advanceTimeBy(600)
+        runCurrent()
+        assertEquals("the ceiling lands one deadline after the FIRST false", true, seen.last())
+        job.cancel()
     }
 }

@@ -2652,8 +2652,18 @@ class CutoverUiDataService internal constructor(
         // [dashPayBackfillStatus].
         val buildsSettled = deferredBuildsSettled(deferredBuilds.count, deferredBuilds.unchangedReads)
         // Fan the two DashPay terms out to the user-facing sync signal — same
-        // cadence, same readings, so the indicator and this gate agree.
-        publishDashPaySyncTerms(buildsSettled, backfillStatus.settled)
+        // cadence, same readings.
+        //
+        // The indicator gets `!ledgerIncomplete`, NOT `settled`. `settled`
+        // also requires the gate's ARMED marker to be absent, and that marker
+        // is permanent on a healthy wallet whose coverage is already correct
+        // (the gate can only clear it by observing a rewind, and it refuses to
+        // record coverage while any received contact predates the height) — so
+        // gating the indicator on it pinned "Syncing balance" on forever
+        // (S21, 11.10.87). The DURABLE seed below still uses the strict test,
+        // where the cost of being wrong is a persisted figure that poisons
+        // every later launch; its armed term carries its own deadline.
+        publishDashPaySyncTerms(buildsSettled, !backfillStatus.ledgerIncomplete)
         val persist = synced && !armedRescanHold && backfillStatus.settled && buildsSettled
         // One line per published figure (changes only — the ticker republishes
         // the same value every REFRESH_INTERVAL_MS). Carries what decides what

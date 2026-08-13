@@ -138,23 +138,58 @@ data class BackfillObservation(
  * read it — "is the DIP-15 contact backfill settled, or is money still
  * missing from the ledger?".
  *
- * Both flags false = settled: either coverage is recorded (the backfill
- * provably completed) or the gate has never written anything at all (a
- * wallet with no DashPay contacts — which must never be held back by a
- * mechanism that does not apply to it).
+ * ## Two predicates, because the two consumers ask different questions
+ *
+ * [armed] is BOOKKEEPING, not a statement about the money. It means "a
+ * provisioning pass ran and we could not PROVE what it did", and on a healthy
+ * wallet it is PERMANENT: [decideDashPayBackfillPassOutcome] can only clear it
+ * by observing a rewind or by recording coverage, and recording coverage is
+ * refused by [noRewindConclusionBlockedBecause] whenever any RECEIVED contact
+ * request predates the height — which is true of essentially every wallet that
+ * has contacts. A wallet whose coverage is already correct therefore stays
+ * armed forever, and it is perfectly healthy (observed on the S21, 11.10.87:
+ * "no rewind observed, but the pass is not conclusive … recording nothing",
+ * repeating with pendingBuilds=0, syncErrors=0, drainScheduled=false).
+ *
+ * So:
+ * - [ledgerIncomplete] — "money is provably missing from the ledger RIGHT
+ *   NOW" — is what a USER-FACING "still syncing" indicator must use. It
+ *   excludes [armed] for exactly the reason above: a permanent bookkeeping
+ *   state would pin the indicator on forever, and an indicator that never
+ *   clears is worse than one that clears slightly early.
+ * - [settled] — "nothing is owed, in flight, or unproven" — is the stricter
+ *   test the DURABLE last-known-balance seed uses, where the cost of being
+ *   wrong is a persisted figure that poisons every later launch. It keeps
+ *   [armed], but the gate reports [armed] under a deadline (see
+ *   [BACKFILL_ARMED_HOLD_MS]) so this cannot freeze the seed forever either.
+ *
+ * All flags false = settled, which is also what a wallet with no DashPay
+ * contacts always reads: the gate has never written anything for it, and a
+ * mechanism that does not apply must never hold it back.
  *
  * @property armed a provisioning pass is armed and unaccounted for: a rewind
- *   may be owed and the current balance may be short of the payments it
- *   would find.
+ *   MAY be owed. See above — on its own this is not evidence of missing money.
  * @property replaying a rewind was OBSERVED and the scan is climbing back —
  *   the balance is mid-replay and passes through arbitrary partial values.
+ * @property registrationOutstanding receiving accounts were REGISTERED since
+ *   the last sweep, so their payments are not matched yet and the total is
+ *   short by exactly them. Positive evidence of missing money, and short-lived
+ *   (the next sweep consumes it).
  */
 data class DashPayBackfillStatus(
     val armed: Boolean,
-    val replaying: Boolean
+    val replaying: Boolean,
+    val registrationOutstanding: Boolean = false
 ) {
-    /** Nothing owed and nothing in flight — the ledger figure is whole. */
-    val settled: Boolean get() = !armed && !replaying
+    /** Nothing owed, in flight or unproven — the strict test for the durable seed. */
+    val settled: Boolean get() = !armed && !replaying && !registrationOutstanding
+
+    /**
+     * Money is provably missing from the ledger right now — the test a
+     * user-facing "still syncing" signal uses. Deliberately excludes [armed];
+     * see the class KDoc.
+     */
+    val ledgerIncomplete: Boolean get() = replaying || registrationOutstanding
 
     companion object {
         val SETTLED = DashPayBackfillStatus(armed = false, replaying = false)
@@ -873,6 +908,14 @@ class DashPayBackfillGateImpl @Inject constructor(
 ) : DashPayBackfillGate {
 
     /**
+     * Monotonic milliseconds for [BACKFILL_ARMED_HOLD_MS]. Deliberately NOT
+     * wall-clock (a clock change must not release or extend the hold) and not
+     * `SystemClock` (which is unavailable on the host JVM these tests run on).
+     * Overridable so the deadline is testable without waiting minutes.
+     */
+    internal var nowElapsedMs: () -> Long = { System.nanoTime() / 1_000_000 }
+
+    /**
      * The observation [evaluate] reasoned over, handed to
      * [recordPassOutcome] so the before/after comparison uses the exact
      * pre-pass watermark rather than re-reading a value the pass has
@@ -913,10 +956,41 @@ class DashPayBackfillGateImpl @Inject constructor(
         }
     }
 
+    /**
+     * Monotonic reading at which THIS PROCESS first saw an armed marker, null
+     * when none has been seen — the clock behind [BACKFILL_ARMED_HOLD_MS].
+     * Nullable rather than a 0 sentinel: 0 is a legitimate reading of a
+     * monotonic clock, and conflating the two re-stamps the deadline on every
+     * read, which is the freeze this exists to end.
+     *
+     * Process-scoped on purpose: the marker itself is durable and (see
+     * [DashPayBackfillStatus]) permanent on a healthy wallet, so a persisted
+     * timestamp would just make the freeze survive relaunches too.
+     */
+    @Volatile
+    private var armedFirstSeenAtMs: Long? = null
+
     override suspend fun readBackfillStatus(): DashPayBackfillStatus = try {
+        val armedMarker = readArmed() != null
+        val firstSeen = if (!armedMarker) {
+            armedFirstSeenAtMs = null
+            null
+        } else {
+            armedFirstSeenAtMs ?: nowElapsedMs().also { armedFirstSeenAtMs = it }
+        }
+        // The armed marker is UNPROVEN, not wrong, and on a wallet whose
+        // coverage is already correct it never clears (see the class KDoc).
+        // Report it only while a rewind could still plausibly be on its way —
+        // past that, the absence of one IS the answer, and continuing to
+        // report it would freeze the last-known-balance seed for the wallet's
+        // whole life. The rewind's own evidence (a latched watch) is not
+        // time-limited here; only the unproven state is.
+        val armedWithinDeadline = firstSeen != null &&
+            nowElapsedMs() - firstSeen < BACKFILL_ARMED_HOLD_MS
         DashPayBackfillStatus(
-            armed = readArmed() != null,
-            replaying = readInProgress() != null
+            armed = armedWithinDeadline,
+            replaying = readInProgress() != null,
+            registrationOutstanding = accountsRegisteredSincePass.get()
         )
     } catch (e: CancellationException) {
         throw e
@@ -1230,6 +1304,24 @@ class DashPayBackfillGateImpl @Inject constructor(
     }
 
     companion object {
+        /**
+         * How long an UNPROVEN armed marker is reported as [DashPayBackfillStatus.armed].
+         *
+         * Sized to the same question the gate's own no-rewind conclusion asks
+         * ([SdkWalletBinder.BACKFILL_NO_REWIND_CONCLUSION_POLLS] — five
+         * one-minute polls): how long must a quiet observation window be
+         * before "no rewind is coming" is the honest reading? The rewind's
+         * durable drop lands 9-60 s after the in-memory rewind (102 s at
+         * worst, measured), so five minutes clears every observed case with
+         * wide margin — the field rewind this guards showed up 13 s after the
+         * process's first sweep (17:23:58 armed -> 17:24:11 observed).
+         *
+         * Over-running costs a delayed refresh of the launch seed.
+         * Under-running was the S21 regression: reported forever, so the seed
+         * could never refresh and the sync indicator never cleared.
+         */
+        internal const val BACKFILL_ARMED_HOLD_MS = 5 * 60_000L
+
         private val log = LoggerFactory.getLogger(DashPayBackfillGateImpl::class.java)
     }
 }

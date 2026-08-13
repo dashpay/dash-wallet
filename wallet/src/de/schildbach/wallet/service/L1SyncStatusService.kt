@@ -215,6 +215,54 @@ internal fun sustainedPlatformStarvation(
     .distinctUntilChanged()
 
 /**
+ * Absolute ceiling on how long the DashPay term may hold the user-facing
+ * "still syncing" state ([dashPaySyncSettledWithDeadline]).
+ *
+ * Belt-and-braces, deliberately independent of every producer: the terms
+ * themselves are each individually bounded, but the S21 regression was
+ * precisely a term that looked bounded and was not (the backfill gate's armed
+ * marker is permanent on a healthy wallet). An indicator that never clears is
+ * worse than one that clears early, so past this point the DashPay half is
+ * reported settled regardless of what any producer says.
+ *
+ * Sized above the worst observed honest tail: on 11.10.86 the L1 scan reported
+ * caught up at 17:12:39 and the DashPay side finished at 17:25:00 — ~12.4
+ * minutes of contact sync, account registration and backfill. Fifteen minutes
+ * keeps that case reporting truthfully while still guaranteeing the indicator
+ * clears.
+ */
+internal const val DASHPAY_SETTLE_DEADLINE_MS = 15 * 60_000L
+
+/**
+ * The DashPay settled verdict, with [deadlineMs] as a hard ceiling: false
+ * while the terms say unsettled, but true unconditionally once that has held
+ * for the deadline. Settling early re-emits true immediately.
+ *
+ * Same shape as [sustainedPlatformStarvation] (and the same reasoning about
+ * [distinctUntilChanged] on the input: a producer re-emitting the same verdict
+ * must not restart the clock, or a 60 s republish cadence would hold the
+ * ceiling off forever). Pure — host-testable.
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal fun dashPaySyncSettledWithDeadline(
+    settled: Flow<Boolean>,
+    deadlineMs: Long = DASHPAY_SETTLE_DEADLINE_MS
+): Flow<Boolean> = settled
+    .distinctUntilChanged()
+    .flatMapLatest { isSettled ->
+        if (isSettled) {
+            flowOf(true)
+        } else {
+            flow {
+                emit(false)
+                delay(deadlineMs)
+                emit(true)
+            }
+        }
+    }
+    .distinctUntilChanged()
+
+/**
  * Neutral chain-sync stage for the DETAIL readout (Tools → Network
  * Monitor) — finer-grained than [org.dash.wallet.common.data.SyncStage]
  * (which collapses the filter pipeline for the home header), with NO
@@ -401,6 +449,27 @@ class L1SyncStatusService @Inject constructor(
         emit(false)
     }.stateIn(scope, SharingStarted.Eagerly, false)
 
+    /**
+     * The DashPay half of "finished syncing", under [DASHPAY_SETTLE_DEADLINE_MS].
+     *
+     * Held EAGERLY in the service scope for the same reason as
+     * [platformStarvedSustained]: [status]'s downstream is screen-scoped
+     * (`MainViewModel.syncStatus` uses `WhileSubscribed`), and a ceiling clock
+     * that restarted on every navigation back to the home screen would never
+     * expire. Starts at `true` so a wallet the signal does not apply to can
+     * never flicker into "syncing" on the way to its first emission.
+     */
+    private val dashPaySettled: StateFlow<Boolean> =
+        dashPaySyncSettledWithDeadline(dashPaySyncStatus.terms.map { it.settled })
+            .catch { e ->
+                // Fail OPEN: the indicator must never be stuck on because a
+                // bookkeeping feed failed.
+                org.slf4j.LoggerFactory.getLogger(L1SyncStatusService::class.java)
+                    .warn("DashPay settled feed failed; reporting the DashPay half as settled", e)
+                emit(true)
+            }
+            .stateIn(scope, SharingStarted.Eagerly, true)
+
     /** The engine-agnostic L1 sync status every sync-aware screen renders. */
     val status: Flow<L1SyncUiStatus> =
         combine(
@@ -408,9 +477,9 @@ class L1SyncStatusService @Inject constructor(
             l1ShadowSyncService.progress,
             blockchainStateProvider.observeState(),
             platformStarvedSustained,
-            dashPaySyncStatus.terms
-        ) { sdkOwnsL1, progress, state, platformStarved, dashPay ->
-            mergeL1SyncUiStatus(sdkOwnsL1, progress, state, platformStarved, dashPay.settled)
+            dashPaySettled
+        ) { sdkOwnsL1, progress, state, platformStarved, dashPaySynced ->
+            mergeL1SyncUiStatus(sdkOwnsL1, progress, state, platformStarved, dashPaySynced)
         }.distinctUntilChanged()
 
     /**

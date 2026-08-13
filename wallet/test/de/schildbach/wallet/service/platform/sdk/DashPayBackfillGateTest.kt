@@ -1089,6 +1089,81 @@ class DashPayBackfillGateTest {
     }
 
     @Test
+    fun gate_armedStatus_expiresSoTheLaunchSeedCanNeverFreeze() = runBlocking {
+        // S21 (11.10.87): a wallet whose coverage is already correct keeps its
+        // armed marker forever — the gate can only clear it by OBSERVING a
+        // rewind, and refuses to record coverage while a received contact
+        // predates the height. Reporting that as "unsettled" indefinitely
+        // froze the last-known-balance seed for the wallet's whole life.
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET] = 2_521_270L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT] = fingerprintA
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        var now = 0L
+        gate.nowElapsedMs = { now }
+
+        // Inside the window the marker still holds the durable seed — this is
+        // the 11.10.86 field incident, where the rewind landed 13 s later.
+        assertTrue(gate.readBackfillStatus().armed)
+        assertFalse(gate.readBackfillStatus().settled)
+        // …but it is NOT evidence of missing money, so the indicator is free.
+        assertFalse(gate.readBackfillStatus().ledgerIncomplete)
+
+        now = DashPayBackfillGateImpl.BACKFILL_ARMED_HOLD_MS
+        assertFalse("an unproven marker must not hold the seed forever", gate.readBackfillStatus().armed)
+        assertTrue(gate.readBackfillStatus().settled)
+    }
+
+    @Test
+    fun gate_armedStatus_restartsItsDeadlineOnceTheMarkerClears() = runBlocking {
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET] = 2_521_270L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT] = fingerprintA
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        var now = 0L
+        gate.nowElapsedMs = { now }
+        assertTrue(gate.readBackfillStatus().armed)
+        now = DashPayBackfillGateImpl.BACKFILL_ARMED_HOLD_MS
+        assertFalse(gate.readBackfillStatus().armed)
+
+        // A LATER pass arms again (FIX A: a registration buys a re-sweep).
+        // That is a fresh unproven state and gets its own full window.
+        store.values.clear()
+        assertFalse(gate.readBackfillStatus().armed)
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET] = 2_600_000L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT] = fingerprintA
+        assertTrue(gate.readBackfillStatus().armed)
+    }
+
+    @Test
+    fun gate_registrationOutstanding_isReportedAsMissingMoney() = runBlocking {
+        // FIX A's guarantee, unchanged: a registered receiving account means
+        // the total is short by exactly its payments, so BOTH the durable seed
+        // and the user-facing indicator must hold.
+        val store = FakeStore()
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        assertTrue(gate.readBackfillStatus().settled)
+
+        gate.noteAccountBuildsRegistered(26)
+
+        assertTrue(gate.readBackfillStatus().registrationOutstanding)
+        assertFalse(gate.readBackfillStatus().settled)
+        assertTrue(gate.readBackfillStatus().ledgerIncomplete)
+    }
+
+    @Test
     fun gate_preFlagCoverageRecord_isTreatedAsAssumedAndReValidated() = runBlocking {
         // A wallet upgrading with a bad floor already persisted (no OBSERVED
         // flag, because the flag did not exist when it was written) must
