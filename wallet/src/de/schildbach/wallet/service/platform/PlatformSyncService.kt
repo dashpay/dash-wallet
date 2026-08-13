@@ -271,6 +271,23 @@ class PlatformSynchronizationService @Inject constructor(
         const val CONTACT_SYNC_STALE_TAKEOVER_MS = 30 * 60 * 1000L
 
         /**
+         * How long [identityDiscoveryInFlight] may be held before a new
+         * [discoverAndRecoverIdentity] caller declares the holder wedged and
+         * takes over.
+         *
+         * Sized against what a HEALTHY hold costs. The latch spans a single
+         * DAPI identity lookup (seconds) plus, on success, the
+         * RestoreIdentityWorker chain it enqueues — which on the worst
+         * observed mainnet restore (the 728-name contested walk, before the
+         * targeted narrowing) ran for tens of minutes. One hour is comfortably
+         * beyond any of that while still being a small fraction of the TEN
+         * HOURS the field wedge cost. Taking over early is cheap and safe
+         * (the enqueue is unique-work KEEP, see [identityDiscoverySince]);
+         * taking over late only delays recovery.
+         */
+        const val IDENTITY_DISCOVERY_STALE_TAKEOVER_MS = 60 * 60 * 1000L
+
+        /**
          * Whether the dashpay DATA CONTRACT itself is loaded — a strictly
          * stronger condition than `hasApp("dashpay")`, which only checks the
          * app REGISTRATION (contract id) is configured. Rebuilding a
@@ -337,6 +354,33 @@ class PlatformSynchronizationService @Inject constructor(
      * therefore cleared by both [stopSync] and [clearDatabases].
      */
     private val identityDiscoveryInFlight = AtomicBoolean(false)
+
+    /**
+     * [contactSyncClock] reading at which [identityDiscoveryInFlight] was
+     * claimed, 0 when it is free — the deadline that lets a WEDGED pass
+     * self-heal.
+     *
+     * The .86 release-on-teardown fix only covers passes the app itself ends
+     * (stopSync / clearDatabases). A pass that simply never returns is not
+     * one of them: on 11.10.84 mainnet the latch was claimed at 02:38:05,
+     * discovery found an identity at 02:38:07 and left it latched by design
+     * ("recovery is under way"), the RestoreIdentityOperation then wedged
+     * inside a Platform call — last getVoteContenders 02:45:41, then nothing
+     * — and every later attempt logged "discovery already in flight,
+     * skipping" (03:14:29, 03:35:41, 03:55:50, 11:57:31, 12:19:10, 12:41:21)
+     * until a force-stop TEN HOURS later. Nothing in the process could
+     * observe the wedge, because the holder never runs another line.
+     *
+     * Taking the latch over is safe precisely because of what it guards: the
+     * enqueue is `RestoreIdentityOperation.create(...).enqueue()`, a
+     * WorkManager `beginUniqueWork(..., ExistingWorkPolicy.KEEP)`. A second
+     * enqueue while the original work is still alive is a NO-OP — WorkManager
+     * keeps the existing chain — so a takeover cannot start a concurrent
+     * restore. It can only re-run the (idempotent, read-only) discovery query
+     * and re-assert the same unique work, which is exactly what recovers a
+     * chain that died without reporting.
+     */
+    private val identityDiscoverySince = AtomicLong(0L)
 
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
     private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
@@ -2266,9 +2310,11 @@ class PlatformSynchronizationService @Inject constructor(
         val identityData = blockchainIdentityDataDao.load()
         if (identityData == null || identityData.restoring) {
             // Only one discovery in flight; keep it latched only if we actually
-            // find an identity (see [identityDiscoveryInFlight]).
-            if (!identityDiscoveryInFlight.compareAndSet(false, true)) {
-                log.info("discoverAndRecoverIdentity: discovery already in flight, skipping")
+            // find an identity (see [identityDiscoveryInFlight]) — but never
+            // for longer than [IDENTITY_DISCOVERY_STALE_TAKEOVER_MS], so a
+            // holder that wedged inside a Platform call self-heals instead of
+            // disabling recovery for the life of the process.
+            if (!claimIdentityDiscoveryLatch()) {
                 return false
             }
             try {
@@ -2281,15 +2327,17 @@ class PlatformSynchronizationService @Inject constructor(
                     RestoreIdentityOperation(walletApplication)
                         .create(identity.id.toString())
                         .enqueue()
-                    // leave the guard latched — recovery is under way
+                    // Leave the guard latched — recovery is under way. The
+                    // deadline in claimIdentityDiscoveryLatch is what stops
+                    // "under way" from meaning "forever".
                     true
                 } else {
                     log.info("discoverAndRecoverIdentity: no existing identity found")
-                    identityDiscoveryInFlight.set(false) // allow a later retry
+                    releaseIdentityDiscoveryLatch("no identity found") // allow a later retry
                     false
                 }
             } catch (e: Exception) {
-                identityDiscoveryInFlight.set(false)
+                releaseIdentityDiscoveryLatch("discovery failed")
                 throw e
             }
         }
@@ -2516,9 +2564,48 @@ class PlatformSynchronizationService @Inject constructor(
      * refused by a latch left over from a recovery that no longer exists.
      */
     private fun releaseIdentityDiscoveryLatch(reason: String) {
+        identityDiscoverySince.set(0L)
         if (identityDiscoveryInFlight.getAndSet(false)) {
             log.info("identity-discovery guard released ({}) — a later discovery may run again", reason)
         }
+    }
+
+    /**
+     * Claim [identityDiscoveryInFlight], taking it over from a holder that has
+     * held it past [IDENTITY_DISCOVERY_STALE_TAKEOVER_MS]. Returns whether the
+     * caller may proceed with a discovery.
+     *
+     * The takeover is the self-heal for a pass that wedged with no return and
+     * no exception — see [identityDiscoverySince] for why re-running is safe
+     * (the enqueue it guards is unique-work KEEP, so it cannot double up).
+     * The claim timestamp is written under the same CAS that wins the latch,
+     * so two racing callers cannot both take over.
+     */
+    private fun claimIdentityDiscoveryLatch(): Boolean {
+        if (identityDiscoveryInFlight.compareAndSet(false, true)) {
+            identityDiscoverySince.set(contactSyncClock())
+            return true
+        }
+        val since = identityDiscoverySince.get()
+        val heldMs = contactSyncClock() - since
+        if (since == 0L || heldMs <= IDENTITY_DISCOVERY_STALE_TAKEOVER_MS) {
+            log.info("discoverAndRecoverIdentity: discovery already in flight, skipping")
+            return false
+        }
+        // Only the caller that swaps the recorded claim time takes over; a
+        // loser sees a fresh timestamp and skips as usual.
+        if (!identityDiscoverySince.compareAndSet(since, contactSyncClock())) {
+            log.info("discoverAndRecoverIdentity: discovery already in flight, skipping")
+            return false
+        }
+        log.warn(
+            "discoverAndRecoverIdentity: the identity-discovery guard has been held for {} ms " +
+                "(limit {} ms) — treating the holder as wedged and taking over; the restore " +
+                "enqueue is unique-work KEEP, so this cannot start a second recovery",
+            heldMs,
+            IDENTITY_DISCOVERY_STALE_TAKEOVER_MS
+        )
+        return true
     }
 
     override fun addPreBlockProgressListener(listener: OnPreBlockProgressListener) {
