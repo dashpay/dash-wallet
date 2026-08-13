@@ -674,6 +674,11 @@ class PlatformSynchronizationService @Inject constructor(
         // and the enqueue it guards is a unique-work KEEP, so even an overlapping
         // caller cannot start a second restore.
         releaseIdentityDiscoveryLatch("wallet reset/rescan")
+        // The DashPay sync latch describes a wallet that is about to be
+        // replaced or wiped, so the NEXT full sync is an INITIAL sync again
+        // and must show as one — a restore is exactly when the user needs to
+        // see the indicator until their contacts are actually back.
+        dashPaySyncStatus.resetForWalletReset()
         log.info("platform sync machinery stopped")
     }
 
@@ -2610,6 +2615,9 @@ class PlatformSynchronizationService @Inject constructor(
         // latch is cleared here too — it must never outlive the identity DB, on any
         // path that reaches the clears (see [identityDiscoveryInFlight]).
         releaseIdentityDiscoveryLatch("platform database clear")
+        // Twin of the reset in [stopSync]: the contacts this latch attested to
+        // have just been deleted.
+        dashPaySyncStatus.resetForWalletReset()
     }
 
     /**

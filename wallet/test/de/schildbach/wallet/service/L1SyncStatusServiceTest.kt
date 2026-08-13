@@ -497,12 +497,125 @@ class L1SyncStatusServiceTest {
         assertTrue(status.terms.value.settled)
     }
 
+    // ── S21 regression #2: the indicator that flickered forever ──────────
+
+    /**
+     * DEVICE REGRESSION (S21, 11.10.87): "Syncing balance" was shown for
+     * 78.2 s of a 192 s window — 40.8% of the time, in 10 blips averaging
+     * 7.8 s — with no sign of stopping. `updateContactRequests` runs on a
+     * ~15 s ticker forever, and the contact term mirrored "a pass is in
+     * flight", so every routine refresh re-raised the indicator.
+     *
+     * This is the whole required shape in one test: shows during the initial
+     * sync, clears when it completes, STAYS cleared across many periodic
+     * refreshes that find nothing, and re-raises only on positive evidence.
+     */
+    @Test
+    fun periodicRefreshesNeverReRaiseTheIndicatorAfterTheInitialSync() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+
+        // 1. INITIAL SYNC IN PROGRESS ⇒ shows. This is the .86 case: contact
+        //    sync ran 6.185 min after L1 reported caught up, and the user has
+        //    to see "syncing" for all of it.
+        status.contactSyncStarted()
+        assertFalse("the initial sync must show as syncing", status.terms.value.settled)
+
+        // 2. INITIAL SYNC COMPLETES ⇒ clears.
+        status.contactSyncFinished()
+        assertTrue(status.terms.value.settled)
+
+        // 3. N PERIODIC REFRESHES THAT FIND NOTHING ⇒ STAYS cleared. The
+        //    device saw one of these every ~15 s, forever.
+        repeat(20) {
+            status.contactSyncStarted()
+            assertTrue(
+                "a scheduled refresh must never re-raise the indicator",
+                status.terms.value.settled
+            )
+            status.contactSyncFinished()
+            assertTrue(status.terms.value.settled)
+        }
+
+        // 4. POSITIVE EVIDENCE ⇒ shows again. A registered receiving account
+        //    or an in-flight replay means money really is missing.
+        status.setBackfillSettled(false)
+        assertFalse("real incompleteness must still re-raise it", status.terms.value.settled)
+        status.setBackfillSettled(true)
+        assertTrue(status.terms.value.settled)
+
+        status.setAccountBuildsSettled(false)
+        assertFalse(status.terms.value.settled)
+        status.setAccountBuildsSettled(true)
+        assertTrue(status.terms.value.settled)
+    }
+
+    /**
+     * The blip count is what the user actually experiences, so assert it
+     * directly: the pre-fix term produced one raise per refresh.
+     */
+    @Test
+    fun twentyRefreshesProduceZeroIndicatorBlips() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished()
+
+        var blips = 0
+        var wasSettled = status.terms.value.settled
+        repeat(20) {
+            status.contactSyncStarted()
+            if (wasSettled && !status.terms.value.settled) blips++
+            wasSettled = status.terms.value.settled
+            status.contactSyncFinished()
+            wasSettled = status.terms.value.settled
+        }
+        assertEquals("routine refreshes must produce no visible blips", 0, blips)
+    }
+
+    /**
+     * Requirement 3 preserved: the latch is per-wallet, not per-process-life.
+     * A reset/restore makes the NEXT sync an initial one again, so the user
+     * sees the indicator until their contacts are actually back.
+     */
+    @Test
+    fun aWalletResetMakesTheNextSyncAnInitialSyncAgain() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished()
+        assertTrue(status.terms.value.settled)
+
+        status.resetForWalletReset()
+        status.setApplicable(true)
+        assertFalse(
+            "after a restore the indicator must show until the new sync completes",
+            status.terms.value.settled
+        )
+        status.contactSyncFinished()
+        assertTrue(status.terms.value.settled)
+    }
+
+    /**
+     * A pass that FAILS still latches — the pass ended and the ticker retries,
+     * whereas requiring success would pin the indicator on forever whenever
+     * Platform is unreachable.
+     */
+    @Test
+    fun aFailedInitialPassStillLatches() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished() // the finally-block path, success or not
+        assertTrue(status.terms.value.settled)
+    }
+
     /** Every term is load-bearing once DashPay applies. */
     @Test
     fun eachDashPayTermCanHoldTheSignal() {
         val status = DashPaySyncStatus()
         status.setApplicable(true)
-        // A pass has never completed yet.
+        // The initial pass has never completed yet.
         assertFalse(status.terms.value.settled)
 
         status.contactSyncFinished()
@@ -515,13 +628,6 @@ class L1SyncStatusServiceTest {
         status.setBackfillSettled(false)
         assertFalse(status.terms.value.settled)
         status.setBackfillSettled(true)
-        assertTrue(status.terms.value.settled)
-
-        // A new pass re-opens it, and its ENDING closes it again — including a
-        // failed ending, so a broken Platform connection cannot pin it on.
-        status.contactSyncStarted()
-        assertFalse(status.terms.value.settled)
-        status.contactSyncFinished()
         assertTrue(status.terms.value.settled)
     }
 
@@ -569,7 +675,7 @@ class L1SyncStatusServiceTest {
 
         val terms = DashPaySyncStatus()
         terms.setApplicable(true)
-        terms.contactSyncFinished()
+        terms.contactSyncFinished()                  // the initial sync latched
         terms.setAccountBuildsSettled(true)          // pendingBuilds=0
         terms.setBackfillSettled(!status.ledgerIncomplete)
         assertTrue("the DashPay term must settle on this wallet", terms.terms.value.settled)
