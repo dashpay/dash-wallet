@@ -22,11 +22,13 @@ import android.view.View
 import androidx.navigation.fragment.findNavController
 import com.google.common.base.Preconditions
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.payments.parsers.DashPaymentParsers
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.address_input.AddressInputFragment
 import org.dash.wallet.common.util.Constants.DASH_CURRENCY
+import org.dash.wallet.common.util.safeNavigate
 class DashAddressInputFragment : AddressInputFragment() {
 
     companion object {
@@ -36,6 +38,16 @@ class DashAddressInputFragment : AddressInputFragment() {
         super.onViewCreated(view, savedInstanceState)
         viewModel.paymentParsers = paymentParsers
         Preconditions.checkState(viewModel.currency == DASH_CURRENCY)
+    }
+
+    override fun handleSpecialInput(input: String): Boolean {
+        if (Constants.SUPPORTS_CONNECT && (DashConnectUri.isKeyUri(input) || DashConnectUri.isStUri(input))) {
+            // DashConnect QR (dash-key:/dash-st:) — handled by the Connections screen. Where the
+            // feature is off (prod) these URIs fall through to the normal unrecognised-QR error.
+            safeNavigate(DashAddressInputFragmentDirections.addressInputToConnections(input))
+            return true
+        }
+        return false
     }
     override fun continueAction() {
         SendCoinsActivity.start(requireActivity(), viewModel.addressResult.paymentIntent!!)

@@ -277,7 +277,7 @@ class MainViewModel @Inject constructor(
                 headersHeight = state.mnlistHeight
                 chainHeight = state.bestChainHeight
                 if (!state.replaying) {
-                    log.info("blockchain state update: {}; {}; {} -> {}", headersHeight, chainHeight, walletData.wallet?.lastBlockSeenHeight)
+                    log.info("blockchain state update: {}; {}", headersHeight, chainHeight)
                 }
             }
             .catch { e -> log.error("blockchain state flow error", e) }
