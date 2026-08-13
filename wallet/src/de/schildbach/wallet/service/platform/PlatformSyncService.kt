@@ -325,6 +325,16 @@ class PlatformSynchronizationService @Inject constructor(
      * caller (a subsequent peerGroup start pre-cutover, or the next SDK synced tick
      * post-cutover) may retry — i.e. "runs discovery at most once per process until an
      * identity is found".
+     *
+     * The latch must NEVER outlive the identity database it guards. This service is a
+     * @Singleton (process-scoped) while BlockchainServiceImpl is destroyed and recreated,
+     * so a Settings → Rescan blockchain — which cancels all work and wipes the identity
+     * DB — used to leave the latch set from the pre-rescan recovery, and every later
+     * discovery for the life of the PROCESS logged "discovery already in flight,
+     * skipping" and returned false. Observed live on 11.10.84 mainnet: identity +
+     * username recovered at 02:38, rescan at 02:44:28, and the post-cutover hook at
+     * 03:14:29 was refused by this latch with the identity DB already empty. It is
+     * therefore cleared by both [stopSync] and [clearDatabases].
      */
     private val identityDiscoveryInFlight = AtomicBoolean(false)
 
@@ -605,6 +615,17 @@ class PlatformSynchronizationService @Inject constructor(
         hasCheckedTopups = false
         lastTopupUpdateTime = 0L
         lastMetadataUpdateTime = 0L
+        // The identity-discovery latch guards the identity DB that the caller is
+        // about to wipe, and this @Singleton outlives the BlockchainServiceImpl
+        // that drives discovery — leaving it latched permanently disabled identity
+        // recovery for the rest of the process (see [identityDiscoveryInFlight]).
+        // Safe here and not a re-entrancy hole: the recovery this latch was
+        // protecting has just been cancelled along with every in-flight child
+        // above (the caller also cancels all WorkManager work, including
+        // RestoreIdentityWorker), so there is no discovery left to double up on;
+        // and the enqueue it guards is a unique-work KEEP, so even an overlapping
+        // caller cannot start a second restore.
+        releaseIdentityDiscoveryLatch("wallet reset/rescan")
         log.info("platform sync machinery stopped")
     }
 
@@ -2458,6 +2479,22 @@ class PlatformSynchronizationService @Inject constructor(
         }
         transactionMetadataChangeCacheDao.clear()
         transactionMetadataDocumentDao.clear()
+        // Twin of the reset in [stopSync]: whoever clears the platform databases
+        // invalidates the identity state this latch was standing guard over, so the
+        // latch is cleared here too — it must never outlive the identity DB, on any
+        // path that reaches the clears (see [identityDiscoveryInFlight]).
+        releaseIdentityDiscoveryLatch("platform database clear")
+    }
+
+    /**
+     * Clear [identityDiscoveryInFlight] so the next caller of
+     * [discoverAndRecoverIdentity] actually runs a discovery instead of being
+     * refused by a latch left over from a recovery that no longer exists.
+     */
+    private fun releaseIdentityDiscoveryLatch(reason: String) {
+        if (identityDiscoveryInFlight.getAndSet(false)) {
+            log.info("identity-discovery guard released ({}) — a later discovery may run again", reason)
+        }
     }
 
     override fun addPreBlockProgressListener(listener: OnPreBlockProgressListener) {
