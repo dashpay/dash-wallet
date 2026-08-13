@@ -1068,23 +1068,28 @@ class SdkWalletBinder internal constructor(
      * Never throws; a thrown scan counts as an attempt and retries on the
      * next pass. Surgical safety net until the Rust-side ordering fix
      * (attach the signer before the registration-time sync) lands.
+     *
+     * @return whether THIS call attached the identity — the caller's cue to
+     *   drive the work that was blocked on it (contact sync) immediately
+     *   rather than on the next 15 s tick. False for every no-op, every
+     *   still-unmanaged attempt and every failure.
      */
-    suspend fun maybeRetryIdentityDiscovery() {
+    suspend fun maybeRetryIdentityDiscovery(): Boolean {
         try {
-            if (discoveryRetrySettled) return
-            val walletId = boundWalletIdHex ?: return
-            val userId = identityConfig.loadBase().userId ?: return
+            if (discoveryRetrySettled) return false
+            val walletId = boundWalletIdHex ?: return false
+            val userId = identityConfig.loadBase().userId ?: return false
             val identityId = try {
                 Identifier.from(userId).toBuffer()
             } catch (e: Exception) {
-                return // malformed stored id — nothing a retry can do
+                return false // malformed stored id — nothing a retry can do
             }
             if (sdkService.isIdentityManaged(walletId, identityId)) {
                 discoveryRetrySettled = true
                 if (discoveryRetryAttempts > 0) {
                     log.info("identity-discovery retry: identity now managed; standing down")
                 }
-                return
+                return false
             }
             if (discoveryRetryAttempts >= DISCOVERY_RETRY_MAX_ATTEMPTS) {
                 if (!discoveryRetryExhaustedLogged) {
@@ -1096,12 +1101,12 @@ class SdkWalletBinder internal constructor(
                         DISCOVERY_RETRY_MAX_ATTEMPTS
                     )
                 }
-                return
+                return false
             }
-            if (now() < discoveryRetryNextAtMs) return
+            if (now() < discoveryRetryNextAtMs) return false
             // A bind pass owns the mutex while it runs its own discovery —
             // don't pile a concurrent scan on top; the next sync tick re-checks.
-            if (!mutex.tryLock()) return
+            if (!mutex.tryLock()) return false
             try {
                 val attempt = ++discoveryRetryAttempts
                 discoveryRetryNextAtMs = now() + discoveryRetryDelayMs(attempt)
@@ -1120,6 +1125,7 @@ class SdkWalletBinder internal constructor(
                     )
                     healIdentityKeys(walletId, identityId)
                     discoveryRetrySettled = true
+                    return true
                 } else {
                     log.warn(
                         "identity-discovery retry {}/{}: scan ran ({} identity(ies)) but the app " +
@@ -1136,6 +1142,7 @@ class SdkWalletBinder internal constructor(
         } catch (t: Throwable) {
             log.warn("identity-discovery retry attempt failed; will retry on a later sync pass", t)
         }
+        return false
     }
 
     /**

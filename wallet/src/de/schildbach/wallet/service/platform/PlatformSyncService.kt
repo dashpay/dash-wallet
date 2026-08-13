@@ -702,7 +702,33 @@ class PlatformSynchronizationService @Inject constructor(
         // user id, the not-managed check, an attempt cap and a backoff window),
         // so running it on every ticker pass — identity or not — is a cheap
         // no-op whenever it does not apply.
-        sdkWalletBinder.maybeRetryIdentityDiscovery()
+        //
+        // Run it OFF this pass, and drive contact sync the moment it lands.
+        // The retry's scan is a network round trip that took 36 s on the
+        // field device (11.10.86: retry 1/8 logged at 17:13:21, "SUCCEEDED"
+        // at 17:13:57), and it was awaited INLINE here — so contact sync,
+        // and everything downstream of it, sat behind it for the whole 36 s
+        // even though the pass could not use the identity until it finished
+        // anyway. Launched instead: this pass returns at the identity gate
+        // below, and the attempt itself re-enters contact sync as soon as it
+        // attaches, rather than waiting out the 15 s ticker. Its own guards
+        // (settled latch, attempt cap, backoff window, binder mutex) make a
+        // launch per tick a no-op, so nothing stacks.
+        syncScope.launch {
+            if (sdkWalletBinder.maybeRetryIdentityDiscovery()) {
+                log.info(
+                    "identity-discovery retry attached the identity; running contact sync now " +
+                        "instead of waiting for the next sync tick"
+                )
+                try {
+                    updateContactRequests(initialSync = true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("post-discovery contact sync failed; the ticker will retry", e)
+                }
+            }
+        }
 
         // if there is no wallet or identity, then skip the remaining steps of the update
         if (!identityRepository.hasBlockchainIdentity || walletApplication.wallet == null) {
