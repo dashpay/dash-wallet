@@ -215,11 +215,18 @@ class SdkIdentityVerifyQueries internal constructor(
     suspend fun getVerificationUrl(ownerId: Identifier, username: String): Optional<String>? {
         if (!isEnabled()) return null
         return try {
-            val json = source.search(
-                whereJson = SdkIdentityVerifyQueryMapping.whereOwnerAndLabel(ownerId, username),
-                orderByJson = SdkIdentityVerifyQueryMapping.ORDER_BY_NORMALIZED_LABEL,
-                limit = 1
-            ) ?: return Optional.empty()
+            // Bounded per round trip: a DAPI node with an expired TLS cert
+            // otherwise costs ~1.8 min before the existing dashj fallback runs.
+            // A timeout takes that identical fallback path.
+            val payload = boundedSdkPlatformQuery("identityVerify.search[$username]") {
+                source.search(
+                    whereJson = SdkIdentityVerifyQueryMapping.whereOwnerAndLabel(ownerId, username),
+                    orderByJson = SdkIdentityVerifyQueryMapping.ORDER_BY_NORMALIZED_LABEL,
+                    limit = 1
+                )
+            } ?: return null
+            // The SDK's own null still means "definitively no link published".
+            val json = payload.orElse(null) ?: return Optional.empty()
             val url = SdkIdentityVerifyQueryMapping.urlFromSearchPayload(json)
             if (url == null) {
                 log.warn("SDK identityVerify search returned malformed payload; falling back to dashj")

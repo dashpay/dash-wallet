@@ -329,10 +329,14 @@ class SdkUsernameQueries internal constructor(
             if (onlyExactUsername) {
                 exactMatchDocuments(text, contract)
             } else {
-                val json = source.search(
-                    Names.normalizeString(text),
-                    if (limit > 0) limit else 0
-                ) ?: return null
+                // Both the budget expiring and the SDK's own null already mean
+                // "fall back to dashj" here, so the bound needs no extra branch.
+                val json = boundedSdkPlatformQuery("dpns.search[$text]") {
+                    source.search(
+                        Names.normalizeString(text),
+                        if (limit > 0) limit else 0
+                    )
+                }?.orElse(null) ?: return null
                 SdkDpnsMapping.documentsFromSearchJson(json, contract).also {
                     if (it == null) log.warn("SDK DPNS search returned malformed payload; falling back to dashj")
                 }
@@ -402,12 +406,19 @@ class SdkUsernameQueries internal constructor(
      * SDK errors propagate to the caller's catch.
      */
     private suspend fun usernamesDocuments(identityId: String, contract: DataContract): List<Document>? {
-        val json = try {
-            source.usernames(identityId, USERNAMES_LIMIT)
+        // Bounded per round trip (see boundedSdkPlatformQuery): this is also the
+        // per-identity call of the getList batch, so a single TLS-broken node
+        // costs seconds and drops the whole batch to dashj instead of stalling
+        // it for ~1.8 min per contact.
+        val payload = try {
+            boundedSdkPlatformQuery("dpns.usernames[$identityId]") {
+                source.usernames(identityId, USERNAMES_LIMIT)
+            }
         } catch (e: Exception) {
             if (SdkDpnsMapping.isNotFound(e)) return emptyList()
             throw e
-        } ?: return emptyList()
+        } ?: return null
+        val json = payload.orElse(null) ?: return emptyList()
         return SdkDpnsMapping.documentsFromSearchJson(json, contract).also {
             if (it == null) {
                 log.warn("SDK DPNS usernames returned malformed payload; falling back to dashj")
@@ -419,15 +430,16 @@ class SdkUsernameQueries internal constructor(
         if (!isEnabled()) return null
         val contract = contractOrNull() ?: return null
         val normalized = Names.normalizeString(username)
-        val json = try {
-            source.resolve(normalized)
+        val payload = try {
+            boundedSdkPlatformQuery("dpns.resolve[$normalized]") { source.resolve(normalized) }
         } catch (e: Exception) {
             if (SdkDpnsMapping.isNotFound(e)) {
                 // dashj parity: names.get returns null for unregistered names.
                 return Resource.success(null)
             }
             throw e
-        } ?: return Resource.success(null)
+        } ?: return null // timed out → dashj fallback, same as any other failure
+        val json = payload.orElse(null) ?: return Resource.success(null)
         val document = SdkDpnsMapping.documentFromResolveJson(json, username, normalized, contract)
         if (document == null) {
             log.warn("SDK DPNS resolve returned malformed payload; falling back to dashj")
@@ -439,12 +451,13 @@ class SdkUsernameQueries internal constructor(
     /** dashj parity for `names.get(text, domain)`: one document, or none. */
     private suspend fun exactMatchDocuments(text: String, contract: DataContract): List<Document>? {
         val normalized = Names.normalizeString(text)
-        val json = try {
-            source.resolve(normalized)
+        val payload = try {
+            boundedSdkPlatformQuery("dpns.resolve[$normalized]") { source.resolve(normalized) }
         } catch (e: Exception) {
             if (SdkDpnsMapping.isNotFound(e)) return emptyList()
             throw e
-        } ?: return emptyList()
+        } ?: return null // timed out → dashj fallback, same as a malformed payload
+        val json = payload.orElse(null) ?: return emptyList()
         val document = SdkDpnsMapping.documentFromResolveJson(json, text, normalized, contract)
             ?: return null // malformed payload → dashj fallback
         return listOf(document)
