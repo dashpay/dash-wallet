@@ -2572,6 +2572,34 @@ class CutoverUiDataService internal constructor(
 
     private suspend fun updateSdkBalance(duffs: Long) {
         val previous = _sdkTotalBalance.value
+        val synced = _l1Synced.value
+        val backfillStatus = dashPayBackfillStatus()
+        // A rewind-driven REPLAY publishes garbage on the way through. The
+        // engine re-matches the rewound range and re-applies TXOs as it goes,
+        // so the running total passes through values that were never real:
+        // 11.10.86 published 819859264 duffs at 17:24:48 — 8.198 DASH, 15x the
+        // true 0.54937488 — three seconds after the backfill watch latched at
+        // 17:24:11, and it was back to 77858888 three seconds later. Hold the
+        // last published figure while a latched replay is climbing.
+        //
+        // Deliberately narrow, so this can never freeze a real balance:
+        // - only while the scan is NOT caught up AND the gate has an OBSERVED
+        //   rewind in flight (a latched watch, not a mere armed marker);
+        // - only once something HAS been published, so the first figure of a
+        //   session always lands (holding it would leave the header on dashj);
+        // - and the very next publication after the watch clears — the
+        //   coverage write — goes through, which on the replay's own TXO churn
+        //   is sub-second, not a ticker interval away.
+        if (previous != null && !synced && backfillStatus.replaying) {
+            if (previous.value != duffs) {
+                log.info(
+                    "SDK balance {} duffs SUPPRESSED (mid-replay: l1Synced=false and a DashPay " +
+                        "backfill rewind is in flight); holding the last published {} duffs",
+                    duffs, previous.value
+                )
+            }
+            return
+        }
         _sdkTotalBalance.value = Coin.valueOf(duffs)
         // Keep the fast-startup seed fresh (same key the dashj
         // WalletBalanceObserver maintains) — but ONLY once the scan has
@@ -2579,7 +2607,8 @@ class CutoverUiDataService internal constructor(
         // very "last known" figure the next launch seeds and holds
         // ([overlayTotalBalance]), so a single interrupted scan would make
         // every later launch open on a wrong (too low) balance.
-        val synced = _l1Synced.value
+        // (`synced` and `backfillStatus` were read at the top of this function
+        // — the mid-replay display hold needs them before anything publishes.)
         // …and a caught-up scan is not on its own evidence that the figure is
         // WHOLE. While DashPay contact account builds are still DRAINING
         // ([_deferredContactBuilds]) the contacts' receiving addresses are not
@@ -2607,7 +2636,6 @@ class CutoverUiDataService internal constructor(
         // addresses will find, so this figure is short by exactly them. This
         // is the guard that would have caught the field incident; see
         // [dashPayBackfillStatus].
-        val backfillStatus = dashPayBackfillStatus()
         val persist = synced && !armedRescanHold && backfillStatus.settled &&
             deferredBuildsSettled(deferredBuilds.count, deferredBuilds.unchangedReads)
         // One line per published figure (changes only — the ticker republishes

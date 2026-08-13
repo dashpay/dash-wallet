@@ -60,6 +60,35 @@ import java.util.Optional
  */
 internal const val SDK_PLATFORM_QUERY_TIMEOUT_MS = 6_000L
 
+/**
+ * Wall-clock ceiling for ONE LEGACY (`org.dashj.platform` / `DapiClient`)
+ * contact-path identity fetch — [boundedLegacyPlatformQuery]'s default.
+ *
+ * ## Why this is not [SDK_PLATFORM_QUERY_TIMEOUT_MS]
+ *
+ * The 6 s budget above is a ROUTING choice: abandoning the SDK attempt costs
+ * nothing because the legacy client answers the same question in ~0.5 s. The
+ * legacy client has no such second implementation behind it — it IS the
+ * fallback — so a budget here does not re-route, it DROPS the contact for
+ * this pass, and with it the DIP-15 friendship keychain that makes that
+ * contact's payments visible. Cutting a working fetch would recreate exactly
+ * the class of bug the rest of this batch fixes.
+ *
+ * And the slow ones are working. On the field device (11.10.86, contact sync
+ * 17:13:57–17:20:09) every stalled `getIdentity` returned an identity and the
+ * contact was added: 17:14:31 → "added sent request from 3h6GqHt…" at
+ * 17:15:03. The stalls cluster tightly at ~32–33 s each — a fixed internal
+ * retry cycle, not an unbounded hang.
+ *
+ * 60 s therefore sits ~1.8x above the worst observed SUCCESSFUL call while
+ * still converting the failure mode that has no bound at all — a call that
+ * never returns, the shape that cost ten hours on the identity-discovery
+ * latch — into a skip-and-retry-next-pass. It is a hang bound, not a
+ * latency optimisation, and it is deliberately not applied to any L1/send
+ * path.
+ */
+internal const val LEGACY_CONTACT_QUERY_TIMEOUT_MS = 60_000L
+
 private val log = LoggerFactory.getLogger("SdkPlatformQueryBudget")
 
 /**
@@ -119,6 +148,50 @@ internal suspend fun <T : Any> boundedSdkPlatformQuery(
         attempt.invokeOnCompletion { cause ->
             log.info(
                 "SDK platform query ({}) that timed out finally settled after {}ms (cause={})",
+                label, System.currentTimeMillis() - startedAt, cause?.javaClass?.simpleName ?: "none"
+            )
+        }
+    }
+    return result
+}
+
+/**
+ * Runs [block] — ONE BLOCKING legacy-Platform (`DapiClient`) call — under a
+ * hard wall-clock budget, so a call that never returns cannot wedge the pass
+ * that made it.
+ *
+ * Same containment as [boundedSdkPlatformQuery] and for the same reason: the
+ * legacy client bottoms out in blocking I/O with no suspension point, so the
+ * attempt runs OUTSIDE the caller's job ([abandonedQueryScope]) — otherwise
+ * the timeout would fire while the caller still waited for the native frame.
+ * The abandoned attempt is left to finish and reports what it cost.
+ *
+ * @return `Optional` wrapping [block]'s own result (including its nulls), or
+ *   **null** when the budget expired — which callers must treat exactly like
+ *   their existing "could not fetch" path, i.e. retry on the next pass.
+ *
+ * Exceptions from [block] propagate unchanged. See
+ * [LEGACY_CONTACT_QUERY_TIMEOUT_MS] for why the bound is generous: a slow
+ * legacy fetch is usually a SUCCESSFUL one, and there is no second
+ * implementation to fall through to.
+ */
+internal suspend fun <T : Any> boundedLegacyPlatformQuery(
+    label: String,
+    timeoutMs: Long = LEGACY_CONTACT_QUERY_TIMEOUT_MS,
+    block: () -> T?
+): Optional<T>? {
+    val startedAt = System.currentTimeMillis()
+    val attempt = abandonedQueryScope.async { Optional.ofNullable(block()) }
+    val result = withTimeoutOrNull(timeoutMs) { attempt.await() }
+    if (result == null) {
+        log.warn(
+            "legacy platform query timed out after {}ms ({}); treating it as unavailable for " +
+                "this pass — the next pass retries",
+            timeoutMs, label
+        )
+        attempt.invokeOnCompletion { cause ->
+            log.info(
+                "legacy platform query ({}) that timed out finally settled after {}ms (cause={})",
                 label, System.currentTimeMillis() - startedAt, cause?.javaClass?.simpleName ?: "none"
             )
         }

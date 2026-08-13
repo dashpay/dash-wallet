@@ -1006,6 +1006,56 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun postCutover_midReplayBalance_isNotPublished() = runTest {
+        // 11.10.86, 17:24:48: 819859264 duffs — 8.198 DASH, 15x the true
+        // total — published three seconds after the backfill watch latched,
+        // and gone again three seconds later. A rewind-driven replay re-applies
+        // TXOs as it re-matches the rewound range, so its running total passes
+        // through values that were never real.
+        val balance = MutableStateFlow(77_859_264L)
+        val source = FakeSource(balanceDuffs = balance)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            l1Synced = flowOf(false),
+            dashPayBackfillStatus = DashPayBackfillStatus(armed = false, replaying = true)
+        )
+        service.start()
+        runCurrent()
+        // The FIRST figure of the session always lands — holding it would
+        // leave the header on the (held) dashj value.
+        assertEquals(Coin.valueOf(77_859_264), service.sdkBalanceOrNull())
+
+        balance.value = 819_859_264L
+        runCurrent()
+
+        assertEquals(
+            "a mid-replay partial must not reach any balance consumer",
+            Coin.valueOf(77_859_264),
+            service.sdkBalanceOrNull()
+        )
+    }
+
+    @Test
+    fun postCutover_replayNotInFlight_publishesEveryFigure() = runTest {
+        // The hold is narrow on purpose: an ordinary not-caught-up scan (no
+        // observed rewind) keeps publishing, exactly as before.
+        val balance = MutableStateFlow(77_859_264L)
+        val source = FakeSource(balanceDuffs = balance)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            l1Synced = flowOf(false),
+            dashPayBackfillStatus = DashPayBackfillStatus(armed = true, replaying = false)
+        )
+        service.start()
+        runCurrent()
+
+        balance.value = 100_000_000L
+        runCurrent()
+
+        assertEquals(Coin.valueOf(100_000_000), service.sdkBalanceOrNull())
+    }
+
+    @Test
     fun postCutover_settledDashPayBackfill_persistsTheWholeFigure() = runTest {
         // Once coverage is recorded the ledger includes the contact payments,
         // so the seed must refresh — the hold can never become permanent.

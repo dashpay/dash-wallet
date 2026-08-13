@@ -47,6 +47,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.service.platform.sdk.boundedLegacyPlatformQuery
 import de.schildbach.wallet.service.platform.sdk.CutoverAutoCommitObserver
 import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
 import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
@@ -1151,7 +1152,7 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    private fun checkAndAddSentRequest(
+    private suspend fun checkAndAddSentRequest(
         userId: String,
         contactRequest: ContactRequest,
         encryptionKey: KeyParameter? = null
@@ -1165,7 +1166,17 @@ class PlatformSynchronizationService @Inject constructor(
                 // unable to CBOR-serialize a v4.1 identity (e.g. an iOS contact);
                 // identities.get would otherwise throw "No converter for ..."
                 // and drop this reconciled contact.
-                val contactIdentity = platform.getContactIdentity(contactRequest.toUserId)
+                // Bounded: this legacy DapiClient fetch has no deadline of its
+                // own and dominated the field contact sync (11.10.86: ~13
+                // stalls of ~32-33 s inside "updating contacts and profiles
+                // took 6.185 min"). A null answer takes the SAME path a fetch
+                // failure already took — the contact is retried on the next
+                // pass — so a slow-but-working node keeps working (see
+                // LEGACY_CONTACT_QUERY_TIMEOUT_MS for why the bound is
+                // generous rather than the SDK path's 6 s).
+                val contactIdentity = boundedLegacyPlatformQuery(
+                    "getContactIdentity(sent request to ${contactRequest.toUserId})"
+                ) { platform.getContactIdentity(contactRequest.toUserId) }?.orElse(null)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
@@ -1198,7 +1209,7 @@ class PlatformSynchronizationService @Inject constructor(
         return false
     }
 
-    private fun checkAndAddReceivedRequest(
+    private suspend fun checkAndAddReceivedRequest(
         userId: String,
         contactRequest: ContactRequest,
         encryptionKey: KeyParameter? = null
@@ -1218,7 +1229,10 @@ class PlatformSynchronizationService @Inject constructor(
                 // unable to CBOR-serialize a v4.1 identity (e.g. an iOS contact);
                 // identities.get would otherwise throw "No converter for ..." and
                 // this received request would never be added to the wallet.
-                val contactIdentity = platform.getContactIdentity(contactRequest.ownerId)
+                // Bounded exactly like the sent-request path above.
+                val contactIdentity = boundedLegacyPlatformQuery(
+                    "getContactIdentity(received request from ${contactRequest.ownerId})"
+                ) { platform.getContactIdentity(contactRequest.ownerId) }?.orElse(null)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
