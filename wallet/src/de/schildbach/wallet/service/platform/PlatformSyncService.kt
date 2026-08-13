@@ -961,6 +961,17 @@ class PlatformSynchronizationService @Inject constructor(
             // on and a wallet is bound. Fire-and-forget (never blocks sync).
             sdkWalletBinder.provisionContactAccountsInBackground(force = addedContact)
 
+            // One-shot-per-process DIP-15 derivation evidence. The contact set
+            // and its friendship keychains are established by the time this pass
+            // reaches here, which is exactly what the line needs. Read-only and
+            // failure-contained; see ContactDerivationFactsLogger.
+            ContactDerivationFactsLogger.logOnce(
+                ourIdentityId = userId,
+                wallet = platformRepo.walletApplication.wallet!!,
+                contactRequestDao = dashPayContactRequestDao,
+                profileDao = dashPayProfileDao
+            )
+
             updateSyncStatus(PreBlockStage.Complete)
 
             // A successful pass resets the failed-update retry budget and marks
