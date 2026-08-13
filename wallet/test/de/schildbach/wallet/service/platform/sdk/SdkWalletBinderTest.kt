@@ -357,6 +357,15 @@ class SdkWalletBinderTest {
             return accountedFor
         }
 
+        /** Account builds the binder reported as REGISTERED (drain path). */
+        var registeredBuilds = 0
+
+        override fun noteAccountBuildsRegistered(built: Int) {
+            registeredBuilds += built
+        }
+
+        override suspend fun readBackfillStatus() = DashPayBackfillStatus.SETTLED
+
         /** Set true to have the no-rewind conclusion succeed when the watch reaches it. */
         var concludesNoRewind: Boolean = false
         var concludeCalls = 0

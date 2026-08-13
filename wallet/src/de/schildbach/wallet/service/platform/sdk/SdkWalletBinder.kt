@@ -675,6 +675,11 @@ class SdkWalletBinder internal constructor(
                 "DashPay account-build drain on {}…: {}",
                 walletId.take(8), describeContactDrain(report)
             )
+            // Accounts that only exist NOW were not there when the last sweep
+            // reconciled the DIP-15 rewind, so a sweep is owed for them; the
+            // gate turns this into a re-provision on its next consultation
+            // instead of leaving the money invisible until a relaunch.
+            backfillGate.noteAccountBuildsRegistered(report.built)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn(

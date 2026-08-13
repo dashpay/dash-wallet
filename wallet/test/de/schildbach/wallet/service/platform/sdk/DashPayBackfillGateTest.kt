@@ -909,6 +909,185 @@ class DashPayBackfillGateTest {
         assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
     }
 
+    // ── registrations after the sweep (the "restart to see your money" bug) ──
+
+    @Test
+    fun armedMarker_accountsRegisteredSinceTheSweep_reProvisionsInTheSameProcess() {
+        // Field 11.10.86 (splawik): the sweep ran at 17:20:08 against ZERO
+        // receival accounts; the drain registered 29 of them 17:20:11–17:20:31.
+        // Every later consultation in that process took the "already
+        // provisioned" branch and skipped, so the 0.11095834 of contact funds
+        // stayed invisible until a manual restart at 17:24.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(2_521_270L, fingerprintA, 2_167_130L, 61),
+            coverage = null,
+            inProgress = null,
+            armed = BackfillArmed(2_521_270L, fingerprintA),
+            hasProvisionedInProcess = true,
+            accountsRegisteredSincePass = true
+        )
+        assertTrue(decision.shouldRun)
+        assertEquals(BackfillArmed(2_521_270L, fingerprintA), decision.armedToWrite)
+    }
+
+    @Test
+    fun armedMarker_noRegistrations_stillWaitsRatherThanReRunning() {
+        // The pre-existing contract is untouched when nothing was registered:
+        // a re-run really would prove nothing there.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(2_521_270L, fingerprintA, 2_167_130L, 61),
+            coverage = null,
+            inProgress = null,
+            armed = BackfillArmed(2_521_270L, fingerprintA),
+            hasProvisionedInProcess = true,
+            accountsRegisteredSincePass = false
+        )
+        assertFalse(decision.shouldRun)
+    }
+
+    @Test
+    fun armedMarker_rewindEvidenceStillWinsOverAPendingRegistration() {
+        // Ordering matters: a durable height BELOW the armed target is proof
+        // the rewind fired, and latching the watch must not be pre-empted by
+        // a registration flag — re-running would re-lower the floor and the
+        // scan would never climb.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(2_237_130L, fingerprintA, 2_167_130L, 61),
+            coverage = null,
+            inProgress = null,
+            armed = BackfillArmed(2_521_270L, fingerprintA),
+            hasProvisionedInProcess = true,
+            accountsRegisteredSincePass = true
+        )
+        assertFalse(decision.shouldRun)
+        assertEquals(
+            BackfillInProgress(2_237_130L, 2_521_270L, fingerprintA),
+            decision.inProgressToWrite
+        )
+    }
+
+    @Test
+    fun coverage_accountsRegisteredSinceTheSweep_discardsItAndBackfillsAgain() {
+        // The app-side contact fingerprint cannot see this: the contact
+        // requests were already counted; only the SDK-side ACCOUNT is new.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(2_521_270L, fingerprintA, 2_167_130L, 61),
+            coverage = BackfillCoverage(2_237_130L, 2_521_270L, fingerprintA),
+            inProgress = null,
+            armed = null,
+            hasProvisionedInProcess = true,
+            accountsRegisteredSincePass = true
+        )
+        assertTrue(decision.shouldRun)
+        assertTrue(decision.clearCoverage)
+        assertEquals(BackfillArmed(2_521_270L, fingerprintA), decision.armedToWrite)
+    }
+
+    @Test
+    fun inFlightBackfill_isNeverInterruptedByARegistration() {
+        // A watch in flight still wins: re-lowering the floor mid-climb is
+        // the livelock the whole gate exists to prevent, and the watch's own
+        // floor-widening rule absorbs a further SDK rewind.
+        val decision = decideDashPayBackfill(
+            observation = BackfillObservation(2_300_000L, fingerprintA, 2_167_130L, 61),
+            coverage = null,
+            inProgress = BackfillInProgress(2_237_130L, 2_521_270L, fingerprintA),
+            armed = null,
+            hasProvisionedInProcess = true,
+            accountsRegisteredSincePass = true
+        )
+        assertFalse(decision.shouldRun)
+    }
+
+    @Test
+    fun gate_registrationFlagIsConsumedByThePassItCauses() = runBlocking {
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET] = 2_521_270L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT] = fingerprintA
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(
+                DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L), // evaluate #1
+                DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L), // record #1: quiet
+                DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L), // evaluate #2
+                DashPayBackfillSignals(2_237_130L, 2_167_130L, 61, 2_167_130L)  // record #2: rewound
+            ),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        // This process has already provisioned, and its sweep saw no rewind…
+        gate.evaluate(walletId, identityId, userId)
+        gate.recordPassOutcome(walletId, identityId, settledReport(pendingBefore = 0))
+        // …then the drain registered accounts the sweep could not have seen.
+        gate.noteAccountBuildsRegistered(26)
+
+        assertTrue(gate.evaluate(walletId, identityId, userId).shouldRun)
+
+        // …and the pass that runs consumes the signal, so a steady wallet
+        // settles instead of sweeping on every trigger.
+        gate.recordPassOutcome(
+            walletId,
+            identityId,
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0,
+                pendingBefore = 0, drainScheduled = false, pendingAfter = 0
+            )
+        )
+        assertEquals(2_237_130L, store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_FLOOR])
+    }
+
+    @Test
+    fun gate_aPassThatBuildsAccountsReArmsItself() = runBlocking {
+        // The registrations landed DURING the pass, after its sweep had
+        // already reconciled — so the pass must leave the signal SET.
+        val store = FakeStore()
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        gate.evaluate(walletId, identityId, userId)
+        gate.recordPassOutcome(
+            walletId,
+            identityId,
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0,
+                pendingBefore = 58, drainScheduled = true, pendingAfter = 32
+            )
+        )
+
+        assertTrue(gate.evaluate(walletId, identityId, userId).shouldRun)
+    }
+
+    @Test
+    fun gate_backfillStatus_reportsArmedThenReplayingThenSettled() = runBlocking {
+        val store = FakeStore()
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        // Nothing written yet: a wallet with no DashPay backfill history is
+        // settled, so the balance persist can never deadlock on it.
+        assertTrue(gate.readBackfillStatus().settled)
+
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET] = 2_521_270L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT] = fingerprintA
+        assertTrue(gate.readBackfillStatus().armed)
+        assertFalse(gate.readBackfillStatus().settled)
+
+        store.values.clear()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_FLOOR] = 2_237_130L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_TARGET] = 2_521_270L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_FINGERPRINT] = fingerprintA
+        assertTrue(gate.readBackfillStatus().replaying)
+
+        store.values.clear()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR] = 2_237_130L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH] = 2_521_270L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT] = fingerprintA
+        assertTrue(gate.readBackfillStatus().settled)
+    }
+
     @Test
     fun gate_preFlagCoverageRecord_isTreatedAsAssumedAndReValidated() = runBlocking {
         // A wallet upgrading with a bad floor already persisted (no OBSERVED

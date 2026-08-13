@@ -761,7 +761,8 @@ class DashSdkServiceImpl @Inject constructor(
             syncSuccess = summary.success,
             syncErrors = summary.errors,
             pendingBefore = drain.queuedBefore,
-            drainScheduled = drain.drainScheduled
+            drainScheduled = drain.drainScheduled,
+            pendingAfter = drain.queuedAfter
         )
     }
 
