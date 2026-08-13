@@ -33,6 +33,7 @@ import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.work.RestoreIdentityWorker
 import de.schildbach.wallet.service.platform.work.ShieldedInviteOverageWorker
 import de.schildbach.wallet.service.platform.work.contestedNameCandidates
+import de.schildbach.wallet.service.platform.work.contestedNameListsCanMatch
 import de.schildbach.wallet.service.platform.work.isOwnContestedCandidate
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
@@ -1702,8 +1703,19 @@ class CreateIdentityService : LifecycleService() {
                 val targetedScan = ownCandidateNames.isNotEmpty()
                 val scanWatch = Stopwatch.createStarted()
 
+                // Same arithmetic as the restore path: the contested index
+                // holds only CONTESTABLE names, so a targeted scan whose own
+                // candidate names are all non-contestable cannot match
+                // anything the fetch could return. See
+                // [RestoreIdentityWorker]'s contestedNameListsCanMatch.
+                val listsCanMatch = contestedNameListsCanMatch(targetedScan, ownCandidateNames)
+
                 // check if the network has this name in the queue for voting
-                val contestedNames = platformRepo.platform.names.getAllContestedNames()
+                val contestedNames = if (listsCanMatch) {
+                    platformRepo.platform.names.getAllContestedNames()
+                } else {
+                    emptyList()
+                }
 
                 val contestedNamesToCheck = if (targetedScan) {
                     // `maybeDualUsernames`/`instantUsername` are the restore
@@ -1723,10 +1735,11 @@ class CreateIdentityService : LifecycleService() {
                     contestedNames
                 }
                 log.info(
-                    "contested-name check (creation): {} scan — own candidate name(s)={}; " +
-                        "querying contenders for {} of {} contested name(s): {}",
+                    "contested-name check (creation): {} scan — own candidate name(s)={}, " +
+                        "listFetch={}; querying contenders for {} of {} contested name(s): {}",
                     if (targetedScan) "TARGETED" else "BROAD (no requested name known)",
                     ownCandidateNames,
+                    if (listsCanMatch) "needed" else "SKIPPED (no candidate name is contestable)",
                     contestedNamesToCheck.size,
                     contestedNames.size,
                     if (targetedScan) contestedNamesToCheck.toString() else "(broad scan)"

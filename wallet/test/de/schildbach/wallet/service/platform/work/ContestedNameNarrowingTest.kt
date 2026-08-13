@@ -166,4 +166,53 @@ class ContestedNameNarrowingTest {
             )
         )
     }
+
+    // ── skipping the list fetches outright ───────────────────────────────
+
+    /**
+     * Field 11.10.86 (splawik): a TARGETED scan for `sp1aw1k21` — not
+     * contestable, it carries `2` and `9` — still fetched both contested
+     * indexes (12 names in 32.65 s, 728 names in 3.56 s) and matched nothing
+     * in either. Neither index can hold a non-contestable name, so both
+     * fetches were provably pointless.
+     */
+    @Test
+    fun `a targeted scan for a non-contestable name needs no list fetch`() {
+        assertFalse(
+            contestedNameListsCanMatch(
+                targetedScan = true,
+                ownCandidateNames = setOf("sp1aw1k21")
+            )
+        )
+    }
+
+    /** A contestable candidate could genuinely be in the index — still fetch. */
+    @Test
+    fun `a targeted scan for a contestable name still fetches`() {
+        assertTrue(
+            contestedNameListsCanMatch(
+                targetedScan = true,
+                ownCandidateNames = setOf("thedesert1ynx")
+            )
+        )
+    }
+
+    /** One contestable candidate among several is enough to need the lists. */
+    @Test
+    fun `a mixed candidate set still fetches`() {
+        assertTrue(
+            contestedNameListsCanMatch(
+                targetedScan = true,
+                ownCandidateNames = setOf("sp1aw1k21", "cat")
+            )
+        )
+    }
+
+    /** The BROAD path is untouched: with no candidate known, the lists ARE the search. */
+    @Test
+    fun `a broad scan always fetches`() {
+        assertTrue(
+            contestedNameListsCanMatch(targetedScan = false, ownCandidateNames = emptySet())
+        )
+    }
 }

@@ -329,18 +329,30 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 fun isOwnCandidate(name: String): Boolean =
                     isOwnContestedCandidate(name, ownCandidateNames, maybeDualUsernames, instantUsername)
                 val scanWatch = Stopwatch.createStarted()
+                // Whether either contested-name index can hold anything this
+                // identity could be a contender for. When it cannot, both
+                // fetches are skipped outright — see [contestedNameListsCanMatch].
+                val listsCanMatch = contestedNameListsCanMatch(targetedScan, ownCandidateNames)
                 log.info(
-                    "contested-name check: {} scan — own candidate name(s)={}, dualUsernames={}, contestable={}",
+                    "contested-name check: {} scan — own candidate name(s)={}, dualUsernames={}, " +
+                        "contestable={}, listFetches={}",
                     if (targetedScan) "TARGETED" else "BROAD (no candidate name known)",
                     ownCandidateNames,
                     maybeDualUsernames,
-                    currentIsContestable
+                    currentIsContestable,
+                    if (listsCanMatch) "needed" else "SKIPPED (no candidate name is contestable, " +
+                        "so no contested-index entry can match)"
                 )
 
                 // find active voting here
                 val watch = Stopwatch.createStarted()
-                val currentlyContestedNames = platformRepo.platform.names.getCurrentlyContestedNames()
-                log.info("getCurrentlyContestedNames returns {} names and took {}", currentlyContestedNames.size, watch)
+                val currentlyContestedNames = if (listsCanMatch) {
+                    platformRepo.platform.names.getCurrentlyContestedNames().also {
+                        log.info("getCurrentlyContestedNames returns {} names and took {}", it.size, watch)
+                    }
+                } else {
+                    emptyList()
+                }
 
                 val currentlyContestedToCheck = if (targetedScan) {
                     currentlyContestedNames.filter { isOwnCandidate(it) }
@@ -498,8 +510,13 @@ class RestoreIdentityWorker @AssistedInject constructor(
 
                     // check if the network has this name in the queue for voting
                     val watch2 = Stopwatch.createStarted()
-                    val contestedNames = platformRepo.platform.names.getAllContestedNames()
-                    log.info("getAllContestedNames returns {} names and took {}", contestedNames.size, watch2)
+                    val contestedNames = if (listsCanMatch) {
+                        platformRepo.platform.names.getAllContestedNames().also {
+                            log.info("getAllContestedNames returns {} names and took {}", it.size, watch2)
+                        }
+                    } else {
+                        emptyList()
+                    }
 
                     val contestedNamesToCheck = if (targetedScan) {
                         contestedNames.filter { isOwnCandidate(it) }
@@ -816,3 +833,38 @@ internal fun isOwnContestedCandidate(
     instantUsername: String?
 ): Boolean = candidates.contains(Names.normalizeString(name)) ||
     (maybeDualUsernames && instantUsername?.contains(name) == true)
+
+/**
+ * Can the contested-name lists possibly contain a name this identity is a
+ * contender for — i.e. is fetching them worth anything at all?
+ *
+ * Both indexes hold only CONTESTABLE names (`^[a-zA-Z01-]{3,19}$`; that is
+ * what makes a name contested in the first place). So when the scan is
+ * TARGETED and not one of the identity's own candidate names is contestable,
+ * no entry in either list can match a candidate, every `getVoteContenders`
+ * body is gated on `uniqueIdentifier == contender id` and cannot fire, and
+ * the two fetches are pure cost.
+ *
+ * Field evidence (11.10.86 mainnet, splawik): candidate `sp1aw1k21` — not
+ * contestable, it carries a `2` and a `9` — yet
+ * `getCurrentlyContestedNames()` (12 names, 32.65 s) and
+ * `getAllContestedNames()` (728 names, 3.56 s) both ran and both yielded
+ * "querying contenders for 0 of N". 36.2 s of a restore spent proving the
+ * arithmetic above.
+ *
+ * BEHAVIOUR NOTE: this deliberately does NOT keep the historic
+ * dual-username SUBSTRING term ([isOwnContestedCandidate]'s second clause)
+ * alive as a reason to fetch. That term can only match a name the identity
+ * has no record of ever requesting — it fires on any contested name that
+ * happens to be a substring of a non-contestable "instant" name — and
+ * keeping it would mean every identity holding such a name pays both
+ * fetches on every restore, forever, which is exactly the cost being
+ * removed. Names the identity DID request are covered by the candidate set
+ * (recovered names, usernameStatuses keys, and the persisted requested
+ * label), and the BROAD path — taken whenever no candidate is known at all
+ * — is untouched. Pure — host-testable.
+ */
+internal fun contestedNameListsCanMatch(
+    targetedScan: Boolean,
+    ownCandidateNames: Set<String>
+): Boolean = !targetedScan || ownCandidateNames.any { Names.isUsernameContestable(it) }
