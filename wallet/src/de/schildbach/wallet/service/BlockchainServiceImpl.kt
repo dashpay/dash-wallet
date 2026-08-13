@@ -225,6 +225,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         /** Peer connect/disconnect bursts collapse to one notification update per second. */
         private const val NOTIFICATION_UPDATE_MIN_INTERVAL_MS = DateUtils.SECOND_IN_MILLIS
         private val TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(180)
+        /** Spacing between re-armed post-cutover identity-discovery attempts. */
+        private val POST_CUTOVER_IDENTITY_RETRY_INTERVAL_MS = TimeUnit.MINUTES.toMillis(2)
         private val log = LoggerFactory.getLogger(BlockchainServiceImpl::class.java)
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
         var cleanupDeferred: CompletableDeferred<Unit>? = null
@@ -337,10 +339,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     /**
      * FIX 1 guard: the post-cutover identity/contacts discovery hook
-     * ([maybeRecoverIdentityPostCutover]) fires at most once — reset only if the
-     * discovery attempt throws, so a later synced notification can retry.
+     * ([maybeRecoverIdentityPostCutover]) fires at most once — re-armed when the
+     * attempt throws, and when it completes without recovering anything while the
+     * wallet still has NO identity, so a later synced notification can retry.
+     *
+     * The second case is the 11.10.84 field defect: a Settings → Rescan wiped the
+     * identity DB, the hook's one shot ran 30 minutes later, was refused by the
+     * (also-stuck) discovery guard in PlatformSynchronizationService and returned
+     * false — a perfectly normal return, so the latch stayed set and the hook was
+     * dead for the rest of this service's life while the wallet sat with no
+     * identity. Re-arming only on "still identity-less" is what keeps a wallet
+     * that HAS an identity from re-running discovery on every state notification.
      */
     private val postCutoverIdentityRecoveryTriggered = AtomicBoolean(false)
+
+    /**
+     * Earliest wall clock at which [maybeRecoverIdentityPostCutover] may fire again
+     * after a re-arm. [handleBlockchainStateNotification] runs on every
+     * blockchain-state write, and each retry costs a DAPI round trip
+     * ([IdentityRepository.getIdentityFromPublicKeyId]), so retries are spaced.
+     */
+    private val postCutoverIdentityRecoveryRetryAtMs = AtomicLong(0L)
 
     /**
      * The SDK-corrected signed net value for [tx] when the cutover UI cache
@@ -2860,8 +2879,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      *
      * Inert pre-cutover ([dashjHeldByCutover] == false): the dashj preBlockDownload
      * path still owns discovery, so this never double-runs it. Idempotent: fires at
-     * most once via [postCutoverIdentityRecoveryTriggered], reset only on failure so a
-     * later synced notification can retry.
+     * most once via [postCutoverIdentityRecoveryTriggered], re-armed (spaced by
+     * [POST_CUTOVER_IDENTITY_RETRY_INTERVAL_MS]) when the attempt throws OR completes
+     * without recovering anything while the wallet still has no identity — the two
+     * cases where the hook has demonstrably not done its job. It is NOT re-armed once
+     * an identity exists, so a normal wallet does not re-run discovery on every
+     * blockchain-state write.
      *
      * FIX 2 (the dark notification bell): discovery alone left the PERIODIC
      * contact-request poll unarmed for the rest of the session. Pre-cutover the
@@ -2884,6 +2907,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (!dashjHeldByCutover) return // pre-cutover: the dashj peerGroup path owns discovery
         if (!Constants.SUPPORTS_PLATFORM) return
         if (blockchainState?.isSynced() != true) return
+        // Checked BEFORE the latch so a rate-limited tick does not consume the shot.
+        val retryAtMs = postCutoverIdentityRecoveryRetryAtMs.get()
+        if (retryAtMs != 0L && System.currentTimeMillis() < retryAtMs) return
         if (!postCutoverIdentityRecoveryTriggered.compareAndSet(false, true)) return
 
         log.info("cutover committed and SDK L1 scan synced — triggering identity/contacts discovery")
@@ -2896,9 +2922,32 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // discoverAndRecoverIdentity's else-branch already ran, so no
                     // blocking first update is requested here.
                     platformSyncService.initSync()
+                    // A plain `false` is NOT proof there is nothing to recover: it is
+                    // also what a refused discovery (guard held), a transient DAPI
+                    // miss, or a discovery that raced an identity-DB wipe returns. If
+                    // the wallet still has no identity at all, the hook has not done
+                    // its job — re-arm it (spaced) so a later synced tick can try
+                    // again, instead of staying dead for this service's lifetime.
+                    // When an identity DOES exist, false means the else-branch ran its
+                    // contact refresh: leave the latch set, exactly as before, so this
+                    // does not re-run on every blockchain-state write.
+                    if (!identityRepo.hasIdentity()) {
+                        postCutoverIdentityRecoveryRetryAtMs.set(
+                            System.currentTimeMillis() + POST_CUTOVER_IDENTITY_RETRY_INTERVAL_MS
+                        )
+                        postCutoverIdentityRecoveryTriggered.set(false)
+                        log.info(
+                            "post-cutover identity discovery found nothing and the wallet has no identity — " +
+                                "re-arming; next attempt no sooner than {} ms from now",
+                            POST_CUTOVER_IDENTITY_RETRY_INTERVAL_MS
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 log.error("post-cutover identity discovery/recovery failed", e)
+                postCutoverIdentityRecoveryRetryAtMs.set(
+                    System.currentTimeMillis() + POST_CUTOVER_IDENTITY_RETRY_INTERVAL_MS
+                )
                 postCutoverIdentityRecoveryTriggered.set(false) // allow a later synced tick to retry
             }
         }
