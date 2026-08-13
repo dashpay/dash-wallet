@@ -206,14 +206,31 @@ open class DashPayViewModel @Inject constructor(
     }
 
     //
-    // Search (established contacts) Usernames and Display Names that contain "text".
+    // Search contact Usernames and Display Names that contain "text".
+    //
+    // includeSentPending = TRUE: without it PlatformRepo.getFromProfiles drops
+    // every request we SENT that was never reciprocated, so those contacts had
+    // nowhere to appear at all (splawik's list showed 29 of 32). The contacts
+    // screen renders them in their own pending section, and the suggestion
+    // exclusion above is more correct for having them — a user we already
+    // asked should not be suggested as a stranger.
+    //
+    // Deliberately scoped to THIS feed: identityRepository.updateFrequentContacts
+    // still queries without the flag, so "frequent contacts" stays
+    // established-only.
     //
     val searchContactsLiveData = contactsLiveData.switchMap { usernameSearch: UsernameSearch ->
         searchContactsJob.cancel()
         searchContactsJob = Job()
         liveData(context = searchContactsJob + Dispatchers.IO) {
             emit(Resource.loading(null))
-            emit(identityRepository.searchContacts(usernameSearch.text, usernameSearch.orderBy))
+            emit(
+                identityRepository.searchContacts(
+                    usernameSearch.text,
+                    usernameSearch.orderBy,
+                    includeSentPending = true
+                )
+            )
         }
     }
 

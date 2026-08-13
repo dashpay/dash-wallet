@@ -135,6 +135,9 @@
     <string name="contacts_add_new_contact">Add new contact</string>
     <string name="contacts_contact_requests_count">Contact Requests (%d)</string>
     <string name="contacts_contact_requests">Contact Requests</string>
+    <!-- Outgoing contact requests we sent that have not been reciprocated. Distinct
+         from "Contact Requests", which is the INCOMING pending set. -->
+    <string name="contacts_pending_sent_requests_count">Pending Requests (%d)</string>
     <string name="contacts_contact_requests_view">view all</string>
     <string name="contacts_my_contacts">My Contacts</string>
     <string name="contacts_sort_order">Sort by:</string>
