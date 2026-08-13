@@ -443,4 +443,94 @@ class L1SyncStatusServiceTest {
         assertEquals(true, seen.last())
         job.cancel()
     }
+
+
+    // ── the DashPay half of "finished syncing" (FIX G) ───────────────────
+
+    /**
+     * The user complaint this closes: 11.10.86 reported synced at 17:12:39
+     * (L1Shadow phase=SYNCED 100.0%) while contact sync then ran until
+     * 17:20:09, the DashPay receiving accounts registered at 17:20:31, and the
+     * correct balance only appeared at 17:25:00.
+     */
+    @Test
+    fun aCaughtUpChainWithAnUnsettledDashPaySideIsNotFullySynced() {
+        val status = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = caughtUp(),
+            dashjState = null,
+            dashPaySynced = false
+        )
+        // The funds/feature gate is untouched — the chain really is caught up.
+        assertTrue(status.isSynced)
+        // …but the user is still told it is working.
+        assertFalse(status.isFullySynced)
+    }
+
+    @Test
+    fun bothHalvesSettled_readsFullySynced() {
+        val status = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = caughtUp(),
+            dashjState = null,
+            dashPaySynced = true
+        )
+        assertTrue(status.isFullySynced)
+    }
+
+    /**
+     * HARD REQUIREMENT: a wallet with no DashPay identity must never be held
+     * in "syncing" by the DashPay term. `applicable` starts false, so the
+     * terms are settled from the first read and stay settled.
+     */
+    @Test
+    fun aWalletWithoutAnIdentityIsTriviallySettled() {
+        assertTrue(DashPaySyncTerms().settled)
+        val status = DashPaySyncStatus()
+        assertTrue(status.terms.value.settled)
+        // Even mid-contact-sync bookkeeping cannot un-settle it while DashPay
+        // does not apply.
+        status.contactSyncStarted()
+        status.setAccountBuildsSettled(false)
+        status.setBackfillSettled(false)
+        assertTrue(status.terms.value.settled)
+    }
+
+    /** Every term is load-bearing once DashPay applies. */
+    @Test
+    fun eachDashPayTermCanHoldTheSignal() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        // A pass has never completed yet.
+        assertFalse(status.terms.value.settled)
+
+        status.contactSyncFinished()
+        assertTrue(status.terms.value.settled)
+
+        status.setAccountBuildsSettled(false)
+        assertFalse(status.terms.value.settled)
+        status.setAccountBuildsSettled(true)
+
+        status.setBackfillSettled(false)
+        assertFalse(status.terms.value.settled)
+        status.setBackfillSettled(true)
+        assertTrue(status.terms.value.settled)
+
+        // A new pass re-opens it, and its ENDING closes it again — including a
+        // failed ending, so a broken Platform connection cannot pin it on.
+        status.contactSyncStarted()
+        assertFalse(status.terms.value.settled)
+        status.contactSyncFinished()
+        assertTrue(status.terms.value.settled)
+    }
+
+    /** Losing DashPay applicability releases the hold immediately. */
+    @Test
+    fun becomingInapplicableReleasesTheHold() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        assertFalse(status.terms.value.settled)
+        status.setApplicable(false)
+        assertTrue(status.terms.value.settled)
+    }
 }

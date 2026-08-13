@@ -620,9 +620,18 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         startActivity(createUsernameActivityIntent)
     }
 
-    /** The single "Syncing N%" header — engine-agnostic (see L1SyncStatusService). */
+    /**
+     * The single "Syncing N%" header — engine-agnostic (see L1SyncStatusService).
+     *
+     * Keyed on isFullySynced: the header must not disappear while the DashPay
+     * tail is still running (contact sync, the account-build drain, the
+     * coreHeight backfill), which on 11.10.86 lasted ~12 minutes past the
+     * point the L1 scan reported 100%. The PERCENTAGE stays the L1 figure, so
+     * that window reads "Syncing 100%" — still working, nearly done — rather
+     * than claiming the wallet is ready.
+     */
     private fun updateSyncState(status: L1SyncUiStatus) {
-        val isSynced = status.isSynced
+        val isSynced = status.isFullySynced
         val percentage = status.percentage
 
         if (isSynced) {

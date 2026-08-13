@@ -1828,6 +1828,15 @@ class CutoverUiDataService internal constructor(
     private val dashPayBackfillStatus: suspend () -> DashPayBackfillStatus =
         { DashPayBackfillStatus.SETTLED },
     /**
+     * Publishes the DashPay-side sync terms this service already observes —
+     * the account-build queue and the backfill bookkeeping — to the
+     * user-facing "still syncing" signal ([de.schildbach.wallet.service.DashPaySyncStatus]).
+     * Pure fan-out; no behaviour of this service depends on it. Default no-op
+     * for the fake-fed tests.
+     */
+    private val publishDashPaySyncTerms: (buildsSettled: Boolean, backfillSettled: Boolean) -> Unit =
+        { _, _ -> },
+    /**
      * PERSIST one engine-reported IS lock (display-hex txid, observation
      * epoch-millis) into the APP-OWNED `instant_send_locks` table
      * ([de.schildbach.wallet.database.dao.InstantSendLockDao]) — the SDK's own
@@ -1880,7 +1889,8 @@ class CutoverUiDataService internal constructor(
         assetLockKindResolver: AssetLockKindResolver,
         sdkTxContactResolver: SdkTxContactResolver,
         instantSendLockDao: de.schildbach.wallet.database.dao.InstantSendLockDao,
-        dashPayBackfillGate: DashPayBackfillGate
+        dashPayBackfillGate: DashPayBackfillGate,
+        dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus
     ) : this(
         source = DashSdkCutoverUiSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1905,6 +1915,10 @@ class CutoverUiDataService internal constructor(
         rescanRecentlyArmed = { sdkService.spvRescanArmedWithin(RESCAN_ARM_PERSIST_HOLD_MS) },
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
         dashPayBackfillStatus = { dashPayBackfillGate.readBackfillStatus() },
+        publishDashPaySyncTerms = { buildsSettled, backfillSettled ->
+            dashPaySyncStatus.setAccountBuildsSettled(buildsSettled)
+            dashPaySyncStatus.setBackfillSettled(backfillSettled)
+        },
         persistInstantLock = { txidHex, lockedAtMs ->
             instantSendLockDao.insert(
                 de.schildbach.wallet.database.entity.InstantSendLockEntry(txidHex, lockedAtMs)
@@ -2636,8 +2650,11 @@ class CutoverUiDataService internal constructor(
         // addresses will find, so this figure is short by exactly them. This
         // is the guard that would have caught the field incident; see
         // [dashPayBackfillStatus].
-        val persist = synced && !armedRescanHold && backfillStatus.settled &&
-            deferredBuildsSettled(deferredBuilds.count, deferredBuilds.unchangedReads)
+        val buildsSettled = deferredBuildsSettled(deferredBuilds.count, deferredBuilds.unchangedReads)
+        // Fan the two DashPay terms out to the user-facing sync signal — same
+        // cadence, same readings, so the indicator and this gate agree.
+        publishDashPaySyncTerms(buildsSettled, backfillStatus.settled)
+        val persist = synced && !armedRescanHold && backfillStatus.settled && buildsSettled
         // One line per published figure (changes only — the ticker republishes
         // the same value every REFRESH_INTERVAL_MS). Carries what decides what
         // the user actually SEES: while !synced the header holds the last-known

@@ -50,12 +50,28 @@ import javax.inject.Singleton
  * @property percentage 0..100 progress for the "Syncing N%" header; 0 means
  *   "no usable figure yet" and the header renders a bare "Syncing…".
  * @property isFailed sync is impeded (the error pane).
+ * @property dashPaySynced whether the DashPay half has settled too
+ *   ([DashPaySyncStatus]). Deliberately a SEPARATE field rather than a
+ *   widening of [isSynced]: [isSynced] gates funds and feature paths (the
+ *   shortcut bar, CrowdNode staking, Join DashPay eligibility, invite
+ *   revalidation) that must not wait on contact sync, so only the surfaces
+ *   that TELL THE USER "still syncing" read [isFullySynced].
  */
 data class L1SyncUiStatus(
     val isSynced: Boolean = false,
     val percentage: Int = 0,
-    val isFailed: Boolean = false
-)
+    val isFailed: Boolean = false,
+    val dashPaySynced: Boolean = true
+) {
+    /**
+     * The USER-FACING "everything is done" predicate: the chain is caught up
+     * AND the DashPay side has settled. On 11.10.86 these diverged by ~12
+     * minutes — the UI said synced at 17:12:39 while contact sync ran until
+     * 17:20:09, the receiving accounts registered at 17:20:31 and the correct
+     * balance only appeared at 17:25:00.
+     */
+    val isFullySynced: Boolean get() = isSynced && dashPaySynced
+}
 
 /**
  * Whether the SDK L1 scan has caught up.
@@ -123,11 +139,13 @@ internal fun mergeL1SyncUiStatus(
     sdkOwnsL1: Boolean,
     sdkProgress: ShadowSyncProgress,
     dashjState: BlockchainState?,
-    platformStarved: Boolean = false
+    platformStarved: Boolean = false,
+    dashPaySynced: Boolean = true
 ): L1SyncUiStatus = L1SyncUiStatus(
     isSynced = if (sdkOwnsL1) sdkL1ScanCaughtUp(sdkProgress) else dashjState?.isSynced() == true,
     percentage = if (sdkOwnsL1) shadowSyncPercent(sdkProgress) else dashjSyncPercentage(dashjState),
-    isFailed = dashjState?.syncFailed() == true || platformStarved
+    isFailed = dashjState?.syncFailed() == true || platformStarved,
+    dashPaySynced = dashPaySynced
 )
 
 /**
@@ -342,6 +360,7 @@ class L1SyncStatusService @Inject constructor(
     cutoverCoordinator: CutoverCoordinator,
     l1ShadowSyncService: L1ShadowSyncService,
     blockchainStateProvider: BlockchainStateProvider,
+    dashPaySyncStatus: DashPaySyncStatus,
     scope: CoroutineScope
 ) {
     /**
@@ -388,9 +407,10 @@ class L1SyncStatusService @Inject constructor(
             cutoverCoordinator.sdkOwnsL1Flow(),
             l1ShadowSyncService.progress,
             blockchainStateProvider.observeState(),
-            platformStarvedSustained
-        ) { sdkOwnsL1, progress, state, platformStarved ->
-            mergeL1SyncUiStatus(sdkOwnsL1, progress, state, platformStarved)
+            platformStarvedSustained,
+            dashPaySyncStatus.terms
+        ) { sdkOwnsL1, progress, state, platformStarved, dashPay ->
+            mergeL1SyncUiStatus(sdkOwnsL1, progress, state, platformStarved, dashPay.settled)
         }.distinctUntilChanged()
 
     /**

@@ -79,7 +79,8 @@ class PlatformSyncEngineTeardownTest {
         cutoverTxSeamService = mockk(relaxed = true),
         cutoverAutoCommitObserver = mockk(relaxed = true),
         shieldedTransferExecutor = mockk(relaxed = true),
-        contactRequestNotificationService = mockk(relaxed = true)
+        contactRequestNotificationService = mockk(relaxed = true),
+        dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus()
     )
 
     @Test

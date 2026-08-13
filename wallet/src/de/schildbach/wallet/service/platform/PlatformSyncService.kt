@@ -235,6 +235,9 @@ class PlatformSynchronizationService @Inject constructor(
     private val cutoverAutoCommitObserver: CutoverAutoCommitObserver,
     private val shieldedTransferExecutor: ShieldedTransferExecutor,
     private val contactRequestNotificationService: ContactRequestNotificationService,
+    // The DashPay half of the user-facing "still syncing" state; this service
+    // is the only component that knows whether DashPay applies at all.
+    private val dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -733,8 +736,14 @@ class PlatformSynchronizationService @Inject constructor(
 
         // if there is no wallet or identity, then skip the remaining steps of the update
         if (!identityRepository.hasBlockchainIdentity || walletApplication.wallet == null) {
+            // DashPay does not apply (yet): the user-facing sync state must
+            // never wait on a subsystem this wallet has no part in.
+            dashPaySyncStatus.setApplicable(false)
             return
         }
+        // From here on the wallet HAS an identity, so the DashPay tail is a
+        // real part of "finished syncing" — see [DashPaySyncStatus].
+        dashPaySyncStatus.setApplicable(true)
         log.info("updateContactRequests($initialSync) checking if can run")
         // only allow this method to execute once at a time
         // allow it to continue if the last state was recovery complete
@@ -849,6 +858,7 @@ class PlatformSynchronizationService @Inject constructor(
 
             updatingContactsOwner.set(thisPass)
             updatingContactsSince.set(contactSyncClock())
+            dashPaySyncStatus.contactSyncStarted()
             updatingContacts.set(true)
             updateSyncStatus(PreBlockStage.Starting)
             updateSyncStatus(PreBlockStage.Initialization)
@@ -1066,6 +1076,10 @@ class PlatformSynchronizationService @Inject constructor(
             if (updatingContactsOwner.compareAndSet(thisPass, null)) {
                 updatingContactsSince.set(0L)
                 updatingContacts.set(false)
+                // Settled on ANY ending, including a failed one: the pass is
+                // over and the ticker retries, whereas counting only success
+                // would pin "syncing" forever on a broken connection.
+                dashPaySyncStatus.contactSyncFinished()
             }
 
             counterForReport++
