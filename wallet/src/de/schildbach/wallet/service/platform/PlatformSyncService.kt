@@ -640,17 +640,30 @@ class PlatformSynchronizationService @Inject constructor(
      */
     override suspend fun updateContactRequests(initialSync: Boolean) {
 
-        // if there is no wallet or identity, then skip the remaining steps of the update
-        if (!identityRepository.hasBlockchainIdentity || walletApplication.wallet == null) {
-            return
-        }
         // Restore safety net: a registration-time SDK identity discovery
         // that failed (signer not attached yet — "External signable wallet
         // has no private key") is never retried by the SDK itself; without
         // a managed identity every contact pass below yields nothing (the
         // field 44-minute REQUESTED_NAME_CHECKING stall). Bounded +
         // backoff'd inside; no-op once managed/exhausted.
+        //
+        // Driven from ABOVE the identity gate on purpose. The retry exists for
+        // the state "the app has a stored identity id that the SDK wallet does
+        // not manage", but [IdentityRepository.hasBlockchainIdentity] is the
+        // IN-MEMORY wrapper, which only exists after identityRepository.init()
+        // — the very step a stalled restore never reaches. Gating the heal for
+        // a missing identity behind already having one meant it never fired in
+        // the case it was written for (11.10.84 field restore). It re-gates
+        // itself on everything it actually needs (a bound SDK wallet, a stored
+        // user id, the not-managed check, an attempt cap and a backoff window),
+        // so running it on every ticker pass — identity or not — is a cheap
+        // no-op whenever it does not apply.
         sdkWalletBinder.maybeRetryIdentityDiscovery()
+
+        // if there is no wallet or identity, then skip the remaining steps of the update
+        if (!identityRepository.hasBlockchainIdentity || walletApplication.wallet == null) {
+            return
+        }
         log.info("updateContactRequests($initialSync) checking if can run")
         // only allow this method to execute once at a time
         // allow it to continue if the last state was recovery complete
