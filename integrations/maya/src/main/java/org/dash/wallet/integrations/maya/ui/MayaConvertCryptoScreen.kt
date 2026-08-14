@@ -28,8 +28,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -248,9 +249,10 @@ fun MayaConvertCryptoScreen(
 }
 
 /**
- * White card showing the conversion direction: the Dash wallet (with its balance) on top and
- * the destination coin + address below, separated by a divider with an arrow-down badge.
- * Built from the design-system [Menu]/[MenuItem] components; supplies its own horizontal inset.
+ * The conversion direction: the Dash wallet (with its balance) in its own white card, then the
+ * destination coin + address in a second card 5dp below it, with a direction (arrow-down) badge
+ * floating over the seam between the two. Matches Figma node 38680:47497 — two separate [Menu]
+ * cards, not one card with an internal divider.
  */
 @Composable
 private fun ConvertDirectionCard(
@@ -260,50 +262,52 @@ private fun ConvertDirectionCard(
     toAddress: String,
     toIconUrls: List<String>
 ) {
-    Menu {
-        // From: Dash Wallet with its balance.
-        MenuItem(
-            title = stringResource(R.string.dash),
-            subtitle = stringResource(R.string.dash_wallet_name),
-            icon = R.drawable.ic_dash_blue_filled,
-            dashAmount = dashBalance,
-            dashIcon = R.drawable.ic_dash_d_black,
-            fiatAmount = fiatBalance
-        )
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            // From: Dash Wallet with its balance.
+            Menu {
+                MenuItem(
+                    title = stringResource(R.string.dash),
+                    subtitle = stringResource(R.string.dash_wallet_name),
+                    icon = R.drawable.ic_dash_blue_filled,
+                    dashAmount = dashBalance,
+                    dashIcon = R.drawable.ic_dash_d_black,
+                    fiatAmount = fiatBalance
+                )
+            }
 
-        // Divider with the direction (arrow-down) badge in the middle.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            HorizontalDivider(thickness = 1.dp, color = LocalDashColors.current.extraLightGray)
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .background(LocalDashColors.current.backgroundSecondary, CircleShape)
-                    .border(1.dp, LocalDashColors.current.extraLightGray, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_arrow_downward_blue_24dp),
-                    contentDescription = null,
-                    tint = LocalDashColors.current.textTertiary,
-                    modifier = Modifier.size(12.dp)
+            // To: destination coin + address, truncated from the center so both ends stay
+            // checkable on one line (the common way of displaying a crypto address).
+            Menu {
+                MenuItem(
+                    title = toCurrencyName,
+                    subtitle = toAddress,
+                    subtitleMaxLines = 1,
+                    subtitleMiddleEllipsis = true,
+                    customIcon = { CoinIcon(iconUrls = toIconUrls) }
                 )
             }
         }
 
-        // To: destination coin + address, truncated from the center so both ends stay
-        // checkable on one line (the common way of displaying a crypto address).
-        MenuItem(
-            title = toCurrencyName,
-            subtitle = toAddress,
-            subtitleMaxLines = 1,
-            subtitleMiddleEllipsis = true,
-            customIcon = { CoinIcon(iconUrls = toIconUrls) }
-        )
+        // Direction badge: a white rounded-square button ringed by a screen-background-colored
+        // border, so it reads as inset into the gap between the two cards.
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(30.dp)
+                .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(10.dp))
+                .border(5.dp, LocalDashColors.current.backgroundPrimary, RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_arrow_downward_blue_24dp),
+                contentDescription = null,
+                // The drawable's own path fill is already the design's blue; tinting it would
+                // override that with an unrelated color.
+                tint = Color.Unspecified,
+                modifier = Modifier.size(12.dp)
+            )
+        }
     }
 }
 
