@@ -352,6 +352,7 @@
     <string name="report_transaction_history_mail_intent_chooser">Send transaction history using…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Sending transaction history failed.</string>
     <string name="report_transaction_history_dialog_export_csv_failed">Exporting transaction history failed.</string>
+    <string name="report_transaction_history_dialog_export_csv_empty">There are no transactions to export yet.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>

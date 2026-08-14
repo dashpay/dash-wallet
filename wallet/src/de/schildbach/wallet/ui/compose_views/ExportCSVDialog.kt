@@ -106,6 +106,21 @@ fun createExportCSVDialog(
                     }
                     viewModel.resetExportCsvResult()
                 }
+                is ToolsViewModel.ExportCsvResult.Empty -> {
+                    // Never hand back a header-only file silently.
+                    dialog.dialog?.setCancelable(true)
+                    dialog.dialog?.setCanceledOnTouchOutside(true)
+                    if (!activity.isDestroyed) {
+                        AdaptiveDialog.create(
+                            null,
+                            activity.getString(R.string.report_transaction_history_title),
+                            activity.getString(R.string.report_transaction_history_dialog_export_csv_empty),
+                            activity.getString(R.string.button_close)
+                        ).showAsync(activity)
+                        dialog.dismiss()
+                    }
+                    viewModel.resetExportCsvResult()
+                }
                 is ToolsViewModel.ExportCsvResult.Idle -> Unit
             }
         }

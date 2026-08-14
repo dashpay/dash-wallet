@@ -46,6 +46,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.launchIn
 import org.bitcoinj.crypto.DeterministicKey
 import de.schildbach.wallet.data.WalletData
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -93,6 +94,7 @@ data class DashjSyncFromPrompt(
 @HiltViewModel
 class ToolsViewModel @Inject constructor(
     private val walletData: WalletData,
+    private val walletDataProvider: WalletDataProvider,
     private val walletApplication: WalletApplication,
     private val clipboardManager: ClipboardManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
@@ -109,6 +111,13 @@ class ToolsViewModel @Inject constructor(
         object Loading : ExportCsvResult()
         data class Success(val file: File) : ExportCsvResult()
         object Error : ExportCsvResult()
+
+        /**
+         * Nothing to export. Distinct from [Error]: previously an empty transaction set
+         * produced a Success carrying a header-only file, so the user got a silent empty
+         * export with no indication anything was wrong.
+         */
+        object Empty : ExportCsvResult()
     }
 
     companion object {
@@ -174,8 +183,20 @@ class ToolsViewModel @Inject constructor(
         _exportCsvResult.value = ExportCsvResult.Loading
         viewModelScope.launch {
             try {
+                val transactions = withContext(Dispatchers.IO) {
+                    // Cutover-aware: post-cutover this is the SDK-fed set plus any dashj-only
+                    // transactions, exactly what the history screen renders. Reading the held
+                    // dashj wallet directly produced a header-only CSV on any wallet restored
+                    // after the cutover.
+                    walletDataProvider.getTransactions()
+                }
+                if (transactions.isEmpty()) {
+                    log.warn("CSV export: no transactions available to export")
+                    _exportCsvResult.value = ExportCsvResult.Empty
+                    return@launch
+                }
                 val file = withContext(Dispatchers.IO) {
-                    val exporter = TaxBitExporter(transactionMetadataProvider, walletData.wallet!!)
+                    val exporter = TaxBitExporter(transactionMetadataProvider, transactions)
                     exporter.initMetadataMap()
                     val csvContent = exporter.exportString()
                     val reportDir = File(cacheDir, "report").also { it.mkdirs() }
