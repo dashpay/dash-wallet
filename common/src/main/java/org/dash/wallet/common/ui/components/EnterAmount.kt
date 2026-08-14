@@ -184,11 +184,19 @@ fun EnterAmount(
             // Wrap the picker to its content instead of letting its options' fillMaxWidth grab the
             // whole row: width = widest option label, height = the stacked options' natural height
             // (so it sits compact on the right rather than stretching across the amount area).
+            // Figma (node 38680:47341) shows these as plain stacked labels with no pill/background
+            // behind them, unlike the segmented-toggle style this component normally renders.
             SegmentedPicker(
                 options = pickerIndices.map { SegmentedOption(currencyCodes[it]) },
                 showSelection = false,
                 style = SegmentedPickerStyle(
                     displayMode = PickerDisplayMode.Vertical,
+                    backgroundColor = Color.Transparent,
+                    cornerRadius = 0f,
+                    shadowElevation = 0,
+                    textStyle = MyTheme.Typography.LabelSmallMedium,
+                    optionPaddingHorizontal = 6f,
+                    optionPaddingVertical = 4f
                 ),
                 onOptionSelected = { option, index ->
                     onCurrencyPickerSelect(option, pickerIndices[index])
