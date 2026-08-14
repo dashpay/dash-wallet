@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -387,56 +386,34 @@ private fun MayaConvertCryptoScreenErrorPreview() {
 }
 
 // Mirrors a real Galaxy S22 (SM-S901U): 1080x2340px @ 480dpi (xxhdpi, scale 3.0) measures to
-// exactly 360x780dp — confirmed via `adb shell wm size` / `wm density`. The status/nav bar
-// placeholders below use the same device's measured insets (27dp / 48dp, from `dumpsys window
-// displays`) instead of relying on `showSystemUi`, which some Studio versions fail to render.
+// exactly 360x780dp — confirmed via `adb shell wm size` / `wm density`.
 @Preview(
     name = "Galaxy S22 @ 1.25x font",
     showBackground = true,
-    widthDp = 360,
-    heightDp = 780,
-    fontScale = 1.25f
+    device = "spec:width=360dp,height=780dp,dpi=480",
+    fontScale = 1.25f,
+    showSystemUi = true
 )
 @Composable
 private fun MayaConvertCryptoScreenGalaxyS22Preview() {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(27.dp)
-                .background(Color.Black)
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {
-            MayaConvertCryptoScreen(
-                state = MayaConvertCryptoUIState(
-                    title = "Convert",
-                    displayAmount = "2",
-                    currencyOptions = listOf("DASH", "USD", "BTC"),
-                    selectedCurrencyIndex = 2,
-                    dashBalance = "0.93999202",
-                    fiatBalance = "$ 28.06",
-                    toCurrencyName = "Bitcoin",
-                    toAddress = "bc1qxhgnnp745xxxxxxxxxxxxxxxxxxxxgkkpkm35020js0",
-                    receiveAmount = "~ 0.00095431 BTC",
-                    networkLabel = "using Maya network",
-                    continueEnabled = true
-                ),
-                onBackClick = {},
-                onMaxClick = {},
-                onCurrencySelected = {},
-                onKeyInput = {},
-                onContinueClick = {}
-            )
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .background(Color.Black)
-        )
-    }
+    MayaConvertCryptoScreen(
+        state = MayaConvertCryptoUIState(
+            title = "Convert",
+            displayAmount = "2",
+            currencyOptions = listOf("DASH", "USD", "BTC"),
+            selectedCurrencyIndex = 2,
+            dashBalance = "0.93999202",
+            fiatBalance = "$ 28.06",
+            toCurrencyName = "Bitcoin",
+            toAddress = "bc1qxhgnnp745xxxxxxxxxxxxxxxxxxxxgkkpkm35020js0",
+            receiveAmount = "~ 0.00095431 BTC",
+            networkLabel = "using Maya network",
+            continueEnabled = true
+        ),
+        onBackClick = {},
+        onMaxClick = {},
+        onCurrencySelected = {},
+        onKeyInput = {},
+        onContinueClick = {}
+    )
 }
