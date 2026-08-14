@@ -299,19 +299,13 @@ private fun ConvertDirectionCard(
         // checkable on one line (the common way of displaying a crypto address).
         MenuItem(
             title = toCurrencyName,
-            subtitle = toAddress.middleEllipsize(),
+            subtitle = toAddress,
             subtitleMaxLines = 1,
+            subtitleMiddleEllipsis = true,
             customIcon = { CoinIcon(iconUrls = toIconUrls) }
         )
     }
 }
-
-/**
- * Middle-truncates a long opaque string (keeping [head] leading and [tail] trailing
- * characters), e.g. "ygJBkc4373Sodn…uhiV8WqaZZ9HQZPGC". Short strings are returned unchanged.
- */
-private fun String.middleEllipsize(head: Int = 14, tail: Int = 14): String =
-    if (length <= head + tail + 1) this else "${take(head)}…${takeLast(tail)}"
 
 /**
  * Coin icon that tries each candidate URL in [iconUrls] in order, advancing to the next source
@@ -337,7 +331,7 @@ private fun CoinIcon(iconUrls: List<String>) {
 
 // ── Previews ────────────────────────────────────────────────────────────────────
 
-@Preview(showBackground = true, widthDp = 393, heightDp = 850)
+@Preview(showBackground = true, widthDp = 393, heightDp = 850, fontScale = 1.25f)
 @Composable
 private fun MayaConvertCryptoScreenPreview() {
     MayaConvertCryptoScreen(
@@ -346,8 +340,8 @@ private fun MayaConvertCryptoScreenPreview() {
             displayAmount = "0.06",
             currencyOptions = listOf("DASH", "USD", "BTC"),
             selectedCurrencyIndex = 2,
-            dashBalance = "0.00",
-            fiatBalance = "0.00 US$",
+            dashBalance = "4.00",
+            fiatBalance = "$140.00",
             toCurrencyName = "Bitcoin",
             toAddress = "XbBzWvnvSyWFbYXFtjkWwuPApbfDD263uC",
             receiveAmount = "~ 0.0053 BTC",
