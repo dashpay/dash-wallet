@@ -486,4 +486,5 @@
     <string name="crowdnode_withdrawal_reminder_title">You have a balance on CrowdNode</string>
     <string name="crowdnode_withdrawal_reminder_message">These funds should be withdrawn from CrowdNode. You can transfer these funds to this wallet or via your online account on some other device.</string>
     <string name="crowdnode_withdraw_funds">Withdraw funds</string>
+    <string name="buy_credits_current_identity_balance">Current Identity Balance: %1$s</string>
 </resources>

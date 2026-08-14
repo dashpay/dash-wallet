@@ -47,6 +47,12 @@ class BuyCreditsFragment : SendCoinsFragment() {
         enterAmountViewModel.setMinAmount(org.dash.wallet.common.money.Coin.valueOf(50_000))
         binding.paymentHeader.setPreposition("")
         viewModel.isAssetLock = true
+
+        // Show what the identity already holds, under the amount field. Refreshed
+        // on each view creation so it reflects a top-up made since last time.
+        lifecycleScope.launch {
+            buyCreditsViewModel.identityBalance.collect { updateView() }
+        }
     }
 
     override fun updateView() {
@@ -72,12 +78,25 @@ class BuyCreditsFragment : SendCoinsFragment() {
         } else {
             amount.value
         } / CreditBalanceInfo.MAX_OPERATION_COST_COIN
+        val estimate = getString(
+            R.string.buy_credits_estimated_items,
+            if (amount.isZero) { Coin.CENT } else { amount }.toFriendlyString(),
+            operations,
+            operations
+        )
+        // Append the current identity balance when it is known. Hidden entirely
+        // when unknown rather than shown as zero, which would read as "you have
+        // no credits" on a balance we simply could not fetch.
+        val balance = buyCreditsViewModel.identityBalance.value
         enterAmountFragment?.setMessage(
-            getString(R.string.buy_credits_estimated_items,
-                if (amount.isZero) { Coin.CENT } else { amount }.toFriendlyString(),
-                operations,
-                operations
-            )
+            if (balance != null) {
+                estimate + "\n" + getString(
+                    R.string.buy_credits_current_identity_balance,
+                    balance.toFriendlyString()
+                )
+            } else {
+                estimate
+            }
         )
 
         super.updateView()

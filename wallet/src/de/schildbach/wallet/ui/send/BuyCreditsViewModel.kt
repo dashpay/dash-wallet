@@ -18,9 +18,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import androidx.lifecycle.viewModelScope
+import org.bitcoinj.core.Coin
+import org.dashj.platform.dpp.identifier.Identifier
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,6 +41,10 @@ class BuyCreditsViewModel @Inject constructor(
     private val sdkTransparentTopUp: SdkTransparentTopUp,
     private val assetLockFundingPreflight: SdkAssetLockFundingPreflight
 ) : ViewModel() {
+    companion object {
+        private val log = LoggerFactory.getLogger(BuyCreditsViewModel::class.java)
+    }
+
     var identityId: String? = null
     var topUpTransaction: Transaction? = null
     private val _currentWorkId = MutableStateFlow("")
@@ -45,6 +56,42 @@ class BuyCreditsViewModel @Inject constructor(
     }
 
     private val topupIdentityOperation = TopupIdentityOperation(walletApplication)
+
+    /**
+     * The identity's CURRENT credit balance, expressed in Dash for display.
+     *
+     * Shown under the amount field so the user can see what they already hold
+     * before deciding how much to buy. `null` while unknown — no identity yet,
+     * or the balance could not be read — and the label is then hidden rather
+     * than showing a misleading zero.
+     *
+     * Credits are 1/1000 of a duff ([CreditBalanceInfo.CREDITS_PER_DUFF]), so
+     * the conversion to a Dash amount divides before building the Coin.
+     */
+    private val _identityBalance = MutableStateFlow<Coin?>(null)
+    val identityBalance: StateFlow<Coin?> = _identityBalance.asStateFlow()
+
+    init {
+        refreshIdentityBalance()
+    }
+
+    fun refreshIdentityBalance() {
+        viewModelScope.launch {
+            val balance = withContext(Dispatchers.IO) {
+                try {
+                    val id = identity.get(BlockchainIdentityConfig.IDENTITY_ID) ?: return@withContext null
+                    val info = platformRepo.getIdentityBalance(Identifier.from(id))
+                    Coin.valueOf(info.balance / CreditBalanceInfo.CREDITS_PER_DUFF)
+                } catch (e: Exception) {
+                    // Best-effort display only: never let a balance read break the
+                    // purchase screen.
+                    log.info("could not read identity credit balance: {}", e.message)
+                    null
+                }
+            }
+            _identityBalance.value = balance
+        }
+    }
 
     fun topWorkStatus(workId: String): LiveData<Resource<WorkInfo>> {
         return TopupIdentityOperation.operationStatus(walletApplication, workId, analytics)
