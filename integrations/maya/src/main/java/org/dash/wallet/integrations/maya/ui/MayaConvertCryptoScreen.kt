@@ -266,7 +266,7 @@ private fun ConvertDirectionCard(
             title = stringResource(R.string.dash),
             subtitle = stringResource(R.string.dash_wallet_name),
             icon = R.drawable.ic_dash_blue_filled,
-            dashAmount = "${stringResource(R.string.balance)} $dashBalance",
+            dashAmount = dashBalance,
             dashIcon = R.drawable.ic_dash_d_black,
             fiatAmount = fiatBalance
         )
@@ -295,15 +295,23 @@ private fun ConvertDirectionCard(
             }
         }
 
-        // To: destination coin + address.
+        // To: destination coin + address, truncated from the center so both ends stay
+        // checkable on one line (the common way of displaying a crypto address).
         MenuItem(
             title = toCurrencyName,
-            subtitle = toAddress,
+            subtitle = toAddress.middleEllipsize(),
             subtitleMaxLines = 1,
             customIcon = { CoinIcon(iconUrls = toIconUrls) }
         )
     }
 }
+
+/**
+ * Middle-truncates a long opaque string (keeping [head] leading and [tail] trailing
+ * characters), e.g. "ygJBkc4373Sodn…uhiV8WqaZZ9HQZPGC". Short strings are returned unchanged.
+ */
+private fun String.middleEllipsize(head: Int = 14, tail: Int = 14): String =
+    if (length <= head + tail + 1) this else "${take(head)}…${takeLast(tail)}"
 
 /**
  * Coin icon that tries each candidate URL in [iconUrls] in order, advancing to the next source
@@ -334,7 +342,7 @@ private fun CoinIcon(iconUrls: List<String>) {
 private fun MayaConvertCryptoScreenPreview() {
     MayaConvertCryptoScreen(
         state = MayaConvertCryptoUIState(
-            title = "Convert Dash to BTC",
+            title = "Convert",
             displayAmount = "0.06",
             currencyOptions = listOf("DASH", "USD", "BTC"),
             selectedCurrencyIndex = 2,
@@ -359,7 +367,7 @@ private fun MayaConvertCryptoScreenPreview() {
 private fun MayaConvertCryptoScreenErrorPreview() {
     MayaConvertCryptoScreen(
         state = MayaConvertCryptoUIState(
-            title = "Convert Dash to BTC",
+            title = "Convert",
             displayAmount = "0.5",
             currencyOptions = listOf("DASH", "USD", "BTC"),
             selectedCurrencyIndex = 0,
@@ -367,7 +375,7 @@ private fun MayaConvertCryptoScreenErrorPreview() {
             fiatBalance = "1.20 US$",
             toCurrencyName = "Bitcoin",
             toAddress = "XbBzWvnvSyWFbYXFtjkWwuPApbfDD263uC",
-            errorMessage = "You don’t have enough balance",
+            errorMessage = "Max $1.20",
             continueEnabled = false
         ),
         onBackClick = {},

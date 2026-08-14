@@ -54,7 +54,6 @@ import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.model.getCoinBaseExchangeRateConversion
-import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
@@ -170,14 +169,8 @@ class MayaConvertCryptoFragment : Fragment() {
         val dashPoolInfo = mayaViewModel.getPoolInfo(Constants.DASH_CURRENCY)
         val currencyMapper = MayaCurrencyMapper(requireContext())
 
-        // Tokens are qualified with their host network ("USDT (Ethereum)"); native L1 coins
-        // (BTC.BTC, …) show just the code.
-        val network = MayaCurrencyList.networkName(args.asset)
-        val displayCode = if (network != null) "${args.currency} ($network)" else args.currency
-
         uiState = uiState.copy(
-            // "Convert DASH to <code>" per design, e.g. "Convert DASH to USDT (Ethereum)".
-            title = getString(R.string.maya_address_input_title, displayCode),
+            title = getString(R.string.maya_convert_enter_amount_title),
             toCurrencyName = currencyMapper.getCurrencyName(args.currency),
             toAddress = getArgAddress(),
             toIconUrls = GenericUtils.getCoinIconUrls(args.currency.lowercase(), args.asset),
@@ -685,17 +678,17 @@ class MayaConvertCryptoFragment : Fragment() {
                 convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
                     val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
                     val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
-                    return "${getString(R.string.entered_amount_is_too_high)} $fiatAmount"
+                    return "${getString(R.string.maya_max_amount_error)} $fiatAmount"
                 }
             }
         } else {
             convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
                 selectedCoinBaseAccount?.getCoinBaseExchangeRateConversion(rate)?.first?.let {
-                    return "${getString(R.string.entered_amount_is_too_high)} $it"
+                    return "${getString(R.string.maya_max_amount_error)} $it"
                 }
             }
         }
-        return getString(R.string.entered_amount_is_too_high)
+        return getString(R.string.maya_max_amount_error)
     }
 
     private fun minAmountErrorMessage(): String? {

@@ -29,6 +29,8 @@
     <string name="dash_dex_sell_subtitle">From Dash Wallet to any crypto</string>
     <string name="maya_address_input_hint">%s Address</string>
     <string name="maya_address_input_title">Convert DASH to %s</string>
+    <!-- Nav bar title of the convert-crypto enter-amount screen (Figma 24034:44864) -->
+    <string name="maya_convert_enter_amount_title">Convert</string>
     <!-- Title of the address input screen (Figma 24007:13081) -->
     <string name="maya_enter_address_title">Enter Address</string>
     <!-- Header of the address-sources card on the address input screen (Figma 24007:13081) -->
@@ -296,6 +298,8 @@
     <!-- taken from Coinbase -->
     <string name="entered_amount_is_too_low">The minimum transaction amount is</string>
     <string name="entered_amount_is_too_high">The maximum transaction amount is</string>
+    <!-- Short form of the max-amount error on the convert-crypto enter-amount screen, e.g. "Max $205.32" (Figma 24034:44864) -->
+    <string name="maya_max_amount_error">Max</string>
     <string name="we_didnt_find_any_assets">We didn’t find any assets on your Coinbase account.</string>
     <string name="something_wrong_title">Something went wrong!</string>
     <string name="dont_have_any_dash"> You don\'t have any Dash in your Dash Wallet.</string>
