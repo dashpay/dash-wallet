@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,6 +49,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -122,10 +124,9 @@ private fun DEXReceiveScreenContent(
                 // height of the (overlaid) status + nav bar that NavBarBack already occupies, so
                 // TopIntro's built-in padding (10dp `safe-area/top`, 20dp sides, 20dp below) covers
                 // the remaining insets and the gap to the card (matches DEXRefundAddressScreen).
-                TopIntro(
-                    heading = stringResource(R.string.dex_receive_heading, coinCode),
-                    text = stringResource(R.string.dex_receive_description)
-                )
+                // No subtitle here per Figma — the equivalent copy now lives in the feature row
+                // below the card instead (dex_receive_description).
+                TopIntro(heading = stringResource(R.string.dex_receive_heading, coinCode))
 
                 Column(
                     modifier = Modifier
@@ -133,7 +134,8 @@ private fun DEXReceiveScreenContent(
                         .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // White card with QR + URI row. shadows/xs: #B8C1CC ~10% alpha, y=5, blur=20.
+                    // White card: QR + URI row + expiry warning, each section supplying its own
+                    // padding (matches Figma, which sets no gap on the card itself — see 35042:51782).
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -143,9 +145,7 @@ private fun DEXReceiveScreenContent(
                                 ambientColor = Color(0xFFB8C1CC),
                                 spotColor = Color(0xFFB8C1CC)
                             )
-                            .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(20.dp))
-                            .padding(top = 40.dp, bottom = 20.dp, start = 20.dp, end = 20.dp),
-                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                            .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(20.dp)),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         if (errorMessageRes != null) {
@@ -155,7 +155,9 @@ private fun DEXReceiveScreenContent(
                                 style = MyTheme.Body2Regular,
                                 color = LocalDashColors.current.red,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 32.dp)
                             )
                         } else {
                             QrArea(content = qrContent, isLoading = isLoading || qrContent.isBlank())
@@ -179,14 +181,26 @@ private fun DEXReceiveScreenContent(
                                     text = stringResource(R.string.dex_receive_memo_warning),
                                     style = MyTheme.Body2Regular,
                                     color = LocalDashColors.current.red,
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp)
                                 )
+                            }
+
+                            // Expiry warning, inside the card below the address (Figma 38669:7486).
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp)
+                            ) {
+                                ExpiryWarning(coinCode = coinCode)
                             }
                         }
                     }
 
-                    // Expiry warning card (Figma 36265:22210): yellow triangle + title + refund note.
-                    ExpiryWarning(coinCode = coinCode)
+                    // Feature row explaining the post-deposit flow (Figma 38669:27847) — the same
+                    // copy that used to sit under the heading as a plain subtitle.
+                    DepositInfoRow(text = stringResource(R.string.dex_receive_description))
                 }
             }
 
@@ -218,15 +232,15 @@ private fun DEXReceiveScreenContent(
     }
 }
 
-/** Gray card warning that the deposit address expires; refund vs. convert note. */
+/** Yellow "system message" card warning that the deposit address expires (Figma 38669:7448). */
 @Composable
 private fun ExpiryWarning(coinCode: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(LocalDashColors.current.gray.copy(alpha = 0.10f))
-            .padding(16.dp),
+            .background(LocalDashColors.current.warningYellow)
+            .padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top
     ) {
@@ -243,7 +257,7 @@ private fun ExpiryWarning(coinCode: String) {
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(top = 2.dp, end = 20.dp),
+                .padding(vertical = 5.dp),
             verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
             Text(
@@ -260,18 +274,56 @@ private fun ExpiryWarning(coinCode: String) {
     }
 }
 
-/** White, rounded box holding the 200dp QR, or a centered spinner while the address is loading. */
+/**
+ * Icon + text row explaining what happens after the deposit is confirmed (Figma 38669:27832),
+ * sitting below the card. The extra end padding (on top of the screen's 20dp side inset) matches
+ * Figma's wider right margin so the paragraph doesn't run the full screen width.
+ */
+@Composable
+private fun DepositInfoRow(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(end = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(LocalDashColors.current.gray, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(CommonR.drawable.ic_arrow_downward_blue_24dp),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        Text(
+            text = text,
+            style = MyTheme.Typography.BodyMedium,
+            color = LocalDashColors.current.textPrimary,
+            modifier = Modifier
+                .weight(1f)
+                .padding(top = 10.dp)
+        )
+    }
+}
+
+/** 160dp QR centered in a 30dp vertical band (Figma "wrap.qr", 35042:51784), or a spinner while loading. */
 @Composable
 private fun QrArea(content: String, isLoading: Boolean) {
     Box(
         modifier = Modifier
+            .fillMaxWidth()
             // Stays white in dark mode too: QR modules need a light background to scan reliably.
-            .background(Color.White, RoundedCornerShape(10.dp))
-            .padding(10.dp),
+            .background(Color.White)
+            .padding(vertical = 30.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
-            modifier = Modifier.size(200.dp),
+            modifier = Modifier.size(160.dp),
             contentAlignment = Alignment.Center
         ) {
             val bitmap = remember(content, isLoading) {
@@ -282,11 +334,11 @@ private fun QrArea(content: String, isLoading: Boolean) {
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = null,
-                    // The QR bitmap is the raw module grid (tiny); scaling it to 200dp with the
+                    // The QR bitmap is the raw module grid (tiny); scaling it to 160dp with the
                     // default (smoothing) filter blurs the modules. None = nearest-neighbour, so the
                     // squares stay crisp (mirrors Qr.themeAwareDrawable's isFilterBitmap = false).
                     filterQuality = FilterQuality.None,
-                    modifier = Modifier.size(200.dp)
+                    modifier = Modifier.size(160.dp)
                 )
             } else {
                 CircularProgressIndicator(color = LocalDashColors.current.dashBlue)
@@ -295,13 +347,13 @@ private fun QrArea(content: String, isLoading: Boolean) {
     }
 }
 
-/** Full-width row: label + value on the left, a tinted-gray copy button on the right. */
+/** Full-width row: label + single-line value on the left, a tinted-gray copy button on the right. */
 @Composable
 private fun LabeledCopyRow(label: String, value: String, onCopyClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(horizontal = 20.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(40.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -319,7 +371,9 @@ private fun LabeledCopyRow(label: String, value: String, onCopyClick: () -> Unit
             Text(
                 text = value,
                 style = MyTheme.Typography.BodyMedium,
-                color = LocalDashColors.current.textPrimary
+                color = LocalDashColors.current.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
@@ -362,6 +416,31 @@ private fun DEXReceiveScreenLoadingPreview() {
 @Preview(showBackground = true, widthDp = 393, heightDp = 760)
 @Composable
 private fun DEXReceiveScreenLoadedPreview() {
+    DEXReceiveScreenContent(
+        coinCode = "BTC",
+        address = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+        uri = "bitcoin:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+        memo = "",
+        isLoading = false,
+        errorMessageRes = null,
+        isOnline = true,
+        onBackClick = {},
+        onBackHomeClick = {},
+        onCopyClick = {}
+    )
+}
+
+// Mirrors a real Galaxy S22 (SM-S901U): 1080x2340px @ 480dpi (xxhdpi, scale 3.0) measures to
+// exactly 360x780dp — confirmed via `adb shell wm size` / `wm density`.
+@Preview(
+    name = "Galaxy S22 @ 1.25x font",
+    showBackground = true,
+    device = "spec:width=360dp,height=780dp,dpi=480",
+    fontScale = 1.25f,
+    showSystemUi = true
+)
+@Composable
+private fun DEXReceiveScreenGalaxyS22Preview() {
     DEXReceiveScreenContent(
         coinCode = "BTC",
         address = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
