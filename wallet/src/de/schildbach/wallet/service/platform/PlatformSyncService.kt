@@ -522,11 +522,58 @@ class PlatformSynchronizationService @Inject constructor(
                 maybePublishChangeCache()
             }
             .launchIn(syncScope)
+
+        // The EFFECTIVE metadata settings, once per arm. These live in this
+        // install's DataStore and do NOT travel with the wallet, so a restore
+        // onto another device silently starts from the defaults — including
+        // saveToNetwork=false. Without this line the only way to know a device's
+        // settings is a screenshot, which cannot be attributed to a device with
+        // certainty. Booleans and enums only; no user content.
+        syncScope.launch {
+            try {
+                val s = dashPayConfig.getTransactionMetadataSettings()
+                log.info(
+                    "TxMetadata settings: saveToNetwork={} frequency={} saveAfter={} " +
+                        "paymentCategory={} taxCategory={} exchangeRates={} memos={} giftCards={} " +
+                        "storedDocuments={}",
+                    s.saveToNetwork, s.saveFrequency, s.saveAfterTimestamp,
+                    s.savePaymentCategory, s.saveTaxCategory, s.saveExchangeRates,
+                    s.savePrivateMemos, s.saveGiftcardInfo,
+                    transactionMetadataDocumentDao.countAllRequests()
+                )
+            } catch (e: Exception) {
+                log.info("TxMetadata settings: unavailable ({})", e.message)
+            }
+        }
+    }
+
+    /**
+     * Last reason [maybePublishChangeCache] declined to publish. The ticker
+     * fires every [PUSH_PERIOD] (3 MINUTES on debug/testnet builds), so logging
+     * unconditionally would bury the log; logging only on CHANGE costs one line
+     * per state transition while making silence unambiguous.
+     *
+     * Silence was the actual defect: the disabled branch returned with no log
+     * at all, so a wallet that had never enabled network saving produced a log
+     * identical to one where publishing was broken — which is exactly how a
+     * field investigation stalled.
+     */
+    private var lastPublishSkipReason: String? = null
+
+    private fun notePublishSkip(reason: String) {
+        if (lastPublishSkipReason != reason) {
+            lastPublishSkipReason = reason
+            log.info("TxMetadata publish: not publishing — {}", reason)
+        }
     }
 
     private suspend fun maybePublishChangeCache() {
         val saveSettings = dashPayConfig.getTransactionMetadataSettings()
         if (!saveSettings.saveToNetwork) {
+            notePublishSkip(
+                "saveToNetwork is OFF (per-device setting; the default for a new or " +
+                    "restored install, and it does NOT travel with the wallet)"
+            )
             return
         }
         val lastPush = config.get(DashPayConfig.LAST_METADATA_PUSH) ?: 0
@@ -567,10 +614,20 @@ class PlatformSynchronizationService @Inject constructor(
         // publish no more frequently than every 3 hours
         val shouldPushToNetwork = (lastPush < now - PUSH_PERIOD.inWholeMilliseconds)
         if (shouldPushToNetwork && meetsSaveFrequency) {
-            log.info("maybe publish meets requirements")
+            lastPublishSkipReason = null
+            log.info(
+                "TxMetadata publish: proceeding — {} eligible item(s), frequency={}, " +
+                    "last push {} ms ago",
+                newDataItems, saveSettings.saveFrequency, now - lastPush
+            )
             publishChangeCache(newEverythingBeforeTimestamp, saveAll = false)
+        } else if (!shouldPushToNetwork) {
+            notePublishSkip("throttled — last push ${now - lastPush} ms ago, minimum is $PUSH_PERIOD")
         } else {
-            log.info("last platform push was less than $CUTOFF_MIN ago, skipping")
+            notePublishSkip(
+                "frequency not met — $newDataItems eligible item(s), setting is " +
+                    "${saveSettings.saveFrequency}"
+            )
         }
     }
 
@@ -1539,8 +1596,21 @@ class PlatformSynchronizationService @Inject constructor(
             .getTxMetaData(lastTxMetadataRequestTime, myEncryptionKey)
 
         if (items.isEmpty()) {
+            // Distinguish "the network has nothing newer" from "the fetch did
+            // not happen": previously both looked identical (silence) in a
+            // support log, which is exactly the ambiguity this diagnoses.
+            log.info(
+                "TxMetadata fetch: 0 documents newer than {} — nothing to apply " +
+                    "(stored locally: {} documents)",
+                lastTxMetadataRequestTime,
+                transactionMetadataDocumentDao.countAllRequests()
+            )
             return
         }
+        log.info(
+            "TxMetadata fetch: {} document(s) returned for watermark {}",
+            items.size, lastTxMetadataRequestTime
+        )
 
         // val lastItem = items.keys.last()
         // lastItem.createdAt?.let {
@@ -1548,8 +1618,11 @@ class PlatformSynchronizationService @Inject constructor(
         // }
         log.info("processing TxMetadataDocuments: {}", items.toString())
 
+        var docsNew = 0
+        var docsAlreadyHeld = 0
         items.forEach { (doc, list) ->
             if (transactionMetadataDocumentDao.count(doc.id) == 0) {
+                docsNew++
                 val timestamp = doc.updatedAt!!
                 log.info("processing TxMetadata: ${doc.id} with ${list.size} items")
                 list.forEach { metadata ->
@@ -1809,11 +1882,21 @@ class PlatformSynchronizationService @Inject constructor(
 
                 // configuration.txMetadataUpdateTime = doc.createdAt!!
             } else {
+                docsAlreadyHeld++
                 log.info("TxMetadataDocument:  this item already exists ${doc.id}")
             }
         }
 
-        log.info("fetching ${items.size} tx metadata items in $watch")
+        // One line that answers "did anything actually arrive and land?" — the
+        // question a support log could not previously answer, because a fetch
+        // that returned only already-held documents looked the same as one that
+        // returned nothing at all.
+        log.info(
+            "TxMetadata fetch summary: {} document(s) returned, {} new (applied), {} already held; " +
+                "{} document(s) now stored locally; took {}",
+            items.size, docsNew, docsAlreadyHeld,
+            transactionMetadataDocumentDao.countAllRequests(), watch
+        )
     }
 
     private suspend fun publishTransactionMetadata(

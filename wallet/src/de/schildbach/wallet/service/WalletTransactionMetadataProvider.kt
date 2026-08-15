@@ -445,9 +445,23 @@ class WalletTransactionMetadataProvider @Inject constructor(
                             metadata.rate
                         )
                     )
+                    // The whole point of publishing a rate is that it survives a
+                    // restore onto another device. Log the APPLY, not just that
+                    // metadata existed: a row showing a live rate instead of the
+                    // historical one is indistinguishable in a support log from
+                    // one that never had metadata at all.
+                    log.info(
+                        "metadata APPLIED rate {} {} to tx {}",
+                        metadata.rate, metadata.currencyCode, tx.txId
+                    )
                 } catch (e: Exception) {
                     log.error("Failed to parse exchange rate for metadata: {}. Error: {}", metadata, e.message, e)
                 }
+            } else if (metadata.rate != null && tx.exchangeRate != null) {
+                // Not a defect — the transaction already carried a local rate
+                // (this device sent it). Logged so "no apply" is never
+                // ambiguous between "already had one" and "nothing stored".
+                log.info("metadata rate SKIPPED for tx {} — transaction already has one", tx.txId)
             } else if (metadata.rate == null && exchangeRate != null) {
                 transactionMetadataDao.updateExchangeRate(
                     tx.txId.toTxId(),
@@ -464,6 +478,16 @@ class WalletTransactionMetadataProvider @Inject constructor(
             // sync transaction memo
             if (metadata.memo.isNotBlank() && tx.memo == null) {
                 tx.memo = metadata.memo
+                // Same reasoning as the rate above: a memo that was published
+                // but never reaches the transaction is invisible in a support
+                // log unless the apply itself is recorded. Length only — the
+                // memo is private user text and never goes in the log.
+                log.info(
+                    "metadata APPLIED memo ({} chars) to tx {}",
+                    metadata.memo.length, tx.txId
+                )
+            } else if (metadata.memo.isNotBlank() && tx.memo != null) {
+                log.info("metadata memo SKIPPED for tx {} — transaction already has one", tx.txId)
             } else if (metadata.memo.isBlank() && tx.memo != null) {
                 setTransactionMemo(tx.txId.toTxId(), tx.memo!!)
             }
