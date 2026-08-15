@@ -80,6 +80,7 @@ class IdentityDiscoveryLatchTest {
         topUpRepository = mockk(relaxed = true),
         identityRepository = identityRepo,
         walletDataProvider = mockk(relaxed = true),
+        walletSeam = mockk(relaxed = true),
         sdkProfileQueries = mockk(relaxed = true),
         sdkUsernameQueries = mockk(relaxed = true),
         sdkIdentityVerifyQueries = mockk(relaxed = true),

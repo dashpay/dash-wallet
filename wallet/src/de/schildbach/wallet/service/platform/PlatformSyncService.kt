@@ -197,7 +197,7 @@ interface PlatformSyncService {
     fun removePreBlockProgressListener(listener: OnPreBlockProgressListener)
 
     suspend fun clearDatabases()
-    suspend fun getUnsavedTransactions(): Pair<List<Transaction>, Long>
+    suspend fun getUnsavedTransactions(): Pair<List<org.dash.wallet.common.transactions.TxInfo>, Long>
     suspend fun hasPendingTxMetadataToSave(): Boolean
 }
 
@@ -222,6 +222,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val topUpRepository: TopUpRepository,
     private val identityRepository: IdentityRepository,
     private val walletDataProvider: WalletData,
+    private val walletSeam: org.dash.wallet.common.WalletDataProvider,
     private val sdkProfileQueries: SdkProfileQueries,
     private val sdkUsernameQueries: SdkUsernameQueries,
     private val sdkIdentityVerifyQueries: SdkIdentityVerifyQueries,
@@ -1977,41 +1978,51 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     // this is a slow operation?
-    override suspend fun getUnsavedTransactions(): Pair<List<Transaction>, Long> {
+    /**
+     * Historical transactions whose metadata has never been published, or whose
+     * published copy is stale.
+     *
+     * Reads the CUTOVER SEAM, not the dashj wallet. The dashj wallet is held —
+     * frozen at the cutover snapshot — for every SDK-owned wallet, so
+     * enumerating it returned nothing and the settings screen concluded there
+     * was no history to save, greying out the "Past" checkbox on exactly the
+     * wallets that needed it most. Same defect class as the CSV exporter.
+     */
+    override suspend fun getUnsavedTransactions(): Pair<List<org.dash.wallet.common.transactions.TxInfo>, Long> {
         val watch = Stopwatch.createStarted()
         val start = dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE) ?: 0L
         val end = System.currentTimeMillis()
 
-        val notCoinJoinFilter = object : WalletTransactionFilter {
-            override fun matches(tx: Transaction): Boolean {
-                val type = CoinJoinTransactionType.fromTx(tx, walletDataProvider.wallet)
-                return type == CoinJoinTransactionType.None || type == CoinJoinTransactionType.Send
-            }
-        }
-        val listOfUnsaved = arrayListOf<Transaction>()
+        val listOfUnsaved = arrayListOf<org.dash.wallet.common.transactions.TxInfo>()
         var firstUnsavedTxDate = 0L
-        walletDataProvider.getTransactions(notCoinJoinFilter).forEach { tx ->
-            if (tx.updateTime.time in start .. end) {
-                if (!transactionMetadataProvider.exists(tx.txId.toTxId())) {
+        // A CoinJoin MIXING round spends the wallet's own coins into its own
+        // denominated outputs, so it is entirely-self; a CoinJoin SEND pays a
+        // foreign address and is not. Excluding entirely-self therefore keeps
+        // the same population the old CoinJoinTransactionType filter did,
+        // without needing a dashj Transaction to classify.
+        walletSeam.getTransactions().forEach { tx ->
+            if (tx.isEntirelySelf) return@forEach
+            if (tx.updateTimeMillis !in start..end) return@forEach
+            val txId = Sha256Hash.wrap(tx.txId).toTxId()
+            if (!transactionMetadataProvider.exists(txId)) {
+                listOfUnsaved.add(tx)
+                firstUnsavedTxDate = if (firstUnsavedTxDate != 0L) {
+                    min(firstUnsavedTxDate, tx.updateTimeMillis)
+                } else {
+                    tx.updateTimeMillis
+                }
+            } else {
+                val previouslySavedItems = transactionMetadataDocumentDao.getTransactionMetadata(txId)
+                val previouslySaved = mergeTransactionMetadataDocuments(Sha256Hash.wrap(tx.txId), previouslySavedItems)
+                val currentItem = transactionMetadataProvider.getTransactionMetadata(txId)!!
+                val giftCard = giftCardDao.getCardForTransaction(Sha256Hash.wrap(tx.txId).bytes)
+
+                if (!previouslySaved.compare(currentItem, giftCard.firstOrNull())) {
                     listOfUnsaved.add(tx)
                     firstUnsavedTxDate = if (firstUnsavedTxDate != 0L) {
-                        min(firstUnsavedTxDate, tx.updateTime.time)
+                        min(firstUnsavedTxDate, tx.updateTimeMillis)
                     } else {
-                        tx.updateTime.time
-                    }
-                } else {
-                    val previouslySavedItems = transactionMetadataDocumentDao.getTransactionMetadata(tx.txId.toTxId())
-                    val previouslySaved = mergeTransactionMetadataDocuments(tx.txId, previouslySavedItems)
-                    val currentItem = transactionMetadataProvider.getTransactionMetadata(tx.txId.toTxId())!!
-                    val giftCard = giftCardDao.getCardForTransaction(tx.txId.bytes)
-
-                    if (!previouslySaved.compare(currentItem, giftCard.firstOrNull())) {
-                        listOfUnsaved.add(tx)
-                        firstUnsavedTxDate = if (firstUnsavedTxDate != 0L) {
-                            min(firstUnsavedTxDate, tx.updateTime.time)
-                        } else {
-                            tx.updateTime.time
-                        }
+                        tx.updateTimeMillis
                     }
                 }
             }
@@ -2024,19 +2035,24 @@ class PlatformSynchronizationService @Inject constructor(
         // determine any changes that haven't been saved before [DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE]
         val alreadySaved = dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE) ?: 0L
         // add to those changes to the change cache
-        val txes = walletApplication.wallet?.getTransactions(true)
+        //
+        // Seam-sourced, not `walletApplication.wallet`: the dashj wallet is held
+        // for every SDK-owned wallet, so this loop had nothing to iterate and a
+        // "Past" upload silently published nothing even when it was reachable.
+        val txes = walletSeam.getTransactions().toList()
         var itemsToSave = 0
-        txes?.forEachIndexed { i, tx ->
-            if (tx.updateTime.time >= alreadySaved) {
-                transactionMetadataProvider.getTransactionMetadata(tx.txId.toTxId())?.let { metadata ->
-                    val giftCard = giftCardDao.getCardForTransaction(tx.txId.bytes)
+        txes.forEachIndexed { i, tx ->
+            if (tx.updateTimeMillis >= alreadySaved) {
+                val txHash = Sha256Hash.wrap(tx.txId)
+                transactionMetadataProvider.getTransactionMetadata(txHash.toTxId())?.let { metadata ->
+                    val giftCard = giftCardDao.getCardForTransaction(txHash.bytes)
 
                     // make sure it is not already saved?
 
-                    val previouslySaved = transactionMetadataDocumentDao.getTransactionMetadata(tx.txId.toTxId())
+                    val previouslySaved = transactionMetadataDocumentDao.getTransactionMetadata(txHash.toTxId())
                     log.info("publish: previously saved: {}", previouslySaved)
 
-                    val saved = mergeTransactionMetadataDocuments(tx.txId, previouslySaved)
+                    val saved = mergeTransactionMetadataDocuments(txHash, previouslySaved)
                     log.info("publish: merged saved: {}", saved)
 
                     val metadataItem = TransactionMetadataCacheItem(
@@ -2051,7 +2067,7 @@ class PlatformSynchronizationService @Inject constructor(
                     }
                     itemsToSave++
                 }
-                progressListener.invoke(i * 100 / txes.size / 2)
+                progressListener.invoke(i * 100 / txes.size.coerceAtLeast(1) / 2)
             }
         }
         // call publishChangeCache

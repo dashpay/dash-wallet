@@ -138,7 +138,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     override val futureSaveDate = _futureSaveDate.asStateFlow()
     private val _hasPastTransactionsToSave = MutableStateFlow<Boolean>(false)
     override val hasPastTransactionsToSave = _hasPastTransactionsToSave.asStateFlow()
-    private val _oldUnsavedTransactions = MutableStateFlow<List<Transaction>>(listOf())
+    private val _oldUnsavedTransactions = MutableStateFlow<List<org.dash.wallet.common.transactions.TxInfo>>(listOf())
     var firstUnsavedTxDate: Long = 0
         private set
     var unsavedTxCount: Int = 0

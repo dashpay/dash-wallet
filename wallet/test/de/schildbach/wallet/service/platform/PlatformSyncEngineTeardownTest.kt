@@ -67,6 +67,7 @@ class PlatformSyncEngineTeardownTest {
         topUpRepository = mockk(relaxed = true),
         identityRepository = identityRepository,
         walletDataProvider = mockk(relaxed = true),
+        walletSeam = mockk(relaxed = true),
         sdkProfileQueries = mockk(relaxed = true),
         sdkUsernameQueries = mockk(relaxed = true),
         sdkIdentityVerifyQueries = mockk(relaxed = true),
