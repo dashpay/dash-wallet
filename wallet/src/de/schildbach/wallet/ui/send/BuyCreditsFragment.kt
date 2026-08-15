@@ -5,7 +5,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.flow.drop
 import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.integration.android.BitcoinIntegration
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
@@ -48,10 +51,25 @@ class BuyCreditsFragment : SendCoinsFragment() {
         binding.paymentHeader.setPreposition("")
         viewModel.isAssetLock = true
 
-        // Show what the identity already holds, under the amount field. Refreshed
-        // on each view creation so it reflects a top-up made since last time.
-        lifecycleScope.launch {
-            buyCreditsViewModel.identityBalance.collect { updateView() }
+        // Show what the identity already holds, under the amount field.
+        //
+        // viewLifecycleOwner + repeatOnLifecycle(STARTED), and drop(1): a
+        // StateFlow replays its CURRENT value synchronously on subscribe, so
+        // collecting here without dropping re-entered updateView() from inside
+        // onViewCreated — before the child EnterAmountFragment's view existed —
+        // and setMessage() crashed on its view LifecycleOwner. The replayed
+        // value is always the initial null anyway (the balance loads async), so
+        // dropping it costs nothing; the real value arrives later, once STARTED.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                buyCreditsViewModel.identityBalance.drop(1).collect {
+                    // The child fragment's view can still be down (config change,
+                    // backgrounded): setMessage() would touch a dead binding.
+                    if (enterAmountFragment?.view != null) {
+                        updateView()
+                    }
+                }
+            }
         }
     }
 
