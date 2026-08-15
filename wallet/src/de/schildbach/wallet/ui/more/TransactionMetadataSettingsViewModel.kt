@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapConcat
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -155,59 +156,35 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
             }.launchIn(viewModelWorkerScope)
 
         dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
-            .onEach {
-                _lastSaveDate.value = it ?: 0
-                log.info("last save date: {}", it?.let { Date(_lastSaveDate.value) })
-            }
-            .launchIn(viewModelScope)
-
-        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER)
-            .onEach {
-                _futureSaveDate.value = it ?: System.currentTimeMillis()
-                log.info("future save date: {}", it?.let { Date(_lastSaveDate.value) })
-            }
-            .launchIn(viewModelScope)
-
-//        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID)
-//            .onEach {
-//                _lastSaveWorkId.value = it
-//                log.info("last save work id: {}", dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID))
-//            }
-//            .launchIn(viewModelScope)
-
-        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
-            .filterNotNull()
-            .onEach { selectedCurrency = it }
-            .flatMapLatest(exchangeRates::observeExchangeRate)
-            .onEach { _selectedExchangeRate.value = it }
-            .launchIn(viewModelScope)
-
-        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
             .flatMapLatest { startTimestamp ->
                 transactionMetadataDao.observeByTimestampRange(startTimestamp ?: 0, System.currentTimeMillis())
-                    .flatMapConcat {
-                        _oldUnsavedTransactions
-                    }
-                    .flatMapConcat {
-                        transactionMetadataChangeCacheDao.observeCachedItemsBefore(System.currentTimeMillis())
-                            .map {
-                                it.map {
-                                    // use default values, just need a count of items
-                                    item -> TransactionMetadata(
-                                        item.txId,
-                                    item.sentTimestamp ?: 0,
-                                        org.dash.wallet.common.money.Coin.ZERO,
-                                        TransactionCategory.Sent
-                                    )
-                                }
-                            }
+                    .flatMapLatest {
+                        // COMBINE, not a chain: "is there past metadata worth
+                        // uploading?" is two independent populations, and either
+                        // can change on its own.
+                        //
+                        //  - the change cache: pending edits
+                        //  - _oldUnsavedTransactions: history never published
+                        //
+                        // Reading the second imperatively raced it — the scan
+                        // behind it takes seconds on a large wallet, so the flow
+                        // emitted "0 never-published" first and never re-emitted
+                        // when the real count landed, leaving "Past" disabled on
+                        // exactly the wallets that had the most to upload.
+                        combine(
+                            transactionMetadataChangeCacheDao
+                                .observeCachedItemsBefore(System.currentTimeMillis()),
+                            _oldUnsavedTransactions
+                        ) { cachedItems, oldUnsaved -> cachedItems.size to oldUnsaved.size }
                     }
             }
-            .onEach {
-                // are there older transactions not in the database?
-                _hasPastTransactionsToSave.value = it.isNotEmpty()
-                unsavedTxCount = it.size
-                log.info("unsaved count: ${it.size}")
+            .onEach { (cachedCount, neverPublishedCount) ->
+                _hasPastTransactionsToSave.value = cachedCount > 0 || neverPublishedCount > 0
+                unsavedTxCount = cachedCount + neverPublishedCount
+                log.info(
+                    "unsaved count: {} ({} cached + {} never-published)",
+                    unsavedTxCount, cachedCount, neverPublishedCount
+                )
             }
             .launchIn(viewModelWorkerScope)
 
