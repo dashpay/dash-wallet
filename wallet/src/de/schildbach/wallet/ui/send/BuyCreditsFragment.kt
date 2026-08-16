@@ -53,16 +53,28 @@ class BuyCreditsFragment : SendCoinsFragment() {
 
         // Show what the identity already holds, under the amount field.
         //
-        // viewLifecycleOwner + repeatOnLifecycle(STARTED), and drop(1): a
-        // StateFlow replays its CURRENT value synchronously on subscribe, so
-        // collecting here without dropping re-entered updateView() from inside
-        // onViewCreated — before the child EnterAmountFragment's view existed —
-        // and setMessage() crashed on its view LifecycleOwner. The replayed
-        // value is always the initial null anyway (the balance loads async), so
-        // dropping it costs nothing; the real value arrives later, once STARTED.
+        // Collected on viewLifecycleOwner under repeatOnLifecycle(STARTED),
+        // which is AFTER onViewCreated — so the child EnterAmountFragment's
+        // view exists and setMessage() cannot blow up on its LifecycleOwner
+        // (the 11.10.89 crash), with the null check below covering a view torn
+        // down by a config change or backgrounding.
+        //
+        // Deliberately NOT drop(1). A StateFlow replays its current value on
+        // subscribe, and whether that value is the initial null or the real
+        // balance is a RACE against the load started in the ViewModel's init.
+        // Dropping it was correct only in the slow case; when the balance had
+        // already resolved, the replayed value WAS the balance, it got
+        // discarded, and no further emission ever came — so the label silently
+        // never appeared (observed in the field on 11.10.93 while the same
+        // build showed it on a slower device).
+        // Re-read on every visit, not just on ViewModel construction: a read
+        // that failed because DAPI was unreachable must not leave the label
+        // reading "unavailable" for the rest of the ViewModel's life.
+        buyCreditsViewModel.refreshIdentityBalance()
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                buyCreditsViewModel.identityBalance.drop(1).collect {
+                buyCreditsViewModel.identityBalance.collect {
                     // The child fragment's view can still be down (config change,
                     // backgrounded): setMessage() would touch a dead binding.
                     if (enterAmountFragment?.view != null) {
@@ -102,19 +114,19 @@ class BuyCreditsFragment : SendCoinsFragment() {
             operations,
             operations
         )
-        // Append the current identity balance when it is known. Hidden entirely
-        // when unknown rather than shown as zero, which would read as "you have
-        // no credits" on a balance we simply could not fetch.
+        // Always show the row, never omit it. Showing zero would wrongly read
+        // as "you have no credits", but hiding it entirely is worse for the
+        // reason this label exists: a support screenshot then cannot distinguish
+        // "the balance could not be read" from "this build lacks the feature".
+        // An explicit "unavailable" says which.
         val balance = buyCreditsViewModel.identityBalance.value
+        val balanceText = balance?.toFriendlyString()
+            ?: getString(R.string.buy_credits_current_identity_balance_unavailable)
         enterAmountFragment?.setMessage(
-            if (balance != null) {
-                estimate + "\n" + getString(
-                    R.string.buy_credits_current_identity_balance,
-                    balance.toFriendlyString()
-                )
-            } else {
-                estimate
-            }
+            estimate + "\n" + getString(
+                R.string.buy_credits_current_identity_balance,
+                balanceText
+            )
         )
 
         super.updateView()

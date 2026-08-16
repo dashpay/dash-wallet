@@ -23,6 +23,8 @@ import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewModelScope
 import org.bitcoinj.core.Coin
@@ -43,6 +45,12 @@ class BuyCreditsViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(BuyCreditsViewModel::class.java)
+
+        /** Attempts for one balance read — see [refreshIdentityBalance]. */
+        private const val BALANCE_READ_ATTEMPTS = 3
+
+        /** Backoff between balance-read attempts; multiplied by the attempt. */
+        private const val BALANCE_READ_RETRY_DELAY_MS = 1_500L
     }
 
     var identityId: String? = null
@@ -75,19 +83,43 @@ class BuyCreditsViewModel @Inject constructor(
         refreshIdentityBalance()
     }
 
+    /**
+     * Read the balance, retrying a few times before giving up.
+     *
+     * A single attempt is not enough in the field: the read is a Platform
+     * round trip, and against nodes with expired certificates it fails with
+     * "Dapi client error: no available …" while a retry moments later succeeds.
+     * A one-shot read therefore left the label reading "unavailable" for the
+     * whole visit — observed on 11.10.93.
+     *
+     * Bounded and cheap: three attempts, short backoff, and it never blocks the
+     * purchase. A still-null result is surfaced as "unavailable" rather than
+     * hidden, so the screen never silently omits the row.
+     */
     fun refreshIdentityBalance() {
         viewModelScope.launch {
             val balance = withContext(Dispatchers.IO) {
-                try {
-                    val id = identity.get(BlockchainIdentityConfig.IDENTITY_ID) ?: return@withContext null
-                    val info = platformRepo.getIdentityBalance(Identifier.from(id))
-                    Coin.valueOf(info.balance / CreditBalanceInfo.CREDITS_PER_DUFF)
-                } catch (e: Exception) {
-                    // Best-effort display only: never let a balance read break the
-                    // purchase screen.
-                    log.info("could not read identity credit balance: {}", e.message)
-                    null
+                val id = identity.get(BlockchainIdentityConfig.IDENTITY_ID)
+                if (id.isNullOrEmpty()) return@withContext null
+                repeat(BALANCE_READ_ATTEMPTS) { attempt ->
+                    try {
+                        val info = platformRepo.getIdentityBalance(Identifier.from(id))
+                        return@withContext Coin.valueOf(
+                            info.balance / CreditBalanceInfo.CREDITS_PER_DUFF
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.info(
+                            "could not read identity credit balance (attempt {} of {}): {}",
+                            attempt + 1, BALANCE_READ_ATTEMPTS, e.message
+                        )
+                        if (attempt < BALANCE_READ_ATTEMPTS - 1) {
+                            delay(BALANCE_READ_RETRY_DELAY_MS * (attempt + 1))
+                        }
+                    }
                 }
+                null
             }
             _identityBalance.value = balance
         }
