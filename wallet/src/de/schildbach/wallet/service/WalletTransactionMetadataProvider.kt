@@ -223,6 +223,15 @@ class WalletTransactionMetadataProvider @Inject constructor(
                     log.info("txmetadata for $txId has no wallet tx, inserting SDK fallback row")
                     transactionMetadataDao.insert(it)
                 }
+            if (inserted == null) {
+                // The metadata is dropped here. Never silent: this is precisely
+                // how fetched platform metadata went missing without a trace.
+                log.warn(
+                    "txmetadata for {} DROPPED — no wallet tx and no fallback row; " +
+                        "any platform metadata for this transaction will not be displayed",
+                    txId
+                )
+            }
             inserted?.let { update(it) }
         }
     }
@@ -268,7 +277,15 @@ class WalletTransactionMetadataProvider @Inject constructor(
         giftCard: GiftCard?,
         iconUrl: String?
     ) {
-        updateAndInsertIfNotExist(txId, true) { existing ->
+        // Pass the platform row as the fallback. Without it, a transaction the
+        // HELD dashj wallet does not hold — post-cutover that is essentially
+        // every transaction on an SDK-owned wallet — took the
+        // insertTransactionMetadata() == null branch, found no fallback, and the
+        // fetched metadata was DISCARDED before reaching the table the UI reads.
+        // The wallet fetched thousands of documents and displayed none of them
+        // (field report, 11.10.93). Same defect class as the CSV exporter and the
+        // "Past" upload gate: a read that still assumed dashj owns the wallet.
+        updateAndInsertIfNotExist(txId, true, fallbackMetadata = metadata) { existing ->
             val updated = existing.copy(
                 // txId and value are kept the same
                 txId = existing.txId,
@@ -284,6 +301,19 @@ class WalletTransactionMetadataProvider @Inject constructor(
             )
 
             transactionMetadataDao.update(updated)
+            // What actually landed in the UI-visible table, per field. This is
+            // the boundary where fetched platform metadata becomes displayable,
+            // so a memo that is on the network but absent on screen is either
+            // logged here as applied (=> a render problem) or never reaches
+            // here (=> a sync problem). Memo length only; never its text.
+            log.info(
+                "platform metadata merged for {}: memo={} rate={} service={} taxCategory={}",
+                txId,
+                updated.memo.length.takeIf { it > 0 }?.let { "$it chars" } ?: "none",
+                updated.rate?.let { "$it ${updated.currencyCode}" } ?: "none",
+                updated.service ?: "none",
+                updated.taxCategory?.name ?: "none"
+            )
         }
 
         if (giftCard != null) {
