@@ -22,8 +22,6 @@ import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.View
 import android.view.ViewPropertyAnimator
 import android.view.inputmethod.InputMethodManager
@@ -52,6 +50,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
@@ -90,6 +89,7 @@ import org.slf4j.LoggerFactory
 class SearchFragment : Fragment(R.layout.fragment_search) {
     companion object {
         private const val SCROLL_OFFSET_FOR_UP = 700
+        private const val SYNC_ERROR_DISPLAY_MS = 15_000L
         private val log = LoggerFactory.getLogger(SearchFragment::class.java)
     }
 
@@ -105,6 +105,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var onBackPressedCallback: OnBackPressedCallback? = null
     private var transitionAnimator: AnimatorSet? = null
     private var manageGpsAnimator: ViewPropertyAnimator? = null
+    private var syncErrorJob: Job? = null
 
     private val isPhysicalSearch: Boolean
         get() = viewModel.exploreTopic == ExploreTopic.ATMs || viewModel.filterMode.value == FilterMode.Nearby
@@ -288,14 +289,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 is FirebaseNetworkException -> {
                     // if the network is unreachable, show the error for 15 seconds
                     syncMessage.text = getString(R.string.sync_in_progress_network_error)
-                    Handler(Looper.getMainLooper())
-                        .postDelayed(
-                            {
-                                clearSyncStatus(binding)
-                                viewModel.setObservedLastError()
-                            },
-                            15000
-                        )
+                    // View-scoped rather than a bare Handler: a raw postDelayed held the whole
+                    // destroyed view tree for 15s after onDestroyView(). Cancelling the previous
+                    // job also stops an older timer from clearing a freshly shown error early.
+                    syncErrorJob?.cancel()
+                    syncErrorJob = viewLifecycleOwner.lifecycleScope.launch {
+                        delay(SYNC_ERROR_DISPLAY_MS)
+                        clearSyncStatus(binding)
+                        viewModel.setObservedLastError()
+                    }
                 }
                 else -> syncMessage.text = getString(R.string.sync_in_progress_error)
             }
@@ -326,6 +328,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         transitionAnimator = null
         manageGpsAnimator?.cancel()
         manageGpsAnimator = null
+        syncErrorJob = null
         super.onDestroyView()
     }
 
