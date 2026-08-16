@@ -203,7 +203,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         binding.manageGpsView.managePermissionsBtn.setOnClickListener {
-            lifecycleScope.launch {
+            // View-scoped: the flow suspends on a config read before touching the permission
+            // launcher and requireActivity().
+            viewLifecycleOwner.lifecycleScope.launch {
                 runLocationFlow(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestSettings)
             }
         }
@@ -424,7 +426,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     bottomSheet.isDraggable = isBottomSheetDraggable()
                     bottomSheetWasExpanded = false
                 } else if (!hasLocationBeenRequested) {
-                    lifecycleScope.launch {
+                    viewLifecycleOwner.lifecycleScope.launch {
                         requestLocationPermission(
                             viewModel.exploreTopic,
                             viewModel.exploreConfig,
@@ -662,7 +664,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 hideKeyboard()
 
                 // Add small delay to ensure keyboard is hidden and layout adjusts
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     delay(150)
                     // Force window to adjust after keyboard is hidden
                     requireActivity().window?.setSoftInputMode(
@@ -1055,7 +1057,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     it.website?.let { website -> openWebsite(website) }
                 },
                 onBuyGiftCardButtonClicked = {
-                    lifecycleScope.launch {
+                    // View-scoped: isUserSignedInService() can hit the network to refresh an
+                    // expired token, and showLoginDialog() then needs requireActivity().
+                    viewLifecycleOwner.lifecycleScope.launch {
                         dashSpendViewModel.selectedProvider = selectedProvider
                         if (!dashSpendViewModel.isUserSignedInService(selectedProvider)) {
                             showLoginDialog(selectedProvider)

@@ -357,7 +357,9 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
                 IconifiedViewItem(getString(R.string.explore_all_states))
             }
 
-            lifecycleScope.launch {
+            // View-scoped: this awaits the territories job before showing a dialog against
+            // requireActivity().
+            viewLifecycleOwner.lifecycleScope.launch {
                 val territories = territoriesJob?.await() ?: listOf()
                 val allTerritories = listOf(firstOption) + territories.map { IconifiedViewItem(it) }
 
@@ -394,13 +396,13 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         )
 
         binding.locationSettingsBtn.setOnClickListener {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 runLocationFlow(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestLauncher)
             }
         }
 
         binding.manageGpsView.managePermissionsBtn.setOnClickListener {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 runLocationFlow(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestLauncher)
             }
         }
