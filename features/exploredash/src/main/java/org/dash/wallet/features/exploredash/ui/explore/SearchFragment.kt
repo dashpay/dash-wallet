@@ -25,6 +25,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.view.ViewPropertyAnimator
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
@@ -103,6 +104,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var previousScreenState: ScreenState = ScreenState.SearchResults
     private var onBackPressedCallback: OnBackPressedCallback? = null
     private var transitionAnimator: AnimatorSet? = null
+    private var manageGpsAnimator: ViewPropertyAnimator? = null
 
     private val isPhysicalSearch: Boolean
         get() = viewModel.exploreTopic == ExploreTopic.ATMs || viewModel.filterMode.value == FilterMode.Nearby
@@ -322,6 +324,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         // against a destroyed view binding.
         transitionAnimator?.cancel()
         transitionAnimator = null
+        manageGpsAnimator?.cancel()
+        manageGpsAnimator = null
         super.onDestroyView()
     }
 
@@ -354,16 +358,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val isTabDisabled = !isLocationEnabled && isNearby
         searchHeaderAdapter.controlsVisible = !isTabDisabled
 
+        // Hold the view directly: the end action can run after onDestroyView(), when reading
+        // the binding delegate would throw.
+        val manageGpsRoot = binding.manageGpsView.root
+
         if (isTabDisabled) {
-            binding.manageGpsView.root.isVisible = true
+            manageGpsRoot.isVisible = true
         }
 
-        binding.manageGpsView.root
+        manageGpsAnimator?.cancel()
+        manageGpsAnimator = manageGpsRoot
             .animate()
             .alpha(if (isTabDisabled) 1f else 0f)
             .setDuration(300)
-            .withEndAction { binding.manageGpsView.root.isVisible = isTabDisabled }
-            .start()
+            .withEndAction { manageGpsRoot.isVisible = isTabDisabled }
+        manageGpsAnimator?.start()
     }
 
     private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>, topic: ExploreTopic) {
