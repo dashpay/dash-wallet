@@ -581,7 +581,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun setupScreenTransitions() {
         viewModel.screenState.observe(viewLifecycleOwner) { state ->
-            lifecycleScope.launch {
+            // View-scoped: this delays before driving the transitions, all of which read the
+            // binding, so it must not survive onDestroyView().
+            viewLifecycleOwner.lifecycleScope.launch {
                 if (isKeyboardShowing) {
                     delay(100)
                 }
