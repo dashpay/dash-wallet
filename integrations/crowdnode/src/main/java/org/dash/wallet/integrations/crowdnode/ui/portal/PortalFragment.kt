@@ -139,7 +139,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         binding.walletBalanceDash.setAmount(Dash.ZERO)
 
         // CrowdNode functionality is limited: deposits aren't supported. Only withdrawals are allowed.
-        binding.depositBtn.isVisible = false
+        // The on-chain deposit senders are retired (CrowdNodeBlockchainApi);
+        // this button has no click listener at all, so hiding it is what
+        // keeps the deposit flow unreachable from the portal.
+        binding.depositBtn.isVisible = CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED
         // online account isn't supported - the button is kept hidden in all states, see setOnlineAccountStatus
         binding.onlineAccountBtn.isVisible = false
 

@@ -46,6 +46,7 @@
             android:theme="@style/CrowdNodeLogoBackground" />
 
         <TextView
+            android:id="@+id/get_started_title"
             style="@style/Headline5"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -56,6 +57,7 @@
             android:textAlignment="gravity" />
 
         <TextView
+            android:id="@+id/get_started_hint"
             style="@style/Body2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

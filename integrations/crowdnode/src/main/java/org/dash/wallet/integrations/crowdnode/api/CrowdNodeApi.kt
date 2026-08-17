@@ -40,6 +40,7 @@ import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.AddressUtils
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.MessageSigningException
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -345,6 +346,17 @@ class CrowdNodeApiAggregator @Inject constructor(
             handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
         } catch (ex: UnknownHostException) {
             log.error("Withdrawal error: ${ex.message}")
+            handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
+        } catch (ex: MessageSigningException) {
+            // The withdrawal request is signed before it is sent
+            // (CrowdNodeWebApi.requestWithdrawal). Signing now THROWS rather
+            // than yielding an empty signature, and neither the caller
+            // (TransferFragment.handleWithdraw, which only catches
+            // WithdrawalLimitsException) nor its lifecycleScope.launch would
+            // catch it — so without this arm a signing failure would crash
+            // the app instead of showing the withdrawal-error screen.
+            // Nothing was sent to CrowdNode, so failing here is safe.
+            log.error("Withdrawal signing error (${ex.reason}): ${ex.message}")
             handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
         }
 

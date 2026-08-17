@@ -45,6 +45,8 @@
     <string name="crowdnode_creating">Creating your CrowdNode account…</string>
     <string name="accepting_terms">Accepting terms of use…</string>
     <string name="crowdnode_signup_error">We couldn’t create your CrowdNode account.</string>
+    <string name="crowdnode_signup_deposits_disabled">CrowdNode is not accepting new accounts or deposits</string>
+    <string name="crowdnode_signup_deposits_disabled_message">You can still withdraw from an existing CrowdNode account and view your balance.</string>
     <string name="crowdnode_deposit_error">We couldn’t make a deposit to your CrowdNode account.</string>
     <string name="crowdnode_withdraw_error">We couldn’t withdraw from your CrowdNode account.</string>
     <string name="crowdnode_transfer_error">Your CrowdNode transfer was unsuccessful.</string>

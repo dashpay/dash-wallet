@@ -227,9 +227,14 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 showErrorBanner()
                 return
             }
-
-            securityFunctions.authenticate(requireActivity()) ?: return
         }
+
+        // Authenticate for BOTH directions. A withdrawal is signed with the
+        // account key and instructs CrowdNode to move real funds, so it needs
+        // the same proof-of-presence a deposit does — signing itself performs
+        // no authentication (see SdkMessageSigner). A null return means the
+        // user cancelled or failed the check: abort without transferring.
+        securityFunctions.authenticate(requireActivity()) ?: return
 
         val isSuccess = AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
             if (isWithdraw) {

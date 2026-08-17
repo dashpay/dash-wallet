@@ -27,6 +27,7 @@ import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
+import org.dash.wallet.integrations.crowdnode.model.CrowdNodeServiceUnavailableException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
@@ -81,6 +82,12 @@ class CrowdNodeAPIConfirmationHandler(
 
             try {
                 blockchainApi.resendConfirmationTx(tx, primaryAddress)
+            } catch (ex: CrowdNodeServiceUnavailableException) {
+                // The resend sender is retired. Distinguished from the arm
+                // below on purpose: this is not a wrong-address situation,
+                // and reporting it as one would send the user chasing a
+                // problem with their address that does not exist.
+                log.info("Confirmation resend is retired; leaving the status unchanged")
             } catch (ex: CrowdNodeException) {
                 handleWrongAddressError()
             }

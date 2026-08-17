@@ -28,6 +28,7 @@ import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.transactions.filters.CoinsReceivedTxFilter
 import org.dash.wallet.common.transactions.filters.TxWithinTimePeriod
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
+import org.dash.wallet.integrations.crowdnode.model.CrowdNodeServiceUnavailableException
 import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
@@ -36,6 +37,49 @@ import java.util.*
 import javax.inject.Inject
 import kotlin.time.Duration
 
+/**
+ * On-chain side of the CrowdNode integration.
+ *
+ * ## The senders are fenced off, not removed
+ *
+ * CrowdNode has disabled account creation and deposits service-side, and the
+ * remaining users are all served by the API path ([CrowdNodeWebApi]), so the
+ * six senders here - [topUpAddress], [makeSignUpRequest], [acceptTerms],
+ * [deposit], [requestWithdrawal] and [resendConfirmationTx] - each open with
+ * a guard on
+ * [org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED]
+ * that throws [CrowdNodeServiceUnavailableException].
+ *
+ * The guard is the FIRST statement in every one, so nothing is attempted
+ * before the refusal: no output locking, no top-up self-send, no partially
+ * executed flow. That is also what retires the partial-deposit stranding
+ * hazard. Throwing rather than returning quietly is deliberate - an
+ * operation that reports success while moving no funds is the failure mode
+ * being refused.
+ *
+ * Everything after each guard is the ORIGINAL dashj implementation, kept
+ * deliberately rather than deleted. It is the working template for a future
+ * port to the platform SDK, which is blocked on an `add_inputs_from_outpoints`
+ * JNI binding - the SDK has no equivalent of the [SpendSelection.ByAddress] /
+ * [SpendSelection.ExactOutput] input pinning these flows depend on.
+ *
+ * Two things follow from that, and neither is obvious from the flag's name:
+ * flipping [org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED]
+ * back to `true` will NOT make these sends work, because the fail-closed
+ * cutover in `SendCoinsTaskRunner` (`cutoverSendRoute`) rejects a custom
+ * coin selection outright once the SDK cutover is committed; and re-enabling
+ * for real therefore means doing that SDK port, not just moving the boolean.
+ *
+ * ## The observers are untouched
+ *
+ * Everything that reads chain state still works and is still needed for
+ * balances, history, withdrawals and wallet restore: the `waitFor*` family,
+ * [getDeposits], [getDepositConfirmations], [getApiAddressConfirmationTx],
+ * [getFullSignUpTxSet] and [getWithdrawalsForTheLast].
+ *
+ * The user-facing gate on the same flag is what users normally meet; these
+ * throws are the backstop for any path that gate misses.
+ */
 open class CrowdNodeBlockchainApi @Inject constructor(
     private val paymentService: SendPaymentService,
     private val walletData: WalletDataProvider
@@ -47,6 +91,9 @@ open class CrowdNodeBlockchainApi @Inject constructor(
     private val networkId = walletData.networkId
 
     suspend fun topUpAddress(accountAddress: String, amount: Dash, emptyWallet: Boolean = false): TxInfo {
+        if (!CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED) {
+            throw CrowdNodeServiceUnavailableException("topUpAddress")
+        }
         // lock funds in outputs to accountAddress to prevent other send operations from using these funds
         val topUpTx = paymentService.sendCoinsSelected(
             accountAddress,
@@ -59,6 +106,9 @@ open class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     suspend fun makeSignUpRequest(accountAddress: String): TxInfo {
+        if (!CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED) {
+            throw CrowdNodeServiceUnavailableException("makeSignUpRequest")
+        }
         val requestValue = CrowdNodeSignUpTx.SIGNUP_REQUEST_CODE
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(networkId)
         val signUpTx = paymentService.sendCoinsSelected(
@@ -84,6 +134,9 @@ open class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     suspend fun acceptTerms(accountAddress: String): TxInfo {
+        if (!CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED) {
+            throw CrowdNodeServiceUnavailableException("acceptTerms")
+        }
         val requestValue = CrowdNodeAcceptTermsTx.ACCEPT_TERMS_REQUEST_CODE
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(networkId)
         val acceptTx = paymentService.sendCoinsSelected(
@@ -115,6 +168,9 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         emptyWallet: Boolean,
         checkBalanceConditions: Boolean
     ): TxInfo {
+        if (!CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED) {
+            throw CrowdNodeServiceUnavailableException("deposit")
+        }
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(networkId)
 
         return paymentService.sendCoinsSelected(
@@ -144,6 +200,9 @@ open class CrowdNodeBlockchainApi @Inject constructor(
 
     // not currently used
     suspend fun requestWithdrawal(accountAddress: String, requestValue: Dash): TxInfo {
+        if (!CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED) {
+            throw CrowdNodeServiceUnavailableException("requestWithdrawal")
+        }
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(networkId)
 
         return paymentService.sendCoinsSelected(
@@ -242,6 +301,9 @@ open class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     suspend fun resendConfirmationTx(confirmationTx: TxInfo, accountAddress: String) {
+        if (!CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED) {
+            throw CrowdNodeServiceUnavailableException("resendConfirmationTx")
+        }
         // lock the outputs
         walletData.lockOutputsPayingTo(confirmationTx.txId, accountAddress)
         val confirmationOutput = confirmationTx.outputs.first {
