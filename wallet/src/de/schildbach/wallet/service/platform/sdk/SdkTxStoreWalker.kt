@@ -94,11 +94,17 @@ internal fun dashjPayloadFacts(payload: ByteArray): TxPayloadFacts? = try {
  * "Received" for money that was sent away, and no reconcile could ever fix
  * them because the "definitive" record itself was wrong.
  *
- * The caller only invokes this for records whose stored shape is IMPOSSIBLE:
- * `direction == INCOMING` on a Standard (classic) tx that demonstrably SPENT
- * the wallet's own TXOs ([spentOwnedDuffs] > 0 over the foreign-excluded
- * mirror — an incoming tx never spends our outputs). The truth is then
- * recomputed from the TXO mirror's (correct, verified) linkage:
+ * The caller invokes this for Standard (classic) records that demonstrably
+ * SPENT the wallet's own TXOs ([spentOwnedDuffs] > 0 over the
+ * foreign-excluded mirror), in two stored shapes:
+ *  - `direction == INCOMING` — IMPOSSIBLE outright (an incoming tx never
+ *    spends our outputs);
+ *  - `direction == OUTGOING` — possibly correct, but the engine can persist
+ *    a multi-account spend with the net of only ONE account's slice
+ *    (dashpay/platform#4387; S22 field wallet: a 15-input sweep stored as
+ *    −0.005 instead of −2.61920199). The recompute below yields the
+ *    whole-wallet net; an already-correct row round-trips unchanged.
+ * The truth is recomputed from the TXO mirror's (correct, verified) linkage:
  *
  *  - `net = fundedOwned − spentOwned` — the wallet's own Σout−Σin, the same
  *    convention [SdkTxContactResolver.signedNetsFor] computes;
@@ -534,7 +540,12 @@ internal class SdkTxStoreWalker(
         // corrected the moment it is planned instead of after its block lands.
         // Fetched once per batch, and only when a row could be flagged at all.
         val pending = if (
-            rows.any { it.record.direction == L1TxUiDirection.INCOMING && it.typeKind == TX_TYPE_KIND_STANDARD }
+            rows.any {
+                it.typeKind == TX_TYPE_KIND_STANDARD && (
+                    it.record.direction == L1TxUiDirection.INCOMING ||
+                        it.record.direction == L1TxUiDirection.OUTGOING
+                    )
+            }
         ) {
             pendingSpentAggregates()
         } else {
@@ -542,8 +553,21 @@ internal class SdkTxStoreWalker(
         }
         fun pendingOf(row: RecordRow): PendingSpent? = pending[row.record.txidHex]
 
+        // INCOMING rows are flagged on the impossible shape (an incoming tx
+        // never spends our outputs). OUTGOING rows are flagged on the SAME
+        // spent-evidence gate but for a different defect: the engine can
+        // persist a multi-account spend with the net of only ONE account's
+        // slice (dashpay/platform#4387 — verified on the S22 field wallet,
+        // where a 15-input full-balance sweep was stored as −0.005 instead of
+        // −2.619). [reattributeIncomingRecord]'s mirror math recomputes the
+        // whole-wallet net either way, and a row whose stored net already
+        // matches produces an EQUAL record — no persist, no log, no churn —
+        // so flagging every spent-evidenced Standard row is idempotent.
         val flagged = rows.filter {
-            it.record.direction == L1TxUiDirection.INCOMING &&
+            (
+                it.record.direction == L1TxUiDirection.INCOMING ||
+                    it.record.direction == L1TxUiDirection.OUTGOING
+                ) &&
                 it.typeKind == TX_TYPE_KIND_STANDARD &&
                 it.spentOwnedDuffs + (pendingOf(it)?.duffs ?: 0L) > 0L
         }

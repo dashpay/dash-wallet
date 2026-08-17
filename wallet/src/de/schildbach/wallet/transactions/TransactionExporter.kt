@@ -107,8 +107,30 @@ abstract class TransactionExporter(
         transactions.sortedBy { it.updateTimeMillis }
     }
 
-    /** Net value to the wallet; the SDK computes this post-cutover, dashj before it. */
-    protected fun getTransactionValue(tx: TxInfo): Coin = Coin.valueOf(tx.netValueDuffs)
+    /** Duffs burned into value-bearing OP_RETURN outputs (the asset-lock credit-funding shape). */
+    protected fun opReturnBurnDuffs(tx: TxInfo): Long =
+        tx.outputs.filter { it.isOpReturn }.sumOf { it.valueDuffs }
+
+    /**
+     * Net value to the wallet; the SDK computes this post-cutover, dashj before it.
+     *
+     * One correction on top of the stored figure: an AssetLock credit purchase is
+     * persisted `INTERNAL / net 0` (every non-burn output returns to the wallet),
+     * which hid the purchase from this export entirely — the S22 reconciliation's
+     * 0.03000241 residual. The burn (value-bearing OP_RETURN) plus fee IS the
+     * wallet's real spend, so surface it as a negative value here. Tracked for the
+     * proper store-side fix on the platform repo (net should be −(burn+fee) at
+     * persistence time); this stays correct after that fix because the stored net
+     * will then be non-zero and the branch never fires.
+     */
+    protected fun getTransactionValue(tx: TxInfo): Coin {
+        val stored = tx.netValueDuffs
+        if (stored == 0L && tx.isEntirelySelf) {
+            val burn = opReturnBurnDuffs(tx)
+            if (burn > 0L) return Coin.valueOf(-(burn + (tx.feeDuffs ?: 0L)))
+        }
+        return Coin.valueOf(stored)
+    }
 
     protected fun isInternal(tx: TxInfo): Boolean = tx.isEntirelySelf
 

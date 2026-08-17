@@ -54,7 +54,13 @@ abstract class CSVExporter(
             // denominated outputs, so it is entirely-self and this one test still excludes it.
             // The former explicit `coinJoinTransactionType` check required a dashj Transaction,
             // which does not exist post-cutover (see TransactionExporter's class docs).
-            val shouldExclude = excludeInternal && isInternal(tx)
+            //
+            // EXCEPT an entirely-self tx that burns value into an OP_RETURN — the
+            // asset-lock credit-purchase shape. That burn+fee is real money leaving
+            // the wallet (the S22 reconciliation's hidden 0.03000241 expense), so it
+            // must appear as an Expense row; getTransactionValue() supplies the
+            // negative burn+fee for it.
+            val shouldExclude = excludeInternal && isInternal(tx) && opReturnBurnDuffs(tx) == 0L
             if (!shouldExclude) {
                 for (spec in dataSpec) {
                     columnData.add(spec.dataFunction(tx, metadataMap[tx.txId.lowercase()]))
