@@ -50,12 +50,28 @@ import javax.inject.Singleton
  * @property percentage 0..100 progress for the "Syncing N%" header; 0 means
  *   "no usable figure yet" and the header renders a bare "Syncing…".
  * @property isFailed sync is impeded (the error pane).
+ * @property dashPaySynced whether the DashPay half has settled too
+ *   ([DashPaySyncStatus]). Deliberately a SEPARATE field rather than a
+ *   widening of [isSynced]: [isSynced] gates funds and feature paths (the
+ *   shortcut bar, CrowdNode staking, Join DashPay eligibility, invite
+ *   revalidation) that must not wait on contact sync, so only the surfaces
+ *   that TELL THE USER "still syncing" read [isFullySynced].
  */
 data class L1SyncUiStatus(
     val isSynced: Boolean = false,
     val percentage: Int = 0,
-    val isFailed: Boolean = false
-)
+    val isFailed: Boolean = false,
+    val dashPaySynced: Boolean = true
+) {
+    /**
+     * The USER-FACING "everything is done" predicate: the chain is caught up
+     * AND the DashPay side has settled. On 11.10.86 these diverged by ~12
+     * minutes — the UI said synced at 17:12:39 while contact sync ran until
+     * 17:20:09, the receiving accounts registered at 17:20:31 and the correct
+     * balance only appeared at 17:25:00.
+     */
+    val isFullySynced: Boolean get() = isSynced && dashPaySynced
+}
 
 /**
  * Whether the SDK L1 scan has caught up.
@@ -71,9 +87,17 @@ data class L1SyncUiStatus(
  * Uses [ShadowSyncProgress.scanCaughtUpToTip], not the SDK's never-latching
  * `synced`/phase == SYNCED: a live SPV perpetually chasing the moving tip
  * would otherwise read as un-synced forever. Pure — host-testable.
+ *
+ * The `synced` (SDK-latched SYNCED phase) arm is ALSO gated on the block
+ * pipeline not provably lagging ([ShadowSyncProgress.blockPipelineLagging]):
+ * the engine's overall phase was observed holding SYNCED while an armed
+ * rescan replayed the whole filter range and the block/tx pipeline was
+ * still churning — the premature l1Synced=true that persisted a partial
+ * balance in the field. An UNKNOWN cursor never counts as lagging, so this
+ * cannot deadlock a genuinely-at-tip wallet (see the predicate's KDoc).
  */
 fun sdkL1ScanCaughtUp(progress: ShadowSyncProgress): Boolean =
-    progress.synced || progress.scanCaughtUpToTip
+    (progress.synced || progress.scanCaughtUpToTip) && !progress.blockPipelineLagging
 
 /**
  * dashj's own header percentage, replicating the historical rule that a
@@ -115,11 +139,13 @@ internal fun mergeL1SyncUiStatus(
     sdkOwnsL1: Boolean,
     sdkProgress: ShadowSyncProgress,
     dashjState: BlockchainState?,
-    platformStarved: Boolean = false
+    platformStarved: Boolean = false,
+    dashPaySynced: Boolean = true
 ): L1SyncUiStatus = L1SyncUiStatus(
     isSynced = if (sdkOwnsL1) sdkL1ScanCaughtUp(sdkProgress) else dashjState?.isSynced() == true,
     percentage = if (sdkOwnsL1) shadowSyncPercent(sdkProgress) else dashjSyncPercentage(dashjState),
-    isFailed = dashjState?.syncFailed() == true || platformStarved
+    isFailed = dashjState?.syncFailed() == true || platformStarved,
+    dashPaySynced = dashPaySynced
 )
 
 /**
@@ -184,6 +210,54 @@ internal fun sustainedPlatformStarvation(
             }
         } else {
             flowOf(false)
+        }
+    }
+    .distinctUntilChanged()
+
+/**
+ * Absolute ceiling on how long the DashPay term may hold the user-facing
+ * "still syncing" state ([dashPaySyncSettledWithDeadline]).
+ *
+ * Belt-and-braces, deliberately independent of every producer: the terms
+ * themselves are each individually bounded, but the S21 regression was
+ * precisely a term that looked bounded and was not (the backfill gate's armed
+ * marker is permanent on a healthy wallet). An indicator that never clears is
+ * worse than one that clears early, so past this point the DashPay half is
+ * reported settled regardless of what any producer says.
+ *
+ * Sized above the worst observed honest tail: on 11.10.86 the L1 scan reported
+ * caught up at 17:12:39 and the DashPay side finished at 17:25:00 — ~12.4
+ * minutes of contact sync, account registration and backfill. Fifteen minutes
+ * keeps that case reporting truthfully while still guaranteeing the indicator
+ * clears.
+ */
+internal const val DASHPAY_SETTLE_DEADLINE_MS = 15 * 60_000L
+
+/**
+ * The DashPay settled verdict, with [deadlineMs] as a hard ceiling: false
+ * while the terms say unsettled, but true unconditionally once that has held
+ * for the deadline. Settling early re-emits true immediately.
+ *
+ * Same shape as [sustainedPlatformStarvation] (and the same reasoning about
+ * [distinctUntilChanged] on the input: a producer re-emitting the same verdict
+ * must not restart the clock, or a 60 s republish cadence would hold the
+ * ceiling off forever). Pure — host-testable.
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal fun dashPaySyncSettledWithDeadline(
+    settled: Flow<Boolean>,
+    deadlineMs: Long = DASHPAY_SETTLE_DEADLINE_MS
+): Flow<Boolean> = settled
+    .distinctUntilChanged()
+    .flatMapLatest { isSettled ->
+        if (isSettled) {
+            flowOf(true)
+        } else {
+            flow {
+                emit(false)
+                delay(deadlineMs)
+                emit(true)
+            }
         }
     }
     .distinctUntilChanged()
@@ -334,6 +408,7 @@ class L1SyncStatusService @Inject constructor(
     cutoverCoordinator: CutoverCoordinator,
     l1ShadowSyncService: L1ShadowSyncService,
     blockchainStateProvider: BlockchainStateProvider,
+    dashPaySyncStatus: DashPaySyncStatus,
     scope: CoroutineScope
 ) {
     /**
@@ -374,15 +449,37 @@ class L1SyncStatusService @Inject constructor(
         emit(false)
     }.stateIn(scope, SharingStarted.Eagerly, false)
 
+    /**
+     * The DashPay half of "finished syncing", under [DASHPAY_SETTLE_DEADLINE_MS].
+     *
+     * Held EAGERLY in the service scope for the same reason as
+     * [platformStarvedSustained]: [status]'s downstream is screen-scoped
+     * (`MainViewModel.syncStatus` uses `WhileSubscribed`), and a ceiling clock
+     * that restarted on every navigation back to the home screen would never
+     * expire. Starts at `true` so a wallet the signal does not apply to can
+     * never flicker into "syncing" on the way to its first emission.
+     */
+    private val dashPaySettled: StateFlow<Boolean> =
+        dashPaySyncSettledWithDeadline(dashPaySyncStatus.terms.map { it.settled })
+            .catch { e ->
+                // Fail OPEN: the indicator must never be stuck on because a
+                // bookkeeping feed failed.
+                org.slf4j.LoggerFactory.getLogger(L1SyncStatusService::class.java)
+                    .warn("DashPay settled feed failed; reporting the DashPay half as settled", e)
+                emit(true)
+            }
+            .stateIn(scope, SharingStarted.Eagerly, true)
+
     /** The engine-agnostic L1 sync status every sync-aware screen renders. */
     val status: Flow<L1SyncUiStatus> =
         combine(
             cutoverCoordinator.sdkOwnsL1Flow(),
             l1ShadowSyncService.progress,
             blockchainStateProvider.observeState(),
-            platformStarvedSustained
-        ) { sdkOwnsL1, progress, state, platformStarved ->
-            mergeL1SyncUiStatus(sdkOwnsL1, progress, state, platformStarved)
+            platformStarvedSustained,
+            dashPaySettled
+        ) { sdkOwnsL1, progress, state, platformStarved, dashPaySynced ->
+            mergeL1SyncUiStatus(sdkOwnsL1, progress, state, platformStarved, dashPaySynced)
         }.distinctUntilChanged()
 
     /**

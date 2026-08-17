@@ -39,6 +39,15 @@ interface TxDisplayCacheDao {
     @Query("SELECT COUNT(*) FROM tx_display_cache")
     suspend fun getCount(): Int
 
+    /**
+     * Epoch-millis of the OLDEST cached row, or null when the cache is empty —
+     * the wallet's first-use date for the startup `WalletHistoryFacts` log
+     * line (restore birth-date calibration; see
+     * [de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService]).
+     */
+    @Query("SELECT MIN(time) FROM tx_display_cache")
+    suspend fun oldestTimeMs(): Long?
+
     /** Fetch all entries ordered newest-first — used for in-memory snapshot on startup. */
     @Query("SELECT * FROM tx_display_cache ORDER BY time DESC")
     suspend fun getAll(): List<TxDisplayCacheEntry>

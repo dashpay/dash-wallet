@@ -193,7 +193,9 @@ internal const val TX_TYPE_KIND_STANDARD = 0
  * Records materialized here are additionally REATTRIBUTED when the stored
  * direction is provably wrong ([reattributeIncomingRecord]) — every consumer
  * (display pipeline, reconcile walk, seam point reads) sees the corrected
- * shape from one place.
+ * shape from one place — and each correction is persisted back into the
+ * store exactly once ([persistCorrections]), so an already-corrected record
+ * is never re-processed on later passes or later launches.
  *
  * NOT thread-safe: watermark/fingerprint state is confined to the single
  * collector that owns the walker (each flow builds its own instance). The
@@ -225,6 +227,15 @@ internal class SdkTxStoreWalker(
      * count/rowid) for the newest [FINGERPRINT_CONTEXT_TAIL] transactions —
      * the only rows whose context realistically still changes; older
      * stragglers converge via the periodic full walk.
+     *
+     * [pendingCount]/[pendingMaxRowid] track the `pending_inputs` side table
+     * (outpoints RESERVED by an in-flight local spend at broadcast — see
+     * [pendingSpentAggregates]): a reservation landing after the spender's
+     * tx row was already drained must still re-trigger a pass, or the
+     * display keeps serving the uncorrected INCOMING record until the 60s
+     * reconcile. These two are not strictly monotone (rows are CASCADE-
+     * deleted with their tx), but any insert/delete moves at least one of
+     * them, which is all change DETECTION needs.
      */
     internal data class Fingerprint(
         val txoCount: Long,
@@ -233,7 +244,9 @@ internal class SdkTxStoreWalker(
         val spendMaxRowid: Long,
         val txCount: Long,
         val txMaxRowid: Long,
-        val tailContextSum: Long
+        val tailContextSum: Long,
+        val pendingCount: Long,
+        val pendingMaxRowid: Long
     )
 
     private var txoWatermark = 0L
@@ -253,10 +266,11 @@ internal class SdkTxStoreWalker(
     // ── Fingerprint ───────────────────────────────────────────────────
 
     /**
-     * Four queries, no row materialization: three index-only aggregates
-     * (`index_txos_walletId`, `index_txos_spendingTxid`, and the smallest
-     * `transactions` index for COUNT) plus one bounded scan of the newest
-     * [FINGERPRINT_CONTEXT_TAIL] `transactions` rows for the context sum.
+     * Five queries, no row materialization: four index-only aggregates
+     * (`index_txos_walletId`, `index_txos_spendingTxid`, the smallest
+     * `transactions` index for COUNT, and `index_pending_inputs_walletId`)
+     * plus one bounded scan of the newest [FINGERPRINT_CONTEXT_TAIL]
+     * `transactions` rows for the context sum.
      */
     internal fun fingerprint(): Fingerprint {
         val (txoCount, txoMaxRowid) = twoLongs(
@@ -276,7 +290,14 @@ internal class SdkTxStoreWalker(
                 "(SELECT context FROM transactions ORDER BY rowid DESC LIMIT $FINGERPRINT_CONTEXT_TAIL)",
             emptyArray()
         ) { c -> if (c.moveToFirst()) c.getLong(0) else 0L }
-        return Fingerprint(txoCount, txoMaxRowid, spendCount, spendMaxRowid, txCount, txMaxRowid, tailContextSum)
+        val (pendingCount, pendingMaxRowid) = twoLongs(
+            "SELECT COUNT(*), COALESCE(MAX(id), 0) FROM pending_inputs WHERE walletId = ?",
+            arrayOf(walletId)
+        )
+        return Fingerprint(
+            txoCount, txoMaxRowid, spendCount, spendMaxRowid, txCount, txMaxRowid, tailContextSum,
+            pendingCount, pendingMaxRowid
+        )
     }
 
     /**
@@ -425,21 +446,106 @@ internal class SdkTxStoreWalker(
         return out
     }
 
+    // ── Pending-input reservations (in-flight local spends) ───────────
+
+    /** Owned-TXO aggregate a spender tx has RESERVED via `pending_inputs`. */
+    internal class PendingSpent(val count: Int, val duffs: Long)
+
+    /**
+     * DISPLAY-side spent evidence for txs the store has not confirmed yet:
+     * per spender txid (display hex), the count/sum of this wallet's OWN
+     * TXOs whose outpoint the spender RESERVED in `pending_inputs` at
+     * broadcast. The SDK only writes `txos.isSpent`/`spendingTxid` at
+     * CONFIRMATION, so between broadcast and confirm a send's only
+     * spent-evidence is its reservation — without it the stored
+     * `INCOMING +change` record passes [reattributed]'s flag unchallenged
+     * and the history renders a phantom receive for money already spent,
+     * lingering until the block lands (the on-device "lingering receive").
+     *
+     * The display predicate, exactly: a TXO counts as PENDING-SPENT iff
+     * `isSpent == 0` AND `spendingTxid IS NULL` AND its outpoint is
+     * reserved in `pending_inputs` for this wallet. The two NULL/0 guards
+     * are the precedence rule that makes stale reservations harmless: the
+     * SDK never cleans `pending_inputs` up post-confirm (verified
+     * on-device), but once the real marks land the row fails the guards,
+     * the confirmed aggregates in [recordColumnsSql] take over, and nothing
+     * is double-counted.
+     *
+     * ONE bounded query per [reattributed] batch (never per record — the
+     * denormalized `pending_inputs.spendingTxid` has no index, so a
+     * per-record correlated probe would scan the side table once per row):
+     * an indexed walk of this wallet's `pending_inputs` rows joined to
+     * `txos` on its PRIMARY KEY (`outpoint`). The inner GROUP BY dedups the
+     * doc-permitted duplicate reservations of one outpoint. Foreign
+     * (watch-only contact-account) rows are excluded like every other
+     * owned-money read. Fail-soft: an empty map keeps today's behavior.
+     */
+    private fun pendingSpentAggregates(): Map<String, PendingSpent> =
+        rawQuery(
+            "SELECT s.spendingTxid, COUNT(*), COALESCE(SUM(s.amount), 0) FROM (" +
+                "SELECT pi.spendingTxid AS spendingTxid, pi.outpoint AS outpoint, MAX(t.amount) AS amount " +
+                "FROM pending_inputs pi JOIN txos t ON t.outpoint = pi.outpoint " +
+                "WHERE pi.walletId = ? AND t.walletId = ? " +
+                "AND t.isSpent = 0 AND t.spendingTxid IS NULL " +
+                "AND NOT (${txoIsForeignSql("t")}) " +
+                "GROUP BY pi.spendingTxid, pi.outpoint" +
+                ") s GROUP BY s.spendingTxid",
+            arrayOf(walletId, walletId)
+        ) { c ->
+            val out = HashMap<String, PendingSpent>()
+            while (c.moveToNext()) {
+                out[displayHexOf(c.getBlob(0))] = PendingSpent(c.getInt(1), c.getLong(2))
+            }
+            out
+        }
+
     // ── Reattribution of provably-wrong stored records ────────────────
 
     /**
      * Apply [reattributeIncomingRecord] to the rows whose stored shape is
      * impossible (a Standard tx recorded INCOMING that spent the wallet's own
      * TXOs). Costs nothing when no row is flagged; a flagged set pays one
-     * chunked funded-split aggregate plus one chunked payload fetch
-     * (internal-vs-send discrimination and fee recovery both need the tx's
-     * real shape — see [TxPayloadFacts]).
+     * chunked funded-split aggregate plus (for the net<0 subset only) one
+     * chunked payload fetch (internal-vs-send discrimination and fee recovery
+     * need the tx's real shape — see [TxPayloadFacts]).
+     *
+     * ## Durable — corrections are WRITTEN BACK to the store
+     *
+     * A computed correction is persisted into the SDK's own `transactions`
+     * row ([persistCorrections]), so the corrected row itself is the durable
+     * per-record "already attributed" flag: on every later pass — this
+     * process or any future launch — the row no longer matches the flag
+     * condition (`direction == INCOMING`) and costs NOTHING beyond the
+     * correlated subqueries every row pays. Before this, the same ~1.4k
+     * provably-wrong records were re-flagged, re-aggregated and re-parsed on
+     * EVERY reconcile walk of every launch (field log: three identical
+     * ~1.5k-line reattribution storms across three launches).
+     *
+     * Wipe/restore and armed-rescan re-runs need NO invalidation plumbing:
+     * the only thing that can restore the wrong stored shape is the engine
+     * itself rewriting the row (a re-scan re-persisting the misattributed
+     * Rust record), which re-satisfies the flag condition and is simply
+     * re-corrected and re-persisted — the invalidation is structural, not
+     * keyed off time or a rescan marker.
      */
     private fun reattributed(rows: List<RecordRow>): List<L1TxUiRecord> {
+        // Pending-input reservations ([pendingSpentAggregates]) supplement the
+        // confirmed spent marks for DISPLAY, so a just-broadcast send is
+        // corrected the moment it is planned instead of after its block lands.
+        // Fetched once per batch, and only when a row could be flagged at all.
+        val pending = if (
+            rows.any { it.record.direction == L1TxUiDirection.INCOMING && it.typeKind == TX_TYPE_KIND_STANDARD }
+        ) {
+            pendingSpentAggregates()
+        } else {
+            emptyMap()
+        }
+        fun pendingOf(row: RecordRow): PendingSpent? = pending[row.record.txidHex]
+
         val flagged = rows.filter {
             it.record.direction == L1TxUiDirection.INCOMING &&
                 it.typeKind == TX_TYPE_KIND_STANDARD &&
-                it.spentOwnedDuffs > 0L
+                it.spentOwnedDuffs + (pendingOf(it)?.duffs ?: 0L) > 0L
         }
         if (flagged.isEmpty()) return rows.map { it.record }
 
@@ -465,11 +571,18 @@ internal class SdkTxStoreWalker(
             }
         }
 
-        // Payload facts for every flagged row: the no-foreign-output subset
-        // needs them for internal-vs-send discrimination, and ALL flagged rows
-        // need them for fee recovery ([reattributeIncomingRecord]).
+        // Payload facts only for flagged rows whose recomputed net is
+        // NEGATIVE: [reattributeIncomingRecord]'s net>=0 branch (a co-funded
+        // receive — direction stands, only the net is corrected) never
+        // consults the payload, and those rows stay flagged forever (their
+        // stored direction legitimately remains INCOMING), so fetching +
+        // dashj-parsing their payloads every pass was pure waste.
+        val needsFacts = flagged.filter {
+            (fundedOwned[it.record.txidHex] ?: 0L) -
+                (it.spentOwnedDuffs + (pendingOf(it)?.duffs ?: 0L)) < 0L
+        }
         val facts = HashMap<String, TxPayloadFacts>()
-        for (chunk in flagged.chunked(TXID_IN_CHUNK)) {
+        for (chunk in needsFacts.chunked(TXID_IN_CHUNK)) {
             val placeholders = chunk.joinToString(",") { "?" }
             rawQuery(
                 "SELECT txid, transactionData FROM transactions WHERE txid IN ($placeholders)",
@@ -483,37 +596,126 @@ internal class SdkTxStoreWalker(
         }
 
         val correctedByHex = HashMap<String, L1TxUiRecord>(flagged.size)
+        val toPersist = ArrayList<Pair<RecordRow, L1TxUiRecord>>()
         for (row in flagged) {
             val hex = row.record.txidHex
+            val pend = pendingOf(row)
+            // DISPLAY shape: confirmed spent marks PLUS in-flight reservations,
+            // so the correction lands at broadcast, not at confirmation.
             val corrected = reattributeIncomingRecord(
                 record = row.record,
-                spentOwnedCount = row.spentOwnedCount,
-                spentOwnedDuffs = row.spentOwnedDuffs,
+                spentOwnedCount = row.spentOwnedCount + (pend?.count ?: 0),
+                spentOwnedDuffs = row.spentOwnedDuffs + (pend?.duffs ?: 0L),
                 fundedOwnedDuffs = fundedOwned[hex] ?: 0L,
                 fundedForeignDuffs = fundedForeign[hex] ?: 0L,
                 payload = facts[hex]
             )
             correctedByHex[hex] = corrected
+            // PERSISTED shape: CONFIRMED evidence only. A reservation is an
+            // in-flight claim a re-org/drop can void, so a pending-derived
+            // correction is served from memory each pass and never written
+            // back — the store is only rewritten once the real spent marks
+            // prove the same thing (the exact pre-existing durable rule).
+            val persistCorrected = if (row.spentOwnedDuffs > 0L) {
+                reattributeIncomingRecord(
+                    record = row.record,
+                    spentOwnedCount = row.spentOwnedCount,
+                    spentOwnedDuffs = row.spentOwnedDuffs,
+                    fundedOwnedDuffs = fundedOwned[hex] ?: 0L,
+                    fundedForeignDuffs = fundedForeign[hex] ?: 0L,
+                    payload = facts[hex]
+                )
+            } else {
+                row.record
+            }
+            if (persistCorrected != row.record) toPersist += row to persistCorrected
             if (corrected.direction != row.record.direction &&
                 reattributionLogged.add(hex)
             ) {
                 log.info(
                     "stored SDK record for {} reattributed {} → {} (stored net {} → {} duffs; " +
-                        "spentOwned={} over {} input(s), fundedOwned={}, fundedForeign={})",
+                        "spentOwned={} over {} input(s), pendingReserved={} over {} input(s), " +
+                        "fundedOwned={}, fundedForeign={})",
                     hex, row.record.direction, corrected.direction,
                     row.record.netAmountDuffs, corrected.netAmountDuffs,
                     row.spentOwnedDuffs, row.spentOwnedCount,
+                    pend?.duffs ?: 0L, pend?.count ?: 0,
                     fundedOwned[hex] ?: 0L, fundedForeign[hex] ?: 0L
                 )
             }
         }
+        persistCorrections(toPersist)
         return rows.map { correctedByHex[it.record.txidHex] ?: it.record }
+    }
+
+    /** The SDK `transactions.direction` column code for [d] — the 0..3 convention [l1TxUiRecord] reads. */
+    private fun directionCode(d: L1TxUiDirection): Int = when (d) {
+        L1TxUiDirection.INCOMING -> 0
+        L1TxUiDirection.OUTGOING -> 1
+        L1TxUiDirection.INTERNAL -> 2
+        L1TxUiDirection.COINJOIN -> 3
+    }
+
+    /**
+     * Write computed corrections back to the SDK's `transactions` rows —
+     * the durable stop for the every-launch reattribution churn (see
+     * [reattributed]'s KDoc). Compare-and-set on the OLD (direction, net):
+     * a row the engine concurrently rewrote no longer matches and is left
+     * alone (the next pass re-evaluates the fresh shape). One transaction
+     * per batch; a failed write only costs re-correcting in memory next
+     * pass — the read path never depends on the write having landed.
+     * Precedent for app-side raw writes to this store:
+     * [L1ShadowSource.clearSdkL1Rows]'s reset deletes.
+     */
+    private fun persistCorrections(corrections: List<Pair<RecordRow, L1TxUiRecord>>) {
+        if (corrections.isEmpty()) return
+        try {
+            val writable = db.openHelper.writableDatabase
+            writable.beginTransaction()
+            try {
+                for ((row, corrected) in corrections) {
+                    val sql = "UPDATE transactions SET direction = ?, netAmount = ?, fee = ? " +
+                        "WHERE txid = ? AND direction = ? AND netAmount = ?"
+                    onQuery?.invoke(sql)
+                    writable.execSQL(
+                        sql,
+                        arrayOf(
+                            directionCode(corrected.direction),
+                            corrected.netAmountDuffs,
+                            corrected.feeDuffs,
+                            row.wireTxid,
+                            directionCode(row.record.direction),
+                            row.record.netAmountDuffs
+                        )
+                    )
+                }
+                writable.setTransactionSuccessful()
+            } finally {
+                writable.endTransaction()
+            }
+            log.info(
+                "persisted {} reattribution correction(s) into the SDK store — these records " +
+                    "are attributed durably and will not be re-processed",
+                corrections.size
+            )
+        } catch (t: Throwable) {
+            log.warn(
+                "failed to persist reattribution corrections; the corrected shapes still " +
+                    "served from memory, re-corrected next pass",
+                t
+            )
+        }
     }
 
     /**
      * Which of [txidWireByHex]'s txids fund or spend a wallet-OWNED TXO —
      * chunked membership probe (foreign rows grant no membership, matching
-     * [queryTxoPage]'s ref rule).
+     * [queryTxoPage]'s ref rule). A tx whose only trace is a `pending_inputs`
+     * RESERVATION of an owned TXO is a member too: a just-broadcast
+     * change-less send (max-send/drain) creates no owned TXO row and its
+     * spent marks only land at confirmation, so without the reservation
+     * probe the tx would be invisible to the store walk until its block —
+     * the same lingering-spend window [pendingSpentAggregates] closes.
      */
     private fun walletRelevantSubset(txidWireByHex: Map<String, ByteArray>): Set<String> {
         if (txidWireByHex.isEmpty()) return emptySet()
@@ -531,6 +733,13 @@ internal class SdkTxStoreWalker(
             rawQuery(
                 "SELECT DISTINCT t.spendingTxid FROM txos t WHERE t.walletId = ? " +
                     "AND t.spendingTxid IN ($placeholders) AND NOT (${txoIsForeignSql("t")})",
+                args.toTypedArray()
+            ) { c -> while (c.moveToNext()) if (!c.isNull(0)) relevant += displayHexOf(c.getBlob(0)) }
+            rawQuery(
+                "SELECT DISTINCT pi.spendingTxid FROM pending_inputs pi " +
+                    "JOIN txos t ON t.outpoint = pi.outpoint " +
+                    "WHERE pi.walletId = ? AND pi.spendingTxid IN ($placeholders) " +
+                    "AND t.walletId = pi.walletId AND NOT (${txoIsForeignSql("t")})",
                 args.toTypedArray()
             ) { c -> while (c.moveToNext()) if (!c.isNull(0)) relevant += displayHexOf(c.getBlob(0)) }
         }
@@ -569,6 +778,24 @@ internal class SdkTxStoreWalker(
             arrayOf(walletId)
         ) { c ->
             while (c.moveToNext() && wire.size < fundedCap) {
+                val txid = c.getBlob(0)
+                wire.putIfAbsent(wireHexOf(txid), txid)
+            }
+        }
+        // Newest RESERVING spenders (`pending_inputs`) — the recently-touched
+        // set must include an in-flight change-less send, whose only store
+        // trace pre-confirm is its reservation (no owned TXO row, no spent
+        // marks). Keeps the pending-corrected record re-emitted while status
+        // still moves, exactly like the confirmed spenders above. A wallet's
+        // reservations are its OWN spends by construction, so no ownership
+        // filter is needed beyond the wallet scope.
+        val pendingCap = wire.size + tailRows
+        rawQuery(
+            "SELECT pi.spendingTxid FROM pending_inputs pi WHERE pi.walletId = ? " +
+                "ORDER BY pi.id DESC LIMIT $overSample",
+            arrayOf(walletId)
+        ) { c ->
+            while (c.moveToNext() && wire.size < pendingCap) {
                 val txid = c.getBlob(0)
                 wire.putIfAbsent(wireHexOf(txid), txid)
             }
@@ -681,8 +908,14 @@ internal class SdkTxStoreWalker(
             "SELECT EXISTS(SELECT 1 FROM txos t WHERE t.walletId = ? AND t.txid = ? " +
                 "AND NOT (${txoIsForeignSql("t")})) " +
                 "OR EXISTS(SELECT 1 FROM txos t2 WHERE t2.walletId = ? AND t2.spendingTxid = ? " +
-                "AND NOT (${txoIsForeignSql("t2")}))",
-            arrayOf(walletId, wire, walletId, wire)
+                "AND NOT (${txoIsForeignSql("t2")})) " +
+                // A pending_inputs RESERVATION of an owned TXO grants membership
+                // too — pre-confirm a change-less send has no other trace (see
+                // walletRelevantSubset).
+                "OR EXISTS(SELECT 1 FROM pending_inputs pi JOIN txos t3 ON t3.outpoint = pi.outpoint " +
+                "WHERE pi.walletId = ? AND pi.spendingTxid = ? " +
+                "AND t3.walletId = pi.walletId AND NOT (${txoIsForeignSql("t3")}))",
+            arrayOf(walletId, wire, walletId, wire, walletId, wire)
         ) { c -> c.moveToFirst() && c.getLong(0) != 0L }
         if (!relevant) return null
         val row = rawQuery(

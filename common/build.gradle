@@ -18,8 +18,14 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Library-level minification is redundant (the app's release
+            // build minifies the final APK with these consumer rules) and
+            // actively harmful here: the shrunk classes feed :wallet's
+            // release compile/KSP classpath, stripping the Room annotations
+            // off this module's entities — ksp_*ReleaseKotlin then fails
+            // ("must have @PrimaryKey" / "no usable public constructor" /
+            // "no such table"). Matches exploredash/coinbase/crowdnode/maya.
+            minifyEnabled false
             consumerProguardFiles 'proguard-rules.pro'
         }
         debug {

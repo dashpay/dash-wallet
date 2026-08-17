@@ -310,11 +310,18 @@ class SdkProfileQueries internal constructor(
         return try {
             val contract = contractOrNull() ?: return null
             val ownerId = Identifier.from(userId)
-            val json = source.searchProfiles(
-                whereJson = SdkProfileMapping.whereOwnerIdEquals(ownerId),
-                orderByJson = null,
-                limit = 1
-            ) ?: return Optional.empty()
+            // Bounded per round trip: a DAPI node with an expired TLS cert
+            // otherwise costs ~1.8 min before this class's existing dashj
+            // fallback runs. A timeout takes that identical fallback path.
+            val payload = boundedSdkPlatformQuery("profiles.get[$userId]") {
+                source.searchProfiles(
+                    whereJson = SdkProfileMapping.whereOwnerIdEquals(ownerId),
+                    orderByJson = null,
+                    limit = 1
+                )
+            } ?: return null
+            // The SDK's own null still means "definitively no profile".
+            val json = payload.orElse(null) ?: return Optional.empty()
             val documents = SdkProfileMapping.profileDocumentsFromJson(json, contract)
             if (documents == null) {
                 log.warn("SDK profile get returned malformed payload; falling back to dashj")
@@ -344,11 +351,16 @@ class SdkProfileQueries internal constructor(
             val documents = ArrayList<Document>(userIds.size)
             // dashj Profiles.getList batches by 100 (Drive's in-clause cap).
             for (chunk in userIds.chunked(GET_LIST_CHUNK_SIZE)) {
-                val json = source.searchProfiles(
-                    whereJson = SdkProfileMapping.whereOwnerIdIn(chunk),
-                    orderByJson = SdkProfileMapping.ORDER_BY_OWNER_ID,
-                    limit = chunk.size
-                ) ?: continue // no payload = no documents for this chunk
+                // Bounded PER CHUNK, not per batch, so a healthy multi-chunk
+                // list is never truncated by the budget.
+                val payload = boundedSdkPlatformQuery("profiles.getList[${chunk.size}]") {
+                    source.searchProfiles(
+                        whereJson = SdkProfileMapping.whereOwnerIdIn(chunk),
+                        orderByJson = SdkProfileMapping.ORDER_BY_OWNER_ID,
+                        limit = chunk.size
+                    )
+                } ?: return null // timed out → dashj fallback for the whole batch
+                val json = payload.orElse(null) ?: continue // no payload = no documents for this chunk
                 val mapped = SdkProfileMapping.profileDocumentsFromJson(json, contract)
                 if (mapped == null) {
                     log.warn("SDK profile getList returned malformed payload; falling back to dashj")

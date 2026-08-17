@@ -675,6 +675,11 @@ class SdkWalletBinder internal constructor(
                 "DashPay account-build drain on {}…: {}",
                 walletId.take(8), describeContactDrain(report)
             )
+            // Accounts that only exist NOW were not there when the last sweep
+            // reconciled the DIP-15 rewind, so a sweep is owed for them; the
+            // gate turns this into a re-provision on its next consultation
+            // instead of leaving the money invisible until a relaunch.
+            backfillGate.noteAccountBuildsRegistered(report.built)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn(
@@ -1009,6 +1014,188 @@ class SdkWalletBinder internal constructor(
         }
     }
 
+    // ── Bounded identity-discovery retry (restore safety net) ─────────
+
+    /** Attempts made by [maybeRetryIdentityDiscovery] this process. */
+    @Volatile
+    private var discoveryRetryAttempts = 0
+
+    /** Wall-clock ms before which [maybeRetryIdentityDiscovery] must not fire again. */
+    @Volatile
+    private var discoveryRetryNextAtMs = 0L
+
+    /** One exhaustion WARN per process, not one per sync tick. */
+    @Volatile
+    private var discoveryRetryExhaustedLogged = false
+
+    /** Latched once the identity is observed managed — the retry loop's clean stop. */
+    @Volatile
+    private var discoveryRetrySettled = false
+
+    /**
+     * Bounded app-side retry for a FAILED registration-time identity
+     * discovery — the restore incident's safety net.
+     *
+     * The Rust wallet registration runs a best-effort identity sync whose
+     * failure is logged and swallowed ("Identity discovery failed during
+     * wallet registration; callers can retry via
+     * PlatformWallet::identity().discover()"). On the field restore it
+     * failed with "External signable wallet has no private key" — the
+     * signer was not attached yet at registration time — and NOTHING ever
+     * retried: the app then polled REQUESTED_NAME_CHECKING for 44 minutes
+     * with no contact sync, because the SDK wallet never managed the
+     * identity. (The bind pass's own discovery can latch [completed] on a
+     * not-found scan, so binding triggers do not recover this state
+     * either.)
+     *
+     * Called on every platform-sync pass ([PlatformSyncService.updateContactRequests]).
+     * Fires only while ALL of:
+     * - a bind pass has handed the seed to the SDK ([boundWalletIdHex] set
+     *   — the post-unlock condition: the mnemonic resolver / signer the
+     *   registration-time discovery lacked is attached now);
+     * - the app has a stored identity id;
+     * - the SDK wallet does NOT manage it (the restored-but-undiscovered
+     *   state);
+     * - fewer than [DISCOVERY_RETRY_MAX_ATTEMPTS] attempts were made, and
+     *   the capped-exponential backoff window has elapsed.
+     *
+     * Each attempt re-runs the full [DashSdkService.discoverIdentities]
+     * scan from index 0 and, on attach, heals the identity keys the same
+     * way the bind pass does. Bounded on purpose: a genuinely-absent
+     * identity (deterministic scan miss) stops costing Platform queries
+     * after the cap — the boundedness IS the permanent-error stop, since
+     * the app cannot reliably tell a signer-gap miss from a real one.
+     * Never throws; a thrown scan counts as an attempt and retries on the
+     * next pass. Surgical safety net until the Rust-side ordering fix
+     * (attach the signer before the registration-time sync) lands.
+     *
+     * @return whether THIS call attached the identity — the caller's cue to
+     *   drive the work that was blocked on it (contact sync) immediately
+     *   rather than on the next 15 s tick. False for every no-op, every
+     *   still-unmanaged attempt and every failure.
+     */
+    suspend fun maybeRetryIdentityDiscovery(): Boolean {
+        try {
+            if (discoveryRetrySettled) return false
+            val walletId = boundWalletIdHex ?: return false
+            val userId = identityConfig.loadBase().userId ?: return false
+            val identityId = try {
+                Identifier.from(userId).toBuffer()
+            } catch (e: Exception) {
+                return false // malformed stored id — nothing a retry can do
+            }
+            if (sdkService.isIdentityManaged(walletId, identityId)) {
+                discoveryRetrySettled = true
+                if (discoveryRetryAttempts > 0) {
+                    log.info("identity-discovery retry: identity now managed; standing down")
+                }
+                return false
+            }
+            if (discoveryRetryAttempts >= DISCOVERY_RETRY_MAX_ATTEMPTS) {
+                if (!discoveryRetryExhaustedLogged) {
+                    discoveryRetryExhaustedLogged = true
+                    log.warn(
+                        "identity-discovery retry exhausted after {} attempts: the SDK wallet " +
+                            "still does not manage the app identity — SDK DashPay/contact " +
+                            "features stay degraded until the next process start",
+                        DISCOVERY_RETRY_MAX_ATTEMPTS
+                    )
+                }
+                return false
+            }
+            if (now() < discoveryRetryNextAtMs) return false
+            // A bind pass owns the mutex while it runs its own discovery —
+            // don't pile a concurrent scan on top; the next sync tick re-checks.
+            if (!mutex.tryLock()) return false
+            try {
+                val attempt = ++discoveryRetryAttempts
+                discoveryRetryNextAtMs = now() + discoveryRetryDelayMs(attempt)
+                log.info(
+                    "identity-discovery retry {}/{}: registration-time discovery failed and the " +
+                        "SDK wallet {}… does not manage identity {}…; re-running the scan " +
+                        "(signer/resolver attached now)",
+                    attempt, DISCOVERY_RETRY_MAX_ATTEMPTS, walletId.take(8), userId.take(8)
+                )
+                val found = sdkService.discoverIdentities(walletId, startIndex = 0)
+                if (sdkService.isIdentityManaged(walletId, identityId)) {
+                    log.info(
+                        "identity-discovery retry {} SUCCEEDED: identity attached to wallet {}… " +
+                            "({} identity(ies) discovered); healing keys",
+                        attempt, walletId.take(8), found.size
+                    )
+                    healIdentityKeys(walletId, identityId)
+                    discoveryRetrySettled = true
+                    return true
+                } else {
+                    log.warn(
+                        "identity-discovery retry {}/{}: scan ran ({} identity(ies)) but the app " +
+                            "identity is still not managed; next attempt in {}ms",
+                        attempt, DISCOVERY_RETRY_MAX_ATTEMPTS, found.size,
+                        discoveryRetryNextAtMs - now()
+                    )
+                }
+            } finally {
+                mutex.unlock()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("identity-discovery retry attempt failed; will retry on a later sync pass", t)
+        }
+        return false
+    }
+
+    /**
+     * Capped exponential backoff between retry attempts: 30s, 1m, 2m, 4m,
+     * 8m, then capped at [DISCOVERY_RETRY_MAX_DELAY_MS] — rides the 15s
+     * platform-sync ticker, so the real spacing is "first tick after the
+     * window opens". Eight attempts span roughly the 44-minute stall the
+     * field incident sat in.
+     */
+    private fun discoveryRetryDelayMs(attempt: Int): Long =
+        (DISCOVERY_RETRY_BASE_DELAY_MS shl (attempt - 1).coerceIn(0, 20))
+            .coerceAtMost(DISCOVERY_RETRY_MAX_DELAY_MS)
+
+    /**
+     * The SDK half of the user-facing "Reset/Rescan blockchain" action.
+     *
+     * Post-cutover the reset's dashj work (delete the SPV block/header
+     * stores, clear the display DB) is an SDK NO-OP: the engine keeps its
+     * `WalletEntity.syncedHeight` watermark and stays SYNCED, so the user
+     * sees nothing happen (field 13:10:04Z on the mainnet device).
+     * This arms the SAME SPV filter-watermark rewind the address-window
+     * heal uses ([DashSdkService.armSpvRescan]) so the reset actually
+     * replays SDK history — from the persisted wallet-creation date when
+     * the user picked one on the rescan dialog ([resolveBirthTimeSecs]
+     * reads the store `SettingsFragment` just wrote), else the wallet's
+     * birth. The arm also starts the last-known-balance persist hold
+     * ([DashSdkService.spvRescanArmedWithin]), so a mid-replay partial
+     * figure can never be persisted as the launch seed.
+     *
+     * Uses the binder's bound wallet id when a bind pass latched one this
+     * process, else the single loaded SDK wallet. Returns whether the arm
+     * ran; never throws.
+     */
+    suspend fun armSpvRescanForBlockchainReset(): Boolean = try {
+        val walletIdHex = boundWalletIdHex ?: sdkService.loadedWalletIds().singleOrNull()
+        if (walletIdHex == null) {
+            log.info("blockchain-reset rescan skipped: no SDK wallet bound or loaded")
+            false
+        } else {
+            val armed = sdkService.armSpvRescan(walletIdHex, resolveBirthTimeSecs())
+            log.info(
+                "blockchain-reset rescan arm on {}…: armed={}",
+                walletIdHex.take(8), armed
+            )
+            armed
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("blockchain-reset rescan arm failed", t)
+        false
+    }
+
     private suspend fun anyFlagEnabled(): Boolean = try {
         dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) == true ||
             dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) == true ||
@@ -1052,6 +1239,19 @@ class SdkWalletBinder internal constructor(
          * never run (v1 shipped only in local QA 11.10.78).
          */
         internal const val GAP_WIDEN_HEAL_VERSION = 2
+
+        /**
+         * Bounds for [maybeRetryIdentityDiscovery]. Eight attempts on a
+         * 30s-base capped-exponential backoff span ~45 min — sized to the
+         * field stall (44 min of REQUESTED_NAME_CHECKING with no contact
+         * sync after the registration-time discovery failure). The cap is
+         * the permanent stop: the app cannot reliably distinguish a
+         * signer-gap miss from a genuinely-absent identity, so it stops
+         * paying Platform queries instead of classifying errors.
+         */
+        internal const val DISCOVERY_RETRY_MAX_ATTEMPTS = 8
+        internal const val DISCOVERY_RETRY_BASE_DELAY_MS = 30_000L
+        internal const val DISCOVERY_RETRY_MAX_DELAY_MS = 10 * 60_000L
 
         /**
          * Cadence and budget for [watchArmedBackfillRewind]. The window the

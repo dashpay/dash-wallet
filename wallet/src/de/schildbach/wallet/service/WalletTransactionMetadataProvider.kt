@@ -223,6 +223,15 @@ class WalletTransactionMetadataProvider @Inject constructor(
                     log.info("txmetadata for $txId has no wallet tx, inserting SDK fallback row")
                     transactionMetadataDao.insert(it)
                 }
+            if (inserted == null) {
+                // The metadata is dropped here. Never silent: this is precisely
+                // how fetched platform metadata went missing without a trace.
+                log.warn(
+                    "txmetadata for {} DROPPED — no wallet tx and no fallback row; " +
+                        "any platform metadata for this transaction will not be displayed",
+                    txId
+                )
+            }
             inserted?.let { update(it) }
         }
     }
@@ -268,7 +277,15 @@ class WalletTransactionMetadataProvider @Inject constructor(
         giftCard: GiftCard?,
         iconUrl: String?
     ) {
-        updateAndInsertIfNotExist(txId, true) { existing ->
+        // Pass the platform row as the fallback. Without it, a transaction the
+        // HELD dashj wallet does not hold — post-cutover that is essentially
+        // every transaction on an SDK-owned wallet — took the
+        // insertTransactionMetadata() == null branch, found no fallback, and the
+        // fetched metadata was DISCARDED before reaching the table the UI reads.
+        // The wallet fetched thousands of documents and displayed none of them
+        // (field report, 11.10.93). Same defect class as the CSV exporter and the
+        // "Past" upload gate: a read that still assumed dashj owns the wallet.
+        updateAndInsertIfNotExist(txId, true, fallbackMetadata = metadata) { existing ->
             val updated = existing.copy(
                 // txId and value are kept the same
                 txId = existing.txId,
@@ -284,6 +301,19 @@ class WalletTransactionMetadataProvider @Inject constructor(
             )
 
             transactionMetadataDao.update(updated)
+            // What actually landed in the UI-visible table, per field. This is
+            // the boundary where fetched platform metadata becomes displayable,
+            // so a memo that is on the network but absent on screen is either
+            // logged here as applied (=> a render problem) or never reaches
+            // here (=> a sync problem). Memo length only; never its text.
+            log.info(
+                "platform metadata merged for {}: memo={} rate={} service={} taxCategory={}",
+                txId,
+                updated.memo.length.takeIf { it > 0 }?.let { "$it chars" } ?: "none",
+                updated.rate?.let { "$it ${updated.currencyCode}" } ?: "none",
+                updated.service ?: "none",
+                updated.taxCategory?.name ?: "none"
+            )
         }
 
         if (giftCard != null) {
@@ -445,9 +475,23 @@ class WalletTransactionMetadataProvider @Inject constructor(
                             metadata.rate
                         )
                     )
+                    // The whole point of publishing a rate is that it survives a
+                    // restore onto another device. Log the APPLY, not just that
+                    // metadata existed: a row showing a live rate instead of the
+                    // historical one is indistinguishable in a support log from
+                    // one that never had metadata at all.
+                    log.info(
+                        "metadata APPLIED rate {} {} to tx {}",
+                        metadata.rate, metadata.currencyCode, tx.txId
+                    )
                 } catch (e: Exception) {
                     log.error("Failed to parse exchange rate for metadata: {}. Error: {}", metadata, e.message, e)
                 }
+            } else if (metadata.rate != null && tx.exchangeRate != null) {
+                // Not a defect — the transaction already carried a local rate
+                // (this device sent it). Logged so "no apply" is never
+                // ambiguous between "already had one" and "nothing stored".
+                log.info("metadata rate SKIPPED for tx {} — transaction already has one", tx.txId)
             } else if (metadata.rate == null && exchangeRate != null) {
                 transactionMetadataDao.updateExchangeRate(
                     tx.txId.toTxId(),
@@ -464,6 +508,16 @@ class WalletTransactionMetadataProvider @Inject constructor(
             // sync transaction memo
             if (metadata.memo.isNotBlank() && tx.memo == null) {
                 tx.memo = metadata.memo
+                // Same reasoning as the rate above: a memo that was published
+                // but never reaches the transaction is invisible in a support
+                // log unless the apply itself is recorded. Length only — the
+                // memo is private user text and never goes in the log.
+                log.info(
+                    "metadata APPLIED memo ({} chars) to tx {}",
+                    metadata.memo.length, tx.txId
+                )
+            } else if (metadata.memo.isNotBlank() && tx.memo != null) {
+                log.info("metadata memo SKIPPED for tx {} — transaction already has one", tx.txId)
             } else if (metadata.memo.isBlank() && tx.memo != null) {
                 setTransactionMemo(tx.txId.toTxId(), tx.memo!!)
             }

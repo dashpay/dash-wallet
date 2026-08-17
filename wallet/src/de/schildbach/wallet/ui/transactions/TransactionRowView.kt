@@ -188,6 +188,20 @@ data class TransactionRowView(
                 -1
             }
 
+            // Render-layer visibility: what metadata this ROW received. The
+            // sync-side logging shows what reached the database; this shows what
+            // reached the screen, so "stored but not displayed" is provable
+            // rather than inferred. Only presence/lengths — never memo text.
+            if (metadata?.memo?.isNotEmpty() == true || metadata?.service != null) {
+                org.slf4j.LoggerFactory.getLogger(TransactionRowView::class.java).info(
+                    "row {} bound with metadata: memo={} service={} icon={}",
+                    tx.txId,
+                    metadata.memo.length.takeIf { it > 0 }?.let { "$it chars" } ?: "none",
+                    metadata.service ?: "none",
+                    metadata.icon != null
+                )
+            }
+
             return TransactionRowView(
                 title,
                 tx.txId.toString(),

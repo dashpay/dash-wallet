@@ -29,7 +29,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
 import org.dashfoundation.dashsdk.identity.IdentityKeyPreview
-import org.dashfoundation.dashsdk.identity.IdentityRegistration.CreatedInvitation
+import org.dashfoundation.dashsdk.tokens.Dashpay.CreatedInvitation
+import org.dashfoundation.dashsdk.identity.RegistrationKeySet
 import org.dashfoundation.dashsdk.identity.RegistrationKeys
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
@@ -159,16 +160,19 @@ internal class DashSdkL1InviteSource(
         nowUnix: Long
     ): CreatedInvitation {
         val manager = manager()
-        return manager.identityRegistration.createInvitation(
-            walletHandle = wallet(walletIdHex).handle,
+        // Invitation creation moved from `identityRegistration` to the
+        // `dashpay` token surface (dashpay/platform#4284 line); the funding
+        // outpoint the app keys its invite-history row + funding-tx
+        // "Invitation" label on is preserved by the JNI's outpoint||uri blob.
+        return wallet(walletIdHex).dashpay.createInvitation(
             amountDuffs = amountDuffs,
             fundingAccountIndex = fundingAccountIndex,
             inviterIdentityId = inviterIdentityId,
             inviterUsername = inviterUsername,
-            nowUnix = nowUnix,
             // The funding-spend signature uses the SAME resolver handle the
             // funded-registration path takes as coreSignerHandle.
-            coreSignerHandle = manager.mnemonicResolverHandle
+            coreSignerHandle = manager.mnemonicResolverHandle,
+            nowUnix = nowUnix
         )
     }
 
@@ -212,7 +216,10 @@ internal class DashSdkL1InviteSource(
             walletHandle = wallet(walletIdHex).handle,
             uri = uri,
             identityIndex = identityIndex,
-            keys = registrationRowsFor(keys),
+            // claimInvitation now takes a RegistrationKeySet (identityIndex +
+            // rows) rather than a bare row list — mirror the transparent
+            // username path's wrapping (SdkTransparentUsernameCreation).
+            keys = RegistrationKeySet(identityIndex, registrationRowsFor(keys)),
             // No Core resolver: the asset-lock's outer signature comes from the
             // voucher key. The identity-key SignerHandle signs the identity
             // create transition.

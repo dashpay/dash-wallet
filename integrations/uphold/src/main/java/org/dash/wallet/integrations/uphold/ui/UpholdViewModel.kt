@@ -33,9 +33,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.money.MoneyFormat

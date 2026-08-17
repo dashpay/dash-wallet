@@ -133,6 +133,69 @@ data class BackfillObservation(
     }
 }
 
+/**
+ * The gate's persisted bookkeeping, as consumers OUTSIDE the gate need to
+ * read it — "is the DIP-15 contact backfill settled, or is money still
+ * missing from the ledger?".
+ *
+ * ## Two predicates, because the two consumers ask different questions
+ *
+ * [armed] is BOOKKEEPING, not a statement about the money. It means "a
+ * provisioning pass ran and we could not PROVE what it did", and on a healthy
+ * wallet it is PERMANENT: [decideDashPayBackfillPassOutcome] can only clear it
+ * by observing a rewind or by recording coverage, and recording coverage is
+ * refused by [noRewindConclusionBlockedBecause] whenever any RECEIVED contact
+ * request predates the height — which is true of essentially every wallet that
+ * has contacts. A wallet whose coverage is already correct therefore stays
+ * armed forever, and it is perfectly healthy (observed on the S21, 11.10.87:
+ * "no rewind observed, but the pass is not conclusive … recording nothing",
+ * repeating with pendingBuilds=0, syncErrors=0, drainScheduled=false).
+ *
+ * So:
+ * - [ledgerIncomplete] — "money is provably missing from the ledger RIGHT
+ *   NOW" — is what a USER-FACING "still syncing" indicator must use. It
+ *   excludes [armed] for exactly the reason above: a permanent bookkeeping
+ *   state would pin the indicator on forever, and an indicator that never
+ *   clears is worse than one that clears slightly early.
+ * - [settled] — "nothing is owed, in flight, or unproven" — is the stricter
+ *   test the DURABLE last-known-balance seed uses, where the cost of being
+ *   wrong is a persisted figure that poisons every later launch. It keeps
+ *   [armed], but the gate reports [armed] under a deadline (see
+ *   [BACKFILL_ARMED_HOLD_MS]) so this cannot freeze the seed forever either.
+ *
+ * All flags false = settled, which is also what a wallet with no DashPay
+ * contacts always reads: the gate has never written anything for it, and a
+ * mechanism that does not apply must never hold it back.
+ *
+ * @property armed a provisioning pass is armed and unaccounted for: a rewind
+ *   MAY be owed. See above — on its own this is not evidence of missing money.
+ * @property replaying a rewind was OBSERVED and the scan is climbing back —
+ *   the balance is mid-replay and passes through arbitrary partial values.
+ * @property registrationOutstanding receiving accounts were REGISTERED since
+ *   the last sweep, so their payments are not matched yet and the total is
+ *   short by exactly them. Positive evidence of missing money, and short-lived
+ *   (the next sweep consumes it).
+ */
+data class DashPayBackfillStatus(
+    val armed: Boolean,
+    val replaying: Boolean,
+    val registrationOutstanding: Boolean = false
+) {
+    /** Nothing owed, in flight or unproven — the strict test for the durable seed. */
+    val settled: Boolean get() = !armed && !replaying && !registrationOutstanding
+
+    /**
+     * Money is provably missing from the ledger right now — the test a
+     * user-facing "still syncing" signal uses. Deliberately excludes [armed];
+     * see the class KDoc.
+     */
+    val ledgerIncomplete: Boolean get() = replaying || registrationOutstanding
+
+    companion object {
+        val SETTLED = DashPayBackfillStatus(armed = false, replaying = false)
+    }
+}
+
 /** What the gate decided, and the bookkeeping the caller must persist. */
 data class BackfillDecision(
     /** Whether the provisioning pass (and with it the SDK's rewind) may run. */
@@ -267,12 +330,45 @@ internal fun noRewindConclusionBlockedBecause(
     return null
 }
 
+/**
+ * Why a pass that already ran IN THIS PROCESS must be run AGAIN when the
+ * drain has registered receival accounts since it — the reason a field
+ * wallet needed a manual restart before its friendship funds appeared.
+ *
+ * The SDK's sweep (`dashPaySyncNow` → `reconcile_dashpay_rescan`) lowers
+ * `synced_height` for the receival accounts that exist AT THAT MOMENT. The
+ * accounts themselves are registered by the signer-backed DRAIN, which runs
+ * AFTER the sweep in the same pass and continues asynchronously beyond it.
+ * So a first pass on a wallet whose accounts are not yet built reconciles
+ * against ZERO receival accounts, rewinds nothing, and every later
+ * consultation in that process then hit the "this process already
+ * provisioned; re-running proves nothing" branch and skipped — leaving the
+ * balance short of every contact payment until the user restarted the app
+ * (field 11.10.86: 29 accounts registered 17:20:11–17:20:31, sweep at
+ * 17:20:08, no rewind until the manual restart at 17:24:01).
+ *
+ * "Re-running proves nothing" is only true for contacts the SDK has ALREADY
+ * marked: `rescan_triggered`
+ * (`rs-platform-wallet/.../network/payments.rs`) is a `BTreeSet<Identifier>`
+ * of contacts, populated only for contacts that had a receival account when
+ * a sweep ran. A contact whose account was registered afterwards is NOT in
+ * it, so the next sweep does fire the rewind for it — which is exactly what
+ * the manual restart demonstrated.
+ */
 internal fun decideDashPayBackfill(
     observation: BackfillObservation,
     coverage: BackfillCoverage?,
     inProgress: BackfillInProgress?,
     armed: BackfillArmed?,
-    hasProvisionedInProcess: Boolean
+    hasProvisionedInProcess: Boolean,
+    /**
+     * Whether the SDK has REGISTERED DashPay account builds since the last
+     * sweep this app observed (see the KDoc above). Over-reporting costs one
+     * extra sweep — the SDK's per-contact guard makes a redundant one a
+     * no-op — and the flag is cleared by the pass it causes, so it cannot
+     * loop.
+     */
+    accountsRegisteredSincePass: Boolean = false
 ): BackfillDecision {
     val syncedHeight = observation.syncedHeight
     val fingerprint = observation.contactFingerprint
@@ -363,6 +459,22 @@ internal fun decideDashPayBackfill(
                 clearArmed = true
             )
         }
+        if (accountsRegisteredSincePass) {
+            // Receival accounts appeared AFTER the armed pass's sweep
+            // reconciled, so that sweep could not have rewound for them and
+            // the SDK's per-contact guard has not marked them. Provision
+            // again NOW — in this same process — instead of waiting for a
+            // relaunch. Re-arms at the current height so the new pass's
+            // rewind is detectable exactly like any other.
+            return BackfillDecision(
+                shouldRun = true,
+                reason = "DashPay account builds were REGISTERED since the last sweep (armed " +
+                    "target ${armed.targetHeight}, synced height $syncedHeight); the sweep " +
+                    "reconciled before those accounts existed, so it could not have rewound " +
+                    "for them — provisioning again in this process and re-arming at $syncedHeight",
+                armedToWrite = BackfillArmed(syncedHeight, fingerprint)
+            )
+        }
         if (!hasProvisionedInProcess) {
             // Height at/above the armed target and this process has not
             // provisioned yet: the marker is from an earlier process, and
@@ -395,6 +507,24 @@ internal fun decideDashPayBackfill(
     }
 
     if (coverage != null) {
+        if (accountsRegisteredSincePass) {
+            // A recorded coverage describes a scan run with the receival
+            // accounts that existed then. An account registered since watches
+            // addresses that range was never matched against, so its history
+            // needs its own rewind — the fingerprint (an app-side contact-set
+            // comparison) cannot see this, because the contact requests were
+            // already there; only the SDK-side ACCOUNT is new.
+            return BackfillDecision(
+                shouldRun = true,
+                reason = "DashPay account builds were REGISTERED since the last sweep, after " +
+                    "coverage floor ${coverage.floor}/completedThrough " +
+                    "${coverage.completedThroughHeight} was recorded; those accounts' " +
+                    "addresses were not watched during the covered scan — discarding the " +
+                    "coverage and backfilling again",
+                clearCoverage = true,
+                armedToWrite = BackfillArmed(syncedHeight, fingerprint)
+            )
+        }
         if (coverage.contactFingerprint != fingerprint) {
             val olderThanCovered = observation.sdkContactFloor != null &&
                 observation.sdkContactFloor < coverage.floor
@@ -695,6 +825,23 @@ interface DashPayBackfillGate {
     suspend fun isRewindAccountedFor(): Boolean
 
     /**
+     * Record that the SDK REGISTERED [built] DashPay account builds — the
+     * signer-backed drain turning queued entries into real receival/external
+     * accounts. Any positive count means the last sweep reconciled the rewind
+     * before those accounts existed, so another sweep is owed; see
+     * [decideDashPayBackfill]. Zero is ignored. Never throws.
+     */
+    fun noteAccountBuildsRegistered(built: Int)
+
+    /**
+     * The persisted bookkeeping, for consumers that must not treat a
+     * mid-backfill balance as whole (see [DashPayBackfillStatus]). Never
+     * throws; a read failure answers "armed", which only holds a stale
+     * launch seed rather than persisting a short one.
+     */
+    suspend fun readBackfillStatus(): DashPayBackfillStatus
+
+    /**
      * Conclude that the armed pass needed NO rewind, and record coverage.
      *
      * Only safe to call after a sustained observation window in which nothing
@@ -738,6 +885,11 @@ interface DashPayBackfillGate {
             // Nothing is ever armed, so there is never anything to watch for.
             override suspend fun isRewindAccountedFor() = true
 
+            override fun noteAccountBuildsRegistered(built: Int) = Unit
+
+            // Nothing is ever recorded, so nothing is ever owed.
+            override suspend fun readBackfillStatus() = DashPayBackfillStatus.SETTLED
+
             override suspend fun concludeNoRewindObserved(
                 walletIdHex: String,
                 ownerIdentityId: ByteArray,
@@ -756,6 +908,14 @@ class DashPayBackfillGateImpl @Inject constructor(
 ) : DashPayBackfillGate {
 
     /**
+     * Monotonic milliseconds for [BACKFILL_ARMED_HOLD_MS]. Deliberately NOT
+     * wall-clock (a clock change must not release or extend the hold) and not
+     * `SystemClock` (which is unavailable on the host JVM these tests run on).
+     * Overridable so the deadline is testable without waiting minutes.
+     */
+    internal var nowElapsedMs: () -> Long = { System.nanoTime() / 1_000_000 }
+
+    /**
      * The observation [evaluate] reasoned over, handed to
      * [recordPassOutcome] so the before/after comparison uses the exact
      * pre-pass watermark rather than re-reading a value the pass has
@@ -770,6 +930,76 @@ class DashPayBackfillGateImpl @Inject constructor(
      * "no rewind was needed"; see [decideDashPayBackfillPassOutcome].
      */
     private val hasProvisionedInProcess = AtomicBoolean(false)
+
+    /**
+     * Whether the drain has registered account builds since the last sweep
+     * this gate accounted for — see [decideDashPayBackfill]'s KDoc. SET by
+     * [noteAccountBuildsRegistered] (and by [recordPassOutcome] from the
+     * pass's own drain), CLEARED at the top of [recordPassOutcome] because
+     * the sweep that pass just ran is what consumes it. Deliberately NOT
+     * cleared by [evaluate]: the watch loop calls evaluate for its side
+     * effects and discards the decision, and a read-and-clear there would
+     * swallow the signal before any pass acted on it.
+     */
+    private val accountsRegisteredSincePass = AtomicBoolean(false)
+
+    override fun noteAccountBuildsRegistered(built: Int) {
+        if (built <= 0) return
+        if (accountsRegisteredSincePass.compareAndSet(false, true)) {
+            log.info(
+                "DashPay coreHeight backfill: {} account build(s) registered since the last " +
+                    "sweep; the next gate consultation will provision again so the SDK can " +
+                    "rewind for them (their receival addresses were not watched when the " +
+                    "current range was scanned)",
+                built
+            )
+        }
+    }
+
+    /**
+     * Monotonic reading at which THIS PROCESS first saw an armed marker, null
+     * when none has been seen — the clock behind [BACKFILL_ARMED_HOLD_MS].
+     * Nullable rather than a 0 sentinel: 0 is a legitimate reading of a
+     * monotonic clock, and conflating the two re-stamps the deadline on every
+     * read, which is the freeze this exists to end.
+     *
+     * Process-scoped on purpose: the marker itself is durable and (see
+     * [DashPayBackfillStatus]) permanent on a healthy wallet, so a persisted
+     * timestamp would just make the freeze survive relaunches too.
+     */
+    @Volatile
+    private var armedFirstSeenAtMs: Long? = null
+
+    override suspend fun readBackfillStatus(): DashPayBackfillStatus = try {
+        val armedMarker = readArmed() != null
+        val firstSeen = if (!armedMarker) {
+            armedFirstSeenAtMs = null
+            null
+        } else {
+            armedFirstSeenAtMs ?: nowElapsedMs().also { armedFirstSeenAtMs = it }
+        }
+        // The armed marker is UNPROVEN, not wrong, and on a wallet whose
+        // coverage is already correct it never clears (see the class KDoc).
+        // Report it only while a rewind could still plausibly be on its way —
+        // past that, the absence of one IS the answer, and continuing to
+        // report it would freeze the last-known-balance seed for the wallet's
+        // whole life. The rewind's own evidence (a latched watch) is not
+        // time-limited here; only the unproven state is.
+        val armedWithinDeadline = firstSeen != null &&
+            nowElapsedMs() - firstSeen < BACKFILL_ARMED_HOLD_MS
+        DashPayBackfillStatus(
+            armed = armedWithinDeadline,
+            replaying = readInProgress() != null,
+            registrationOutstanding = accountsRegisteredSincePass.get()
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        // Unknown ⇒ treat as owed: holding a stale launch seed is recoverable,
+        // persisting a figure short of every contact payment is not.
+        log.warn("failed to read the DashPay backfill status; treating it as unsettled", e)
+        DashPayBackfillStatus(armed = true, replaying = false)
+    }
 
     override suspend fun evaluate(
         walletIdHex: String,
@@ -793,7 +1023,8 @@ class DashPayBackfillGateImpl @Inject constructor(
             val inProgress = readInProgress()
             val armed = readArmed()
             val decision = decideDashPayBackfill(
-                observation, coverage, inProgress, armed, hasProvisionedInProcess.get()
+                observation, coverage, inProgress, armed, hasProvisionedInProcess.get(),
+                accountsRegisteredSincePass.get()
             )
             // Persist the bookkeeping — including the armed marker on a
             // shouldRun=true decision — BEFORE returning, so the pass this
@@ -840,6 +1071,12 @@ class DashPayBackfillGateImpl @Inject constructor(
         try {
             val before = lastObservation
             val firstPass = hasProvisionedInProcess.compareAndSet(false, true)
+            // The sweep this pass just ran is what the pending-registration
+            // signal was asking for; consume it BEFORE re-reading the pass's
+            // own drain below, so registrations that landed DURING this pass
+            // (after its sweep reconciled) still ask for the next one.
+            accountsRegisteredSincePass.set(false)
+            noteAccountBuildsRegistered(report.built)
             val after = sdkService
                 .readDashPayBackfillSignals(walletIdHex, ownerIdentityId)
                 .syncedHeight
@@ -1067,6 +1304,24 @@ class DashPayBackfillGateImpl @Inject constructor(
     }
 
     companion object {
+        /**
+         * How long an UNPROVEN armed marker is reported as [DashPayBackfillStatus.armed].
+         *
+         * Sized to the same question the gate's own no-rewind conclusion asks
+         * ([SdkWalletBinder.BACKFILL_NO_REWIND_CONCLUSION_POLLS] — five
+         * one-minute polls): how long must a quiet observation window be
+         * before "no rewind is coming" is the honest reading? The rewind's
+         * durable drop lands 9-60 s after the in-memory rewind (102 s at
+         * worst, measured), so five minutes clears every observed case with
+         * wide margin — the field rewind this guards showed up 13 s after the
+         * process's first sweep (17:23:58 armed -> 17:24:11 observed).
+         *
+         * Over-running costs a delayed refresh of the launch seed.
+         * Under-running was the S21 regression: reported forever, so the seed
+         * could never refresh and the sync indicator never cleared.
+         */
+        internal const val BACKFILL_ARMED_HOLD_MS = 5 * 60_000L
+
         private val log = LoggerFactory.getLogger(DashPayBackfillGateImpl::class.java)
     }
 }

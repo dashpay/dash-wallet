@@ -1499,7 +1499,17 @@ internal class DashSdkCutoverUiSource(
         db: org.dashfoundation.dashsdk.persistence.DashDatabase,
         walletId: ByteArray
     ): Flow<Unit> =
-        combine(db.txoDao().countByWallet(walletId), db.transactionDao().count()) { _, _ -> }
+        combine(
+            db.txoDao().countByWallet(walletId),
+            db.transactionDao().count(),
+            // pending_inputs: the outpoints an in-flight local spend RESERVED at
+            // broadcast — the walker's display-side spent evidence pre-confirm
+            // ([SdkTxStoreWalker]'s pending aggregates). A reservation landing
+            // after the spender's tx row was already drained changes neither of
+            // the two tables above, so without this trigger the corrected shape
+            // would wait for the 60s reconcile.
+            db.documentDao().countPendingInputs()
+        ) { _, _, _ -> }
 
     /**
      * Contains-only view over the wallet's TXO outpoint set — one indexed
@@ -1775,6 +1785,19 @@ class CutoverUiDataService internal constructor(
      */
     private val l1Synced: Flow<Boolean> = flowOf(true),
     /**
+     * Whether an APP-ARMED SPV rescan/replay was armed recently
+     * ([DashSdkService.spvRescanArmedWithin] over
+     * [RESCAN_ARM_PERSIST_HOLD_MS]) — the second guard on persisting
+     * [WalletUIConfig.LAST_TOTAL_BALANCE]: the app KNOWS it armed a
+     * replay (heal v2's widen+rescan, the reset-blockchain rescan), and
+     * between arming and the engine's progress reflecting the rewind the
+     * [l1Synced] gate still reads true, exactly the window the field
+     * incident persisted a partial figure in. Display publishing is NOT
+     * gated on this — only the durable last-known seed is. Default false
+     * for the fake-fed tests.
+     */
+    private val rescanRecentlyArmed: () -> Boolean = { false },
+    /**
      * How many DashPay contact ACCOUNT BUILDS the SDK still has queued for
      * the given wallet — the receive-side DIP-15 accounts whose addresses are
      * not in the watched script set until they are registered, so any payment
@@ -1791,6 +1814,41 @@ class CutoverUiDataService internal constructor(
      * tests have no SDK queue.
      */
     private val deferredContactBuildCount: suspend (String) -> Int? = { null },
+    /**
+     * The DIP-15 contact-backfill bookkeeping ([DashPayBackfillGate.readBackfillStatus]) —
+     * the THIRD guard on persisting [WalletUIConfig.LAST_TOTAL_BALANCE].
+     *
+     * The two existing guards both read "fine" in the exact window the field
+     * incident persisted a wrong figure in (11.10.86 mainnet, 17:23:58:
+     * `l1Synced=true rescanArmedHold=false deferredContactBuilds=0
+     * persistedAsLastKnown=true`, value 0.43841654 — the bip44-only total,
+     * short by the 0.11095834 of DashPay receiving funds). All three were
+     * true only because the process had just started: the durable watermark
+     * was still at the pre-rewind tip, no app-armed rescan had happened (the
+     * rewind is SDK-driven), and the SDK's account-build queue reads empty
+     * until the first sweep refills it. What WAS knowable at that instant is
+     * that the gate held an unaccounted armed marker from the previous
+     * process — i.e. a contact backfill was owed and had never been proven
+     * complete, so the ledger could not yet be whole.
+     *
+     * Cannot deadlock a wallet without DashPay: the gate only ever writes a
+     * marker for a wallet that has an identity AND contacts, so
+     * [DashPayBackfillStatus.SETTLED] is the answer for everyone else. Nor
+     * can it hold forever on one that does: the armed marker resolves into a
+     * watch and then into recorded coverage (or is concluded away by the
+     * post-arm watch), and a fresh launch re-provisions.
+     */
+    private val dashPayBackfillStatus: suspend () -> DashPayBackfillStatus =
+        { DashPayBackfillStatus.SETTLED },
+    /**
+     * Publishes the DashPay-side sync terms this service already observes —
+     * the account-build queue and the backfill bookkeeping — to the
+     * user-facing "still syncing" signal ([de.schildbach.wallet.service.DashPaySyncStatus]).
+     * Pure fan-out; no behaviour of this service depends on it. Default no-op
+     * for the fake-fed tests.
+     */
+    private val publishDashPaySyncTerms: (buildsSettled: Boolean, backfillSettled: Boolean) -> Unit =
+        { _, _ -> },
     /**
      * PERSIST one engine-reported IS lock (display-hex txid, observation
      * epoch-millis) into the APP-OWNED `instant_send_locks` table
@@ -1843,7 +1901,9 @@ class CutoverUiDataService internal constructor(
         l1SyncStatusService: de.schildbach.wallet.service.L1SyncStatusService,
         assetLockKindResolver: AssetLockKindResolver,
         sdkTxContactResolver: SdkTxContactResolver,
-        instantSendLockDao: de.schildbach.wallet.database.dao.InstantSendLockDao
+        instantSendLockDao: de.schildbach.wallet.database.dao.InstantSendLockDao,
+        dashPayBackfillGate: DashPayBackfillGate,
+        dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus
     ) : this(
         source = DashSdkCutoverUiSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1865,7 +1925,13 @@ class CutoverUiDataService internal constructor(
         // this was a second hand-copied `synced || scanCaughtUpToTip`
         // expression that had to be kept in lockstep by hand.
         l1Synced = l1SyncStatusService.sdkScanCaughtUp,
+        rescanRecentlyArmed = { sdkService.spvRescanArmedWithin(RESCAN_ARM_PERSIST_HOLD_MS) },
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
+        dashPayBackfillStatus = { dashPayBackfillGate.readBackfillStatus() },
+        publishDashPaySyncTerms = { buildsSettled, backfillSettled ->
+            dashPaySyncStatus.setAccountBuildsSettled(buildsSettled)
+            dashPaySyncStatus.setBackfillSettled(backfillSettled)
+        },
         persistInstantLock = { txidHex, lockedAtMs ->
             instantSendLockDao.insert(
                 de.schildbach.wallet.database.entity.InstantSendLockEntry(txidHex, lockedAtMs)
@@ -2533,6 +2599,34 @@ class CutoverUiDataService internal constructor(
 
     private suspend fun updateSdkBalance(duffs: Long) {
         val previous = _sdkTotalBalance.value
+        val synced = _l1Synced.value
+        val backfillStatus = dashPayBackfillStatus()
+        // A rewind-driven REPLAY publishes garbage on the way through. The
+        // engine re-matches the rewound range and re-applies TXOs as it goes,
+        // so the running total passes through values that were never real:
+        // 11.10.86 published 819859264 duffs at 17:24:48 — 8.198 DASH, 15x the
+        // true 0.54937488 — three seconds after the backfill watch latched at
+        // 17:24:11, and it was back to 77858888 three seconds later. Hold the
+        // last published figure while a latched replay is climbing.
+        //
+        // Deliberately narrow, so this can never freeze a real balance:
+        // - only while the scan is NOT caught up AND the gate has an OBSERVED
+        //   rewind in flight (a latched watch, not a mere armed marker);
+        // - only once something HAS been published, so the first figure of a
+        //   session always lands (holding it would leave the header on dashj);
+        // - and the very next publication after the watch clears — the
+        //   coverage write — goes through, which on the replay's own TXO churn
+        //   is sub-second, not a ticker interval away.
+        if (previous != null && !synced && backfillStatus.replaying) {
+            if (previous.value != duffs) {
+                log.info(
+                    "SDK balance {} duffs SUPPRESSED (mid-replay: l1Synced=false and a DashPay " +
+                        "backfill rewind is in flight); holding the last published {} duffs",
+                    duffs, previous.value
+                )
+            }
+            return
+        }
         _sdkTotalBalance.value = Coin.valueOf(duffs)
         // Keep the fast-startup seed fresh (same key the dashj
         // WalletBalanceObserver maintains) — but ONLY once the scan has
@@ -2540,7 +2634,8 @@ class CutoverUiDataService internal constructor(
         // very "last known" figure the next launch seeds and holds
         // ([overlayTotalBalance]), so a single interrupted scan would make
         // every later launch open on a wrong (too low) balance.
-        val synced = _l1Synced.value
+        // (`synced` and `backfillStatus` were read at the top of this function
+        // — the mid-replay display hold needs them before anything publishes.)
         // …and a caught-up scan is not on its own evidence that the figure is
         // WHOLE. While DashPay contact account builds are still DRAINING
         // ([_deferredContactBuilds]) the contacts' receiving addresses are not
@@ -2556,17 +2651,44 @@ class CutoverUiDataService internal constructor(
         // pinned at the same non-zero count long enough to prove nothing is
         // moving.
         val deferredBuilds = _deferredContactBuilds.value
-        val persist = synced &&
-            deferredBuildsSettled(deferredBuilds.count, deferredBuilds.unchangedReads)
+        // …and an app-armed rescan/replay in flight makes the figure
+        // untrustworthy even while the caught-up gate still reads true —
+        // the engine takes up to a filter-loop tick to reflect the armed
+        // watermark rewind, after which !synced takes over the hold. The
+        // window only guards the DURABLE seed; display publishing above is
+        // unaffected (see [rescanRecentlyArmed]).
+        val armedRescanHold = rescanRecentlyArmed()
+        // …and a DIP-15 contact backfill that is owed or in flight means the
+        // ledger has not yet matched the payments those contacts' receiving
+        // addresses will find, so this figure is short by exactly them. This
+        // is the guard that would have caught the field incident; see
+        // [dashPayBackfillStatus].
+        val buildsSettled = deferredBuildsSettled(deferredBuilds.count, deferredBuilds.unchangedReads)
+        // Fan the two DashPay terms out to the user-facing sync signal — same
+        // cadence, same readings.
+        //
+        // The indicator gets `!ledgerIncomplete`, NOT `settled`. `settled`
+        // also requires the gate's ARMED marker to be absent, and that marker
+        // is permanent on a healthy wallet whose coverage is already correct
+        // (the gate can only clear it by observing a rewind, and it refuses to
+        // record coverage while any received contact predates the height) — so
+        // gating the indicator on it pinned "Syncing balance" on forever
+        // (S21, 11.10.87). The DURABLE seed below still uses the strict test,
+        // where the cost of being wrong is a persisted figure that poisons
+        // every later launch; its armed term carries its own deadline.
+        publishDashPaySyncTerms(buildsSettled, !backfillStatus.ledgerIncomplete)
+        val persist = synced && !armedRescanHold && backfillStatus.settled && buildsSettled
         // One line per published figure (changes only — the ticker republishes
         // the same value every REFRESH_INTERVAL_MS). Carries what decides what
         // the user actually SEES: while !synced the header holds the last-known
         // figure instead of this one ([overlayTotalBalance]).
         if (previous?.value != duffs) {
             log.info(
-                "SDK balance published: {} duffs (was {}) | l1Synced={} deferredContactBuilds={} " +
+                "SDK balance published: {} duffs (was {}) | l1Synced={} rescanArmedHold={} " +
+                    "dashPayBackfill(armed={},replaying={}) deferredContactBuilds={} " +
                     "(unchangedReads={}) persistedAsLastKnown={} lastKnown={}",
-                duffs, previous?.value ?: "none", synced, deferredBuilds.count,
+                duffs, previous?.value ?: "none", synced, armedRescanHold,
+                backfillStatus.armed, backfillStatus.replaying, deferredBuilds.count,
                 deferredBuilds.unchangedReads, persist,
                 _lastKnownTotalBalance.value?.value ?: "none"
             )
@@ -3265,6 +3387,17 @@ class CutoverUiDataService internal constructor(
 
     companion object {
         internal const val REFRESH_INTERVAL_MS = 60_000L
+
+        /**
+         * How long after an app-armed SPV rescan the last-known-balance
+         * persist stays held ([rescanRecentlyArmed]). Sized to cover the
+         * arm→engine-reflects latency with margin (the watermark rewind
+         * lands on a filter-loop tick — 9–60s observed in the field), after
+         * which the ordinary not-caught-up gate carries the hold for the
+         * replay's whole duration. Over-holding only delays refreshing the
+         * launch seed; under-holding re-opens the partial-persist window.
+         */
+        internal const val RESCAN_ARM_PERSIST_HOLD_MS = 5 * 60_000L
 
         /**
          * One retry's grace for the TXO mirror to persist a just-detected tx

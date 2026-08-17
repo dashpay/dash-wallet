@@ -166,6 +166,13 @@ class TxDisplayCacheService @Inject constructor(
     @Volatile private var metadata: Map<TxId, PresentableTxMetadata> = mapOf()
     @Volatile private var contacts: Map<String, DashPayProfile> = mapOf()
     @Volatile private var contactsByTxId: Map<String, DashPayProfile> = mapOf()
+    /**
+     * Whether the contacts observer has received its baseline emission. Only
+     * emissions AFTER the baseline represent contact-data CHANGES worth asking
+     * the SDK pipeline to re-resolve tx attribution for (see the observer).
+     * Touched only from the single-threaded [serviceScope].
+     */
+    private var contactsPrimed = false
     @Volatile private var minContactCreatedDate: LocalDate = LocalDate.MIN
     @Volatile private var chainLockBlockHeight: Int = 0
     private var wasReplaying: Boolean? = null
@@ -435,6 +442,31 @@ class TxDisplayCacheService @Inject constructor(
                 this.contacts = contactsByIdentity
                 this.contactsByTxId = mapOf()
                 resolveAllContacts()
+                // resolveAllContacts() above only re-attributes wrappers the dashj
+                // wallet can see. Post-cutover the SDK pipeline owns the fresh rows,
+                // and its DIP-15 attribution had NO reactive tie to the contact data:
+                // a row planned before the sender's friendship keychain / profile
+                // landed was cached contact-less (generic direction icon) and only
+                // retried on the 60s reconcile ticker — or never, when the resolver
+                // negative-cached a definitive-looking "no friendship match" that was
+                // really just the keychain not existing yet. The only re-resolution
+                // trigger was the addedContact edge inside one specific
+                // updateContactRequests pass. Re-request it from the DATA instead:
+                // this flow is Room-backed (contact-request + profile tables), so
+                // every contact/profile change re-runs the SDK-side attribution too,
+                // with the negative cache busted (requestContactReResolution), and
+                // the row heals in place via the display-cache write → refresh-bus →
+                // pager-invalidate chain. The FIRST emission is the baseline load of
+                // an unchanged contact set (rows already attributed last session, and
+                // startup must stay O(visible)) — skip it; the ticker converges any
+                // straggler. Inert pre-cutover (no pipeline collector) and cheap:
+                // distinctUntilChanged gates on real content changes and the walk
+                // coalesces in the pipeline.
+                if (contactsPrimed) {
+                    cutoverUiDataService.get().requestContactReResolution()
+                } else {
+                    contactsPrimed = true
+                }
             }
             .catch { e -> log.error("contacts flow error", e) }
             .launchIn(serviceScope)

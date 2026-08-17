@@ -60,8 +60,13 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         // live climbing figure, or a settled figure with the label still
         // blinking, is worse than either state alone. Both now read the same
         // source (L1SyncStatusService), so they cannot drift apart.
+        // isFullySynced, not isSynced: the DashPay tail (contact sync, the
+        // account-build drain, the coreHeight backfill) runs AFTER the L1 scan
+        // reports caught up, and the balance is short of every contact payment
+        // until it finishes — 11.10.86 stopped blinking at 17:12:39 while the
+        // true figure only landed at 17:25:00.
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.syncStatus.collect { updateSyncingIndicator(it.isSynced) }
+            viewModel.syncStatus.collect { updateSyncingIndicator(it.isFullySynced) }
         }
 
         viewModel.hideBalance.observe(viewLifecycleOwner) { hideBalance ->

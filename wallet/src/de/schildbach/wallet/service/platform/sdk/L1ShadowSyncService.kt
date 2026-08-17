@@ -116,7 +116,26 @@ data class ShadowSyncProgress(
      * masternode-height-only changes it previously conflated, pre-cutover
      * too (verified benign: every collector dedups downstream).
      */
-    val mnListHeight: Long = 0
+    val mnListHeight: Long = 0,
+    /**
+     * The wallet's COMMITTED scan cursor — the height through which the
+     * engine's block-download/tx-processing pipeline has actually DRAINED,
+     * not merely the filter scan position. 0 = unknown (no evidence yet).
+     *
+     * Fed by [L1ShadowSyncService] from the engine's
+     * `WalletEvent::SyncHeightAdvanced` events ("the filter pipeline
+     * committed a batch covering blocks up to height" — the commit lands
+     * AFTER the batch's matched blocks were processed through the wallet),
+     * seeded at shadow start from the SDK's durable `WalletEntity.syncedHeight`
+     * watermark. This is the only Kotlin-visible view of the engine's
+     * requested-vs-processed block state: the typed FFI progress
+     * ([SpvSyncProgressData]) carries headers/filterHeaders/filters/
+     * masternodes but NOT the dash-spv `BlocksProgress` sub-phase, whose
+     * churn the field incident hid behind a "synced" filter scan.
+     * LATEST-WINS, not monotonic: an armed rescan rewinds the cursor and
+     * the follow-up events legitimately re-climb from the rewound floor.
+     */
+    val walletSyncedHeight: Long = 0
 ) {
     /** The shadow chain is fully synced — parity mismatches count as real from here. */
     val synced: Boolean get() = phase == ShadowSyncPhase.SYNCED
@@ -168,11 +187,37 @@ data class ShadowSyncProgress(
      * mid-scan (filters thousands of blocks behind, or the engine
      * IDLE/ERROR/still on headers) trails far outside the tolerance and
      * keeps the gate closed (fail-closed).
+     *
+     * ALSO requires the block/tx pipeline not to be PROVABLY lagging
+     * ([blockPipelineLagging]) — the field incident this closes: the
+     * filters sub-progress reported Synced (scan position at tip) one
+     * minute into a three-hour replay while the engine's block
+     * download/processing pipeline was still churning through the matched
+     * blocks, so the app declared l1Synced=true and persisted a partial
+     * 48.86 DASH as the last-known balance.
      */
     val scanCaughtUpToTip: Boolean get() =
         headerTarget > 0 && headerHeight >= headerTarget &&
             filterTarget > 0 &&
-            headerTarget - filterHeight <= SCAN_TIP_TOLERANCE_BLOCKS
+            headerTarget - filterHeight <= SCAN_TIP_TOLERANCE_BLOCKS &&
+            !blockPipelineLagging
+
+    /**
+     * The engine's block-download/tx-processing pipeline DEMONSTRABLY
+     * trails the header tip: the wallet's committed scan cursor
+     * ([walletSyncedHeight]) is known AND more than
+     * [SCAN_TIP_TOLERANCE_BLOCKS] behind [headerTarget]. Evidence-based on
+     * purpose — an UNKNOWN cursor (0, e.g. before the first
+     * `SyncHeightAdvanced` event of a session whose durable watermark seed
+     * failed) does NOT count as lagging, so the predicate can never
+     * deadlock "synced" when the signal is missing; during any real
+     * replay/scan the engine commits batches continuously, so the cursor
+     * is live within seconds and the lag is visible for the churn's whole
+     * duration.
+     */
+    val blockPipelineLagging: Boolean get() =
+        headerTarget > 0 && walletSyncedHeight > 0 &&
+            headerTarget - walletSyncedHeight > SCAN_TIP_TOLERANCE_BLOCKS
 
     /**
      * The shadow SPV's best knowledge of the NETWORK chain tip, 0 when the
@@ -297,12 +342,218 @@ internal fun toShadowSyncProgress(data: SpvSyncProgressData): ShadowSyncProgress
     )
 }
 
-/** The throttled `L1Shadow` one-line progress summary. Pure for tests. */
+/**
+ * The throttled `L1Shadow` one-line progress summary. Pure for tests.
+ * [ShadowSyncProgress.overallPercent] is the SDK's 0..1 fraction, so it is
+ * scaled ×100 here (the line used to print the raw fraction — the field
+ * log's "phase=FILTERS 0.7%" was really 70%). Also carries the committed
+ * wallet cursor ([ShadowSyncProgress.walletSyncedHeight]) so a
+ * filters-at-tip-but-blocks-churning state is visible in one line.
+ */
 internal fun shadowProgressLine(p: ShadowSyncProgress): String = String.format(
     Locale.US,
-    "L1Shadow phase=%s %.1f%% headers %d/%d filters %d/%d",
-    p.phase, p.overallPercent, p.headerHeight, p.headerTarget, p.filterHeight, p.filterTarget
+    "L1Shadow phase=%s %.1f%% headers %d/%d filters %d/%d wallet %d",
+    p.phase, p.overallPercent * 100, p.headerHeight, p.headerTarget, p.filterHeight, p.filterTarget,
+    p.walletSyncedHeight
 )
+
+/**
+ * Whether the engine is ACTIVELY syncing/replaying, for the replay memory
+ * telemetry ([replayMemTelemetryLine]): not caught up on the drain-aware
+ * predicate — the scan position trails the tip, the phase never reached a
+ * caught-up state, OR the block/tx pipeline provably lags
+ * ([ShadowSyncProgress.blockPipelineLagging] — the phase can hold SYNCED
+ * right through an armed replay). Exactly the negation of the shared
+ * caught-up predicate (`sdkL1ScanCaughtUp`), spelled out here so the
+ * telemetry stops the moment "synced" settles for the UI too. Pure —
+ * host-testable.
+ */
+internal val ShadowSyncProgress.replayActive: Boolean get() =
+    !(synced || scanCaughtUpToTip) || blockPipelineLagging
+
+/**
+ * One structured `ReplayMemTelemetry` line: process memory (native heap
+ * from `android.os.Debug`, JVM heap from `Runtime`) against the engine's
+ * replay position — the instrument that localizes the native-heap surge
+ * curve against engine progress from a plain log pull, no SDK change.
+ * Emitted every ~30s while [replayActive] holds, plus ONE final line
+ * (` SETTLED` suffix) when the replay settles. Greps cleanly on the tag.
+ * Pure — host-testable.
+ */
+internal fun replayMemTelemetryLine(
+    p: ShadowSyncProgress,
+    nativeHeapAllocatedBytes: Long,
+    nativeHeapSizeBytes: Long,
+    jvmUsedBytes: Long,
+    jvmMaxBytes: Long,
+    settled: Boolean = false
+): String = String.format(
+    Locale.US,
+    "ReplayMemTelemetry phase=%s nativeHeapAllocated=%d nativeHeapSize=%d jvmUsed=%d jvmMax=%d " +
+        "headers %d/%d filters %d wallet %d%s",
+    p.phase, nativeHeapAllocatedBytes, nativeHeapSizeBytes, jvmUsedBytes, jvmMaxBytes,
+    p.headerHeight, p.headerTarget, p.filterHeight, p.walletSyncedHeight,
+    if (settled) " SETTLED" else ""
+)
+
+// ── Wallet-balance facts (rescan before/after diagnostics) ────────────
+
+/**
+ * One settle-edge balance snapshot for the `WalletBalanceFacts` log line
+ * ([walletBalanceFactsLine]) — the instrument for the field rescan
+ * experiment: (a) does a rescan recover the missing balance (before/after
+ * total diff), (b) which account family holds what (the CoinJoin
+ * classification question), (c) tx count against the display baseline —
+ * all from a log pull, no incoming transaction needed.
+ *
+ * Every field is nullable: null = that surface could not be read this
+ * time and prints as the literal `unavailable` — never a guessed number.
+ *
+ * @property totalDuffs confirmed+unconfirmed from the SDK wallet's native
+ *   `balance()` — the SAME read every publisher of
+ *   `CutoverUiDataService.updateSdkBalance` uses, so the line's total is
+ *   the figure the header shows.
+ * @property accountFamilies per-account-family (confirmed+unconfirmed)
+ *   duffs, aggregated over accounts of the same family, parsed from the
+ *   SDK's `PlatformWalletManager.accountBalances` JSON
+ *   ([parseAccountBalanceMap]).
+ * @property txCount raw `COUNT(*)` over the SDK store's `transactions`
+ *   table (the walker's DB-access pattern).
+ */
+internal data class WalletBalanceFacts(
+    val totalDuffs: Long?,
+    val confirmedDuffs: Long?,
+    val unconfirmedDuffs: Long?,
+    val accountFamilies: Map<String, Long>?,
+    val txCount: Int?
+)
+
+/**
+ * Compact family name for an SDK account `typeTag` (+ `standardTag` for
+ * the type-0 BIP44/BIP32 split) — the account-type vocabulary of the
+ * SDK's own `accountTypeName` mapping, shortened for the one-line log.
+ * `dashpayExternal` (type 13) is the watch-only contact-payment chain —
+ * the CONTACT's money ([txoIsForeignSql]) — deliberately included and
+ * distinguishable by name, since money "hiding" there is one of the
+ * misclassification hypotheses the snapshot exists to test.
+ */
+internal fun sdkAccountFamilyName(typeTag: Int, standardTag: Int): String = when (typeTag) {
+    0 -> if (standardTag == 1) "bip32" else "bip44"
+    1 -> "coinjoin"
+    2 -> "identityRegistration"
+    3 -> "identityTopUp"
+    4 -> "identityTopUpUnbound"
+    5 -> "identityInvitation"
+    6 -> "assetLockTopUp"
+    7 -> "assetLockShieldedTopUp"
+    8 -> "providerVoting"
+    9 -> "providerOwner"
+    10 -> "providerOperator"
+    11 -> "providerPlatform"
+    12 -> "dashpayReceiving"
+    13 -> "dashpayExternal"
+    14 -> "platformPayment"
+    15 -> "identityAuthEcdsa"
+    16 -> "identityAuthBls"
+    else -> "type$typeTag"
+}
+
+/** One flat per-account object inside the `accountBalances` JSON array. */
+private val ACCOUNT_BALANCE_OBJECT = Regex("""\{[^{}]*\}""")
+
+/**
+ * Parse the SDK's `accountBalances` JSON array (flat per-account objects
+ * carrying `typeTag`, `standardTag`, `confirmed`, `unconfirmed`, … — see
+ * `DashpayNative.walletManagerAccountBalances`) into a per-family
+ * (confirmed+unconfirmed) duffs map, aggregated over same-family accounts
+ * in store order. Returns an empty map for an empty wallet (`[]`), null
+ * when nothing parseable — the caller prints `unavailable`, never a
+ * guess. Deliberately regex-extracted rather than org.json: the payload
+ * is a fixed machine-generated flat shape, and this keeps the parser pure
+ * and host-JVM testable.
+ */
+internal fun parseAccountBalanceMap(json: String): Map<String, Long>? {
+    val entries = LinkedHashMap<String, Long>()
+    var sawAny = false
+    fun long(obj: String, field: String): Long? =
+        Regex("\"$field\"\\s*:\\s*(-?\\d+)").find(obj)?.groupValues?.get(1)?.toLongOrNull()
+    for (m in ACCOUNT_BALANCE_OBJECT.findAll(json)) {
+        val obj = m.value
+        val typeTag = long(obj, "typeTag")?.toInt() ?: continue
+        sawAny = true
+        val name = sdkAccountFamilyName(typeTag, long(obj, "standardTag")?.toInt() ?: 0)
+        entries.merge(name, (long(obj, "confirmed") ?: 0L) + (long(obj, "unconfirmed") ?: 0L), Long::plus)
+    }
+    return when {
+        sawAny -> entries
+        json.trim() == "[]" -> emptyMap()
+        else -> null
+    }
+}
+
+/**
+ * The one-line `WalletBalanceFacts` summary — greppable on the tag;
+ * unavailable surfaces print the literal `unavailable`. Pure —
+ * host-testable.
+ */
+internal fun walletBalanceFactsLine(f: WalletBalanceFacts): String {
+    val accounts = f.accountFamilies
+        ?.entries?.joinToString(", ") { (name, duffs) -> "$name:$duffs" }
+        ?.let { "{$it}" }
+        ?: "unavailable"
+    return "WalletBalanceFacts: total=${f.totalDuffs ?: "unavailable"} accounts=$accounts " +
+        "confirmed=${f.confirmedDuffs ?: "unavailable"} " +
+        "unconfirmed=${f.unconfirmedDuffs ?: "unavailable"} " +
+        "txCount=${f.txCount ?: "unavailable"}"
+}
+
+// ── Wallet-history facts (restore birth-date calibration) ─────────────
+
+/**
+ * The wallet's first-use evidence for the one-shot startup
+ * `WalletHistoryFacts` log line ([walletHistoryFactsLine]). Purpose: the
+ * field wallet restores with the EARLIEST_HD_SEED_CREATION_TIME fallback
+ * birth time (2015-03-29), forcing an 11-year filter scan — the next log
+ * pull must reveal the wallet's TRUE first-use date so the restore
+ * birth-date recommendation can be calibrated.
+ *
+ * @property oldestTxTimeMs `MIN(time)` over the display DB
+ *   (`tx_display_cache`), null when the cache is empty (fresh restore,
+ *   pre-sync).
+ * @property txCount display-DB row count.
+ * @property firstUseHeight `MIN(blockHeight)` over the SDK store's
+ *   `transactions` rows with a known height — the display DB carries no
+ *   heights, and this minimum IS the birth-height floor the calibration
+ *   needs. Null when unknown (no synced rows yet / SDK not started).
+ * @property dashjEarliestKeyTimeSecs the dashj wallet's
+ *   `earliestKeyCreationTime` (epoch SECONDS), for cross-checking what the
+ *   restore actually used as its scan floor. Null when the wallet isn't
+ *   loaded.
+ */
+internal data class WalletHistoryFacts(
+    val oldestTxTimeMs: Long?,
+    val txCount: Int,
+    val firstUseHeight: Long?,
+    val dashjEarliestKeyTimeSecs: Long?
+)
+
+/**
+ * The one-line `WalletHistoryFacts` summary — greppable on the tag, ISO
+ * dates. Empty display DB reads `displayDbEmpty` (the caller re-logs the
+ * real line at the first sync-settle edge). Pure — host-testable.
+ */
+internal fun walletHistoryFactsLine(f: WalletHistoryFacts): String {
+    val dashjTime = f.dashjEarliestKeyTimeSecs
+        ?.let { java.time.Instant.ofEpochSecond(it).toString() } ?: "unknown"
+    return if (f.oldestTxTimeMs == null || f.txCount == 0) {
+        "WalletHistoryFacts: displayDbEmpty count=${f.txCount} " +
+            "dashjEarliestKeyTime=$dashjTime (real line follows at first sync settle)"
+    } else {
+        "WalletHistoryFacts: oldestTx=${java.time.Instant.ofEpochMilli(f.oldestTxTimeMs)} " +
+            "height=${f.firstUseHeight ?: "unknown"} count=${f.txCount} " +
+            "dashjEarliestKeyTime=$dashjTime"
+    }
+}
 
 // ── Parity probe shapes ───────────────────────────────────────────────
 
@@ -974,6 +1225,29 @@ private val CHAIN_LOCK_HEIGHT = Regex("""\bchain_lock:\s*(?:Some\(\s*)?ChainLock
 fun parseL1ChainLockHeight(eventDebug: String): Int? =
     CHAIN_LOCK_HEIGHT.find(eventDebug)?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it > 0 }
 
+/**
+ * The `height` of a `WalletEvent::SyncHeightAdvanced` Debug string —
+ * "the wallet's scan cursor advanced because the filter pipeline committed
+ * a batch covering blocks up to `height`" (key-wallet-manager events.rs).
+ * The commit lands AFTER the batch's matched blocks were processed through
+ * the wallet, so this height is the drained-through watermark the
+ * caught-up predicate needs ([ShadowSyncProgress.walletSyncedHeight]).
+ * Anchored on the variant name: `height:` also appears in `BlockProcessed`
+ * / `BlockInfo`, which must not feed the cursor (a block's own height says
+ * nothing about the batch being committed). Null for every other event and
+ * for anything that fails to parse. Pure — host-testable.
+ */
+fun parseL1SyncHeightAdvanced(eventDebug: String): Long? =
+    if (eventDebug.startsWith("SyncHeightAdvanced")) {
+        SYNC_HEIGHT_ADVANCED_HEIGHT.find(eventDebug)?.groupValues?.get(1)?.toLongOrNull()
+            ?.takeIf { it > 0 }
+    } else {
+        null
+    }
+
+/** `SyncHeightAdvanced { wallet_id: .., height: N }` — the only `height:` field in that variant. */
+private val SYNC_HEIGHT_ADVANCED_HEIGHT = Regex("""\bheight:\s*(\d+)""")
+
 // ── Source seam ───────────────────────────────────────────────────────
 
 /**
@@ -1010,11 +1284,36 @@ interface L1ShadowSource {
      */
     fun walletEventStrings(): Flow<String> = kotlinx.coroutines.flow.emptyFlow()
 
+    /**
+     * The wallet's DURABLE filter-scan watermark (`WalletEntity.syncedHeight`
+     * from the SDK's Room `wallets` row), or null when unknown — the seed
+     * for [ShadowSyncProgress.walletSyncedHeight] before the session's
+     * first `SyncHeightAdvanced` event lands. Default null so test fakes
+     * stay source-compatible (null = no evidence, never treated as lagging).
+     */
+    suspend fun sdkWalletSyncedHeight(walletIdHex: String): Long? = null
+
     /** (confirmed, unconfirmed) duffs from the SDK wallet's lock-free L1 balance. */
     suspend fun sdkBalanceDuffs(walletIdHex: String): Pair<Long, Long>
 
     /** Distinct wallet-relevant tx count from the SDK's TXO store. */
     suspend fun sdkTxCount(walletIdHex: String): Int
+
+    /**
+     * The SDK's per-account balance snapshot as its raw JSON array string
+     * (`PlatformWalletManager.accountBalances` — flat per-account objects,
+     * see [parseAccountBalanceMap]), or null when unavailable. Default null
+     * so test fakes stay source-compatible.
+     */
+    suspend fun sdkAccountBalancesJson(walletIdHex: String): String? = null
+
+    /**
+     * Raw `COUNT(*)` over the SDK store's `transactions` table (NOT the
+     * wallet-scoped distinct count [sdkTxCount] computes — the balance-facts
+     * line wants the store's own row count for baseline comparison), or
+     * null when unavailable. Default null for test fakes.
+     */
+    suspend fun sdkStoredTxRowCount(): Int? = null
 
     /** (ESTIMATED, AVAILABLE) duffs from the dashj wallet, or null when it isn't loaded. */
     suspend fun dashjBalanceDuffs(): Pair<Long, Long>?
@@ -1118,6 +1417,11 @@ internal class DashSdkL1ShadowSource(
         )
     }
 
+    override suspend fun sdkWalletSyncedHeight(walletIdHex: String): Long? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        return database().walletDao().getByWalletId(walletId)?.syncedHeight?.toLong()
+    }
+
     override suspend fun sdkBalanceDuffs(walletIdHex: String): Pair<Long, Long> {
         val wallet = checkNotNull(manager().wallets.value[walletIdHex]) { "SDK wallet not loaded" }
         val balance = wallet.balance()
@@ -1144,6 +1448,20 @@ internal class DashSdkL1ShadowSource(
                     arrayOf<Any?>(walletId, walletId)
                 )
             ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+        }
+    }
+
+    override suspend fun sdkAccountBalancesJson(walletIdHex: String): String? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        return manager().accountBalances(walletId)
+    }
+
+    override suspend fun sdkStoredTxRowCount(): Int? {
+        val db = database()
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            db.openHelper.readableDatabase.query(
+                androidx.sqlite.db.SimpleSQLiteQuery("SELECT COUNT(*) FROM transactions")
+            ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else null }
         }
     }
 
@@ -1361,7 +1679,22 @@ class L1ShadowSyncService internal constructor(
     private val watchdogIntervalMs: Long = WATCHDOG_INTERVAL_MS,
     private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS,
     /** Wallet-recreation collaborators; null (tests' default) disables [recoverByRecreatingWallet]. */
-    private val recreator: ShadowWalletRecreator? = null
+    private val recreator: ShadowWalletRecreator? = null,
+    /**
+     * One-shot [WalletHistoryFacts] reader for the startup
+     * `WalletHistoryFacts` line; null (tests' default) disables the log.
+     * The production wiring reads the display DB + the SDK store + the
+     * dashj wallet — see the @Inject constructor.
+     */
+    private val historyFacts: (suspend () -> WalletHistoryFacts)? = null,
+    /**
+     * Enables the settle-edge `WalletBalanceFacts` snapshot
+     * ([logWalletBalanceFacts]). Tests' default false keeps the snapshot's
+     * [L1ShadowSource.sdkBalanceDuffs] read from polluting the fakes'
+     * probe counters (the parity tests count that exact call); the @Inject
+     * constructor turns it on.
+     */
+    private val balanceFactsEnabled: Boolean = false
 ) {
     @Inject
     constructor(
@@ -1374,7 +1707,8 @@ class L1ShadowSyncService internal constructor(
         // Provider breaks the Dagger cycle: ShieldedBalanceServiceImpl's
         // @Inject constructor takes L1ShadowSyncService (funding gate).
         shieldedBalanceService: javax.inject.Provider<ShieldedBalanceService>,
-        nonInteractiveWalletUnlock: NonInteractiveWalletUnlock
+        nonInteractiveWalletUnlock: NonInteractiveWalletUnlock,
+        txDisplayCacheDao: de.schildbach.wallet.database.dao.TxDisplayCacheDao
     ) : this(
         source = DashSdkL1ShadowSource(sdkService, walletData),
         dashPayConfig = dashPayConfig,
@@ -1389,7 +1723,29 @@ class L1ShadowSyncService internal constructor(
             binder = sdkWalletBinder,
             shielded = { shieldedBalanceService.get() },
             unlock = nonInteractiveWalletUnlock
-        )
+        ),
+        historyFacts = {
+            WalletHistoryFacts(
+                oldestTxTimeMs = txDisplayCacheDao.oldestTimeMs(),
+                txCount = txDisplayCacheDao.getCount(),
+                // The display DB carries no heights: the first-use height
+                // floor comes from the SDK store's transactions rows (the
+                // table is not wallet-scoped, but this app binds one wallet).
+                firstUseHeight = sdkService.databaseOrNull()?.let { db ->
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        db.openHelper.readableDatabase.query(
+                            androidx.sqlite.db.SimpleSQLiteQuery(
+                                "SELECT MIN(blockHeight) FROM transactions WHERE blockHeight > 0"
+                            )
+                        ).use { c ->
+                            if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else null
+                        }
+                    }
+                },
+                dashjEarliestKeyTimeSecs = walletData.wallet?.earliestKeyCreationTime
+            )
+        },
+        balanceFactsEnabled = true
     )
 
     /** Serializes [startIfEnabled]/[stop] — the single-flight guarantee. */
@@ -1443,6 +1799,19 @@ class L1ShadowSyncService internal constructor(
      * consumer treats it as "proven chainlocked at or below this height".
      */
     val chainLockHeight: StateFlow<Int> = _chainLockHeight.asStateFlow()
+
+    /**
+     * The wallet's committed scan cursor for
+     * [ShadowSyncProgress.walletSyncedHeight]: seeded from the durable
+     * `WalletEntity.syncedHeight` at shadow start
+     * ([L1ShadowSource.sdkWalletSyncedHeight]), then LATEST-WINS updated
+     * from `SyncHeightAdvanced` events ([parseL1SyncHeightAdvanced]) — not
+     * monotonic, because an armed rescan rewinds the engine cursor and the
+     * follow-up events re-climb from the rewound floor (a max() here would
+     * hide exactly the replay churn the drain predicate exists to see).
+     * 0 = unknown. Reset on [stop]; re-seeded on the next start.
+     */
+    private val _engineWalletSyncedHeight = MutableStateFlow(0L)
 
     /**
      * Whether the wallet-event tap coroutine feeding [txEvents] is live.
@@ -1579,6 +1948,110 @@ class L1ShadowSyncService internal constructor(
     /** The auto-reset decision state (see [ShadowResetDecider] for the table). */
     private val resetDecider = ShadowResetDecider()
 
+    /** Once-per-process latch for the startup `WalletHistoryFacts` line. */
+    @Volatile
+    private var historyFactsLogged = false
+
+    /**
+     * The display DB was EMPTY when the startup facts line logged (fresh
+     * restore, pre-sync) — re-log the real line once at the first
+     * sync-settle edge (the same edge the replay memory telemetry uses).
+     */
+    @Volatile
+    private var historyFactsAwaitingSettle = false
+
+    /**
+     * Log the one-shot `WalletHistoryFacts` line ([walletHistoryFactsLine])
+     * — once per process, at wallet load (the shadow start that follows the
+     * bind), never on a sync tick. An empty display DB logs its empty state
+     * and arms the settle-edge re-log ([maybeLogHistoryFactsAtSettle]). A
+     * failed read un-latches so the next start trigger retries. Never
+     * throws (except cancellation).
+     */
+    private suspend fun logWalletHistoryFactsOnce() {
+        val read = historyFacts ?: return
+        if (historyFactsLogged) return
+        historyFactsLogged = true
+        try {
+            val facts = read()
+            log.info(walletHistoryFactsLine(facts))
+            if (facts.oldestTxTimeMs == null || facts.txCount == 0) {
+                historyFactsAwaitingSettle = true
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            historyFactsLogged = false
+            log.warn("WalletHistoryFacts read failed; will retry on the next shadow start", t)
+        }
+    }
+
+    /**
+     * Contain one component read of the balance-facts snapshot: null on
+     * failure (the line prints `unavailable` for it), cancellation
+     * propagates. One WARN per failed component, so a single dead surface
+     * never hides the others.
+     */
+    private suspend fun <T> balanceFactOrNull(what: String, block: suspend () -> T?): T? = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("WalletBalanceFacts: {} read failed (printed as unavailable)", what, t)
+        null
+    }
+
+    /**
+     * Emit one `WalletBalanceFacts` snapshot line ([walletBalanceFactsLine])
+     * — called at every sync-settle edge, and once at shadow start when the
+     * engine is ALREADY caught up (so a rescan run logs a BEFORE line at
+     * launch and an AFTER line at the post-replay settle; the before/after
+     * total diff answers whether the rescan recovered missing funds, the
+     * per-family map answers where they sit). All reads are local
+     * (native balance(), manager account snapshot, one COUNT(*)) and run on
+     * their own IO dispatchers inside the source; every component is
+     * failure-contained ([balanceFactOrNull]) — the line always prints,
+     * with `unavailable` for whatever could not be read. Never throws
+     * (except cancellation).
+     */
+    private suspend fun logWalletBalanceFacts() {
+        if (!balanceFactsEnabled) return
+        val walletIdHex = runningWalletIdHex.value ?: return
+        try {
+            val split = balanceFactOrNull("native balance") { source.sdkBalanceDuffs(walletIdHex) }
+            val accountFamilies = balanceFactOrNull("account balances") {
+                source.sdkAccountBalancesJson(walletIdHex)
+            }?.let(::parseAccountBalanceMap)
+            val txCount = balanceFactOrNull("tx row count") { source.sdkStoredTxRowCount() }
+            log.info(
+                walletBalanceFactsLine(
+                    WalletBalanceFacts(
+                        totalDuffs = split?.let { it.first + it.second },
+                        confirmedDuffs = split?.first,
+                        unconfirmedDuffs = split?.second,
+                        accountFamilies = accountFamilies,
+                        txCount = txCount
+                    )
+                )
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("WalletBalanceFacts snapshot failed", t)
+        }
+    }
+
+    /** The settle-edge re-log for a startup that found the display DB empty. */
+    private suspend fun maybeLogHistoryFactsAtSettle() {
+        if (!historyFactsAwaitingSettle) return
+        historyFactsAwaitingSettle = false
+        val read = historyFacts ?: return
+        try {
+            log.info(walletHistoryFactsLine(read()))
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("WalletHistoryFacts settle-edge read failed", t)
+        }
+    }
+
     /** Fire-and-forget [startIfEnabled] for call sites that must not wait. */
     fun startInBackground(): Job = scope.launch { startIfEnabled() }
 
@@ -1604,6 +2077,16 @@ class L1ShadowSyncService internal constructor(
                     source.startSpv(dataDir.absolutePath)
                 }
                 runningWalletIdHex.value = walletIdHex
+                // Seed the committed-cursor tracker from the durable
+                // watermark so the drain predicate has evidence before the
+                // session's first SyncHeightAdvanced event; a failed read
+                // leaves 0 (= unknown, never treated as lagging).
+                _engineWalletSyncedHeight.value = runCatching {
+                    source.sdkWalletSyncedHeight(walletIdHex) ?: 0L
+                }.getOrElse { t ->
+                    log.warn("durable syncedHeight seed read failed; cursor starts unknown", t)
+                    0L
+                }
                 lastProbeHeartbeatMs = nowMs()
                 monitorJob = scope.launch { monitorProgress() }.logCompletion("progress monitor")
                 parityJob = scope.launch { parityLoop(walletIdHex) }.logCompletion("parity probe loop")
@@ -1614,6 +2097,9 @@ class L1ShadowSyncService internal constructor(
                         "debug-only instrumentation — two SPV engines are now running",
                     walletIdHex.take(8), dataDir.absolutePath
                 )
+                // One-shot wallet-history facts at wallet load (once per
+                // process; runs after this mutex-held block returns).
+                scope.launch { logWalletHistoryFactsOnce() }
                 true
             }
         } catch (t: Throwable) {
@@ -1642,6 +2128,7 @@ class L1ShadowSyncService internal constructor(
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             _progress.value = ShadowSyncProgress.IDLE
+            _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
             log.info("L1 shadow sync stopped")
         }
     }
@@ -1719,10 +2206,19 @@ class L1ShadowSyncService internal constructor(
     private suspend fun monitorProgress() {
         var lastLogMs = 0L
         var lastPhase = ShadowSyncPhase.IDLE
+        var lastTelemetryMs = 0L
+        var telemetryActive = false
+        var balanceFactsStartLogged = false
         while (currentCoroutineContext().isActive) {
             try {
                 source.spvProgress().collect { data ->
+                    // Carry the committed wallet cursor (seeded durable
+                    // watermark, live SyncHeightAdvanced events) so the
+                    // caught-up predicate can see block/tx-pipeline churn
+                    // the typed SPV progress hides (fed at ≤1s staleness —
+                    // this feed ticks at 1 Hz while SPV runs).
                     val mapped = toShadowSyncProgress(data)
+                        .copy(walletSyncedHeight = _engineWalletSyncedHeight.value)
                     _progress.value = mapped
                     // Verification verdict from the chain state: still
                     // scanning until SYNCED, then "probing" until a parity
@@ -1759,6 +2255,36 @@ class L1ShadowSyncService internal constructor(
                         log.info(shadowProgressLine(mapped))
                         lastLogMs = now
                     }
+                    // Replay memory telemetry: one structured line per
+                    // [progressLogIntervalMs] while the engine is actively
+                    // syncing/replaying, riding this same 1 Hz feed (no new
+                    // ticker/thread), plus one final SETTLED line the moment
+                    // the caught-up predicate holds — the instrument for
+                    // localizing the native-heap surge against progress.
+                    if (mapped.replayActive) {
+                        if (now - lastTelemetryMs >= progressLogIntervalMs) {
+                            lastTelemetryMs = now
+                            logReplayMemTelemetry(mapped, settled = false)
+                        }
+                        telemetryActive = true
+                    } else if (telemetryActive) {
+                        telemetryActive = false
+                        logReplayMemTelemetry(mapped, settled = true)
+                        // A startup that found the display DB empty (fresh
+                        // restore) re-logs the real WalletHistoryFacts line
+                        // now that the first sync has settled.
+                        maybeLogHistoryFactsAtSettle()
+                        // Every settle edge gets a balance snapshot — the
+                        // AFTER line of a rescan run.
+                        balanceFactsStartLogged = true
+                        logWalletBalanceFacts()
+                    } else if (!balanceFactsStartLogged) {
+                        // The engine was ALREADY caught up when this monitor
+                        // session began (no replay edge will fire): log the
+                        // rescan experiment's BEFORE snapshot once.
+                        balanceFactsStartLogged = true
+                        logWalletBalanceFacts()
+                    }
                     lastPhase = mapped.phase
                 }
                 return // upstream flow completed normally
@@ -1768,6 +2294,27 @@ class L1ShadowSyncService internal constructor(
                 delay(LOOP_RETRY_DELAY_MS)
             }
         }
+    }
+
+    /**
+     * Emit one [replayMemTelemetryLine] with the CURRENT process memory:
+     * native heap from `android.os.Debug` (the surge under investigation
+     * lives there — the Rust engine allocates natively), JVM heap from
+     * [Runtime]. Host-JVM tests run with `returnDefaultValues` so the
+     * Debug statics read 0 there; the line itself is pure and tested.
+     */
+    private fun logReplayMemTelemetry(p: ShadowSyncProgress, settled: Boolean) {
+        val rt = Runtime.getRuntime()
+        log.info(
+            replayMemTelemetryLine(
+                p,
+                nativeHeapAllocatedBytes = android.os.Debug.getNativeHeapAllocatedSize(),
+                nativeHeapSizeBytes = android.os.Debug.getNativeHeapSize(),
+                jvmUsedBytes = rt.totalMemory() - rt.freeMemory(),
+                jvmMaxBytes = rt.maxMemory(),
+                settled = settled
+            )
+        )
     }
 
     /**
@@ -1792,6 +2339,13 @@ class L1ShadowSyncService internal constructor(
                             _chainLockHeight.value = height
                             log.info("L1 engine chainlock height {} -> {}", previous, height)
                         }
+                    }
+                    // Committed-cursor feed for the drain predicate.
+                    // LATEST-WINS (see [_engineWalletSyncedHeight]): after an
+                    // armed rescan the first event is legitimately LOWER than
+                    // the tracked value and must replace it.
+                    parseL1SyncHeightAdvanced(debug)?.let { height ->
+                        _engineWalletSyncedHeight.value = height
                     }
                     val event = parseL1TxEvent(debug) ?: return@collect
                     log.info("L1 engine tx event: {}", event)

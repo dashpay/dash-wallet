@@ -18,9 +18,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.lifecycle.viewModelScope
+import org.bitcoinj.core.Coin
+import org.dashj.platform.dpp.identifier.Identifier
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,6 +43,16 @@ class BuyCreditsViewModel @Inject constructor(
     private val sdkTransparentTopUp: SdkTransparentTopUp,
     private val assetLockFundingPreflight: SdkAssetLockFundingPreflight
 ) : ViewModel() {
+    companion object {
+        private val log = LoggerFactory.getLogger(BuyCreditsViewModel::class.java)
+
+        /** Attempts for one balance read — see [refreshIdentityBalance]. */
+        private const val BALANCE_READ_ATTEMPTS = 3
+
+        /** Backoff between balance-read attempts; multiplied by the attempt. */
+        private const val BALANCE_READ_RETRY_DELAY_MS = 1_500L
+    }
+
     var identityId: String? = null
     var topUpTransaction: Transaction? = null
     private val _currentWorkId = MutableStateFlow("")
@@ -45,6 +64,66 @@ class BuyCreditsViewModel @Inject constructor(
     }
 
     private val topupIdentityOperation = TopupIdentityOperation(walletApplication)
+
+    /**
+     * The identity's CURRENT credit balance, expressed in Dash for display.
+     *
+     * Shown under the amount field so the user can see what they already hold
+     * before deciding how much to buy. `null` while unknown — no identity yet,
+     * or the balance could not be read — and the label is then hidden rather
+     * than showing a misleading zero.
+     *
+     * Credits are 1/1000 of a duff ([CreditBalanceInfo.CREDITS_PER_DUFF]), so
+     * the conversion to a Dash amount divides before building the Coin.
+     */
+    private val _identityBalance = MutableStateFlow<Coin?>(null)
+    val identityBalance: StateFlow<Coin?> = _identityBalance.asStateFlow()
+
+    init {
+        refreshIdentityBalance()
+    }
+
+    /**
+     * Read the balance, retrying a few times before giving up.
+     *
+     * A single attempt is not enough in the field: the read is a Platform
+     * round trip, and against nodes with expired certificates it fails with
+     * "Dapi client error: no available …" while a retry moments later succeeds.
+     * A one-shot read therefore left the label reading "unavailable" for the
+     * whole visit — observed on 11.10.93.
+     *
+     * Bounded and cheap: three attempts, short backoff, and it never blocks the
+     * purchase. A still-null result is surfaced as "unavailable" rather than
+     * hidden, so the screen never silently omits the row.
+     */
+    fun refreshIdentityBalance() {
+        viewModelScope.launch {
+            val balance = withContext(Dispatchers.IO) {
+                val id = identity.get(BlockchainIdentityConfig.IDENTITY_ID)
+                if (id.isNullOrEmpty()) return@withContext null
+                repeat(BALANCE_READ_ATTEMPTS) { attempt ->
+                    try {
+                        val info = platformRepo.getIdentityBalance(Identifier.from(id))
+                        return@withContext Coin.valueOf(
+                            info.balance / CreditBalanceInfo.CREDITS_PER_DUFF
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.info(
+                            "could not read identity credit balance (attempt {} of {}): {}",
+                            attempt + 1, BALANCE_READ_ATTEMPTS, e.message
+                        )
+                        if (attempt < BALANCE_READ_ATTEMPTS - 1) {
+                            delay(BALANCE_READ_RETRY_DELAY_MS * (attempt + 1))
+                        }
+                    }
+                }
+                null
+            }
+            _identityBalance.value = balance
+        }
+    }
 
     fun topWorkStatus(workId: String): LiveData<Resource<WorkInfo>> {
         return TopupIdentityOperation.operationStatus(walletApplication, workId, analytics)

@@ -47,6 +47,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.service.platform.sdk.boundedLegacyPlatformQuery
 import de.schildbach.wallet.service.platform.sdk.CutoverAutoCommitObserver
 import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
 import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
@@ -196,7 +197,7 @@ interface PlatformSyncService {
     fun removePreBlockProgressListener(listener: OnPreBlockProgressListener)
 
     suspend fun clearDatabases()
-    suspend fun getUnsavedTransactions(): Pair<List<Transaction>, Long>
+    suspend fun getUnsavedTransactions(): Pair<List<org.dash.wallet.common.transactions.TxInfo>, Long>
     suspend fun hasPendingTxMetadataToSave(): Boolean
 }
 
@@ -221,6 +222,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val topUpRepository: TopUpRepository,
     private val identityRepository: IdentityRepository,
     private val walletDataProvider: WalletData,
+    private val walletSeam: org.dash.wallet.common.WalletDataProvider,
     private val sdkProfileQueries: SdkProfileQueries,
     private val sdkUsernameQueries: SdkUsernameQueries,
     private val sdkIdentityVerifyQueries: SdkIdentityVerifyQueries,
@@ -234,6 +236,9 @@ class PlatformSynchronizationService @Inject constructor(
     private val cutoverAutoCommitObserver: CutoverAutoCommitObserver,
     private val shieldedTransferExecutor: ShieldedTransferExecutor,
     private val contactRequestNotificationService: ContactRequestNotificationService,
+    // The DashPay half of the user-facing "still syncing" state; this service
+    // is the only component that knows whether DashPay applies at all.
+    private val dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -269,6 +274,23 @@ class PlatformSynchronizationService @Inject constructor(
          * attempt logging "already running" and returning.
          */
         const val CONTACT_SYNC_STALE_TAKEOVER_MS = 30 * 60 * 1000L
+
+        /**
+         * How long [identityDiscoveryInFlight] may be held before a new
+         * [discoverAndRecoverIdentity] caller declares the holder wedged and
+         * takes over.
+         *
+         * Sized against what a HEALTHY hold costs. The latch spans a single
+         * DAPI identity lookup (seconds) plus, on success, the
+         * RestoreIdentityWorker chain it enqueues — which on the worst
+         * observed mainnet restore (the 728-name contested walk, before the
+         * targeted narrowing) ran for tens of minutes. One hour is comfortably
+         * beyond any of that while still being a small fraction of the TEN
+         * HOURS the field wedge cost. Taking over early is cheap and safe
+         * (the enqueue is unique-work KEEP, see [identityDiscoverySince]);
+         * taking over late only delays recovery.
+         */
+        const val IDENTITY_DISCOVERY_STALE_TAKEOVER_MS = 60 * 60 * 1000L
 
         /**
          * Whether the dashpay DATA CONTRACT itself is loaded — a strictly
@@ -325,8 +347,45 @@ class PlatformSynchronizationService @Inject constructor(
      * caller (a subsequent peerGroup start pre-cutover, or the next SDK synced tick
      * post-cutover) may retry — i.e. "runs discovery at most once per process until an
      * identity is found".
+     *
+     * The latch must NEVER outlive the identity database it guards. This service is a
+     * @Singleton (process-scoped) while BlockchainServiceImpl is destroyed and recreated,
+     * so a Settings → Rescan blockchain — which cancels all work and wipes the identity
+     * DB — used to leave the latch set from the pre-rescan recovery, and every later
+     * discovery for the life of the PROCESS logged "discovery already in flight,
+     * skipping" and returned false. Observed live on 11.10.84 mainnet: identity +
+     * username recovered at 02:38, rescan at 02:44:28, and the post-cutover hook at
+     * 03:14:29 was refused by this latch with the identity DB already empty. It is
+     * therefore cleared by both [stopSync] and [clearDatabases].
      */
     private val identityDiscoveryInFlight = AtomicBoolean(false)
+
+    /**
+     * [contactSyncClock] reading at which [identityDiscoveryInFlight] was
+     * claimed, 0 when it is free — the deadline that lets a WEDGED pass
+     * self-heal.
+     *
+     * The .86 release-on-teardown fix only covers passes the app itself ends
+     * (stopSync / clearDatabases). A pass that simply never returns is not
+     * one of them: on 11.10.84 mainnet the latch was claimed at 02:38:05,
+     * discovery found an identity at 02:38:07 and left it latched by design
+     * ("recovery is under way"), the RestoreIdentityOperation then wedged
+     * inside a Platform call — last getVoteContenders 02:45:41, then nothing
+     * — and every later attempt logged "discovery already in flight,
+     * skipping" (03:14:29, 03:35:41, 03:55:50, 11:57:31, 12:19:10, 12:41:21)
+     * until a force-stop TEN HOURS later. Nothing in the process could
+     * observe the wedge, because the holder never runs another line.
+     *
+     * Taking the latch over is safe precisely because of what it guards: the
+     * enqueue is `RestoreIdentityOperation.create(...).enqueue()`, a
+     * WorkManager `beginUniqueWork(..., ExistingWorkPolicy.KEEP)`. A second
+     * enqueue while the original work is still alive is a NO-OP — WorkManager
+     * keeps the existing chain — so a takeover cannot start a concurrent
+     * restore. It can only re-run the (idempotent, read-only) discovery query
+     * and re-assert the same unique work, which is exactly what recovers a
+     * chain that died without reporting.
+     */
+    private val identityDiscoverySince = AtomicLong(0L)
 
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
     private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
@@ -448,6 +507,13 @@ class PlatformSynchronizationService @Inject constructor(
         if (runFirstUpdateBlocking) {
             updateContactRequests(true)
         }
+        // Idempotent re-arm: initSync is reachable from several triggers (the
+        // dashj preBlockDownload listener, identity creation, identity restore,
+        // and the post-cutover synced hook in BlockchainServiceImpl). Cancel any
+        // previous tickers first so a second trigger within one service lifetime
+        // can never stack a duplicate poll.
+        platformSyncJob?.cancel(CancellationException("re-arming the platform sync ticker"))
+        txMetadataJob?.cancel(CancellationException("re-arming the tx metadata ticker"))
         platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY)
             .onEach { updateContactRequests() }
             .launchIn(syncScope)
@@ -457,11 +523,60 @@ class PlatformSynchronizationService @Inject constructor(
                 maybePublishChangeCache()
             }
             .launchIn(syncScope)
+
+        syncScope.launch { remergeStoredPlatformMetadataOnce() }
+
+        // The EFFECTIVE metadata settings, once per arm. These live in this
+        // install's DataStore and do NOT travel with the wallet, so a restore
+        // onto another device silently starts from the defaults — including
+        // saveToNetwork=false. Without this line the only way to know a device's
+        // settings is a screenshot, which cannot be attributed to a device with
+        // certainty. Booleans and enums only; no user content.
+        syncScope.launch {
+            try {
+                val s = dashPayConfig.getTransactionMetadataSettings()
+                log.info(
+                    "TxMetadata settings: saveToNetwork={} frequency={} saveAfter={} " +
+                        "paymentCategory={} taxCategory={} exchangeRates={} memos={} giftCards={} " +
+                        "storedDocuments={}",
+                    s.saveToNetwork, s.saveFrequency, s.saveAfterTimestamp,
+                    s.savePaymentCategory, s.saveTaxCategory, s.saveExchangeRates,
+                    s.savePrivateMemos, s.saveGiftcardInfo,
+                    transactionMetadataDocumentDao.countAllRequests()
+                )
+            } catch (e: Exception) {
+                log.info("TxMetadata settings: unavailable ({})", e.message)
+            }
+        }
+    }
+
+    /**
+     * Last reason [maybePublishChangeCache] declined to publish. The ticker
+     * fires every [PUSH_PERIOD] (3 MINUTES on debug/testnet builds), so logging
+     * unconditionally would bury the log; logging only on CHANGE costs one line
+     * per state transition while making silence unambiguous.
+     *
+     * Silence was the actual defect: the disabled branch returned with no log
+     * at all, so a wallet that had never enabled network saving produced a log
+     * identical to one where publishing was broken — which is exactly how a
+     * field investigation stalled.
+     */
+    private var lastPublishSkipReason: String? = null
+
+    private fun notePublishSkip(reason: String) {
+        if (lastPublishSkipReason != reason) {
+            lastPublishSkipReason = reason
+            log.info("TxMetadata publish: not publishing — {}", reason)
+        }
     }
 
     private suspend fun maybePublishChangeCache() {
         val saveSettings = dashPayConfig.getTransactionMetadataSettings()
         if (!saveSettings.saveToNetwork) {
+            notePublishSkip(
+                "saveToNetwork is OFF (per-device setting; the default for a new or " +
+                    "restored install, and it does NOT travel with the wallet)"
+            )
             return
         }
         val lastPush = config.get(DashPayConfig.LAST_METADATA_PUSH) ?: 0
@@ -502,10 +617,20 @@ class PlatformSynchronizationService @Inject constructor(
         // publish no more frequently than every 3 hours
         val shouldPushToNetwork = (lastPush < now - PUSH_PERIOD.inWholeMilliseconds)
         if (shouldPushToNetwork && meetsSaveFrequency) {
-            log.info("maybe publish meets requirements")
+            lastPublishSkipReason = null
+            log.info(
+                "TxMetadata publish: proceeding — {} eligible item(s), frequency={}, " +
+                    "last push {} ms ago",
+                newDataItems, saveSettings.saveFrequency, now - lastPush
+            )
             publishChangeCache(newEverythingBeforeTimestamp, saveAll = false)
+        } else if (!shouldPushToNetwork) {
+            notePublishSkip("throttled — last push ${now - lastPush} ms ago, minimum is $PUSH_PERIOD")
         } else {
-            log.info("last platform push was less than $CUTOFF_MIN ago, skipping")
+            notePublishSkip(
+                "frequency not met — $newDataItems eligible item(s), setting is " +
+                    "${saveSettings.saveFrequency}"
+            )
         }
     }
 
@@ -598,6 +723,22 @@ class PlatformSynchronizationService @Inject constructor(
         hasCheckedTopups = false
         lastTopupUpdateTime = 0L
         lastMetadataUpdateTime = 0L
+        // The identity-discovery latch guards the identity DB that the caller is
+        // about to wipe, and this @Singleton outlives the BlockchainServiceImpl
+        // that drives discovery — leaving it latched permanently disabled identity
+        // recovery for the rest of the process (see [identityDiscoveryInFlight]).
+        // Safe here and not a re-entrancy hole: the recovery this latch was
+        // protecting has just been cancelled along with every in-flight child
+        // above (the caller also cancels all WorkManager work, including
+        // RestoreIdentityWorker), so there is no discovery left to double up on;
+        // and the enqueue it guards is a unique-work KEEP, so even an overlapping
+        // caller cannot start a second restore.
+        releaseIdentityDiscoveryLatch("wallet reset/rescan")
+        // The DashPay sync latch describes a wallet that is about to be
+        // replaced or wiped, so the NEXT full sync is an INITIAL sync again
+        // and must show as one — a restore is exactly when the user needs to
+        // see the indicator until their contacts are actually back.
+        dashPaySyncStatus.resetForWalletReset()
         log.info("platform sync machinery stopped")
     }
 
@@ -612,10 +753,62 @@ class PlatformSynchronizationService @Inject constructor(
      */
     override suspend fun updateContactRequests(initialSync: Boolean) {
 
+        // Restore safety net: a registration-time SDK identity discovery
+        // that failed (signer not attached yet — "External signable wallet
+        // has no private key") is never retried by the SDK itself; without
+        // a managed identity every contact pass below yields nothing (the
+        // field 44-minute REQUESTED_NAME_CHECKING stall). Bounded +
+        // backoff'd inside; no-op once managed/exhausted.
+        //
+        // Driven from ABOVE the identity gate on purpose. The retry exists for
+        // the state "the app has a stored identity id that the SDK wallet does
+        // not manage", but [IdentityRepository.hasBlockchainIdentity] is the
+        // IN-MEMORY wrapper, which only exists after identityRepository.init()
+        // — the very step a stalled restore never reaches. Gating the heal for
+        // a missing identity behind already having one meant it never fired in
+        // the case it was written for (11.10.84 field restore). It re-gates
+        // itself on everything it actually needs (a bound SDK wallet, a stored
+        // user id, the not-managed check, an attempt cap and a backoff window),
+        // so running it on every ticker pass — identity or not — is a cheap
+        // no-op whenever it does not apply.
+        //
+        // Run it OFF this pass, and drive contact sync the moment it lands.
+        // The retry's scan is a network round trip that took 36 s on the
+        // field device (11.10.86: retry 1/8 logged at 17:13:21, "SUCCEEDED"
+        // at 17:13:57), and it was awaited INLINE here — so contact sync,
+        // and everything downstream of it, sat behind it for the whole 36 s
+        // even though the pass could not use the identity until it finished
+        // anyway. Launched instead: this pass returns at the identity gate
+        // below, and the attempt itself re-enters contact sync as soon as it
+        // attaches, rather than waiting out the 15 s ticker. Its own guards
+        // (settled latch, attempt cap, backoff window, binder mutex) make a
+        // launch per tick a no-op, so nothing stacks.
+        syncScope.launch {
+            if (sdkWalletBinder.maybeRetryIdentityDiscovery()) {
+                log.info(
+                    "identity-discovery retry attached the identity; running contact sync now " +
+                        "instead of waiting for the next sync tick"
+                )
+                try {
+                    updateContactRequests(initialSync = true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("post-discovery contact sync failed; the ticker will retry", e)
+                }
+            }
+        }
+
         // if there is no wallet or identity, then skip the remaining steps of the update
         if (!identityRepository.hasBlockchainIdentity || walletApplication.wallet == null) {
+            // DashPay does not apply (yet): the user-facing sync state must
+            // never wait on a subsystem this wallet has no part in.
+            dashPaySyncStatus.setApplicable(false)
             return
         }
+        // From here on the wallet HAS an identity, so the DashPay tail is a
+        // real part of "finished syncing" — see [DashPaySyncStatus].
+        dashPaySyncStatus.setApplicable(true)
         log.info("updateContactRequests($initialSync) checking if can run")
         // only allow this method to execute once at a time
         // allow it to continue if the last state was recovery complete
@@ -730,6 +923,7 @@ class PlatformSynchronizationService @Inject constructor(
 
             updatingContactsOwner.set(thisPass)
             updatingContactsSince.set(contactSyncClock())
+            dashPaySyncStatus.contactSyncStarted()
             updatingContacts.set(true)
             updateSyncStatus(PreBlockStage.Starting)
             updateSyncStatus(PreBlockStage.Initialization)
@@ -913,6 +1107,17 @@ class PlatformSynchronizationService @Inject constructor(
             // on and a wallet is bound. Fire-and-forget (never blocks sync).
             sdkWalletBinder.provisionContactAccountsInBackground(force = addedContact)
 
+            // One-shot-per-process DIP-15 derivation evidence. The contact set
+            // and its friendship keychains are established by the time this pass
+            // reaches here, which is exactly what the line needs. Read-only and
+            // failure-contained; see ContactDerivationFactsLogger.
+            ContactDerivationFactsLogger.logOnce(
+                ourIdentityId = userId,
+                wallet = platformRepo.walletApplication.wallet!!,
+                contactRequestDao = dashPayContactRequestDao,
+                profileDao = dashPayProfileDao
+            )
+
             updateSyncStatus(PreBlockStage.Complete)
 
             // A successful pass resets the failed-update retry budget and marks
@@ -936,6 +1141,10 @@ class PlatformSynchronizationService @Inject constructor(
             if (updatingContactsOwner.compareAndSet(thisPass, null)) {
                 updatingContactsSince.set(0L)
                 updatingContacts.set(false)
+                // Settled on ANY ending, including a failed one: the pass is
+                // over and the ticker retries, whereas counting only success
+                // would pin "syncing" forever on a broken connection.
+                dashPaySyncStatus.contactSyncFinished()
             }
 
             counterForReport++
@@ -1022,7 +1231,7 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    private fun checkAndAddSentRequest(
+    private suspend fun checkAndAddSentRequest(
         userId: String,
         contactRequest: ContactRequest,
         encryptionKey: KeyParameter? = null
@@ -1036,7 +1245,17 @@ class PlatformSynchronizationService @Inject constructor(
                 // unable to CBOR-serialize a v4.1 identity (e.g. an iOS contact);
                 // identities.get would otherwise throw "No converter for ..."
                 // and drop this reconciled contact.
-                val contactIdentity = platform.getContactIdentity(contactRequest.toUserId)
+                // Bounded: this legacy DapiClient fetch has no deadline of its
+                // own and dominated the field contact sync (11.10.86: ~13
+                // stalls of ~32-33 s inside "updating contacts and profiles
+                // took 6.185 min"). A null answer takes the SAME path a fetch
+                // failure already took — the contact is retried on the next
+                // pass — so a slow-but-working node keeps working (see
+                // LEGACY_CONTACT_QUERY_TIMEOUT_MS for why the bound is
+                // generous rather than the SDK path's 6 s).
+                val contactIdentity = boundedLegacyPlatformQuery(
+                    "getContactIdentity(sent request to ${contactRequest.toUserId})"
+                ) { platform.getContactIdentity(contactRequest.toUserId) }?.orElse(null)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
@@ -1069,7 +1288,7 @@ class PlatformSynchronizationService @Inject constructor(
         return false
     }
 
-    private fun checkAndAddReceivedRequest(
+    private suspend fun checkAndAddReceivedRequest(
         userId: String,
         contactRequest: ContactRequest,
         encryptionKey: KeyParameter? = null
@@ -1089,7 +1308,10 @@ class PlatformSynchronizationService @Inject constructor(
                 // unable to CBOR-serialize a v4.1 identity (e.g. an iOS contact);
                 // identities.get would otherwise throw "No converter for ..." and
                 // this received request would never be added to the wallet.
-                val contactIdentity = platform.getContactIdentity(contactRequest.ownerId)
+                // Bounded exactly like the sent-request path above.
+                val contactIdentity = boundedLegacyPlatformQuery(
+                    "getContactIdentity(received request from ${contactRequest.ownerId})"
+                ) { platform.getContactIdentity(contactRequest.ownerId) }?.orElse(null)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
@@ -1377,8 +1599,21 @@ class PlatformSynchronizationService @Inject constructor(
             .getTxMetaData(lastTxMetadataRequestTime, myEncryptionKey)
 
         if (items.isEmpty()) {
+            // Distinguish "the network has nothing newer" from "the fetch did
+            // not happen": previously both looked identical (silence) in a
+            // support log, which is exactly the ambiguity this diagnoses.
+            log.info(
+                "TxMetadata fetch: 0 documents newer than {} — nothing to apply " +
+                    "(stored locally: {} documents)",
+                lastTxMetadataRequestTime,
+                transactionMetadataDocumentDao.countAllRequests()
+            )
             return
         }
+        log.info(
+            "TxMetadata fetch: {} document(s) returned for watermark {}",
+            items.size, lastTxMetadataRequestTime
+        )
 
         // val lastItem = items.keys.last()
         // lastItem.createdAt?.let {
@@ -1386,8 +1621,11 @@ class PlatformSynchronizationService @Inject constructor(
         // }
         log.info("processing TxMetadataDocuments: {}", items.toString())
 
+        var docsNew = 0
+        var docsAlreadyHeld = 0
         items.forEach { (doc, list) ->
             if (transactionMetadataDocumentDao.count(doc.id) == 0) {
+                docsNew++
                 val timestamp = doc.updatedAt!!
                 log.info("processing TxMetadata: ${doc.id} with ${list.size} items")
                 list.forEach { metadata ->
@@ -1647,11 +1885,21 @@ class PlatformSynchronizationService @Inject constructor(
 
                 // configuration.txMetadataUpdateTime = doc.createdAt!!
             } else {
+                docsAlreadyHeld++
                 log.info("TxMetadataDocument:  this item already exists ${doc.id}")
             }
         }
 
-        log.info("fetching ${items.size} tx metadata items in $watch")
+        // One line that answers "did anything actually arrive and land?" — the
+        // question a support log could not previously answer, because a fetch
+        // that returned only already-held documents looked the same as one that
+        // returned nothing at all.
+        log.info(
+            "TxMetadata fetch summary: {} document(s) returned, {} new (applied), {} already held; " +
+                "{} document(s) now stored locally; took {}",
+            items.size, docsNew, docsAlreadyHeld,
+            transactionMetadataDocumentDao.countAllRequests(), watch
+        )
     }
 
     private suspend fun publishTransactionMetadata(
@@ -1727,46 +1975,121 @@ class PlatformSynchronizationService @Inject constructor(
         )
     }
 
+    /**
+     * Re-merge platform metadata already on this device into the UI-visible
+     * table, once.
+     *
+     * Documents fetched before the `syncPlatformMetadata` fallback fix were
+     * stored in `transaction_metadata_platform` and then dropped before they
+     * reached `transaction_metadata`, so a wallet could hold thousands of
+     * fetched rows and display none of them. The fetch watermark means those
+     * documents will never be delivered again, so without this the only repair
+     * would be clearing the metadata store — and the documents already carry
+     * every field, so no network round trip is needed.
+     *
+     * Idempotent and best-effort: guarded by a one-shot flag, and a failure
+     * leaves the flag unset so the next launch retries.
+     */
+    private suspend fun remergeStoredPlatformMetadataOnce() {
+        if (dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_REMERGE_DONE) == true) return
+        val watch = Stopwatch.createStarted()
+        try {
+            val docs = transactionMetadataDocumentDao.load()
+            if (docs.isEmpty()) {
+                dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_REMERGE_DONE, true)
+                return
+            }
+            val byTx = docs.groupBy { it.txId }
+            log.info(
+                "TxMetadata re-merge: {} stored document row(s) across {} transaction(s)",
+                docs.size, byTx.size
+            )
+            var merged = 0
+            for ((txId, rows) in byTx) {
+                try {
+                    val item = mergeTransactionMetadataDocuments(txId.toSha256Hash(), rows)
+                    val metadata = TransactionMetadata(
+                        txId,
+                        item.sentTimestamp ?: 0,
+                        org.dash.wallet.common.money.Coin.ZERO,
+                        TransactionCategory.Invalid,
+                        item.taxCategory,
+                        item.currencyCode,
+                        item.rate,
+                        item.memo ?: "",
+                        service = item.service
+                    )
+                    transactionMetadataProvider.syncPlatformMetadata(txId, metadata, null, null)
+                    merged++
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.info("TxMetadata re-merge: skipped {} ({})", txId, e.message)
+                }
+            }
+            dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_REMERGE_DONE, true)
+            log.info(
+                "TxMetadata re-merge: merged {} of {} transaction(s) in {}",
+                merged, byTx.size, watch
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Flag deliberately left unset — retry on the next launch.
+            log.warn("TxMetadata re-merge failed; will retry next launch", e)
+        }
+    }
+
     override suspend fun hasPendingTxMetadataToSave(): Boolean {
         return transactionMetadataChangeCacheDao.count() > 0 || getUnsavedTransactions().first.isNotEmpty()
     }
 
     // this is a slow operation?
-    override suspend fun getUnsavedTransactions(): Pair<List<Transaction>, Long> {
+    /**
+     * Historical transactions whose metadata has never been published, or whose
+     * published copy is stale.
+     *
+     * Reads the CUTOVER SEAM, not the dashj wallet. The dashj wallet is held —
+     * frozen at the cutover snapshot — for every SDK-owned wallet, so
+     * enumerating it returned nothing and the settings screen concluded there
+     * was no history to save, greying out the "Past" checkbox on exactly the
+     * wallets that needed it most. Same defect class as the CSV exporter.
+     */
+    override suspend fun getUnsavedTransactions(): Pair<List<org.dash.wallet.common.transactions.TxInfo>, Long> {
         val watch = Stopwatch.createStarted()
         val start = dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE) ?: 0L
         val end = System.currentTimeMillis()
 
-        val notCoinJoinFilter = object : WalletTransactionFilter {
-            override fun matches(tx: Transaction): Boolean {
-                val type = CoinJoinTransactionType.fromTx(tx, walletDataProvider.wallet)
-                return type == CoinJoinTransactionType.None || type == CoinJoinTransactionType.Send
-            }
-        }
-        val listOfUnsaved = arrayListOf<Transaction>()
+        val listOfUnsaved = arrayListOf<org.dash.wallet.common.transactions.TxInfo>()
         var firstUnsavedTxDate = 0L
-        walletDataProvider.getTransactions(notCoinJoinFilter).forEach { tx ->
-            if (tx.updateTime.time in start .. end) {
-                if (!transactionMetadataProvider.exists(tx.txId.toTxId())) {
+        // A CoinJoin MIXING round spends the wallet's own coins into its own
+        // denominated outputs, so it is entirely-self; a CoinJoin SEND pays a
+        // foreign address and is not. Excluding entirely-self therefore keeps
+        // the same population the old CoinJoinTransactionType filter did,
+        // without needing a dashj Transaction to classify.
+        walletSeam.getTransactions().forEach { tx ->
+            if (tx.isEntirelySelf) return@forEach
+            if (tx.updateTimeMillis !in start..end) return@forEach
+            val txId = Sha256Hash.wrap(tx.txId).toTxId()
+            if (!transactionMetadataProvider.exists(txId)) {
+                listOfUnsaved.add(tx)
+                firstUnsavedTxDate = if (firstUnsavedTxDate != 0L) {
+                    min(firstUnsavedTxDate, tx.updateTimeMillis)
+                } else {
+                    tx.updateTimeMillis
+                }
+            } else {
+                val previouslySavedItems = transactionMetadataDocumentDao.getTransactionMetadata(txId)
+                val previouslySaved = mergeTransactionMetadataDocuments(Sha256Hash.wrap(tx.txId), previouslySavedItems)
+                val currentItem = transactionMetadataProvider.getTransactionMetadata(txId)!!
+                val giftCard = giftCardDao.getCardForTransaction(Sha256Hash.wrap(tx.txId).bytes)
+
+                if (!previouslySaved.compare(currentItem, giftCard.firstOrNull())) {
                     listOfUnsaved.add(tx)
                     firstUnsavedTxDate = if (firstUnsavedTxDate != 0L) {
-                        min(firstUnsavedTxDate, tx.updateTime.time)
+                        min(firstUnsavedTxDate, tx.updateTimeMillis)
                     } else {
-                        tx.updateTime.time
-                    }
-                } else {
-                    val previouslySavedItems = transactionMetadataDocumentDao.getTransactionMetadata(tx.txId.toTxId())
-                    val previouslySaved = mergeTransactionMetadataDocuments(tx.txId, previouslySavedItems)
-                    val currentItem = transactionMetadataProvider.getTransactionMetadata(tx.txId.toTxId())!!
-                    val giftCard = giftCardDao.getCardForTransaction(tx.txId.bytes)
-
-                    if (!previouslySaved.compare(currentItem, giftCard.firstOrNull())) {
-                        listOfUnsaved.add(tx)
-                        firstUnsavedTxDate = if (firstUnsavedTxDate != 0L) {
-                            min(firstUnsavedTxDate, tx.updateTime.time)
-                        } else {
-                            tx.updateTime.time
-                        }
+                        tx.updateTimeMillis
                     }
                 }
             }
@@ -1779,19 +2102,24 @@ class PlatformSynchronizationService @Inject constructor(
         // determine any changes that haven't been saved before [DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE]
         val alreadySaved = dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE) ?: 0L
         // add to those changes to the change cache
-        val txes = walletApplication.wallet?.getTransactions(true)
+        //
+        // Seam-sourced, not `walletApplication.wallet`: the dashj wallet is held
+        // for every SDK-owned wallet, so this loop had nothing to iterate and a
+        // "Past" upload silently published nothing even when it was reachable.
+        val txes = walletSeam.getTransactions().toList()
         var itemsToSave = 0
-        txes?.forEachIndexed { i, tx ->
-            if (tx.updateTime.time >= alreadySaved) {
-                transactionMetadataProvider.getTransactionMetadata(tx.txId.toTxId())?.let { metadata ->
-                    val giftCard = giftCardDao.getCardForTransaction(tx.txId.bytes)
+        txes.forEachIndexed { i, tx ->
+            if (tx.updateTimeMillis >= alreadySaved) {
+                val txHash = Sha256Hash.wrap(tx.txId)
+                transactionMetadataProvider.getTransactionMetadata(txHash.toTxId())?.let { metadata ->
+                    val giftCard = giftCardDao.getCardForTransaction(txHash.bytes)
 
                     // make sure it is not already saved?
 
-                    val previouslySaved = transactionMetadataDocumentDao.getTransactionMetadata(tx.txId.toTxId())
+                    val previouslySaved = transactionMetadataDocumentDao.getTransactionMetadata(txHash.toTxId())
                     log.info("publish: previously saved: {}", previouslySaved)
 
-                    val saved = mergeTransactionMetadataDocuments(tx.txId, previouslySaved)
+                    val saved = mergeTransactionMetadataDocuments(txHash, previouslySaved)
                     log.info("publish: merged saved: {}", saved)
 
                     val metadataItem = TransactionMetadataCacheItem(
@@ -1806,7 +2134,7 @@ class PlatformSynchronizationService @Inject constructor(
                     }
                     itemsToSave++
                 }
-                progressListener.invoke(i * 100 / txes.size / 2)
+                progressListener.invoke(i * 100 / txes.size.coerceAtLeast(1) / 2)
             }
         }
         // call publishChangeCache
@@ -2207,9 +2535,11 @@ class PlatformSynchronizationService @Inject constructor(
         val identityData = blockchainIdentityDataDao.load()
         if (identityData == null || identityData.restoring) {
             // Only one discovery in flight; keep it latched only if we actually
-            // find an identity (see [identityDiscoveryInFlight]).
-            if (!identityDiscoveryInFlight.compareAndSet(false, true)) {
-                log.info("discoverAndRecoverIdentity: discovery already in flight, skipping")
+            // find an identity (see [identityDiscoveryInFlight]) — but never
+            // for longer than [IDENTITY_DISCOVERY_STALE_TAKEOVER_MS], so a
+            // holder that wedged inside a Platform call self-heals instead of
+            // disabling recovery for the life of the process.
+            if (!claimIdentityDiscoveryLatch()) {
                 return false
             }
             try {
@@ -2222,15 +2552,17 @@ class PlatformSynchronizationService @Inject constructor(
                     RestoreIdentityOperation(walletApplication)
                         .create(identity.id.toString())
                         .enqueue()
-                    // leave the guard latched — recovery is under way
+                    // Leave the guard latched — recovery is under way. The
+                    // deadline in claimIdentityDiscoveryLatch is what stops
+                    // "under way" from meaning "forever".
                     true
                 } else {
                     log.info("discoverAndRecoverIdentity: no existing identity found")
-                    identityDiscoveryInFlight.set(false) // allow a later retry
+                    releaseIdentityDiscoveryLatch("no identity found") // allow a later retry
                     false
                 }
             } catch (e: Exception) {
-                identityDiscoveryInFlight.set(false)
+                releaseIdentityDiscoveryLatch("discovery failed")
                 throw e
             }
         }
@@ -2444,6 +2776,64 @@ class PlatformSynchronizationService @Inject constructor(
         }
         transactionMetadataChangeCacheDao.clear()
         transactionMetadataDocumentDao.clear()
+        // Twin of the reset in [stopSync]: whoever clears the platform databases
+        // invalidates the identity state this latch was standing guard over, so the
+        // latch is cleared here too — it must never outlive the identity DB, on any
+        // path that reaches the clears (see [identityDiscoveryInFlight]).
+        releaseIdentityDiscoveryLatch("platform database clear")
+        // Twin of the reset in [stopSync]: the contacts this latch attested to
+        // have just been deleted.
+        dashPaySyncStatus.resetForWalletReset()
+    }
+
+    /**
+     * Clear [identityDiscoveryInFlight] so the next caller of
+     * [discoverAndRecoverIdentity] actually runs a discovery instead of being
+     * refused by a latch left over from a recovery that no longer exists.
+     */
+    private fun releaseIdentityDiscoveryLatch(reason: String) {
+        identityDiscoverySince.set(0L)
+        if (identityDiscoveryInFlight.getAndSet(false)) {
+            log.info("identity-discovery guard released ({}) — a later discovery may run again", reason)
+        }
+    }
+
+    /**
+     * Claim [identityDiscoveryInFlight], taking it over from a holder that has
+     * held it past [IDENTITY_DISCOVERY_STALE_TAKEOVER_MS]. Returns whether the
+     * caller may proceed with a discovery.
+     *
+     * The takeover is the self-heal for a pass that wedged with no return and
+     * no exception — see [identityDiscoverySince] for why re-running is safe
+     * (the enqueue it guards is unique-work KEEP, so it cannot double up).
+     * The claim timestamp is written under the same CAS that wins the latch,
+     * so two racing callers cannot both take over.
+     */
+    private fun claimIdentityDiscoveryLatch(): Boolean {
+        if (identityDiscoveryInFlight.compareAndSet(false, true)) {
+            identityDiscoverySince.set(contactSyncClock())
+            return true
+        }
+        val since = identityDiscoverySince.get()
+        val heldMs = contactSyncClock() - since
+        if (since == 0L || heldMs <= IDENTITY_DISCOVERY_STALE_TAKEOVER_MS) {
+            log.info("discoverAndRecoverIdentity: discovery already in flight, skipping")
+            return false
+        }
+        // Only the caller that swaps the recorded claim time takes over; a
+        // loser sees a fresh timestamp and skips as usual.
+        if (!identityDiscoverySince.compareAndSet(since, contactSyncClock())) {
+            log.info("discoverAndRecoverIdentity: discovery already in flight, skipping")
+            return false
+        }
+        log.warn(
+            "discoverAndRecoverIdentity: the identity-discovery guard has been held for {} ms " +
+                "(limit {} ms) — treating the holder as wedged and taking over; the restore " +
+                "enqueue is unique-work KEEP, so this cannot start a second recovery",
+            heldMs,
+            IDENTITY_DISCOVERY_STALE_TAKEOVER_MS
+        )
+        return true
     }
 
     override fun addPreBlockProgressListener(listener: OnPreBlockProgressListener) {

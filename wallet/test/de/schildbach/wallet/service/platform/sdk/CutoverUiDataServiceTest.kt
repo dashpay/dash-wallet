@@ -808,6 +808,9 @@ class CutoverUiDataServiceTest {
         notify: (Long) -> Unit = {},
         txEvents: Flow<L1TxEvent> = kotlinx.coroutines.flow.emptyFlow(),
         l1Synced: Flow<Boolean> = flowOf(true),
+        rescanRecentlyArmed: () -> Boolean = { false },
+        /** The DIP-15 contact-backfill bookkeeping; default = nothing owed. */
+        dashPayBackfillStatus: DashPayBackfillStatus = DashPayBackfillStatus.SETTLED,
         deferredContactBuilds: Int? = null,
         /** When non-null, the deferred-build probe calls THIS per read (overrides [deferredContactBuilds]). */
         deferredContactBuildFeed: (suspend () -> Int?)? = null,
@@ -834,6 +837,8 @@ class CutoverUiDataServiceTest {
         notifyCoinsReceived = notify,
         txEvents = txEvents,
         l1Synced = l1Synced,
+        rescanRecentlyArmed = rescanRecentlyArmed,
+        dashPayBackfillStatus = { dashPayBackfillStatus },
         deferredContactBuildCount = {
             if (deferredContactBuildFeed != null) deferredContactBuildFeed() else deferredContactBuilds
         },
@@ -930,6 +935,28 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun postCutover_armedRescan_publishesTheBalanceButDoesNotPersistIt() = runTest {
+        // The app just armed an SPV rescan/replay (heal v2, reset blockchain).
+        // Until the engine reflects the watermark rewind the caught-up gate
+        // still reads true — the field window that persisted a partial 48.86
+        // as last-known. The armed marker must hold the persist by itself.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(true),
+            rescanRecentlyArmed = { true }
+        )
+        service.start()
+        runCurrent()
+
+        // The live figure still publishes for display…
+        assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
+        // …but is never written back as the launch seed.
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
     fun postCutover_deferredContactBuilds_publishTheBalanceButDoNotPersistIt() = runTest {
         // A caught-up scan is not evidence that the figure is WHOLE: while
         // DashPay contact account builds are queued, those contacts' receiving
@@ -952,6 +979,98 @@ class CutoverUiDataServiceTest {
         // The live figure is still published — the header must not freeze.
         assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_armedDashPayBackfill_publishesTheBalanceButDoesNotPersistIt() = runTest {
+        // Field 11.10.86, 17:23:58: l1Synced=true, no app-armed rescan, and the
+        // SDK's build queue read 0 because the process had only just started —
+        // all three existing guards passed and the bip44-only 0.43841654 was
+        // persisted as the launch seed, 0.11095834 short of the truth. The
+        // gate's own unaccounted armed marker (written by the PREVIOUS
+        // process) is the one thing that WAS knowable at that instant.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(43_841_654L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(true),
+            dashPayBackfillStatus = DashPayBackfillStatus(armed = true, replaying = false),
+            deferredContactBuilds = 0
+        )
+        service.start()
+        runCurrent()
+
+        // Display is unaffected — only the durable seed is held.
+        assertEquals(Coin.valueOf(43_841_654), service.sdkBalanceOrNull())
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_midReplayBalance_isNotPublished() = runTest {
+        // 11.10.86, 17:24:48: 819859264 duffs — 8.198 DASH, 15x the true
+        // total — published three seconds after the backfill watch latched,
+        // and gone again three seconds later. A rewind-driven replay re-applies
+        // TXOs as it re-matches the rewound range, so its running total passes
+        // through values that were never real.
+        val balance = MutableStateFlow(77_859_264L)
+        val source = FakeSource(balanceDuffs = balance)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            l1Synced = flowOf(false),
+            dashPayBackfillStatus = DashPayBackfillStatus(armed = false, replaying = true)
+        )
+        service.start()
+        runCurrent()
+        // The FIRST figure of the session always lands — holding it would
+        // leave the header on the (held) dashj value.
+        assertEquals(Coin.valueOf(77_859_264), service.sdkBalanceOrNull())
+
+        balance.value = 819_859_264L
+        runCurrent()
+
+        assertEquals(
+            "a mid-replay partial must not reach any balance consumer",
+            Coin.valueOf(77_859_264),
+            service.sdkBalanceOrNull()
+        )
+    }
+
+    @Test
+    fun postCutover_replayNotInFlight_publishesEveryFigure() = runTest {
+        // The hold is narrow on purpose: an ordinary not-caught-up scan (no
+        // observed rewind) keeps publishing, exactly as before.
+        val balance = MutableStateFlow(77_859_264L)
+        val source = FakeSource(balanceDuffs = balance)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            l1Synced = flowOf(false),
+            dashPayBackfillStatus = DashPayBackfillStatus(armed = true, replaying = false)
+        )
+        service.start()
+        runCurrent()
+
+        balance.value = 100_000_000L
+        runCurrent()
+
+        assertEquals(Coin.valueOf(100_000_000), service.sdkBalanceOrNull())
+    }
+
+    @Test
+    fun postCutover_settledDashPayBackfill_persistsTheWholeFigure() = runTest {
+        // Once coverage is recorded the ledger includes the contact payments,
+        // so the seed must refresh — the hold can never become permanent.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(54_937_488L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(true),
+            dashPayBackfillStatus = DashPayBackfillStatus.SETTLED,
+            deferredContactBuilds = 0
+        )
+        service.start()
+        runCurrent()
+
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 54_937_488L) }
     }
 
     @Test

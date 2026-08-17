@@ -21,6 +21,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.shadowSyncPercent
+import de.schildbach.wallet.service.sdkL1ScanCaughtUp
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,9 +73,11 @@ class CutoverSyncNoticeViewModel @Inject constructor(
             .onEach { progress ->
                 _uiState.value = CutoverSyncNoticeUIState(
                     syncPercent = shadowSyncPercent(progress),
-                    // Same predicate as the home header's blinking "Syncing
-                    // balance" label (L1SyncStatusService.sdkScanCaughtUp).
-                    synced = progress.synced || progress.scanCaughtUpToTip
+                    // THE predicate the home header's blinking "Syncing
+                    // balance" label uses (L1SyncStatusService.sdkScanCaughtUp)
+                    // — no longer a hand-copied expression, so the block-
+                    // pipeline drain gate applies here too.
+                    synced = sdkL1ScanCaughtUp(progress)
                 )
             }
             .catch { e -> log.error("cutover sync-notice progress feed failed", e) }

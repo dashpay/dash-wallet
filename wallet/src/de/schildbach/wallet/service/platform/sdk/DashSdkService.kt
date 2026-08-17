@@ -103,8 +103,28 @@ data class DashPayContactProvisionReport(
      * accounts and lowers the SPV `synced_height` to re-scan historical
      * funding heights (DIP-15 §12.6 / committed-range rescan).
      */
-    val drainScheduled: Boolean
-)
+    val drainScheduled: Boolean,
+    /**
+     * Entries still queued when the pass stopped watching the drain — the
+     * same figure [DashPayContactDrainReport.queuedAfter] reports, carried
+     * here so the caller can tell how many accounts this pass actually
+     * REGISTERED ([built]).
+     *
+     * Load-bearing for the backfill gate: the sweep in step 1 reconciles the
+     * rewind against the receival accounts that exist AT THAT MOMENT, and the
+     * drain in step 2 registers more of them afterwards. Accounts registered
+     * after the sweep are owed a rewind the sweep could not have fired (the
+     * SDK's `rescan_triggered` guard is PER CONTACT, so a second sweep in the
+     * same process still fires for them), and [built] > 0 is the app's only
+     * evidence that this happened. Defaults to [pendingBefore] — "nothing
+     * observed to have been built" — so an unwired construction can never
+     * claim registrations that did not happen.
+     */
+    val pendingAfter: Int = pendingBefore
+) {
+    /** Account builds that left the queue while this pass watched. */
+    val built: Int get() = (pendingBefore - pendingAfter).coerceAtLeast(0)
+}
 
 /**
  * Outcome of one [DashSdkService.drainDashPayContactAccountBuilds] pass — the
@@ -324,6 +344,21 @@ interface DashSdkService {
      * failed.
      */
     suspend fun armSpvRescan(walletIdHex: String, birthTimeSecs: Long?): Boolean
+
+    /**
+     * Whether an APP-ARMED SPV filter rescan ([armSpvRescan]) was
+     * successfully armed within the last [windowMs] of elapsed-realtime.
+     *
+     * Consulted by the last-known-balance persist gate
+     * (`CutoverUiDataService.updateSdkBalance`): between arming and the
+     * engine's progress/cursor actually reflecting the watermark rewind
+     * (up to a filter-loop tick, 9–60s observed) the caught-up predicate
+     * still reads true, so a balance persisted in that window would seed
+     * later launches with a figure the armed replay is about to rewrite.
+     * After the window the ordinary not-caught-up hold takes over. Default
+     * false (never armed) so read-only fakes stay source-compatible.
+     */
+    fun spvRescanArmedWithin(windowMs: Long): Boolean = false
 
     /**
      * The activated wallet manager for the app's network, or null if

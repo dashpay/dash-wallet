@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.more.tools
 
 import de.schildbach.wallet.Constants.HEX
 import de.schildbach.wallet.transactions.TaxBitExporter
+import de.schildbach.wallet.transactions.TxInfoConverter
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
@@ -82,7 +83,10 @@ class TransactionExportTest {
         val transactionMetadataProvider = mockk<TransactionMetadataProvider>()
         coEvery { transactionMetadataProvider.getAllTransactionMetadata() } returns listOf(txMetadata)
 
-        val exporter = TaxBitExporter(transactionMetadataProvider, wallet)
+        // The exporter now consumes the neutral seam type, so this converts the dashj
+        // transaction the same way WalletDataProvider.getTransactions() does.
+        val txInfos = listOf(TxInfoConverter.toTxInfo(tx, wallet, wallet.params))
+        val exporter = TaxBitExporter(transactionMetadataProvider, txInfos)
 
         runBlocking {
             // production callers (ToolsViewModel) initialize the metadata map

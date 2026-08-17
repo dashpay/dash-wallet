@@ -373,6 +373,21 @@ class DashSdkServiceImpl @Inject constructor(
     @Volatile
     private var runtime: SdkRuntime? = null
 
+    /**
+     * Elapsed-realtime of the last SUCCESSFUL [armSpvRescan], 0 = none this
+     * process — backs [spvRescanArmedWithin] (the last-known-balance
+     * persist hold; see the interface KDoc). In-memory only on purpose: a
+     * process death interrupts the persist path with it, and on relaunch
+     * the rewound engine progress itself holds the gate.
+     */
+    @Volatile
+    private var lastSpvRescanArmElapsedMs = 0L
+
+    override fun spvRescanArmedWithin(windowMs: Long): Boolean {
+        val armedAt = lastSpvRescanArmElapsedMs
+        return armedAt != 0L && android.os.SystemClock.elapsedRealtime() - armedAt < windowMs
+    }
+
     override val isStarted: Boolean
         get() = runtime != null
 
@@ -746,7 +761,8 @@ class DashSdkServiceImpl @Inject constructor(
             syncSuccess = summary.success,
             syncErrors = summary.errors,
             pendingBefore = drain.queuedBefore,
-            drainScheduled = drain.drainScheduled
+            drainScheduled = drain.drainScheduled,
+            pendingAfter = drain.queuedAfter
         )
     }
 
@@ -833,6 +849,10 @@ class DashSdkServiceImpl @Inject constructor(
                 ).resolve(time)
             }
             manager.rescanSpvFilters(walletId, birthHeight.toInt())
+            // Stamp BEFORE reporting success: the persist gate
+            // (spvRescanArmedWithin) must already see the arm when the
+            // caller's next balance tick runs.
+            lastSpvRescanArmElapsedMs = android.os.SystemClock.elapsedRealtime()
             log.info(
                 "armSpvRescan: filter watermark rewind to {} armed on {}…",
                 birthHeight, walletIdHex.take(8)

@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service
 
+import de.schildbach.wallet.service.platform.sdk.DashPayBackfillStatus
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,8 +53,12 @@ class L1SyncStatusServiceTest {
         headerTarget: Long = 1_514_660,
         filterHeight: Long = 1_400_000,
         filterTarget: Long = 1_514_660,
-        mnListHeight: Long = 0
-    ) = ShadowSyncProgress(phase, 0.0, headerHeight, headerTarget, filterHeight, filterTarget, mnListHeight)
+        mnListHeight: Long = 0,
+        walletSyncedHeight: Long = 0
+    ) = ShadowSyncProgress(
+        phase, 0.0, headerHeight, headerTarget, filterHeight, filterTarget, mnListHeight,
+        walletSyncedHeight
+    )
 
     private fun dashjState(
         percentageSync: Int,
@@ -88,6 +93,39 @@ class L1SyncStatusServiceTest {
         )
         assertTrue(sdkL1ScanCaughtUp(progress(phase = ShadowSyncPhase.SYNCED)))
         assertFalse("a genuine mid-scan is not caught up", sdkL1ScanCaughtUp(progress()))
+    }
+
+    @Test
+    fun sdkCaughtUp_blocksWhileTheBlockPipelineProvablyLags() {
+        // The field incident: filters sub-progress at the tip (position-wise
+        // "synced") one minute into a three-hour replay while the engine was
+        // still downloading/processing the matched blocks — the committed
+        // wallet cursor trailing the header tip is the only Kotlin-visible
+        // evidence of that churn, and it must hold the gate closed.
+        assertFalse(
+            "filters at tip but the committed cursor far behind = still churning",
+            sdkL1ScanCaughtUp(
+                progress(filterHeight = 1_514_659, walletSyncedHeight = 1_200_000)
+            )
+        )
+        // The SDK's own latched SYNCED phase is gated the same way — it was
+        // observed holding SYNCED right through an armed replay.
+        assertFalse(
+            sdkL1ScanCaughtUp(
+                progress(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_200_000)
+            )
+        )
+        // A cursor within tolerance of the tip is drained: caught up.
+        assertTrue(
+            sdkL1ScanCaughtUp(
+                progress(filterHeight = 1_514_659, walletSyncedHeight = 1_514_658)
+            )
+        )
+        // An UNKNOWN cursor (0 — no event/seed evidence) must never deadlock
+        // the gate: pre-change behavior applies.
+        assertTrue(
+            sdkL1ScanCaughtUp(progress(filterHeight = 1_514_659, walletSyncedHeight = 0))
+        )
     }
 
     // ── dashj's own percentage rule ───────────────────────────────────
@@ -404,6 +442,352 @@ class L1SyncStatusServiceTest {
         runCurrent()
         // …and the report still lands one grace after the FIRST observation.
         assertEquals(true, seen.last())
+        job.cancel()
+    }
+
+
+    // ── the DashPay half of "finished syncing" (FIX G) ───────────────────
+
+    /**
+     * The user complaint this closes: 11.10.86 reported synced at 17:12:39
+     * (L1Shadow phase=SYNCED 100.0%) while contact sync then ran until
+     * 17:20:09, the DashPay receiving accounts registered at 17:20:31, and the
+     * correct balance only appeared at 17:25:00.
+     */
+    @Test
+    fun aCaughtUpChainWithAnUnsettledDashPaySideIsNotFullySynced() {
+        val status = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = caughtUp(),
+            dashjState = null,
+            dashPaySynced = false
+        )
+        // The funds/feature gate is untouched — the chain really is caught up.
+        assertTrue(status.isSynced)
+        // …but the user is still told it is working.
+        assertFalse(status.isFullySynced)
+    }
+
+    @Test
+    fun bothHalvesSettled_readsFullySynced() {
+        val status = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = caughtUp(),
+            dashjState = null,
+            dashPaySynced = true
+        )
+        assertTrue(status.isFullySynced)
+    }
+
+    /**
+     * HARD REQUIREMENT: a wallet with no DashPay identity must never be held
+     * in "syncing" by the DashPay term. `applicable` starts false, so the
+     * terms are settled from the first read and stay settled.
+     */
+    @Test
+    fun aWalletWithoutAnIdentityIsTriviallySettled() {
+        assertTrue(DashPaySyncTerms().settled)
+        val status = DashPaySyncStatus()
+        assertTrue(status.terms.value.settled)
+        // Even mid-contact-sync bookkeeping cannot un-settle it while DashPay
+        // does not apply.
+        status.contactSyncStarted()
+        status.setAccountBuildsSettled(false)
+        status.setBackfillSettled(false)
+        assertTrue(status.terms.value.settled)
+    }
+
+    // ── S21 regression #2: the indicator that flickered forever ──────────
+
+    /**
+     * DEVICE REGRESSION (S21, 11.10.87): "Syncing balance" was shown for
+     * 78.2 s of a 192 s window — 40.8% of the time, in 10 blips averaging
+     * 7.8 s — with no sign of stopping. `updateContactRequests` runs on a
+     * ~15 s ticker forever, and the contact term mirrored "a pass is in
+     * flight", so every routine refresh re-raised the indicator.
+     *
+     * This is the whole required shape in one test: shows during the initial
+     * sync, clears when it completes, STAYS cleared across many periodic
+     * refreshes that find nothing, and re-raises only on positive evidence.
+     */
+    @Test
+    fun periodicRefreshesNeverReRaiseTheIndicatorAfterTheInitialSync() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+
+        // 1. INITIAL SYNC IN PROGRESS ⇒ shows. This is the .86 case: contact
+        //    sync ran 6.185 min after L1 reported caught up, and the user has
+        //    to see "syncing" for all of it.
+        status.contactSyncStarted()
+        assertFalse("the initial sync must show as syncing", status.terms.value.settled)
+
+        // 2. INITIAL SYNC COMPLETES ⇒ clears.
+        status.contactSyncFinished()
+        assertTrue(status.terms.value.settled)
+
+        // 3. N PERIODIC REFRESHES THAT FIND NOTHING ⇒ STAYS cleared. The
+        //    device saw one of these every ~15 s, forever.
+        repeat(20) {
+            status.contactSyncStarted()
+            assertTrue(
+                "a scheduled refresh must never re-raise the indicator",
+                status.terms.value.settled
+            )
+            status.contactSyncFinished()
+            assertTrue(status.terms.value.settled)
+        }
+
+        // 4. POSITIVE EVIDENCE ⇒ shows again. A registered receiving account
+        //    or an in-flight replay means money really is missing.
+        status.setBackfillSettled(false)
+        assertFalse("real incompleteness must still re-raise it", status.terms.value.settled)
+        status.setBackfillSettled(true)
+        assertTrue(status.terms.value.settled)
+
+        status.setAccountBuildsSettled(false)
+        assertFalse(status.terms.value.settled)
+        status.setAccountBuildsSettled(true)
+        assertTrue(status.terms.value.settled)
+    }
+
+    /**
+     * The blip count is what the user actually experiences, so assert it
+     * directly: the pre-fix term produced one raise per refresh.
+     */
+    @Test
+    fun twentyRefreshesProduceZeroIndicatorBlips() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished()
+
+        var blips = 0
+        var wasSettled = status.terms.value.settled
+        repeat(20) {
+            status.contactSyncStarted()
+            if (wasSettled && !status.terms.value.settled) blips++
+            wasSettled = status.terms.value.settled
+            status.contactSyncFinished()
+            wasSettled = status.terms.value.settled
+        }
+        assertEquals("routine refreshes must produce no visible blips", 0, blips)
+    }
+
+    /**
+     * Requirement 3 preserved: the latch is per-wallet, not per-process-life.
+     * A reset/restore makes the NEXT sync an initial one again, so the user
+     * sees the indicator until their contacts are actually back.
+     */
+    @Test
+    fun aWalletResetMakesTheNextSyncAnInitialSyncAgain() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished()
+        assertTrue(status.terms.value.settled)
+
+        status.resetForWalletReset()
+        status.setApplicable(true)
+        assertFalse(
+            "after a restore the indicator must show until the new sync completes",
+            status.terms.value.settled
+        )
+        status.contactSyncFinished()
+        assertTrue(status.terms.value.settled)
+    }
+
+    /**
+     * A pass that FAILS still latches — the pass ended and the ticker retries,
+     * whereas requiring success would pin the indicator on forever whenever
+     * Platform is unreachable.
+     */
+    @Test
+    fun aFailedInitialPassStillLatches() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished() // the finally-block path, success or not
+        assertTrue(status.terms.value.settled)
+    }
+
+    /** Every term is load-bearing once DashPay applies. */
+    @Test
+    fun eachDashPayTermCanHoldTheSignal() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        // The initial pass has never completed yet.
+        assertFalse(status.terms.value.settled)
+
+        status.contactSyncFinished()
+        assertTrue(status.terms.value.settled)
+
+        status.setAccountBuildsSettled(false)
+        assertFalse(status.terms.value.settled)
+        status.setAccountBuildsSettled(true)
+
+        status.setBackfillSettled(false)
+        assertFalse(status.terms.value.settled)
+        status.setBackfillSettled(true)
+        assertTrue(status.terms.value.settled)
+    }
+
+    /** Losing DashPay applicability releases the hold immediately. */
+    @Test
+    fun becomingInapplicableReleasesTheHold() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        assertFalse(status.terms.value.settled)
+        status.setApplicable(false)
+        assertTrue(status.terms.value.settled)
+    }
+
+
+    // ── S21 regression: the indicator that never cleared ─────────────────
+
+    /**
+     * DEVICE REGRESSION (S21, 11.10.87 testnet, identity + 8 contact
+     * requests): "Syncing balance" showed permanently, minutes after L1
+     * reported SYNCED, while the balance itself rendered correctly.
+     *
+     * The gate's log line was the tell — every sub-condition benign, and it
+     * STILL declined to record:
+     *
+     *   backfill pass outcome: no rewind observed, but the pass is not
+     *   conclusive (firstPassInProcess=false, syncErrors=0, pendingBuilds=0,
+     *   drainScheduled=false); recording nothing
+     *
+     * That is by design: the gate clears an armed marker only by OBSERVING a
+     * rewind or recording coverage, and it refuses to record coverage while
+     * any received contact predates the height. On a wallet whose coverage is
+     * already correct the marker is therefore PERMANENT — and the indicator
+     * was keyed on its absence.
+     */
+    @Test
+    fun correctCoverage_settlesEvenThoughTheGateStaysArmedForever() {
+        // The exact device state: the ledger is complete (nothing replaying,
+        // no registration outstanding) while the bookkeeping stays armed.
+        val status = DashPayBackfillStatus(
+            armed = true,
+            replaying = false,
+            registrationOutstanding = false
+        )
+        assertTrue("an unproven armed marker is not missing money", !status.ledgerIncomplete)
+
+        val terms = DashPaySyncStatus()
+        terms.setApplicable(true)
+        terms.contactSyncFinished()                  // the initial sync latched
+        terms.setAccountBuildsSettled(true)          // pendingBuilds=0
+        terms.setBackfillSettled(!status.ledgerIncomplete)
+        assertTrue("the DashPay term must settle on this wallet", terms.terms.value.settled)
+
+        val ui = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = caughtUp(),
+            dashjState = null,
+            dashPaySynced = terms.terms.value.settled
+        )
+        assertTrue("the indicator must clear", ui.isFullySynced)
+    }
+
+    /** Positive evidence of missing money still holds the indicator. */
+    @Test
+    fun realIncompletenessStillHoldsTheIndicator() {
+        assertTrue(
+            DashPayBackfillStatus(armed = false, replaying = true).ledgerIncomplete
+        )
+        assertTrue(
+            DashPayBackfillStatus(
+                armed = false,
+                replaying = false,
+                registrationOutstanding = true
+            ).ledgerIncomplete
+        )
+    }
+
+    /**
+     * The DURABLE seed keeps the strict test — an unproven armed marker still
+     * blocks LAST_TOTAL_BALANCE, which is the 11.10.86 field incident (a
+     * bip44-only figure persisted as the launch seed at 17:23:58).
+     */
+    @Test
+    fun theDurableSeedStillTreatsAnArmedMarkerAsUnsettled() {
+        assertFalse(DashPayBackfillStatus(armed = true, replaying = false).settled)
+        assertFalse(
+            DashPayBackfillStatus(
+                armed = false,
+                replaying = false,
+                registrationOutstanding = true
+            ).settled
+        )
+        assertTrue(DashPayBackfillStatus.SETTLED.settled)
+    }
+
+    // ── the belt-and-braces ceiling ──────────────────────────────────────
+
+    /**
+     * HARD REQUIREMENT: no producer may hold the indicator indefinitely. Even
+     * a term that is stuck false forever is overridden once the ceiling
+     * passes — an indicator that never clears is worse than one that clears
+     * early.
+     */
+    @Test
+    fun theDashPayTermCanNeverHoldTheIndicatorPastTheCeiling() = runTest {
+        val stuck = MutableSharedFlow<Boolean>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncSettledWithDeadline(stuck, deadlineMs = 1_000).collect { seen += it }
+        }
+        runCurrent()
+        stuck.emit(false)
+        runCurrent()
+        assertEquals(false, seen.last())
+
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals("the ceiling must release the indicator", true, seen.last())
+        job.cancel()
+    }
+
+    /** Settling normally reports at once, without waiting for the ceiling. */
+    @Test
+    fun settlingBeforeTheCeilingReportsImmediately() = runTest {
+        val feed = MutableSharedFlow<Boolean>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncSettledWithDeadline(feed, deadlineMs = 10_000).collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(false)
+        testScheduler.advanceTimeBy(500)
+        runCurrent()
+        assertEquals(false, seen.last())
+
+        feed.emit(true)
+        runCurrent()
+        assertEquals(true, seen.last())
+        job.cancel()
+    }
+
+    /**
+     * A producer republishing the SAME unsettled verdict (the balance
+     * pipeline fans these out on a 60 s cadence) must not restart the
+     * ceiling clock — otherwise the ceiling could never be reached.
+     */
+    @Test
+    fun republishingTheSameVerdictDoesNotRestartTheCeiling() = runTest {
+        val feed = MutableSharedFlow<Boolean>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncSettledWithDeadline(feed, deadlineMs = 1_000).collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(false)
+        testScheduler.advanceTimeBy(600)
+        runCurrent()
+        feed.emit(false)
+        testScheduler.advanceTimeBy(600)
+        runCurrent()
+        assertEquals("the ceiling lands one deadline after the FIRST false", true, seen.last())
         job.cancel()
     }
 }

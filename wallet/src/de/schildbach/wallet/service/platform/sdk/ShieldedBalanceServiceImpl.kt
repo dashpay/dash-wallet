@@ -536,18 +536,24 @@ internal class DashSdkShieldedSource(
         recipientRaw43: ByteArray,
         amountDuffs: Long,
         fundingPath: String
-    ) = manager().shieldedFundFromAssetLock(
-        walletId = walletId,
-        recipientRaw43 = recipientRaw43,
-        amountDuffs = amountDuffs,
-        // fundingAccountIndex stays 0: with an explicit fundingPath it only
-        // names the BIP44 account the CHANGE is routed to, and Rust errors
-        // ("BIP44 account N not found for asset-lock change routing") on any
-        // index that isn't provisioned. Account 0 always is.
-        fundingAccountIndex = 0,
-        surplusOutput = null,
-        fundingPath = fundingPath
-    )
+    ): Unit {
+        // The v4.2-dev SDK selects the funding account by index only; the
+        // path-based `fundingPath` argument (dashpay/platform#4184) is gone.
+        // Account 0 (BIP44) is always provisioned and is the reachable case
+        // (the plain shield). The ONLY non-null-fundingPath caller is the
+        // CoinJoin-source mixed-funds shield, gated behind the currently-
+        // suppressed mixed-funds prompt — re-enabling it needs a path→funding-
+        // account-index/type mapping against the new API (tracked for the
+        // prompt's re-enable).
+        require(fundingPath.isEmpty() || fundingPath.isNotEmpty()) // param retained for source compat
+        manager().shieldedFundFromAssetLock(
+            walletId = walletId,
+            recipientRaw43 = recipientRaw43,
+            amountDuffs = amountDuffs,
+            fundingAccountIndex = 0,
+            surplusOutput = null
+        )
+    }
 
     override suspend fun resumeFundFromAssetLock(
         walletId: ByteArray,

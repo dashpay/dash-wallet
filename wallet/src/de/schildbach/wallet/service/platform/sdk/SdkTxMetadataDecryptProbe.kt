@@ -113,17 +113,16 @@ internal class DashSdkTxMetadataDecryptSource(
             walletIdHex.take(8), wallet.handle, wallet.handle != 0L,
             manager.mnemonicResolverHandle, manager.mnemonicResolverHandle != 0L
         )
-        // The app's SDK wallet is EXTERNAL-SIGNABLE (no private keys in the
-        // Rust wallet — keys derive on demand through the registered mnemonic
-        // resolver), so the txMetadata AES-key derivation REQUIRES the
-        // resolver handle — same plumbing as the discoverIdentities path.
-        return manager.documentTransactions.fetchEncryptedDocuments(
-            walletHandle = wallet.handle,
-            mnemonicResolverHandle = manager.mnemonicResolverHandle,
-            ownerId = ownerId,
-            contractId = contractId,
-            documentType = documentType,
-            sinceMs = sinceMs
+        // `documentTransactions.fetchEncryptedDocuments` is a qa5-only SDK
+        // surface that never merged upstream (the v4.2-dev DocumentTransactions
+        // exposes only purchase/create/replace/…). This is a DEBUG-only
+        // decrypt-proof probe with no production callers, so surface a clear
+        // "unavailable" instead of a compile break; the decrypt mapping logic
+        // ([DecryptProofVerdict]) is still exercised by its own unit tests via
+        // a fake source. Restore the real fetch if the surface lands upstream.
+        throw UnsupportedOperationException(
+            "tx-metadata decrypt-proof fetch is not available on this SDK build " +
+                "(documentTransactions.fetchEncryptedDocuments is a qa5-only surface)"
         )
     }
 }

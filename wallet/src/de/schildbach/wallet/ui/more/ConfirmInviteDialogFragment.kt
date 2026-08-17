@@ -170,6 +170,16 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                     } else {
                         invitationFragmentViewModel.sendInviteTransaction(inviteAmount)
                     }
+                    // The spend deliberately outlives the view (fragment
+                    // lifecycleScope — cancelling a ~30s funding spend on a
+                    // relock/teardown would orphan it mid-flight), so the view
+                    // can be gone by the time the SDK returns. Navigating off a
+                    // destroyed view throws; the invite already exists and the
+                    // Invitations list shows it on next open, so just skip.
+                    if (view == null) {
+                        log.warn("invite created but the dialog's view is destroyed — skipping navigation")
+                        return@launch
+                    }
                     findNavController().navigate(
                         ConfirmInviteDialogFragmentDirections.toInviteCreatedFragment(identityId, args.source)
                     )
@@ -212,6 +222,14 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
             "invite creation failed: kind={} attempt={} retryAllowed={}",
             kind, failedCreateAttempts, retryAllowed
         )
+        // The creating coroutine outlives the view (fragment lifecycleScope, see
+        // onViewCreated) — a failure landing after a relock/teardown must not
+        // touch the binding delegate (getView() == null throws). The attempt was
+        // counted and logged above; a re-opened dialog starts from honest state.
+        if (view == null) {
+            log.warn("invite-creation failure arrived after the dialog's view was destroyed — UI update skipped")
+            return
+        }
         binding.confirmMessage.text = when (kind) {
             InviteCreationFailureKind.INSUFFICIENT_FUNDS ->
                 getString(R.string.invitation_cant_afford_message, inviteAmount.toFriendlyString())

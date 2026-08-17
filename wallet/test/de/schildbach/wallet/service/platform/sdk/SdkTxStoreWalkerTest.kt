@@ -182,9 +182,10 @@ class SdkTxStoreWalkerTest {
         assertTrue("a page exceeded the bounded window", pageSizes.all { it <= pageRows * 2 })
         assertTrue("the walk was not paged at all", pageSizes.size >= n / pageRows)
         // Query bound: one TXO page query + at most ⌈2·pageRows/500⌉ IN-chunk
-        // record fetches per page — nothing proportional to the table per pass.
+        // record fetches + one pending-reservation aggregate per page —
+        // nothing proportional to the table per pass.
         val pages = pageSizes.size + 1 // + the final short/empty page probe
-        val maxQueriesPerPage = 1 + (2 * pageRows + 499) / 500
+        val maxQueriesPerPage = 2 + (2 * pageRows + 499) / 500
         assertTrue(
             "query count ${queryLog.size} exceeds the per-page bound",
             queryLog.size <= pages * maxQueriesPerPage
@@ -229,14 +230,14 @@ class SdkTxStoreWalkerTest {
         // First drain establishes the fingerprint (and emits the bounded tail).
         assertTrue(w.drainChanges { })
 
-        // UNCHANGED store: the drain must confirm and skip with the four
+        // UNCHANGED store: the drain must confirm and skip with the five
         // fingerprint queries — no row queries, no pages, no records.
         queryLog.clear()
         var pages = 0
         val drained = w.drainChanges { pages++ }
         assertFalse(drained)
         assertEquals(0, pages)
-        assertEquals("expected exactly the 4 fingerprint queries", 4, queryLog.size)
+        assertEquals("expected exactly the 5 fingerprint queries", 5, queryLog.size)
         assertTrue(queryLog.all { it.startsWith("SELECT COUNT(*)") || it.startsWith("SELECT COALESCE(SUM(context)") })
     }
 
@@ -416,13 +417,18 @@ class SdkTxStoreWalkerTest {
         amount: Long,
         address: String,
         spendingTxid: ByteArray? = null
-    ) {
+    ): ByteArray {
+        val outpoint = ByteArray(36).also {
+            it[0] = (outpointSeed and 0xff).toByte()
+            it[1] = (outpointSeed++ shr 8).toByte()
+            it[35] = 7
+        }
         exec(
             "INSERT INTO txos (outpoint, vout, amount, address, scriptPubKey, height, isCoinbase, " +
                 "isConfirmed, isInstantLocked, isLocked, isSpent, createdAt, lastUpdated, walletId, " +
                 "txid, spendingTxid, spendingInputIndex, accountId, coreAddressId) " +
                 "VALUES (?, ?, ?, ?, ?, 0, 0, 1, 0, 0, ?, 0, 0, ?, ?, ?, NULL, NULL, ?)",
-            ByteArray(36).also { it[0] = (outpointSeed and 0xff).toByte(); it[1] = (outpointSeed++ shr 8).toByte(); it[35] = 7 },
+            outpoint,
             vout,
             amount,
             address,
@@ -432,6 +438,23 @@ class SdkTxStoreWalkerTest {
             txid,
             spendingTxid,
             address
+        )
+        return outpoint
+    }
+
+    /**
+     * A `pending_inputs` reservation as the engine writes it at broadcast:
+     * outpoint + the spending txid denorm ([spendingTransactionTxid] left
+     * NULL — the relationship materialization is optional and irrelevant to
+     * the walker's reads, which only consult the always-set scalar).
+     */
+    private fun insertPendingInput(outpoint: ByteArray, spendingTxid: ByteArray) {
+        exec(
+            "INSERT INTO pending_inputs (outpoint, inputIndex, spendingTxid, " +
+                "spendingTransactionTxid, walletId, createdAt) VALUES (?, 0, ?, NULL, ?, 0)",
+            outpoint,
+            spendingTxid,
+            walletId
         )
     }
 
@@ -587,6 +610,189 @@ class SdkTxStoreWalkerTest {
         assertEquals(-49_999_774L, drain.netAmountDuffs)
         val sweep = requireNotNull(w.recordFor(displayHexOf(ids.sweep)))
         assertEquals(L1TxUiDirection.INTERNAL, sweep.direction)
+    }
+
+    // ── Durable write-back: corrected once, never re-processed ────────
+
+    /** Raw (direction, netAmount, fee) of one stored `transactions` row. */
+    private fun storedShape(txid: ByteArray): Triple<Int, Long, Long?> =
+        db.openHelper.readableDatabase.query(
+            androidx.sqlite.db.SimpleSQLiteQuery(
+                "SELECT direction, netAmount, fee FROM transactions WHERE txid = ?",
+                arrayOf<Any?>(txid)
+            )
+        ).use { c ->
+            assertTrue(c.moveToFirst())
+            Triple(c.getInt(0), c.getLong(1), if (c.isNull(2)) null else c.getLong(2))
+        }
+
+    @Test
+    fun reattribution_persistsCorrectionsDurably_nextLaunchDoesNoReattributionWork() = runBlocking {
+        val ids = seedS22Shape()
+        walker(payloadFacts = markerPayloadFacts).walkAll { }
+
+        // The corrections landed in the STORE (the durable per-record flag):
+        // sweep → INTERNAL(2) net=−fee fee recovered; drain → OUTGOING(1).
+        assertEquals(Triple(2, -226L, 226L), storedShape(ids.sweep))
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+        // Genuine receives untouched.
+        assertEquals(Triple(0, 50_000_000L, null), storedShape(ids.receive))
+        assertEquals(Triple(0, 100_000_000L, null), storedShape(ids.faucet))
+
+        // "Next launch": a FRESH walker instance (no in-memory state). The
+        // rows no longer match the flag condition, so the walk issues NO
+        // reattribution statements — no funded-split aggregate, no payload
+        // fetch, no UPDATE — the every-launch storm is gone.
+        val w2 = walker(payloadFacts = { error("payload parse must not run on a corrected store") })
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w2.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        assertTrue(queryLog.none { it.contains("transactionData") })
+        assertTrue(queryLog.none { it.contains("GROUP BY t.txid") })
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        // …and the served shapes are still the corrected ones.
+        assertEquals(L1TxUiDirection.INTERNAL, byHex[displayHexOf(ids.sweep)]?.direction)
+        assertEquals(L1TxUiDirection.OUTGOING, byHex[displayHexOf(ids.drain)]?.direction)
+        assertEquals(L1TxUiDirection.INCOMING, byHex[displayHexOf(ids.faucet)]?.direction)
+    }
+
+    @Test
+    fun reattribution_engineRewriteReflagsAndRecorrects() = runBlocking {
+        // The wipe/restore/armed-rescan re-run contract: when the engine
+        // re-persists the misattributed Rust record (the only way the wrong
+        // shape can come back), the walker must re-correct AND re-persist —
+        // no invalidation plumbing, the flag condition is structural.
+        val ids = seedS22Shape()
+        walker(payloadFacts = markerPayloadFacts).walkAll { }
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+
+        // Engine rewrite: the rescan re-stores the wrong INCOMING shape.
+        exec(
+            "UPDATE transactions SET direction = 0, netAmount = 49999138, fee = NULL WHERE txid = ?",
+            ids.drain
+        )
+
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = markerPayloadFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        assertEquals(L1TxUiDirection.OUTGOING, byHex[displayHexOf(ids.drain)]?.direction)
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+    }
+
+    // ── pending_inputs reservations: the "lingering receive" fix ──────
+    //
+    // The SDK only writes `txos.isSpent`/`spendingTxid` at CONFIRMATION,
+    // but reserves the spent outpoints in `pending_inputs` at BROADCAST.
+    // Between the two, a send's stored record is `INCOMING +change` with no
+    // confirmed spent evidence — without the reservation supplement the
+    // walker served that phantom receive for minutes (the on-device
+    // lingering receive). These tests pin the display predicate
+    // (isSpent == 0 AND spendingTxid IS NULL AND outpoint reserved), the
+    // display-only rule (nothing persisted from pending evidence), and the
+    // precedence that makes the SDK's never-cleaned stale reservations
+    // harmless once the real marks land.
+
+    /** Payload facts for marker 4: payment 0.2 (external) + change 0.29999774, one input. */
+    private val pendingSendPayloadFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+        when (payload.firstOrNull()?.toInt()) {
+            4 -> TxPayloadFacts(outputsTotalDuffs = 49_999_774, outputCount = 2, inputCount = 1)
+            5 -> TxPayloadFacts(outputsTotalDuffs = 49_999_774, outputCount = 1, inputCount = 1)
+            else -> null
+        }
+    }
+
+    @Test
+    fun pendingReservation_correctsJustBroadcastSend_displayOnlyThenConfirmedPersists() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_0", bip44Account)
+        insertCoreAddress("chg_0", bip44Account)
+
+        val receive = txid(21)
+        val send = txid(22)
+        // A confirmed 0.5 receive…
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        // …spent by a JUST-BROADCAST send, stored the way the engine writes
+        // it pre-confirm: INCOMING, net = +change, fee NULL — the phantom
+        // receive of money already spent.
+        insertTx(send, direction = 0, netAmount = 29_999_774, payload = byteArrayOf(4), firstSeen = 1_700_000_002)
+        val receiveOutpoint = insertTxo(receive, 0, 50_000_000, "bip44_0") // isSpent=0, spendingTxid=NULL
+        insertTxo(send, 1, 29_999_774, "chg_0") // the change output
+        insertPendingInput(receiveOutpoint, send)
+
+        // DISPLAY: the reservation supplies the spent evidence — OUTGOING,
+        // net = change − spent = −(payment + fee), fee recovered from the
+        // payload (all inputs provably ours via the reservation count).
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = pendingSendPayloadFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        val sendRecord = requireNotNull(byHex[displayHexOf(send)])
+        assertEquals(L1TxUiDirection.OUTGOING, sendRecord.direction)
+        assertEquals(-20_000_226L, sendRecord.netAmountDuffs)
+        assertEquals(226L, sendRecord.feeDuffs)
+        // The receive row itself stays a genuine receive.
+        assertEquals(L1TxUiDirection.INCOMING, requireNotNull(byHex[displayHexOf(receive)]).direction)
+
+        // DISPLAY-ONLY: pending evidence never rewrites the store — the
+        // stored shape is untouched until the real marks land.
+        assertEquals(Triple(0, 29_999_774L, null), storedShape(send))
+
+        // CONFIRMATION lands: real marks written; the stale reservation is
+        // DELIBERATELY left behind (the SDK never cleans pending_inputs up).
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE outpoint = ?", send, receiveOutpoint)
+
+        // Same display shape — the isSpent=0/spendingTxid-NULL guards keep
+        // the stale reservation from double-counting the spent input — and
+        // the correction is now persisted durably (the pre-existing rule).
+        val byHex2 = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = pendingSendPayloadFacts).walkAll { page -> page.forEach { byHex2[it.txidHex] = it } }
+        val confirmed = requireNotNull(byHex2[displayHexOf(send)])
+        assertEquals(L1TxUiDirection.OUTGOING, confirmed.direction)
+        assertEquals(-20_000_226L, confirmed.netAmountDuffs)
+        assertEquals(226L, confirmed.feeDuffs)
+        assertEquals(Triple(1, -20_000_226L, 226L), storedShape(send))
+    }
+
+    @Test
+    fun pendingReservation_changelessSend_discoveredAndCorrectedReactively() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_0", bip44Account)
+
+        val receive = txid(31)
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        val receiveOutpoint = insertTxo(receive, 0, 50_000_000, "bip44_0")
+
+        val w = walker(payloadFacts = pendingSendPayloadFacts)
+        w.primeWatermarks()
+        assertTrue(w.drainChanges { }) // baseline
+
+        // A change-less send (max-send/drain): pre-confirm its ONLY store
+        // traces are the transactions row and the reservation. Tx row first —
+        // without the reservation it is not yet wallet-relevant.
+        val send = txid(32)
+        insertTx(send, direction = 0, netAmount = 49_999_774, payload = byteArrayOf(5), firstSeen = 1_700_000_002)
+        val phaseB = mutableListOf<L1TxUiRecord>()
+        assertTrue(w.drainChanges { page -> phaseB += page })
+        assertTrue(
+            "a tx with no owned-TXO link and no reservation must not gain membership",
+            phaseB.none { it.txidHex == displayHexOf(send) }
+        )
+
+        // The reservation lands as its OWN later write. It must re-trigger
+        // the drain (pending_inputs is part of the fingerprint) and surface
+        // the send — membership and spent evidence both via pending_inputs.
+        insertPendingInput(receiveOutpoint, send)
+        val phaseC = mutableListOf<L1TxUiRecord>()
+        assertTrue("a reservation-only write went undetected", w.drainChanges { page -> phaseC += page })
+        val sendRecord = phaseC.firstOrNull { it.txidHex == displayHexOf(send) }
+        assertEquals(L1TxUiDirection.OUTGOING, requireNotNull(sendRecord) { "reserving send not emitted" }.direction)
+        assertEquals(-50_000_000L, sendRecord.netAmountDuffs)
+        assertEquals(226L, sendRecord.feeDuffs)
+
+        // Point reads see the same membership + corrected shape.
+        val point = requireNotNull(w.recordFor(displayHexOf(send)))
+        assertEquals(L1TxUiDirection.OUTGOING, point.direction)
+        assertEquals(-50_000_000L, point.netAmountDuffs)
+
+        // Still display-only: the stored row keeps the engine's shape.
+        assertEquals(Triple(0, 49_999_774L, null), storedShape(send))
     }
 
     // ── reattributeIncomingRecord (pure) ──────────────────────────────

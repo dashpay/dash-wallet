@@ -1585,7 +1585,9 @@ class L1ShadowSyncServiceTest {
         filters: SpvSubProgress? = sub(SpvSyncState.SYNCED, 100, 100)
     ) = SpvSyncProgressData(
         overallState = SpvSyncState.SYNCING,
-        overallPercentage = 50.0,
+        // The SDK's overall percentage is a 0..1 fraction (dash-spv
+        // SyncProgress::percentage averages ProgressPercentage fractions).
+        overallPercentage = 0.5,
         headers = headers,
         filterHeaders = filterHeaders,
         filters = filters,
@@ -1636,15 +1638,228 @@ class L1ShadowSyncServiceTest {
                 filters = sub(SpvSyncState.SYNCING, 50, 200)
             )
         )
-        assertEquals(50.0, mapped.overallPercent, 0.0)
+        assertEquals(0.5, mapped.overallPercent, 0.0)
         assertEquals(200, mapped.headerHeight)
         assertEquals(200, mapped.headerTarget)
         assertEquals(50, mapped.filterHeight)
         assertEquals(200, mapped.filterTarget)
+        // The line scales the 0..1 fraction ×100 (the field log's "0.7%" was
+        // really 70%) and carries the committed wallet cursor.
         assertEquals(
-            "L1Shadow phase=FILTERS 50.0% headers 200/200 filters 50/200",
+            "L1Shadow phase=FILTERS 50.0% headers 200/200 filters 50/200 wallet 0",
             shadowProgressLine(mapped)
         )
+        assertEquals(
+            "L1Shadow phase=FILTERS 50.0% headers 200/200 filters 50/200 wallet 199",
+            shadowProgressLine(mapped.copy(walletSyncedHeight = 199))
+        )
+    }
+
+    // ── The committed-cursor drain predicate + its event parser ───────
+
+    @Test
+    fun scanCaughtUpToTip_requiresTheBlockPipelineDrained() {
+        val filtersAtTip = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 1.0,
+            headerHeight = 1_514_660, headerTarget = 1_514_660,
+            filterHeight = 1_514_659, filterTarget = 1_514_660
+        )
+        // No cursor evidence (0): pre-change behavior — caught up.
+        assertTrue(filtersAtTip.scanCaughtUpToTip)
+        assertFalse(filtersAtTip.blockPipelineLagging)
+        // Cursor provably behind the tip: the engine is still downloading /
+        // processing matched blocks — NOT caught up (the premature-synced
+        // field incident).
+        val churning = filtersAtTip.copy(walletSyncedHeight = 1_200_000)
+        assertTrue(churning.blockPipelineLagging)
+        assertFalse(churning.scanCaughtUpToTip)
+        // Cursor within SCAN_TIP_TOLERANCE_BLOCKS of the tip: drained.
+        val drained = filtersAtTip.copy(walletSyncedHeight = 1_514_658)
+        assertFalse(drained.blockPipelineLagging)
+        assertTrue(drained.scanCaughtUpToTip)
+    }
+
+    // ── Replay memory telemetry (pure parts) ──────────────────────────
+
+    @Test
+    fun replayActive_holdsWhileSyncingOrPipelineLagging_dropsAtSettle() {
+        val atTip = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 1.0,
+            headerHeight = 1_514_660, headerTarget = 1_514_660,
+            filterHeight = 1_514_659, filterTarget = 1_514_660
+        )
+        // Mid-scan: active.
+        assertTrue(atTip.copy(filterHeight = 1_200_000).replayActive)
+        // SDK-latched SYNCED but the block pipeline provably lags: STILL active
+        // (the armed-replay shape the phase check alone would miss).
+        assertTrue(
+            atTip.copy(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_200_000).replayActive
+        )
+        // Caught up (drain-aware): not active — telemetry stops at the same
+        // instant the UI's "synced" settles.
+        assertFalse(atTip.replayActive)
+        assertFalse(atTip.copy(walletSyncedHeight = 1_514_659).replayActive)
+        assertFalse(ShadowSyncProgress(ShadowSyncPhase.SYNCED, 1.0, 100, 100, 100, 100).replayActive)
+    }
+
+    @Test
+    fun replayMemTelemetryLine_structuredAndGreppable_settledSuffixOnFinalLine() {
+        val p = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.7,
+            headerHeight = 2_137_000, headerTarget = 2_137_100,
+            filterHeight = 1_800_000, filterTarget = 2_137_100,
+            mnListHeight = 0, walletSyncedHeight = 1_790_000
+        )
+        assertEquals(
+            "ReplayMemTelemetry phase=FILTERS nativeHeapAllocated=123456789 " +
+                "nativeHeapSize=234567890 jvmUsed=50000000 jvmMax=536870912 " +
+                "headers 2137000/2137100 filters 1800000 wallet 1790000",
+            replayMemTelemetryLine(p, 123_456_789, 234_567_890, 50_000_000, 536_870_912)
+        )
+        assertEquals(
+            "ReplayMemTelemetry phase=SYNCED nativeHeapAllocated=1 nativeHeapSize=2 " +
+                "jvmUsed=3 jvmMax=4 headers 100/100 filters 100 wallet 100 SETTLED",
+            replayMemTelemetryLine(
+                ShadowSyncProgress(ShadowSyncPhase.SYNCED, 1.0, 100, 100, 100, 100, 0, 100),
+                1, 2, 3, 4, settled = true
+            )
+        )
+    }
+
+    // ── WalletHistoryFacts (the startup first-use log line) ───────────
+
+    @Test
+    fun walletHistoryFactsLine_fullLine_isoDatesAndGreppableTag() {
+        // 2016-08-19T21:54:32Z = 1471643672s; 2015-03-29T00:00:00Z = 1427587200s.
+        assertEquals(
+            "WalletHistoryFacts: oldestTx=2016-08-19T21:54:32Z height=522871 count=6284 " +
+                "dashjEarliestKeyTime=2015-03-29T00:00:00Z",
+            walletHistoryFactsLine(
+                WalletHistoryFacts(
+                    oldestTxTimeMs = 1_471_643_672_000L,
+                    txCount = 6_284,
+                    firstUseHeight = 522_871,
+                    dashjEarliestKeyTimeSecs = 1_427_587_200L
+                )
+            )
+        )
+        // Unknown height / no dashj wallet: named unknowns, never zeros.
+        assertEquals(
+            "WalletHistoryFacts: oldestTx=2016-08-19T21:54:32Z height=unknown count=1 " +
+                "dashjEarliestKeyTime=unknown",
+            walletHistoryFactsLine(
+                WalletHistoryFacts(
+                    oldestTxTimeMs = 1_471_643_672_000L,
+                    txCount = 1,
+                    firstUseHeight = null,
+                    dashjEarliestKeyTimeSecs = null
+                )
+            )
+        )
+    }
+
+    @Test
+    fun walletHistoryFactsLine_emptyDisplayDb_announcesTheSettleFollowUp() {
+        assertEquals(
+            "WalletHistoryFacts: displayDbEmpty count=0 " +
+                "dashjEarliestKeyTime=2015-03-29T00:00:00Z (real line follows at first sync settle)",
+            walletHistoryFactsLine(
+                WalletHistoryFacts(
+                    oldestTxTimeMs = null,
+                    txCount = 0,
+                    firstUseHeight = null,
+                    dashjEarliestKeyTimeSecs = 1_427_587_200L
+                )
+            )
+        )
+    }
+
+    // ── WalletBalanceFacts (the settle-edge balance snapshot) ─────────
+
+    /** One flat per-account row in the SDK's accountBalances JSON shape. */
+    private fun accountJson(
+        typeTag: Int,
+        confirmed: Long,
+        unconfirmed: Long = 0,
+        standardTag: Int = 0,
+        index: Int = 0
+    ): String =
+        "{\"typeTag\":$typeTag,\"standardTag\":$standardTag,\"index\":$index," +
+            "\"registrationIndex\":0,\"keyClass\":0," +
+            "\"userIdentityId\":\"${"00".repeat(32)}\",\"friendIdentityId\":\"${"00".repeat(32)}\"," +
+            "\"confirmed\":$confirmed,\"unconfirmed\":$unconfirmed,\"immature\":0,\"locked\":0," +
+            "\"keysUsed\":35,\"keysTotal\":1000}"
+
+    @Test
+    fun parseAccountBalanceMap_aggregatesFamilies_handlesEmptyAndGarbage() {
+        val json = "[" +
+            accountJson(typeTag = 0, confirmed = 4_800_000_000L, unconfirmed = 86_000_000L) + "," +
+            accountJson(typeTag = 1, confirmed = 5_400_000_000L) + "," +
+            // Two contact-receiving accounts must AGGREGATE into one family.
+            accountJson(typeTag = 12, confirmed = 30_000_000L, index = 0) + "," +
+            accountJson(typeTag = 12, confirmed = 12_000_000L, index = 1) + "," +
+            accountJson(typeTag = 13, confirmed = 69_998_912L) + "," +
+            accountJson(typeTag = 0, confirmed = 7L, standardTag = 1) + // BIP32 variant
+            "]"
+        assertEquals(
+            linkedMapOf(
+                "bip44" to 4_886_000_000L,
+                "coinjoin" to 5_400_000_000L,
+                "dashpayReceiving" to 42_000_000L,
+                "dashpayExternal" to 69_998_912L,
+                "bip32" to 7L
+            ),
+            parseAccountBalanceMap(json)
+        )
+        // Empty wallet: an empty map (renders "{}"), not unavailable.
+        assertEquals(emptyMap<String, Long>(), parseAccountBalanceMap("[]"))
+        // Nothing parseable: null — the line prints "unavailable", never a guess.
+        assertNull(parseAccountBalanceMap("not json at all"))
+        assertNull(parseAccountBalanceMap("{\"noTypeTagHere\":1}"))
+    }
+
+    @Test
+    fun walletBalanceFactsLine_fullLine_andUnavailableComponents() {
+        assertEquals(
+            "WalletBalanceFacts: total=4886000000 " +
+                "accounts={bip44:4886000000, coinjoin:0} " +
+                "confirmed=4800000000 unconfirmed=86000000 txCount=6284",
+            walletBalanceFactsLine(
+                WalletBalanceFacts(
+                    totalDuffs = 4_886_000_000L,
+                    confirmedDuffs = 4_800_000_000L,
+                    unconfirmedDuffs = 86_000_000L,
+                    accountFamilies = linkedMapOf("bip44" to 4_886_000_000L, "coinjoin" to 0L),
+                    txCount = 6_284
+                )
+            )
+        )
+        // Every unreadable surface prints the literal `unavailable`.
+        assertEquals(
+            "WalletBalanceFacts: total=unavailable accounts=unavailable " +
+                "confirmed=unavailable unconfirmed=unavailable txCount=unavailable",
+            walletBalanceFactsLine(WalletBalanceFacts(null, null, null, null, null))
+        )
+    }
+
+    @Test
+    fun parseL1SyncHeightAdvanced_extractsTheCommittedHeight_ignoresOtherEvents() {
+        assertEquals(
+            1_514_321L,
+            parseL1SyncHeightAdvanced(
+                "SyncHeightAdvanced { wallet_id: WalletId([205, 205, 205]), height: 1514321 }"
+            )
+        )
+        // BlockProcessed carries a height too, but a block's own height says
+        // nothing about the batch being committed — must not feed the cursor.
+        assertNull(
+            parseL1SyncHeightAdvanced(
+                "BlockProcessed { wallet_id: WalletId([205]), height: 1514321, chain_lock: None }"
+            )
+        )
+        assertNull(parseL1SyncHeightAdvanced(detectedDebug()))
+        assertNull(parseL1SyncHeightAdvanced("SyncHeightAdvanced { wallet_id: WalletId([1]) }"))
+        assertNull(parseL1SyncHeightAdvanced("SyncHeightAdvanced { height: 0 }"))
     }
 
     // ── kotlinSyncLabel (home-screen debug indicator) ─────────────────

@@ -280,7 +280,10 @@ class ContactsFragment : Fragment(),
                     // Mirror what processResults() actually displays: pending requests
                     // and established (mutual) contacts.
                     val hasContactsToShow = it.data?.any { u ->
-                        u.isPendingRequest || (u.requestSent && u.requestReceived)
+                        // Mirrors processResults' three sections, pending
+                        // OUTGOING included — otherwise the empty-state pane
+                        // covers a list that does have rows.
+                        u.isPendingRequest || u.requestSent
                     } ?: false
                     binding.contactList.apply {
                         emptyStatePane.root.isVisible = !hasContactsToShow
@@ -374,9 +377,10 @@ class ContactsFragment : Fragment(),
 
     private fun processResults(data: List<UsernameSearchResult>) {
         val results = ArrayList<ContactSearchResultsAdapter.ViewItem>()
+        val sections = splitContactSections(data)
         // process the requests
         val requests = if (args.mode != ContactsScreenMode.SELECT_CONTACT) {
-            data.filter { r -> r.isPendingRequest }.toMutableList()
+            sections.incomingPending.toMutableList()
         } else {
             ArrayList()
         }
@@ -396,12 +400,53 @@ class ContactsFragment : Fragment(),
         }
         // process contacts
         val contacts = if (args.mode != ContactsScreenMode.VIEW_REQUESTS)
-            data.filter { r -> r.requestSent && r.requestReceived }
+            sections.established
         else ArrayList()
 
         if (contacts.isNotEmpty() && args.mode != ContactsScreenMode.VIEW_REQUESTS) {
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_HEADER))
             contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        }
+
+        // PENDING OUTGOING — requests WE sent that were never reciprocated.
+        // These were invisible entirely: PlatformRepo.getFromProfiles drops
+        // them unless includeSentPending is set, and nothing set it, so
+        // splawik's 32 contacts rendered as 29 (ryszard1951,
+        // TheBitcoinBarbie, thedesertlynx63 were the three missing).
+        //
+        // Their own section, never merged into "My Contacts": a one-way
+        // request is not a mutual contact and the list must not imply it is.
+        // The three sets are disjoint by construction — incoming-pending is
+        // `requestReceived && !requestSent`, established is both, this is
+        // `requestSent && !requestReceived` — so no request is ever listed
+        // twice. Ownership: the "Contact Requests (N)" section above (and the
+        // VIEW_REQUESTS screen behind it) owns INCOMING pending; this section
+        // owns OUTGOING pending; the contacts section owns mutual.
+        //
+        // DIP-15 asymmetry, which is why these rows carry no actions while
+        // incoming-pending rows do: a contact request carries the SENDER's
+        // xpub. An INCOMING request therefore hands us their key material —
+        // we can derive their payment addresses and pay them, and
+        // ContactRequestPane.applyReceivedState already shows Pay for that
+        // state. An OUTGOING request only gave them OURS, so we have nothing
+        // to derive from and paying is impossible; the row (and the detail
+        // screen's applySentState) offers no send and no payment history.
+        val pendingSent = if (args.mode == ContactsScreenMode.SEARCH_CONTACTS) {
+            sections.outgoingPending
+        } else {
+            emptyList()
+        }
+        if (pendingSent.isNotEmpty()) {
+            results.add(
+                ContactSearchResultsAdapter.ViewItem(
+                    null,
+                    ContactSearchResultsAdapter.CONTACT_REQUEST_SENT_HEADER,
+                    requestCount = pendingSent.size
+                )
+            )
+            pendingSent.forEach { r ->
+                results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT))
+            }
         }
         contactsAdapter.results = results
     }
@@ -530,3 +575,31 @@ class ContactsFragment : Fragment(),
         }.parse()
     }
 }
+
+/**
+ * The three DISJOINT sections the contacts screen renders, from one contact
+ * feed. Pure — host-testable.
+ *
+ * Disjoint by construction ([UsernameSearchResult.type]): a request is either
+ * incoming-only, outgoing-only or mutual, so nothing is ever listed twice and
+ * a one-way request is never merged into "My Contacts".
+ *
+ * @property incomingPending they asked us and we have not accepted — the
+ *   "Contact Requests (N)" section. Actionable: their request carried THEIR
+ *   xpub, so we can derive their addresses and pay them (DIP-15).
+ * @property established mutual.
+ * @property outgoingPending we asked them and they have not reciprocated —
+ *   informational only: our request carried only OUR xpub, so we have no key
+ *   material to derive their addresses from and cannot pay them.
+ */
+internal data class ContactSections(
+    val incomingPending: List<UsernameSearchResult>,
+    val established: List<UsernameSearchResult>,
+    val outgoingPending: List<UsernameSearchResult>
+)
+
+internal fun splitContactSections(data: List<UsernameSearchResult>) = ContactSections(
+    incomingPending = data.filter { it.requestReceived && !it.requestSent },
+    established = data.filter { it.requestSent && it.requestReceived },
+    outgoingPending = data.filter { it.requestSent && !it.requestReceived }
+)

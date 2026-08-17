@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.PowerManager
 import androidx.lifecycle.LifecycleService
 import com.google.android.gms.common.internal.Preconditions.checkState
+import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -29,7 +30,11 @@ import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.ShieldedInviteOverageTopUp
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.work.RestoreIdentityWorker
 import de.schildbach.wallet.service.platform.work.ShieldedInviteOverageWorker
+import de.schildbach.wallet.service.platform.work.contestedNameCandidates
+import de.schildbach.wallet.service.platform.work.contestedNameListsCanMatch
+import de.schildbach.wallet.service.platform.work.isOwnContestedCandidate
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_TEXT
@@ -1669,10 +1674,88 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentity.currentUsername == null) {
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
 
-                // check if the network has this name in the queue for voting
-                val contestedNames = platformRepo.platform.names.getAllContestedNames()
+                // This walk exists to answer ONE question: is THIS identity a
+                // contender for a contested name, and with what status? The
+                // inner body is gated on `blockchainIdentity.uniqueIdentifier
+                // == identifier`, so a name this identity never requested
+                // cannot produce any effect — its per-name `getVoteContenders`
+                // network round trip is pure cost.
+                //
+                // Unnarrowed, that cost is unbounded: mainnet DAPI nodes serving
+                // EXPIRED TLS CERTS make the Kotlin-SDK vote-state query burn
+                // ~1.8 min before the ~0.5 s legacy-Platform fallback answers,
+                // and there are ~728 contested names — the same multi-hour stall
+                // that stranded the 11.10.84 mainnet restore (fixed in
+                // RestoreIdentityWorker by f97baaa99). Apply the identical
+                // narrowing here.
+                //
+                // SOURCE OF THE CANDIDATE NAME DIFFERS FROM THE RESTORE PATH:
+                // this block is gated on `currentUsername == null`, so nothing
+                // was recovered on chain and the recovered-name fields are all
+                // empty. The name this identity could be a contender for is the
+                // one it REQUESTED — the persisted creation record
+                // (BlockchainIdentityConfig.USERNAME / USERNAME_SECONDARY, and
+                // the same fields on the restoring row already loaded above).
+                val ownCandidateNames = ownRequestedContestedCandidates(
+                    blockchainIdentity,
+                    existingBlockchainIdentityData
+                )
+                val targetedScan = ownCandidateNames.isNotEmpty()
+                val scanWatch = Stopwatch.createStarted()
 
-                contestedNames.forEach { name ->
+                // Same arithmetic as the restore path: the contested index
+                // holds only CONTESTABLE names, so a targeted scan whose own
+                // candidate names are all non-contestable cannot match
+                // anything the fetch could return. See
+                // [RestoreIdentityWorker]'s contestedNameListsCanMatch.
+                val listsCanMatch = contestedNameListsCanMatch(targetedScan, ownCandidateNames)
+
+                // check if the network has this name in the queue for voting
+                val contestedNames = if (listsCanMatch) {
+                    platformRepo.platform.names.getAllContestedNames()
+                } else {
+                    emptyList()
+                }
+
+                val contestedNamesToCheck = if (targetedScan) {
+                    // `maybeDualUsernames`/`instantUsername` are the restore
+                    // path's historic substring heuristic, which requires a
+                    // RECOVERED non-contestable name. Under this `currentUsername
+                    // == null` gate there is none, so the term is inert and is
+                    // passed as its identity value rather than faked.
+                    contestedNames.filter {
+                        isOwnContestedCandidate(
+                            name = it,
+                            candidates = ownCandidateNames,
+                            maybeDualUsernames = false,
+                            instantUsername = null
+                        )
+                    }
+                } else {
+                    contestedNames
+                }
+                log.info(
+                    "contested-name check (creation): {} scan — own candidate name(s)={}, " +
+                        "listFetch={}; querying contenders for {} of {} contested name(s): {}",
+                    if (targetedScan) "TARGETED" else "BROAD (no requested name known)",
+                    ownCandidateNames,
+                    if (listsCanMatch) "needed" else "SKIPPED (no candidate name is contestable)",
+                    contestedNamesToCheck.size,
+                    contestedNames.size,
+                    if (targetedScan) contestedNamesToCheck.toString() else "(broad scan)"
+                )
+
+                for (name in contestedNamesToCheck) {
+                    if (!targetedScan &&
+                        scanWatch.elapsed(TimeUnit.MILLISECONDS) > RestoreIdentityWorker.BROAD_SCAN_BUDGET_MS
+                    ) {
+                        log.warn(
+                            "contested-name check (creation): BROAD scan exceeded its {} ms budget after {} — " +
+                                "stopping at '{}'; treating as no contested name so creation can finish",
+                            RestoreIdentityWorker.BROAD_SCAN_BUDGET_MS, scanWatch, name
+                        )
+                        break
+                    }
                     val voteContenders = platformRepo.getVoteContenders(name)
                     val winner = voteContenders.winner
                     voteContenders.map.forEach { (identifier, documentWithVotes) ->
@@ -1764,7 +1847,23 @@ class CreateIdentityService : LifecycleService() {
                                 .enqueue()
                         }
                     }
+                    // The match body is the ONLY writer of currentUsername in
+                    // this loop, so a non-null value here means "this identity
+                    // is a contender for `name`" — the answer the walk exists
+                    // to find. Bound the otherwise-unbounded BROAD scan with it.
+                    // The TARGETED scan is deliberately NOT short-circuited: it
+                    // enumerates every candidate exactly as before, so a
+                    // multi-candidate identity resolves the same way it does
+                    // today (last match wins).
+                    if (!targetedScan && blockchainIdentity.currentUsername != null) {
+                        log.info("contested-name check (creation): BROAD scan matched '{}' after {}", name, scanWatch)
+                        break
+                    }
                 }
+                log.info(
+                    "contested-name check (creation) complete in {} (found={})",
+                    scanWatch, blockchainIdentity.currentUsername != null
+                )
 
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKED)
                 identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
@@ -1816,11 +1915,57 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
+    /**
+     * Every contested name this identity could be a CONTENDER for on the
+     * CREATION path — the narrowing input for the `getAllContestedNames()`
+     * walk, mirroring
+     * [de.schildbach.wallet.service.platform.work.RestoreIdentityWorker]'s
+     * `ownContestedCandidates` but reading the creation path's own sources.
+     *
+     * A contender document is created by the identity that REQUESTED the name,
+     * and this walk runs under `currentUsername == null` — nothing was
+     * recovered on chain — so the requested name is the whole answer. It is
+     * read from the persisted creation record: the restoring row already
+     * loaded in this flow, falling back to the
+     * [BlockchainIdentityConfig.USERNAME] / [BlockchainIdentityConfig.USERNAME_SECONDARY]
+     * prefs (same store, read directly in case the row failed to load). The
+     * recovered fields are folded in anyway so the set stays correct if this
+     * walk is ever reached with a partially recovered identity.
+     *
+     * EMPTY means "this wallet knows of no name it ever requested", the only
+     * case where the caller falls back to the broad (time-budgeted) scan.
+     */
+    private suspend fun ownRequestedContestedCandidates(
+        blockchainIdentity: BlockchainIdentity,
+        existingBlockchainIdentityData: BlockchainIdentityData?
+    ): Set<String> {
+        val requestedPrimary = existingBlockchainIdentityData?.username
+            ?: readRequestedLabel(BlockchainIdentityConfig.USERNAME)
+        val requestedSecondary = existingBlockchainIdentityData?.usernameSecondary
+            ?: readRequestedLabel(BlockchainIdentityConfig.USERNAME_SECONDARY)
+        return requestedContestedCandidates(
+            recoveredCurrentUsername = blockchainIdentity.currentUsername,
+            recoveredPrimaryUsername = blockchainIdentity.primaryUsername,
+            recoveredSecondaryUsername = blockchainIdentity.secondaryUsername,
+            recoveredUsernameStatusKeys = blockchainIdentity.usernameStatuses.keys,
+            requestedPrimary = requestedPrimary,
+            requestedSecondary = requestedSecondary
+        )
+    }
+
+    /** Never fatal: an unreadable pref degrades the scan to broad, not to a crash. */
+    private suspend fun readRequestedLabel(key: androidx.datastore.preferences.core.Preferences.Key<String>): String? = try {
+        blockchainIdentityDataDao.get(key)
+    } catch (e: Exception) {
+        log.warn("contested-name check (creation): could not read {}; continuing without it", key.name, e)
+        null
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         log.info(".onDestroy()")
         serviceJob.cancel()
-        
+
         // Detach wallet wipe listener to prevent memory leaks
         walletDataProvider.detachOnWalletWipedListener(walletWipeListener)
 
@@ -1830,3 +1975,35 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 }
+
+/**
+ * Pure half of [CreateIdentityService.ownRequestedContestedCandidates] — see its
+ * KDoc for why the candidate set is exactly this.
+ *
+ * Delegates the normalization/blank-filtering to
+ * [de.schildbach.wallet.service.platform.work.contestedNameCandidates] (the
+ * restore path's helper) so both paths fold names with the same real
+ * `Names.normalizeString`; the second call exists only because the creation
+ * path has TWO requested labels (primary + the dual-username secondary) where
+ * the restore path has one.
+ */
+internal fun requestedContestedCandidates(
+    recoveredCurrentUsername: String?,
+    recoveredPrimaryUsername: String?,
+    recoveredSecondaryUsername: String?,
+    recoveredUsernameStatusKeys: Collection<String>,
+    requestedPrimary: String?,
+    requestedSecondary: String?
+): Set<String> = contestedNameCandidates(
+    currentUsername = recoveredCurrentUsername,
+    primaryUsername = recoveredPrimaryUsername,
+    secondaryUsername = recoveredSecondaryUsername,
+    usernameStatusKeys = recoveredUsernameStatusKeys,
+    requestedLabel = requestedPrimary
+) + contestedNameCandidates(
+    currentUsername = null,
+    primaryUsername = null,
+    secondaryUsername = null,
+    usernameStatusKeys = emptySet(),
+    requestedLabel = requestedSecondary
+)

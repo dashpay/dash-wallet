@@ -306,15 +306,24 @@ class SdkVotingQueries internal constructor(
             return null
         }
         val normalized = Names.normalizeString(username)
-        val json = source.contestedResourceVoteState(
-            contractId = contractId.toString(),
-            documentTypeName = DOCUMENT_TYPE,
-            indexName = INDEX_NAME,
-            indexValuesJson = indexValuesJson(normalized),
-            resultType = RESULT_TYPE_DOCUMENTS_AND_VOTE_TALLY,
-            allowIncludeLockedAndAbstaining = true,
-            count = 0
-        ) ?: return SdkVotingMapping.emptyContenders()
+        // Bounded: a DAPI node with an expired TLS cert makes this round trip
+        // cost ~1.8 min before the dashj fallback below can answer in ~0.5 s.
+        // A timeout returns null here, which is the SAME "fall back to dashj"
+        // signal every other failure in this class produces.
+        val payload = boundedSdkPlatformQuery("voting.contestedResourceVoteState[$normalized]") {
+            source.contestedResourceVoteState(
+                contractId = contractId.toString(),
+                documentTypeName = DOCUMENT_TYPE,
+                indexName = INDEX_NAME,
+                indexValuesJson = indexValuesJson(normalized),
+                resultType = RESULT_TYPE_DOCUMENTS_AND_VOTE_TALLY,
+                allowIncludeLockedAndAbstaining = true,
+                count = 0
+            )
+        } ?: return null
+        // The SDK's own null still means "definitively no contenders" (dashj
+        // parity), untouched by the budget.
+        val json = payload.orElse(null) ?: return SdkVotingMapping.emptyContenders()
         val contenders = SdkVotingMapping.contendersFromVoteStateJson(json)
         if (contenders == null) {
             log.warn("SDK vote-state returned malformed payload; falling back to dashj")

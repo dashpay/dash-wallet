@@ -92,6 +92,7 @@ class PlatformUsernameReconcileTest {
         topUpRepository = mockk(relaxed = true),
         identityRepository = identityRepository,
         walletDataProvider = mockk(relaxed = true),
+        walletSeam = mockk(relaxed = true),
         sdkProfileQueries = mockk(relaxed = true),
         sdkUsernameQueries = mockk(relaxed = true),
         sdkIdentityVerifyQueries = mockk(relaxed = true),
@@ -104,7 +105,8 @@ class PlatformUsernameReconcileTest {
         cutoverTxSeamService = mockk(relaxed = true),
         cutoverAutoCommitObserver = mockk(relaxed = true),
         shieldedTransferExecutor = mockk(relaxed = true),
-        contactRequestNotificationService = mockk(relaxed = true)
+        contactRequestNotificationService = mockk(relaxed = true),
+        dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus()
     )
 
     @Test

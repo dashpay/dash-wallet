@@ -263,12 +263,12 @@ class SdkL1SendServiceTest {
 
     @Test
     fun classify_typedTransactionBuild_isNotBroadcast() {
-        // v41int14: code 32 replaces the WalletOperation message-prefix shape
-        // for builder rejections. The message deliberately matches NO prefix
-        // rule — the TYPE alone must prove pre-broadcast, or this regresses
-        // to Ambiguous and blocks the safe fallback.
-        val error = DashSdkError.PlatformWallet.TransactionBuild(
-            "funding path m/44'/1'/0' matches no spendable funds account"
+        // v4.2-dev dropped the typed code-32 arm (#4310/#4311 closed
+        // unmerged); a builder rejection now classifies via the
+        // WalletOperation "transaction build failed" prefix fallback — still
+        // pre-broadcast, so the safe fallback is preserved.
+        val error = DashSdkError.PlatformWallet.WalletOperation(
+            "transaction build failed: funding path m/44'/1'/0' matches no spendable funds account"
         )
         val result = classifyCoreSendFailure(error)
         assertTrue(result is SdkWriteResult.NotBroadcast)
@@ -277,12 +277,11 @@ class SdkL1SendServiceTest {
 
     @Test
     fun classify_typedTransactionSigning_isNotBroadcast_keyedRetryableAfterUnlock() {
-        // v41int14: code 33 — request valid, tx assembled, only the
-        // signatures failed (Keystore locked); the native layer released the
-        // reservation. Must be NotBroadcast AND carry the signer-locked
-        // reason key so the UI surfaces "unlock to continue", never a hard
-        // payment failure (dashpay/platform#4256).
-        val error = DashSdkError.PlatformWallet.TransactionSigning(
+        // The merged line surfaces a signing failure as SigningKeyUnavailable
+        // (code 31): request valid, tx assembled, but the signer holds no
+        // usable key (Keystore locked). Must be NotBroadcast AND carry the
+        // signer-locked reason key so the UI surfaces "unlock to continue".
+        val error = DashSdkError.PlatformWallet.SigningKeyUnavailable(
             "mnemonic unavailable: keystore locked"
         )
         val result = classifyCoreSendFailure(error)
@@ -323,8 +322,8 @@ class SdkL1SendServiceTest {
         // broadcast path.
         for (
             error in listOf<Throwable>(
-                DashSdkError.PlatformWallet.TransactionBuild("bad recipients blob"),
-                DashSdkError.PlatformWallet.TransactionSigning("keystore locked"),
+                DashSdkError.PlatformWallet.WalletOperation("transaction build failed: bad recipients blob"),
+                DashSdkError.PlatformWallet.SigningKeyUnavailable("keystore locked"),
                 DashSdkError.PlatformWallet.TransactionBroadcastRejected("rejected by core")
             )
         ) {
@@ -828,7 +827,7 @@ class SdkL1SendServiceTest {
         assertFalse(isSendAllShortfall(RuntimeException("transaction build failed: Insufficient funds")))
         // A typed build refusal that is NOT a shortfall must not retry either.
         assertFalse(
-            isSendAllShortfall(DashSdkError.PlatformWallet.TransactionBuild("recipient below dust"))
+            isSendAllShortfall(DashSdkError.PlatformWallet.WalletOperation("transaction build failed: recipient below dust"))
         )
         // Every retryable shortfall MUST classify NotBroadcast (the no-
         // double-broadcast proof the single retry rests on).
