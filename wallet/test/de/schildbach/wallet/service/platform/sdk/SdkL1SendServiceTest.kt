@@ -161,10 +161,7 @@ class SdkL1SendServiceTest {
                 txidHex = "bb".repeat(32),
                 rawTxBytes = ByteArray(0),
                 feeDuffs = onMayaDepositFee(vaultDuffs, memo),
-                native = null,
-                // Every deposit names its own amount now, so the SDK's
-                // sole-deliverable figure is the vault output itself.
-                deliverableDuffs = vaultDuffs
+                native = null
             )
         }
 

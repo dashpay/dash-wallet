@@ -469,20 +469,6 @@ class SdkDeferredPayment internal constructor(
     val rawTxBytes: ByteArray,
     val feeDuffs: Long,
     internal val native: Any?,
-    /**
-     * What the single non-OP_RETURN output actually pays, in duffs.
-     *
-     * For an explicit-amount build this is the amount the caller asked for.
-     * For a DRAIN it is the figure the ENGINE computed (total inputs − fee,
-     * no change) — the caller never supplied it, so this is the only way to
-     * learn what the transaction will deliver. A max swap deposit must check
-     * this against the quoted amount BEFORE broadcasting: paying a vault less
-     * than quoted is under-delivery, which Maya and NEAR Intents refuse.
-     *
-     * 0 when the source could not report it (fakes, or an SDK too old to
-     * expose it); callers treat 0 as "unknown" rather than "pays nothing".
-     */
-    val deliverableDuffs: Long = 0
 )
 
 // ── Source seam ───────────────────────────────────────────────────────
@@ -858,8 +844,7 @@ internal class DashSdkL1SendSource(
             signed.txidHex,
             signed.rawTxBytes,
             signed.feeDuffs,
-            signed,
-            deliverableDuffs = signed.deliverableAmountDuffs
+            signed
         )
     }
 
