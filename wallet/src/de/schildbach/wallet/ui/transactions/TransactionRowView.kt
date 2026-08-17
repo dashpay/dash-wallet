@@ -61,6 +61,20 @@ data class TransactionRowView(
     val swapStatus: SwapOrderStatus? = null
 ): HistoryRowView() {
     companion object {
+        /**
+         * The row title for a transaction that funded a DEX swap, by order [status].
+         * Single-sourced so the display-cache swap reconciler
+         * ([de.schildbach.wallet.service.planSwapRowDecorations]) cannot drift from the
+         * title this renderer produces — the two must agree or a row would flip between
+         * them on every pass.
+         */
+        @StringRes
+        fun swapTitleRes(status: SwapOrderStatus?): Int = if (status == SwapOrderStatus.COMPLETED) {
+            R.string.transaction_row_converted
+        } else {
+            R.string.transaction_row_conversion
+        }
+
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,
             bag: TransactionBag,
@@ -154,11 +168,7 @@ data class TransactionRowView(
                 icon = R.drawable.ic_convert_circle
                 iconBackground = R.style.TxOrangeBackground
                 title = ResourceString(
-                    if (swapOrder.status == SwapOrderStatus.COMPLETED) {
-                        R.string.transaction_row_converted
-                    } else {
-                        R.string.transaction_row_conversion
-                    },
+                    swapTitleRes(swapOrder.status),
                     listOf(swapOrder.fromAsset, swapOrder.toAsset)
                 )
             } else if (isInternal) {

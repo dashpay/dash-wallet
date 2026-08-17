@@ -569,7 +569,18 @@ internal fun planL1DisplaySync(
 
         // Surgical status refresh of a dashj-era row. Never touch rows
         // with richer semantics than a plain send/receive.
-        if (existing.hasErrors || existing.service != null ||
+        //
+        // A DEX swap row is one of those: its title/icon come from the `swap_orders`
+        // record ([de.schildbach.wallet.service.planSwapRowDecorations]) and the SDK
+        // record cannot reproduce them. `swapStatus` is checked as well as `service`
+        // because the service column alone is not proof: a rebuild that raced an
+        // unpopulated metadata map leaves a swap row plainly rendered with service
+        // null, and the definitive re-stamp below would then re-title it "Sending" —
+        // permanently for a Maya drain, whose SDK `context` never leaves the mempool
+        // (verified on-device, 2026-08-07 Maya field test). The swap reconciler
+        // restores swapStatus on the next display-cache write signal, so this guard
+        // then holds the row stable instead of flip-flopping once per sync pass.
+        if (existing.hasErrors || existing.service != null || existing.swapStatus != null ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0 ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0
         ) {
@@ -839,7 +850,9 @@ internal fun planL1InstantLockRowUpdate(
     existing: TxDisplayCacheEntry,
     resolve: (Int) -> String
 ): TxDisplayCacheEntry? {
-    if (existing.hasErrors || existing.service != null ||
+    // Same never-touch set as [planL1DisplaySync]'s update path, swap rows included
+    // (their title comes from `swap_orders`, not from a lock).
+    if (existing.hasErrors || existing.service != null || existing.swapStatus != null ||
         (existing.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0 ||
         (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0
     ) {

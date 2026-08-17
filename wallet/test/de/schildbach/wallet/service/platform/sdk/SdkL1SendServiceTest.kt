@@ -56,6 +56,9 @@ class SdkL1SendServiceTest {
         var onSendAll: (String, String, Long) -> String = { _, _, _ ->
             throw IllegalStateException("send-all not stubbed")
         },
+        /** Fee the faked engine reports for a Maya deposit build. */
+        var onMayaDepositFee: (Long, ByteArray) -> Long = { _, _ -> 0L },
+        var externalAddress: String? = null,
         // Interface default: enumeration unavailable → the service uses the
         // flat SEND_ALL_FEE_RESERVE_DUFFS fallback reserve.
         var onPooledUtxoCount: () -> Int? = { null }
@@ -123,6 +126,50 @@ class SdkL1SendServiceTest {
             sendAllFloors += floorDuffs
             return onSendAll(walletIdHex, addressBase58, floorDuffs)
         }
+
+        // ── Maya deposit build / release (fee-probe surface) ──────────────
+        var mayaBuildCalls = 0
+        var mayaReleaseCalls = 0
+        val mayaBuiltAmounts = mutableListOf<Long>()
+        val mayaBuiltMemoSizes = mutableListOf<Int>()
+        var mayaBuiltVault: String? = null
+
+        var mayaBuiltDrains = mutableListOf<Boolean>()
+
+        /**
+         * Under [drain] the engine computes the deliverable amount, so the fake
+         * mirrors that: it reports [drainDeliverable] rather than echoing the
+         * caller's (ignored) [vaultDuffs].
+         */
+        var drainDeliverable: Long = 0
+
+        /** When set, the build throws it — the engine refusing an unfundable drain. */
+        var failMayaBuildWith: Throwable? = null
+
+        override suspend fun buildDeferredMayaDeposit(
+            walletIdHex: String,
+            vaultAddressBase58: String,
+            vaultDuffs: Long,
+            memo: ByteArray
+        ): SdkDeferredPayment {
+            mayaBuildCalls++
+            failMayaBuildWith?.let { throw it }
+            mayaBuiltAmounts += vaultDuffs
+            mayaBuiltMemoSizes += memo.size
+            mayaBuiltVault = vaultAddressBase58
+            return SdkDeferredPayment(
+                txidHex = "bb".repeat(32),
+                rawTxBytes = ByteArray(0),
+                feeDuffs = onMayaDepositFee(vaultDuffs, memo),
+                native = null
+            )
+        }
+
+        override suspend fun releaseDeferredPayment(walletIdHex: String, payment: SdkDeferredPayment) {
+            mayaReleaseCalls++
+        }
+
+        override suspend fun unusedExternalAddress(walletIdHex: String): String? = externalAddress
     }
 
     private fun config(enabled: Boolean?, cutoverState: String? = null): DashPayConfig = mockk {
@@ -167,6 +214,7 @@ class SdkL1SendServiceTest {
         // exercisable; the production wiring (and the constructor default)
         // is fail-closed — covered by dedicated tests below.
         hasAppLockedOutputs: () -> Boolean = { false },
+        utxoCount: suspend (String) -> Int = { 1 },
         // Fresh empty registry by default: no seam locks, drain paths
         // exercisable. Seam-lock refusal is covered by dedicated tests.
         seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry()
@@ -176,6 +224,7 @@ class SdkL1SendServiceTest {
         isValidAddress = addressValid,
         l1Progress = progress,
         hasAppLockedSpendableOutputs = hasAppLockedOutputs,
+        spendableUtxoCount = utxoCount,
         seamOutputLockRegistry = seamRegistry,
         onSelfSpendBroadcast = { selfSpendMarks++ },
         bridgeAfterBroadcast = bridgeAfterBroadcast
@@ -1173,5 +1222,167 @@ class SdkL1SendServiceTest {
         } catch (expected: NoSuchMethodException) {
             // v41int11+ shape: no SDK-side mutex accessor.
         }
+    }
+
+    // ── Maya max-deposit measurement ──────────────────────────────────────
+    // The figure quoted for a MAX sell. It must NEVER come in under the real
+    // fee: a quote derived from a too-small reserve makes the deposit pay the
+    // vault less than quoted, and NEAR Intents refuses under-delivery.
+
+    private fun mayaSource(spendable: Long, feeDuffs: Long, deliverable: Long = 0L) = FakeSource(
+        boundWalletId = { walletId },
+        onSpendable = { spendable },
+        onMayaDepositFee = { _, _ -> feeDuffs },
+        externalAddress = validAddress
+    ).apply { drainDeliverable = deliverable }
+
+    @Test
+    fun maxMayaDepositIsSpendableMinusTheFeeReserve() = runBlocking {
+        // The whole model: quote = spendable - reserve, an amount the app owns.
+        // No probe build is performed, so nothing is reserved to compute it.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val expected = 1_000_000L - mayaMaxFeeReserveDuffs(1, SdkL1SendService.MAX_MAYA_MEMO_BYTES)
+        assertEquals(expected, service(source).maxMayaDepositDuffs())
+        assertEquals("quoting must not build anything", 0, source.mayaBuildCalls)
+        assertEquals("and must not reserve anything", 0, source.mayaReleaseCalls)
+    }
+
+    @Test
+    fun maxMayaDepositReserveGrowsWithTheInputCount() = runBlocking {
+        // More inputs means a bigger transaction means a bigger fee, so the
+        // reserve must scale with the UTXO count -- under-reserving is the
+        // direction that fails the build.
+        val source = mayaSource(spendable = 10_000_000L, feeDuffs = 500L)
+        val few = service(source, utxoCount = { 1 }).maxMayaDepositDuffs()
+        val many = service(source, utxoCount = { 40 }).maxMayaDepositDuffs()
+        assertTrue("a 40-input wallet must reserve more than a 1-input one", many < few)
+    }
+
+    @Test
+    fun maxMayaDepositReservesForTheWorstCaseMemoByDefault() = runBlocking {
+        // The default sizes the data carrier at the 80-byte ceiling, so a
+        // shorter real memo only over-reserves -- the safe direction. Needs a
+        // wallet big enough that the 1000-duff floor is not what decides the
+        // reserve; see the floor test below.
+        val source = mayaSource(spendable = 10_000_000L, feeDuffs = 500L)
+        val worstCase = service(source, utxoCount = { 40 }).maxMayaDepositDuffs()
+        val shortMemo = service(source, utxoCount = { 40 }).maxMayaDepositDuffs(memoSizeBytes = 10)
+        assertTrue("a 10-byte memo leaves more depositable", shortMemo > worstCase)
+    }
+
+    @Test
+    fun theReserveFloorDominatesASmallWallet() = runBlocking {
+        // Sized purely by bytes, a one-input deposit would reserve only a few
+        // hundred duffs, so the 1000-duff floor is what actually applies -- and
+        // it makes the memo size irrelevant at that scale. Pinned so the floor
+        // is not mistaken for a bug when a small wallet quotes identically for
+        // any memo length.
+        assertEquals(1000L, mayaMaxFeeReserveDuffs(1, SdkL1SendService.MAX_MAYA_MEMO_BYTES))
+        assertEquals(1000L, mayaMaxFeeReserveDuffs(1, 10))
+        assertTrue(mayaMaxFeeReserveDuffs(40, SdkL1SendService.MAX_MAYA_MEMO_BYTES) > 1000L)
+    }
+
+    @Test
+    fun maxMayaDepositNeverGoesNegative() = runBlocking {
+        // A reserve larger than the balance must read as "nothing depositable",
+        // never as a negative quote.
+        val source = mayaSource(spendable = 100L, feeDuffs = 25_000L)
+        assertEquals(0L, service(source, utxoCount = { 40 }).maxMayaDepositDuffs())
+    }
+
+    @Test
+    fun maxMayaDepositRefusesWhileAppLockedOutputsExist() = runBlocking {
+        // A max deposit drains the account, so selection would reach
+        // CrowdNode-locked outputs — the same fail-closed refusal the send-all
+        // drain applies. Nothing may be built or measured.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        try {
+            service(source, hasAppLockedOutputs = { true }).maxMayaDepositDuffs()
+            fail("expected the max deposit to be refused while app-locked outputs exist")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("app-locked"))
+        }
+        assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun maxMayaDepositRefusesOnSeamRegisteredLocks() = runBlocking {
+        // Locks on SDK-only txs are invisible to the dashj check; they block too.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val registry = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        try {
+            service(source, seamRegistry = registry).maxMayaDepositDuffs()
+            fail("expected the max deposit to be refused while seam locks exist")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("app-locked"))
+        }
+        assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun maxMayaDepositFailsClosedWhenTheLockCheckThrows() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val svc = service(source, hasAppLockedOutputs = { throw IllegalStateException("wallet unavailable") })
+        try {
+            svc.maxMayaDepositDuffs()
+            fail("expected a failed lock check to block the max deposit")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("app-locked"))
+        }
+        assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun maxDepositRefusesAppLockedOutputsWithoutAnyPriorMeasurement() = runBlocking {
+        // The guard belongs to the PRIMITIVE, not to the call-site convention
+        // of measuring first. A caller that goes straight to a max build —
+        // which no current caller does, but which one refactor could — must
+        // still be refused, with nothing reserved.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val svc = service(source, hasAppLockedOutputs = { true })
+        try {
+            svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = true)
+            fail("expected a direct max build to be refused while app-locked outputs exist")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("app-locked"))
+        }
+        assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun maxDepositRefusesSeamRegisteredLocksWithoutAnyPriorMeasurement() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val registry = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        try {
+            service(source, seamRegistry = registry)
+                .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = true)
+            fail("expected a direct max build to be refused while seam locks exist")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message!!.contains("app-locked"))
+        }
+        assertEquals(0, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun partialDepositIsNotBlockedByAppLockedOutputs() = runBlocking {
+        // Only a DRAIN is guarded. A partial deposit keeps the ordinary send's
+        // exposure — guarding it too would block ordinary swaps for anyone
+        // holding a CrowdNode balance.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val svc = service(source, hasAppLockedOutputs = { true })
+        svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = false)
+        assertEquals(1, source.mayaBuildCalls)
+    }
+
+    @Test
+    fun maxMayaDepositRejectsAnOversizeMemo() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        try {
+            service(source).maxMayaDepositDuffs(memoSizeBytes = SdkL1SendService.MAX_MAYA_MEMO_BYTES + 1)
+            fail("expected an oversize memo to be rejected")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message!!.contains("memoSizeBytes"))
+        }
+        Unit
     }
 }

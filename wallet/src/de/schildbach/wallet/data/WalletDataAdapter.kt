@@ -202,20 +202,24 @@ class WalletDataAdapter @Inject constructor(
     }
 
     override suspend fun waitUntilLocked(txId: String) {
-        // Held-wallet path first (self-authored txs; the only path pre-cutover) —
-        // dashj confidence semantics, byte-identical to before.
-        val tx = walletData.getTransaction(Sha256Hash.wrap(txId))
-        if (tx != null) {
-            tx.waitToMatchFilters(LockedTransaction())
-            return
-        }
-        // Post-cutover: an SDK-fed tx has no held-wallet confidence to wait on — wait
-        // for the seam feed instead (its TxInfo isLocked flips on islock/block context
-        // events). The current-state replay closes the check-then-subscribe race.
+        // Post-cutover seam path FIRST: a bridged self-authored tx (an SDK send) also
+        // exists in the held dashj wallet, but its confidence is FROZEN there — no
+        // peergroup ever delivers it an IS-lock — so the held-wallet wait would sit
+        // out any timeout even though the engine saw the lock within seconds (the
+        // 2026-08-05 Maya mainnet field test: engine IS-lock in 1.6s, UI waited the
+        // full 10s). The seam's TxInfo carries the live engine lock state, and the
+        // current-state replay means an already-locked tx returns immediately.
         if (txSeamService.sdkTxInfosOrNull()?.get(txId.lowercase()) != null) {
             txSeamService
                 .observeSdkTransactionsWithCurrentState(arrayOf(NeutralLockedTransaction(txId)))
                 .first()
+            return
+        }
+        // Pre-cutover (and anything the SDK store never learned): dashj confidence
+        // semantics, byte-identical to before.
+        val tx = walletData.getTransaction(Sha256Hash.wrap(txId))
+        if (tx != null) {
+            tx.waitToMatchFilters(LockedTransaction())
             return
         }
         // Fail closed rather than pretending the tx is locked (see lockOutputsPayingTo):

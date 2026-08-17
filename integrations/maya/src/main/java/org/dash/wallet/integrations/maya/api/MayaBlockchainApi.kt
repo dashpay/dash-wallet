@@ -18,13 +18,16 @@
 package org.dash.wallet.integrations.maya.api
 
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 
 /**
  * Builds, signs and broadcasts the Maya swap transaction for a quoted trade.
  *
  * Implemented in the wallet module (de.schildbach.wallet.payments.MayaBlockchainApiImpl),
- * which owns the dashj transaction machinery; this module stays dashj-free.
+ * which builds the deposit on the Kotlin SDK's deferred build/broadcast surface and
+ * verifies the MAYACHAIN deposit shape before broadcasting; this module stays free
+ * of wallet-engine types.
  */
 interface MayaBlockchainApi {
     /**
@@ -44,4 +47,20 @@ interface MayaBlockchainApi {
     suspend fun buildAndSendSwapTx(
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel>
+
+    /**
+     * The largest amount a swap deposit can pay a vault right now: what a
+     * DRAIN of the funding account delivers, measured through the real SDK
+     * builder and reported by the engine — never estimated, and never reduced
+     * by a headroom or reserve constant.
+     *
+     * Quote a MAX sell at exactly this figure. The deposit that follows runs
+     * the identical drain, so quote and payment agree by construction rather
+     * than by a margin chosen to be safe. A quote above the real deliverable
+     * would make the deposit pay less than quoted, and NEAR Intents refuses
+     * under-delivery (~1h wait, then a refund minus 0.001 DASH).
+     *
+     * [Dash.ZERO] when no drain is fundable at all.
+     */
+    suspend fun maxSwapDepositAmount(): Dash
 }

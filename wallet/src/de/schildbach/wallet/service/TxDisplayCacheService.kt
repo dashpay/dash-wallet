@@ -78,6 +78,7 @@ import org.bitcoinj.wallet.WalletEx
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.entity.SwapOrder
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.ui.components.merchantNameBitmap
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -297,6 +298,12 @@ class TxDisplayCacheService @Inject constructor(
                 val oldMetadata = this.metadata
                 this.metadata = newMetadata
 
+                // Swap rows first, and UNCONDITIONALLY: their decoration comes from the
+                // swap-orders table by txid and needs no dashj wrapper, so it must not be
+                // gated on either the changedIds diff below or on the wrapper being
+                // resolvable (see reconcileSwapRows).
+                reconcileSwapRows(newMetadata)
+
                 val changedIds = buildSet<String> {
                     newMetadata.forEach { (id, meta) -> if (meta != oldMetadata[id]) add(id.toString()) }
                     oldMetadata.forEach { (id, _) -> if (id !in newMetadata) add(id.toString()) }
@@ -396,12 +403,21 @@ class TxDisplayCacheService @Inject constructor(
                             displayCacheRefreshBus.isSdkAuthoritative(entry.rowId) ||
                             (entry.valueSatoshis == 0L && existing.valueSatoshis != 0L)
                         if (existingIsSdkStamped) {
+                            // The swap decoration (convert icon, "Conversion"/
+                            // "Converted" title, swapStatus) is METADATA-authoritative
+                            // — this very path runs BECAUSE the swap-orders table
+                            // changed — so it must pass the freeze or the home row
+                            // stays "Sent"/"Conversion" until a manual cache wipe
+                            // (2026-08-05 Maya field test). Value, exchange rate and
+                            // the filter bucket stay frozen: the dashj rebuild still
+                            // cannot be trusted for those, swap or not.
+                            val swapDecorated = entry.swapStatus != null
                             result = result.copy(
                                 valueSatoshis = existing.valueSatoshis,
-                                iconType      = existing.iconType,
-                                iconBgType    = existing.iconBgType,
-                                title         = existing.title,
-                                statusText    = existing.statusText,
+                                iconType      = if (swapDecorated) entry.iconType else existing.iconType,
+                                iconBgType    = if (swapDecorated) entry.iconBgType else existing.iconBgType,
+                                title         = if (swapDecorated) entry.title else existing.title,
+                                statusText    = if (swapDecorated) entry.statusText else existing.statusText,
                                 filterFlags   = existing.filterFlags
                             )
                         }
@@ -504,7 +520,14 @@ class TxDisplayCacheService @Inject constructor(
         // and no more disruptive to scroll than any normal data change. Pre-cutover nothing
         // writes the cache, so the bus never fires and this is inert.
         displayCacheRefreshBus.changes
-            .onEach { _currentPagingSource.value?.invalidate() }
+            .onEach {
+                // The SDK writer authors rows with no notion of swap orders, so a row it
+                // just inserted or re-stamped may have lost (or never had) its swap
+                // decoration. Re-derive it from the swap orders before refreshing the
+                // readers, so the list never settles on a plain "Sending" row for a swap.
+                reconcileSwapRows(metadata)
+                _currentPagingSource.value?.invalidate()
+            }
             .catch { e -> log.error("display cache refresh bus flow error", e) }
             .launchIn(serviceScope)
     }
@@ -1286,6 +1309,45 @@ class TxDisplayCacheService @Inject constructor(
         return entries.map { mergePreservingSdkStamped(it, existingByRowId[it.rowId]) }
     }
 
+    /**
+     * Re-apply the swap decoration to every already-cached row whose txid has a
+     * `swap_orders` record, from [snapshot] (the presentable metadata, which carries the
+     * joined order). See [planSwapRowDecorations] for why this is derived from the order
+     * rather than from a re-render of the transaction, and for the on-device latch it fixes.
+     *
+     * Cheap and idempotent: one Room read over the swap txids only (a handful), and a write
+     * only for rows that actually differ — a settled swap row costs one query per trigger.
+     */
+    private suspend fun reconcileSwapRows(snapshot: Map<TxId, PresentableTxMetadata>) {
+        val swapMetadata = snapshot.values.filter { it.swapOrder != null }
+        if (swapMetadata.isEmpty()) return
+        // Chunked like every other reader here: SQLite's IN-clause variable cap is 999 and
+        // a heavy DEX user's swap count is unbounded.
+        val existingByRowId = HashMap<String, TxDisplayCacheEntry>(swapMetadata.size)
+        for (chunk in swapMetadata.map { it.txId.toString() }.chunked(500)) {
+            txDisplayCacheDao.getEntriesByIds(chunk).forEach { existingByRowId[it.rowId] = it }
+        }
+        val decorated = planSwapRowDecorations(swapMetadata, existingByRowId) { order ->
+            walletApplication.getString(
+                TransactionRowView.swapTitleRes(order.status),
+                order.fromAsset,
+                order.toAsset
+            )
+        }
+        if (decorated.isEmpty()) return
+        txDisplayCacheDao.insertAll(decorated)
+        // Same belt-and-suspenders as the rest of this service: Room's InvalidationTracker
+        // can miss an upsert on-device, and a swap row that is already correct in the table
+        // but stale on screen is the very symptom this reconciler exists to end.
+        _currentPagingSource.value?.invalidate()
+        log.info(
+            "swap row reconcile: re-decorated {} of {} swap row(s) from swap_orders ({})",
+            decorated.size,
+            existingByRowId.size,
+            decorated.joinToString { "${it.rowId.take(8)}→${it.title}" }
+        )
+    }
+
     private fun computeFilterFlags(wrapper: TransactionWrapper): Int {
         val bag = walletData.transactionBag
         var flags = 0
@@ -1317,6 +1379,65 @@ class TxDisplayCacheService @Inject constructor(
     fun close() {
         serviceScope.cancel()
     }
+}
+
+/**
+ * PURE planner for the SWAP DECORATION of already-cached display rows — the
+ * host-testable core of [TxDisplayCacheService.reconcileSwapRows].
+ *
+ * A swap row's decoration (convert icon on the orange halo, "Conversion …"/"Converted …"
+ * title, [TxDisplayCacheEntry.swapStatus] for the row chip) is derived ENTIRELY from the
+ * `swap_orders` record keyed by txid — exactly like the transaction-details screen
+ * ([de.schildbach.wallet.ui.TransactionResultViewModel.swapOrder], which observes the
+ * order directly). It needs NO dashj transaction, so unlike
+ * [TransactionRowView.fromTransaction] this planner can decorate a row for a transaction
+ * the held dashj wallet cannot render (an SDK-authored send whose inputs are unconnected,
+ * or one it does not hold at all).
+ *
+ * That independence is the fix for the verified on-device latch (2026-08-07 Maya field
+ * test): a Maya/SwapKit MAX sell's row was authored by the SDK writer
+ * ([de.schildbach.wallet.service.platform.sdk.CutoverUiDataService]) which knows nothing
+ * about swap orders, so it stayed titled "Sending" — permanently, because the SDK record's
+ * `context` never advanced past mempool AND because the only writer that DID know about
+ * the swap (the metadata flow) fires on a metadata DIFF and had already consumed the one
+ * that mattered. Re-deriving the decoration from `swap_orders` on every metadata emission
+ * and every display-cache write signal converges regardless of which writer authored the row.
+ *
+ * Idempotent by construction: a row that already matches is not returned, so a settled
+ * swap row produces no write on any later pass. Only the decoration fields are touched —
+ * value, exchange rate, contact identity, memo, time and the filter bucket are preserved,
+ * since this planner has no authority over them.
+ *
+ * @param swapMetadata presentable metadata whose [PresentableTxMetadata.swapOrder] is set.
+ * @param resolveTitle resolves an order to its row title; supply
+ *        [TransactionRowView.swapTitleRes] formatted with the order's assets so this
+ *        planner and the renderer can never disagree.
+ */
+internal fun planSwapRowDecorations(
+    swapMetadata: Collection<PresentableTxMetadata>,
+    existingByRowId: Map<String, TxDisplayCacheEntry>,
+    resolveTitle: (SwapOrder) -> String
+): List<TxDisplayCacheEntry> = swapMetadata.mapNotNull { meta ->
+    val order = meta.swapOrder ?: return@mapNotNull null
+    // Only rows the cache already displays are decorated. A swap whose row does not exist
+    // yet is left to whichever writer authors it first; that write signals the refresh bus,
+    // which brings us straight back here with the row present.
+    val existing = existingByRowId[meta.txId.toString()] ?: return@mapNotNull null
+    val decorated = existing.copy(
+        title = resolveTitle(order),
+        iconType = TxDisplayCacheEntry.ICON_CONVERT,
+        iconBgType = TxDisplayCacheEntry.BG_ORANGE,
+        // A swap row's live state is the chip fed by swapStatus ("Processing"/"Refunded"/
+        // "Failed" — see TransactionAdapter.setSwapStatus), never a secondary status line;
+        // this also clears the stale "Processing"/"Confirming" a plain-send writer stamped.
+        statusText = "",
+        // Keep an already-classified service when this metadata row carries none, so the
+        // decoration cannot un-classify a row (the service column is what keeps the SDK
+        // planner's plain-send re-stamp off this row).
+        service = meta.service ?: existing.service,
+        swapStatus = order.status.name
+    )
+    decorated.takeIf { it != existing }
 }
 
 /**
@@ -1399,12 +1520,24 @@ internal fun mergeDisplayEntryPreservingSdkStamped(
             existing.title == sendingTitle && entry.title == sentTitle
         val statusCleared = allowStatusProgress &&
             entry.statusText.isEmpty() && existing.statusText.isNotEmpty()
+        // The swap decoration (convert icon, "Conversion"/"Converted" title,
+        // swapStatus) is METADATA-authoritative — it comes from the swap-orders
+        // table the tracking service maintains, not from a dashj recomputation —
+        // so it must pass the freeze. The tracker flips PENDING→COMPLETED long
+        // after the row was SDK-stamped; freezing the title pinned the row at
+        // "Sent"/"Conversion" until a manual cache wipe (home-screen staleness
+        // found in the 2026-08-05 Maya field test). Value, exchange rate,
+        // contact identity and the filter bucket stay frozen: the dashj rebuild
+        // still cannot be trusted for those, swap or not. A rebuild WITHOUT
+        // swap metadata (entry.swapStatus == null) never undresses an existing
+        // swap row — the freeze keeps the cached shape as before.
+        val swapDecorated = entry.swapStatus != null
         result = result.copy(
             valueSatoshis = existing.valueSatoshis,
-            iconType      = existing.iconType,
-            iconBgType    = existing.iconBgType,
-            title         = if (sendingToSent) entry.title else existing.title,
-            statusText    = if (statusCleared) entry.statusText else existing.statusText,
+            iconType      = if (swapDecorated) entry.iconType else existing.iconType,
+            iconBgType    = if (swapDecorated) entry.iconBgType else existing.iconBgType,
+            title         = if (swapDecorated || sendingToSent) entry.title else existing.title,
+            statusText    = if (swapDecorated || statusCleared) entry.statusText else existing.statusText,
             filterFlags   = existing.filterFlags
         )
     }

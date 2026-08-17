@@ -639,25 +639,34 @@ class SwapKitApiAggregator @Inject constructor(
         // guarded again in buildAndSendDepositTx before broadcasting. The receive address is
         // only a size stand-in for the estimate; the real deposit address is also P2PKH.
         val effectiveAmount = if (swapRequest.maximum) {
-            val balance = walletDataProvider.getWalletBalance()
-            val sweep = try {
-                sendPaymentService.estimateNetworkFee(
-                    walletDataProvider.currentReceiveAddressString(),
-                    balance,
-                    emptyWallet = true
-                )
+            // MEASURED through the SDK builder (MayaBlockchainApi.maxSwapDepositAmount),
+            // not estimated by dashj: post-cutover the dashj engine is held, and
+            // incoming SDK transactions never reach its wallet, so its coin set is
+            // frozen at cutover time — a sweep estimate from it either throws
+            // (funds received since the cutover are invisible to it) or prices the
+            // wrong transaction shape. The SDK figure is biased HIGH so the deposit
+            // can never come in under the quote.
+            val maxDeposit = try {
+                blockchainApi.maxSwapDepositAmount()
             } catch (e: Exception) {
-                log.error("swapkit max sell: sweep fee estimation failed", e)
+                log.error("swapkit max sell: deposit fee measurement failed", e)
                 return ResponseResource.Failure(e, false, 0, e.message)
             }
+            if (maxDeposit.duffs <= 0L) {
+                return ResponseResource.Failure(
+                    MayaException("balance too low to cover a swap deposit and its fee"),
+                    false,
+                    0,
+                    null
+                )
+            }
             log.info(
-                "swapkit max sell: quoting sweep output {} (balance {}, fee {})",
-                sweep.amountToSend.toFriendlyString(),
-                balance.toFriendlyString(),
-                sweep.fee
+                "swapkit max sell: quoting the measured max deposit {} (balance {})",
+                maxDeposit.toFriendlyString(),
+                walletDataProvider.getWalletBalance().toFriendlyString()
             )
             swapRequest.amount.copy().apply {
-                dash = sweep.amountToSend.toBigDecimal()
+                dash = maxDeposit.toBigDecimal()
                 anchoredType = swapRequest.amount.anchoredType
             }
         } else {
@@ -986,15 +995,11 @@ class SwapKitApiAggregator @Inject constructor(
             // broadcasting a doomed deposit. A balance that grew simply over-delivers, which
             // NEAR accepts.
             if (swapTradeUIModel.maximum) {
-                val sweep = sendPaymentService.estimateNetworkFee(
-                    swapTradeUIModel.vaultAddress,
-                    walletDataProvider.getWalletBalance(),
-                    emptyWallet = true
-                )
-                if (sweep.amountToSend.isLessThan(amount)) {
+                val maxDeposit = blockchainApi.maxSwapDepositAmount()
+                if (maxDeposit.isLessThan(amount)) {
                     log.warn(
-                        "swapkit max sell aborted: sweep would deliver {} < quoted {}",
-                        sweep.amountToSend.toFriendlyString(),
+                        "swapkit max sell aborted: {} now depositable < quoted {}",
+                        maxDeposit.toFriendlyString(),
                         amount.toFriendlyString()
                     )
                     return ResponseResource.Failure(
