@@ -943,8 +943,36 @@ class DashPayBackfillGateImpl @Inject constructor(
      */
     private val accountsRegisteredSincePass = AtomicBoolean(false)
 
+    /**
+     * Account builds this PROCESS has already raised the signal for,
+     * cumulatively. The cap that ends the S22 field loop (2026-08-17): the
+     * provisioning sweep re-enqueues and the drain re-"builds" the SAME
+     * receival accounts every pass, so `report.built` re-raises the signal
+     * once a minute forever (rewind → sweep → re-build → rewind …) with the
+     * sync indicator pinned at 100%. A wallet has at most one receival
+     * account per SDK contact request, so once this counter reaches the
+     * SDK's contact-request count every further "registration" is provably a
+     * RE-build — muted. Genuinely new accounts always fit: a new contact
+     * raises the cap ([BackfillObservation.sdkContactCount]) before (or as)
+     * its build registers, and the first completion of the deferred drain is
+     * under the cap by construction. Process-scoped on purpose — a relaunch
+     * re-proves from scratch, exactly like [hasProvisionedInProcess].
+     */
+    private val buildsNotedThisProcess = java.util.concurrent.atomic.AtomicInteger(0)
+
     override fun noteAccountBuildsRegistered(built: Int) {
         if (built <= 0) return
+        val cap = lastObservation.sdkContactCount
+        if (cap > 0 && buildsNotedThisProcess.get() >= cap) {
+            log.info(
+                "DashPay coreHeight backfill: {} account build(s) reported, but this process " +
+                    "already accounted for {} (cap: {} SDK contact request(s)) — re-builds of " +
+                    "already-swept accounts, NOT raising the re-provision signal (loop guard)",
+                built, buildsNotedThisProcess.get(), cap
+            )
+            return
+        }
+        buildsNotedThisProcess.addAndGet(built)
         if (accountsRegisteredSincePass.compareAndSet(false, true)) {
             log.info(
                 "DashPay coreHeight backfill: {} account build(s) registered since the last " +
