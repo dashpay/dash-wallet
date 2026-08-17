@@ -1077,10 +1077,18 @@ class RequestUserNameViewModel @Inject constructor(
             // submissions keep the dashj path (their funding is already
             // committed elsewhere / has no transparent SDK API); pre-cutover
             // keeps dashj byte-for-byte.
+            // The EFFECTIVE source — identical to what the balance gate
+            // evaluated for this name, so a contested submission the pool
+            // cannot fund routes through the Dash-balance path the gate
+            // approved instead of dead-ending in the shielded preflight
+            // (QA Mo-973; see effectivePaymentSource).
+            val submitSource = effectivePaymentSource(
+                requestedUserName?.let { Names.isUsernameContestable(it) } ?: false
+            )
             val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
-                paymentSource != UsernamePaymentSource.SHIELDED_BALANCE &&
+                submitSource != UsernamePaymentSource.SHIELDED_BALANCE &&
                 transparentUsernameCreation.isCutoverCommitted()
-            if (paymentSource == UsernamePaymentSource.SHIELDED_BALANCE &&
+            if (submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
                 !isUsingInvite() && !reuseTransaction
             ) {
                 // The user picked the shielded balance on the payment-option
@@ -1380,10 +1388,62 @@ class RequestUserNameViewModel @Inject constructor(
      * display balance covers the fee but the eligibility does not, the
      * result carries `fundsSettling` so the row explains WHY.
      */
+    /**
+     * Whether the ordinary Dash-balance (L1 asset-lock / identity-credit) path
+     * can fund this username — the same arms [computeBalanceGate] applies on
+     * the [UsernamePaymentSource.DASH_BALANCE] source, extracted so the
+     * shielded-shortfall fallback below can consult them.
+     */
+    private fun canDashBalanceFund(contestable: Boolean): Boolean {
+        val identityBalance = _identityBalance.value
+        val walletBalance = _walletBalance.value
+        return when {
+            identityBalance > 0L && contestable ->
+                (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000)
+            identityBalance > 0L && !contestable ->
+                (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000)
+            contestable ->
+                walletBalance >= Constants.DASH_PAY_FEE_CONTESTED &&
+                    assetLockFundingEligible(Constants.DASH_PAY_FEE_CONTESTED)
+            else ->
+                walletBalance >= Constants.DASH_PAY_FEE &&
+                    assetLockFundingEligible(Constants.DASH_PAY_FEE)
+        }
+    }
+
+    /**
+     * The payment source THIS username actually uses. The welcome-screen
+     * decision point offers [UsernamePaymentSource.SHIELDED_BALANCE] when the
+     * pool covers the NON-contested 0.03 denomination — but a CONTESTED name
+     * needs the 0.25 denomination, and a pool that can't cover it dead-ended
+     * the flow even when the ordinary Dash-balance path could fund it
+     * (QA Mo-973: pool 0.031 < 0.25 while 0.96 sat asset-lock-eligible; every
+     * contested attempt refused with no way forward). When the pool cannot
+     * fund the contested tier but the Dash-balance path can, fall back to it —
+     * the gate and the submit routing consult THIS, never the raw field, so
+     * they cannot disagree.
+     */
+    private fun effectivePaymentSource(contestable: Boolean): UsernamePaymentSource {
+        if (paymentSource == UsernamePaymentSource.SHIELDED_BALANCE &&
+            contestable &&
+            !canShieldedFundContestedUsername() &&
+            canDashBalanceFund(contestable)
+        ) {
+            log.info(
+                "shielded pool cannot fund the contested denomination — falling back to the " +
+                    "Dash-balance path for this submission (pool={}, eligible L1 covers 0.25)",
+                _shieldedBalance.value.toPlainString()
+            )
+            return UsernamePaymentSource.DASH_BALANCE
+        }
+        return paymentSource
+    }
+
     private fun computeBalanceGate(username: String, contestable: Boolean): BalanceGateResult {
         val identityBalance = _identityBalance.value
         val walletBalance = _walletBalance.value
         val inviteBalance = _inviteBalance.value
+        val paymentSource = effectivePaymentSource(contestable)
         val enoughBalance = when {
             // Shielded (L2) invites have no L1 inviteBalance to check — the note is
             // verified/spent at claim time (createIdentityFromInvitation), so there is

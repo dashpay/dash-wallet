@@ -139,7 +139,10 @@ private fun startSendIntent(activity: FragmentActivity, csvFile: File) {
     try {
         val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.file_attachment", csvFile)
         val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
+            // text/csv, not text/plain: receivers that (re)name the attachment
+            // from the MIME type were delivering an extensionless or .txt file
+            // (QA field report, 11.10.98).
+            type = "text/csv"
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_SUBJECT, Constants.REPORT_SUBJECT_BEGIN + activity.getString(R.string.report_transaction_history_title))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

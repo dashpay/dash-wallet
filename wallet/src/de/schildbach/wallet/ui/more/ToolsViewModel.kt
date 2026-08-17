@@ -53,6 +53,9 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import java.util.*
@@ -201,7 +204,16 @@ class ToolsViewModel @Inject constructor(
                     exporter.initMetadataMap()
                     val csvContent = exporter.exportString()
                     val reportDir = File(cacheDir, "report").also { it.mkdirs() }
-                    val f = File.createTempFile("transaction-history.", ".csv", reportDir)
+                    // Deterministic, human-readable name ENDING in .csv. The old
+                    // createTempFile put random digits before the suffix
+                    // (`transaction-history.867…4894.csv`), and share-sheet
+                    // receivers that rename by display title dropped everything
+                    // after the first dot — delivering an extensionless file
+                    // (QA field report, 11.10.98). One canonical file per day,
+                    // overwritten on re-export, so the cache dir cannot fill
+                    // with abandoned temp files either.
+                    val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                    val f = File(reportDir, "dash-wallet-transactions-$stamp.csv")
                     OutputStreamWriter(FileOutputStream(f), Charsets.UTF_8).use { it.write(csvContent) }
                     f
                 }
