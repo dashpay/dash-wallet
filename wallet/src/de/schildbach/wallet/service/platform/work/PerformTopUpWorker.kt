@@ -132,7 +132,7 @@ class PerformTopUpWorker @AssistedInject constructor(
                 first.reason == REASON_PRE_BROADCAST_BUILD_SHORTFALL ||
                     first.reason == REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION
                 )
-        if (isMaxSpend && first is SdkWriteResult.NotBroadcast && retryableShortfall) {
+        if (isMaxSpend && retryableShortfall) {
             // The input population comes from the SDK's OWN eligible-UTXO
             // query — the same table its coin selection reads — not dashj's
             // spendableUtxoCount(): dashj counts coins the asset lock can

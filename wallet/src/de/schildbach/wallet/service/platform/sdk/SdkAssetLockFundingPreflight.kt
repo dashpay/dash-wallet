@@ -210,11 +210,6 @@ data class AssetLockFundingEvidence(
     val unclassifiedDuffs: Long
 )
 
-/** Eligible duffs: SUM over [ELIGIBLE_ASSET_LOCK_PREDICATE_SQL]. */
-internal const val ELIGIBLE_ASSET_LOCK_DUFFS_SQL =
-    "SELECT COALESCE(SUM(t.amount), 0) FROM txos t " +
-        ELIGIBLE_ASSET_LOCK_PREDICATE_SQL
-
 /**
  * COUNT twin of [ELIGIBLE_ASSET_LOCK_DUFFS_SQL] — the number of UTXOs a
  * fresh asset-lock build can select. Sizes the fee reserve a MAX

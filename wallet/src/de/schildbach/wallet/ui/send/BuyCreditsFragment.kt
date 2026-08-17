@@ -50,7 +50,9 @@ class BuyCreditsFragment : SendCoinsFragment() {
         binding.paymentHeader.setTitle(getString(R.string.credit_balance_button_buy))
         enterAmountViewModel.setMinAmount(MIN_TOP_UP, isIncludedMin = true)
         binding.paymentHeader.setPreposition("")
-        viewModel.isAssetLock = true
+        // (The base's `viewModel.isAssetLock = true` dashj tripwire is gone
+        // with the dashj purchase path: handleGo is overridden to the SDK
+        // worker and can never reach signAndSendPayment.)
 
         // Show what the identity already holds, under the amount field.
         //
