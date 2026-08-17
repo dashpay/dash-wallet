@@ -24,8 +24,12 @@ android {
         }
 
         // Seed PiggyCards test merchants in any build except the production
-        // release pipeline (fastlane sets BUILD_PROD=1).
-        def supportPiggyCardsTestMerchant = System.getenv("BUILD_PROD") != "1"
+        // release pipeline (fastlane sets BUILD_PROD=1). The project property
+        // takes precedence: a long-lived Gradle daemon does not pick up an
+        // environment variable set after it started, so local distribution
+        // builds pass -PBUILD_PROD instead.
+        def buildProd = project.findProperty("BUILD_PROD") ?: System.getenv("BUILD_PROD")
+        def supportPiggyCardsTestMerchant = buildProd != "1"
         buildConfigField "boolean", "PIGGY_CARDS_TEST_MERCHANT", supportPiggyCardsTestMerchant.toString()
     }
     

@@ -71,6 +71,14 @@ Build and distribute with Firebase
 
 Submit apk to Firebase Distribution
 
+### android qa
+
+```sh
+[bundle exec] fastlane android qa
+```
+
+Build locally and distribute to Firebase, skipping CI
+
 ### android build
 
 ```sh
