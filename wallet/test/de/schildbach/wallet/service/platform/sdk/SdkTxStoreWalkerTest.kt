@@ -344,8 +344,11 @@ class SdkTxStoreWalkerTest {
         exec("UPDATE txos SET spendingTxid = ? WHERE txid = ?", spender, txid(3))
         // Fresh reads — no caching layer to go stale.
         assertEquals(displayHexOf(spender), w.spenderOf(displayHex(3), 0))
-        // The spender is wallet-relevant purely through spendingTxid.
-        assertEquals(-500L, requireNotNull(w.recordFor(displayHexOf(spender))).netAmountDuffs)
+        // The spender is wallet-relevant purely through spendingTxid. Its
+        // stored −500 is a per-account slice of the real spend — the #4387
+        // heal recomputes the whole-wallet net from the mirror (it spent the
+        // 1000-duff output and funded nothing back).
+        assertEquals(-1000L, requireNotNull(w.recordFor(displayHexOf(spender))).netAmountDuffs)
     }
 
     @Test
@@ -395,12 +398,19 @@ class SdkTxStoreWalkerTest {
         )
     }
 
-    private fun insertTx(id: ByteArray, direction: Int, netAmount: Long, payload: ByteArray, firstSeen: Long) {
+    private fun insertTx(
+        id: ByteArray,
+        direction: Int,
+        netAmount: Long,
+        payload: ByteArray,
+        firstSeen: Long,
+        typeKind: Int = TX_TYPE_KIND_STANDARD
+    ) {
         exec(
             "INSERT INTO transactions (txid, transactionData, context, blockHeight, blockTimestamp, " +
                 "blockPosition, hasBlockPosition, direction, transactionType, transactionTypeKind, " +
                 "netAmount, label, firstSeen, createdAt, lastUpdated) " +
-                "VALUES (?, ?, 3, 0, 0, 0, 0, ?, 'Standard', 0, ?, '', ?, 0, 0)",
+                "VALUES (?, ?, 3, 0, 0, 0, 0, ?, 'Standard', $typeKind, ?, '', ?, 0, 0)",
             id,
             payload,
             direction,
@@ -558,6 +568,119 @@ class SdkTxStoreWalkerTest {
         assertEquals(100_000_000L, faucet.netAmountDuffs)
     }
 
+    /**
+     * The S22 AssetLock shape (dashpay/platform#4412): a credit purchase
+     * persisted INTERNAL/net-0. Real figures from the field wallet: one
+     * 0.14886489 input, 0.11886248 change, 0.03 OP_RETURN burn, 241-duff fee.
+     * The heal must surface OUTGOING / −(burn+fee) = −0.03000241, with the
+     * fee recovered from the payload.
+     */
+    @Test
+    fun reattribution_assetLock_internalNetZero_healsToOutgoingBurnPlusFee() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_al", bip44Account)
+        insertCoreAddress("bip44_al_change", bip44Account)
+        val funding = txid(41)
+        insertTx(funding, direction = 0, netAmount = 14_886_489, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(funding, 0, 14_886_489, "bip44_al")
+
+        val assetLock = txid(42)
+        insertTx(
+            assetLock, direction = 2, netAmount = 0, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, funding)
+        insertTxo(assetLock, 1, 11_886_248, "bip44_al_change")
+
+        val w = walker(payloadFacts = { payload ->
+            // outputs = change + value-bearing OP_RETURN burn; both inputs ours.
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(outputsTotalDuffs = 14_886_248, outputCount = 2, inputCount = 1)
+            } else {
+                null
+            }
+        })
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        val healed = requireNotNull(byHex[displayHexOf(assetLock)])
+        assertEquals(L1TxUiDirection.OUTGOING, healed.direction)
+        assertEquals(-3_000_241L, healed.netAmountDuffs)
+        assertEquals(241L, healed.feeDuffs)
+    }
+
+    /**
+     * An AssetLock whose stored net is already non-zero (the shape the rust
+     * store-side fix will persist) is NOT flagged — the heal arm goes inert.
+     */
+    @Test
+    fun reattribution_assetLock_correctStoredNet_untouched() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_al2", bip44Account)
+        insertCoreAddress("bip44_al2_change", bip44Account)
+        val funding = txid(43)
+        insertTx(funding, direction = 0, netAmount = 14_886_489, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(funding, 0, 14_886_489, "bip44_al2")
+
+        val assetLock = txid(44)
+        insertTx(
+            assetLock, direction = 1, netAmount = -3_000_241, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, funding)
+        insertTxo(assetLock, 1, 11_886_248, "bip44_al2_change")
+
+        val w = walker(payloadFacts = { null })
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        val kept = requireNotNull(byHex[displayHexOf(assetLock)])
+        assertEquals(L1TxUiDirection.OUTGOING, kept.direction)
+        assertEquals(-3_000_241L, kept.netAmountDuffs)
+    }
+
+    /**
+     * The dashpay/platform#4387 shape from the S22 reconciliation: a
+     * multi-account sweep persisted OUTGOING but with only ONE account
+     * slice's net. The widened OUTGOING flag recomputes the whole-wallet
+     * net from the mirror.
+     */
+    @Test
+    fun reattribution_outgoingUndersizedNet_healsToWholeWalletNet() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertAccount(recvAccount, 12)
+        insertCoreAddress("bip44_s1", bip44Account)
+        insertCoreAddress("recv_s2", recvAccount)
+        val f1 = txid(45)
+        insertTx(f1, direction = 0, netAmount = 200_000_000, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(f1, 0, 200_000_000, "bip44_s1")
+        val f2 = txid(46)
+        insertTx(f2, direction = 0, netAmount = 62_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTxo(f2, 0, 62_000_000, "recv_s2")
+
+        val sweep = txid(47)
+        // Stored: the net of only the second input's account slice.
+        insertTx(sweep, direction = 1, netAmount = -500_000, payload = byteArrayOf(10), firstSeen = 1_700_000_002)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", sweep, f1)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", sweep, f2)
+
+        val w = walker(payloadFacts = { payload ->
+            if (payload.firstOrNull()?.toInt() == 10) {
+                // Everything left the wallet; fee = 300 duffs.
+                TxPayloadFacts(outputsTotalDuffs = 261_999_700, outputCount = 1, inputCount = 2)
+            } else {
+                null
+            }
+        })
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        val healed = requireNotNull(byHex[displayHexOf(sweep)])
+        assertEquals(L1TxUiDirection.OUTGOING, healed.direction)
+        assertEquals(-262_000_000L, healed.netAmountDuffs)
+        assertEquals(300L, healed.feeDuffs)
+    }
+
     @Test
     fun reattribution_withoutPayloadFacts_sweepDegradesToOutgoing_neverInternal() = runBlocking {
         val ids = seedS22Shape()
@@ -640,15 +763,18 @@ class SdkTxStoreWalkerTest {
         assertEquals(Triple(0, 100_000_000L, null), storedShape(ids.faucet))
 
         // "Next launch": a FRESH walker instance (no in-memory state). The
-        // rows no longer match the flag condition, so the walk issues NO
-        // reattribution statements — no funded-split aggregate, no payload
-        // fetch, no UPDATE — the every-launch storm is gone.
+        // corrected rows produce NO further reattribution WORK — no payload
+        // fetch (dashj parse), no UPDATE — the every-launch storm is gone.
+        // The bounded funded-split aggregate DOES still run: since the #4387
+        // heal, OUTGOING rows with spent evidence are audited against the
+        // mirror each pass (a correct row and a per-account-slice row are
+        // numerically indistinguishable without it), and the audit's verdict
+        // "already correct" is what suppresses the facts fetch and the write.
         val w2 = walker(payloadFacts = { error("payload parse must not run on a corrected store") })
         queryLog.clear()
         val byHex = HashMap<String, L1TxUiRecord>()
         w2.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
         assertTrue(queryLog.none { it.contains("transactionData") })
-        assertTrue(queryLog.none { it.contains("GROUP BY t.txid") })
         assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
         // …and the served shapes are still the corrected ones.
         assertEquals(L1TxUiDirection.INTERNAL, byHex[displayHexOf(ids.sweep)]?.direction)

@@ -160,6 +160,14 @@ internal fun reattributeIncomingRecord(
 internal const val TX_TYPE_KIND_STANDARD = 0
 
 /**
+ * Rust `TransactionType` discriminant for an AssetLock (credit-funding)
+ * transaction — admitted to reattribution ONLY in its known-bad
+ * INTERNAL/net-0 persisted shape (dashpay/platform#4412); every other
+ * special kind stays excluded per the note above.
+ */
+internal const val TX_TYPE_KIND_ASSET_LOCK = 6
+
+/**
  * BOUNDED reader over the Kotlin SDK's L1 Room store (`txos` +
  * `transactions`) for the post-cutover display/seam pipelines — the fix for
  * the release-blocking scalability defect where every snapshot rebuild
@@ -565,11 +573,28 @@ internal class SdkTxStoreWalker(
         // so flagging every spent-evidenced Standard row is idempotent.
         val flagged = rows.filter {
             (
-                it.record.direction == L1TxUiDirection.INCOMING ||
-                    it.record.direction == L1TxUiDirection.OUTGOING
-                ) &&
-                it.typeKind == TX_TYPE_KIND_STANDARD &&
-                it.spentOwnedDuffs + (pendingOf(it)?.duffs ?: 0L) > 0L
+                (
+                    it.record.direction == L1TxUiDirection.INCOMING ||
+                        it.record.direction == L1TxUiDirection.OUTGOING
+                    ) &&
+                    it.typeKind == TX_TYPE_KIND_STANDARD &&
+                    it.spentOwnedDuffs + (pendingOf(it)?.duffs ?: 0L) > 0L
+                ) ||
+                // The known-bad AssetLock shape (dashpay/platform#4412): a credit
+                // purchase persisted INTERNAL/net-0 because its value-bearing
+                // OP_RETURN burn has no address and everything address-bearing is
+                // change. The mirror math corrects it to OUTGOING/−(burn+fee)
+                // (the burn is absent from the mirror, so `internal` can't
+                // trigger), making the spend visible to EVERY consumer — UI,
+                // CSV, balance reconciliation — from the one store row. Gated
+                // narrowly on the exact defective shape so a store-side rust fix
+                // (non-zero persisted net) makes this arm inert.
+                (
+                    it.typeKind == TX_TYPE_KIND_ASSET_LOCK &&
+                        it.record.direction == L1TxUiDirection.INTERNAL &&
+                        it.record.netAmountDuffs == 0L &&
+                        it.spentOwnedDuffs > 0L
+                    )
         }
         if (flagged.isEmpty()) return rows.map { it.record }
 
@@ -602,8 +627,18 @@ internal class SdkTxStoreWalker(
         // stored direction legitimately remains INCOMING), so fetching +
         // dashj-parsing their payloads every pass was pure waste.
         val needsFacts = flagged.filter {
-            (fundedOwned[it.record.txidHex] ?: 0L) -
-                (it.spentOwnedDuffs + (pendingOf(it)?.duffs ?: 0L)) < 0L
+            val recomputed = (fundedOwned[it.record.txidHex] ?: 0L) -
+                (it.spentOwnedDuffs + (pendingOf(it)?.duffs ?: 0L))
+            recomputed < 0L &&
+                // An OUTGOING row whose stored net already equals the mirror
+                // recompute is CORRECT: no correction will be produced, so
+                // fetching + dashj-parsing its payload every pass would be
+                // pure waste — and would violate the durability rule that a
+                // corrected store does no further reattribution work.
+                (
+                    it.record.direction != L1TxUiDirection.OUTGOING ||
+                        it.record.netAmountDuffs != recomputed
+                    )
         }
         val facts = HashMap<String, TxPayloadFacts>()
         for (chunk in needsFacts.chunked(TXID_IN_CHUNK)) {
