@@ -20,7 +20,6 @@ package de.schildbach.wallet.service.platform
 import android.app.ActivityManager
 import android.content.Intent
 import android.text.format.DateUtils
-import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
 import com.google.zxing.BarcodeFormat
@@ -665,10 +664,23 @@ class PlatformSynchronizationService @Inject constructor(
         }
 
         if (platformSyncJob != null && identityRepository.hasBlockchainIdentity) {
-            Preconditions.checkState(platformSyncJob!!.isActive)
-            log.info("Shutting down the platform sync job")
-            syncScope.coroutineContext.cancelChildren(CancellationException("shutdown the platform sync"))
-            platformSyncJob!!.cancel(null)
+            // A non-null-but-completed job is a NORMAL state here, not an
+            // invariant violation: the job completes on its own when the sync
+            // scope is cancelled by an earlier teardown step, and a service
+            // restart (e.g. the post-seed-backup onboarding restart) reaches
+            // this shutdown with the field still set. The old
+            // `checkState(isActive)` crashed the whole process from
+            // BlockchainServiceImpl.onDestroy's coroutine (no handler →
+            // uncaught → CRASH) — the Mo-972 field crash on 11.10.87. Handle
+            // it exactly like the txMetadataJob block below: cancel only if
+            // still active, always clear the field.
+            if (platformSyncJob!!.isActive) {
+                log.info("Shutting down the platform sync job")
+                syncScope.coroutineContext.cancelChildren(CancellationException("shutdown the platform sync"))
+                platformSyncJob!!.cancel(null)
+            } else {
+                log.info("platform sync job already completed at shutdown — clearing without cancel")
+            }
             platformSyncJob = null
         }
         if (txMetadataJob != null && identityRepository.hasIdentity()) {
