@@ -36,6 +36,7 @@ import coil.transform.RoundedCornersTransformation
 import org.dash.wallet.common.ui.components.MerchantNameIcon
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.service.platform.sdk.AssetLockKind
 import de.schildbach.wallet.service.platform.sdk.L1TxUiStatus
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import de.schildbach.wallet.service.platform.sdk.assetLockTitleRes
@@ -121,6 +122,8 @@ class TransactionResultViewBinder(
     private var inputAddresses: List<Address> = listOf()
     private var outputAddresses: List<Address> = listOf()
     private var outputAssetLocks = listOf<String>()
+    /** Non-null after [bindSdkDetail] of a Platform-funding asset lock. */
+    private var sdkAssetLockKind: AssetLockKind? = null
 
     fun bind(
         tx: Transaction,
@@ -269,6 +272,7 @@ class TransactionResultViewBinder(
             binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
             // A Platform-funding asset lock (upgrade / top-up / invite) surfaces
             // its "…Fee" title instead of the generic "Amount Sent".
+            sdkAssetLockKind = detail.assetLockKind
             binding.transactionTitle.text = detail.assetLockKind
                 ?.let { context.getText(assetLockTitleRes(it)) }
                 ?: context.getText(R.string.transaction_details_amount_sent)
@@ -347,7 +351,14 @@ class TransactionResultViewBinder(
                 binding.transactionOutputOpReturnsContainer,
                 false
             ) as TextView
-            opReturnView.text = "OP RETURN"
+            // An SDK-era top-up's OP_RETURN is the Platform-credits burn —
+            // label it like the dashj path does, not as a raw script. The
+            // credited state is refreshed by [setSdkTopUpState].
+            opReturnView.text = if (sdkAssetLockKind == AssetLockKind.TOPUP) {
+                context.getString(R.string.platform_credits_not_transferred)
+            } else {
+                "OP RETURN"
+            }
             binding.transactionOutputOpReturnsContainer.addView(opReturnView)
         }
     }
@@ -662,6 +673,28 @@ class TransactionResultViewBinder(
                 }
             }
         }
+    }
+
+    /**
+     * Refresh the Platform-credits row of an SDK-era top-up bound via
+     * [bindSdkDetail] once its credited state is known (lock gone from the
+     * SDK's recovery queue = credited). No-op for non-top-up details.
+     */
+    fun setSdkTopUpState(error: Boolean, completed: Boolean) {
+        if (sdkAssetLockKind != AssetLockKind.TOPUP) return
+        binding.transactionOutputOpReturnsContainer.removeAllViews()
+        binding.transactionOutputOpReturnsContainer.isVisible = true
+        val opReturnView = LayoutInflater.from(context).inflate(
+            R.layout.transaction_result_address_row,
+            binding.transactionOutputOpReturnsContainer,
+            false
+        ) as TextView
+        opReturnView.text = when {
+            error -> context.getString(R.string.platform_credits_error)
+            completed -> context.getString(R.string.platform_credits)
+            else -> context.getString(R.string.platform_credits_not_transferred)
+        }
+        binding.transactionOutputOpReturnsContainer.addView(opReturnView)
     }
 
     fun setSentToReturn(

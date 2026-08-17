@@ -31,7 +31,8 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.service.DashSystemService
-import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
+import de.schildbach.wallet.service.platform.sdk.SdkTopUpRecoveryService
+import de.schildbach.wallet.service.platform.work.ResumeTopUpsOperation
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.BuildConfig
 import org.bitcoinj.core.Coin
@@ -83,7 +84,7 @@ import androidx.core.net.toUri
 /**
  * contains topup related functions that are used by:
  * 1. [CreateIdentityService] to create an identity
- * 2. [TopupIdentityWorker] to topup an identity
+ * 2. [checkTopUps] to retry/complete legacy top-ups
  * 3. [SendInviteWorker] to create Invitations (dynamic link)
  */
 interface TopUpRepository {
@@ -174,7 +175,8 @@ class TopUpRepositoryImpl @Inject constructor(
     private val dashPayProfileDao: DashPayProfileDao,
     private val invitationsDao: InvitationsDao,
     private val dashPayConfig: DashPayConfig,
-    private val dashSystemService: DashSystemService
+    private val dashSystemService: DashSystemService,
+    private val sdkTopUpRecoveryService: SdkTopUpRecoveryService
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
@@ -528,38 +530,24 @@ class TopUpRepositoryImpl @Inject constructor(
         }
     }
 
-    private var checkedPreviousTopUps = false
 
+    /**
+     * Phase 2/3 (MO-998): the legacy dashj retry loops are DELETED — the
+     * SDK's tracked-lock queue is the only top-up retry system. Uncredited
+     * dashj-era top-ups from before the migration are NOT retried by the
+     * app anymore; they become recoverable again when the SDK gains
+     * chain rediscovery of asset locks (the pending platform change), at
+     * which point they surface on the recovery queue below like any
+     * interrupted SDK top-up. Funds are never lost in the interim — the
+     * locks sit on chain, claimable by this wallet's keys.
+     */
     override suspend fun checkTopUps(aesKeyParameter: KeyParameter?) {
-        val topUps = topUpsDao.getUnused()
-        topUps.forEach { topUp ->
-            try {
-                val tx = walletDataProvider.wallet!!.getTransaction(topUp.txId)
-                val assetLockTx = authExtension.getAssetLockTransaction(tx)
-                topUpIdentity(assetLockTx, aesKeyParameter)
-                topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
-            } catch (e: Exception) {
-                // swallow
+        try {
+            if (sdkTopUpRecoveryService.hasPendingTopUpLocks()) {
+                ResumeTopUpsOperation(walletApplication).enqueue()
             }
-        }
-        // only check once per app start
-        if (!checkedPreviousTopUps) {
-            log.info("checking all topup transactions")
-            authExtension.topupFundingTransactions.forEach { assetLockTx ->
-                val topUp = topUpsDao.getByTxId(assetLockTx.txId)
-                if (topUp == null || topUp.notUsed()) {
-                    val identity = topUp?.toUserId ?: identityRepository.blockchainIdentity!!.uniqueIdentifier.toString()
-                    if (topUp == null) {
-                        topUpsDao.insert(TopUp(assetLockTx.txId, identity))
-                    }
-                    try {
-                        topUpIdentity(assetLockTx, platformRepo.getWalletEncryptionKey()!!)
-                    } catch (e: Exception) {
-                        log.info("problem executing topup for ${assetLockTx.txId}", e)
-                    }
-                }
-            }
-            checkedPreviousTopUps = true
+        } catch (e: Exception) {
+            log.warn("failed to check/enqueue the SDK top-up drain", e)
         }
     }
 

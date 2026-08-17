@@ -99,6 +99,18 @@ sealed class SdkWriteResult<out T> {
  * Kept as a top-level pure function so the table is unit-testable on the
  * host JVM without any native or Android dependency.
  */
+/**
+ * [classifyBroadcastFailure] reasons for the two PRE-BROADCAST funding
+ * shortfalls that are retryable with a smaller amount (nothing submitted,
+ * selection released). Named so retry logic — e.g. a MAX top-up's one-shot
+ * fee-adjusted retry — matches the classifier's own verdict instead of
+ * re-matching raw engine messages that differ per build path.
+ */
+internal const val REASON_PRE_BROADCAST_BUILD_SHORTFALL =
+    "pre-broadcast build failure (insufficient funds / coin selection)"
+internal const val REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION =
+    "pre-broadcast asset-lock coin-selection failure"
+
 internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = when {
     t is DashSdkError.InvalidParameter ||
         t is DashSdkError.InvalidState ||
@@ -143,6 +155,20 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // replaces the auth window and gives this a typed error.
     t.message?.contains("User not authenticated") == true ->
         SdkWriteResult.NotBroadcast("signing failure (pre-broadcast): Keystore auth window expired", t)
+    // TYPED funding shortfalls — checked BEFORE the message arms because
+    // engine message text drifts across AAR lines while the type cannot.
+    // CoreInsufficientFunds (FFI 22) is the atomic Core selection;
+    // AssetLockInsufficientFunds (FFI 29) is the asset-lock coin selection
+    // (asset_lock/build.rs map_builder_error promotes every builder
+    // shortfall shape to it, including the zero-candidate NoUtxosAvailable).
+    // Both are raised while BUILDING, strictly pre-broadcast, nothing
+    // submitted and the selection released — retryable with a smaller
+    // amount. The message arms below stay as the fallback for AAR lines
+    // that still surface these as WalletOperation strings.
+    t is DashSdkError.PlatformWallet.CoreInsufficientFunds ->
+        SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_BUILD_SHORTFALL, t)
+    t is DashSdkError.PlatformWallet.AssetLockInsufficientFunds ->
+        SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION, t)
     // Coin selection / insufficient funds happens during transaction BUILDING,
     // strictly before any broadcast — nothing was submitted. Surfaced as a
     // WalletOperation error carrying the reason in the message (observed live:
@@ -155,7 +181,7 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
             m.contains("transaction build failed") ||
             m.contains("set_funding failed")
     } == true ->
-        SdkWriteResult.NotBroadcast("pre-broadcast build failure (insufficient funds / coin selection)", t)
+        SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_BUILD_SHORTFALL, t)
     // Shielded note selection (rs-platform-wallet note_selection.rs) runs
     // strictly BEFORE proof generation or broadcast — nothing was submitted
     // and the selected notes are released. Surfaced as a WalletOperation
@@ -182,7 +208,7 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // real shape. Message-matched until the SDK exposes typed errors.
     // Retryable with a smaller amount.
     t.message?.contains("asset lock coin selection is short") == true ->
-        SdkWriteResult.NotBroadcast("pre-broadcast asset-lock coin-selection failure", t)
+        SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION, t)
     // The SDK's SPV client wasn't running when broadcast was attempted, so the
     // tx never left the device (observed live: the interim shield pipeline
     // broadcasts via the shadow SPV, which our recovery paths stop/reset — the

@@ -2,45 +2,44 @@ package de.schildbach.wallet.ui.send
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.service.platform.sdk.ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
-import de.schildbach.wallet.service.platform.sdk.SdkTransparentTopUp
-import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
-import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
+import de.schildbach.wallet.service.platform.work.PerformTopUpOperation
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.withContext
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import de.schildbach.wallet.data.CreditBalanceInfo
-import de.schildbach.wallet.data.WalletData
-import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+/**
+ * Buy Credits is SDK-only (Phase 2/3, MO-998): the dashj purchase path and
+ * its TopupIdentityWorker/topup-counter plumbing are deleted. The purchase
+ * runs as UNIQUE background work ([startTopUp] →
+ * [de.schildbach.wallet.service.platform.work.PerformTopUpWorker]) so a
+ * lock screen / rotation / process death cannot cancel it mid-flight;
+ * interrupted attempts are completed by
+ * [de.schildbach.wallet.service.platform.work.ResumeTopUpsWorker].
+ */
 @HiltViewModel
 class BuyCreditsViewModel @Inject constructor(
-    val walletApplication: WalletApplication,
-    val platformRepo: PlatformRepo,
-    val identity: BlockchainIdentityConfig,
-    val walletDataProvider: WalletData,
-    val analytics: AnalyticsService,
-    val dashPayConfig: DashPayConfig,
-    private val sdkTransparentTopUp: SdkTransparentTopUp,
+    private val walletApplication: WalletApplication,
+    private val platformRepo: PlatformRepo,
+    private val identity: BlockchainIdentityConfig,
     private val assetLockFundingPreflight: SdkAssetLockFundingPreflight
 ) : ViewModel() {
     companion object {
@@ -52,18 +51,6 @@ class BuyCreditsViewModel @Inject constructor(
         /** Backoff between balance-read attempts; multiplied by the attempt. */
         private const val BALANCE_READ_RETRY_DELAY_MS = 1_500L
     }
-
-    var identityId: String? = null
-    var topUpTransaction: Transaction? = null
-    private val _currentWorkId = MutableStateFlow("")
-    val currentWorkId: StateFlow<String>
-        get() = _currentWorkId
-
-    private suspend fun getNextWorkId() = withContext(Dispatchers.IO) {
-        dashPayConfig.getTopupCounter().toString(16)
-    }
-
-    private val topupIdentityOperation = TopupIdentityOperation(walletApplication)
 
     /**
      * The identity's CURRENT credit balance, expressed in Dash for display.
@@ -125,49 +112,26 @@ class BuyCreditsViewModel @Inject constructor(
         }
     }
 
-    fun topWorkStatus(workId: String): LiveData<Resource<WorkInfo>> {
-        return TopupIdentityOperation.operationStatus(walletApplication, workId, analytics)
-    }
-
-    suspend fun topUpOnPlatform() = withContext(Dispatchers.IO) {
-        identity.get(BlockchainIdentityConfig.IDENTITY_ID)?.let { identityId ->
-            val workId = getNextWorkId()
-            topupIdentityOperation
-                .create(workId, topUpTransaction?.txId!!)
-                .enqueue()
-            _currentWorkId.value = workId
-        }
-    }
-
-    suspend fun getTransaction(txId: Sha256Hash?) = withContext(Dispatchers.IO) {
-        walletDataProvider.wallet!!.getTransaction(txId)
+    /**
+     * Start the purchase as unique background work. A tap while one runs
+     * attaches to the existing run (no double buy). The screen drives its
+     * UI from [topUpWorkStatus]. [isMaxSpend] marks a "spend everything"
+     * purchase: the worker may make ONE fee-adjusted retry when the full
+     * balance fails the asset-lock coin selection pre-broadcast.
+     */
+    fun startTopUp(amountDuffs: Long, isMaxSpend: Boolean) {
+        PerformTopUpOperation(walletApplication).enqueue(amountDuffs, isMaxSpend)
     }
 
     /**
-     * Whether the cutover is committed. Post-cutover the dashj L1 engine is
-     * HELD (0 UTXOs), so building the top-up asset lock with dashj fails —
-     * the funds live in the SDK, and the go handler routes funding through
-     * [topUpViaSdk] instead of the dashj asset-lock + [TopupIdentityWorker]
-     * chain. Pre-cutover this is false and the existing dashj path is used
-     * byte-for-byte.
+     * Live status of the unique purchase work (empty until first use).
+     * Delivers the last FINISHED run to a fresh observer too — the screen
+     * gates on having seen an active state, rather than pruning (a
+     * WorkManager prune is app-global and would erase finished work states
+     * other features still observe by tag).
      */
-    suspend fun isCutoverCommitted(): Boolean = sdkTransparentTopUp.isCutoverCommitted()
-
-    /**
-     * Post-cutover top-up: fund the EXISTING identity's credit balance by
-     * [amountDuffs] Core duffs (the user-entered amount) directly through the
-     * SDK's resume-gated `topUpFromCore` (which FUSES the asset-lock build with
-     * the Platform top-up registration — no dashj tx/txid). Returns the
-     * three-valued outcome the go handler observes directly: Broadcast(new
-     * credit balance) / NotBroadcast (nothing spent, retry-safe) / Ambiguous
-     * (unconfirmed — never retried). Returns NotBroadcast when no identity id
-     * is on record.
-     */
-    suspend fun topUpViaSdk(amountDuffs: Long): SdkWriteResult<Long> = withContext(Dispatchers.IO) {
-        val identityId = identity.get(BlockchainIdentityConfig.IDENTITY_ID)
-            ?: return@withContext SdkWriteResult.NotBroadcast("no identity to top up")
-        sdkTransparentTopUp.topUp(identityId, amountDuffs)
-    }
+    fun topUpWorkStatus(): LiveData<List<WorkInfo>> =
+        PerformTopUpOperation.status(walletApplication)
 
     /**
      * PRE-FLIGHT funding-eligibility for an SDK top-up of [amountDuffs]:
@@ -178,7 +142,30 @@ class BuyCreditsViewModel @Inject constructor(
      * the preflight has no evidence (pre-cutover, SDK unavailable, read
      * failure) — the real build stays the authority.
      */
-    suspend fun canFundTopUp(amountDuffs: Long): Boolean = withContext(Dispatchers.IO) {
-        assetLockFundingPreflight.canFundAssetLockDuffs(amountDuffs) ?: true
-    }
+    suspend fun canFundTopUp(amountDuffs: Long, isMaxSpend: Boolean): Boolean =
+        withContext(Dispatchers.IO) {
+            // A MAX spend can never clear the preflight at the FULL balance —
+            // the check demands fee headroom ON TOP of the amount, and there is
+            // nothing on top of everything. Preflight what the worker's
+            // fee-adjusted retry would actually send instead: the same reserve
+            // rule the shielded Internal Transfer max uses
+            // (assetLockMaxFeeReserve, sized from the spendable UTXO count).
+            val effective = if (isMaxSpend) {
+                // Same source the worker's retry uses: the SDK's own
+                // eligible-UTXO count. The preflight re-adds its fixed fee
+                // headroom to whatever it is asked about, and for a MAX spend
+                // the withheld reserve IS the fee allowance — so subtract the
+                // headroom here too, or the two stack and a MAX preflight
+                // (eligible == amount) can never pass. Net effect: the check
+                // becomes eligible + reserve >= amount, i.e. "is no more than
+                // the fee reserve tied up in non-final coins".
+                val count = assetLockFundingPreflight.eligibleAssetLockUtxoCountOrNull()
+                val reserve = count?.let { assetLockMaxFeeReserve(it).duffs } ?: 0L
+                (amountDuffs - reserve - ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS)
+                    .coerceAtLeast(1L)
+            } else {
+                amountDuffs
+            }
+            assetLockFundingPreflight.canFundAssetLockDuffs(effective) ?: true
+        }
 }

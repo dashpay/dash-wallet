@@ -234,7 +234,7 @@ internal class DashSdkTransparentTopUpSource(
  * TRANSPARENT-funded identity TOP-UP ("Buy Credits") — the post-cutover
  * replacement for the dashj asset-lock funding path in
  * [de.schildbach.wallet.ui.send.BuyCreditsFragment] /
- * [de.schildbach.wallet.service.platform.work.TopupIdentityWorker]. Once the
+ * the deleted legacy TopupIdentityWorker. Once the
  * cutover is committed the dashj L1 engine is HELD (0 UTXOs), so building the
  * top-up asset lock with dashj fails `InsufficientMoneyException` — the funds
  * live in the SDK. This routes top-up funding through the SDK's
@@ -403,7 +403,17 @@ class SdkTransparentTopUp internal constructor(
      * [SdkWriteResult] three-valued contract holds
      * ([SdkWriteResult.Ambiguous] is never retried by anyone).
      */
-    suspend fun topUpTransparent(identityIdBase58: String, amountDuffs: Long): SdkWriteResult<Long> {
+    suspend fun topUpTransparent(
+        identityIdBase58: String,
+        amountDuffs: Long,
+        /**
+         * Internal: the outpoint of a tracked lock the resume gate must
+         * IGNORE — set on the single self-retry taken after that lock was
+         * rejected as already-consumed (see the catch below). Non-null also
+         * means "this is the retry", so it can never loop.
+         */
+        skipLockOutpoint: Pair<ByteArray, Int>? = null
+    ): SdkWriteResult<Long> {
         // Fail closed unless the cutover is committed — pre-cutover this path
         // must submit nothing (the dashj path owns funding then).
         val committed = try {
@@ -448,6 +458,15 @@ class SdkTransparentTopUp internal constructor(
         // unresolved lock exists would select DIFFERENT UTXOs = DOUBLE-PAY.
         val existingLock = try {
             source.unresolvedTopUpAssetLock(walletId, ref.registrationIndex)
+                // Drop a lock Platform already rejected as consumed on this
+                // call's first pass: it is stale bookkeeping, not a resumable
+                // candidate, and re-picking it would fail forever (the SDK
+                // never marks it consumed locally — platform ask on MO-998).
+                ?.takeUnless { lock ->
+                    skipLockOutpoint?.let { (txid, vout) ->
+                        lock.outpointTxid.contentEquals(txid) && lock.outpointVout == vout
+                    } == true
+                }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             // A failed recovery lookup cannot prove no lock exists — refuse the
@@ -475,6 +494,28 @@ class SdkTransparentTopUp internal constructor(
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
+            // A RESUME that Platform rejects as already-consumed is NOT
+            // ambiguous: those credits provably landed on an earlier attempt.
+            // The SDK keeps the lock in its tracked list regardless (nothing
+            // marks it consumed locally — platform ask on MO-998), so the
+            // resume gate would keep picking this dead lock and every future
+            // purchase would fail. Treat it as "this stale lock is not a
+            // resumable candidate" and immediately retry the pipeline ONCE,
+            // which then takes the fresh-build branch. Safe: the rejection
+            // proves the lock's outputs are spent, so no double-pay is
+            // possible, and the flag stops it from ever looping.
+            if (existingLock != null && isAlreadyConsumed(t) && skipLockOutpoint == null) {
+                log.warn(
+                    "resume hit an already-consumed lock at index {} (its credits landed earlier); " +
+                        "ignoring that stale tracked lock and building fresh",
+                    ref.registrationIndex
+                )
+                return topUpTransparent(
+                    identityIdBase58,
+                    amountDuffs,
+                    skipLockOutpoint = existingLock.outpointTxid to existingLock.outpointVout
+                )
+            }
             return when (val classified = classifyBroadcastFailure(t)) {
                 is SdkWriteResult.NotBroadcast -> {
                     log.warn("transparent identity top-up rejected pre-broadcast", t)
