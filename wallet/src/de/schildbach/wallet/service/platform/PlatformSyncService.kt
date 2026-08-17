@@ -524,6 +524,8 @@ class PlatformSynchronizationService @Inject constructor(
             }
             .launchIn(syncScope)
 
+        syncScope.launch { remergeStoredPlatformMetadataOnce() }
+
         // The EFFECTIVE metadata settings, once per arm. These live in this
         // install's DataStore and do NOT travel with the wallet, so a restore
         // onto another device silently starts from the defaults — including
@@ -1971,6 +1973,71 @@ class PlatformSynchronizationService @Inject constructor(
             giftCardChallenge = docs.lastOrNull { it.giftCardChallenge != null}?.giftCardChallenge,
             index = docs.lastOrNull { it.index != null }?.index
         )
+    }
+
+    /**
+     * Re-merge platform metadata already on this device into the UI-visible
+     * table, once.
+     *
+     * Documents fetched before the `syncPlatformMetadata` fallback fix were
+     * stored in `transaction_metadata_platform` and then dropped before they
+     * reached `transaction_metadata`, so a wallet could hold thousands of
+     * fetched rows and display none of them. The fetch watermark means those
+     * documents will never be delivered again, so without this the only repair
+     * would be clearing the metadata store — and the documents already carry
+     * every field, so no network round trip is needed.
+     *
+     * Idempotent and best-effort: guarded by a one-shot flag, and a failure
+     * leaves the flag unset so the next launch retries.
+     */
+    private suspend fun remergeStoredPlatformMetadataOnce() {
+        if (dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_REMERGE_DONE) == true) return
+        val watch = Stopwatch.createStarted()
+        try {
+            val docs = transactionMetadataDocumentDao.load()
+            if (docs.isEmpty()) {
+                dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_REMERGE_DONE, true)
+                return
+            }
+            val byTx = docs.groupBy { it.txId }
+            log.info(
+                "TxMetadata re-merge: {} stored document row(s) across {} transaction(s)",
+                docs.size, byTx.size
+            )
+            var merged = 0
+            for ((txId, rows) in byTx) {
+                try {
+                    val item = mergeTransactionMetadataDocuments(txId.toSha256Hash(), rows)
+                    val metadata = TransactionMetadata(
+                        txId,
+                        item.sentTimestamp ?: 0,
+                        org.dash.wallet.common.money.Coin.ZERO,
+                        TransactionCategory.Invalid,
+                        item.taxCategory,
+                        item.currencyCode,
+                        item.rate,
+                        item.memo ?: "",
+                        service = item.service
+                    )
+                    transactionMetadataProvider.syncPlatformMetadata(txId, metadata, null, null)
+                    merged++
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.info("TxMetadata re-merge: skipped {} ({})", txId, e.message)
+                }
+            }
+            dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_REMERGE_DONE, true)
+            log.info(
+                "TxMetadata re-merge: merged {} of {} transaction(s) in {}",
+                merged, byTx.size, watch
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Flag deliberately left unset — retry on the next launch.
+            log.warn("TxMetadata re-merge failed; will retry next launch", e)
+        }
     }
 
     override suspend fun hasPendingTxMetadataToSave(): Boolean {

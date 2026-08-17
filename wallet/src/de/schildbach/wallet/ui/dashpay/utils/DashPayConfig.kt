@@ -128,6 +128,17 @@ open class DashPayConfig @Inject constructor(
         val TRANSACTION_METADATA_SAVE_MEMOS = booleanPreferencesKey("transaction_metadata_save_memos")
         val TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO = booleanPreferencesKey("transaction_metadata_save_gift_card_info")
         val TRANSACTION_METADATA_SAVE_AFTER = longPreferencesKey("transaction_metadata_save_after")
+
+        /**
+         * One-shot marker for the re-merge of already-fetched platform metadata.
+         *
+         * Metadata fetched before the `syncPlatformMetadata` fallback fix was
+         * stored as platform documents and then DISCARDED before reaching the
+         * UI-visible table. The documents are still on the device and carry the
+         * whole field set, so the repair is a local re-merge — no re-fetch, and
+         * the fetch watermark would not re-deliver them anyway.
+         */
+        val TRANSACTION_METADATA_REMERGE_DONE = booleanPreferencesKey("transaction_metadata_remerge_done")
         val TRANSACTION_METADATA_SAVE_ON_RESET = booleanPreferencesKey("transaction_metadata_save_on_reset")
         val TRANSACTION_METADATA_LAST_SAVE_WORK_ID = stringPreferencesKey("transaction_metadata_last_save_work_id")
         val TRANSACTION_METADATA_LAST_PAST_SAVE = longPreferencesKey("transaction_metadata_last_save_work_timestamp")
