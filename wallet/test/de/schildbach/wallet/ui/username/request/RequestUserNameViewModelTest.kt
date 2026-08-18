@@ -240,6 +240,52 @@ class RequestUserNameViewModelTest {
         }
     }
 
+    // ── reset() vs the shielded-gate mirrors ────────────────────────────────
+
+    @Test
+    fun reset_preservesTheShieldedGateMirrors() = runVmTest {
+        val viewModel = viewModel()
+        viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+        shieldedSyncStatusFlow.value = ShieldedSyncStatus.READY
+        // The collectors have mirrored the service state into uiState.
+        assertEquals(ShieldedSyncStatus.READY, viewModel.uiState.value.shieldedSyncStatus)
+        assertEquals(true, viewModel.uiState.value.fundingNoteAnchored)
+
+        // reset() runs on EVERY empty username input, including screen entry.
+        viewModel.reset()
+
+        // The service will not re-emit an unchanged READY, so a wiped mirror
+        // could never repair itself — the button read "Preparing shielded
+        // balance…" for the rest of the screen's life (S21 repro 2026-08-18).
+        assertEquals(ShieldedSyncStatus.READY, viewModel.uiState.value.shieldedSyncStatus)
+        assertEquals(true, viewModel.uiState.value.fundingNoteAnchored)
+    }
+
+    // ── the EFFECTIVE payment source (Mo-973 fallback) ──────────────────────
+
+    @Test
+    fun effectiveSource_contestedShieldedShortfall_fallsBackToDashBalance() = runVmTest {
+        val viewModel = viewModel()
+        viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+        shieldedSyncStatusFlow.value = ShieldedSyncStatus.READY
+        // Pool covers the 0.03 non-contested denomination but not 0.25.
+        shieldedBalanceFlow.value = Dash(4_787_148L)
+        // L1 covers the contested fee (preflight evidence defaults open).
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(94_900_000)
+
+        // Contested: the pool cannot fund 0.25 → the Dash-balance path is the
+        // effective source (this is what the fragment's button gate consumes).
+        assertEquals(
+            UsernamePaymentSource.DASH_BALANCE,
+            viewModel.effectivePaymentSourceFor(contestable = true)
+        )
+        // Non-contested: the pool funds it — the raw source stands.
+        assertEquals(
+            UsernamePaymentSource.SHIELDED_BALANCE,
+            viewModel.effectivePaymentSourceFor(contestable = false)
+        )
+    }
+
     // ── paymentSource routing ───────────────────────────────────────────────
 
     @Test

@@ -254,7 +254,11 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             // lock-step with it (Fix D).
             val buttonState = usernameSubmitButtonState(
                 usernameType = usernameType,
-                paymentSource = requestUserNameViewModel.paymentSource,
+                // The EFFECTIVE source, not the raw field: a contested name
+                // the pool cannot fund falls back to the Dash-balance path
+                // (Mo-973), and that submission must not gate on shielded
+                // pool readiness it does not use.
+                paymentSource = requestUserNameViewModel.effectivePaymentSourceFor(it.usernameContestable),
                 shieldedSyncStatus = it.shieldedSyncStatus,
                 enoughBalance = it.enoughBalance,
                 usernameExists = it.usernameExists,

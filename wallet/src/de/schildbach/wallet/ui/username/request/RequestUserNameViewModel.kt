@@ -1191,8 +1191,23 @@ class RequestUserNameViewModel @Inject constructor(
     fun reset() {
         lastGateUsername = null
         // networkSlow is screen-entry-scoped (advisory probe result), not
-        // per-username state — clearing the input must not wipe it.
-        _uiState.update { RequestUserNameUIState(networkSlow = it.networkSlow) }
+        // per-username state — clearing the input must not wipe it. Same
+        // for the shielded-gate mirrors: they are SERVICE state, and the
+        // service never re-emits an unchanged READY, so wiping them to
+        // defaults here pinned the submit button at "Preparing shielded
+        // balance…" for the rest of the screen's life — reset() runs on
+        // every empty input, including screen entry, so the wipe always
+        // landed right after the collectors had mirrored READY (S21 repro
+        // 2026-08-18, the Mo-973 dead-end). Re-source the status from the
+        // live VM mirror and re-read the anchor gate asynchronously.
+        _uiState.update {
+            RequestUserNameUIState(
+                networkSlow = it.networkSlow,
+                shieldedSyncStatus = _shieldedSyncStatus.value,
+                fundingNoteAnchored = it.fundingNoteAnchored
+            )
+        }
+        viewModelScope.launch { refreshFundingNoteAnchor() }
     }
 
     private fun resetUiForRetrySubmit() {
@@ -1429,15 +1444,35 @@ class RequestUserNameViewModel @Inject constructor(
             !canShieldedFundContestedUsername() &&
             canDashBalanceFund(contestable)
         ) {
-            log.info(
-                "shielded pool cannot fund the contested denomination — falling back to the " +
-                    "Dash-balance path for this submission (pool={}, eligible L1 covers 0.25)",
-                _shieldedBalance.value.toPlainString()
-            )
+            // Logged on the TRANSITION only — the gate recomputes on every
+            // uiState emission (several times per keystroke), and one line
+            // per decision is the useful signal.
+            if (!loggedShieldedFallback) {
+                loggedShieldedFallback = true
+                log.info(
+                    "shielded pool cannot fund the contested denomination — falling back to the " +
+                        "Dash-balance path for this submission (pool={}, eligible L1 covers 0.25)",
+                    _shieldedBalance.value.toPlainString()
+                )
+            }
             return UsernamePaymentSource.DASH_BALANCE
         }
+        loggedShieldedFallback = false
         return paymentSource
     }
+
+    /** One fallback log per decision transition — see [effectivePaymentSource]. */
+    private var loggedShieldedFallback = false
+
+    /**
+     * The payment source THIS username actually uses — the fragment's
+     * button gate must consult the same shielded-shortfall fallback the
+     * balance gate and the submit routing use. Passing the RAW field
+     * instead gated a Dash-balance submission on shielded pool readiness
+     * it does not need (the second half of the Mo-973 dead-end).
+     */
+    fun effectivePaymentSourceFor(contestable: Boolean): UsernamePaymentSource =
+        effectivePaymentSource(contestable)
 
     private fun computeBalanceGate(username: String, contestable: Boolean): BalanceGateResult {
         val identityBalance = _identityBalance.value
