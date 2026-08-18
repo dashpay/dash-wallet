@@ -760,16 +760,17 @@ class ShieldedBalanceServiceTest {
             ShieldedSyncStatus.SYNCING,
             mapShieldedSyncStatus(ready = true, firstPassCompleted = false, passInFlight = false)
         )
-        // A pass in flight (a re-scan) is always SYNCING — even after the
-        // first pass completed: this is the "funded wallet reads 0 for
-        // minutes while re-scanning" case.
-        assertEquals(
-            ShieldedSyncStatus.SYNCING,
-            mapShieldedSyncStatus(ready = true, firstPassCompleted = true, passInFlight = true)
-        )
         assertEquals(
             ShieldedSyncStatus.SYNCING,
             mapShieldedSyncStatus(ready = true, firstPassCompleted = false, passInFlight = true)
+        )
+        // A ROUTINE pass in flight after the first completed does NOT demote
+        // READY: the persisted note store stays trustworthy through it, and
+        // the old SYNCING arm made every 60s background pass flicker every
+        // READY-gated surface (the username button, live on the S21).
+        assertEquals(
+            ShieldedSyncStatus.READY,
+            mapShieldedSyncStatus(ready = true, firstPassCompleted = true, passInFlight = true)
         )
         // Ready, first pass done, nothing in flight → the balance is trustworthy.
         assertEquals(

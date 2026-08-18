@@ -257,11 +257,18 @@ internal fun evaluateWalletFundingGate(
  * latch; [firstPassCompleted] latches once a full sync pass has finished since
  * bring-up; [passInFlight] is the live "a pass is scanning right now" signal.
  *
- * A pass in flight is always [ShieldedSyncStatus.SYNCING] (the pool is
- * re-scanning — the user-reported "funded wallet shows 0 for minutes" case),
- * and before the first pass finishes we are likewise SYNCING rather than
- * exposing the placeholder zero. Only a ready runtime with a finished pass and
- * nothing in flight is [ShieldedSyncStatus.READY].
+ * SYNCING means the FIRST catch-up since bring-up has not finished — the
+ * window where the note store can read a placeholder zero ("funded wallet
+ * shows 0 for minutes"). Once that first pass completes, the persisted note
+ * store stays trustworthy THROUGH routine background passes (a pass adds
+ * notes; it does not blank the store), so [passInFlight] no longer demotes
+ * the status: the old `passInFlight → SYNCING` arm made every 60-second
+ * background pass yank READY away for its 2–4s duration, and every surface
+ * gated on READY flickered with it (observed live as the username submit
+ * button dropping back to "Preparing shielded balance…" mid-typing, S21
+ * 2026-08-18). Consumers that must not run concurrently with a pass poll
+ * [ShieldedSource.isShieldedSyncing] directly — that is its job, not this
+ * status's.
  */
 internal fun mapShieldedSyncStatus(
     ready: Boolean,
@@ -269,7 +276,6 @@ internal fun mapShieldedSyncStatus(
     passInFlight: Boolean
 ): ShieldedSyncStatus = when {
     !ready -> ShieldedSyncStatus.NOT_READY
-    passInFlight -> ShieldedSyncStatus.SYNCING
     !firstPassCompleted -> ShieldedSyncStatus.SYNCING
     else -> ShieldedSyncStatus.READY
 }
