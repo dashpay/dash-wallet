@@ -143,13 +143,24 @@ class RestoreIdentityWorker @AssistedInject constructor(
             // not-yet-completed creation (e.g. a contested primary still at
             // USERNAME_REGISTERED, which must route to VOTING) both keep the
             // historic empty/restoring reset unchanged.
-            val alreadyCompletedFromCreation = if (fromCreation) {
-                identityConfig.load()?.takeIf { it.creationState >= IdentityCreationState.DONE }
-            } else {
-                null
-            }
-            // use an "empty" state for each (unless preserving a completed fromCreation state)
+            val persistedRecord = if (fromCreation) identityConfig.load() else null
+            val alreadyCompletedFromCreation = persistedRecord?.takeIf { it.creationState >= IdentityCreationState.DONE }
+            // use an "empty" state for a genuine device restore (nothing local
+            // worth keeping) — but NEVER for a fromCreation run: the persisted
+            // record carries the REQUESTED names, and the historic empty reset
+            // destroyed them before the recovery walk. recoverUsernames() then
+            // rebuilt the record purely from on-chain REGISTERED names, so a
+            // DUAL create's pending CONTESTED primary (not a registered domain
+            // until its vote resolves) vanished — the contested-name scan's
+            // candidate label was gone before the scan ran, and the identity
+            // completed DONE holding only the instant name (Mo-972; S21
+            // 2026-08-18, reproduced twice — the second time through this very
+            // reset with the adoption guard already in place downstream). Seed
+            // from the persisted record instead: restoring=true keeps the
+            // processing-card semantics, and the walk re-advances creationState
+            // exactly as before.
             val blockchainIdentityData = alreadyCompletedFromCreation
+                ?: persistedRecord?.also { it.restoring = true }
                 ?: BlockchainIdentityData(IdentityCreationState.NONE, null, null, null, null, true)
 
             val authExtension =
