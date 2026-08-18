@@ -57,3 +57,53 @@ internal fun preferDisplayLabel(
     normalize(display) == normalized -> display
     else -> normalized
 }
+
+
+/**
+ * TRUE when dashj's `recoverUsernames()` mis-adopted a DUAL-flow instant
+ * secondary as the identity's "primary" while the record's REQUESTED
+ * contested primary is still pending its vote.
+ *
+ * The dual flow registers the instant (non-contested) name immediately and
+ * submits the contested primary as a CONTEST — which is not a registered
+ * DPNS domain until voting resolves, so `recoverUsernames()` cannot see it
+ * and adopts the only registered name (the instant secondary) as
+ * `primaryUsername`. Copying that over the record's requested primary
+ * erased the in-flight contest from the app entirely: the requested-label
+ * candidate the contested-name scan reads was gone 20 ms before the scan
+ * ran, so no voting tile, no UsernameRequest row, state DONE instead of
+ * VOTING, and the More screen greeted the user with the NORMALIZED instant
+ * name (observed live: requested `brimoztest` + instant `brimoztest3` →
+ * record clobbered to `br1m0ztest3`; S21 2026-08-18, the Mo-972 shape).
+ *
+ * The comparison is on NORMALIZED forms throughout: the recovered value IS
+ * the normalized label, so a raw-string compare against the record's
+ * display-form secondary can never match (`br1m0ztest3` != `brimoztest3`)
+ * — the miss that let the clobber through the earlier raw-equality
+ * backstop. Guard fires only when the record's primary is genuinely
+ * CONTESTABLE (the only shape the dual flow produces); a contested primary
+ * that has since WON registers on chain, the recovered primary then
+ * normalizes to the record's primary — not its secondary — and the guard
+ * stands down, letting normal adoption run.
+ */
+internal fun recoveredPrimaryIsPendingDualSecondary(
+    recordPrimary: String?,
+    recordSecondary: String?,
+    recoveredPrimary: String?,
+    normalize: (String) -> String,
+    contestable: (String) -> Boolean
+): Boolean {
+    if (recordPrimary == null || recordSecondary == null || recoveredPrimary == null) return false
+    val recovered = try {
+        normalize(recoveredPrimary)
+    } catch (e: Exception) {
+        return false
+    }
+    return try {
+        recovered == normalize(recordSecondary) &&
+            recovered != normalize(recordPrimary) &&
+            contestable(recordPrimary)
+    } catch (e: Exception) {
+        false
+    }
+}

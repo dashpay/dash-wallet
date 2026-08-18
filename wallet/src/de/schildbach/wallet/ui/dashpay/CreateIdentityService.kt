@@ -155,7 +155,17 @@ internal fun resolveSdkInviteIdentityId(
  * healthy records (distinct names, single-name, empty) never trip it.
  */
 internal fun isDualPrimaryClobbered(primary: String?, secondary: String?): Boolean =
-    primary != null && secondary != null && primary == secondary
+    primary != null && secondary != null && (
+        primary == secondary ||
+            // The clobber can also arrive in NORMALIZED form: recoverUsernames
+            // rewrites names to the DPNS normalized label, so a primary
+            // overwritten with the secondary's normalized form ("br1m0ztest3"
+            // vs "brimoztest3") passed the raw equality above unnoticed
+            // (S21 2026-08-18). Compare normalized forms too.
+            runCatching {
+                Names.normalizeString(primary) == Names.normalizeString(secondary)
+            }.getOrDefault(false)
+        )
 
 /**
  * The record mutation for one SDK invite-DPNS Broadcast, with NO wrapper

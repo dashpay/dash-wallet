@@ -26,6 +26,7 @@ import de.schildbach.wallet.ui.dashpay.UserAlert
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.Companion.UPGRADE_IDENTITY_REQUIRED
 import de.schildbach.wallet.ui.dashpay.utils.preferDisplayLabel
+import de.schildbach.wallet.ui.dashpay.utils.recoveredPrimaryIsPendingDualSecondary
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -432,18 +433,47 @@ class IdentityRepositoryImpl @Inject constructor(
                 // — same DPNS name, human spelling; anything else still
                 // loses to the on-chain value.
                 val recoveredPrimary = blockchainIdentity.primaryUsername
-                username = recoveredPrimary?.let { preferDisplayLabel(username, it, Names::normalizeString) }
-                if (blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED) {
-                    preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
-                    usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
-                }
-                val requestStatus = blockchainIdentity.getUsernameRequestStatus(recoveredPrimary!!)
-                if (requestStatus != UsernameRequestStatus.NONE) {
-                    usernameRequested = requestStatus
-                }
-                val votingStart = blockchainIdentity.getUsernameVotingStart(recoveredPrimary)
-                if (votingStart != -1L) {
-                    votingPeriodStart = votingStart
+                if (recoveredPrimaryIsPendingDualSecondary(
+                        recordPrimary = username,
+                        recordSecondary = usernameSecondary,
+                        recoveredPrimary = recoveredPrimary,
+                        normalize = Names::normalizeString,
+                        contestable = Names::isUsernameContestable
+                    )
+                ) {
+                    // DUAL flow, contested primary still in its vote: the only
+                    // REGISTERED name is the instant secondary, so dashj
+                    // adopted it as "primary". Copying it over the record's
+                    // requested primary erased the in-flight contest (no
+                    // voting tile, no request row, state DONE, normalized
+                    // name on More — the Mo-972 shape, S21 2026-08-18). Keep
+                    // the requested primary — the contested-name scan reads
+                    // it as its candidate — and route the recovered name's
+                    // status/salt to the SECONDARY fields it belongs to.
+                    log.info(
+                        "recovered primary '{}' is the record's own instant secondary — keeping requested " +
+                            "contested primary '{}' (its contest is pending vote)",
+                        recoveredPrimary,
+                        username
+                    )
+                    if (blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED) {
+                        usernameSecondaryStatus = blockchainIdentity.statusOfUsername(recoveredPrimary!!)
+                        preorderSaltSecondary = blockchainIdentity.saltForUsername(recoveredPrimary, false)
+                    }
+                } else {
+                    username = recoveredPrimary?.let { preferDisplayLabel(username, it, Names::normalizeString) }
+                    if (blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED) {
+                        preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
+                        usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
+                    }
+                    val requestStatus = blockchainIdentity.getUsernameRequestStatus(recoveredPrimary!!)
+                    if (requestStatus != UsernameRequestStatus.NONE) {
+                        usernameRequested = requestStatus
+                    }
+                    val votingStart = blockchainIdentity.getUsernameVotingStart(recoveredPrimary)
+                    if (votingStart != -1L) {
+                        votingPeriodStart = votingStart
+                    }
                 }
 
                 log.info("creation: blockchainIdentity.secondaryUsername = {}", blockchainIdentity.secondaryUsername)

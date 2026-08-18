@@ -66,4 +66,71 @@ class UsernameDisplayTest {
         assertEquals("br1an-s21", preferDisplayLabel("br1an-s21", "br1an-s21", normalize))
         assertEquals("br1an-s21", normalize("br1an-s21"))
     }
+
+    // ── recoveredPrimaryIsPendingDualSecondary (the Mo-972 adoption guard) ──
+
+    private val contestable: (String) -> Boolean = { Names.isUsernameContestable(it) }
+
+    @Test
+    fun `dual instant secondary mis-adopted as primary is detected`() {
+        // The live S21 shape: requested contested primary + registered instant
+        // secondary; dashj recovered the secondary's NORMALIZED label as
+        // "primary". Raw equality can never catch this (br1m0ztest3 != brimoztest3).
+        assertEquals(
+            true,
+            recoveredPrimaryIsPendingDualSecondary(
+                recordPrimary = "brimoztest",
+                recordSecondary = "brimoztest3",
+                recoveredPrimary = "br1m0ztest3",
+                normalize = normalize,
+                contestable = contestable
+            )
+        )
+    }
+
+    @Test
+    fun `a contested primary that has WON adoption stands down`() {
+        // Once the contest resolves and the name registers, the recovered
+        // primary normalizes to the RECORD primary — normal adoption must run.
+        assertEquals(
+            false,
+            recoveredPrimaryIsPendingDualSecondary(
+                recordPrimary = "brimoztest",
+                recordSecondary = "brimoztest3",
+                recoveredPrimary = "br1m0ztest",
+                normalize = normalize,
+                contestable = contestable
+            )
+        )
+    }
+
+    @Test
+    fun `single-name identities never trip the guard`() {
+        assertEquals(
+            false,
+            recoveredPrimaryIsPendingDualSecondary(
+                recordPrimary = "brimoztest2",
+                recordSecondary = null,
+                recoveredPrimary = "br1m0ztest2",
+                normalize = normalize,
+                contestable = contestable
+            )
+        )
+    }
+
+    @Test
+    fun `a non-contestable record primary never trips the guard`() {
+        // The dual flow only ever pairs a CONTESTED primary with an instant
+        // secondary; anything else keeps the on-chain-wins adoption.
+        assertEquals(
+            false,
+            recoveredPrimaryIsPendingDualSecondary(
+                recordPrimary = "somename22",
+                recordSecondary = "somename23",
+                recoveredPrimary = "s0mename23",
+                normalize = normalize,
+                contestable = contestable
+            )
+        )
+    }
 }

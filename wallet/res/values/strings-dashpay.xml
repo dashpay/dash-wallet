@@ -681,6 +681,11 @@
          app scope (ShieldedTransferExecutor) and the outcome is announced by an in-app
          toast or a system notification. Must not imply the app has to stay open. -->
     <string name="shielded_proving_message">This could take about 30 seconds. We will notify you when it’s done.</string>
+    <!-- Unshield (Shielded balance → Dash Wallet) proving copy: this direction
+         settles through the platform withdrawal queue and can genuinely take
+         up to 10 minutes — the 30-second line is only true for the
+         Dash Wallet → Shielded direction (QA field report, S22 2026-08-18). -->
+    <string name="shielded_proving_message_from">This could take up to 10 minutes to complete. We will notify you when it’s done.</string>
     <!-- Hides the proving dialog only; the transfer keeps running in the background. -->
     <string name="shielded_proving_dismiss">Hide</string>
     <string name="shielded_transfer_completed">Transfer completed</string>

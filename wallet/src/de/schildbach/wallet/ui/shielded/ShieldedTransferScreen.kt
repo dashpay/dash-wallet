@@ -378,7 +378,10 @@ private fun ShieldedTransferScreenContent(
 
         when (val submitState = uiState.submitState) {
             ShieldedSubmitState.Proving -> if (provingDialogShowing) {
-                ProvingOverlay(onDismiss = onDismissProving)
+                ProvingOverlay(
+                    onDismiss = onDismissProving,
+                    fromShielded = uiState.direction == ShieldedTransferDirection.FromShielded
+                )
             }
             ShieldedSubmitState.Success -> {
                 // No in-screen overlay: the host leaves the flow and shows
@@ -908,7 +911,16 @@ private fun TimingFeatureRow(icon: Int, heading: String, text: String) {
  * keeps the old non-dismissable modal.
  */
 @Composable
-internal fun ProvingOverlay(onDismiss: (() -> Unit)? = null) {
+internal fun ProvingOverlay(
+    onDismiss: (() -> Unit)? = null,
+    /**
+     * Shielded balance → Dash Wallet runs through the platform withdrawal
+     * queue and can take up to 10 minutes; only the opposite direction is
+     * a ~30-second operation. The message must match the direction or the
+     * user reads a broken promise for the whole wait (QA, S22 2026-08-18).
+     */
+    fromShielded: Boolean = false
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -939,7 +951,13 @@ internal fun ProvingOverlay(onDismiss: (() -> Unit)? = null) {
                 textAlign = TextAlign.Center
             )
             Text(
-                text = stringResource(R.string.shielded_proving_message),
+                text = stringResource(
+                    if (fromShielded) {
+                        R.string.shielded_proving_message_from
+                    } else {
+                        R.string.shielded_proving_message
+                    }
+                ),
                 style = MyTheme.Typography.BodyMedium,
                 color = MyTheme.Colors.textSecondary,
                 textAlign = TextAlign.Center

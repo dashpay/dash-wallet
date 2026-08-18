@@ -284,4 +284,15 @@ class InviteDpnsRoutingTest {
         assertEquals("fhjf", record.username)
         assertEquals("fhjf-2", record.usernameSecondary)
     }
+
+    @Test
+    fun `dual primary clobber is detected in NORMALIZED form too`() {
+        // recoverUsernames rewrites names to the DPNS normalized label, so the
+        // clobber can arrive as the secondary's normalized form — raw equality
+        // missed it (S21 2026-08-18: primary "br1m0ztest3" vs secondary
+        // "brimoztest3").
+        assertTrue(isDualPrimaryClobbered("br1m0ztest3", "brimoztest3"))
+        // Distinct names — healthy dual record — still never trip.
+        assertFalse(isDualPrimaryClobbered("brimoztest", "brimoztest3"))
+    }
 }
