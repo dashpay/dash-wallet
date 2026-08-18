@@ -785,6 +785,15 @@ class SdkShieldedUsernameCreation internal constructor(
                 is SdkWriteResult.NotBroadcast -> ShieldedUsernameSubmitState.NotSent(result.reason)
                 is SdkWriteResult.Ambiguous -> ShieldedUsernameSubmitState.MayHaveGoneThrough
             }
+            if (result !is SdkWriteResult.NotBroadcast) {
+                // The Type-20 spend consumed pool notes OUTSIDE the balance
+                // service's own write paths — without this the More card
+                // shows the pre-spend balance until the next 60s sync pass
+                // (Ambiguous marks stale too: the spend MAY have landed,
+                // and a false "Syncing…" beats a false stale amount).
+                runCatching { shieldedBalanceService.noteExternalShieldedSpendBroadcast() }
+                    .onFailure { log.warn("post-submit balance stale-mark failed; the 60s loop will catch up", it) }
+            }
             synchronized(this@SdkShieldedUsernameCreation) {
                 _submitState.value = outcome
             }

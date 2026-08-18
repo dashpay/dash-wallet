@@ -207,16 +207,17 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             binding.votingPeriodContainer.isVisible = !it.checkingUsername && usernameType != UsernameType.Secondary
 
             // The row LABELS follow the same split as below (see the
-            // inviteBalance observer): the invite-for-contested flow shows
-            // the general validity rules; everyone else shows the
-            // NON-CONTESTED QUALIFIERS ("contains 2–9" / "20–23 chars") —
-            // and the checkmarks must be computed from the SAME rule set as
-            // the labels (they previously mixed general validity under
-            // qualifier labels: a 15-char name showed green on "Between 20
-            // and 23 characters" — Brian).
-            val inviteContestedRows = requestUserNameViewModel.isUsingInvite() &&
+            // inviteBalance observer): the GENERAL validity rules serve the
+            // plain (non-invite) flow AND a contested-tier invite — both can
+            // request contested names, so the non-contested qualifiers would
+            // sit unmatched under a perfectly valid contested name (observed
+            // live: "briantestagain" over two empty qualifier circles —
+            // Brian). Only an invite RESTRICTED to non-contested names (or
+            // unreadable tier) shows the qualifier rows — and the checkmarks
+            // must be computed from the SAME rule set as the labels.
+            val generalValidityRows = !requestUserNameViewModel.isUsingInvite() ||
                 requestUserNameViewModel.isInviteForContestedNames()
-            if (inviteContestedRows) {
+            if (generalValidityRows) {
                 binding.checkLetters.setImageResource(
                     getCheckMarkImage(it.usernameCharactersValid, it.usernameTooShort)
                 )
@@ -429,11 +430,16 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             val inviteTier = requestUserNameViewModel.inviteTier()
             val isInviteForContestedNames = inviteTier == InviteUsernameTier.CONTESTED
             val isInviteContested = requestUserNameViewModel.isUsingInvite() && isInviteForContestedNames
+            // Qualifier rows ONLY for an invite restricted to non-contested
+            // names; the plain flow and a contested-tier invite both show the
+            // general validity rules (same split as the checkmark binding).
+            val restrictedToNonContested = requestUserNameViewModel.isUsingInvite() &&
+                !isInviteForContestedNames
             binding.charLengthRequirement.text = getString(
-                if (isInviteContested) {
-                    R.string.request_username_length_requirement
-                } else {
+                if (restrictedToNonContested) {
                     R.string.request_username_length_requirement_noncontested
+                } else {
+                    R.string.request_username_length_requirement
                 }
             )
             
@@ -441,10 +447,10 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             binding.charLengthRequirement.isVisible = usernameType != UsernameType.Secondary
             binding.checkLength.isVisible = usernameType != UsernameType.Secondary
             binding.allowedCharsRule.text = getString(
-                if (isInviteContested) {
-                    R.string.request_username_character_requirement
-                } else {
+                if (restrictedToNonContested) {
                     R.string.request_username_character_requirement_invite_noncontested
+                } else {
+                    R.string.request_username_character_requirement
                 }
             )
             binding.inviteOnlyNoncontested.isVisible = requestUserNameViewModel.isUsingInvite() &&
@@ -460,24 +466,20 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                     R.string.request_username_invitation_only_noncontested_message
                 }
             )
-            // "The username must meet one of these criteria" — shown to
-            // EVERYONE who sees the non-contested qualifier rows (not just
-            // invites): without it the meet-one-of semantics are invisible
-            // and the rows read as two hard requirements (Brian).
+            // Header copy follows the rows: "meet ONE of these criteria"
+            // only above the qualifier rows (their semantics are meet-one-of);
+            // the general validity rows are meet-ALL, so the plain flow says
+            // "must meet these criteria". An unreadable invite keeps its
+            // softer descriptive variant.
             binding.usernameRequirements.isVisible =
                 !isInviteContested && usernameType != UsernameType.Secondary
-            // …but "MUST meet" is only true when we know the invitation is
-            // non-contested. On an unreadable invite the rows describe what a
-            // non-contested invitation would need, nothing more — otherwise
-            // they contradict the notice directly above them, which tells the
-            // user a contested name may still be requested.
             binding.usernameRequirements.setText(
-                if (requestUserNameViewModel.isUsingInvite() &&
-                    inviteTier == InviteUsernameTier.UNKNOWN
-                ) {
-                    R.string.request_username_requirements_message_invite_unknown_tier
-                } else {
-                    R.string.request_username_requirements_message_invite_noncontested
+                when {
+                    restrictedToNonContested && inviteTier == InviteUsernameTier.UNKNOWN ->
+                        R.string.request_username_requirements_message_invite_unknown_tier
+                    restrictedToNonContested ->
+                        R.string.request_username_requirements_message_invite_noncontested
+                    else -> R.string.request_username_requirements_message
                 }
             )
         }

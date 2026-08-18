@@ -1522,6 +1522,11 @@ class ShieldedBalanceServiceImpl internal constructor(
         _shieldedBalanceMaybeStale.value = true
     }
 
+    override suspend fun noteExternalShieldedSpendBroadcast() {
+        markLocalSpendPending()
+        kickImmediateShieldedSync()
+    }
+
     private suspend fun kickImmediateShieldedSync() {
         try {
             source.syncShieldedNow()

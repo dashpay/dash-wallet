@@ -246,6 +246,18 @@ interface ShieldedBalanceService {
     val shieldedBalanceMaybeStale: StateFlow<Boolean>
 
     /**
+     * Notify the service that a shielded spend was broadcast by an EXTERNAL
+     * executor (username creation, invite creation — the Type-20 family),
+     * outside this service's own write paths. Marks the cached balance
+     * stale and kicks an immediate sync pass, so the More card flips to
+     * "Syncing…" and settles within seconds instead of showing the
+     * pre-spend amount until the next 60-second pass (observed live:
+     * the shielded balance held the old value for up to a minute after a
+     * shielded-funded username submit — Brian, S21 2026-08-18).
+     */
+    suspend fun noteExternalShieldedSpendBroadcast()
+
+    /**
      * True when the wallet holds an ANCHORED (confirmed, `blockHeight > 0`)
      * unspent shielded note set whose total covers [denomination] — the
      * funding-note precondition the shielded-username create gate is keyed on.
