@@ -55,8 +55,13 @@ data class AddressSourceUIState(
     /** Resolved display name, e.g. "Uphold". */
     val name: String,
     @DrawableRes val icon: Int,
-    /** Deposit address when connected; null/empty shows the "Log in" action instead. */
+    /** Deposit address, when one was obtained. */
     val address: String?,
+    /**
+     * True when the user is signed in to this exchange. A connected row never shows "Log in":
+     * with an address it pastes on tap; without one (the lookup failed) tapping retries it.
+     */
+    val isConnected: Boolean = false,
     /**
      * Set when this exchange is connected but can't hold the asset on the selected network
      * (Figma 39439:35111): the row is shown disabled with this message in a yellow system-message
@@ -165,7 +170,7 @@ fun MayaAddressInputScreen(
                         )
 
                         state.addressSources.forEach { source ->
-                            val connected = !source.address.isNullOrEmpty()
+                            val connected = source.isConnected
                             val unsupported = source.unsupportedMessage != null
                             // An unsupported source offers nothing to tap: no address to paste and
                             // no point connecting again, so the whole row is disabled (dimmed,
@@ -247,7 +252,8 @@ private fun MayaAddressInputScreenPreview() {
                     id = "uphold",
                     name = "Uphold",
                     icon = CommonR.drawable.ic_dash_blue_filled,
-                    address = "XsQwPTRMtjzJmccAzYcCzNVbG1UsBGffNc"
+                    address = "XsQwPTRMtjzJmccAzYcCzNVbG1UsBGffNc",
+                    isConnected = true
                 ),
                 AddressSourceUIState(
                     id = "coinbase",
@@ -309,6 +315,7 @@ private fun unsupportedNetworkPreviewState() = MayaAddressInputUIState(
             name = "Coinbase",
             icon = CommonR.drawable.ic_dash_blue_filled,
             address = null,
+            isConnected = true,
             unsupportedMessage = "Coinbase doesn't support USDC on the TRON network"
         )
     )

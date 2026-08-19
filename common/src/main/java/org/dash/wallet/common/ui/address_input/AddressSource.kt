@@ -34,5 +34,11 @@ data class AddressSource(
      * explanation instead of being silently dropped. [address] is left null in that case so the
      * wrong-network address can never be pasted.
      */
-    val unsupported: Boolean = false
+    val unsupported: Boolean = false,
+    /**
+     * True when the user is signed in to this exchange, regardless of whether an address was
+     * obtained. Distinct from address-presence: a connected exchange whose deposit-address lookup
+     * failed has [isConnected] true and [address] null, and must not be offered a "Log in" action.
+     */
+    val isConnected: Boolean = false
 )

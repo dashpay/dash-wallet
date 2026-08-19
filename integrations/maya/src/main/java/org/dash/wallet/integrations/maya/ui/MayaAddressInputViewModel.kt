@@ -85,7 +85,8 @@ class MayaAddressInputViewModel @Inject constructor(
                     integration.iconId,
                     if (unsupported) null else address,
                     integration.currency,
-                    unsupported
+                    unsupported,
+                    integration.isConnected
                 )
             }
         _addressSources.value = sources

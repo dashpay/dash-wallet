@@ -158,6 +158,7 @@ class MayaAddressInputFragment : Fragment() {
                         name = name,
                         icon = source.icon,
                         address = source.address,
+                        isConnected = source.isConnected,
                         unsupportedMessage = if (source.unsupported) {
                             getString(
                                 R.string.maya_exchange_unsupported_network,
@@ -189,11 +190,16 @@ class MayaAddressInputFragment : Fragment() {
     }
 
     private fun onSourceClick(source: AddressSourceUIState) {
-        if (!source.address.isNullOrEmpty()) {
-            viewModel.setInput(normalizeCase(source.address))
-        } else {
+        when {
+            !source.address.isNullOrEmpty() -> viewModel.setInput(normalizeCase(source.address))
+            // Connected but the deposit-address lookup failed (see
+            // ExchangeIntegrationListProvider): the user is already signed in, so
+            // sending them to login would be wrong -- retry the lookup instead.
+            source.isConnected -> mayaAddressInputViewModel.refreshAddressSources()
             // exchange login
-            findNavController().navigate(DeepLinkDestination.Exchange(source.id, "login_and_close").deepLink)
+            else -> findNavController().navigate(
+                DeepLinkDestination.Exchange(source.id, "login_and_close").deepLink
+            )
         }
     }
 
