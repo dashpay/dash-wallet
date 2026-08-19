@@ -952,13 +952,26 @@ class ShieldedBalanceServiceImpl internal constructor(
                         firstPassCompleted = true
                     }
                 }
-                // A sync pass just finished (in-flight → idle transition): the
-                // note store now reflects any local spend, so the last-known
-                // balance is no longer stale. Gated on the TRANSITION (not
-                // steady idle) so a spend's flag is never cleared before its
-                // pass has been observed running.
+                // A sync pass just finished (in-flight → idle transition).
+                // Clearing the stale flag on the FIRST completed pass was not
+                // enough: a Type-20 spend's note settlement spreads across
+                // MULTIPLE passes (observed live: spent-nullifier, change
+                // note, and OVK outgoing recovery landing at three separate
+                // pass completions — the More card marched through several
+                // intermediate balances after a shielded username create;
+                // Brian, S21 2026-08-18). Require the balance to be STABLE
+                // across two consecutive completed passes before clearing —
+                // the surface holds "Syncing…" until the value stops moving.
                 if (prevInFlight && !inFlight) {
-                    _shieldedBalanceMaybeStale.value = false
+                    val settledCredits = runCatching {
+                        readyWalletIdHex.value?.let(::walletIdFromHex)?.let { walletId ->
+                            source.observeUnspentNotes(walletId).first().sumOf { it.value }
+                        }
+                    }.getOrNull()
+                    if (settledCredits != null && settledCredits == lastPassBalanceCredits) {
+                        _shieldedBalanceMaybeStale.value = false
+                    }
+                    lastPassBalanceCredits = settledCredits
                 }
                 prevInFlight = inFlight
                 _shieldedSyncStatus.value = mapShieldedSyncStatus(
@@ -1520,7 +1533,14 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private fun markLocalSpendPending() {
         _shieldedBalanceMaybeStale.value = true
+        // Restart the two-pass stability window: the flag must survive at
+        // least two completed passes with an unchanged balance from here.
+        lastPassBalanceCredits = null
     }
+
+    /** Balance at the last completed sync pass — see the stability gate in [startSyncStatusPolling]. */
+    @Volatile
+    private var lastPassBalanceCredits: Long? = null
 
     override suspend fun noteExternalShieldedSpendBroadcast() {
         markLocalSpendPending()
