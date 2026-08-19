@@ -87,7 +87,7 @@ fun InfoPanel(
                     style = MyTheme.Typography.FootnoteMedium,
                     color = colors.textPrimary
                 )
-                
+
                 Text(
                     text = description,
                     style = MyTheme.Typography.Footnote,
@@ -126,4 +126,4 @@ fun InfoPanelPreview() {
             onAction = {}
         )
     }
-} 
+}

@@ -146,18 +146,22 @@ fun SystemMessage(
                 }
             }
 
-            if (primaryButtonText != null && onPrimaryButtonClick != null) {
+            val hasPrimaryAction = primaryButtonText != null && onPrimaryButtonClick != null
+            val hasSecondaryAction = secondaryButtonText != null && onSecondaryButtonClick != null
+            if (hasPrimaryAction || hasSecondaryAction) {
                 Row(
                     modifier = Modifier.padding(bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    DashButton(
-                        text = primaryButtonText,
-                        style = Style.FilledBlue,
-                        size = Size.Small,
-                        stretch = false,
-                        onClick = onPrimaryButtonClick
-                    )
+                    if (primaryButtonText != null && onPrimaryButtonClick != null) {
+                        DashButton(
+                            text = primaryButtonText,
+                            style = Style.FilledBlue,
+                            size = Size.Small,
+                            stretch = false,
+                            onClick = onPrimaryButtonClick
+                        )
+                    }
 
                     if (secondaryButtonText != null && onSecondaryButtonClick != null) {
                         DashButton(
