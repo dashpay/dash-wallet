@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.dash.wallet.common.ui.components.DarkPreviewTheme
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
@@ -428,6 +429,30 @@ private fun DEXReceiveScreenLoadedPreview() {
         onBackHomeClick = {},
         onCopyClick = {}
     )
+}
+
+/**
+ * Loaded state in dark mode, to check the [ExpiryWarning] card: its background is the translucent
+ * YellowAlpha10, which has to tint the dark card enough for the title (textPrimary) and message
+ * (textSecondary) to stay readable.
+ */
+@Preview(showBackground = true, widthDp = 393, heightDp = 760)
+@Composable
+private fun DEXReceiveScreenLoadedDarkPreview() {
+    DarkPreviewTheme {
+        DEXReceiveScreenContent(
+            coinCode = "BTC",
+            address = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+            uri = "bitcoin:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+            memo = "",
+            isLoading = false,
+            errorMessageRes = null,
+            isOnline = true,
+            onBackClick = {},
+            onBackHomeClick = {},
+            onCopyClick = {}
+        )
+    }
 }
 
 // Mirrors a real Galaxy S22 (SM-S901U): 1080x2340px @ 480dpi (xxhdpi, scale 3.0) measures to

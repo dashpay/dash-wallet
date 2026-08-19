@@ -152,11 +152,22 @@ class MayaAddressInputFragment : Fragment() {
         mayaAddressInputViewModel.addressSources.observe(viewLifecycleOwner) { sources ->
             uiState = uiState.copy(
                 addressSources = sources.map { source ->
+                    val name = getString(source.name)
                     AddressSourceUIState(
                         id = source.id,
-                        name = getString(source.name),
+                        name = name,
                         icon = source.icon,
-                        address = source.address
+                        address = source.address,
+                        unsupportedMessage = if (source.unsupported) {
+                            getString(
+                                R.string.maya_exchange_unsupported_network,
+                                name,
+                                mayaAddressInputViewModel.assetCoinCode,
+                                mayaAddressInputViewModel.assetNetworkName
+                            )
+                        } else {
+                            null
+                        }
                     )
                 }
             )

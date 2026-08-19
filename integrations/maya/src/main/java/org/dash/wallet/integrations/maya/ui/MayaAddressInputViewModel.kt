@@ -66,27 +66,55 @@ class MayaAddressInputViewModel @Inject constructor(
         // The selected [asset] (e.g. "TRON.USDT") pins the destination network. An
         // exchange such as Coinbase may only support some networks for a coin (e.g.
         // ERC-20 USDT, not TRON.USDT) and hand back a deposit address on the wrong
-        // network. Sending the swap output there would lose funds, so drop any
-        // connected source whose address doesn't validate against this asset's own
-        // parser. Sources without an address yet (not connected) are kept so the user
-        // can still connect.
+        // network. Sending the swap output there would lose funds, so a connected source
+        // whose address doesn't validate against this asset's own parser is flagged
+        // [AddressSource.unsupported] — the row stays visible but disabled, with an
+        // explanation, rather than disappearing without a reason (Figma 39439:35111).
+        // Its address is dropped so it can never be pasted. Sources without an address
+        // yet (not connected) are left alone so the user can still connect.
         val addressParser = if (::asset.isInitialized) MayaCurrencyList[asset]?.addressParser else null
         val sources = integrations
-            .filter { integration ->
-                val address = integration.address
-                address == null || addressParser == null || addressParser.exactMatch(address.trim())
-            }
             .map { integration ->
+                val address = integration.address
+                val unsupported = !address.isNullOrEmpty() &&
+                    addressParser != null &&
+                    !addressParser.exactMatch(address.trim())
                 AddressSource(
                     integration.id,
                     integration.name,
                     integration.iconId,
-                    integration.address,
-                    integration.currency
+                    if (unsupported) null else address,
+                    integration.currency,
+                    unsupported
                 )
             }
         _addressSources.value = sources
     }
+
+    /**
+     * Coin code of the selected asset, e.g. "USDT" for "TRON.USDT". Used in the
+     * "<exchange> doesn't support <coin> on the <network> network" warning.
+     */
+    val assetCoinCode: String
+        get() = if (::asset.isInitialized) {
+            MayaCurrencyList[asset]?.code ?: asset.substringAfter(".").substringBefore("-")
+        } else {
+            ""
+        }
+
+    /**
+     * Host-network name of the selected asset, e.g. "TRON" for "TRON.USDT". Native L1 coins have
+     * no network qualifier of their own, so their coin name doubles as the network name
+     * ("Bitcoin" for "BTC.BTC").
+     */
+    val assetNetworkName: String
+        get() = if (::asset.isInitialized) {
+            MayaCurrencyList.networkName(asset)
+                ?: MayaCurrencyList[asset]?.name
+                ?: asset.substringBefore(".")
+        } else {
+            ""
+        }
 
     fun setCurrency(currency: String) {
         inputCurrency.value = currency

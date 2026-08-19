@@ -148,7 +148,8 @@
     <string name="input_parser_invalid_paymentrequest">Invalid payment request:\n%s</string>
     <string name="input_parser_invalid_transaction">Invalid transaction:\n%s</string>
     <string name="address_input_paste_from">Paste from %s</string>
-    <string name="input_connect">Connect</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">Log in</string>
 
     <!-- others -->
     <string name="confirm_sec">Confirm (%ss)</string>

@@ -615,6 +615,12 @@ object MyTheme {
         val inputErrorBackground: Color,
         val disabledButtonBg: Color,
         val buttonRipple: Color,
+        /**
+         * Background for warning / "system message" cards. Deliberately translucent (10% yellow)
+         * so it tints the surface behind it instead of forcing a light background: over a white
+         * card it reads as #FFF9ED, over a dark card as a dark amber, keeping [textPrimary]
+         * readable in both themes.
+         */
         val warningYellow: Color,
         // Transaction row backgrounds
         val txSentBackground: Color,
@@ -678,6 +684,10 @@ object MyTheme {
 
             // Red
             val Red = Color(0xFFEA3943)
+
+            // Yellow
+            val Yellow = Color(0xFFFFC043)
+            val YellowAlpha10 = Color(0x1AFFC043)
 
             // White
             val White = Color(0xFFFFFFFF)
@@ -744,7 +754,7 @@ object MyTheme {
         inputErrorBackground = Color(0x1AE85C4A),
         disabledButtonBg = Color(0xFFEEEEEE),
         buttonRipple = Color(0x1F000000),
-        warningYellow = Color(0xFFFFF9ED),
+        warningYellow = ColorScheme.YellowAlpha10,
         // Transaction row backgrounds
         txSentBackground = Color(0xFFE7F4FB),
         txReceivedBackground = Color(0xFFEDF8F2),
@@ -808,7 +818,7 @@ object MyTheme {
         inputErrorBackground = Color(0x1AE85C4A),
         disabledButtonBg = Color(0xFF3C3C3C),
         buttonRipple = Color(0x30FFFFFF),
-        warningYellow = Color(0xFFFFF9ED),
+        warningYellow = ColorScheme.YellowAlpha10,
         // Transaction row backgrounds
         txSentBackground = Color(0xFF20262E),
         txReceivedBackground = Color(0xFF232826),
