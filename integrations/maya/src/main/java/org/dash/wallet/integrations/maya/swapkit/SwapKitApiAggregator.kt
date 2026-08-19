@@ -974,13 +974,16 @@ class SwapKitApiAggregator @Inject constructor(
             // Deposit amount = sellAmount + swap fee, matching the total shown in the
             // preview (amount + feeAmount) and the Maya vault path
             // (MayaBlockchainApi.buildAndSendSwapTx). The DASH mining fee is funded
-            // separately by the wallet's coin selection. emptyWallet (maximum) ignores
-            // this value and sweeps the balance instead.
-            val amount = if (!swapTradeUIModel.maximum) {
-                swapTradeUIModel.amount.dash + swapTradeUIModel.feeAmount.dash
-            } else {
-                swapTradeUIModel.amount.dash
-            }.setScale(8, RoundingMode.HALF_UP).toDash()
+            // separately by the wallet's coin selection. A MAX sell is ALSO a
+            // fixed-amount send: its quote is already `spendable − fee reserve`
+            // (MayaBlockchainApi.maxSwapDepositAmount, re-measured by the commit-time
+            // getSwapInfo refresh), so the deposit pays exactly the quoted amount and
+            // the reserve's unused remainder returns as change.
+            val amount = swapKitDepositAmountDash(
+                sellAmountDash = swapTradeUIModel.amount.dash,
+                feeAmountDash = swapTradeUIModel.feeAmount.dash,
+                maximum = swapTradeUIModel.maximum
+            ).toDash()
 
             // NEAR Intents UTXO deposits carry no memo. Warn if SwapKit unexpectedly
             // returned one so we notice if a provider ever starts requiring it.
@@ -988,12 +991,13 @@ class SwapKitApiAggregator @Inject constructor(
                 log.warn("non-Maya deposit route returned a memo; not encoding it: {}", swapTradeUIModel.memo)
             }
 
-            // A max sell was quoted for (balance − estimated sweep fee) in getSwapInfo. If the
-            // spendable balance dropped since, the sweep's output would come in below the quoted
-            // amount, and NEAR Intents refuses under-delivery — the deposit would sit for ~1h
-            // and refund minus a 0.001 DASH fee. Abort with a recoverable error instead of
-            // broadcasting a doomed deposit. A balance that grew simply over-delivers, which
-            // NEAR accepts.
+            // A max sell was quoted for (spendable − fee reserve) in getSwapInfo. If the
+            // spendable balance dropped since, the fixed-amount build would come up short
+            // at fee — abort with a clearer, recoverable error BEFORE building instead of
+            // letting coin selection fail. NEAR Intents refuses under-delivery (the
+            // deposit would sit for ~1h and refund minus a 0.001 DASH fee), but a
+            // fixed-amount send cannot under-deliver — it either pays exactly the quoted
+            // amount or is refused whole. A balance that grew just leaves more change.
             if (swapTradeUIModel.maximum) {
                 val maxDeposit = blockchainApi.maxSwapDepositAmount()
                 if (maxDeposit.isLessThan(amount)) {
@@ -1013,11 +1017,17 @@ class SwapKitApiAggregator @Inject constructor(
 
             // Broadcast through the neutral (dashj-free) send facade: base58 address
             // string + Dash amount, returning the created transaction's hex txId.
+            // NEVER emptyWallet, max included: the changeless send-all drain produced a
+            // transaction with NO wallet-owned output, which compact block filters can
+            // never match — it never reached CONTEXT_IN_BLOCK and its spent inputs
+            // counted spendable forever (mainnet a5c99aec…/1f608a9a…; see
+            // mayaMaxFeeReserveDuffs in SdkL1SendService). The fixed amount above plus
+            // the withheld fee reserve keeps a change output, exactly like the Maya
+            // vault route (MayaBlockchainApiImpl), which was moved off the drain first.
             log.info("swapkit deposit: {} to {}", amount.toFriendlyString(), swapTradeUIModel.vaultAddress)
             val sentTxId = sendPaymentService.sendCoins(
                 swapTradeUIModel.vaultAddress,
                 amount,
-                emptyWallet = swapTradeUIModel.maximum,
                 // Mirror the Maya builder, which bypasses leftover-balance checks for swaps.
                 checkBalanceConditions = false
             )
@@ -1247,3 +1257,28 @@ private class HydratedSnapshot(
     val usdPrices: Map<String, BigDecimal>,
     val routes: Map<String, RouteProvider>
 )
+
+/**
+ * The exact DASH amount a SwapKit deposit pays its deposit address, as a
+ * FIXED-amount, change-leaving send (never an `emptyWallet` drain — a
+ * changeless send-all has no wallet-owned output, so compact block filters
+ * never match it and it never settles; mainnet `a5c99aec…`/`1f608a9a…`):
+ *
+ * - ordinary sell: [sellAmountDash] + [feeAmountDash] — the total shown in
+ *   the preview, mirroring the Maya vault path;
+ * - MAX sell: exactly [sellAmountDash], which the quote already set to
+ *   `spendable − fee reserve` ([MayaBlockchainApi.maxSwapDepositAmount]) —
+ *   the amount reported downstream and the amount actually sent are equal
+ *   by construction, and the reserve's unused remainder returns as change.
+ *
+ * Pure — extracted for host-JVM testing.
+ */
+internal fun swapKitDepositAmountDash(
+    sellAmountDash: BigDecimal,
+    feeAmountDash: BigDecimal,
+    maximum: Boolean
+): BigDecimal = if (!maximum) {
+    sellAmountDash + feeAmountDash
+} else {
+    sellAmountDash
+}.setScale(8, RoundingMode.HALF_UP)
