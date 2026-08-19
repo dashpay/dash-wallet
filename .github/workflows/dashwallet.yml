@@ -23,6 +23,10 @@ jobs:
     env:
       GITHUB_ACTOR: ${{ github.actor }}
       GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+      # The SDK AAR dependency makes the data-binding merge task unserializable
+      # by the configuration cache (fails _testNet3Release); runners are fresh
+      # each run so the cache buys nothing in CI — disable it here only.
+      GRADLE_OPTS: -Dorg.gradle.configuration-cache=false
 
     steps:
     - name: Get build number from run id
