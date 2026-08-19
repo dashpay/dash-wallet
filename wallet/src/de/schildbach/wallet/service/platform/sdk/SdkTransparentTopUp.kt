@@ -352,8 +352,23 @@ class SdkTransparentTopUp internal constructor(
      *   (never retried);
      * - a Broadcast/NotBroadcast outcome resets to IDLE so a later, deliberate
      *   top-up (or a retry after a provably-pre-broadcast refusal) is allowed.
+     *
+     * [newUserIntent] MUST be true only for the FIRST execution of a freshly
+     * enqueued purchase (a deliberate user tap that has not reached the SDK
+     * before). It is what legitimizes the fresh-build-on-consumed carve-out in
+     * [topUpTransparent]: on a new intent, a tracked lock Platform rejects as
+     * already consumed PREDATES this request (stale bookkeeping from an earlier
+     * purchase) and may be ignored. On a WorkManager RERUN of the same purchase
+     * (the process died after the SDK hand-off) it must be FALSE: the consumed
+     * lock is then this purchase's OWN completed asset lock, and fresh-building
+     * would broadcast a SECOND full-amount lock — one tap, two charges.
+     * Deliberately no default: every caller must decide.
      */
-    suspend fun topUp(identityIdBase58: String, amountDuffs: Long): SdkWriteResult<Long> {
+    suspend fun topUp(
+        identityIdBase58: String,
+        amountDuffs: Long,
+        newUserIntent: Boolean
+    ): SdkWriteResult<Long> {
         synchronized(this) {
             when (guard) {
                 Guard.IN_FLIGHT -> {
@@ -371,7 +386,7 @@ class SdkTransparentTopUp internal constructor(
             }
         }
         val result = try {
-            withContext(ioDispatcher) { topUpTransparent(identityIdBase58, amountDuffs) }
+            withContext(ioDispatcher) { topUpTransparent(identityIdBase58, amountDuffs, newUserIntent) }
         } catch (t: Throwable) {
             // A thrown (non-cancellation) failure escaping the pipeline is, by
             // the money-path contract, treated as unconfirmed: it may have
@@ -406,6 +421,8 @@ class SdkTransparentTopUp internal constructor(
     suspend fun topUpTransparent(
         identityIdBase58: String,
         amountDuffs: Long,
+        /** See [topUp] — gates the fresh-build-on-consumed carve-out below. */
+        newUserIntent: Boolean,
         /**
          * Internal: the outpoint of a tracked lock the resume gate must
          * IGNORE — set on the single self-retry taken after that lock was
@@ -496,15 +513,46 @@ class SdkTransparentTopUp internal constructor(
             if (t is CancellationException) throw t
             // A RESUME that Platform rejects as already-consumed is NOT
             // ambiguous: those credits provably landed on an earlier attempt.
-            // The SDK keeps the lock in its tracked list regardless (nothing
-            // marks it consumed locally — platform ask on MO-998), so the
-            // resume gate would keep picking this dead lock and every future
-            // purchase would fail. Treat it as "this stale lock is not a
-            // resumable candidate" and immediately retry the pipeline ONCE,
-            // which then takes the fresh-build branch. Safe: the rejection
-            // proves the lock's outputs are spent, so no double-pay is
-            // possible, and the flag stops it from ever looping.
+            // What that MEANS depends on whose attempt it was:
+            //
+            // - NOT a new user intent (a WorkManager RERUN of this same
+            //   purchase after a mid-flight process death): the consumed lock
+            //   is this purchase's OWN asset lock — Platform consumed it
+            //   before the death (the state observed live 2026-08-04), so the
+            //   purchase COMPLETED. Terminal SUCCESS, never a fresh build:
+            //   rebuilding here broadcast a SECOND full-amount asset lock for
+            //   the same tap (one tap, two charges).
+            //
+            // - A NEW user intent (first execution of a fresh purchase): the
+            //   consumed lock PREDATES this request — stale bookkeeping from
+            //   an earlier purchase (the SDK never marks it consumed locally,
+            //   platform ask on MO-998), so the resume gate would keep picking
+            //   this dead lock and every future purchase would fail. Treat it
+            //   as "not a resumable candidate" and retry the pipeline ONCE,
+            //   which then takes the fresh-build branch. Safe: the rejection
+            //   proves the lock's outputs are spent, and the flag stops it
+            //   from ever looping.
             if (existingLock != null && isAlreadyConsumed(t) && skipLockOutpoint == null) {
+                if (!newUserIntent) {
+                    log.warn(
+                        "rerun resume hit this purchase's own already-consumed lock at index {} — " +
+                            "its credits landed on the earlier attempt; terminal success, no fresh build",
+                        ref.registrationIndex
+                    )
+                    // Same best-effort Topup labelling as the success tail —
+                    // the attempt that actually credited died before recording.
+                    try {
+                        val lockTxidDisplayHex = displayHexOf(existingLock.outpointTxid)
+                        seedAssetLockKind(lockTxidDisplayHex, AssetLockKind.TOPUP)
+                        recordTopUp(lockTxidDisplayHex, idBase58)
+                    } catch (t2: Throwable) {
+                        if (t2 is CancellationException) throw t2
+                        log.warn("failed to capture/record the already-credited top-up asset-lock txid", t2)
+                    }
+                    // The rejection proved consumption, not a balance — report
+                    // the sentinel; the credits are on the identity regardless.
+                    return SdkWriteResult.Broadcast(BALANCE_ALREADY_CREDITED)
+                }
                 log.warn(
                     "resume hit an already-consumed lock at index {} (its credits landed earlier); " +
                         "ignoring that stale tracked lock and building fresh",
@@ -513,6 +561,7 @@ class SdkTransparentTopUp internal constructor(
                 return topUpTransparent(
                     identityIdBase58,
                     amountDuffs,
+                    newUserIntent,
                     skipLockOutpoint = existingLock.outpointTxid to existingLock.outpointVout
                 )
             }
@@ -602,5 +651,14 @@ class SdkTransparentTopUp internal constructor(
 
         /** BIP44 account the top-up asset lock is funded from (same as the SDK's plain send). */
         private const val ACCOUNT_INDEX = 0
+
+        /**
+         * [SdkWriteResult.Broadcast] value when a worker RERUN found this
+         * purchase's own already-consumed asset lock: the credits provably
+         * landed on the earlier attempt, but the rejected resume reported no
+         * balance, so the new balance is unknown. The purchase itself is a
+         * SUCCESS.
+         */
+        const val BALANCE_ALREADY_CREDITED = -1L
     }
 }

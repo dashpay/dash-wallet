@@ -224,6 +224,19 @@ open class BlockchainIdentityConfig @Inject constructor(
         val CANCELED_REQUESTED_USERNAME_LINK = booleanPreferencesKey("cancelled_requested_username_link")
         val USERNAME_REQUESTED = stringPreferencesKey("username_requested")
         val VOTING_PERIOD_START = longPreferencesKey("voting_period_start")
+
+        /**
+         * The WorkManager request id (UUID string) of the Buy Credits purchase
+         * that last reached the SDK hand-off, written DURABLY by
+         * [de.schildbach.wallet.service.platform.work.PerformTopUpWorker]
+         * right before its SDK top-up call. On a worker execution whose own id
+         * matches this value, the run is a RERUN of a purchase that already
+         * reached the SDK once (the process died mid-flight) — the signal that
+         * an "already consumed" resume rejection means this purchase's own
+         * credits landed, so the pipeline must never fresh-build a second
+         * asset lock (see [SdkTransparentTopUp.topUp]'s newUserIntent).
+         */
+        val TOP_UP_WORK_SDK_STARTED_ID = stringPreferencesKey("top_up_work_sdk_started_id")
         private val log = LoggerFactory.getLogger(BlockchainIdentityConfig::class.java)
     }
 

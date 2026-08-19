@@ -46,10 +46,19 @@ import org.slf4j.LoggerFactory
  * Funds safety on reruns: if the process dies mid-call, WorkManager reruns
  * this worker; [SdkTransparentTopUp]'s resume gate then matches the
  * already-broadcast lock (by the identity's registration index) and
- * completes IT instead of building a second one — no double pay. This
- * worker itself never returns retry: a NotBroadcast outcome is the user's
- * to retry, and an Ambiguous outcome must never be blindly re-run — it is
- * handed to [ResumeTopUpsWorker], which resumes only the tracked lock.
+ * completes IT instead of building a second one — no double pay. When
+ * Platform already CONSUMED that lock before the death (the resume is then
+ * rejected "already completely used"), the credits provably landed and the
+ * rerun terminates as success — never a fresh build. The worker tells the
+ * pipeline which case it is in via `newUserIntent`: before the SDK call it
+ * durably records its own WorkManager request id
+ * ([BlockchainIdentityConfig.TOP_UP_WORK_SDK_STARTED_ID]), so an execution
+ * that finds its OWN id recorded knows this same purchase already reached
+ * the SDK once — only a FIRST execution (fresh id) may treat a consumed
+ * lock as stale bookkeeping from an earlier purchase and build fresh.
+ * This worker itself never returns retry: a NotBroadcast outcome is the
+ * user's to retry, and an Ambiguous outcome must never be blindly re-run —
+ * it is handed to [ResumeTopUpsWorker], which resumes only the tracked lock.
  */
 @HiltWorker
 class PerformTopUpWorker @AssistedInject constructor(
@@ -96,11 +105,47 @@ class PerformTopUpWorker @AssistedInject constructor(
         // success log names the sent amount, not the requested one.
         var sentDuffs = amountDuffs
 
+        // RERUN detection (funds-critical, see the class doc): a NEW purchase
+        // is a fresh WorkRequest with a fresh UUID, so finding our OWN id
+        // already recorded proves THIS purchase reached the SDK hand-off on an
+        // earlier execution and the process died mid-flight. An execution that
+        // died BEFORE the hand-off (id not yet recorded) correctly counts as a
+        // new intent — nothing of this purchase can be on chain yet.
+        val workId = id.toString()
+        val newUserIntent = try {
+            blockchainIdentityConfig.get(BlockchainIdentityConfig.TOP_UP_WORK_SDK_STARTED_ID) != workId
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // Unreadable marker: fail to the SAFE side — treat as a rerun so
+            // the pipeline can never fresh-build over a consumed lock.
+            log.warn("could not read the top-up rerun marker; treating this execution as a rerun", t)
+            false
+        }
+        if (!newUserIntent) {
+            log.warn("this purchase already reached the SDK on an earlier execution (rerun of work {})", workId)
+        }
+
+        // Durably mark the hand-off BEFORE the SDK call so a rerun after a
+        // mid-flight process death can identify itself (read above). A marker
+        // that cannot be written ABORTS the purchase pre-SDK: without it a
+        // rerun would read as a new intent and could fresh-build over this
+        // purchase's own consumed lock — the double charge. Safe to fail
+        // here: nothing was attempted, the purchase is the user's to retry.
+        try {
+            blockchainIdentityConfig.set(BlockchainIdentityConfig.TOP_UP_WORK_SDK_STARTED_ID, workId)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.error("could not durably record the top-up hand-off marker; refusing to start", t)
+            return Result.failure(
+                workDataOf(KEY_ERROR_MESSAGE to "could not persist the purchase's recovery marker")
+            )
+        }
+
         var result = try {
             // Tell the UI the hand-off is complete: the purchase is now the
             // SDK's (and this worker's) responsibility, not the screen's.
             setProgress(workDataOf(KEY_SDK_CALL_STARTED to true))
-            sdkTransparentTopUp.topUp(identityId, amountDuffs)
+            sdkTransparentTopUp.topUp(identityId, amountDuffs, newUserIntent)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.error("top-up threw unexpectedly", t)
@@ -157,7 +202,9 @@ class PerformTopUpWorker @AssistedInject constructor(
                     adjusted
                 )
                 result = try {
-                    sdkTransparentTopUp.topUp(identityId, adjusted)
+                    // Same purchase, same intent: the first call's shortfall was
+                    // provably pre-broadcast, so nothing changed hands yet.
+                    sdkTransparentTopUp.topUp(identityId, adjusted, newUserIntent)
                 } catch (t: Throwable) {
                     if (t is CancellationException) throw t
                     log.error("adjusted max top-up threw unexpectedly", t)
@@ -174,7 +221,15 @@ class PerformTopUpWorker @AssistedInject constructor(
         }
         return when (result) {
             is SdkWriteResult.Broadcast -> {
-                log.info("top-up of {} duffs credited; new balance {}", sentDuffs, result.value)
+                if (result.value == SdkTransparentTopUp.BALANCE_ALREADY_CREDITED) {
+                    log.info(
+                        "top-up of {} duffs had already credited on an earlier execution of this " +
+                            "purchase (rerun found its own consumed lock); new balance unknown",
+                        sentDuffs
+                    )
+                } else {
+                    log.info("top-up of {} duffs credited; new balance {}", sentDuffs, result.value)
+                }
                 Result.success(workDataOf(KEY_NEW_BALANCE to result.value))
             }
             is SdkWriteResult.NotBroadcast -> {
