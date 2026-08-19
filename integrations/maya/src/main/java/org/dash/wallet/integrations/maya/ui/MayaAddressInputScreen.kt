@@ -34,11 +34,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.dash.wallet.common.ui.components.ActionItem
 import org.dash.wallet.common.ui.components.DarkPreviewTheme
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
-import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackTitle
 import org.dash.wallet.common.ui.components.Size
@@ -170,11 +170,10 @@ fun MayaAddressInputScreen(
                             // An unsupported source offers nothing to tap: no address to paste and
                             // no point connecting again, so the whole row is disabled (dimmed,
                             // icon and label alike) and the trailing button is hidden.
-                            MenuItem(
+                            ActionItem(
                                 title = source.name,
                                 enabled = !unsupported,
                                 subtitle = source.address?.takeIf { it.isNotEmpty() },
-                                subtitleMaxLines = 1,
                                 subtitleMiddleEllipsis = true,
                                 icon = source.icon,
                                 trailingButtonText = if (connected || unsupported) {
@@ -187,7 +186,7 @@ fun MayaAddressInputScreen(
                                 } else {
                                     ({ onSourceClick(source) })
                                 },
-                                action = { onSourceClick(source) }
+                                onClick = { onSourceClick(source) }
                             )
 
                             // Yellow system message explaining why the exchange above is unusable,
@@ -205,13 +204,12 @@ fun MayaAddressInputScreen(
                         }
 
                         state.clipboardAddress?.let { clipboardAddress ->
-                            MenuItem(
+                            ActionItem(
                                 title = stringResource(R.string.maya_clipboard),
                                 subtitle = clipboardAddress,
-                                subtitleMaxLines = 1,
                                 subtitleMiddleEllipsis = true,
                                 icon = R.drawable.ic_maya_clipboard,
-                                action = onClipboardClick
+                                onClick = onClipboardClick
                             )
                         }
                     }
