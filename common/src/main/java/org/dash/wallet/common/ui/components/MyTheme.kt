@@ -46,7 +46,10 @@ object MyTheme {
         textAlign = TextAlign.Center,
     )
 
-    @Deprecated(message = "obsolete font")
+    @Deprecated(
+        message = "obsolete font",
+        replaceWith = ReplaceWith("MyTheme.Typography.Footnote")
+    )
     val Caption = TextStyle(
         fontSize = 13.sp,
         lineHeight = 18.sp,
@@ -54,7 +57,10 @@ object MyTheme {
         fontWeight = FontWeight(400)
     )
 
-    @Deprecated(message = "obsolete font")
+    @Deprecated(
+        message = "obsolete font",
+        replaceWith = ReplaceWith("MyTheme.Typography.FootnoteMedium")
+    )
     val CaptionMedium = TextStyle(
         fontSize = 13.sp,
         lineHeight = 18.sp,
@@ -384,6 +390,37 @@ object MyTheme {
             fontWeight = FontWeight(400)
         )
 
+        // Subhead styles - between Title Small and Body. From the "New/Text" styles that design
+        // system components apply (e.g. SystemMessage's title, node 8378:445); not yet on the
+        // documented typography page (node 5856:804).
+        val SubheadBold = TextStyle(
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val SubheadSemibold = TextStyle(
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val SubheadMedium = TextStyle(
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val Subhead = TextStyle(
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
         // Body styles - Main body text
         val BodyLargeBold = TextStyle(
             fontSize = 16.sp,
@@ -465,6 +502,38 @@ object MyTheme {
         val BodySmall = TextStyle(
             fontSize = 12.sp,
             lineHeight = 16.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        // Footnote styles - secondary/explanatory text. From the "New/Text" styles that design
+        // system components apply (e.g. SystemMessage's description, node 8378:445); not yet on
+        // the documented typography page (node 5856:804). Same metrics as the deprecated
+        // [MyTheme.Caption] - new code should use these instead.
+        val FootnoteBold = TextStyle(
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val FootnoteSemibold = TextStyle(
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val FootnoteMedium = TextStyle(
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val Footnote = TextStyle(
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
             fontFamily = interRegular,
             fontWeight = FontWeight(400)
         )

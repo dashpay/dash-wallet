@@ -60,6 +60,8 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.ui.components.SystemMessage
+import org.dash.wallet.common.ui.components.SystemMessageStyle
 import org.dash.wallet.common.ui.components.Toast
 import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.components.TopIntro
@@ -189,13 +191,16 @@ private fun DEXReceiveScreenContent(
                             }
 
                             // Expiry warning, inside the card below the address (Figma 38669:7486).
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp)
-                            ) {
-                                ExpiryWarning(coinCode = coinCode)
-                            }
+                            SystemMessage(
+                                title = stringResource(R.string.dex_receive_expiry_title),
+                                description = stringResource(
+                                    R.string.dex_receive_expiry_message,
+                                    coinCode
+                                ),
+                                style = SystemMessageStyle.Yellow,
+                                iconRes = CommonR.drawable.ic_warning_triangle,
+                                modifier = Modifier.padding(20.dp)
+                            )
                         }
                     }
 
@@ -228,48 +233,6 @@ private fun DEXReceiveScreenContent(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 25.dp, vertical = 8.dp)
-            )
-        }
-    }
-}
-
-/** Yellow "system message" card warning that the deposit address expires (Figma 38669:7448). */
-@Composable
-private fun ExpiryWarning(coinCode: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(LocalDashColors.current.warningYellow)
-            .padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier.size(30.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(CommonR.drawable.ic_warning_triangle),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(vertical = 5.dp),
-            verticalArrangement = Arrangement.spacedBy(1.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.dex_receive_expiry_title),
-                style = MyTheme.Typography.TitleMediumMedium,
-                color = LocalDashColors.current.textPrimary
-            )
-            Text(
-                text = stringResource(R.string.dex_receive_expiry_message, coinCode),
-                style = MyTheme.Body2Regular,
-                color = LocalDashColors.current.textSecondary
             )
         }
     }
@@ -362,16 +325,16 @@ private fun LabeledCopyRow(label: String, value: String, onCopyClick: () -> Unit
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            // Footnote (13sp, text/secondary): closest existing token is MyTheme.Caption (13sp).
+            // Footnote (13sp, text/secondary)
             Text(
                 text = label,
-                style = MyTheme.Caption,
+                style = MyTheme.Typography.Footnote,
                 color = LocalDashColors.current.textSecondary
             )
-            // Subhead (15sp, text/primary): no 15sp token exists; closest is BodyMedium (14sp).
+            // Subhead (15sp, text/primary)
             Text(
                 text = value,
-                style = MyTheme.Typography.BodyMedium,
+                style = MyTheme.Typography.Subhead,
                 color = LocalDashColors.current.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -432,9 +395,9 @@ private fun DEXReceiveScreenLoadedPreview() {
 }
 
 /**
- * Loaded state in dark mode, to check the [ExpiryWarning] card: its background is the translucent
- * YellowAlpha10, which has to tint the dark card enough for the title (textPrimary) and message
- * (textSecondary) to stay readable.
+ * Loaded state in dark mode, to check the expiry [SystemMessage] card: its background is the
+ * translucent YellowAlpha10, which has to tint the dark card enough for the title (textPrimary)
+ * and description (textSecondary) to stay readable.
  */
 @Preview(showBackground = true, widthDp = 393, heightDp = 760)
 @Composable

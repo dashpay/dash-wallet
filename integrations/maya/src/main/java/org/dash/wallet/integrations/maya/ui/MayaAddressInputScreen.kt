@@ -18,29 +18,19 @@
 package org.dash.wallet.integrations.maya.ui
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -53,12 +43,11 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackTitle
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.ui.components.SystemMessage
+import org.dash.wallet.common.ui.components.SystemMessageStyle
 import org.dash.wallet.common.ui.components.TextField
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.common.R as CommonR
-
-/** Opacity Figma applies to an address-source row that can't be used for the selected network. */
-private const val DISABLED_ROW_ALPHA = 0.4f
 
 /** One row of the "Paste address from" card: a connected exchange, or one that can be connected. */
 data class AddressSourceUIState(
@@ -168,7 +157,7 @@ fun MayaAddressInputScreen(
                     Menu {
                         Text(
                             text = stringResource(R.string.maya_paste_address_from),
-                            style = MyTheme.Caption,
+                            style = MyTheme.Typography.Footnote,
                             color = LocalDashColors.current.textSecondary,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -179,32 +168,39 @@ fun MayaAddressInputScreen(
                             val connected = !source.address.isNullOrEmpty()
                             val unsupported = source.unsupportedMessage != null
                             // An unsupported source offers nothing to tap: no address to paste and
-                            // no point connecting again, so Figma dims the whole row and hides the
-                            // trailing button. MenuItem takes no modifier, so the dimming sits on
-                            // the wrapper, from where it covers the icon and the label alike.
-                            Box(modifier = if (unsupported) Modifier.alpha(DISABLED_ROW_ALPHA) else Modifier) {
-                                MenuItem(
-                                    title = source.name,
-                                    subtitle = source.address?.takeIf { it.isNotEmpty() },
-                                    subtitleMaxLines = 1,
-                                    subtitleMiddleEllipsis = true,
-                                    icon = source.icon,
-                                    trailingButtonText = if (connected || unsupported) {
-                                        null
-                                    } else {
-                                        stringResource(CommonR.string.input_log_in)
-                                    },
-                                    onTrailingButtonClick = if (connected || unsupported) {
-                                        null
-                                    } else {
-                                        ({ onSourceClick(source) })
-                                    },
-                                    action = if (unsupported) null else ({ onSourceClick(source) })
-                                )
-                            }
+                            // no point connecting again, so the whole row is disabled (dimmed,
+                            // icon and label alike) and the trailing button is hidden.
+                            MenuItem(
+                                title = source.name,
+                                enabled = !unsupported,
+                                subtitle = source.address?.takeIf { it.isNotEmpty() },
+                                subtitleMaxLines = 1,
+                                subtitleMiddleEllipsis = true,
+                                icon = source.icon,
+                                trailingButtonText = if (connected || unsupported) {
+                                    null
+                                } else {
+                                    stringResource(CommonR.string.input_log_in)
+                                },
+                                onTrailingButtonClick = if (connected || unsupported) {
+                                    null
+                                } else {
+                                    ({ onSourceClick(source) })
+                                },
+                                action = { onSourceClick(source) }
+                            )
 
+                            // Yellow system message explaining why the exchange above is unusable,
+                            // e.g. "Coinbase doesn't support USDC on the TRON network"
+                            // (Figma SystemMessage, node 39439:35535). Inset from the Menu card
+                            // content edge like in Figma.
                             source.unsupportedMessage?.let { message ->
-                                UnsupportedNetworkMessage(message)
+                                SystemMessage(
+                                    description = message,
+                                    style = SystemMessageStyle.Yellow,
+                                    iconRes = CommonR.drawable.ic_warning_triangle,
+                                    modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
+                                )
                             }
                         }
 
@@ -235,45 +231,6 @@ fun MayaAddressInputScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
-        )
-    }
-}
-
-/**
- * Yellow "system message" card (Figma SystemMessage, node 39439:35535) explaining why the exchange
- * above it is unusable, e.g. "Coinbase doesn't support USDC on the TRON network". Sits inside the
- * sources card, inset from the [Menu] content edge like in Figma.
- */
-@Composable
-private fun UnsupportedNetworkMessage(message: String) {
-    val colors = LocalDashColors.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(colors.warningYellow)
-            .padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier.size(30.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(CommonR.drawable.ic_warning_triangle),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-        Text(
-            text = message,
-            style = MyTheme.Caption,
-            color = colors.textPrimary,
-            modifier = Modifier
-                .weight(1f)
-                .padding(vertical = 5.dp)
         )
     }
 }
@@ -376,8 +333,8 @@ private fun MayaAddressInputScreenUnsupportedNetworkPreview() {
 
 /**
  * Same state in dark mode. Worth its own preview because the warning card's background is the
- * translucent YellowAlpha10: it has to tint the dark card enough for textPrimary (WhiteAlpha90)
- * to stay readable.
+ * translucent YellowAlpha10: it has to tint the dark card enough for textSecondary
+ * (WhiteAlpha80) to stay readable.
  */
 @Preview(showBackground = true, widthDp = 393, heightDp = 760)
 @Composable
