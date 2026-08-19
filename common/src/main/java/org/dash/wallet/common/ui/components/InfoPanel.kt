@@ -84,13 +84,13 @@ fun InfoPanel(
             ) {
                 Text(
                     text = title,
-                    style = MyTheme.CaptionMedium,
+                    style = MyTheme.Typography.FootnoteMedium,
                     color = colors.textPrimary
                 )
                 
                 Text(
                     text = description,
-                    style = MyTheme.Caption,
+                    style = MyTheme.Typography.Footnote,
                     color = colors.textSecondary
                 )
             }

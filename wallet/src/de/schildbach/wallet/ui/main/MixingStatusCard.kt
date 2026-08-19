@@ -155,7 +155,7 @@ fun MixingStatusCard(
                                         stringResource(statusTextId),
                                         percentageInt
                                     ),
-                                    style = MyTheme.Caption,
+                                    style = MyTheme.Typography.Footnote,
                                     color = colors.textPrimary,
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
@@ -172,7 +172,7 @@ fun MixingStatusCard(
                                         mixedBalanceString,
                                         totalBalanceString
                                     ),
-                                    style = MyTheme.Caption,
+                                    style = MyTheme.Typography.Footnote,
                                     color = colors.textPrimary,
                                     textAlign = TextAlign.End
                                 )

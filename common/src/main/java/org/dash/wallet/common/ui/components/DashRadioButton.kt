@@ -102,7 +102,7 @@ fun DashRadioButton(
                 TextContent(
                     text = trailingText,
                     helpText = trailingHelpText,
-                    textStyle = MyTheme.Caption,
+                    textStyle = MyTheme.Typography.Footnote,
                     primaryTextColor = primaryTextColor.copy(alpha = contentAlpha),
                     secondaryTextColor = secondaryTextColor.copy(alpha = contentAlpha),
                     textFirst = true,
@@ -151,7 +151,7 @@ private fun TextContent(
     modifier: Modifier = Modifier,
     text: String?,
     helpText: String?,
-    textStyle: TextStyle = MyTheme.CaptionMedium,
+    textStyle: TextStyle = MyTheme.Typography.FootnoteMedium,
     helpTextStyle: TextStyle = MyTheme.OverlineCaptionMedium,
     primaryTextColor: Color,
     secondaryTextColor: Color,
