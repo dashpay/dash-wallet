@@ -150,6 +150,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // LockScreenActivity finishes the activity when there is no wallet
+        // (e.g. a direct launch on a fresh install); its setContentView
+        // override is a no-op while finishing, so nothing below can run.
+        if (isFinishing) {
+            return
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             // no-op on API 35+, where edge-to-edge is enforced
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
