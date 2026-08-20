@@ -562,6 +562,12 @@ class ExploreViewModel @Inject constructor(
         _screenState.postValue(ScreenState.MerchantLocations)
         this.allMerchantLocationsJob?.cancel()
         this.allMerchantLocationsJob = _searchBounds
+            // The Google Map camera callback is the only writer of searchBounds. On devices
+            // without Google Play Services the map never initializes, so the value stays null
+            // and this flow would never emit, leaving the locations screen permanently blank.
+            // Seed with noBounds in that case — the radius is only applied in Nearby mode,
+            // which requires location services anyway.
+            .onStart { if (_searchBounds.value == null) emit(GeoBounds.noBounds) }
             .filterNotNull()
             .flatMapLatest { bounds ->
                 // Only apply radius bounds if we're in Nearby mode
