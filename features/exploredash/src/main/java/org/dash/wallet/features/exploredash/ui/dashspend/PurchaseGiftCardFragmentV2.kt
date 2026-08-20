@@ -404,9 +404,16 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
             findNavController().popBackStack()
             return
         }
-        viewModel.setIsFixedDenomination(
-            DenominationType.fromString(provider.denominationsType) is DenominationType.Fixed
-        )
+        // updateMerchantDetails refreshed this provider row's denominationsType from the
+        // provider's API, so this reflects what is currently purchasable rather than the
+        // cached explore dataset. If the network call failed we fall back to the cached
+        // type; an unparseable cached value resolves to the Flexible default.
+        val denominationType = try {
+            DenominationType.fromString(provider.denominationsType)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+        viewModel.setIsFixedDenomination(denominationType is DenominationType.Fixed)
     }
 
     private fun buildPurchaseMode(
