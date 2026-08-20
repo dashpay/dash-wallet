@@ -804,6 +804,118 @@ class SdkTxStoreWalkerTest {
         assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
     }
 
+    // ── Incomplete-TXO-mirror guard: no born-wrong durable stamps ─────
+    //
+    // Replica of the 2026-08-19 device investigation: the store had DROPPED
+    // change-output rows (platform ecc6740ed4 — owned output role losing
+    // index collisions in the same-txid record fold), so the walker summed
+    // an incomplete funded set and durably persisted a born-wrong net
+    // (5e4d7282: −0.98771 stamped when the true net was −0.00000227). The
+    // guard must catch the gap — a payload output paying a wallet-tracked
+    // address with no txos row — skip the correction, write nothing, and
+    // heal normally once the mirror rows land.
+
+    @Test
+    fun reattribution_incompleteMirror_defersCorrectionAndPersistsNothing() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_g0", bip44Account)
+        insertCoreAddress("bip44_g1", bip44Account)
+        insertCoreAddress("chg_g", bip44Account)
+
+        val funding = txid(61)
+        insertTx(funding, direction = 0, netAmount = 100_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTxo(funding, 0, 100_000_000, "bip44_g0")
+
+        // An internal sweep stored misattributed as INCOMING +0.6. Its real
+        // outputs: 0.6 back to bip44_g1 (mirrored) and 0.39999774 change to
+        // chg_g — whose txos row the store dropped.
+        val sweep = txid(62)
+        insertTx(sweep, direction = 0, netAmount = 60_000_000, payload = byteArrayOf(6), firstSeen = 1_700_000_002)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", sweep, funding)
+        insertTxo(sweep, 0, 60_000_000, "bip44_g1")
+        // The change row for vout 1 is deliberately absent — the dropped row.
+
+        val incompleteFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 6) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 99_999_774,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf("bip44_g1", "chg_g")
+                )
+            } else {
+                null
+            }
+        }
+
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = incompleteFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        // Deferred: the stored shape is served untouched and NOTHING is
+        // written. Before the guard this pass computed net = 0.6 − 1.0 =
+        // −0.4 from the incomplete mirror and stamped it durably — the
+        // born-wrong value that then fought every later correct upsert.
+        val served = requireNotNull(byHex[displayHexOf(sweep)])
+        assertEquals(L1TxUiDirection.INCOMING, served.direction)
+        assertEquals(60_000_000L, served.netAmountDuffs)
+        assertEquals(Triple(0, 60_000_000L, null), storedShape(sweep))
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+
+        // The mirror heals (the upstream fold fix, or the rows simply land
+        // late): the exact same record now corrects to INTERNAL/−fee and
+        // persists durably — deferral, not suppression.
+        insertTxo(sweep, 1, 39_999_774, "chg_g")
+        val byHex2 = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = incompleteFacts).walkAll { page -> page.forEach { byHex2[it.txidHex] = it } }
+        val healed = requireNotNull(byHex2[displayHexOf(sweep)])
+        assertEquals(L1TxUiDirection.INTERNAL, healed.direction)
+        assertEquals(-226L, healed.netAmountDuffs)
+        assertEquals(226L, healed.feeDuffs)
+        assertEquals(Triple(2, -226L, 226L), storedShape(sweep))
+    }
+
+    @Test
+    fun reattribution_externalSend_unknownOutputAddress_stillPersistsDurably() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_h0", bip44Account)
+        insertCoreAddress("chg_h", bip44Account)
+
+        val receive = txid(63)
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTxo(receive, 0, 50_000_000, "bip44_h0")
+
+        // A genuine external payment stored INCOMING +change. The payment
+        // output's address is UNKNOWN to the wallet, so its absence from
+        // the mirror is the ordinary send shape, not a dropped row — the
+        // guard must not block the durable correction.
+        val send = txid(64)
+        insertTx(send, direction = 0, netAmount = 29_999_774, payload = byteArrayOf(7), firstSeen = 1_700_000_002)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", send, receive)
+        insertTxo(send, 1, 29_999_774, "chg_h")
+
+        val sendFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 7) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 49_999_774,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf("yTheirExternalAddress", "chg_h")
+                )
+            } else {
+                null
+            }
+        }
+
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = sendFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        val corrected = requireNotNull(byHex[displayHexOf(send)])
+        assertEquals(L1TxUiDirection.OUTGOING, corrected.direction)
+        assertEquals(-20_000_226L, corrected.netAmountDuffs)
+        assertEquals(226L, corrected.feeDuffs)
+        assertEquals(Triple(1, -20_000_226L, 226L), storedShape(send))
+    }
+
     // ── pending_inputs reservations: the "lingering receive" fix ──────
     //
     // The SDK only writes `txos.isSpent`/`spendingTxid` at CONFIRMATION,
@@ -996,6 +1108,27 @@ class SdkTxStoreWalkerTest {
         assertEquals(-1_000L, contactPay.netAmountDuffs)
     }
 
+    @Test
+    fun firstUnmirroredKnownOutput_flagsOnlyTrackedAddressGaps() {
+        val payload = TxPayloadFacts(
+            outputsTotalDuffs = 1_000,
+            outputCount = 3,
+            inputCount = 1,
+            outputAddresses = listOf("external", "ours", null)
+        )
+        val known = setOf("ours")
+        // A tracked address with no mirror row → its vout.
+        assertEquals(1, firstUnmirroredKnownOutput(payload, known, setOf(0)))
+        // Its mirror row present → complete.
+        assertNull(firstUnmirroredKnownOutput(payload, known, setOf(1)))
+        // Unknown and address-less outputs never count as gaps.
+        assertNull(firstUnmirroredKnownOutput(payload, setOf("elsewhere"), emptySet()))
+        // A facts source without addresses, or no tracked addresses at all,
+        // keeps the guard inert (pre-guard behavior).
+        assertNull(firstUnmirroredKnownOutput(payload.copy(outputAddresses = emptyList()), known, emptySet()))
+        assertNull(firstUnmirroredKnownOutput(payload, emptySet(), emptySet()))
+    }
+
     // ── dashjPayloadFacts against the REAL device payloads ────────────
 
     /** The S22 drain `5538f908…` exactly as pulled from `dash-sdk.db`: 4 inputs, one 0.69998912 output. */
@@ -1023,6 +1156,10 @@ class SdkTxStoreWalkerTest {
         assertEquals(69_998_912L, facts.outputsTotalDuffs)
         assertEquals(1, facts.outputCount)
         assertEquals(4, facts.inputCount)
+        // The mirror-completeness guard needs the destination addresses:
+        // the single P2PKH output must resolve to a base58 address.
+        assertEquals(1, facts.outputAddresses.size)
+        assertTrue(facts.outputAddresses[0] != null)
         // Garbage never parses to facts.
         assertNull(dashjPayloadFacts(ByteArray(0)))
         assertNull(dashjPayloadFacts(byteArrayOf(1, 2, 3)))

@@ -62,7 +62,18 @@ internal fun txoIsForeignSql(alias: String): String =
 internal data class TxPayloadFacts(
     val outputsTotalDuffs: Long,
     val outputCount: Int,
-    val inputCount: Int
+    val inputCount: Int,
+    /**
+     * Per-output destination address (base58), index-aligned with vout; null
+     * for an output with no resolvable address (OP_RETURN burns,
+     * non-standard scripts). The mirror-completeness guard
+     * ([firstUnmirroredKnownOutput]) matches these against `core_addresses`
+     * to tell a `txos` row that is MISSING (the store dropped it) apart from
+     * one that is legitimately absent (the output paid an external party).
+     * Empty when the facts source cannot provide addresses — the guard is
+     * then inert and the pre-guard behavior stands.
+     */
+    val outputAddresses: List<String?> = emptyList()
 )
 
 /**
@@ -76,10 +87,44 @@ internal fun dashjPayloadFacts(payload: ByteArray): TxPayloadFacts? = try {
     TxPayloadFacts(
         outputsTotalDuffs = tx.outputs.sumOf { it.value.value },
         outputCount = tx.outputs.size,
-        inputCount = tx.inputs.size
+        inputCount = tx.inputs.size,
+        outputAddresses = tx.outputs.map { out ->
+            try {
+                out.scriptPubKey.getToAddress(de.schildbach.wallet.Constants.NETWORK_PARAMETERS, true).toBase58()
+            } catch (t: Throwable) {
+                null
+            }
+        }
     )
 } catch (t: Throwable) {
     null
+}
+
+/**
+ * Mirror-completeness guard predicate: the vout of the FIRST payload output
+ * that pays an address the wallet already tracks (`core_addresses`,
+ * [knownWalletAddresses]) yet has NO `txos` row ([mirroredVouts]) — or null
+ * when every wallet-known output is mirrored.
+ *
+ * A non-null result proves the TXO mirror is missing rows for this
+ * transaction: an output to a tracked address is exactly what the store
+ * mirrors into `txos` (owned chains and the watch-only DIP-15 contact
+ * chains alike), so its absence means the rows were dropped or have not
+ * landed yet — NOT that the value left the wallet. An output to an UNKNOWN
+ * address never trips the guard: that is the ordinary external-payment
+ * shape, whose absence from the mirror is what OUTGOING classification is
+ * built on. Pure — host-testable.
+ */
+internal fun firstUnmirroredKnownOutput(
+    payload: TxPayloadFacts,
+    knownWalletAddresses: Set<String>,
+    mirroredVouts: Set<Int>
+): Int? {
+    if (knownWalletAddresses.isEmpty()) return null
+    payload.outputAddresses.forEachIndexed { vout, address ->
+        if (address != null && address in knownWalletAddresses && vout !in mirroredVouts) return vout
+    }
+    return null
 }
 
 /**
@@ -541,6 +586,30 @@ internal class SdkTxStoreWalker(
      * Rust record), which re-satisfies the flag condition and is simply
      * re-corrected and re-persisted — the invalidation is structural, not
      * keyed off time or a rescan marker.
+     *
+     * ## Guarded — no correction from a provably-INCOMPLETE mirror
+     *
+     * The recompute is only as good as the `txos` rows it sums. During the
+     * 2026-08-19 device investigation the store had DROPPED change-output
+     * rows (platform ecc6740ed4, owned-role index collisions in the
+     * same-txid record fold), so the walker summed an incomplete funded set
+     * and durably stamped born-wrong nets (5e4d7282: −0.98771 stamped when
+     * the true net was −0.00000227) — turning a transient store gap into a
+     * persisted wrong value that then FOUGHT any later correct engine
+     * upsert (the still-incomplete mirror keeps "proving" the wrong net).
+     * The guard: before applying a payload-informed correction, every
+     * payload output that pays a wallet-tracked address (`core_addresses`)
+     * must have a `txos` row ([firstUnmirroredKnownOutput]); a missing one
+     * proves the mirror dropped or has not yet written rows for this tx, so
+     * the record is SKIPPED — stored shape served, nothing persisted — and
+     * simply retried on every later pass until the mirror is complete
+     * (rows landing late is the common transient case; the flag condition
+     * re-fires structurally). Outputs paying UNKNOWN addresses never trip
+     * the guard — that is the ordinary external send, whose mirror absence
+     * is exactly what OUTGOING classification rests on. The guard needs
+     * payload facts: the payload-free degrade path and the net≥0 branch
+     * (which stays flagged and is recomputed every pass anyway, so a gap
+     * self-heals) are unchanged.
      */
     private fun reattributed(rows: List<RecordRow>): List<L1TxUiRecord> {
         // Pending-input reservations ([pendingSpentAggregates]) supplement the
@@ -654,10 +723,68 @@ internal class SdkTxStoreWalker(
             }
         }
 
+        // Mirror-completeness probes for the payload-informed subset: which
+        // of the payload output addresses the wallet tracks, and which vouts
+        // the mirror actually holds rows for. Two bounded chunked queries,
+        // paid only when a correction is pending at all.
+        val knownAddressCandidates = HashSet<String>()
+        for (row in needsFacts) {
+            facts[row.record.txidHex]?.outputAddresses?.forEach { if (it != null) knownAddressCandidates += it }
+        }
+        val knownWalletAddresses = HashSet<String>()
+        for (chunk in knownAddressCandidates.chunked(TXID_IN_CHUNK)) {
+            val placeholders = chunk.joinToString(",") { "?" }
+            rawQuery(
+                "SELECT address FROM core_addresses WHERE address IN ($placeholders)",
+                chunk.toTypedArray<Any?>()
+            ) { c -> while (c.moveToNext()) knownWalletAddresses += c.getString(0) }
+        }
+        val mirroredVouts = HashMap<String, MutableSet<Int>>()
+        if (knownWalletAddresses.isNotEmpty()) {
+            for (chunk in needsFacts.chunked(TXID_IN_CHUNK)) {
+                val placeholders = chunk.joinToString(",") { "?" }
+                val args = ArrayList<Any?>(1 + chunk.size)
+                args.add(walletId)
+                chunk.forEach { args.add(it.wireTxid) }
+                // Foreign rows count as mirrored here: the store mirrors
+                // contact-chain outputs into txos too, so their presence is
+                // part of the completeness evidence.
+                rawQuery(
+                    "SELECT t.txid, t.vout FROM txos t WHERE t.walletId = ? AND t.txid IN ($placeholders)",
+                    args.toTypedArray()
+                ) { c ->
+                    while (c.moveToNext()) {
+                        mirroredVouts.getOrPut(displayHexOf(c.getBlob(0))) { HashSet() } += c.getInt(1)
+                    }
+                }
+            }
+        }
+
         val correctedByHex = HashMap<String, L1TxUiRecord>(flagged.size)
         val toPersist = ArrayList<Pair<RecordRow, L1TxUiRecord>>()
         for (row in flagged) {
             val hex = row.record.txidHex
+            val fact = facts[hex]
+            val unmirroredVout = if (fact == null) {
+                null
+            } else {
+                firstUnmirroredKnownOutput(fact, knownWalletAddresses, mirroredVouts[hex] ?: emptySet())
+            }
+            if (unmirroredVout != null) {
+                // The mirror is missing rows for this tx — any net summed
+                // from it would be born wrong (the 2026-08-19 shape). Serve
+                // the stored record, write nothing, retry next pass.
+                if (reattributionDeferredLogged.add(hex)) {
+                    log.info(
+                        "reattribution of {} deferred: output {} pays wallet-tracked address {} " +
+                            "but has no txos row — the TXO mirror is incomplete for this tx, so a " +
+                            "recomputed net would be wrong; serving the stored record and retrying " +
+                            "once the mirror rows land",
+                        hex, unmirroredVout, fact?.outputAddresses?.getOrNull(unmirroredVout).orEmpty()
+                    )
+                }
+                continue
+            }
             val pend = pendingOf(row)
             // DISPLAY shape: confirmed spent marks PLUS in-flight reservations,
             // so the correction lands at broadcast, not at confirmation.
@@ -1047,6 +1174,22 @@ internal class SdkTxStoreWalker(
          * Bounded; an evicted txid merely re-logs, it never re-corrupts.
          */
         private val reattributionLogged: MutableSet<String> =
+            java.util.Collections.synchronizedSet(
+                java.util.Collections.newSetFromMap(
+                    object : LinkedHashMap<String, Boolean>() {
+                        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>): Boolean =
+                            size > 1_024
+                    }
+                )
+            )
+
+        /**
+         * Incomplete-mirror deferrals already logged, process-wide — same
+         * rationale and bound as [reattributionLogged]: the deferral repeats
+         * every pass until the mirror rows land, and one line per txid is
+         * all a log reader needs.
+         */
+        private val reattributionDeferredLogged: MutableSet<String> =
             java.util.Collections.synchronizedSet(
                 java.util.Collections.newSetFromMap(
                     object : LinkedHashMap<String, Boolean>() {
