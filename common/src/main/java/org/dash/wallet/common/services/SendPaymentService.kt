@@ -17,49 +17,85 @@
 
 package org.dash.wallet.common.services
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.TransactionOutput
-import org.bitcoinj.uri.BitcoinURI
-import org.bitcoinj.wallet.CoinSelector
-import org.bitcoinj.wallet.SendRequest
-import java.util.function.Consumer
-import java.util.function.Predicate
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.transactions.TxInfo
 
-class LeftoverBalanceException(missing: Coin, message: String) : InsufficientMoneyException(missing, message)
+/**
+ * Thrown when a send would leave less than the required leftover balance in the wallet
+ * (e.g. for CrowdNode withdrawals). [missing] is the amount that is missing to satisfy
+ * the requirement.
+ */
+class LeftoverBalanceException(val missing: Dash, message: String) : InsufficientFundsException(message)
+
 class DirectPayException(message: String) : Exception(message)
 
+/**
+ * Describes which outputs a send may draw on. The wallet module maps these onto its
+ * dashj coin selectors.
+ */
+sealed class SpendSelection {
+    /** Default selection over all spendable outputs. */
+    object Any : SpendSelection()
+
+    /** Only outputs paying the given base58 address (mirrors `ByAddressCoinSelector`). */
+    data class ByAddress(val address: String) : SpendSelection()
+
+    /** Exactly the given output of the given transaction (mirrors `ExactOutputsSelector`). */
+    data class ExactOutput(val txId: String, val outputIndex: Int) : SpendSelection()
+}
+
+/**
+ * Neutral (dashj-free) payment service facade: amounts are [Dash], addresses are base58
+ * strings, created transactions are returned as [TxInfo] snapshots or hex tx ids.
+ */
 interface SendPaymentService {
+
+    /**
+     * Sends [amount] to the base58 [address] and returns the created transaction's txId
+     * as a hex string. Failures surface as exceptions classifiable with the neutral
+     * `Throwable.is*` helpers.
+     */
     @Throws(LeftoverBalanceException::class)
     suspend fun sendCoins(
-        address: Address,
-        amount: Coin,
-        coinSelector: CoinSelector? = null,
+        address: String,
+        amount: Dash,
+        emptyWallet: Boolean = false,
+        checkBalanceConditions: Boolean = true
+    ): String
+
+    /**
+     * Full-control send used by integrations that steer coin selection and output locking
+     * (CrowdNode). Returns the created transaction as a [TxInfo].
+     *
+     * @param selection which outputs the send may draw on.
+     * @param lockSentOutputsTo before broadcasting, lock the created transaction's P2PKH outputs
+     *        paying this base58 address (mirrors the CrowdNode account-output locking).
+     * @param canSpendLockedOutputsTo allow spending locked outputs that pay this base58 address.
+     */
+    @Throws(LeftoverBalanceException::class)
+    suspend fun sendCoinsSelected(
+        address: String,
+        amount: Dash,
+        selection: SpendSelection = SpendSelection.Any,
         emptyWallet: Boolean = false,
         checkBalanceConditions: Boolean = true,
-        beforeSending: Consumer<Transaction>? = null,
-        canSendLockedOutput: Predicate<TransactionOutput>? = null
-    ): Transaction
+        lockSentOutputsTo: String? = null,
+        canSpendLockedOutputsTo: String? = null
+    ): TxInfo
 
+    /** Fee/total estimate for sending [amount] to [address]. */
     suspend fun estimateNetworkFee(
-        address: Address,
-        amount: Coin,
+        address: String,
+        amount: Dash,
         emptyWallet: Boolean = false
-    ): TransactionDetails
+    ): TransactionEstimate
 
-    data class TransactionDetails(
+    data class TransactionEstimate(
         val fee: String,
-        val amountToSend: Coin,
+        val amountToSend: Dash,
         val totalAmount: String
     )
 
-    suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction
-    fun isFeeTooHigh(tx: Transaction): Boolean
-
-    /** support manual tx creation */
-    suspend fun completeTransaction(sendRequest: SendRequest)
-    suspend fun signTransaction(sendRequest: SendRequest)
-    suspend fun sendTransaction(sendRequest: SendRequest): Transaction
+    /** Pays the given `dash:` payment URI and returns the created transaction. */
+    suspend fun payWithDashUrl(dashUri: String, serviceName: String?): TxInfo
 }

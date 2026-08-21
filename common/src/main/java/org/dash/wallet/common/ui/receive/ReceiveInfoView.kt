@@ -26,11 +26,11 @@ import android.view.LayoutInflater
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.uri.BitcoinURI
-import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.R
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.payments.parsers.AddressNetwork
+import org.dash.wallet.common.payments.parsers.PaymentURI
 import org.dash.wallet.common.databinding.ReceiveInfoViewBinding
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.util.Qr
@@ -45,8 +45,8 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
     private var onSpecifyAmountClicked: (() -> Unit)? = null
     private var onShareClicked: (() -> Unit)? = null
 
-    private var address: Address? = null
-    private var amount: Coin? = null
+    private var address: String? = null
+    private var amount: Dash? = null
     private var paymentRequestUri: String = ""
     private var username: String? = null
 
@@ -80,7 +80,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             }
             binding.shareButton.setOnClickListener {
                 onShareClicked?.invoke()
-                address?.let { handleShare(it.toBase58()) }
+                address?.let { handleShare(it) }
             }
 
             refresh()
@@ -91,7 +91,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         }
     }
 
-    fun setInfo(address: Address, amount: Coin?) {
+    fun setInfo(address: String, amount: Dash?) {
         if (this.address != address) {
             this.address = address
             this.amount = amount
@@ -141,7 +141,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
 
         if (address != null) {
             binding.addressPreviewPane.isVisible = true
-            binding.addressPreview.text = address.toBase58()
+            binding.addressPreview.text = address
         } else {
             binding.addressPreviewPane.isVisible = false
         }
@@ -153,7 +153,14 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         val address = this.address
 
         if (address != null) {
-            paymentRequestUri = BitcoinURI.convertToBitcoinURI(address.parameters, address.toBase58(), amount, null, null, username)
+            paymentRequestUri = PaymentURI.convertToPaymentURI(
+                AddressNetwork.fromDashAddress(address),
+                address,
+                amount?.let { Coin.valueOf(it.duffs) },
+                null,
+                null,
+                username
+            )
             val qrCodeBitmap = Qr.themeAwareDrawable(paymentRequestUri, resources)
             binding.qrPreview.setImageDrawable(qrCodeBitmap)
         } else {
@@ -162,19 +169,17 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         }
     }
 
-    private fun handleCopyAddress(address: Address) {
-        try {
-            val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    private fun handleCopyAddress(address: String) {
+        val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
-            if (amount != null && paymentRequestUri.isNotEmpty()) {
-                clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash payment request", paymentRequestUri))
-            } else {
-                clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash address", address.toBase58()))
-            }
+        if (amount != null && paymentRequestUri.isNotEmpty()) {
+            clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash payment request", paymentRequestUri))
+        } else {
+            clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash address", address))
+        }
 
-            Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
-            log.info("address copied to clipboard: {}", address)
-        } catch (ignore: BitcoinURIParseException) { }
+        Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
+        log.info("address copied to clipboard: {}", address)
     }
 
     private fun handleCopyUsername(username: String) {

@@ -35,10 +35,19 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsReceiveBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 @AndroidEntryPoint
 class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
@@ -63,7 +72,7 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
     }
 
     private val args by navArgs<PaymentsReceiveFragmentArgs>()
-    @Inject lateinit var walletDataProvider: WalletDataProvider
+    @Inject lateinit var walletDataProvider: WalletData
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -106,7 +115,7 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
         viewLifecycleOwner.lifecycleScope.launch {
             // get current address is much faster, because the wallet doesn't need to be saved
             val freshAddress = viewModel.getCurrentAddress()
-            binding.receiveInfo.setInfo(freshAddress, null)
+            binding.receiveInfo.setInfo(freshAddress.toBase58(), null)
         }
     }
 }

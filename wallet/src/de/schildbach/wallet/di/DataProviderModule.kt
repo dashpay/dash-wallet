@@ -25,6 +25,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.data.WalletDataAdapter
 import org.dash.wallet.common.WalletDataProvider
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.service.WalletTransactionMetadataProvider
@@ -44,8 +46,14 @@ abstract class DataProviderModule {
         @Provides
         fun provideWalletData(
             @ApplicationContext context: Context
-        ): WalletDataProvider = context as WalletApplication
+        ): WalletData = context as WalletApplication
     }
+
+    @Singleton
+    @Binds
+    abstract fun bindWalletDataProvider(
+        adapter: WalletDataAdapter
+    ): WalletDataProvider
 
     @Binds
     abstract fun bindBlockchainStateProvider(

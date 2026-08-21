@@ -138,9 +138,20 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
         val fiatBalanceStr = viewModel.getBalanceInLocalFormat()
 
         if (walletBalance.isGreaterThan(Coin.ZERO) && viewModel.needPassphraseBackUp) {
+            // At-risk wallet (has a balance, recovery phrase not yet backed up):
+            // ONE confirmation that keeps both safety affordances — the balance
+            // in the title AND the "back up your seed first" extra action. This
+            // was previously two near-identical red-button dialogs shown back to
+            // back (same body text + same button), which read as an accidental
+            // double-prompt; collapsed to a single informative confirmation.
             val resetWalletDialog = ExtraActionDialog.create(
                 R.drawable.ic_warning_yellow_circle,
-                getString(R.string.launch_reset_wallet_title),
+                getString(
+                    R.string.start_reset_wallet_title,
+                    fiatBalanceStr.ifEmpty {
+                        walletBalance.toFriendlyString()
+                    }
+                ),
                 getString(R.string.launch_reset_wallet_message),
                 getString(R.string.button_cancel),
                 getString(R.string.reset_wallet_button),
@@ -152,25 +163,7 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                 requireActivity(),
                 onResult = {
                     if (it == true) {
-                        val startResetWalletDialog = AdaptiveDialog.create(
-                            R.drawable.ic_warning_yellow_circle,
-                            getString(
-                                R.string.start_reset_wallet_title,
-                                fiatBalanceStr.ifEmpty {
-                                    walletBalance.toFriendlyString()
-                                }
-                            ),
-                            getString(R.string.launch_reset_wallet_message),
-                            getString(R.string.button_cancel),
-                            getString(R.string.reset_wallet_button)
-                        ).apply {
-                            requireArguments().putInt(AdaptiveDialog.POS_BUTTON_COLOR_ARG, R.style.PrimaryButtonTheme_Large_Red)
-                        }
-                        startResetWalletDialog.show(requireActivity()) { confirmed ->
-                            if (confirmed == true) {
-                                checkUsernameThenReset()
-                            }
-                        }
+                        checkUsernameThenReset()
                     }
                 },
                 onExtraMessageAction = {
@@ -218,14 +211,16 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
 
     private fun doReset() {
         viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
-        val dialog = AdaptiveDialog.progress(getString(R.string.reset_wallet_text))
-        dialog.show(requireActivity())
         (requireActivity() as AbstractBindServiceActivity).doUnbindService()
-        viewModel.triggerWipe() {
-            dialog.dismissAllowingStateLoss()
-            startActivity(OnboardingActivity.createIntent(requireContext()))
-            requireActivity().finishAffinity()
-        }
+        // Nothing is posted back here on completion. The wipe hands the UI
+        // over to OnboardingActivity itself, before it destroys anything, and
+        // then runs for minutes — this fragment and its activity are long gone
+        // by the time it finishes. The old completion callback called
+        // startActivity() on this fragment from a background dispatcher and
+        // took the process down with "Fragment SecurityFragment not attached
+        // to Activity"; the progress it showed is now owned by the screen that
+        // survives the wipe.
+        viewModel.triggerWipe()
     }
 
     private fun showSeed(seed: Array<String>) {

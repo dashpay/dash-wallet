@@ -184,9 +184,20 @@ class NotificationsAdapter(val context: Context, val transactionBag: Transaction
                 }
                 else -> when (notificationViewItem.notificationItem) {
                     is NotificationItemPayment -> {
-                        val tx = notificationViewItem.notificationItem.tx!!
-                        val sent = tx.getValue(transactionBag).signum() < 0
-                        val isInternal = tx.purpose == Transaction.Purpose.KEY_ROTATION
+                        val payment = notificationViewItem.notificationItem
+                        // tx is null for an SDK-only received contact payment (no dashj Transaction);
+                        // such a row always carries a correctedDisplay, so direction comes from it.
+                        val tx = payment.tx
+                        // Post-cutover correction: when a tx_display_cache row exists it is the
+                        // authoritative direction (an SDK contact send mis-reads as received via
+                        // dashj's +change). Use its sign; absent → the dashj computation as before.
+                        val corrected = payment.correctedDisplay
+                        val sent = if (corrected != null) {
+                            corrected.valueSatoshis < 0
+                        } else {
+                            tx!!.getValue(transactionBag).signum() < 0
+                        }
+                        val isInternal = tx?.purpose == Transaction.Purpose.KEY_ROTATION
                         if (filter === ProfileActivityHeaderHolder.Filter.INCOMING && !sent && !isInternal
                                 || filter === ProfileActivityHeaderHolder.Filter.ALL || filter === ProfileActivityHeaderHolder.Filter.OUTGOING && sent && !isInternal) {
                             resultTransactions.add(notificationViewItem)

@@ -27,6 +27,8 @@
     <string name="dash_address">Dash Address</string>
     <string name="username">Username</string>
     <string name="balance">Balance:</string>
+    <string name="hide_balance">Hide balance</string>
+    <string name="show_balance">Show balance</string>
     <string name="nothing_here">Nothing here</string>
 
     <!-- Local Currency List: GGP -->
@@ -55,6 +57,8 @@
     <string name="get_quote">Get Quote</string>
     <string name="button_close">Close</string>
     <string name="button_cancel">Cancel</string>
+    <string name="button_clear">Clear</string>
+    <string name="button_paste">Paste</string>
     <string name="button_confirm">Confirm</string>
     <string name="button_retry">Retry</string>
     <string name="button_send_report">Send Report</string>
@@ -90,7 +94,6 @@
     <string name="exchange_rate_template" translatable="false">%1$s DASH = %2$s</string>
     <string name="send_coins_error_dusty_send">The amount is too small to send</string>
     <string name="send_coins_error_insufficient_money">Insufficient funds</string>
-    <string name="send_coins_error_insufficient_mixed_money">Insufficient mixed funds. Wait for CoinJoin mixing to finish or disable this feature in the settings to complete this transaction.</string>
     <string name="syncing">Syncing</string>
     <string name="no_connection">No internet connection</string>
     <string name="rate_not_available">Not available</string>

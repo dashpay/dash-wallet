@@ -38,16 +38,17 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import de.schildbach.wallet.util.toDashjFiat
 
 @HiltViewModel
 class PaymentProtocolViewModel @Inject constructor(
-    walletData: WalletDataProvider,
+    walletData: WalletData,
     configuration: Configuration,
     exchangeRates: ExchangeRatesProvider,
     private val sendCoinsTaskRunner: SendCoinsTaskRunner,
@@ -56,13 +57,41 @@ class PaymentProtocolViewModel @Inject constructor(
 
     companion object {
         val FAKE_FEE_FOR_EXCEPTIONS: Coin =
-            org.dash.wallet.common.util.Constants.ECONOMIC_FEE.multiply(261).divide(1000)
+            Coin.valueOf(org.dash.wallet.common.util.Constants.ECONOMIC_FEE.multiply(261).divide(1000).value)
     }
 
     private val log = LoggerFactory.getLogger(PaymentProtocolFragment::class.java)
 
-    var baseSendRequest: SendRequest? = null
     var finalPaymentIntent: PaymentIntent? = null
+
+    /**
+     * Post-cutover preview (issue #1520 Phase 1B item 1): the SDK-built,
+     * signed, inputs-RESERVED payment. Its [SdkDeferredPayment.feeDuffs]
+     * is the EXACT fee of the tx that will be submitted — the fee preview
+     * IS the payment. Consumed by [sendPayment]; released in [onCleared]
+     * when abandoned (idempotent engine-side, TTL backstop besides).
+     */
+    private val deferredPaymentRef =
+        java.util.concurrent.atomic.AtomicReference<de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment?>(null)
+    val deferredPayment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment?
+        get() = deferredPaymentRef.get()
+
+    /**
+     * In-flight guard for [sendPayment]: a second confirm while one is
+     * running is dropped instead of racing it. Covers BOTH paths — on the
+     * deferred path a duplicate could double-submit/rebuild the
+     * reservation; on the dashj path it would build a genuinely second
+     * transaction (a pre-existing double-pay hazard this guard closes).
+     */
+    private val sendingPayment = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** The exact fee of the reserved payment the preview shows. */
+    val previewFee: Coin?
+        get() = deferredPayment?.let { Coin.valueOf(it.feeDuffs) }
+
+    /** True when a confirmed send can actually run (the preview is armed). */
+    val canSendPayment: Boolean
+        get() = deferredPayment != null
 
     private val _sendRequestLiveData = MutableLiveData<Resource<SendRequest?>>()
     val sendRequestLiveData: LiveData<Resource<SendRequest?>>
@@ -76,7 +105,7 @@ class PaymentProtocolViewModel @Inject constructor(
 
     val exchangeRate: org.bitcoinj.utils.ExchangeRate?
         get() = exchangeRateData.value?.run {
-            org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat)
+            org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat.toDashjFiat())
         }
 
     init {
@@ -129,7 +158,7 @@ class PaymentProtocolViewModel @Inject constructor(
             try {
                 val paymentIntent = sendCoinsTaskRunner.fetchPaymentRequest(basePaymentIntent)
 
-                if (basePaymentIntent.isExtendedBy(paymentIntent, true, Constants.NETWORK_PARAMETERS)) {
+                if (basePaymentIntent.isExtendedBy(paymentIntent, true, Constants.ADDRESS_NETWORK)) {
                     finalPaymentIntent = paymentIntent
                     createBaseSendRequest(paymentIntent)
                 } else {
@@ -146,26 +175,25 @@ class PaymentProtocolViewModel @Inject constructor(
     }
 
     /**
-     * Creates a base send request for the given payment intent.
-     * This is a dry-run to show the user the transaction details before sending.
+     * Creates the payment preview: the SDK builds + signs the REAL
+     * payment with its inputs reserved ([deferredPayment]) — the
+     * displayed fee is exact and the preview IS the payment. (The dashj
+     * `completeTx` dry-run was deleted per the replace-then-delete
+     * policy; dashj remains foundation-only until Phase 3.)
      */
     private suspend fun createBaseSendRequest(paymentIntent: PaymentIntent) {
         withContext(Dispatchers.IO) {
-            Context.propagate(wallet.context)
             try {
-                val sendRequest = sendCoinsTaskRunner.createSendRequest(
-                    false,
-                    paymentIntent,
-                    signInputs = false,
-                    forceEnsureMinRequiredFee = false
-                )
-
-                wallet.completeTx(sendRequest)
-
-                baseSendRequest = sendRequest
-                _sendRequestLiveData.postValue(Resource.success(sendRequest))
+                // A re-preview (retry after a failed send) must not
+                // leak the previous reservation. getAndSet keeps the
+                // take-then-release atomic against a concurrent send.
+                deferredPaymentRef.getAndSet(null)?.let {
+                    sendCoinsTaskRunner.releaseDeferredPayment(it)
+                }
+                deferredPaymentRef.set(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent))
+                _sendRequestLiveData.postValue(Resource.success(null))
             } catch (x: Exception) {
-                baseSendRequest = null
+                deferredPaymentRef.set(null)
                 _sendRequestLiveData.postValue(Resource.error(x))
             }
         }
@@ -176,38 +204,79 @@ class PaymentProtocolViewModel @Inject constructor(
      * Updates [directPaymentAckLiveData] with the result.
      */
     fun sendPayment() {
+        // Single-flight: a confirm while a send is already running is
+        // dropped, not queued — a duplicate would race the atomic take
+        // below and, on the dashj path, build a second transaction.
+        if (!sendingPayment.compareAndSet(false, true)) {
+            log.warn("sendPayment ignored: a payment submission is already in flight")
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 directPaymentAckLiveData.postValue(Resource.loading(null))
 
-                val sendRequest = sendCoinsTaskRunner.createSendRequest(
-                    basePaymentIntent.mayEditAmount(),
-                    finalPaymentIntent!!,
-                    true,
-                    baseSendRequest!!.ensureMinRequiredFee
-                )
-
-                val transaction = sendCoinsTaskRunner.sendDirectPayment(
-                    sendRequest,
-                    finalPaymentIntent!!
-                )
+                // Atomic take: whoever wins this getAndSet owns the
+                // reservation; any concurrent reader sees null.
+                val prebuilt = deferredPaymentRef.getAndSet(null)
+                val transaction = if (prebuilt != null) {
+                    // Post-cutover: submit the EXACT tx the preview showed.
+                    // The reservation is consumed (ack → broadcast) or
+                    // released (pre-ack failure) inside the runner either
+                    // way — this reference is dead after the call.
+                    try {
+                        sendCoinsTaskRunner.sendPrebuiltDirectPayment(prebuilt, finalPaymentIntent!!)
+                    } catch (ex: Exception) {
+                        // Re-arm ONLY on a definitive refusal (nack): the
+                        // server said no, nothing is on the network, and a
+                        // fresh reservation is safe.
+                        //
+                        // NEVER re-arm on an AMBIGUOUS failure (transport
+                        // error that the network-observation rescue could
+                        // not resolve): the engine cannot see the mempool
+                        // spend of the released inputs, so a rebuilt retry
+                        // may select DIFFERENT inputs and pay the merchant
+                        // twice if the server did broadcast after all.
+                        // Observed in the field test (2026-08-03): the
+                        // rebuild produced a different tx (ed08074b) for
+                        // an invoice whose original (2c3be7d8) was already
+                        // on-chain. The user must restart the payment.
+                        //
+                        // Also never re-arm after Bip70AckedDisplayException
+                        // — the merchant holds an ACKED tx.
+                        if (ex is org.dash.wallet.common.services.DirectPayException) {
+                            runCatching { createBaseSendRequest(finalPaymentIntent!!) }
+                        }
+                        throw ex
+                    }
+                } else {
+                    // No armed reservation: the preview failed (the
+                    // fragment gates on canSendPayment, so this is a
+                    // backstop, not a fallback — the dashj leg is gone).
+                    error("no prepared payment to submit — the preview must build first")
+                }
 
                 directPaymentAckLiveData.postValue(Resource.success(transaction))
             } catch (ex: Exception) {
                 log.error("Failed to send direct payment", ex)
                 directPaymentAckLiveData.postValue(Resource.error(ex, ex.message ?: "Payment failed"))
+            } finally {
+                sendingPayment.set(false)
             }
         }
     }
 
-    /**
-     * Commits and broadcasts a transaction that has already been acknowledged.
-     */
-    suspend fun commitAndBroadcast(sendRequest: SendRequest): Transaction {
-        return sendCoinsTaskRunner.sendCoins(
-            sendRequest,
-            txCompleted = true,
-            checkBalanceConditions = true
-        )
+    override fun onCleared() {
+        // Abandoned preview (user backed out before confirming): free the
+        // reserved inputs. Fire-and-forget on a detached scope — the
+        // ViewModel scope is already dead here, the release is idempotent,
+        // and the engine's reservation TTL is the backstop if the process
+        // dies first.
+        deferredPaymentRef.getAndSet(null)?.let { payment ->
+            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+            kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                sendCoinsTaskRunner.releaseDeferredPayment(payment)
+            }
+        }
+        super.onCleared()
     }
 }

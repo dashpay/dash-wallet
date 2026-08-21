@@ -28,7 +28,7 @@ import androidx.core.app.ShareCompat
 import androidx.core.content.FileProvider
 import androidx.core.text.HtmlCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -45,7 +45,12 @@ const val REQUEST_CODE_SHARE = 1
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 abstract class InvitationFragment(fragmentResId: Int) : Fragment(fragmentResId) {
-    protected val viewModel by viewModels<InvitationFragmentViewModel>()
+    // activity-scoped so the shielded invite link published by
+    // ConfirmInviteDialogFragment survives the nav to InviteCreatedFragment
+    // (matches the username flow's activityViewModels sharing). A fragment-
+    // scoped VM here gets a fresh instance with a null shieldedInviteLink, so
+    // the created screen hangs on "Loading Invite…".
+    protected val viewModel by activityViewModels<InvitationFragmentViewModel>()
     abstract val invitationBitmapTemplateBinding: InvitationBitmapTemplateBinding
     var sendInviteLauncher: ActivityResultLauncher<Intent>? = null
 

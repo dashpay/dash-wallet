@@ -57,6 +57,21 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         // CrowdNode functionality is limited: linking an existing account isn't supported
         binding.existingAccountBtn.isVisible = false
 
+        // Account creation is fenced off (CrowdNodeConstants.
+        // SIGNUP_AND_DEPOSITS_ENABLED). This is THE entry point to the signup
+        // flow, so hiding the button here is what stops a user reaching the
+        // fenced-off on-chain senders; CrowdNodeBlockchainApi's throws are
+        // the backstop. Say why, rather than leaving an empty screen.
+        //
+        // The explanation replaces the screen's own title/hint, which sit
+        // OUTSIDE the button card — requiredDashTxt is a child of
+        // newAccountBtn and would be hidden along with it.
+        if (!CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED) {
+            binding.newAccountBtn.isVisible = false
+            binding.getStartedTitle.text = getString(R.string.crowdnode_signup_deposits_disabled)
+            binding.getStartedHint.text = getString(R.string.crowdnode_signup_deposits_disabled_message)
+        }
+
         binding.backupPassphraseHint.setOnClickListener {
             val dialog = AdaptiveDialog.create(
                 null,

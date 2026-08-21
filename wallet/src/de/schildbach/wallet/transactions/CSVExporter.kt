@@ -16,19 +16,16 @@
 
 package de.schildbach.wallet.transactions
 
-import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 
 abstract class CSVExporter(
     transactionMetadataProvider: TransactionMetadataProvider,
-    wallet: Wallet,
+    transactions: Collection<TxInfo>,
     taxCategories: List<String>
 ) :
-    TransactionExporter(transactionMetadataProvider, wallet, taxCategories) {
+    TransactionExporter(transactionMetadataProvider, transactions, taxCategories) {
 
     companion object {
         const val NEW_LINE = "\n"
@@ -36,7 +33,7 @@ abstract class CSVExporter(
 
     inner class CSVColumn(
         val name: String,
-        val dataFunction: (Transaction, TransactionMetadata?) -> String
+        val dataFunction: (TxInfo, TransactionMetadata?) -> String
     )
 
     abstract val dataSpec: List<CSVColumn>
@@ -47,19 +44,26 @@ abstract class CSVExporter(
     }
 
     override suspend fun exportString(): String {
+        ensureMetadataMap()
         val history = StringBuilder()
 
         history.append(getHeader()).append(NEW_LINE)
         for (tx in sortedTransactions) {
             val columnData = arrayListOf<String>()
-            val isCoinJoin = when (tx.coinJoinTransactionType) {
-                CoinJoinTransactionType.Mixing -> true
-                else -> false
-            }
-            val shouldExclude = excludeInternal && (tx.isEntirelySelf(wallet) || isCoinJoin)
+            // A CoinJoin mixing round spends the wallet's own coins into the wallet's own
+            // denominated outputs, so it is entirely-self and this one test still excludes it.
+            // The former explicit `coinJoinTransactionType` check required a dashj Transaction,
+            // which does not exist post-cutover (see TransactionExporter's class docs).
+            //
+            // EXCEPT an entirely-self tx that burns value into an OP_RETURN — the
+            // asset-lock credit-purchase shape. That burn+fee is real money leaving
+            // the wallet (the S22 reconciliation's hidden 0.03000241 expense), so it
+            // must appear as an Expense row; getTransactionValue() supplies the
+            // negative burn+fee for it.
+            val shouldExclude = excludeInternal && isInternal(tx) && opReturnBurnDuffs(tx) == 0L
             if (!shouldExclude) {
                 for (spec in dataSpec) {
-                    columnData.add(spec.dataFunction(tx, metadataMap[tx.txId]))
+                    columnData.add(spec.dataFunction(tx, metadataMap[tx.txId.lowercase()]))
                 }
                 history.append(columnData.joinToString(",")).append(NEW_LINE)
             }

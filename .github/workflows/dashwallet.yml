@@ -4,12 +4,29 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master, feature-*, bugfix-* ]
+    branches: [ master, feature-*, bugfix-*, feat/*, fix/* ]
+
+permissions:
+  contents: read
+  packages: read
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
+
+    # Resolve org.dashj:dash-sdk-android from GitHub Packages on dashpay/platform
+    # (see the repository declaration in build.gradle). Prefer the GH_PACKAGES_TOKEN
+    # secret — a PAT with read:packages — because the automatic GITHUB_TOKEN is
+    # scoped to this repository and cannot read another repository's packages
+    # unless that package explicitly grants this repo read access.
+    env:
+      GITHUB_ACTOR: ${{ github.actor }}
+      GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+      # The SDK AAR dependency makes the data-binding merge task unserializable
+      # by the configuration cache (fails _testNet3Release); runners are fresh
+      # each run so the cache buys nothing in CI — disable it here only.
+      GRADLE_OPTS: -Dorg.gradle.configuration-cache=false
 
     steps:
     - name: Get build number from run id

@@ -6,10 +6,10 @@ import android.content.Intent
 import android.os.PowerManager
 import androidx.lifecycle.LifecycleService
 import com.google.android.gms.common.internal.Preconditions.checkState
+import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.dao.UsernameRequestDao
@@ -20,10 +20,22 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.uniqueIdStringOrNull
 import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
+import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.ShieldedInviteOverageTopUp
+import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.work.RestoreIdentityWorker
+import de.schildbach.wallet.service.platform.work.ShieldedInviteOverageWorker
+import de.schildbach.wallet.service.platform.work.contestedNameCandidates
+import de.schildbach.wallet.service.platform.work.contestedNameListsCanMatch
+import de.schildbach.wallet.service.platform.work.isOwnContestedCandidate
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_TEXT
 import de.schildbach.wallet.ui.dashpay.work.GetUsernameVotingResultOperation
@@ -32,12 +44,14 @@ import de.schildbach.wallet.ui.username.UsernameType
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -59,6 +73,143 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
+/**
+ * The per-username-type creation-state quartet [registerUsername] marches
+ * through. Extracted so the SDK invite-DPNS routing decisions over these
+ * states are host-JVM testable against real resumed-record shapes.
+ */
+internal data class UsernameRegistrationStates(
+    val preorderRegistering: IdentityCreationState,
+    val preorderRegistered: IdentityCreationState,
+    val domainRegistering: IdentityCreationState,
+    val domainRegistered: IdentityCreationState
+)
+
+internal fun usernameRegistrationStates(usernameType: UsernameType): UsernameRegistrationStates =
+    when (usernameType) {
+        UsernameType.Primary -> UsernameRegistrationStates(
+            preorderRegistering = IdentityCreationState.PREORDER_REGISTERING,
+            preorderRegistered = IdentityCreationState.PREORDER_REGISTERED,
+            domainRegistering = IdentityCreationState.USERNAME_REGISTERING,
+            domainRegistered = IdentityCreationState.USERNAME_REGISTERED
+        )
+        UsernameType.Secondary -> UsernameRegistrationStates(
+            preorderRegistering = IdentityCreationState.PREORDER_SECONDARY_REGISTERING,
+            preorderRegistered = IdentityCreationState.PREORDER_SECONDARY_REGISTERED,
+            domainRegistering = IdentityCreationState.USERNAME_SECONDARY_REGISTERING,
+            domainRegistered = IdentityCreationState.USERNAME_SECONDARY_REGISTERED
+        )
+    }
+
+/**
+ * Whether the SDK invite-DPNS branch must still REGISTER [usernameType]'s
+ * name at [creationState], or skip it as already registered. Mirrors the
+ * legacy tail's `<=` gate semantics per name: everything at or past that
+ * name's domainRegistered state (including every later state — the OTHER
+ * name's stages, profile, voting, DONE) is complete for this name. The
+ * dual-name state machine runs SECONDARY (instant) first, so a record
+ * resumed on the primary stages must skip the secondary re-register.
+ */
+internal fun sdkInviteDpnsShouldRegister(
+    creationState: IdentityCreationState,
+    usernameType: UsernameType
+): Boolean = creationState < usernameRegistrationStates(usernameType).domainRegistered
+
+/**
+ * Resolve the SDK-claimed invite identity id for a DPNS registration, in
+ * trust order: the in-flight claim result (set only when the claim ran in
+ * THIS process), then the PERSISTED record's identityId (authoritative on a
+ * resume after interruption/process death), then the rehydrated dashj
+ * wrapper's uniqueId (may legitimately be null — it is a lateinit that
+ * rehydration can leave unset). Null means no source knows the id — the
+ * caller must fail retryably, never crash.
+ */
+internal fun resolveSdkInviteIdentityId(
+    inFlightClaimId: String?,
+    persistedIdentityId: String?,
+    wrapperUniqueId: String?
+): String? = inFlightClaimId ?: persistedIdentityId ?: wrapperUniqueId
+
+/**
+ * Whether a DUAL-username record's primary was overwritten with its own
+ * instant secondary — the pre-11.10.52 clobber: mid-creation
+ * `recoverUsernames` adopted the just-registered instant name into
+ * `wrapper.primaryUsername`, and the wrapper-adoption persist copied it over
+ * the record's requested primary (observed live on the S22: fhjf → fhjf-2).
+ * A legitimate dual record can never have identical names: the dual flow
+ * exists only for a CONTESTED primary plus a non-contested instant, and the
+ * two tiers have disjoint character rules.
+ *
+ * KNOWN LIMITATION (accepted, 2026-08-03): this check runs INSIDE the
+ * primary registration pass, which sits behind the state-based per-type
+ * completion guard — so it only protects records whose primary stage is
+ * still PENDING. A record damaged by the pre-11.10.52 clobber that ALSO had
+ * its primary STATUS stamped CONFIRMED can be marched to DONE/
+ * DONE_AND_DISMISS by the status-driven completion surfaces before any
+ * registration pass consults this check (observed on the S22: the record
+ * completed holding only the instant name). Such records are not repaired
+ * retroactively — the lost primary is filed through the normal Request
+ * Username flow instead. Post-11.10.52 the clobber cannot occur (the routed
+ * arm no longer adopts wrapper names), so this check is purely a backstop.
+ * Its ONLY production consumer is registerUsername's primary SDK branch —
+ * healthy records (distinct names, single-name, empty) never trip it.
+ */
+internal fun isDualPrimaryClobbered(primary: String?, secondary: String?): Boolean =
+    primary != null && secondary != null && (
+        primary == secondary ||
+            // The clobber can also arrive in NORMALIZED form: recoverUsernames
+            // rewrites names to the DPNS normalized label, so a primary
+            // overwritten with the secondary's normalized form ("br1m0ztest3"
+            // vs "brimoztest3") passed the raw equality above unnoticed
+            // (S21 2026-08-18). Compare normalized forms too.
+            runCatching {
+                Names.normalizeString(primary) == Names.normalizeString(secondary)
+            }.getOrDefault(false)
+        )
+
+/**
+ * The record mutation for one SDK invite-DPNS Broadcast, with NO wrapper
+ * adoption: only the per-type STATUS advances — the record's username fields
+ * are the REQUESTED names and stay untouched (the invariant the S22 11.10.51
+ * clobber broke). A CONTESTED primary is left unstamped: its request status
+ * is owned by the voting tail (REQUESTED_NAME_* → VOTING), not CONFIRMED.
+ */
+internal fun advanceRecordForSdkDpnsBroadcast(
+    record: BlockchainIdentityData,
+    usernameType: UsernameType,
+    contestable: Boolean
+) {
+    when (usernameType) {
+        UsernameType.Primary -> if (!contestable) {
+            record.usernameStatus = UsernameStatus.CONFIRMED
+        }
+        UsernameType.Secondary -> record.usernameSecondaryStatus = UsernameStatus.CONFIRMED
+    }
+}
+
+/**
+ * Repair a CLAIMED invite record's requested names on a retry-with-new-
+ * username, without ever resetting the record (the identity is on chain; a
+ * reset would re-claim a consumed invitation at the wrong identity index):
+ * - the PRIMARY is replaced by the user's re-entry — the recovery path for a
+ *   record whose primary was clobbered to its own instant name (S22);
+ * - the SECONDARY is only ever FILLED when absent, never overwritten: once
+ *   the instant name is registered, its stages sit behind the per-type
+ *   completion guard and the on-chain name cannot be renamed here.
+ */
+internal fun repairClaimedInviteRecordNames(
+    record: BlockchainIdentityData,
+    newPrimary: String?,
+    newSecondary: String?
+) {
+    if (newPrimary != null && newPrimary != record.username) {
+        record.username = newPrimary
+    }
+    if (newSecondary != null && record.usernameSecondary == null) {
+        record.usernameSecondary = newSecondary
+    }
+}
+
 @AndroidEntryPoint
 class CreateIdentityService : LifecycleService() {
     companion object {
@@ -73,11 +224,23 @@ class CreateIdentityService : LifecycleService() {
         private const val ACTION_RETRY_INVITE_WITH_NEW_USERNAME = "org.dash.dashpay.action.ACTION_RETRY_INVITE_WITH_NEW_USERNAME"
         private const val ACTION_RETRY_INVITE_AFTER_INTERRUPTION = "org.dash.dashpay.action.ACTION_RETRY_INVITE_AFTER_INTERRUPTION"
 
+        /**
+         * Post-cutover SDK (transparent) username creation runs on the
+         * app-scoped [SdkTransparentUsernameCreation] executor, not this
+         * service. This action carries NO funding: the service only holds the
+         * process foreground (notification + wakelock, exactly like the dashj
+         * path) so a screen lock cannot get the app reaped mid-proof, and
+         * projects the executor's submit state onto the home identity tile. It
+         * is self-contained and self-stopping — see [handleSdkForegroundHold].
+         */
+        private const val ACTION_HOLD_FOREGROUND_FOR_SDK_CREATE = "org.dash.dashpay.action.HOLD_FOREGROUND_FOR_SDK_CREATE"
+
         private const val EXTRA_USERNAME = "org.dash.dashpay.extra.USERNAME"
         private const val EXTRA_USERNAME_SECONDARY = "org.dash.dashpay.extra.USERNAME_SECONDARY"
         private const val EXTRA_START_FOREGROUND_PROMISED = "org.dash.dashpay.extra.EXTRA_START_FOREGROUND_PROMISED"
         private const val EXTRA_IDENTITY = "org.dash.dashpay.extra.IDENTITY"
         private const val EXTRA_INVITE = "org.dash.dashpay.extra.INVITE"
+        private const val EXTRA_SHIELDED = "org.dash.dashpay.extra.SHIELDED"
 
         @JvmStatic
         fun createIntentForNewUsername(context: Context, username: String, usernameSecondary: String?): Intent {
@@ -124,6 +287,33 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
+        /**
+         * Start the foreground hold for an app-scoped SDK (transparent)
+         * username creation. Must be started from the Activity tap path (a
+         * visible activity) to satisfy the Android 12+ FGS-start-from-background
+         * rules — the caller is [de.schildbach.wallet.ui.username.request
+         * .RequestUserNameViewModel.submit] right after the executor accepted
+         * the submit. Does NOT trigger any funding. [shielded] selects which
+         * executor's submit state the hold observes (shielded pool vs
+         * transparent UTXO creation).
+         */
+        @JvmStatic
+        fun createIntentForSdkForegroundHold(
+            context: Context,
+            username: String,
+            usernameSecondary: String?,
+            shielded: Boolean = false
+        ): Intent {
+            return Intent(context, CreateIdentityService::class.java).apply {
+                action = ACTION_HOLD_FOREGROUND_FOR_SDK_CREATE
+                putExtra(EXTRA_USERNAME, username)
+                usernameSecondary?.let {
+                    putExtra(EXTRA_USERNAME_SECONDARY, it)
+                }
+                putExtra(EXTRA_SHIELDED, shielded)
+            }
+        }
+
         @JvmStatic
         fun createIntentForRetry(context: Context, startForegroundPromised: Boolean = false): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
@@ -150,10 +340,34 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var userAlertDao: UserAlertDao
     @Inject lateinit var blockchainIdentityDataDao: BlockchainIdentityConfig
     @Inject lateinit var securityFunctions: SecurityFunctions
-    @Inject lateinit var coinJoinConfig: CoinJoinConfig
     @Inject lateinit var usernameRequestDao: UsernameRequestDao
-    @Inject lateinit var walletDataProvider: WalletDataProvider
+    @Inject lateinit var walletDataProvider: WalletData
+    @Inject lateinit var identityCreationStatus: IdentityCreationStatusHolder
+    @Inject lateinit var sdkShieldedUsernameCreation: SdkShieldedUsernameCreation
+    @Inject lateinit var transparentUsernameCreation: SdkTransparentUsernameCreation
+    @Inject lateinit var sdkL1InviteCreation: SdkL1InviteCreation
+    @Inject lateinit var shieldedInviteOverageTopUp: ShieldedInviteOverageTopUp
+    @Inject lateinit var dashPayConfig: DashPayConfig
     private lateinit var securityGuard: SecurityGuard
+
+    /**
+     * The on-chain identity id from an SDK-routed invite claim — SHIELDED
+     * ([claimShieldedInvitation]) or L1 DIP-13 ([claimL1Invitation]). Used by
+     * [registerUsername] to register the DPNS name through the SDK: an
+     * SDK-created identity's keys live in the SDK keystore, not the dashj
+     * identity keychain, so the legacy dashj signer returns 0. Null for the
+     * legacy dashj invite claim (pre-cutover), where the dashj signer is correct.
+     */
+    private var sdkClaimedInviteIdentityId: String? = null
+
+    /**
+     * True once this service instance is running purely as an SDK-creation
+     * foreground hold ([ACTION_HOLD_FOREGROUND_FOR_SDK_CREATE]). Gates the
+     * [onStartCommand] restart contract to START_NOT_STICKY so a killed
+     * process is never redelivered a null intent into the dashj
+     * [handleCreateIdentityAction] state machine (which fails post-cutover).
+     */
+    private var sdkHoldMode = false
     
     private val walletWipeListener: suspend () -> Unit = {
         log.info("Wallet wipe detected, stopping CreateIdentityService")
@@ -185,6 +399,11 @@ class CreateIdentityService : LifecycleService() {
         log.error(exception.message, exception)
         analytics.logError(exception, "Failed to create Identity")
         analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_ERROR, mapOf())
+        // Terminal failure: keep the hint only when the error is one of
+        // the KNOWN transient network shapes (its copy still explains
+        // what the retry will wait on); anything unknown clears it —
+        // the tile's error state covers the rest.
+        identityCreationStatus.setHint(identityRetryStatusHint(exception))
 
         GlobalScope.launch {
             var isInvite = false
@@ -262,16 +481,29 @@ class CreateIdentityService : LifecycleService() {
                     }
                     handleCreateIdentityFromInvitationAction(null, null, null)
                 }
+                ACTION_HOLD_FOREGROUND_FOR_SDK_CREATE -> {
+                    val username = intent.getStringExtra(EXTRA_USERNAME)
+                    val usernameSecondary = intent.getStringExtra(EXTRA_USERNAME_SECONDARY)
+                    val shielded = intent.getBooleanExtra(EXTRA_SHIELDED, false)
+                    handleSdkForegroundHold(username, usernameSecondary, shielded)
+                }
             }
         } else {
             log.info("work in progress, ignoring ${intent.action}")
         }
 
-        return Service.START_STICKY
+        // The SDK-creation hold must NOT be sticky: the funding runs on the
+        // app-scoped executor, so a null-intent restart would only re-enter the
+        // dashj handleCreateIdentityAction(null, null) state machine (line
+        // above) — which fails on a committed cutover (dashj engine held).
+        // START_NOT_STICKY guarantees no such redelivery for this action; the
+        // executor's own resume gate handles re-entry after a process restart.
+        return if (sdkHoldMode) Service.START_NOT_STICKY else Service.START_STICKY
     }
 
     private fun handleCreateIdentityAction(username: String?, usernameSecondary: String?, retryWithNewUserName: Boolean = false) {
         workInProgress = true
+        identityCreationStatus.clear() // fresh run — drop any stale hint
         serviceScope.launch(createIdentityExceptionHandler) {
             createIdentity(username, usernameSecondary, retryWithNewUserName)
             workInProgress = false
@@ -406,14 +638,12 @@ class CreateIdentityService : LifecycleService() {
             // Step 2: Create and send the credit funding transaction
             //
             // check to see if the funding transaction exists
-            val useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE
             if (blockchainIdentity.assetLockTransaction == null) {
                 if (blockchainIdentity.identity == null) {
                     topUpRepository.createAssetLockTransaction(
                         blockchainIdentity,
                         blockchainIdentityData.username!!,
-                        encryptionKey,
-                        useCoinJoin
+                        encryptionKey
                     )
                     assetLockTransaction = blockchainIdentity.assetLockTransaction
                     walletApplication.broadcastTransaction(assetLockTransaction)
@@ -436,8 +666,7 @@ class CreateIdentityService : LifecycleService() {
                     assetLockTransaction = topUpRepository.createTopupTransaction(
                         blockchainIdentity,
                         topupValue,
-                        encryptionKey,
-                        useCoinJoin
+                        encryptionKey
                     )
                 }
             }
@@ -510,10 +739,272 @@ class CreateIdentityService : LifecycleService() {
 
     private fun handleCreateIdentityFromInvitationAction(username: String?, usernameSecondary: String?, invite: InvitationLinkData?) {
         workInProgress = true
+        identityCreationStatus.clear() // fresh run — drop any stale hint
         serviceScope.launch(createIdentityExceptionHandler) {
             createIdentityFromInvitation(username, usernameSecondary, invite)
             workInProgress = false
             stopSelf()
+        }
+    }
+
+    /**
+     * Foreground hold for an app-scoped SDK (transparent) username creation.
+     * This does NO funding — the single-flight spend lives on
+     * [SdkTransparentUsernameCreation], the single source of truth. Here we
+     * only:
+     *  1. keep the process foreground (the notification + wakelock acquired in
+     *     [onCreate]) so a screen lock cannot get the app reaped mid-proof, and
+     *  2. project the executor's [ShieldedUsernameSubmitState] onto the
+     *     home-screen identity tile through the same `creationState` seam the
+     *     dashj path uses ([IdentityRepository.updateIdentityCreationState]).
+     *
+     * Self-stops on EVERY terminal executor outcome (success, not-sent,
+     * unconfirmed, or an observer failure via the finally). Combined with
+     * START_NOT_STICKY (see [onStartCommand]) the hold never leaks a service or
+     * wakelock and never re-enters the dashj state machine.
+     */
+    private fun handleSdkForegroundHold(username: String?, usernameSecondary: String?, shielded: Boolean = false) {
+        sdkHoldMode = true
+        serviceScope.launch {
+            try {
+                seedSdkCreationInProgress(username, usernameSecondary)
+                // The executor flipped submitState to Proving synchronously in
+                // submit() before this service was started, so the first
+                // observed value is Proving. Wait for the terminal outcome. The
+                // (seenProving && Idle) arm is a defensive catch for the case
+                // where a screen-scoped ViewModel already acknowledged the
+                // terminal (resetting to Idle) before we observed it. The
+                // [shielded] flag selects which executor's state we project —
+                // the shielded-pool creation vs the transparent-UTXO one — so
+                // the shielded path drives the same home tile the transparent
+                // path does.
+                var seenProving = false
+                val submitStateFlow = if (shielded) {
+                    sdkShieldedUsernameCreation.submitState
+                } else {
+                    transparentUsernameCreation.submitState
+                }
+                val terminal = submitStateFlow
+                    .onEach { if (it == ShieldedUsernameSubmitState.Proving) seenProving = true }
+                    .first { state ->
+                        state is ShieldedUsernameSubmitState.Created ||
+                            state is ShieldedUsernameSubmitState.NotSent ||
+                            state == ShieldedUsernameSubmitState.MayHaveGoneThrough ||
+                            (seenProving && state == ShieldedUsernameSubmitState.Idle)
+                    }
+                when (terminal) {
+                    is ShieldedUsernameSubmitState.Created ->
+                        // Identity is on chain; the executor already enqueued
+                        // the RestoreIdentityOperation, whose worker advances
+                        // the tile through its states to DONE. Leave the seed.
+                        log.info("SDK username creation broadcast — restore worker will advance the identity tile")
+                    is ShieldedUsernameSubmitState.NotSent -> {
+                        // Provably nothing spent (retry-safe): retract the
+                        // progress tile so the user can re-request. The
+                        // ViewModel's own dialog surfaced the error when the
+                        // request screen was open.
+                        log.info("SDK username creation not sent ({}) — retracting the progress tile", terminal.reason)
+                        clearSdkCreationIfUntouched()
+                    }
+                    ShieldedUsernameSubmitState.MayHaveGoneThrough -> {
+                        // Unconfirmed outcome (sticky in the executor; never
+                        // auto-retried). Retract the stuck progress card;
+                        // platform-sync recovery repopulates the tile if the
+                        // identity actually landed on chain.
+                        log.warn("SDK username creation outcome unconfirmed — retracting the progress tile; sync recovery reconciles")
+                        clearSdkCreationIfUntouched()
+                    }
+                    else -> {
+                        // Idle after Proving — the terminal was surfaced and
+                        // acknowledged elsewhere; retract only our own untouched
+                        // seed (never stomp a racing advance).
+                        clearSdkCreationIfUntouched()
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.error("SDK foreground-hold observer failed", e)
+            } finally {
+                stopSdkHold()
+            }
+        }
+    }
+
+    /**
+     * Seed the home identity tile with an in-progress card for the requested
+     * name while the app-scoped SDK proof + funding runs. Mirrors the dashj
+     * fresh-create seed (BlockchainIdentityData with the username +
+     * CREDIT_FUNDING_TX_CREATING) so [HistoryHeaderAdapter] renders it
+     * identically. No funds logic — the executor owns the spend.
+     */
+    private suspend fun seedSdkCreationInProgress(username: String?, usernameSecondary: String?) {
+        val name = username?.trim()
+        if (name.isNullOrEmpty()) {
+            log.warn("SDK foreground-hold started without a username; not seeding the identity tile")
+            return
+        }
+        val base = identityRepository.loadBlockchainIdentityBaseData()
+        blockchainIdentityData = BlockchainIdentityData(
+            IdentityCreationState.NONE,
+            null,
+            name,
+            usernameSecondary?.trim()?.takeIf { it.isNotEmpty() },
+            null,
+            false,
+            verificationLink = base.verificationLink
+        )
+        identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+        identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
+    }
+
+    /**
+     * Retract the in-progress seed [seedSdkCreationInProgress] wrote — but only
+     * if nothing has advanced it. If the restore worker (on a Broadcast) has
+     * already moved the state, an identity id was recorded, or an error was
+     * stamped, leave it. Setting the state back to NONE hides the tile
+     * ([helloCardEligible]) without wiping the requested-username pref.
+     */
+    private suspend fun clearSdkCreationIfUntouched() {
+        val data = identityRepository.loadBlockchainIdentityData() ?: return
+        if (data.creationState == IdentityCreationState.CREDIT_FUNDING_TX_CREATING &&
+            data.userId == null &&
+            data.creationStateErrorMessage == null
+        ) {
+            identityRepository.updateIdentityCreationState(data, IdentityCreationState.NONE)
+        }
+    }
+
+    /** Release the foreground hold. onDestroy releases the wakelock + job. */
+    private fun stopSdkHold() {
+        stopForeground(true)
+        stopSelf()
+    }
+
+    private suspend fun isShieldedEnabled(): Boolean = try {
+        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+    } catch (e: Exception) {
+        log.warn("failed to read USE_KOTLIN_SDK_SHIELDED; treating as off", e)
+        false
+    }
+
+    /**
+     * Claim a SHIELDED (L2) invitation: create the identity directly from the
+     * invite's one-time Orchard key (Type-20). The new identity is funded
+     * with as much of the invite's note value as the allowed
+     * exit-denomination set permits, regardless of which username tier the
+     * claimer picked (`inviteClaimDenominationLadder`): the claim starts at
+     * the largest allowed denomination the link's `amt`
+     * ([InvitationLinkData.shieldedFundingCredits]) covers — for a legacy
+     * 0.3 contested note that is 0.25, since 0.3 is retired from the v13 set
+     * — and steps DOWN the ladder (0.25 → 0.1 → 0.03, never below the
+     * username-derived floor) only on the fail-closed "no covering note"
+     * refusal, so a claim never spends more than the note actually holds.
+     * Links without a believable `amt` start from the largest denomination
+     * any invite note could cover (0.25). Any PROVABLE remainder the exit
+     * clamp left in the claimer's own pool (`inviteClaimOverageCredits` —
+     * e.g. a legacy 0.3 note exits 0.25, leaving 0.05) is then moved onto
+     * the new identity by [ShieldedInviteOverageTopUp] below (see
+     * [SdkShieldedUsernameCreation.createIdentityFromInvitation]).
+     *
+     * On success the identity is on chain and the caller's existing recovery +
+     * DPNS + contact-request tail runs. A double-claim (the note's nullifier
+     * is already spent) maps to the same "Invite has already been used" state
+     * the L1 outpoint-collision path throws; any other failure is surfaced as
+     * a claim error.
+     */
+    private suspend fun claimShieldedInvitation(invite: InvitationLinkData, username: String) {
+        when (val result = sdkShieldedUsernameCreation.createIdentityFromInvitation(
+            oneTimeSkHex = invite.oneTimeKey,
+            fundingHeight = invite.fundingHeight,
+            label = username,
+            fundingCredits = invite.shieldedFundingCredits
+        )) {
+            is SdkWriteResult.Broadcast -> {
+                // Remember the on-chain identity id so registerUsername can
+                // register the DPNS name through the SDK (its keys are in the
+                // SDK keystore, not the dashj identity keychain).
+                sdkClaimedInviteIdentityId = result.value
+                log.info("shielded invite claimed — identity {} is on chain", result.value)
+                // OVERAGE → identity: when the claim recorded a pending
+                // overage (a legacy 0.3 note exited at 0.25; the 0.05 change
+                // landed in the claimer's own pool), start the background
+                // completion now. Non-blocking: the username registration
+                // proceeds regardless, and the worker retries on its own
+                // (MainActivity re-enqueues at launch while a record exists).
+                try {
+                    if (shieldedInviteOverageTopUp.hasPending()) {
+                        ShieldedInviteOverageWorker.enqueue(walletApplication)
+                    }
+                } catch (e: Exception) {
+                    log.warn("failed to enqueue the invite overage top-up; the launch re-enqueue will catch it", e)
+                }
+            }
+            // The terminal already-claimed outcome is recognised from the TYPED
+            // SDK error (ShieldedInviteAlreadyClaimed, native code 37) as well
+            // as the app-owned reason, so every one of rs-platform-wallet's
+            // already-claimed raise sites lands on the "Invite has already been
+            // used" surface — including the ones whose reason text carries a
+            // plain result-wait error rather than a nullifier quote, which the
+            // old reason-only match let through as a generic claim failure.
+            is SdkWriteResult.NotBroadcast ->
+                if (SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(result)) {
+                    log.warn("shielded invite has already been used")
+                    throw IllegalStateException("Invite has already been used")
+                } else {
+                    throw IllegalStateException("shielded invite claim failed: ${result.reason}", result.cause)
+                }
+            is SdkWriteResult.Ambiguous ->
+                if (SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(result)) {
+                    log.warn("shielded invite has already been used")
+                    throw IllegalStateException("Invite has already been used")
+                } else {
+                    throw IllegalStateException("shielded invite claim outcome unconfirmed", result.cause)
+                }
+        }
+    }
+
+    /**
+     * Whether a STANDARD (L1) invitation claim should be routed through the
+     * Kotlin SDK DIP-13 [SdkL1InviteCreation.claimL1Invite] path instead of the
+     * dashj asset-lock claim ([TopUpRepository.obtainAssetLockTransaction] +
+     * [PlatformRepo.registerIdentity]) — the L1-invite flag is on AND the
+     * cutover is committed. A false result keeps the dashj claim, byte-identical
+     * to before. Mirrors [isShieldedEnabled] for the shielded claim branch.
+     */
+    private suspend fun isL1InviteSdkRoutable(): Boolean = try {
+        sdkL1InviteCreation.isEnabledAndCommitted()
+    } catch (e: Exception) {
+        log.warn("failed to read the L1-invite SDK routing state; treating as off", e)
+        false
+    }
+
+    /**
+     * Claim a STANDARD (L1) invitation through the Kotlin SDK DIP-13 path:
+     * register the invitee's new identity funded by the invite's imported
+     * asset-lock voucher (the bearer `dashpay://invite?…` link), replacing the
+     * dashj asset-lock funding + legacy registerIdentity. On success the
+     * identity is on chain and the caller's existing recovery + DPNS + contact
+     * tail runs. A double-claim (the voucher is already spent) surfaces the same
+     * "Invite has already been used" state the L1 outpoint-collision path
+     * throws; any other failure is surfaced as a claim error. Mirrors
+     * [claimShieldedInvitation].
+     */
+    private suspend fun claimL1Invitation(invite: InvitationLinkData, username: String) {
+        when (val result = sdkL1InviteCreation.claimL1Invite(
+            uri = invite.link.toString(),
+            label = username
+        )) {
+            is SdkWriteResult.Broadcast -> {
+                // Same as the shielded claim: the L1 DIP-13 identity's keys are
+                // in the SDK keystore, so registerUsername must route DPNS to the SDK.
+                sdkClaimedInviteIdentityId = result.value
+                log.info("L1 invite claimed — identity {} is on chain", result.value)
+            }
+            is SdkWriteResult.NotBroadcast ->
+                throw IllegalStateException("L1 invite claim failed: ${result.reason}", result.cause)
+            is SdkWriteResult.Ambiguous ->
+                throw IllegalStateException("L1 invite claim outcome unconfirmed", result.cause)
         }
     }
 
@@ -529,6 +1020,27 @@ class CreateIdentityService : LifecycleService() {
                 if (username != null && blockchainIdentityData.username != username && !retryWithNewUserName) {
                     throw IllegalStateException()
                 }
+            }
+            // Retry-with-new-username on a CLAIMED invite (identity already on
+            // chain): NEVER reset the record — the old reset path rebuilt a
+            // NONE record without the invite link and would try to re-claim a
+            // consumed invitation (and re-derive keys at the wrong identity
+            // index). Keep the claimed record and repair only the requested
+            // names: the primary is the user's re-entry (this is also the
+            // recovery path for a record whose primary was clobbered by the
+            // pre-11.10.52 wrapper-adoption bug); the secondary is only ever
+            // FILLED, never overwritten — its registration is already behind
+            // the per-type completion guard when it landed on chain.
+            (blockchainIdentityDataTmp != null && retryWithNewUserName && blockchainIdentityDataTmp.userId != null) -> {
+                blockchainIdentityData = blockchainIdentityDataTmp
+                if (username != null && username != blockchainIdentityData.username) {
+                    log.info(
+                        "claimed-invite retry: repairing requested primary '{}' -> '{}'",
+                        blockchainIdentityData.username,
+                        username
+                    )
+                }
+                repairClaimedInviteRecordNames(blockchainIdentityData, username, usernameSecondary)
             }
             (username != null) -> {
                 blockchainIdentityData = BlockchainIdentityData(IdentityCreationState.NONE,
@@ -621,15 +1133,40 @@ class CreateIdentityService : LifecycleService() {
 
         val blockchainIdentity = identityRepository.initBlockchainIdentity(blockchainIdentityData, wallet)
 
+        // SHIELDED (L2) invitation claim: when the link carries a one-time
+        // Orchard key (and the flag is on) the identity is funded DIRECTLY
+        // from that key's note (Type-20 create-from-one-time-key), not an L1
+        // asset lock. The whole asset-lock funding + legacy registerIdentity
+        // is replaced by the SDK create below; the unchanged L1 claim runs
+        // untouched when this is null.
+        val shieldedInvite = blockchainIdentityData.invite
+            ?.takeIf { it.isShielded && isShieldedEnabled() }
+
+        // STANDARD (L1) invitation claim through the SDK DIP-13 path: when the
+        // link is an L1 invite (NOT shielded) and the flag+cutover route, the
+        // invitee's identity is registered directly from the invite's imported
+        // asset-lock voucher (claimInvitation), replacing the dashj asset-lock
+        // funding + legacy registerIdentity. Null (flag off / pre-cutover /
+        // shielded) leaves the unchanged dashj L1 claim untouched.
+        val l1SdkInvite = blockchainIdentityData.invite
+            ?.takeIf { !it.isShielded && isL1InviteSdkRoutable() }
 
         if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CREATING) {
             identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
             //
             // Step 2: Create and send the credit funding transaction
             //
-            topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
-        } else {
+            if (shieldedInvite != null) {
+                claimShieldedInvitation(shieldedInvite, blockchainIdentityData.username!!)
+            } else if (l1SdkInvite != null) {
+                claimL1Invitation(l1SdkInvite, blockchainIdentityData.username!!)
+            } else {
+                topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
+            }
+        } else if (shieldedInvite == null && l1SdkInvite == null) {
             // if we are retrying, then we need to initialize the credit funding tx
+            // (an SDK claim — shielded or L1 — has no L1 asset lock to re-obtain;
+            // the voucher was already spent creating the identity on chain).
             topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
         }
 
@@ -654,6 +1191,14 @@ class CreateIdentityService : LifecycleService() {
                 val existingIdentity = identityRepository.getIdentityFromPublicKeyId()
                 if (existingIdentity != null) {
                     val encryptionKey = platformRepo.getWalletEncryptionKey()
+                    val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
+                    platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
+                } else if (shieldedInvite != null || l1SdkInvite != null) {
+                    // The SDK claim (shielded Type-20 note OR L1 DIP-13 voucher)
+                    // already put the identity on chain — there is no asset lock
+                    // to registerIdentity with. Recover it by its slot-0 public
+                    // key (SDK/dashj DIP-9 index-0 key parity), exactly as the
+                    // existing-identity branch does.
                     val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
                     platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
                 } else {
@@ -682,6 +1227,17 @@ class CreateIdentityService : LifecycleService() {
             identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
+        // ORDERING DEPENDENCY — invite link cleared AFTER the overage record:
+        // this is the FIRST point on any entry point (fresh, resumed,
+        // recovered) where an invite-link copy is cleared, and it must stay
+        // strictly after claimShieldedInvitation returned: the overage record
+        // is persisted (awaited) INSIDE the claim call's success tail, and
+        // the caller is suspended on that call, so the record provably lands
+        // before this line can run. The record's own link copy
+        // (BlockchainIdentityConfig.INVITE_LINK) is never cleared on
+        // completion — it is the completed-claim reconcile's amt source.
+        // Guarded by SdkShieldedUsernameCreationTest
+        // .claim_overageRecordPersists_beforeAnyCallerSideLinkClear.
         topUpRepository.clearInvitation()
 
         finishRegistration(blockchainIdentity, encryptionKey, usernameSecondary)
@@ -714,12 +1270,27 @@ class CreateIdentityService : LifecycleService() {
         }
         val timerStep3 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_3)
 
-        if (usernameSecondary != null || blockchainIdentityData.usernameSecondary != null) {
-            blockchainIdentity.primaryUsername = blockchainIdentityData.username
-            blockchainIdentity.secondaryUsername = blockchainIdentityData.usernameSecondary
-            registerUsername(blockchainIdentity, encryptionKey, UsernameType.Secondary)
+        // Capture BOTH requested names ONCE, before any registration pass:
+        // registerUsername now receives its name EXPLICITLY per type instead
+        // of re-reading the mutable record mid-flow. On the S22 (11.10.51)
+        // the secondary pass's wrapper-adoption persist overwrote the
+        // record's primary with the just-registered instant name, and the
+        // primary stage then re-registered the secondary. The adoption is
+        // also fixed at its source (see the routed branch), but the explicit
+        // hand-off makes the name immune to any future record mutation.
+        val requestedPrimary = blockchainIdentityData.username
+        val requestedSecondary = usernameSecondary ?: blockchainIdentityData.usernameSecondary
+        if (requestedSecondary != null) {
+            blockchainIdentity.primaryUsername = requestedPrimary
+            blockchainIdentity.secondaryUsername = requestedSecondary
+            registerUsername(blockchainIdentity, encryptionKey, UsernameType.Secondary, requestedSecondary)
         }
-        registerUsername(blockchainIdentity, encryptionKey, UsernameType.Primary)
+        registerUsername(
+            blockchainIdentity,
+            encryptionKey,
+            UsernameType.Primary,
+            requestedPrimary ?: error("no primary username on the identity record")
+        )
 
         addInviteUserAlert()
 
@@ -835,6 +1406,7 @@ class CreateIdentityService : LifecycleService() {
         platformSyncService.initSync()
 
         timerStep3.logTiming()
+        identityCreationStatus.clear() // registration finished — no transient status left to explain
         // aaaand we're done :)
         log.info("username registration complete")
     }
@@ -842,33 +1414,21 @@ class CreateIdentityService : LifecycleService() {
     private suspend fun registerUsername(
         blockchainIdentity: BlockchainIdentity,
         encryptionKey: KeyParameter,
-        usernameType: UsernameType
+        usernameType: UsernameType,
+        /**
+         * The name to register, captured by [finishRegistration] BEFORE any
+         * registration pass runs — never re-read from the mutable record
+         * mid-flow. On the S22 (11.10.51) the record's primary was
+         * overwritten during the secondary pass, and the primary stage then
+         * re-registered the secondary name.
+         */
+        username: String
     ) {
-        val preorderRegistering: IdentityCreationState
-        val preorderRegistered: IdentityCreationState
-        val domainRegistering: IdentityCreationState
-        val domainRegistered: IdentityCreationState
-
-        when (usernameType) {
-            UsernameType.Primary -> {
-                preorderRegistering = IdentityCreationState.PREORDER_REGISTERING
-                preorderRegistered = IdentityCreationState.PREORDER_REGISTERED
-                domainRegistering = IdentityCreationState.USERNAME_REGISTERING
-                domainRegistered = IdentityCreationState.USERNAME_REGISTERED
-            }
-            UsernameType.Secondary -> {
-                preorderRegistering = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
-                preorderRegistered = IdentityCreationState.PREORDER_SECONDARY_REGISTERED
-                domainRegistering = IdentityCreationState.USERNAME_SECONDARY_REGISTERING
-                domainRegistered = IdentityCreationState.USERNAME_SECONDARY_REGISTERED
-            }
-        }
-
-
-        val username = when (usernameType) {
-            UsernameType.Primary -> blockchainIdentityData.username
-            UsernameType.Secondary -> blockchainIdentityData.usernameSecondary
-        }!!
+        val states = usernameRegistrationStates(usernameType)
+        val preorderRegistering = states.preorderRegistering
+        val preorderRegistered = states.preorderRegistered
+        val domainRegistering = states.domainRegistering
+        val domainRegistered = states.domainRegistered
 
         if (!blockchainIdentity.getUsernames().contains(username)) {
             blockchainIdentity.addUsername(username)
@@ -880,6 +1440,110 @@ class CreateIdentityService : LifecycleService() {
                 blockchainIdentity.currentUsername = username
             }
             UsernameType.Secondary-> blockchainIdentity.secondaryUsername = username
+        }
+
+        // SDK-claimed invite (shielded L2 or L1 DIP-13): the identity was created
+        // by the SDK, so its keys live in the SDK keystore — the legacy dashj
+        // preorderName/registerName below cannot sign it ("signer callback
+        // returned 0"). Register the DPNS name through the SDK instead
+        // (registerDpnsNameForExistingIdentity — no funding, no re-fund, and no
+        // shielded-flag coupling), mirroring RestoreIdentityWorker's completion
+        // step; then let the normal finishRegistration tail (contested check /
+        // DONE / profile) run. EVERY username type routes here: the dual-name
+        // invite flow registers the instant SECONDARY first, and the original
+        // "invites are single-username, route only the primary" scoping sent
+        // that branch into the legacy dashj signer, which died with "signer
+        // callback returned 0" (observed live on the S22, 11.10.50, state
+        // PREORDER_SECONDARY_REGISTERING). A NotBroadcast/Ambiguous leaves the
+        // state at the type's registering state for a retryable tile /
+        // RestoreIdentityWorker reconcile (never a re-fund).
+        val sdkClaimedInvite = blockchainIdentityData.invite?.let {
+            (it.isShielded && isShieldedEnabled()) || (!it.isShielded && isL1InviteSdkRoutable())
+        } == true
+        if (sdkClaimedInvite) {
+            // Per-type completion guard, mirroring the legacy tail's `<=` gates:
+            // finishRegistration calls this for BOTH names on every resume, and
+            // the SDK primitive has no internal name pre-check — without this a
+            // record resumed past this name's registration would re-register it
+            // and transiently REGRESS the persisted state.
+            if (!sdkInviteDpnsShouldRegister(blockchainIdentityData.creationState, usernameType)) {
+                log.info(
+                    "skipping SDK DPNS registration of '{}' — already registered (state {})",
+                    username,
+                    blockchainIdentityData.creationState
+                )
+                return
+            }
+            // Corrupted-dual repair gate: a record whose primary EQUALS its
+            // instant secondary lost the real primary (the pre-11.10.52
+            // wrapper-adoption clobber, observed live on the S22 — the record
+            // held fhjf-2/fhjf-2 after the secondary pass). Registering it
+            // would re-submit the already-owned instant name. Fail with the
+            // distinctive retryable message the home/More retry surfaces match
+            // (needsNewUsername), which routes the user to re-enter the
+            // primary; the resume then repairs the record (see
+            // createIdentityFromInvitation's claimed-record retry arm) and
+            // completes without a reset.
+            if (usernameType == UsernameType.Primary &&
+                isDualPrimaryClobbered(username, blockchainIdentityData.usernameSecondary)
+            ) {
+                error(
+                    "invite primary username was lost — an earlier build overwrote it with the " +
+                        "instant username '$username'; request the primary username again"
+                )
+            }
+            if (blockchainIdentityData.creationState <= preorderRegistering) {
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, preorderRegistering)
+            }
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, domainRegistering)
+            // The id must resolve from PERSISTED state on a resume:
+            // sdkClaimedInviteIdentityId is an in-memory var set only when the
+            // claim ran in THIS process — after an interruption it is null and
+            // the record's persisted identityId (userId) is authoritative. The
+            // wrapper's uniqueId is the last resort, read SAFELY: it is a
+            // lateinit that rehydration can leave unset (observed live as
+            // UninitializedPropertyAccessException on the S22 resume).
+            val identityId = resolveSdkInviteIdentityId(
+                inFlightClaimId = sdkClaimedInviteIdentityId,
+                persistedIdentityId = blockchainIdentityData.userId,
+                wrapperUniqueId = blockchainIdentity.uniqueIdStringOrNull()
+            ) ?: error("invite username registration cannot resolve the claimed identity id (retryable)")
+            log.info("registering DPNS name '{}' for SDK-claimed invite identity {} via the SDK", username, identityId)
+            when (val result = transparentUsernameCreation.registerDpnsNameForExistingIdentity(identityId, username)) {
+                is SdkWriteResult.Broadcast -> {
+                    log.info("SDK DPNS registration of '{}' confirmed: {}", username, result.value)
+                    // NO recoverUsernames + NO wrapper-adoption persist here.
+                    // Mid-creation, recoverUsernames ADOPTS whatever is already
+                    // on chain as primaryUsername/currentUsername (after the
+                    // instant name lands that is the instant name; a contested
+                    // primary in voting has nothing to recover at all), and the
+                    // two-arg updateBlockchainIdentityData then copied that
+                    // adopted value into the record — overwriting the requested
+                    // primary and making the primary stage re-register the
+                    // secondary (S22, 11.10.51). The record's username fields
+                    // ARE the requested names; only the per-type STATUS
+                    // advances here, on the record and the wrapper's own
+                    // UsernameInfo (a contested primary's status is owned by
+                    // the voting tail, not stamped CONFIRMED).
+                    advanceRecordForSdkDpnsBroadcast(
+                        blockchainIdentityData,
+                        usernameType,
+                        contestable = Names.isUsernameContestable(username)
+                    )
+                    blockchainIdentity.usernameStatuses[username]?.let { info ->
+                        if (!Names.isUsernameContestable(username)) {
+                            info.usernameStatus = UsernameStatus.CONFIRMED
+                        }
+                    }
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+                    identityRepository.updateIdentityCreationState(blockchainIdentityData, domainRegistered)
+                }
+                is SdkWriteResult.NotBroadcast ->
+                    error("invite username registration did not complete (retryable): ${result.reason}")
+                is SdkWriteResult.Ambiguous ->
+                    error("invite username registration outcome unconfirmed (retryable): ${result.cause?.message}")
+            }
+            return
         }
 
         if (blockchainIdentityData.creationState <= preorderRegistering) {
@@ -1020,10 +1684,88 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentity.currentUsername == null) {
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
 
-                // check if the network has this name in the queue for voting
-                val contestedNames = platformRepo.platform.names.getAllContestedNames()
+                // This walk exists to answer ONE question: is THIS identity a
+                // contender for a contested name, and with what status? The
+                // inner body is gated on `blockchainIdentity.uniqueIdentifier
+                // == identifier`, so a name this identity never requested
+                // cannot produce any effect — its per-name `getVoteContenders`
+                // network round trip is pure cost.
+                //
+                // Unnarrowed, that cost is unbounded: mainnet DAPI nodes serving
+                // EXPIRED TLS CERTS make the Kotlin-SDK vote-state query burn
+                // ~1.8 min before the ~0.5 s legacy-Platform fallback answers,
+                // and there are ~728 contested names — the same multi-hour stall
+                // that stranded the 11.10.84 mainnet restore (fixed in
+                // RestoreIdentityWorker by f97baaa99). Apply the identical
+                // narrowing here.
+                //
+                // SOURCE OF THE CANDIDATE NAME DIFFERS FROM THE RESTORE PATH:
+                // this block is gated on `currentUsername == null`, so nothing
+                // was recovered on chain and the recovered-name fields are all
+                // empty. The name this identity could be a contender for is the
+                // one it REQUESTED — the persisted creation record
+                // (BlockchainIdentityConfig.USERNAME / USERNAME_SECONDARY, and
+                // the same fields on the restoring row already loaded above).
+                val ownCandidateNames = ownRequestedContestedCandidates(
+                    blockchainIdentity,
+                    existingBlockchainIdentityData
+                )
+                val targetedScan = ownCandidateNames.isNotEmpty()
+                val scanWatch = Stopwatch.createStarted()
 
-                contestedNames.forEach { name ->
+                // Same arithmetic as the restore path: the contested index
+                // holds only CONTESTABLE names, so a targeted scan whose own
+                // candidate names are all non-contestable cannot match
+                // anything the fetch could return. See
+                // [RestoreIdentityWorker]'s contestedNameListsCanMatch.
+                val listsCanMatch = contestedNameListsCanMatch(targetedScan, ownCandidateNames)
+
+                // check if the network has this name in the queue for voting
+                val contestedNames = if (listsCanMatch) {
+                    platformRepo.platform.names.getAllContestedNames()
+                } else {
+                    emptyList()
+                }
+
+                val contestedNamesToCheck = if (targetedScan) {
+                    // `maybeDualUsernames`/`instantUsername` are the restore
+                    // path's historic substring heuristic, which requires a
+                    // RECOVERED non-contestable name. Under this `currentUsername
+                    // == null` gate there is none, so the term is inert and is
+                    // passed as its identity value rather than faked.
+                    contestedNames.filter {
+                        isOwnContestedCandidate(
+                            name = it,
+                            candidates = ownCandidateNames,
+                            maybeDualUsernames = false,
+                            instantUsername = null
+                        )
+                    }
+                } else {
+                    contestedNames
+                }
+                log.info(
+                    "contested-name check (creation): {} scan — own candidate name(s)={}, " +
+                        "listFetch={}; querying contenders for {} of {} contested name(s): {}",
+                    if (targetedScan) "TARGETED" else "BROAD (no requested name known)",
+                    ownCandidateNames,
+                    if (listsCanMatch) "needed" else "SKIPPED (no candidate name is contestable)",
+                    contestedNamesToCheck.size,
+                    contestedNames.size,
+                    if (targetedScan) contestedNamesToCheck.toString() else "(broad scan)"
+                )
+
+                for (name in contestedNamesToCheck) {
+                    if (!targetedScan &&
+                        scanWatch.elapsed(TimeUnit.MILLISECONDS) > RestoreIdentityWorker.BROAD_SCAN_BUDGET_MS
+                    ) {
+                        log.warn(
+                            "contested-name check (creation): BROAD scan exceeded its {} ms budget after {} — " +
+                                "stopping at '{}'; treating as no contested name so creation can finish",
+                            RestoreIdentityWorker.BROAD_SCAN_BUDGET_MS, scanWatch, name
+                        )
+                        break
+                    }
                     val voteContenders = platformRepo.getVoteContenders(name)
                     val winner = voteContenders.winner
                     voteContenders.map.forEach { (identifier, documentWithVotes) ->
@@ -1115,7 +1857,23 @@ class CreateIdentityService : LifecycleService() {
                                 .enqueue()
                         }
                     }
+                    // The match body is the ONLY writer of currentUsername in
+                    // this loop, so a non-null value here means "this identity
+                    // is a contender for `name`" — the answer the walk exists
+                    // to find. Bound the otherwise-unbounded BROAD scan with it.
+                    // The TARGETED scan is deliberately NOT short-circuited: it
+                    // enumerates every candidate exactly as before, so a
+                    // multi-candidate identity resolves the same way it does
+                    // today (last match wins).
+                    if (!targetedScan && blockchainIdentity.currentUsername != null) {
+                        log.info("contested-name check (creation): BROAD scan matched '{}' after {}", name, scanWatch)
+                        break
+                    }
                 }
+                log.info(
+                    "contested-name check (creation) complete in {} (found={})",
+                    scanWatch, blockchainIdentity.currentUsername != null
+                )
 
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKED)
                 identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
@@ -1136,7 +1894,7 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
                 blockchainIdentityData.creationState = IdentityCreationState.USERNAME_REGISTERING
                 blockchainIdentityData.restoring = false
-                error("missing domain document for ${blockchainIdentity.uniqueId}")
+                error("missing domain document for ${blockchainIdentity.uniqueIdStringOrNull()}")
             }
 
             //
@@ -1167,11 +1925,57 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
+    /**
+     * Every contested name this identity could be a CONTENDER for on the
+     * CREATION path — the narrowing input for the `getAllContestedNames()`
+     * walk, mirroring
+     * [de.schildbach.wallet.service.platform.work.RestoreIdentityWorker]'s
+     * `ownContestedCandidates` but reading the creation path's own sources.
+     *
+     * A contender document is created by the identity that REQUESTED the name,
+     * and this walk runs under `currentUsername == null` — nothing was
+     * recovered on chain — so the requested name is the whole answer. It is
+     * read from the persisted creation record: the restoring row already
+     * loaded in this flow, falling back to the
+     * [BlockchainIdentityConfig.USERNAME] / [BlockchainIdentityConfig.USERNAME_SECONDARY]
+     * prefs (same store, read directly in case the row failed to load). The
+     * recovered fields are folded in anyway so the set stays correct if this
+     * walk is ever reached with a partially recovered identity.
+     *
+     * EMPTY means "this wallet knows of no name it ever requested", the only
+     * case where the caller falls back to the broad (time-budgeted) scan.
+     */
+    private suspend fun ownRequestedContestedCandidates(
+        blockchainIdentity: BlockchainIdentity,
+        existingBlockchainIdentityData: BlockchainIdentityData?
+    ): Set<String> {
+        val requestedPrimary = existingBlockchainIdentityData?.username
+            ?: readRequestedLabel(BlockchainIdentityConfig.USERNAME)
+        val requestedSecondary = existingBlockchainIdentityData?.usernameSecondary
+            ?: readRequestedLabel(BlockchainIdentityConfig.USERNAME_SECONDARY)
+        return requestedContestedCandidates(
+            recoveredCurrentUsername = blockchainIdentity.currentUsername,
+            recoveredPrimaryUsername = blockchainIdentity.primaryUsername,
+            recoveredSecondaryUsername = blockchainIdentity.secondaryUsername,
+            recoveredUsernameStatusKeys = blockchainIdentity.usernameStatuses.keys,
+            requestedPrimary = requestedPrimary,
+            requestedSecondary = requestedSecondary
+        )
+    }
+
+    /** Never fatal: an unreadable pref degrades the scan to broad, not to a crash. */
+    private suspend fun readRequestedLabel(key: androidx.datastore.preferences.core.Preferences.Key<String>): String? = try {
+        blockchainIdentityDataDao.get(key)
+    } catch (e: Exception) {
+        log.warn("contested-name check (creation): could not read {}; continuing without it", key.name, e)
+        null
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         log.info(".onDestroy()")
         serviceJob.cancel()
-        
+
         // Detach wallet wipe listener to prevent memory leaks
         walletDataProvider.detachOnWalletWipedListener(walletWipeListener)
 
@@ -1181,3 +1985,35 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 }
+
+/**
+ * Pure half of [CreateIdentityService.ownRequestedContestedCandidates] — see its
+ * KDoc for why the candidate set is exactly this.
+ *
+ * Delegates the normalization/blank-filtering to
+ * [de.schildbach.wallet.service.platform.work.contestedNameCandidates] (the
+ * restore path's helper) so both paths fold names with the same real
+ * `Names.normalizeString`; the second call exists only because the creation
+ * path has TWO requested labels (primary + the dual-username secondary) where
+ * the restore path has one.
+ */
+internal fun requestedContestedCandidates(
+    recoveredCurrentUsername: String?,
+    recoveredPrimaryUsername: String?,
+    recoveredSecondaryUsername: String?,
+    recoveredUsernameStatusKeys: Collection<String>,
+    requestedPrimary: String?,
+    requestedSecondary: String?
+): Set<String> = contestedNameCandidates(
+    currentUsername = recoveredCurrentUsername,
+    primaryUsername = recoveredPrimaryUsername,
+    secondaryUsername = recoveredSecondaryUsername,
+    usernameStatusKeys = recoveredUsernameStatusKeys,
+    requestedLabel = requestedPrimary
+) + contestedNameCandidates(
+    currentUsername = null,
+    primaryUsername = null,
+    secondaryUsername = null,
+    usernameStatusKeys = emptySet(),
+    requestedLabel = requestedSecondary
+)

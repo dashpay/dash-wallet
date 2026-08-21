@@ -87,7 +87,6 @@
     <string name="select_currency">Wybierz Walutę</string>
     <string name="send_coins_error_dusty_send">Kwota jest zbyt mała, aby wysłać</string>
     <string name="send_coins_error_insufficient_money">Niewystarczająca ilość funduszy</string>
-    <string name="send_coins_error_insufficient_mixed_money">Nie posiadasz wystarczająco wymieszanych funduszy. Poczekaj, aż mieszanie Coinjoin zakończy się lub wyłącz tę funkcję w ustawieniach, aby dokonać tej transakcji.</string>
     <string name="syncing">Synchronizowanie</string>
     <string name="no_connection">Brak połączenia z Internetem</string>
     <string name="rate_not_available">Niedostępne</string>

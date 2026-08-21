@@ -20,12 +20,8 @@ import android.os.PowerManager
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.CoinJoinService
-import de.schildbach.wallet.service.MixingStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,38 +32,28 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import org.bitcoinj.core.Coin
+import kotlinx.coroutines.flow.update
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.slf4j.LoggerFactory
-import org.dash.wallet.common.util.toBigDecimal
-import java.text.DecimalFormat
 import javax.inject.Inject
 
 data class SettingsUIState(
-    val hideBalance: Boolean = false,
     val ignoringBatteryOptimizations: Boolean = false,
-    val coinJoinMixingMode: CoinJoinMode = CoinJoinMode.NONE,
-    val mixingProgress: Double = 0.0,
     val localCurrencySymbol: String = Constants.USD_CURRENCY,
-    val coinJoinMixingStatus: MixingStatus = MixingStatus.NOT_STARTED,
-    val totalBalance: Coin = Coin.ZERO,
-    val mixedBalance: Coin = Coin.ZERO,
     val transactionMetadataVisible: Boolean = false,
-    val transactionMetadataSubtitle: String? = null,
+    val transactionMetadataSubtitle: String? = null
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val walletUIConfig: WalletUIConfig,
-    private val coinJoinConfig: CoinJoinConfig,
-    private val coinJoinService: CoinJoinService,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val analytics: AnalyticsService,
     private val configuration: Configuration,
     private val dashPayConfig: DashPayConfig,
@@ -96,56 +82,11 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun observeDataSources() {
-        // Observe hide balance setting
-        walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
-            .filterNotNull()
-            .onEach { hideBalance ->
-                _uiState.value = _uiState.value.copy(hideBalance = hideBalance)
-            }
-            .launchIn(viewModelScope)
-
-        // Observe CoinJoin mixing mode
-        coinJoinConfig.observeMode()
-            .onEach { mode ->
-                _uiState.value = _uiState.value.copy(coinJoinMixingMode = mode)
-            }
-            .launchIn(viewModelScope)
-
-        // Observe mixing state
-        coinJoinService.observeMixingState()
-            .onEach { status ->
-                _uiState.value = _uiState.value.copy(coinJoinMixingStatus = status)
-            }
-            .launchIn(viewModelScope)
-
-        // Observe mixing progress
-        coinJoinService.observeMixingProgress()
-            .onEach { progress ->
-                _uiState.value = _uiState.value.copy(mixingProgress = progress)
-            }
-            .launchIn(viewModelScope)
-
         // Observe selected currency
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .onEach { currency ->
-                _uiState.value = _uiState.value.copy(localCurrencySymbol = currency)
-            }
-            .launchIn(viewModelScope)
-
-        // Observe mixed balance
-        walletDataProvider.observeMixedBalance()
-            .filterNotNull()
-            .onEach { balance ->
-                _uiState.value = _uiState.value.copy(mixedBalance = balance)
-            }
-            .launchIn(viewModelScope)
-
-        // Observe total balance
-        walletDataProvider.observeTotalBalance()
-            .filterNotNull()
-            .onEach { balance ->
-                _uiState.value = _uiState.value.copy(totalBalance = balance)
+                _uiState.update { it.copy(localCurrencySymbol = currency) }
             }
             .launchIn(viewModelScope)
 
@@ -155,7 +96,7 @@ class SettingsViewModel @Inject constructor(
             .map { it.creationComplete }
             .distinctUntilChanged()
             .onEach { isVisible ->
-                _uiState.value = _uiState.value.copy(transactionMetadataVisible = isVisible)
+                _uiState.update { it.copy(transactionMetadataVisible = isVisible) }
             }.launchIn(viewModelScope)
     }
 
@@ -166,18 +107,10 @@ class SettingsViewModel @Inject constructor(
     fun updateIgnoringBatteryOptimizations() {
         try {
             val isIgnoring = isIgnoringBatteryOptimizations()
-            _uiState.value = _uiState.value.copy(ignoringBatteryOptimizations = isIgnoring)
+            _uiState.update { it.copy(ignoringBatteryOptimizations = isIgnoring) }
         } catch (e: Exception) {
             log.error("Error updating battery optimization status", e)
         }
-    }
-
-    suspend fun shouldShowCoinJoinInfo(): Boolean {
-        return coinJoinConfig.get(CoinJoinConfig.FIRST_TIME_INFO_SHOWN) != true
-    }
-
-    suspend fun setCoinJoinInfoShown() {
-        coinJoinConfig.set(CoinJoinConfig.FIRST_TIME_INFO_SHOWN, true)
     }
 
     fun logEvent(event: String) {
@@ -199,7 +132,7 @@ class SettingsViewModel @Inject constructor(
     suspend fun isSavingTransactionMetadata() = dashPayConfig.isSavingTransactionMetadata()
 
     fun updateTransactionMetadataSubtitle(subtitle: String?) {
-        _uiState.value = _uiState.value.copy(transactionMetadataSubtitle = subtitle)
+        _uiState.update { it.copy(transactionMetadataSubtitle = subtitle) }
     }
 
     suspend fun setWalletCreationDate(creationDate: Long?) {

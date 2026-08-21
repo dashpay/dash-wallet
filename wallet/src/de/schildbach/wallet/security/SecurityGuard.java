@@ -116,6 +116,10 @@ public class SecurityGuard {
     }
 
     private void logState() {
+        // Never log preference VALUES here: they are the encrypted wallet-password
+        // and PIN key blobs, and this line lands in wallet.log and every support
+        // report. Key names plus value sizes carry the diagnostic signal this dump
+        // exists for (which entries are missing/empty) without the material.
         if (BuildConfig.DEBUG) {
             StringBuffer buffer = new StringBuffer();
             buffer.append("Security Guard Preferences:\n");
@@ -124,7 +128,7 @@ public class SecurityGuard {
                 @Override
                 public void accept(String s, Object o) {
                     buffer.append("  ").append(s).append(":");
-                    buffer.append(o.toString());
+                    buffer.append(o == null ? "null" : "[redacted, " + o.toString().length() + " chars]");
                     buffer.append("\n");
                 }
             });
@@ -708,6 +712,17 @@ public class SecurityGuard {
         } catch (Exception e) {
             log.error("Failed to ensure PIN-based fallback", e);
             return false;
+        }
+    }
+
+    /**
+     * Remove PIN- and mnemonic-based fallback entries so they can be recreated.
+     * Call this after a PIN change, before re-adding fallbacks: the existing PIN-fallback
+     * is encrypted with the old PIN and the mnemonic-fallback contains the old PIN.
+     */
+    public synchronized void removeFallbacks() {
+        if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+            ((DualFallbackEncryptionProvider) encryptionProvider).removeFallbacks();
         }
     }
 

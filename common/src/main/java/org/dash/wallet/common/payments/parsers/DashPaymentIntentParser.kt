@@ -22,19 +22,14 @@ import com.google.protobuf.InvalidProtocolBufferException
 import com.google.protobuf.UninitializedMessageException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoin.protocols.payments.Protos.PaymentRequest
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.AddressFormatException
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.crypto.TrustStoreLoader.DefaultTrustStoreLoader
-import org.bitcoinj.protocols.payments.PaymentProtocol
-import org.bitcoinj.protocols.payments.PaymentProtocolException
-import org.bitcoinj.protocols.payments.PaymentProtocolException.Expired
-import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidNetwork
-import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentURL
-import org.bitcoinj.protocols.payments.PaymentProtocolException.PkiVerificationException
-import org.bitcoinj.uri.BitcoinURI
-import org.bitcoinj.uri.BitcoinURIParseException
+import org.dash.wallet.common.payments.bip70.Protos.PaymentRequest
+import org.dash.wallet.common.payments.bip70.TrustStoreLoader.DefaultTrustStoreLoader
+import org.dash.wallet.common.payments.bip70.PaymentProtocol
+import org.dash.wallet.common.payments.bip70.PaymentProtocolException
+import org.dash.wallet.common.payments.bip70.PaymentProtocolException.Expired
+import org.dash.wallet.common.payments.bip70.PaymentProtocolException.InvalidNetwork
+import org.dash.wallet.common.payments.bip70.PaymentProtocolException.InvalidPaymentURL
+import org.dash.wallet.common.payments.bip70.PaymentProtocolException.PkiVerificationException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.util.AddressUtil
@@ -50,7 +45,7 @@ import java.io.InputStream
 import java.security.KeyStoreException
 import java.util.*
 
-class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("dash", "dash", params) {
+class DashPaymentIntentParser(params: AddressNetwork) : PaymentIntentParser("dash", "dash", params) {
     private val log = LoggerFactory.getLogger(DashPaymentIntentParser::class.java)
     private val addressParser = AddressParser.getDashAddressParser(params)
 
@@ -88,15 +83,15 @@ class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("
             return@withContext parseRequest(serializedPaymentRequest)
         } else if (inputStr.startsWith(Constants.DASH_SCHEME + ":")) {
             try {
-                val bitcoinUri = BitcoinURI(null, inputStr)
-                val address = AddressUtil.getCorrectAddress(bitcoinUri, params)
+                val paymentUri = PaymentURI(null, inputStr)
+                val address = AddressUtil.getCorrectAddress(paymentUri, params)
 
-                if (address != null && params != address.parameters) {
-                    throw BitcoinURIParseException("mismatched network")
+                if (address != null && !params!!.acceptsVersion(AddressUtils.decode(address).version)) {
+                    throw PaymentURI.ParseException("mismatched network")
                 }
 
-                return@withContext PaymentIntent.fromBitcoinUri(bitcoinUri)
-            } catch (ex: BitcoinURIParseException) {
+                return@withContext PaymentIntent.fromPaymentUri(paymentUri)
+            } catch (ex: PaymentURI.ParseException) {
                 log.info("got invalid bitcoin uri: '$inputStr'", ex)
                 throw PaymentIntentParserException(
                     ex,
@@ -108,8 +103,8 @@ class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("
             }
         } else if (addressParser.exactMatch(inputStr)) {
             try {
-                val address = Address.fromString(params, inputStr)
-                return@withContext PaymentIntent.fromAddress(address, null)
+                AddressUtils.verify(params!!, inputStr)
+                return@withContext PaymentIntent.fromAddress(inputStr, null)
             } catch (ex: AddressFormatException) {
                 log.info("got invalid address", ex)
                 throw PaymentIntentParserException(

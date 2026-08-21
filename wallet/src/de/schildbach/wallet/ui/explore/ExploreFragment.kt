@@ -37,6 +37,7 @@ import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.safeNavigate
@@ -72,25 +73,27 @@ class ExploreFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                ExploreScreen(
-                    state = screenState.value,
-                    onBackClick = { findNavController().popBackStack() },
-                    onWhereToSpendClick = ::handleMerchantsNavigation,
-                    onAtmsClick = {
-                        safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.ATMs))
-                    },
-                    onStakingClick = {
-                        viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
-                        handleStakingNavigation()
-                    },
-                    onFaucetClick = {
-                        safeNavigate(ExploreFragmentDirections.exploreToFaucet())
-                    },
-                    onWithdrawClick = {
-                        viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
-                        handleStakingNavigation(goToWithdraw = true)
-                    }
-                )
+                DashWalletTheme {
+                    ExploreScreen(
+                        state = screenState.value,
+                        onBackClick = { findNavController().popBackStack() },
+                        onWhereToSpendClick = ::handleMerchantsNavigation,
+                        onAtmsClick = {
+                            safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.ATMs))
+                        },
+                        onStakingClick = {
+                            viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
+                            handleStakingNavigation()
+                        },
+                        onFaucetClick = {
+                            safeNavigate(ExploreFragmentDirections.exploreToFaucet())
+                        },
+                        onWithdrawClick = {
+                            viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
+                            handleStakingNavigation(goToWithdraw = true)
+                        }
+                    )
+                }
             }
         }
     }

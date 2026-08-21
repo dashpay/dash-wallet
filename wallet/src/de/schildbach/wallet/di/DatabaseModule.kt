@@ -29,6 +29,7 @@ import de.schildbach.wallet.database.AppDatabaseMigrations
 import de.schildbach.wallet.database.dao.*
 import de.schildbach.wallet.database.dao.TxGroupCacheDao
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
+import org.dash.wallet.integrations.maya.data.SwapOrderDao
 import javax.inject.Singleton
 
 @Module
@@ -47,7 +48,9 @@ object DatabaseModule {
                 AppDatabaseMigrations.migration16to17,
                 AppDatabaseMigrations.migration17to18,
                 AppDatabaseMigrations.migration18to19,
-                AppDatabaseMigrations.migration19to20
+                AppDatabaseMigrations.migration19to20,
+                AppDatabaseMigrations.migration20to21,
+                AppDatabaseMigrations.migration21to22
             )
             // destructive migrations are used from versions 1 to 11
             .fallbackToDestructiveMigration()
@@ -143,5 +146,15 @@ object DatabaseModule {
     @Provides
     fun provideTxGroupCacheDao(appDatabase: AppDatabase): TxGroupCacheDao {
         return appDatabase.txGroupCacheDao()
+    }
+
+    @Provides
+    fun provideSwapOrderDao(appDatabase: AppDatabase): SwapOrderDao {
+        return appDatabase.swapOrderDao()
+    }
+
+    @Provides
+    fun provideInstantSendLockDao(appDatabase: AppDatabase): InstantSendLockDao {
+        return appDatabase.instantSendLockDao()
     }
 }

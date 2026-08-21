@@ -17,19 +17,18 @@
 
 package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.transactions.filters.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 // TODO: consider making sure that `toAddress` matches our account address
-class CrowdNodeAcceptTermsResponse(networkParams: NetworkParameters) : CoinsFromAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams),
+class CrowdNodeAcceptTermsResponse(networkId: String) : CoinsFromAddressTxFilter(
+    CrowdNodeConstants.getCrowdNodeAddress(networkId),
     ACCEPT_TERMS_RESPONSE_CODE
 ) {
     companion object {
-        val ACCEPT_TERMS_RESPONSE_CODE: Coin =
-            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.PleaseAcceptTerms.code)
+        val ACCEPT_TERMS_RESPONSE_CODE: Dash =
+            CrowdNodeConstants.API_OFFSET + Dash.valueOf(ApiCode.PleaseAcceptTerms.code)
     }
 }

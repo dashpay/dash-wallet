@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapConcat
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -49,7 +50,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -65,6 +66,16 @@ import java.util.Currency
 import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.util.toFormattedString
 
 enum class TxMetadataSaveFrequency {
     afterTenTransactions,
@@ -107,6 +118,15 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private var originalState: TransactionMetadataSettings? = null
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
+
+    override fun onCleared() {
+        // viewModelScope is cancelled by the framework, but the IO worker
+        // scope is ours to stop — its launchIn collectors never complete on
+        // their own and would outlive the screen.
+        workerJob.cancel()
+        super.onCleared()
+    }
+
     private var _selectedExchangeRate = MutableStateFlow<ExchangeRate?>(null)
     val selectedExchangeRate = _selectedExchangeRate.asStateFlow()
     private var selectedCurrency: String = Constants.USD_CURRENCY
@@ -119,7 +139,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     override val futureSaveDate = _futureSaveDate.asStateFlow()
     private val _hasPastTransactionsToSave = MutableStateFlow<Boolean>(false)
     override val hasPastTransactionsToSave = _hasPastTransactionsToSave.asStateFlow()
-    private val _oldUnsavedTransactions = MutableStateFlow<List<Transaction>>(listOf())
+    private val _oldUnsavedTransactions = MutableStateFlow<List<org.dash.wallet.common.transactions.TxInfo>>(listOf())
     var firstUnsavedTxDate: Long = 0
         private set
     var unsavedTxCount: Int = 0
@@ -136,59 +156,35 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
             }.launchIn(viewModelWorkerScope)
 
         dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
-            .onEach {
-                _lastSaveDate.value = it ?: 0
-                log.info("last save date: {}", it?.let { Date(_lastSaveDate.value) })
-            }
-            .launchIn(viewModelScope)
-
-        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER)
-            .onEach {
-                _futureSaveDate.value = it ?: System.currentTimeMillis()
-                log.info("future save date: {}", it?.let { Date(_lastSaveDate.value) })
-            }
-            .launchIn(viewModelScope)
-
-//        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID)
-//            .onEach {
-//                _lastSaveWorkId.value = it
-//                log.info("last save work id: {}", dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID))
-//            }
-//            .launchIn(viewModelScope)
-
-        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
-            .filterNotNull()
-            .onEach { selectedCurrency = it }
-            .flatMapLatest(exchangeRates::observeExchangeRate)
-            .onEach { _selectedExchangeRate.value = it }
-            .launchIn(viewModelScope)
-
-        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
             .flatMapLatest { startTimestamp ->
                 transactionMetadataDao.observeByTimestampRange(startTimestamp ?: 0, System.currentTimeMillis())
-                    .flatMapConcat {
-                        _oldUnsavedTransactions
-                    }
-                    .flatMapConcat {
-                        transactionMetadataChangeCacheDao.observeCachedItemsBefore(System.currentTimeMillis())
-                            .map {
-                                it.map {
-                                    // use default values, just need a count of items
-                                    item -> TransactionMetadata(
-                                        item.txId,
-                                    item.sentTimestamp ?: 0,
-                                        Coin.ZERO,
-                                        TransactionCategory.Sent
-                                    )
-                                }
-                            }
+                    .flatMapLatest {
+                        // COMBINE, not a chain: "is there past metadata worth
+                        // uploading?" is two independent populations, and either
+                        // can change on its own.
+                        //
+                        //  - the change cache: pending edits
+                        //  - _oldUnsavedTransactions: history never published
+                        //
+                        // Reading the second imperatively raced it — the scan
+                        // behind it takes seconds on a large wallet, so the flow
+                        // emitted "0 never-published" first and never re-emitted
+                        // when the real count landed, leaving "Past" disabled on
+                        // exactly the wallets that had the most to upload.
+                        combine(
+                            transactionMetadataChangeCacheDao
+                                .observeCachedItemsBefore(System.currentTimeMillis()),
+                            _oldUnsavedTransactions
+                        ) { cachedItems, oldUnsaved -> cachedItems.size to oldUnsaved.size }
                     }
             }
-            .onEach {
-                // are there older transactions not in the database?
-                _hasPastTransactionsToSave.value = it.isNotEmpty()
-                unsavedTxCount = it.size
-                log.info("unsaved count: ${it.size}")
+            .onEach { (cachedCount, neverPublishedCount) ->
+                _hasPastTransactionsToSave.value = cachedCount > 0 || neverPublishedCount > 0
+                unsavedTxCount = cachedCount + neverPublishedCount
+                log.info(
+                    "unsaved count: {} ({} cached + {} never-published)",
+                    unsavedTxCount, cachedCount, neverPublishedCount
+                )
             }
             .launchIn(viewModelWorkerScope)
 
@@ -223,7 +219,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
 
     fun getBalanceInLocalFormat(): String {
         selectedExchangeRate.value?.fiat?.let {
-            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it)
+            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.toDashjFiat())
             val fiatValue = exchangeRate.coinToFiat(CURRENT_DATA_COST)
             val minValue = try {
                 val fractionDigits = Currency.getInstance(selectedCurrency).defaultFractionDigits

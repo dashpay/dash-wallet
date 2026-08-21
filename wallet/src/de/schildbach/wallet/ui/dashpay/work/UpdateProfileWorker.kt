@@ -31,12 +31,17 @@ import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
+import de.schildbach.wallet.ui.dashpay.utils.preferDisplayLabel
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.work.BaseWorker
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
+import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.IOException
@@ -104,12 +109,20 @@ class UpdateProfileWorker @AssistedInject constructor(
         // Perform the image upload here
         val avatarUrlToUpload = inputData.getString(KEY_LOCAL_AVATAR_URL_TO_UPLOAD)?:""
         val uploadService = inputData.getString(KEY_UPLOAD_SERVICE)?:""
+        // The RAW avatar image — the Kotlin-SDK profile write recomputes the
+        // avatarHash + perceptual fingerprint Rust-side from these bytes
+        // instead of taking the precomputed pair below, so without them an
+        // avatar-bearing profile falls back to dashj. When we just uploaded the
+        // picture to Drive the local file IS those bytes (no round trip needed);
+        // otherwise they are fetched from the avatar URL further down.
+        var avatarBytes: ByteArray? = null
         if (avatarUrlToUpload.isNotEmpty()) {
             val avatarFile = File(avatarUrlToUpload)
             @Suppress("BlockingMethodInNonBlockingContext")
             when (uploadService) {
                 EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE.name -> {
                     val avatarFileBytes = avatarFile.readBytes()
+                    avatarBytes = avatarFileBytes
                     val fileId = saveToGoogleDrive(applicationContext, avatarFileBytes)
                     avatarUrl = "https://drive.google.com/uc?export=view&id=$fileId"
                 }
@@ -130,7 +143,7 @@ class UpdateProfileWorker @AssistedInject constructor(
                 org.dash.wallet.common.ui.avatar.ProfilePictureHelper.avatarHashAndFingerprint(
                     applicationContext, uri, null,
                     object : org.dash.wallet.common.ui.avatar.ProfilePictureHelper.OnResourceReadyListener {
-                        override fun onResourceReady(avatarHash: org.bitcoinj.core.Sha256Hash?, avatarFingerprint: BigInteger?) {
+                        override fun onResourceReady(avatarHash: org.dash.wallet.common.data.TxId?, avatarFingerprint: BigInteger?) {
                             computedHash = avatarHash?.bytes
                             computedFingerprint = avatarFingerprint
                             countDownLatch.countDown()
@@ -153,8 +166,32 @@ class UpdateProfileWorker @AssistedInject constructor(
             Pair(avatarHash, avatarFingerprint)
         }
 
+        // Nothing was uploaded from a local file, so pull the raw image from the
+        // avatar URL itself — the SAME file the hash above is computed over, so
+        // the SDK's Rust-side digests match the ones the dashj path would carry.
+        // Best-effort: a failure just leaves avatarBytes null and the profile
+        // takes the dashj path.
+        if (avatarBytes == null && avatarUrl.isNotEmpty()) {
+            avatarBytes = withContext(Dispatchers.IO) {
+                ProfilePictureHelper.avatarBytesBlocking(applicationContext, avatarUrl.toUri())
+            }
+        }
+
+        // getUniqueUsername() is the first key of the wrapper's usernameStatuses
+        // map, which recoverUsernames() keys on the DPNS NORMALIZED label —
+        // persisting it here replaced the profile's DISPLAY username with the
+        // folded form ("br1an-s21") on every profile edit, until the next
+        // contact-profile sync rewrote it from the domain document's `.label`.
+        // The username is local-only (broadcastUpdatedProfile carries just
+        // displayName/publicMessage/avatar on chain), so prefer the human label
+        // the existing profile row already holds for the same DPNS name.
+        val recoveredUsername = blockchainIdentity.getUniqueUsername()
         val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
-                blockchainIdentity.getUniqueUsername(),
+                preferDisplayLabel(
+                    identityRepository.getLocalUserProfile()?.username,
+                    recoveredUsername,
+                    Names::normalizeString
+                ),
                 displayName,
                 publicMessage,
                 avatarUrl,
@@ -164,7 +201,8 @@ class UpdateProfileWorker @AssistedInject constructor(
         )
 
         return try {
-            val profileRequestResult = platformBroadcastService.broadcastUpdatedProfile(dashPayProfile, encryptionKey)
+            val profileRequestResult =
+                platformBroadcastService.broadcastUpdatedProfile(dashPayProfile, encryptionKey, avatarBytes)
             Result.success(workDataOf(
                     KEY_USER_ID to profileRequestResult.userId
             ))

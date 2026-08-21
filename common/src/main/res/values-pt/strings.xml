@@ -87,7 +87,6 @@
     <string name="select_currency">Selecione a moeda</string>
     <string name="send_coins_error_dusty_send">O valor é muito baixo para ser enviado</string>
     <string name="send_coins_error_insufficient_money">Fundos insuficientes</string>
-    <string name="send_coins_error_insufficient_mixed_money">Fundos misturados insuficientes. Aguarde o término da mistura CoinJoin ou desative este recurso nas configurações para concluir esta transação.</string>
     <string name="syncing">Sincronizando</string>
     <string name="no_connection">Sem conexão com a internet</string>
     <string name="rate_not_available">Não disponível</string>

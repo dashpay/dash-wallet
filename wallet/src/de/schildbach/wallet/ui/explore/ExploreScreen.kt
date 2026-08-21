@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.ui.compose_views.Shadows.softShadow
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
@@ -67,10 +68,11 @@ fun ExploreScreen(
     onWithdrawClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         // Fixed back chevron pinned to the top, above the scrolling content
         NavBarBack(onBackClick = onBackClick)
@@ -94,13 +96,13 @@ fun ExploreScreen(
                 Text(
                     text = stringResource(R.string.explore_dash),
                     style = MyTheme.Typography.HeadlineMediumBold,
-                    color = MyTheme.Colors.textPrimary,
+                    color = colors.textPrimary,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
                     text = stringResource(R.string.explore_subtitle),
                     style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.textSecondary,
+                    color = colors.textSecondary,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -110,7 +112,7 @@ fun ExploreScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .softShadow(16.dp)
-                    .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(16.dp))
+                    .background(colors.backgroundSecondary, RoundedCornerShape(16.dp))
                     .padding(6.dp)
             ) {
                 Column(
@@ -162,6 +164,7 @@ private fun StakingMenuItem(
     apy: Double,
     onClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     if (apy == 0.0) {
         MenuItem(
             title = stringResource(R.string.staking_title),
@@ -196,12 +199,12 @@ private fun StakingMenuItem(
                 Text(
                     text = stringResource(R.string.staking_title),
                     style = MyTheme.Body2Medium,
-                    color = MyTheme.Colors.textPrimary
+                    color = colors.textPrimary
                 )
                 Text(
                     text = stringResource(R.string.explore_staking_subtitle),
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textSecondary,
+                    color = colors.textSecondary,
                     modifier = Modifier.fillMaxWidth()
                 )
                 // APY shown as plain blue inline text (per design)
@@ -211,7 +214,7 @@ private fun StakingMenuItem(
                         String.format(Locale.getDefault(), "%.1f", apy)
                     ),
                     style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.dashBlue,
+                    color = colors.dashBlue,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
@@ -223,10 +226,11 @@ private fun StakingMenuItem(
 private fun CrowdNodeWithdrawalBanner(
     onWithdrawClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MyTheme.Colors.gray.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
+            .background(colors.gray.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
             .padding(16.dp)
     ) {
         Row(
@@ -249,13 +253,13 @@ private fun CrowdNodeWithdrawalBanner(
                     Text(
                         text = stringResource(R.string.crowdnode_withdrawal_reminder_title),
                         style = MyTheme.Typography.TitleMediumMedium,
-                        color = MyTheme.Colors.textPrimary,
+                        color = colors.textPrimary,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
                         text = stringResource(R.string.crowdnode_withdrawal_reminder_message),
                         style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.textSecondary,
+                        color = colors.textSecondary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -279,7 +283,7 @@ private fun CrowdNodeWithdrawalBanner(
 private fun ExploreScreenFullPreview() {
     ExploreScreen(
         state = ExploreScreenState(
-            showFaucet = true,
+            showFaucet = false,
             showStaking = true,
             apy = 5.7,
             showWithdrawalBanner = true

@@ -27,11 +27,10 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards
-import org.bitcoinj.wallet.Wallet.DustySendRequested
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.isDustySend
+import org.dash.wallet.common.services.isInsufficientMoney
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
@@ -39,6 +38,7 @@ import org.dash.wallet.integrations.crowdnode.databinding.FragmentResultBinding
 import org.dash.wallet.integrations.crowdnode.model.CrowdNodeException
 import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -66,10 +66,10 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
     }
 
     private fun setErrorMessage(ex: Exception) {
-        binding.subtitle.text = when (ex) {
-            is DustySendRequested, is CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
-            is InsufficientMoneyException -> ex.message ?: getString(R.string.send_coins_error_insufficient_money)
-            is CrowdNodeException -> {
+        binding.subtitle.text = when {
+            ex.isDustySend -> getString(R.string.send_coins_error_dusty_send)
+            ex.isInsufficientMoney -> ex.message ?: getString(R.string.send_coins_error_insufficient_money)
+            ex is CrowdNodeException -> {
                 if (ex.message == CrowdNodeException.WITHDRAWAL_ERROR) {
                     getString(R.string.crowdnode_withdrawal_limits_error)
                 } else {
@@ -96,7 +96,20 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             setErrorMessage(it)
         }
 
-        if (viewModel.crowdNodeError is InsufficientMoneyException ||
+        // Retrying a signup would re-enter the retired on-chain senders, so
+        // when the capability is off there is nothing to retry — offering the
+        // button would just reproduce the same failure
+        // (CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED).
+        // The MessageStatusException exclusion matters: that is an API-path
+        // failure (a rejected signed message), which is still live and worth
+        // retrying via retryOnlineSignUp. Only a non-API signup error would
+        // re-enter the fenced-off senders and re-throw immediately.
+        val signUpRetryRetired = !CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED &&
+            viewModel.signUpStatus == SignUpStatus.Error &&
+            viewModel.crowdNodeError !is MessageStatusException
+
+        if (signUpRetryRetired ||
+            viewModel.crowdNodeError?.isInsufficientMoney == true ||
             viewModel.crowdNodeError?.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true ||
             viewModel.crowdNodeError?.message == CrowdNodeException.CONFIRMATION_ERROR
         ) {

@@ -1,34 +1,35 @@
 package de.schildbach.wallet.transactions.coinjoin
 
+import de.schildbach.wallet.transactions.dashjTx
 import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
-import org.bitcoinj.core.*
 import org.bitcoinj.wallet.WalletEx
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.TxInfo
 import java.time.LocalDate
-import java.time.ZoneId
 
 open class CoinJoinMixingTxSet(
     private val wallet: WalletEx
 ) : TransactionWrapper {
     override val id: String
         get() = "coinjoin_$groupDate"
-    override val transactions: HashMap<Sha256Hash, Transaction> = hashMapOf()
+    override val transactions: HashMap<String, TxInfo> = hashMapOf()
     final override var groupDate: LocalDate = LocalDate.now()
         private set
 
-    override fun tryInclude(tx: Transaction): Boolean {
+    override fun tryInclude(tx: TxInfo): Boolean {
         if (transactions.containsKey(tx.txId)) {
             transactions[tx.txId] = tx
             return true
         }
 
-        val type = CoinJoinTransactionType.fromTx(tx, wallet)
+        val type = CoinJoinTransactionType.fromTx(tx.dashjTx, wallet)
 
         if (type == CoinJoinTransactionType.None || type == CoinJoinTransactionType.Send) {
             return false
         }
 
-        val txDate = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+        val txDate = tx.groupDate
 
         if (transactions.isEmpty()) {
             groupDate = txDate
@@ -41,14 +42,13 @@ open class CoinJoinMixingTxSet(
         return true
     }
 
-    override fun getValue(bag: TransactionBag): Coin {
-        var result = Coin.ZERO
+    override fun getValue(): Dash {
+        var result = 0L
 
         for (pair in transactions) {
-            val value = pair.value.getValue(bag)
-            result = result.add(value)
+            result += pair.value.netValueDuffs
         }
 
-        return result
+        return Dash(result)
     }
 }

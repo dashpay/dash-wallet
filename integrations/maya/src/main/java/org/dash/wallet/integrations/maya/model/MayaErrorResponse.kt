@@ -20,7 +20,6 @@ package org.dash.wallet.integrations.maya.model
 import android.os.Parcelable
 import com.google.gson.Gson
 import kotlinx.parcelize.Parcelize
-import org.bitcoinj.core.Transaction
 import org.dash.wallet.integrations.maya.R
 
 enum class MayaErrorType {
@@ -39,8 +38,6 @@ enum class MayaErrorType {
 }
 
 class MayaException(val errorType: MayaErrorType, message: String?) : Exception(message)
-class IncorrectSwapOutputCount(val tx: Transaction) :
-    Exception("Maya transaction has ${tx.outputs.size} outputs.  Only 3 are allowed")
 
 fun getMayaErrorType(error: String): MayaErrorType {
     val endOfErrorType = error.indexOf(':')
@@ -58,6 +55,10 @@ fun getMayaErrorType(error: String): MayaErrorType {
                 else -> MayaErrorType.QUOTE_ERROR
             }
         }
+        // SwapKit returns this when the sell amount is below the route's economic
+        // minimum — no provider can profitably fill the swap. Surface it the same
+        // way Maya's below-minimum error is surfaced.
+        "noRoutesFound" -> MayaErrorType.AMOUNT_TOO_LOW
         else -> MayaErrorType.UNKNOWN_ERROR
     }
 }

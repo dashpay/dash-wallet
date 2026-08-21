@@ -17,31 +17,29 @@
 
 package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.*
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import java.time.LocalDate
-import java.time.ZoneId
 
 open class FullCrowdNodeSignUpTxSet(
-    networkParams: NetworkParameters,
-    private val bag: TransactionBag
+    networkId: String
 ) : TransactionWrapper {
-    private val signUpFilter = CrowdNodeSignUpTx(networkParams)
-    private val crowdNodeTxFilters = mutableListOf(
+    private val signUpFilter = CrowdNodeSignUpTx(networkId)
+    private val crowdNodeTxFilters = mutableListOf<TransactionFilter>(
         signUpFilter,
-        CrowdNodeAcceptTermsResponse(networkParams),
-        CrowdNodeAcceptTermsTx(networkParams),
-        CrowdNodeWelcomeToApiResponse(networkParams),
-        PossibleAcceptTermsResponse(bag, null),
-        PossibleWelcomeResponse(bag, null)
+        CrowdNodeAcceptTermsResponse(networkId),
+        CrowdNodeAcceptTermsTx(networkId),
+        CrowdNodeWelcomeToApiResponse(networkId),
+        PossibleAcceptTermsResponse(null),
+        PossibleWelcomeResponse(null)
     )
 
     private val matchedFilters = mutableListOf<TransactionFilter>()
 
     override val id: String = "crowdnode"
-    override val transactions = hashMapOf<Sha256Hash, Transaction>()
+    override val transactions = hashMapOf<String, TxInfo>()
     final override var groupDate: LocalDate = LocalDate.now()
         private set
 
@@ -68,20 +66,20 @@ open class FullCrowdNodeSignUpTxSet(
             )
         }
 
-    override fun tryInclude(tx: Transaction): Boolean {
+    override fun tryInclude(tx: TxInfo): Boolean {
         if (transactions.containsKey(tx.txId)) {
             transactions[tx.txId] = tx
             return true
         }
 
-        if (tx.isEntirelySelf(bag)) {
+        if (tx.isEntirelySelf) {
             // We might not have our CrowdNode account address by the time the topUp
             // transaction is found, which means we need to check its `spentBy`
             for (output in tx.outputs) {
                 output.spentBy?.let {
-                    if (signUpFilter.matches(it.parentTransaction)) {
+                    if (signUpFilter.matches(it)) {
                         val accountAddress = signUpFilter.fromAddresses.first()
-                        crowdNodeTxFilters.add(CrowdNodeTopUpTx(accountAddress, bag))
+                        crowdNodeTxFilters.add(CrowdNodeTopUpTx(accountAddress))
                     }
                 }
             }
@@ -91,7 +89,7 @@ open class FullCrowdNodeSignUpTxSet(
 
         if (matchedFilter != null) {
             if (transactions.isEmpty()) {
-                groupDate = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                groupDate = tx.groupDate
             }
 
             transactions[tx.txId] = tx
@@ -102,18 +100,18 @@ open class FullCrowdNodeSignUpTxSet(
         return false
     }
 
-    override fun getValue(bag: TransactionBag): Coin {
-        var result = Coin.ZERO
+    override fun getValue(): Dash {
+        var result = Dash.ZERO
 
         for (pair in transactions) {
-            val value = pair.value.getValue(bag)
+            val value = Dash.valueOf(pair.value.netValueDuffs)
             result = result.add(value)
         }
 
         return result
     }
 
-    private fun didSignUpFromAddress(toAddress: Address?): Boolean {
+    private fun didSignUpFromAddress(toAddress: String?): Boolean {
         if (toAddress == null) {
             return false
         }

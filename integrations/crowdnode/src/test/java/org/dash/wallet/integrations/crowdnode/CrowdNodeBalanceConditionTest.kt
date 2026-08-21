@@ -18,9 +18,8 @@
 package org.dash.wallet.integrations.crowdnode
 
 import junit.framework.TestCase.assertTrue
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.params.TestNet3Params
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
@@ -31,7 +30,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 
 class CrowdNodeBalanceConditionTest {
-    private val params = TestNet3Params.get()
+    private val networkId = AddressNetwork.ID_TESTNET
 
     @Test
     fun check_zeroBalance_passes() {
@@ -39,9 +38,9 @@ class CrowdNodeBalanceConditionTest {
             onBlocking { get(CrowdNodeConfig.LAST_BALANCE) } doReturn 0
         }
         CrowdNodeBalanceCondition().check(
-            Coin.COIN,
-            Address.fromBase58(params, "yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu"),
-            Coin.COIN,
+            Dash.COIN,
+            "yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu",
+            Dash.COIN,
             crowdNodeConfig
         )
         assertTrue(true) // No exceptions
@@ -58,9 +57,9 @@ class CrowdNodeBalanceConditionTest {
             LeftoverBalanceException::class.java
         ) {
             CrowdNodeBalanceCondition().check(
-                Coin.COIN,
-                Address.fromBase58(params, "yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu"),
-                Coin.COIN - Coin.valueOf(20000),
+                Dash.COIN,
+                "yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu",
+                Dash.COIN - Dash.valueOf(20000),
                 crowdNodeConfig
             )
         }
@@ -78,9 +77,9 @@ class CrowdNodeBalanceConditionTest {
             LeftoverBalanceException::class.java
         ) {
             CrowdNodeBalanceCondition().check(
-                Coin.COIN,
-                CrowdNodeConstants.getCrowdNodeAddress(params),
-                Coin.COIN,
+                Dash.COIN,
+                CrowdNodeConstants.getCrowdNodeAddress(networkId),
+                Dash.COIN,
                 crowdNodeConfig
             )
         }
@@ -93,9 +92,9 @@ class CrowdNodeBalanceConditionTest {
             onBlocking { get(CrowdNodeConfig.LAST_BALANCE) } doReturn 0
         }
         CrowdNodeBalanceCondition().check(
-            Coin.COIN,
+            Dash.COIN,
             null,
-            Coin.COIN,
+            Dash.COIN,
             crowdNodeConfig
         )
         assertTrue(true) // No exceptions

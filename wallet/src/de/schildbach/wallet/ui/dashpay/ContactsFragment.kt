@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
@@ -40,6 +39,7 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -66,6 +66,45 @@ enum class ContactsScreenMode {
     VIEW_REQUESTS
 }
 
+/** Decision produced by [ContactsIdentityGate] for one blockchainIdentity emission. */
+enum class ContactsIdentityRouting {
+    /** Identity not loaded yet, or this view is already routed — do nothing. */
+    NONE,
+    SHOW_CONTACTS,
+    SHOW_EVO_UPGRADE
+}
+
+/**
+ * One-shot identity routing gate for the contacts screen.
+ *
+ * blockchainIdentity LiveData is populated asynchronously from DataStore and
+ * can emit repeatedly (BlockchainIdentityData is not deduped by
+ * distinctUntilChanged, and DataStore emits on any preference change), so the
+ * first non-null emission decides the routing and later emissions are ignored.
+ *
+ * The gate is one-shot PER VIEW, so a new instance must be created in
+ * onViewCreated. A fragment-scoped flag regressed here: the fragment instance
+ * survives a back-stack pop while its view (and binding) are recreated, and
+ * the stale resolved flag left the recreated view permanently blank —
+ * container hidden, toolbar bare (no title/menu), no adapter or observers.
+ */
+class ContactsIdentityGate {
+    private var resolved = false
+
+    fun route(hasUsername: Boolean?): ContactsIdentityRouting {
+        if (hasUsername == null || resolved) {
+            return ContactsIdentityRouting.NONE
+        }
+
+        resolved = true
+        return if (hasUsername) {
+            ContactsIdentityRouting.SHOW_CONTACTS
+        } else {
+            ContactsIdentityRouting.SHOW_EVO_UPGRADE
+        }
+    }
+}
+
 @AndroidEntryPoint
 class ContactsFragment : Fragment(),
         ContactSearchResultsAdapter.Listener,
@@ -82,8 +121,6 @@ class ContactsFragment : Fragment(),
     private val args by navArgs<ContactsFragmentArgs>()
     private var initialSearch = true
     private var searchEventSent = false
-    private var identityResolved = false
-    private var viewsInitialized = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_contacts_root, container, false)
@@ -92,33 +129,45 @@ class ContactsFragment : Fragment(),
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // DashPayUserBottomSheet is shown on the activity's FragmentManager (via show(activity)),
+        // so listen there for its result.
+        requireActivity().supportFragmentManager.setFragmentResultListener(
+            DashPayUserBottomSheet.REQUEST_KEY,
+            viewLifecycleOwner
+        ) { _, bundle ->
+            if (bundle.getBoolean(DashPayUserBottomSheet.KEY_CHANGED, false)) {
+                searchContacts()
+            }
+        }
         // blockchainIdentity LiveData is populated asynchronously from DataStore.
         // Reading hasIdentity synchronously can return false before the first
         // emission, misrouting users who have a username to the EvoUpgrade screen.
         // The observer can fire repeatedly (BlockchainIdentityData is not deduped
         // by distinctUntilChanged, and DataStore emits on any preference change),
         // so identityResolved makes the routing decision one-shot.
+        val identityGate = ContactsIdentityGate()
         binding.container.isVisible = false
         mainViewModel.blockchainIdentity.observe(viewLifecycleOwner) { identityData ->
-            if (identityData == null || identityResolved) return@observe
-
-            identityResolved = true
-            if (!identityData.hasUsername) {
-                // No username: don't initialize the contacts UI or trigger any
-                // platform queries (PlatformRepo/blockchainIdentity are not set up
-                // without a username); just route to the upgrade screen.
-                safeNavigate(ContactsFragmentDirections.contactsToEvoUpgrade())
-            } else {
-                binding.container.isVisible = true
-                setupContactsViews()
+            when (identityGate.route(identityData?.hasUsername)) {
+                ContactsIdentityRouting.SHOW_EVO_UPGRADE -> {
+                    // No username: don't initialize the contacts UI or trigger any
+                    // platform queries (PlatformRepo/blockchainIdentity are not set
+                    // up without a username); just route to the upgrade screen.
+                    safeNavigate(ContactsFragmentDirections.contactsToEvoUpgrade())
+                }
+                ContactsIdentityRouting.SHOW_CONTACTS -> {
+                    binding.container.isVisible = true
+                    setupContactsViews()
+                }
+                ContactsIdentityRouting.NONE -> {}
             }
         }
     }
 
+    // Called at most once per view lifecycle (gated by ContactsIdentityGate in
+    // onViewCreated); everything here targets the current view's binding, so it
+    // must run again whenever the view is recreated.
     private fun setupContactsViews() {
-        if (viewsInitialized) return
-        viewsInitialized = true
-
         enterTransition = MaterialFadeThrough()
         binding.appBar.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
@@ -231,7 +280,10 @@ class ContactsFragment : Fragment(),
                     // Mirror what processResults() actually displays: pending requests
                     // and established (mutual) contacts.
                     val hasContactsToShow = it.data?.any { u ->
-                        u.isPendingRequest || (u.requestSent && u.requestReceived)
+                        // Mirrors processResults' three sections, pending
+                        // OUTGOING included — otherwise the empty-state pane
+                        // covers a list that does have rows.
+                        u.isPendingRequest || u.requestSent
                     } ?: false
                     binding.contactList.apply {
                         emptyStatePane.root.isVisible = !hasContactsToShow
@@ -249,6 +301,12 @@ class ContactsFragment : Fragment(),
         dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner) {
             imitateUserInteraction()
             contactsAdapter.sendContactRequestWorkStateMap = it
+            // A failed accept/send must never be a silent no-op — the row only
+            // reverts to its pending state — so surface newly-failed
+            // operations started from this screen.
+            if (dashPayViewModel.consumeNewSendContactRequestErrors(it).isNotEmpty()) {
+                showSendContactRequestError()
+            }
         }
         dashPayViewModel.contactsUpdatedLiveData.observe(viewLifecycleOwner) {
             if (it?.data != null && it.data) {
@@ -314,11 +372,15 @@ class ContactsFragment : Fragment(),
         dashPayViewModel.updateDashPayState()
     }
 
+    // No onDestroyView reset needed: the identity-routing gate (ContactsIdentityGate) is
+    // created per view in onViewCreated, so a recreated view re-runs the full setup.
+
     private fun processResults(data: List<UsernameSearchResult>) {
         val results = ArrayList<ContactSearchResultsAdapter.ViewItem>()
+        val sections = splitContactSections(data)
         // process the requests
         val requests = if (args.mode != ContactsScreenMode.SELECT_CONTACT) {
-            data.filter { r -> r.isPendingRequest }.toMutableList()
+            sections.incomingPending.toMutableList()
         } else {
             ArrayList()
         }
@@ -338,12 +400,53 @@ class ContactsFragment : Fragment(),
         }
         // process contacts
         val contacts = if (args.mode != ContactsScreenMode.VIEW_REQUESTS)
-            data.filter { r -> r.requestSent && r.requestReceived }
+            sections.established
         else ArrayList()
 
         if (contacts.isNotEmpty() && args.mode != ContactsScreenMode.VIEW_REQUESTS) {
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_HEADER))
             contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        }
+
+        // PENDING OUTGOING — requests WE sent that were never reciprocated.
+        // These were invisible entirely: PlatformRepo.getFromProfiles drops
+        // them unless includeSentPending is set, and nothing set it, so
+        // splawik's 32 contacts rendered as 29 (ryszard1951,
+        // TheBitcoinBarbie, thedesertlynx63 were the three missing).
+        //
+        // Their own section, never merged into "My Contacts": a one-way
+        // request is not a mutual contact and the list must not imply it is.
+        // The three sets are disjoint by construction — incoming-pending is
+        // `requestReceived && !requestSent`, established is both, this is
+        // `requestSent && !requestReceived` — so no request is ever listed
+        // twice. Ownership: the "Contact Requests (N)" section above (and the
+        // VIEW_REQUESTS screen behind it) owns INCOMING pending; this section
+        // owns OUTGOING pending; the contacts section owns mutual.
+        //
+        // DIP-15 asymmetry, which is why these rows carry no actions while
+        // incoming-pending rows do: a contact request carries the SENDER's
+        // xpub. An INCOMING request therefore hands us their key material —
+        // we can derive their payment addresses and pay them, and
+        // ContactRequestPane.applyReceivedState already shows Pay for that
+        // state. An OUTGOING request only gave them OURS, so we have nothing
+        // to derive from and paying is impossible; the row (and the detail
+        // screen's applySentState) offers no send and no payment history.
+        val pendingSent = if (args.mode == ContactsScreenMode.SEARCH_CONTACTS) {
+            sections.outgoingPending
+        } else {
+            emptyList()
+        }
+        if (pendingSent.isNotEmpty()) {
+            results.add(
+                ContactSearchResultsAdapter.ViewItem(
+                    null,
+                    ContactSearchResultsAdapter.CONTACT_REQUEST_SENT_HEADER,
+                    requestCount = pendingSent.size
+                )
+            )
+            pendingSent.forEach { r ->
+                results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT))
+            }
         }
         contactsAdapter.results = results
     }
@@ -401,7 +504,7 @@ class ContactsFragment : Fragment(),
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
         when (args.mode) {
             ContactsScreenMode.SEARCH_CONTACTS, ContactsScreenMode.VIEW_REQUESTS -> {
-                startActivity(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult))
+                DashPayUserBottomSheet.newInstance(usernameSearchResult).show(requireActivity())
             }
             ContactsScreenMode.SELECT_CONTACT -> {
                 handleString(usernameSearchResult.toContactRequest!!.toUserId, true, R.string.scan_to_pay_username_dialog_message)
@@ -417,11 +520,16 @@ class ContactsFragment : Fragment(),
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
-            searchContacts()
-        }
+    private fun showSendContactRequestError() {
+        // The only contact-request action on this screen is accepting an
+        // incoming request (onAcceptRequest → sendContactRequest), so use the
+        // accept wording.
+        AdaptiveDialog.create(
+            R.drawable.ic_warning_yellow_circle,
+            getString(R.string.accept_contact_request_error_title),
+            getString(R.string.accept_contact_request_error_message),
+            getString(R.string.button_ok)
+        ).show(requireActivity())
     }
 
     private fun handleString(input: String, fireAction: Boolean, errorDialogTitleResId: Int) {
@@ -467,3 +575,31 @@ class ContactsFragment : Fragment(),
         }.parse()
     }
 }
+
+/**
+ * The three DISJOINT sections the contacts screen renders, from one contact
+ * feed. Pure — host-testable.
+ *
+ * Disjoint by construction ([UsernameSearchResult.type]): a request is either
+ * incoming-only, outgoing-only or mutual, so nothing is ever listed twice and
+ * a one-way request is never merged into "My Contacts".
+ *
+ * @property incomingPending they asked us and we have not accepted — the
+ *   "Contact Requests (N)" section. Actionable: their request carried THEIR
+ *   xpub, so we can derive their addresses and pay them (DIP-15).
+ * @property established mutual.
+ * @property outgoingPending we asked them and they have not reciprocated —
+ *   informational only: our request carried only OUR xpub, so we have no key
+ *   material to derive their addresses from and cannot pay them.
+ */
+internal data class ContactSections(
+    val incomingPending: List<UsernameSearchResult>,
+    val established: List<UsernameSearchResult>,
+    val outgoingPending: List<UsernameSearchResult>
+)
+
+internal fun splitContactSections(data: List<UsernameSearchResult>) = ContactSections(
+    incomingPending = data.filter { it.requestReceived && !it.requestSent },
+    established = data.filter { it.requestSent && it.requestReceived },
+    outgoingPending = data.filter { it.requestSent && !it.requestReceived }
+)

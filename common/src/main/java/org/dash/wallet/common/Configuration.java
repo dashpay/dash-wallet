@@ -31,8 +31,8 @@ import androidx.annotation.Nullable;
 
 import com.google.common.base.Strings;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.money.Coin;
+import org.dash.wallet.common.money.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

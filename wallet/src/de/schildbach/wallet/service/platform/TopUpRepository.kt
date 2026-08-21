@@ -22,7 +22,6 @@ import com.appsflyer.share.LinkGenerator.ResponseListener
 import com.appsflyer.share.ShareInviteHelper
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.DynamicLink
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.DashPayProfileDao
@@ -31,9 +30,9 @@ import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.DashSystemService
-import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
+import de.schildbach.wallet.service.platform.sdk.SdkTopUpRecoveryService
+import de.schildbach.wallet.service.platform.work.ResumeTopUpsOperation
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.BuildConfig
 import org.bitcoinj.core.Coin
@@ -49,7 +48,7 @@ import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dpp.toHex
 import org.dashj.platform.sdk.platform.Names
@@ -67,7 +66,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import org.bitcoinj.coinjoin.CoinJoin
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.InsufficientMoneyException
@@ -86,22 +84,20 @@ import androidx.core.net.toUri
 /**
  * contains topup related functions that are used by:
  * 1. [CreateIdentityService] to create an identity
- * 2. [TopupIdentityWorker] to topup an identity
+ * 2. [checkTopUps] to retry/complete legacy top-ups
  * 3. [SendInviteWorker] to create Invitations (dynamic link)
  */
 interface TopUpRepository {
     suspend fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
         username: String,
-        keyParameter: KeyParameter?,
-        useCoinJoin: Boolean
+        keyParameter: KeyParameter?
     )
 
     fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
-        keyParameter: KeyParameter?,
-        useCoinJoin: Boolean
+        keyParameter: KeyParameter?
     ): AssetLockTransaction
 
     fun obtainAssetLockTransaction(
@@ -140,6 +136,19 @@ interface TopUpRepository {
         aesKeyParameter: KeyParameter
     ): DynamicLink
 
+    /**
+     * Wrap an already-built SHIELDED (L2) invitation deep link in the same
+     * AppsFlyer OneLink as an L1 invite (H1): OG preview + install redirect,
+     * with the raw `dashpay://invite?du=…&osk=…&bh=…` deep link as the
+     * `af_dp`. The preview label/avatar are read from the shielded link's own
+     * params (the inviter profile the SDK embedded). Throws on generation
+     * failure, exactly like [createAppsFlyerLink]; callers fall back to the
+     * raw deep link.
+     */
+    suspend fun createShieldedAppsFlyerLink(
+        invitationLinkData: InvitationLinkData
+    ): DynamicLink
+
     suspend fun checkInvites(encryptionKey: KeyParameter?)
     suspend fun updateInvitations()
     fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long)
@@ -154,21 +163,20 @@ interface TopUpRepository {
     fun close()
 
     fun getAssetLockTransaction(invite: InvitationLinkData): AssetLockTransaction
-    fun isInvitationMixed(inviteAssetLockTx: AssetLockTransaction): Boolean
     suspend fun clearInvitation()
 }
 
 class TopUpRepositoryImpl @Inject constructor(
     private val walletApplication: WalletApplication,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
     private val topUpsDao: TopUpsDao,
     private val dashPayProfileDao: DashPayProfileDao,
     private val invitationsDao: InvitationsDao,
-    private val coinJoinConfig: CoinJoinConfig,
     private val dashPayConfig: DashPayConfig,
-    private val dashSystemService: DashSystemService
+    private val dashSystemService: DashSystemService,
+    private val sdkTopUpRecoveryService: SdkTopUpRecoveryService
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
@@ -183,22 +191,21 @@ class TopUpRepositoryImpl @Inject constructor(
     override suspend fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
         username: String,
-        keyParameter: KeyParameter?,
-        useCoinJoin: Boolean
+        keyParameter: KeyParameter?
     ) {
         val fee = if (Names.isUsernameContestable(username)) {
             Constants.DASH_PAY_FEE_CONTESTED
         } else {
             Constants.DASH_PAY_FEE
         }
-        val balance = walletDataProvider.observeSpendableBalance().first()
+        val balance = walletDataProvider.observeTotalBalance().first()
         val emptyWallet = balance == fee ||
                 (balance >= fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT.multiply(MIN_DUST_FACTOR)))
         Context.propagate(walletDataProvider.wallet!!.context)
         val cftx = blockchainIdentity.createAssetLockTransaction(
             fee,
             keyParameter,
-            useCoinJoin,
+            useCoinJoin = false,
             returnChange = true,
             emptyWallet = emptyWallet
         )
@@ -208,8 +215,7 @@ class TopUpRepositoryImpl @Inject constructor(
     override fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
-        keyParameter: KeyParameter?,
-        useCoinJoin: Boolean
+        keyParameter: KeyParameter?
     ): AssetLockTransaction {
         Context.propagate(walletDataProvider.wallet!!.context)
         val balance = walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
@@ -217,7 +223,7 @@ class TopUpRepositoryImpl @Inject constructor(
         return blockchainIdentity.createTopupFundingTransaction(
             topupAmount,
             keyParameter,
-            useCoinJoin,
+            useCoinJoin = false,
             returnChange = true,
             emptyWallet = emptyWallet
         )
@@ -242,25 +248,6 @@ class TopUpRepositoryImpl @Inject constructor(
             assetLockTx.confidence.setInstantSendLock(instantSendLock)
         }
         return assetLockTx
-    }
-
-    override fun isInvitationMixed(inviteAssetLockTx: AssetLockTransaction): Boolean {
-        val inputTxes = hashMapOf<Sha256Hash, Transaction>()
-        return inviteAssetLockTx.inputs.map { input ->
-            val tx = inputTxes[input.outpoint.hash]
-                ?: platformRepo.platform.client.getTransaction(input.outpoint.hash.toString())?.let {
-                    Transaction(Constants.NETWORK_PARAMETERS, it)
-                }
-            log.info("obtaining input tx: {}", input.outpoint.hash)
-            tx?.let {
-                log.info(" --> input tx: {}", tx.txId)
-                input.connect(it.getOutput(input.outpoint.index))
-                log.info(" --> input tx: {}", input.value)
-                input.value
-            } ?: Coin.ZERO
-        }.all { value ->
-            CoinJoin.isDenominatedAmount(value)
-        }
     }
 
     override suspend fun clearInvitation() {
@@ -543,38 +530,24 @@ class TopUpRepositoryImpl @Inject constructor(
         }
     }
 
-    private var checkedPreviousTopUps = false
 
+    /**
+     * Phase 2/3 (MO-998): the legacy dashj retry loops are DELETED — the
+     * SDK's tracked-lock queue is the only top-up retry system. Uncredited
+     * dashj-era top-ups from before the migration are NOT retried by the
+     * app anymore; they become recoverable again when the SDK gains
+     * chain rediscovery of asset locks (the pending platform change), at
+     * which point they surface on the recovery queue below like any
+     * interrupted SDK top-up. Funds are never lost in the interim — the
+     * locks sit on chain, claimable by this wallet's keys.
+     */
     override suspend fun checkTopUps(aesKeyParameter: KeyParameter?) {
-        val topUps = topUpsDao.getUnused()
-        topUps.forEach { topUp ->
-            try {
-                val tx = walletDataProvider.wallet!!.getTransaction(topUp.txId)
-                val assetLockTx = authExtension.getAssetLockTransaction(tx)
-                topUpIdentity(assetLockTx, aesKeyParameter)
-                topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
-            } catch (e: Exception) {
-                // swallow
+        try {
+            if (sdkTopUpRecoveryService.hasPendingTopUpLocks()) {
+                ResumeTopUpsOperation(walletApplication).enqueue()
             }
-        }
-        // only check once per app start
-        if (!checkedPreviousTopUps) {
-            log.info("checking all topup transactions")
-            authExtension.topupFundingTransactions.forEach { assetLockTx ->
-                val topUp = topUpsDao.getByTxId(assetLockTx.txId)
-                if (topUp == null || topUp.notUsed()) {
-                    val identity = topUp?.toUserId ?: identityRepository.blockchainIdentity!!.uniqueIdentifier.toString()
-                    if (topUp == null) {
-                        topUpsDao.insert(TopUp(assetLockTx.txId, identity))
-                    }
-                    try {
-                        topUpIdentity(assetLockTx, platformRepo.getWalletEncryptionKey()!!)
-                    } catch (e: Exception) {
-                        log.info("problem executing topup for ${assetLockTx.txId}", e)
-                    }
-                }
-            }
-            checkedPreviousTopUps = true
+        } catch (e: Exception) {
+            log.warn("failed to check/enqueue the SDK top-up drain", e)
         }
     }
 
@@ -594,7 +567,7 @@ class TopUpRepositoryImpl @Inject constructor(
         val cftx = blockchainIdentity.createInviteFundingTransaction(
             topupAmount,
             keyParameter,
-            useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE,
+            useCoinJoin = false,
             returnChange = true,
             emptyWallet = emptyWallet
         )
@@ -634,6 +607,36 @@ class TopUpRepositoryImpl @Inject constructor(
         val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
         val invitationLinkData = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, assetLockTx, aesKeyParameter)
 
+        return generateInviteOneLink(invitationLinkData, dashPayProfile.nameLabel, dashPayProfile.avatarUrl)
+    }
+
+    override suspend fun createShieldedAppsFlyerLink(
+        invitationLinkData: InvitationLinkData
+    ): DynamicLink {
+        log.info("creating AppsFlyer OneLink for a shielded invitation")
+        // The shielded link already carries the inviter's preview label/avatar
+        // (the SDK embedded them); there is no L1 asset-lock tx to build from.
+        return generateInviteOneLink(
+            invitationLinkData,
+            invitationLinkData.displayName,
+            invitationLinkData.avatarUrl
+        )
+    }
+
+    /**
+     * Core AppsFlyer OneLink generation shared by the L1 and shielded invite
+     * paths (H1): wraps [invitationLinkData]'s raw deep link as the OneLink's
+     * `af_dp`, and attaches the OG preview ([nameLabel] + [avatarUrl] image).
+     * Bridges the async [ResponseListener] with [suspendCoroutine] as the L1
+     * path always has; [onResponseError] surfaces as an exception the caller
+     * handles (fall back to the raw deep link).
+     */
+    private suspend fun generateInviteOneLink(
+        invitationLinkData: InvitationLinkData,
+        nameLabel: String,
+        avatarUrl: String
+    ): DynamicLink {
+        val avatarUrlEncoded = URLEncoder.encode(avatarUrl, StandardCharsets.UTF_8.displayName())
         return suspendCoroutine { continuation ->
             val linkGenerator = ShareInviteHelper.generateInviteUrl(walletApplication)
             linkGenerator.setBaseDeeplink(invitationLinkData.link.toString())
@@ -642,7 +645,6 @@ class TopUpRepositoryImpl @Inject constructor(
             linkGenerator.setCampaign("dashpay_invitation")
             linkGenerator.setBrandDomain(BuildConfig.APPSFLYER_BRAND_DOMAIN)
             val title = walletApplication.getString(R.string.invitation_preview_title)
-            val nameLabel = dashPayProfile.nameLabel
             val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.displayName())
             val imageUrl = "https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded".toUri()
             val description = walletApplication.getString(R.string.invitation_preview_message, nameLabel)
@@ -743,7 +745,9 @@ class TopUpRepositoryImpl @Inject constructor(
         val invitations = invitationsDao.loadAll()
         for (invitation in invitations) {
             if (invitation.acceptedAt == 0L) {
-                val identity = platform.identities.get(invitation.userId)
+                // Tolerant fetch: the invited identity may carry contract-bound
+                // keys whose shape the legacy CBOR cache cannot serialize.
+                val identity = platform.getIdentity(invitation.userId)
                 if (identity != null) {
                     platformRepo.updateDashPayProfile(identity.id.toString())
                     updateInvitation(
@@ -820,6 +824,16 @@ class TopUpRepositoryImpl @Inject constructor(
      */
 
     override fun validateInvitation(invite: InvitationLinkData): Boolean {
+        // Shielded (L2) invites carry a one-time Orchard key (osk), not an L1 asset-lock tx,
+        // so there is nothing on L1 to validate here — touching invite.assetLockTx would NPE.
+        // The funding note is verified at claim time by shieldedIdentityCreateFromOneTimeKey
+        // (createIdentityFromInvitation), which reports NotBroadcast if the note is missing or
+        // already spent. The link was already checked well-formed by isValidShielded, so treat
+        // it as valid here and let the claim flow do the real work.
+        if (invite.isShielded) {
+            log.info("validateInvitation: shielded invite — deferring funds check to claim")
+            return true
+        }
         val stopWatch = Stopwatch.createStarted()
         var tx = getAssetLockTransaction(invite.assetLockTx)
         log.info("validateInvitation: obtaining transaction info for invite took $stopWatch")
@@ -829,7 +843,9 @@ class TopUpRepositoryImpl @Inject constructor(
         }
         if (tx != null) {
             val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx)
-            val identity = platform.identities.get(cfTx.identityId.toStringBase58())
+            // Tolerant fetch: the claimed identity may carry contract-bound keys
+            // whose shape the legacy CBOR cache cannot serialize.
+            val identity = platform.getIdentity(cfTx.identityId.toStringBase58())
             if (identity == null) {
                 // determine if the invite has enough credits
                 if (cfTx.lockedOutput.value < Constants.DASH_PAY_INVITE_MIN) {

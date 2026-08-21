@@ -470,8 +470,6 @@
     <string name="masternode_key_not_used">Non utilisé</string>
     <string name="masternode_key_revoked">Révoqué</string>
     <string name="masternode_key_private_public_base64">Clés privée / publique (base64)</string>
-    <string name="timeskew_ahead">en avant</string>
-    <string name="timeskew_behind">en arrière</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Les cours n\'ont pas pu être récupérés. Les valeurs fiduciaires peuvent être incorrectes.</string>

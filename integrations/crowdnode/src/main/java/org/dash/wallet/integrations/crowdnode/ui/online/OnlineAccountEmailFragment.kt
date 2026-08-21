@@ -25,8 +25,11 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
@@ -35,11 +38,15 @@ import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountEmailBinding
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_email) {
     private val binding by viewBinding(FragmentOnlineAccountEmailBinding::bind)
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
+
+    @Inject
+    lateinit var securityFunctions: AuthenticationManager
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -128,7 +135,18 @@ class OnlineAccountEmailFragment : Fragment(R.layout.fragment_online_account_ema
 
     private fun continueCreating(email: String) {
         KeyboardUtil.hideKeyboard(requireContext(), binding.emailInput)
-        viewModel.signAndSendEmail(email)
+
+        // Registering the email signs it with the account key, and CrowdNode
+        // treats that signature as authorization to bind the address to this
+        // email — the hook the account-recovery flow hangs off. Signing
+        // performs no authentication of its own (see SdkMessageSigner), so
+        // the gate belongs here. `?.let` means a cancelled or failed check
+        // simply returns without sending anything.
+        lifecycleScope.launch {
+            securityFunctions.authenticate(requireActivity())?.let {
+                viewModel.signAndSendEmail(email)
+            }
+        }
     }
 
     private fun isEmail(text: CharSequence?): Boolean {

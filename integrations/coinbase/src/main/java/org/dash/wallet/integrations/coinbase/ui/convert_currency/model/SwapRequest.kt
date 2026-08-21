@@ -17,11 +17,11 @@
 
 package org.dash.wallet.integrations.coinbase.ui.convert_currency.model
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
 
 data class SwapRequest(
     val dashToCrypto: Boolean,
-    val amount: Coin?,
-    val fiatAmount: Fiat?
+    val amount: Dash?,
+    val fiatAmount: FiatValue?
 )

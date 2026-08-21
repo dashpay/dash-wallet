@@ -58,6 +58,75 @@ data class InvitationLinkData(
         private const val PARAM_CFTX = "assetlocktx"
         private const val PARAM_PRIVATE_KEY = "pk"
         private const val PARAM_IS_LOCK = "islock"
+
+        /**
+         * Shielded (L2) invitation params — the private-invitation variant
+         * (iOS-parity). Instead of a pre-created L1 asset lock ([PARAM_CFTX]
+         * / [PARAM_PRIVATE_KEY] / [PARAM_IS_LOCK]), a shielded invite carries
+         * a single-use Orchard spending key that the RECEIVER spends on claim
+         * to create their identity directly from a shielded note:
+         *
+         * - [PARAM_ONE_TIME_KEY] (`osk`): the invitation's one-time 32-byte
+         *   Orchard spending key, lowercase hex. Unlike the L1 [PARAM_PRIVATE_KEY]
+         *   (a Core key in WiF), this is a raw Orchard scalar — WiF/Base58Check
+         *   does not apply, so it is carried as hex.
+         * - [PARAM_FUNDING_HEIGHT] (`bh`): the block height the funding note
+         *   was created at — an advisory scan hint for the claim-side network
+         *   scan (absent/blank ⇒ "no hint").
+         *
+         * An invite is the SHIELDED variant iff [PARAM_ONE_TIME_KEY] is
+         * present; the L1 variant is unchanged and both parse (branch via
+         * [isShielded]).
+         */
+        private const val PARAM_ONE_TIME_KEY = "osk"
+        private const val PARAM_FUNDING_HEIGHT = "bh"
+
+        /**
+         * The shielded invitation's funding NOTE VALUE in Platform credits
+         * (`amt`) — what the inviter actually funded: 0.03 DASH
+         * (3_000_000_000 credits) non-contested / 0.25 DASH (25_000_000_000)
+         * contested today, or 0.1 / 0.3 for links minted before the protocol
+         * revised the exit-denomination set. A note VALUE, not necessarily an
+         * exit denomination: the legacy 0.3 note exits at 0.25 (see
+         * `inviteClaimDenominationLadder`).
+         *
+         * This exists because the claim side has NO other way to learn the
+         * invite's tier. An L1 invite carries its asset-lock txid, so the
+         * claimer can read the funded amount off chain; a shielded invite
+         * carries only a one-time Orchard spending key, and the SDK's claim
+         * FFI (`shieldedIdentityCreateFromOneTimeKey`) takes the denomination
+         * as an INPUT — it never reports the note's value. Without this
+         * parameter the claim screen cannot tell a contested invite from a
+         * non-contested one and wrongly tells every claimer they may only pick
+         * a non-contested username.
+         *
+         * ADVISORY and OPTIONAL: links minted before this parameter existed
+         * omit it, and a claimer that cannot read a tier must not assert one
+         * (see `InviteUsernameTier.UNKNOWN`). Two readers, neither of which
+         * trusts it with funds it does not have:
+         *
+         * - the claim screen's tier UI (notice / requirement rows / submit
+         *   gate);
+         * - the claim itself, which requests the claimed value as the
+         *   Type-20 denomination so the new IDENTITY receives the invite's
+         *   full note value in credits regardless of the username tier the
+         *   claimer picks (`SdkShieldedUsernameCreation
+         *   .createIdentityFromInvitation`). Safe against tampering because
+         *   the note itself is what the claim spends and the FFI fails
+         *   CLOSED, pre-broadcast, when no note covers the requested
+         *   denomination: a lying-high or junk `amt` just downgrades to the
+         *   same descending-ladder attempt order a link without `amt` gets
+         *   (0.3 → 0.1), and nothing is spent by a refused attempt. A
+         *   lying-LOW `amt` (0.1 written onto a 0.3 invite) is believed —
+         *   indistinguishable from a genuine 0.1 invite — and makes the
+         *   claim spend the 0.3 note at the 0.1 denomination with the 0.2
+         *   difference going to the CLAIMER's own Orchard change address.
+         *   That moves no value to a third party: only the claimer benefits
+         *   from tampering their own bearer link, and they were receiving
+         *   the full value either way (as spendable shielded DASH instead
+         *   of identity credits).
+         */
+        private const val PARAM_FUNDING_CREDITS = "amt"
         private val VALIDATION_EXPIRED = TimeUnit.MINUTES.toMillis(1)
 
         fun create(username: String, displayName: String, avatarUrl: String, cftx: AssetLockTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
@@ -77,7 +146,53 @@ data class InvitationLinkData(
             return InvitationLinkData(linkBuilder.build(), null)
         }
 
-        fun isValid(link: Uri): Boolean {
+        /**
+         * Build the SHIELDED (L2) invitation link: the private-invitation
+         * counterpart of [create]. Carries the one-time Orchard spending key
+         * [oneTimeKeyHex] (lowercase hex of the 32-byte scalar) and the
+         * funding note's [fundingHeight]; it DROPS the L1 asset-lock params
+         * ([PARAM_CFTX] / [PARAM_PRIVATE_KEY] / [PARAM_IS_LOCK]) entirely.
+         * There is no pre-created identity — the receiver creates theirs on
+         * claim from the note funded to [oneTimeKeyHex].
+         *
+         * [fundingCredits] is the note's value in Platform credits — the tier
+         * hint the claim screen needs (see [PARAM_FUNDING_CREDITS]). Omitted
+         * from the link when null or non-positive.
+         */
+        fun createShielded(
+            username: String,
+            displayName: String,
+            avatarUrl: String,
+            oneTimeKeyHex: String,
+            fundingHeight: Int,
+            fundingCredits: Long? = null
+        ): InvitationLinkData {
+            val linkBuilder = URI_PREFIX.toUri().buildUpon()
+                .appendQueryParameter(PARAM_USER, username)
+                .appendQueryParameter(PARAM_ONE_TIME_KEY, oneTimeKeyHex)
+                .appendQueryParameter(PARAM_FUNDING_HEIGHT, fundingHeight.toString())
+
+            if (fundingCredits != null && fundingCredits > 0) {
+                linkBuilder.appendQueryParameter(PARAM_FUNDING_CREDITS, fundingCredits.toString())
+            }
+            if (displayName.isNotEmpty()) {
+                linkBuilder.appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
+            }
+            if (avatarUrl.isNotEmpty()) {
+                linkBuilder.appendQueryParameter(PARAM_AVATAR_URL, avatarUrl)
+            }
+            return InvitationLinkData(linkBuilder.build(), null)
+        }
+
+        /**
+         * True when [link] is a well-formed invitation of EITHER variant —
+         * the unchanged L1 asset-lock form ([isValidL1]) or the shielded L2
+         * form ([isValidShielded]). Branch on presence of `osk` vs `pk`.
+         */
+        fun isValid(link: Uri): Boolean = isValidShielded(link) || isValidL1(link)
+
+        /** The unchanged L1 asset-lock invitation validity check. */
+        private fun isValidL1(link: Uri): Boolean {
             return try {
                 val queryParams = link.queryParameterNames
                     queryParams.contains(PARAM_USER) &&
@@ -88,6 +203,23 @@ data class InvitationLinkData(
                     !link.getQueryParameter(PARAM_PRIVATE_KEY).isNullOrBlank() &&
                     !link.getQueryParameter(PARAM_IS_LOCK).isNullOrBlank() &&
                     !link.getQueryParameter(PARAM_CFTX).isNullOrBlank()
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        /**
+         * The shielded (L2) invitation validity check: a user and a
+         * non-blank one-time key. The funding height is advisory, so a
+         * missing/blank `bh` does not invalidate the link.
+         */
+        private fun isValidShielded(link: Uri): Boolean {
+            return try {
+                val queryParams = link.queryParameterNames
+                queryParams.contains(PARAM_USER) &&
+                    queryParams.contains(PARAM_ONE_TIME_KEY) &&
+                    !link.getQueryParameter(PARAM_USER).isNullOrBlank() &&
+                    !link.getQueryParameter(PARAM_ONE_TIME_KEY).isNullOrBlank()
             } catch (e: Exception) {
                 false
             }
@@ -126,6 +258,48 @@ data class InvitationLinkData(
         link.getQueryParameter(PARAM_IS_LOCK)!!.lowercase()
     }
 
+    /**
+     * Whether this is the SHIELDED (L2) invitation variant — carries a
+     * one-time Orchard key (`osk`) instead of an L1 asset lock. The claim
+     * path branches on this: shielded links go through
+     * `shieldedIdentityCreateFromOneTimeKey`, L1 links through the
+     * asset-lock claim. Only the L1 accessors ([assetLockTx], [privateKey],
+     * [instantSendLock]) are safe when this is false; [oneTimeKey] /
+     * [fundingHeight] only when it is true.
+     */
+    @IgnoredOnParcel
+    val isShielded: Boolean by lazy {
+        !link.getQueryParameter(PARAM_ONE_TIME_KEY).isNullOrBlank()
+    }
+
+    /** The one-time 32-byte Orchard spending key, lowercase hex (L2 only). */
+    @IgnoredOnParcel
+    val oneTimeKey by lazy {
+        link.getQueryParameter(PARAM_ONE_TIME_KEY)!!.lowercase()
+    }
+
+    /**
+     * The funding note's block height (L2 advisory scan hint), or null when
+     * absent/unparseable — the claim FFI treats null as "no hint".
+     */
+    @IgnoredOnParcel
+    val fundingHeight: Int? by lazy {
+        link.getQueryParameter(PARAM_FUNDING_HEIGHT)?.toIntOrNull()
+    }
+
+    /**
+     * The shielded funding note's value in Platform credits (L2 only), or
+     * null when the link does not carry it — either because it is an L1
+     * invite or because it was minted before [PARAM_FUNDING_CREDITS] existed.
+     * Null means "tier unknown", NOT "non-contested": callers must not
+     * assert a tier they cannot read (see [PARAM_FUNDING_CREDITS]).
+     * Non-positive/unparseable values are treated as absent.
+     */
+    @IgnoredOnParcel
+    val shieldedFundingCredits: Long? by lazy {
+        link.getQueryParameter(PARAM_FUNDING_CREDITS)?.toLongOrNull()?.takeIf { it > 0 }
+    }
+
     @Deprecated("use link")
     fun getUri(): Uri = "https://invitations.dashpay.io/applink".toUri().buildUpon()
         .appendQueryParameter(PARAM_USER, user)
@@ -138,6 +312,31 @@ data class InvitationLinkData(
 
     val expired: Boolean
         get() = validationTimestamp?.let { it < System.currentTimeMillis() - VALIDATION_EXPIRED } ?: true
+
+    /**
+     * Whether [other] is the SAME invitation as this one, compared on the
+     * field that identifies the invite's funds — the one-time Orchard key
+     * for a shielded invite, the asset-lock txid for an L1 one. Link
+     * equality would not do: the same invite reaches us with different
+     * optional params and param order depending on whether it arrived
+     * directly or through the AppsFlyer wrapper.
+     *
+     * Returns false for a malformed stored link rather than throwing: the
+     * callers use this to SUPPRESS a message, and a wrong suppression is a
+     * cosmetic error where a crash is not.
+     */
+    fun isSameInvitation(other: InvitationLinkData?): Boolean {
+        other ?: return false
+        return try {
+            when {
+                isShielded && other.isShielded -> oneTimeKey == other.oneTimeKey
+                !isShielded && !other.isShielded -> assetLockTx == other.assetLockTx
+                else -> false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     fun validate(validationState: InvitationValidationState): InvitationLinkData {
         return copy(validationState = validationState, validationTimestamp = System.currentTimeMillis())

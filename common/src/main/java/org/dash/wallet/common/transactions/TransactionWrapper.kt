@@ -17,16 +17,17 @@
 
 package org.dash.wallet.common.transactions
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.TransactionBag
+import org.dash.wallet.common.money.Dash
 import java.time.LocalDate
 
 interface TransactionWrapper {
     val id: String
-    val transactions: HashMap<Sha256Hash, Transaction>
+
+    /** Included transactions, keyed by hex txId. */
+    val transactions: HashMap<String, TxInfo>
     val groupDate: LocalDate
-    fun tryInclude(tx: Transaction): Boolean
-    fun getValue(bag: TransactionBag): Coin
+    fun tryInclude(tx: TxInfo): Boolean
+
+    /** Sum of the included transactions' net wallet values. */
+    fun getValue(): Dash
 }

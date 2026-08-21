@@ -20,7 +20,7 @@ package de.schildbach.wallet.payments;
 import android.os.Handler;
 import android.os.Looper;
 
-import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.dash.wallet.common.payments.bip70.PaymentProtocol;
 import org.dash.wallet.common.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

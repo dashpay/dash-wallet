@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.maya.api
 
 import android.content.Intent
+import androidx.annotation.StringRes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,21 +31,39 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.common.util.toFiatValue
+import org.dash.wallet.integrations.maya.R
+import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.InboundAddress
+import org.dash.wallet.integrations.maya.model.MayaErrorType
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapQuote
+import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
+import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.model.getMayaErrorString
+import org.dash.wallet.integrations.maya.model.getMayaErrorType
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
+/**
+ * Legacy Maya-specific surface kept for backwards compatibility.
+ *
+ * New consumers should depend on [SwapProvider] instead — [MayaApiAggregator] implements
+ * both. Once every call site is migrated this interface can be removed.
+ */
 interface MayaApi {
     val poolInfoList: StateFlow<List<PoolInfo>>
     val apiError: StateFlow<Exception?>
@@ -54,9 +73,13 @@ interface MayaApi {
     suspend fun swap()
     suspend fun reset()
 
-    fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>>
+    fun observePoolList(fiatExchangeRate: FiatValue): Flow<List<PoolInfo>>
     suspend fun getInboundAddresses(): List<InboundAddress>
-    suspend fun getDefaultSwapQuote(toAsset: String, value: Long = 1_0000_0000): SwapQuote?
+
+    // Default lives on [SwapProvider.getDefaultSwapQuote] — Kotlin refuses defaults
+    // declared on more than one super interface, so [MayaApiAggregator] gets the
+    // default solely from [SwapProvider].
+    suspend fun getDefaultSwapQuote(toAsset: String, value: Long): SwapQuote?
 }
 
 class MayaApiAggregator @Inject constructor(
@@ -68,13 +91,12 @@ class MayaApiAggregator @Inject constructor(
     private val config: MayaConfig,
     private val securityFunctions: AuthenticationManager,
     private val transactionMetadataProvider: TransactionMetadataProvider
-) : MayaApi {
+) : MayaApi, SwapProvider {
     companion object {
         private val log = LoggerFactory.getLogger(MayaApiAggregator::class.java)
         private val UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30)
     }
 
-    private val params = walletDataProvider.networkParameters
     private var tickerJob: Job? = null
     private val configScope = CoroutineScope(Dispatchers.IO)
     private val responseScope = CoroutineScope(
@@ -110,7 +132,7 @@ class MayaApiAggregator @Inject constructor(
             .launchIn(configScope)
     }
 
-    private suspend fun updatePoolList(fiatExchangeRate: Fiat) {
+    private suspend fun updatePoolList(fiatExchangeRate: FiatValue) {
         poolInfoList.value = webApi.getPoolInfo()
     }
 
@@ -120,6 +142,29 @@ class MayaApiAggregator @Inject constructor(
 
     override suspend fun getDefaultSwapQuote(toAsset: String, value: Long): SwapQuote? {
         return webApi.getDefaultSwapQuote(toAsset, value)
+    }
+
+    override suspend fun getDefaultSwapQuote(
+        toAsset: String,
+        destinationAddress: String,
+        value: Long
+    ): SwapQuote? {
+        return webApi.getDefaultSwapQuote(toAsset, destinationAddress, value)
+    }
+
+    override suspend fun getSwapInfo(swapRequest: SwapQuoteRequest): ResponseResource<SwapTradeUIModel> {
+        return webApi.getSwapInfo(swapRequest)
+    }
+
+    override suspend fun commitSwapTransaction(
+        tradeId: String,
+        swapTradeUIModel: SwapTradeUIModel
+    ): ResponseResource<SwapTradeUIModel> {
+        return blockchainApi.commitSwapTransaction(tradeId, swapTradeUIModel)
+    }
+
+    override suspend fun getUserAccounts(currency: String): List<AccountDataUIModel> {
+        return webApi.getUserAccounts(currency)
     }
 
     override suspend fun reset() {
@@ -163,7 +208,7 @@ class MayaApiAggregator @Inject constructor(
         }
     }
 
-    override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> {
+    override fun observePoolList(fiatExchangeRate: FiatValue): Flow<List<PoolInfo>> {
         log.info("observePoolList(${fiatExchangeRate.toFriendlyString()})")
         if (shouldRefresh()) {
             refreshRates(fiatExchangeRate)
@@ -171,7 +216,7 @@ class MayaApiAggregator @Inject constructor(
         return poolInfoList
     }
 
-    private fun refreshRates(fiatExchangeRate: Fiat) {
+    private fun refreshRates(fiatExchangeRate: FiatValue) {
         log.info("refreshRates(${fiatExchangeRate.toFriendlyString()})")
         if (!shouldRefresh()) {
             return
@@ -186,5 +231,62 @@ class MayaApiAggregator @Inject constructor(
     private fun shouldRefresh(): Boolean {
         val now = System.currentTimeMillis()
         return poolListLastUpdated == 0L || now - poolListLastUpdated > UPDATE_FREQ_MS
+    }
+
+    override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: FiatValue) {
+        // Liquidity-weighted USD price of CACAO from all available USD-stable pools.
+        // Sum of asset balances / sum of cacao balances naturally weights by depth.
+        val stablePools = pools.filter {
+            (it.currencyCode == "USDT" || it.currencyCode == "USDC") &&
+                it.status.equals("available", ignoreCase = true)
+        }
+        val sumStableCacao = stablePools.fold(BigDecimal.ZERO) { acc, p ->
+            acc + (p.balanceCacao.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+        }
+        val sumStableAsset = stablePools.fold(BigDecimal.ZERO) { acc, p ->
+            acc + (p.balanceAsset.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+        }
+        if (sumStableCacao.signum() <= 0 || sumStableAsset.signum() <= 0) {
+            log.warn("no stablecoin pool data; skipping price update")
+            return
+        }
+        log.info("stable pools: {} ({} pools)", stablePools.map { it.asset }, stablePools.size)
+
+        // usdToFiat is the wallet's "1 USD in SELECTED_CURRENCY" rate. Each pool's
+        // USD price is computed via the (balance_cacao * Σstable_asset) /
+        // (balance_asset * Σstable_cacao) cross-product (CACAO's decimals cancel,
+        // and pool assets share 8 decimals so the result is USD per whole asset).
+        // Multiply by usdToFiat to land in the selected fiat.
+        val fiatPerUsd = usdToFiat.toBigDecimal()
+
+        pools.forEach { pool ->
+            val priceUsd = priceInUsd(pool, sumStableCacao, sumStableAsset)
+            if (priceUsd == null || priceUsd.signum() <= 0) {
+                log.info("no USD price for {}", pool.asset)
+                return@forEach
+            }
+            pool.assetPriceFiat = priceUsd.multiply(fiatPerUsd).toFiatValue(usdToFiat.currencyCode)
+            log.info("$priceUsd, ${pool.assetPriceFiat} -> ${pool.asset}")
+        }
+    }
+
+    // Maya's own error vocabulary → friendly message resource (see model/MayaErrorResponse).
+    @StringRes
+    override fun errorMessageRes(error: String?): Int =
+        getMayaErrorString(error ?: "") ?: R.string.something_wrong_title
+
+    override fun isAmountTooLowError(error: String?): Boolean =
+        getMayaErrorType(error ?: "") == MayaErrorType.AMOUNT_TOO_LOW
+
+    private fun priceInUsd(
+        pool: PoolInfo,
+        sumStableCacao: BigDecimal,
+        sumStableAsset: BigDecimal
+    ): BigDecimal? {
+        val cacao = pool.balanceCacao.toBigDecimalOrNull() ?: return null
+        val asset = pool.balanceAsset.toBigDecimalOrNull() ?: return null
+        if (asset.signum() == 0 || sumStableCacao.signum() == 0) return null
+        return cacao.multiply(sumStableAsset)
+            .divide(asset.multiply(sumStableCacao), 10, RoundingMode.HALF_UP)
     }
 }

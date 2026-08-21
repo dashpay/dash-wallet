@@ -44,6 +44,14 @@ interface DashPayProfileDao {
     @Query("SELECT * FROM dashpay_profile")
     suspend fun loadAll(): List<DashPayProfile>
 
+    /**
+     * Emits on every write to the profile table — Room re-runs the query on
+     * each invalidation. For observers whose answer depends on which profiles
+     * have been downloaded, not on any one profile.
+     */
+    @Query("SELECT COUNT(*) FROM dashpay_profile")
+    fun observeCount(): Flow<Int>
+
     @Query("DELETE FROM dashpay_profile")
     suspend fun clear()
 }

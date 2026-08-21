@@ -28,7 +28,7 @@ import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.Companion.TRANSACTION_METADATA_LAST_PAST_SAVE
 import org.bitcoinj.core.InsufficientMoneyException
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
@@ -38,7 +38,7 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
     @Assisted parameters: WorkerParameters,
     private val analytics: AnalyticsService,
     private val platformSynchronizationService: PlatformSynchronizationService,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val dashPayConfig: DashPayConfig
 ) : BaseWorker(context, parameters) {
     companion object {

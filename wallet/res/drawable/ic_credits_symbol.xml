@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Platform-credits symbol: the design's slanted-C glyph (Figma component
+    "credits-direction", node 1746:18435 — the inner "credits" vector,
+    10.4962×10 design px, asset 0d4aa9b3…svg). The Figma component renders
+    the raw vector rotated 180° (bowl on the left, opening right, strokes
+    slanted like the Dash Đ), reproduced here by the pivot-centered group.
+    Tinted with the app's primary text color by default; override per
+    render site (Compose Icon tint / ImageView app:tint) as needed.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="10.5dp"
+    android:height="10dp"
+    android:viewportWidth="10.4962"
+    android:viewportHeight="10"
+    android:tint="@color/content_primary">
+    <group
+        android:rotation="180"
+        android:pivotX="5.2481"
+        android:pivotY="5">
+        <path
+            android:fillColor="#0A0B0D"
+            android:pathData="M1.75865,0H6.24724C10.1913,0 10.8904,2.14864 10.3238,5.17292C9.94849,7.20383 9.00662,8.75644 7.43193,9.48491C6.72553,9.81604 6.04856,10 4.47388,10H0L0.375276,7.91759H4.31199C6.68138,7.92495 7.30684,6.89478 7.61589,5.99706C7.73363,5.65857 7.99853,4.62104 8.00588,4.00294C8.0206,2.80353 7.43193,2.08241 5.43782,2.08241L1.39073,2.07505L1.75865,0Z" />
+    </group>
+</vector>

@@ -45,6 +45,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.more.ToolsViewModel
 import org.dash.wallet.common.util.findFragmentActivity
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.FeatureTopText
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
@@ -105,6 +106,21 @@ fun createExportCSVDialog(
                     }
                     viewModel.resetExportCsvResult()
                 }
+                is ToolsViewModel.ExportCsvResult.Empty -> {
+                    // Never hand back a header-only file silently.
+                    dialog.dialog?.setCancelable(true)
+                    dialog.dialog?.setCanceledOnTouchOutside(true)
+                    if (!activity.isDestroyed) {
+                        AdaptiveDialog.create(
+                            null,
+                            activity.getString(R.string.report_transaction_history_title),
+                            activity.getString(R.string.report_transaction_history_dialog_export_csv_empty),
+                            activity.getString(R.string.button_close)
+                        ).showAsync(activity)
+                        dialog.dismiss()
+                    }
+                    viewModel.resetExportCsvResult()
+                }
                 is ToolsViewModel.ExportCsvResult.Idle -> Unit
             }
         }
@@ -123,7 +139,10 @@ private fun startSendIntent(activity: FragmentActivity, csvFile: File) {
     try {
         val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.file_attachment", csvFile)
         val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
+            // text/csv, not text/plain: receivers that (re)name the attachment
+            // from the MIME type were delivering an extensionless or .txt file
+            // (QA field report, 11.10.98).
+            type = "text/csv"
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_SUBJECT, Constants.REPORT_SUBJECT_BEGIN + activity.getString(R.string.report_transaction_history_title))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -145,6 +164,7 @@ internal fun ExportCSVContent(
     isLoading: Boolean = false,
     onExportClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()

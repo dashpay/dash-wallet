@@ -32,7 +32,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
@@ -45,7 +45,7 @@ class SendInviteWorker @AssistedInject constructor(
     private val platformRepo: PlatformRepo,
     private val invitationsDao: InvitationsDao,
     private val topUpRepository: TopUpRepository,
-    private val walletDataProvider: WalletDataProvider
+    private val walletDataProvider: WalletData
 ): BaseWorker(context, parameters) {
     companion object {
         const val KEY_PASSWORD = "SendInviteWorker.PASSWORD"

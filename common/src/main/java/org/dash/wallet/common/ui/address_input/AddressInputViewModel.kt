@@ -19,6 +19,7 @@ package org.dash.wallet.common.ui.address_input
 
 import android.content.ClipDescription
 import android.content.ClipboardManager
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,7 +52,7 @@ data class AddressInputResult(
             return if (separator == -1) {
                 addressInput
             } else {
-                addressInput.substring(separator)
+                addressInput.substring(separator + 1)
             }
         }
 }
@@ -60,13 +61,22 @@ data class AddressInputResult(
 class AddressInputViewModel @Inject constructor(
     private val clipboardManager: ClipboardManager,
     private val analyticsService: AnalyticsService,
-    walletDataProvider: WalletDataProvider
+    walletDataProvider: WalletDataProvider,
+    private val savedStateHandle: SavedStateHandle
 ): ViewModel() {
+    companion object {
+        private const val KEY_ADDRESS_INPUT = "address_input"
+    }
+
     lateinit var paymentParsers: PaymentParsers
     var currency: String = Constants.DASH_CURRENCY
     val addressSources = arrayListOf<AddressSource>()
 
-    private val _uiState = MutableStateFlow(AddressInputUIState())
+    // The entered address survives process death via SavedStateHandle; everything else in the
+    // UI state is re-derived (clipboard) or transient.
+    private val _uiState = MutableStateFlow(
+        AddressInputUIState(addressInput = savedStateHandle[KEY_ADDRESS_INPUT] ?: "")
+    )
     val uiState: StateFlow<AddressInputUIState> = _uiState.asStateFlow()
 
     private var paymentIntent: PaymentIntent? = null
@@ -92,6 +102,7 @@ class AddressInputViewModel @Inject constructor(
 
     fun setInput(text: String) {
         _uiState.value = _uiState.value.copy(addressInput = text)
+        savedStateHandle[KEY_ADDRESS_INPUT] = text
         analyticsService.logEvent(AnalyticsConstants.AddressInput.ADDRESS_TAP, mapOf())
     }
 

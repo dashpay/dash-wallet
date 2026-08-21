@@ -1,0 +1,43 @@
+<!--
+  ~ Copyright 2025 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="60dp"
+    android:height="60dp"
+    android:viewportWidth="60"
+    android:viewportHeight="60">
+    <!-- Rounded background, vertical gradient #262626 -> #000000 -->
+    <path android:pathData="M15,0L45,0A15,15 0 0 1 60,15L60,45A15,15 0 0 1 45,60L15,60A15,15 0 0 1 0,45L0,15A15,15 0 0 1 15,0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="30"
+                android:startY="0"
+                android:endX="30"
+                android:endY="60">
+                <item android:offset="0" android:color="#FF262626" />
+                <item android:offset="1" android:color="#FF000000" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- DashDEX glyph, vertical gradient white -> white 50% -->
+    <path android:pathData="M42.9328,16.0586C43.0723,16.0587 43.1857,16.172 43.1857,16.3115V20.6074C43.1856,20.7468 43.0722,20.8602 42.9328,20.8604H25.7189C23.5928,20.8604 21.8507,22.5217 21.7199,24.6152H42.9328C43.0723,24.6154 43.1857,24.7286 43.1857,24.8682V33.459C43.1857,33.5985 43.0723,33.7118 42.9328,33.7119H38.8898V37.502H42.9328C43.0722,37.5021 43.1857,37.6154 43.1857,37.7549C43.1857,42.613 39.2343,46.5644 34.3761,46.5645H17.1623C17.0227,46.5645 16.9093,46.4511 16.9093,46.3115V42.0156C16.9095,41.8762 17.0228,41.7627 17.1623,41.7627H34.3761C36.5021,41.7626 38.2443,40.1013 38.3752,38.0078H17.1623C17.0227,38.0078 16.9093,37.8945 16.9093,37.7549V29.1641C16.9093,29.0245 17.0227,28.9111 17.1623,28.9111H21.2052V25.1211H17.1623C17.0227,25.1211 16.9094,25.0077 16.9093,24.8682C16.9093,20.01 20.8607,16.0586 25.7189,16.0586H42.9328ZM21.7111,33.207H38.3879V29.416H21.7111V33.207Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="30.0474"
+                android:startY="16.3115"
+                android:endX="30.0474"
+                android:endY="46.3115">
+                <item android:offset="0" android:color="#FFFFFFFF" />
+                <item android:offset="1" android:color="#80FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         compileSdk 35
-        minSdkVersion 24
+        minSdkVersion 29
         targetSdkVersion 35
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -50,7 +50,6 @@ dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
-    implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
 
@@ -69,7 +68,9 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly('io.jsonwebtoken:jjwt-orgjson:0.11.5') {
-        exclude(group: 'org.json', module: 'json') //provided by Android natively
+        // On a device org.json comes from the platform, so it must not be packaged into the APK.
+        // JVM unit tests are the exception — see the testImplementation below.
+        exclude(group: 'org.json', module: 'json')
     }
 
     implementation 'com.madgag.spongycastle:core:1.50.0.0'
@@ -83,6 +84,11 @@ dependencies {
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     testImplementation "com.squareup.okhttp3:mockwebserver:$ok_http_version"
+    // android.jar's org.json is a stub whose methods throw "not mocked" under JVM unit tests, so
+    // UpholdApiException's error parsing needs a real implementation on the test classpath. This
+    // used to arrive transitively via org.dashj:dashj-core (its POM pulls org.json:json at runtime
+    // scope); dashj was removed from this module, so depend on it directly and explicitly.
+    testImplementation 'org.json:json:20231013'
 
     androidTestImplementation("androidx.test.espresso:espresso-core:$espressoVersion", {
         exclude group: 'com.android.support', module: 'support-annotations'

@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -25,20 +26,20 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.script.ScriptBuilder
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.observeDashBalance
+import org.dash.wallet.common.payments.parsers.withOutputAdded
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.integrations.maya.api.MayaWebApi
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.MayaErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
@@ -50,7 +51,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MayaConvertCryptoViewModel @Inject constructor(
-    private val coinBaseRepository: MayaWebApi,
+    private val swapProvider: SwapProvider,
     private val config: MayaConfig,
     private val walletUIConfig: WalletUIConfig,
     private val walletDataProvider: WalletDataProvider,
@@ -59,6 +60,11 @@ class MayaConvertCryptoViewModel @Inject constructor(
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
     var paymentIntent: PaymentIntent? = null
+
+    // Source of truth for the inline amount error: the Compose UIState lives in the fragment
+    // and is recreated with the view, so the currently shown error is kept here to survive
+    // configuration changes.
+    var inlineErrorMessage: String? = null
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -67,8 +73,8 @@ class MayaConvertCryptoViewModel @Inject constructor(
 
     val swapTradeFailedCallback = SingleLiveEvent<String?>()
 
-    private val _dashWalletBalance = MutableLiveData<Coin>()
-    val dashWalletBalance: LiveData<Coin>
+    private val _dashWalletBalance = MutableLiveData<Dash>()
+    val dashWalletBalance: LiveData<Dash>
         get() = this._dashWalletBalance
 
     val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
@@ -97,7 +103,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
             maximum = swapTradeInfo.maximum
         )
 
-        when (val result = coinBaseRepository.getSwapInfo(swapRequest)) {
+        when (val result = swapProvider.getSwapInfo(swapRequest)) {
             is ResponseResource.Success -> {
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     _showLoading.value = false
@@ -142,7 +148,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SELECT_COIN, mapOf())
 
         return try {
-            coinBaseRepository.getUserAccounts(walletUIConfig.getExchangeCurrencyCode())
+            swapProvider.getUserAccounts(walletUIConfig.getExchangeCurrencyCode())
         } catch (ex: Exception) {
             listOf()
         }.filter {
@@ -158,8 +164,8 @@ class MayaConvertCryptoViewModel @Inject constructor(
         analyticsService.logEvent(eventName, mapOf())
     }
 
-    suspend fun getLastBalance(): Coin {
-        return Coin.ZERO
+    suspend fun getLastBalance(): Dash {
+        return Dash.ZERO
     }
 
     private fun isValidCoinBaseAccount(it: AccountDataUIModel) = (
@@ -169,32 +175,23 @@ class MayaConvertCryptoViewModel @Inject constructor(
         )
 
     private fun setDashWalletBalance() {
-        walletDataProvider.observeBalance().onEach {
+        walletDataProvider.observeDashBalance().onEach {
             _dashWalletBalance.value = it
         }.launchIn(viewModelScope)
     }
 
-    suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
+    suspend fun isInputGreaterThanLimit(amountInDash: Dash): Boolean {
         return false
     }
 
-    fun getUpdatedPaymentIntent(amountInDash: Coin, destination: Address): PaymentIntent? {
-        return paymentIntent?.let {
-            val outputList = it.outputs!!.toList().toMutableList()
-            outputList.add(PaymentIntent.Output(amountInDash, ScriptBuilder.createOutputScript(destination)))
-
-            PaymentIntent(
-                it.standard,
-                it.payeeName,
-                it.payeeVerifiedBy,
-                outputList.toTypedArray(),
-                it.memo, it.paymentUrl,
-                it.payeeData, it.paymentRequestUrl,
-                it.paymentRequestHash,
-                null,
-                null,
-                null
-            )
-        }
+    fun getUpdatedPaymentIntent(amountInDash: Dash, destinationAddress: String): PaymentIntent? {
+        return paymentIntent?.withOutputAdded(amountInDash, destinationAddress)
     }
+
+    /** Friendly message resource for a swap error, mapped by whichever backend is active. */
+    @StringRes
+    fun errorMessageRes(error: String?): Int = swapProvider.errorMessageRes(error)
+
+    /** True when the swap failed because the amount is below the route's minimum (shown inline). */
+    fun isAmountTooLowError(error: String?): Boolean = swapProvider.isAmountTooLowError(error)
 }

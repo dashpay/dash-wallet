@@ -17,11 +17,12 @@
 
 package org.dash.wallet.common.transactions.filters
 
-import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.transactions.TxInfo
 import java.util.*
 
-class TxWithinTimePeriod(private val from: Date, private val to: Date): TransactionFilter {
-    override fun matches(tx: Transaction): Boolean {
-        return tx.updateTime.after(from) && tx.updateTime.before(to)
+class TxWithinTimePeriod(private val from: Date, private val to: Date) : TransactionFilter {
+    override fun matches(tx: TxInfo): Boolean {
+        val updateTime = Date(tx.updateTimeMillis)
+        return updateTime.after(from) && updateTime.before(to)
     }
 }

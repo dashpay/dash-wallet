@@ -17,25 +17,19 @@
 
 package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.script.ScriptPattern
+import org.dash.wallet.common.payments.parsers.AddressNetwork
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class CrowdNodeDepositTx(private val accountAddress: Address) : TransactionFilter {
-    override fun matches(tx: Transaction): Boolean {
-        val networkParams = accountAddress.parameters
-        val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(networkParams)
+class CrowdNodeDepositTx(private val accountAddress: String) : TransactionFilter {
+    override fun matches(tx: TxInfo): Boolean {
+        val networkId = AddressNetwork.fromDashAddress(accountAddress).id
+        val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(networkId)
 
         val allFromAccount = tx.inputs.all {
-            val script = it.outpoint.connectedOutput?.scriptPubKey
-
-            script != null &&
-                (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                script.getToAddress(networkParams) == accountAddress
+            it.connectedAddress != null && it.connectedAddress == accountAddress
         }
 
         if (!allFromAccount) {
@@ -43,20 +37,16 @@ class CrowdNodeDepositTx(private val accountAddress: Address) : TransactionFilte
         }
 
         for (output in tx.outputs) {
-            val script = output.scriptPubKey
-
-            if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                script.getToAddress(networkParams) == crowdNodeAddress
-            ) {
-                return !isApiRequest(output.value)
+            if (output.address != null && output.address == crowdNodeAddress) {
+                return !isApiRequest(output.valueDuffs)
             }
         }
 
         return false
     }
 
-    private fun isApiRequest(coin: Coin): Boolean {
-        val toCheck = (coin - CrowdNodeConstants.API_OFFSET).value
+    private fun isApiRequest(valueDuffs: Long): Boolean {
+        val toCheck = valueDuffs - CrowdNodeConstants.API_OFFSET.duffs
 
         return toCheck <= ApiCode.MaxCode.code
     }

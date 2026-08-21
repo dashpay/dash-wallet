@@ -87,7 +87,6 @@
     <string name="select_currency">Selecteer valuta</string>
     <string name="send_coins_error_dusty_send">bedrag is te klein om te versturen</string>
     <string name="send_coins_error_insufficient_money">Ontoereikende fondsen</string>
-    <string name="send_coins_error_insufficient_mixed_money">Onvoldoende gemengd saldo. Wacht tot de CoinJoin mix is voltooid of schakel deze functie uit in de instellingen om deze transactie te voltooien.</string>
     <string name="syncing">Aan het synchroniseren</string>
     <string name="no_connection">Geen internetverbinding</string>
     <string name="rate_not_available">Niet beschikbaar</string>

@@ -10,7 +10,7 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlin.OptIn
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -18,7 +18,7 @@ public class VotingViewModel @Inject constructor(
     private val dashPayConfig:DashPayConfig,
     private val usernameRequestDao:UsernameRequestDao,
     private val platformSyncService: PlatformSyncService,
-    private val walletDataProvider: WalletDataProvider
+    private val walletDataProvider: WalletData
 ): ViewModel() {
 
 }

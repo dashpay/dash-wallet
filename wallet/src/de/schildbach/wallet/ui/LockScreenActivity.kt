@@ -63,7 +63,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -91,7 +91,7 @@ open class LockScreenActivity : SecureActivity() {
 
     lateinit var alertDialog: AlertDialog
     @Inject lateinit var walletApplication: WalletApplication
-    @Inject lateinit var walletData: WalletDataProvider
+    @Inject lateinit var walletData: WalletData
     @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var restartService: RestartService
@@ -239,6 +239,22 @@ open class LockScreenActivity : SecureActivity() {
 
     override fun onStart() {
         super.onStart()
+
+        // A Reset Wallet is destroying this wallet's data. Nothing below may
+        // run: not the unlock (its keys are being deleted), not
+        // startBlockchainService() (the service is shutting down to perform
+        // the wipe), and above all not the wallet screen itself. The reset
+        // clears the task to onboarding when it starts, but the system can
+        // still restore a wallet activity — after a process death mid-wipe, or
+        // from recents — and on S22 the auto-logout did exactly this: it put
+        // the lock screen up at 22:39:11, the user authenticated, and landed
+        // back on a wallet whose file and keystore secrets were already gone.
+        if (walletApplication.isWipeInProgress) {
+            log.warn("reset in progress — leaving {} for onboarding", javaClass.simpleName)
+            restartService.performRestart(this, true)
+            return
+        }
+
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         val showLockScreen = !keepUnlocked && configuration.autoLogoutEnabled &&
@@ -384,8 +400,28 @@ open class LockScreenActivity : SecureActivity() {
                 }
                 Status.SUCCESS -> {
                     if (biometricHelper.requiresEnabling) {
+                        // Fully SUSPEND auto-logout for the DURATION of the biometric enroll,
+                        // not merely clear the "locked" flags. Clearing deviceWasLocked /
+                        // keepLockedUntilPinEntered alone is not enough: shouldLogout() also
+                        // returns true via (autoLogoutEnabled && logoutTimeExceeded) — when the
+                        // system enroll dialog takes focus the app counts as backgrounded, so the
+                        // next auto-logout timer tick fires onLogout() -> biometricHelper
+                        // .cancelPending() and kills the live BiometricPrompt (ERROR_CANCELED).
+                        // turnOffAutoLogout() stops the timer outright so no tick can fire during
+                        // enrollment; turnOnAutoLogout() in finally always restores it, even if the
+                        // enroll throws. The flag clears stay as belt-and-suspenders (they are
+                        // normally cleared in onCorrectPin, which we defer until AFTER enrollment).
+                        // onCorrectPin still runs LAST so wallet content is not revealed until
+                        // enrollment finishes.
+                        autoLogout.deviceWasLocked = false
+                        autoLogout.keepLockedUntilPinEntered = false
+                        turnOffAutoLogout()
                         lifecycleScope.launch {
-                            biometricHelper.enableBiometricReminder(this@LockScreenActivity, it.data!!)
+                            try {
+                                biometricHelper.enableBiometricReminder(this@LockScreenActivity, it.data!!)
+                            } finally {
+                                turnOnAutoLogout()
+                            }
                             onCorrectPin(it.data)
                         }
                     } else {
@@ -591,6 +627,7 @@ open class LockScreenActivity : SecureActivity() {
     open fun onLockScreenActivated() { }
 
     open fun onLockScreenDeactivated() {
+        lockScreenBroadcaster.deactivatingLockScreen.call()
         lockScreenDeactivatedListeners.forEach {
             it.invoke()
         }

@@ -17,18 +17,17 @@
 
 package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.transactions.filters.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class CrowdNodeWithdrawalQueueResponse(networkParams: NetworkParameters) : CoinsFromAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams),
+class CrowdNodeWithdrawalQueueResponse(networkId: String) : CoinsFromAddressTxFilter(
+    CrowdNodeConstants.getCrowdNodeAddress(networkId),
     WITHDRAWAL_QUEUE_RESPONSE_CODE
 ) {
     companion object {
-        val WITHDRAWAL_QUEUE_RESPONSE_CODE: Coin =
-            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.WithdrawalQueue.code)
+        val WITHDRAWAL_QUEUE_RESPONSE_CODE: Dash =
+            CrowdNodeConstants.API_OFFSET + Dash.valueOf(ApiCode.WithdrawalQueue.code)
     }
 }

@@ -53,7 +53,35 @@ open class CrowdNodeException(message: String) : Exception(message) {
         const val CONFIRMATION_ERROR = "confirmation_error"
         const val WITHDRAWAL_ERROR = "withdrawal_error"
         const val MISSING_PRIMARY = "primary_not_specified"
+        const val SERVICE_UNAVAILABLE = "service_unavailable"
     }
 }
 
 class MessageStatusException(details: String) : CrowdNodeException(details)
+
+/**
+ * A retired on-chain operation was invoked. CrowdNode has disabled account
+ * creation and deposits service-side, and the remaining users are all on the
+ * API path, so the dashj senders in
+ * [org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi] no
+ * longer build or broadcast anything — they raise this instead.
+ *
+ * Deliberately an exception rather than a silent no-op: an operation that
+ * reports success while moving no funds is the failure mode being refused
+ * here. It is raised BEFORE any side effect (no output locking, no partial
+ * flow), so nothing is left half-done for the caller to reconcile.
+ *
+ * Extends [CrowdNodeException] on purpose — the existing handlers
+ * (`CrowdNodeApi.signUp`/`deposit`'s `catch (Exception)` and
+ * `CrowdNodeConfirmationTxHandler`'s `catch (CrowdNodeException)`) then turn
+ * it into an error state rather than an uncaught crash.
+ *
+ * The UI gate ([org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED])
+ * is what users normally meet; this is the backstop for any path the gate
+ * misses.
+ *
+ * @property operation the retired call, for logs and analytics.
+ */
+class CrowdNodeServiceUnavailableException(
+    val operation: String
+) : CrowdNodeException("$SERVICE_UNAVAILABLE: $operation is no longer available")

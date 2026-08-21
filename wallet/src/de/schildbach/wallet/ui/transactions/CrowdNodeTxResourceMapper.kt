@@ -22,8 +22,18 @@ import androidx.annotation.StringRes
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.toTxInfo
 import org.dash.wallet.integrations.crowdnode.transactions.*
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 class CrowdNodeTxResourceMapper: TxResourceMapper() {
     override val dateTimeFormat: Int
@@ -39,15 +49,18 @@ class CrowdNodeTxResourceMapper: TxResourceMapper() {
             return super.getTransactionTypeName(tx, bag)
         }
 
+        val txInfo = tx.toTxInfo(bag, tx.params)
+        val networkId = tx.params.id
+
         return if (tx.isEntirelySelf(bag)) {
             R.string.shuffle_coins
-        } else if (CrowdNodeSignUpTx(tx.params).matches(tx)) {
+        } else if (CrowdNodeSignUpTx(networkId).matches(txInfo)) {
             R.string.account_create
-        } else if (CrowdNodeAcceptTermsTx(tx.params).matches(tx)) {
+        } else if (CrowdNodeAcceptTermsTx(networkId).matches(txInfo)) {
             R.string.accept_terms
-        } else if (CrowdNodeAcceptTermsResponse(tx.params).matches(tx) || PossibleAcceptTermsResponse(bag, null).matches(tx)) {
+        } else if (CrowdNodeAcceptTermsResponse(networkId).matches(txInfo) || PossibleAcceptTermsResponse(null).matches(txInfo)) {
             R.string.accept_terms_response
-        } else if (CrowdNodeWelcomeToApiResponse(tx.params).matches(tx) || PossibleWelcomeResponse(bag, null).matches(tx)) {
+        } else if (CrowdNodeWelcomeToApiResponse(networkId).matches(txInfo) || PossibleWelcomeResponse(null).matches(txInfo)) {
             R.string.welcome_response
         } else {
             super.getTransactionTypeName(tx, bag)

@@ -44,11 +44,8 @@ import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.ServiceType
-import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.dashpay.NotificationsFragment
@@ -79,6 +76,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.InfoPanel
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.scan.ScanActivity
@@ -88,8 +86,10 @@ import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
+import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import de.schildbach.wallet.service.L1SyncUiStatus
 
 @AndroidEntryPoint
 class WalletFragment : Fragment(R.layout.home_content) {
@@ -165,43 +165,28 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
         binding.infoPanel.setContent {
             if (shortcutViewModel.showShortcutInfo) {
-                InfoPanel(
-                    stringResource(R.string.customize_shortcuts),
-                    stringResource(R.string.customize_shortcuts_description),
-                    modifier = Modifier
-                        .wrapContentHeight()
-                        .fillMaxWidth()
-                        .padding(horizontal = 2.dp),
-                    leftIconRes = R.drawable.ic_shortcuts,
-                    actionIconRes = R.drawable.ic_popup_close
-                ) {
-                    shortcutViewModel.hideShortcutInfo()
+                DashWalletTheme {
+                    InfoPanel(
+                        stringResource(R.string.customize_shortcuts),
+                        stringResource(R.string.customize_shortcuts_description),
+                        modifier = Modifier
+                            .wrapContentHeight()
+                            .fillMaxWidth()
+                            .padding(horizontal = 2.dp),
+                        leftIconRes = R.drawable.ic_shortcuts,
+                        actionIconRes = R.drawable.ic_popup_close
+                    ) {
+                        shortcutViewModel.hideShortcutInfo()
+                    }
                 }
             }
         }
-        binding.composeMixingStatusPane.setViewCompositionStrategy(
-            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
-        )
-        binding.composeMixingStatusPane.setContent {
-            MixingStatusCard(
-                viewModel.coinJoinMode,
-                viewModel.mixingState,
-                viewModel.mixingProgress,
-                viewModel.mixedBalance.asFlow(),
-                viewModel.totalBalance.asFlow(),
-                viewModel.hideBalance
-            ) {
-                startActivity(Intent(requireContext(), CoinJoinActivity::class.java).apply {
-                    putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, false)
-                })
-            }
-        }
-
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.transactionsLoaded.collect { if (it) refreshShortcutBar() }
         }
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
-        viewModel.isBlockchainSyncFailed.observe(viewLifecycleOwner) { updateSyncState() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.syncStatus.collect { updateSyncState(it) }
+        }
 
         if (!configuration.hasDisplayedTaxCategoryExplainer) {
             viewModel.observeMostRecentTransaction().observe(viewLifecycleOwner) { mostRecentTransaction: Transaction ->
@@ -242,7 +227,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
         }
 
-        viewModel.notificationCountData.observe(viewLifecycleOwner) { setNotificationIndicator() }
+        viewModel.notificationCount.observe(viewLifecycleOwner) { setNotificationIndicator() }
 
         viewModel.totalBalance.observe(viewLifecycleOwner) {
             val balance: Coin = viewModel.totalBalance.value ?: Coin.ZERO
@@ -276,15 +261,17 @@ class WalletFragment : Fragment(R.layout.home_content) {
         )
 
         binding.shortcutsPane.setContent {
-            ShortcutsPane(
-                shortcuts = shortcutViewModel.shortcuts,
-                onClick = { shortcut ->
-                    onShortcutTap(shortcut)
-                },
-                onLongClick = { shortcut, index ->
-                    onShortcutLongTap(shortcut, index)
-                }
-            )
+            DashWalletTheme {
+                ShortcutsPane(
+                    shortcuts = shortcutViewModel.shortcuts,
+                    onClick = { shortcut ->
+                        onShortcutTap(shortcut)
+                    },
+                    onLongClick = { shortcut, index ->
+                        onShortcutLongTap(shortcut, index)
+                    }
+                )
+            }
         }
 
         refreshShortcutBar()
@@ -295,18 +282,15 @@ class WalletFragment : Fragment(R.layout.home_content) {
         shortcutViewModel.userHasContacts = viewModel.hasIdentity && viewModel.hasContacts.value
     }
 
-    private fun updateSyncState() {
-        val isSyncFailed = viewModel.isBlockchainSyncFailed.value
-
-        if (isSyncFailed != null && isSyncFailed) {
+    private fun updateSyncState(status: L1SyncUiStatus) {
+        if (status.isFailed) {
             binding.syncStatusPane.syncErrorPane.isVisible = true
             return
         }
 
         binding.syncStatusPane.syncErrorPane.isVisible = false
-        val isSynced = viewModel.isBlockchainSynced.value
 
-        if (isSynced != null && isSynced) {
+        if (status.isSynced) {
             refreshShortcutBar()
         }
     }
@@ -384,7 +368,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun setNotificationIndicator() {
         binding.notificationBell.isVisible = viewModel.hasIdentity
         binding.notificationBell.setImageResource(
-            if (viewModel.notificationCount > 0) {
+            if (viewModel.notificationCount.value > 0) {
                 R.drawable.ic_new_notifications
             } else {
                 R.drawable.ic_notification_bell
@@ -405,6 +389,11 @@ class WalletFragment : Fragment(R.layout.home_content) {
             ShortcutOption.BUY_SELL -> {
                 viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL)
                 safeNavigate(WalletFragmentDirections.homeToBuySell())
+            }
+            ShortcutOption.DASH_DEX -> {
+                viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_DASH_DEX)
+                viewModel.setSwapBackend(SwapBackend.SWAPKIT)
+                safeNavigate(WalletFragmentDirections.homeToMaya())
             }
             ShortcutOption.SEND_TO_ADDRESS -> {
                 handlePayToAddress()
@@ -493,7 +482,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     private fun handleStakingNavigation() {
         lifecycleScope.launch {
-            if (viewModel.isBlockchainSynced.value == true) {
+            if (viewModel.syncStatus.value.isSynced) {
                 stakingLauncher.launch(Intent(requireContext(), StakingActivity::class.java))
             } else {
                 val openWebsite = AdaptiveDialog.create(

@@ -23,6 +23,7 @@ import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Space
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
@@ -41,11 +42,31 @@ import de.schildbach.wallet_test.databinding.TransactionGroupHeaderBinding
 import de.schildbach.wallet_test.databinding.TransactionRowBinding
 import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
+import org.dash.wallet.common.data.entity.SwapOrderStatus
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.avatar.UserAvatarPlaceholderDrawable
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.util.GenericUtils
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 open class HistoryViewHolder(root: View): RecyclerView.ViewHolder(root)
+
+/**
+ * View type for rows the adapter can't resolve to an item: positions RecyclerView asks about
+ * while a paging diff is still being dispatched (stale layout positions during replay churn)
+ * or a null item from [PagingDataAdapter.getItem]. Must never collide with an `R.layout` id —
+ * those are always positive resource ids.
+ */
+private const val VIEW_TYPE_PLACEHOLDER = 0
 
 /**
  * ViewHolder for a single transaction row.
@@ -109,6 +130,7 @@ class TransactionViewHolder(
         setIcon(txView)
         setPrimaryStatus(txView)
         setSecondaryStatus(txView)
+        setSwapStatus(txView)
         setValue(txView.value, txView.hasErrors)
         setFiatValue(txView.value, txView.exchangeRate)
         setTime(txView.time, resourceMapper.dateTimeFormat)
@@ -124,13 +146,35 @@ class TransactionViewHolder(
         if (contact != null) {
             binding.primaryIcon.background = null
             binding.primaryIcon.setPadding(0, 0, 0, 0)
-            binding.primaryIcon.load(contact.avatarUrl) {
-                transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
-                placeholder(R.drawable.ic_avatar)
-                error(R.drawable.ic_avatar)
+            // Fall back to the SAME generated default avatar the profile screens show
+            // (a colored circle with the username's first letter) instead of the gray
+            // ic_avatar silhouette, for a contact whose avatarUrl is blank or fails to
+            // load. Mirrors ProfilePictureDisplay's default path (UserAvatarPlaceholderDrawable).
+            val username = contact.username
+            val fallbackAvatar = ResourcesCompat.getDrawable(resources, R.drawable.ic_avatar, null)
+            val defaultAvatar = if (username.isNotEmpty()) {
+                UserAvatarPlaceholderDrawable.getDrawable(
+                    itemView.context,
+                    username[0],
+                    (iconSize * ProfilePictureDisplay.FONT_SIZE_RATIO).toInt()
+                ) ?: fallbackAvatar
+            } else {
+                fallbackAvatar
+            }
+            if (contact.avatarUrl.isNotEmpty()) {
+                binding.primaryIcon.load(contact.avatarUrl) {
+                    transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+                    placeholder(defaultAvatar)
+                    error(defaultAvatar)
+                }
+            } else {
+                binding.primaryIcon.setImageDrawable(defaultAvatar)
             }
             binding.primaryIcon.setOnClickListener {
-                clickListener.invoke(txView, 0, true)
+                // Only treat the tap as a profile click when the contact carries a real
+                // userId (a defensively-reconstructed cache contact may have ""); the
+                // fragment's handler otherwise opens the transaction detail.
+                clickListener.invoke(txView, 0, contact.userId.isNotEmpty())
             }
 
             binding.secondaryIcon.isVisible = true
@@ -176,6 +220,19 @@ class TransactionViewHolder(
             binding.secondaryStatus.setTextColor(colorSecondaryStatus)
         } else {
             binding.secondaryStatus.text = null
+        }
+    }
+
+    private fun setSwapStatus(txView: TransactionRowView) {
+        val textRes = when (txView.swapStatus) {
+            null, SwapOrderStatus.COMPLETED -> 0
+            SwapOrderStatus.REFUNDED -> R.string.transaction_row_status_refunded
+            SwapOrderStatus.FAILED -> R.string.transaction_row_status_failed
+            else -> R.string.transaction_row_status_processing
+        }
+        binding.swapStatus.isVisible = textRes != 0
+        if (textRes != 0) {
+            binding.swapStatus.setText(textRes)
         }
     }
 
@@ -277,23 +334,27 @@ class TransactionAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
-        if (position >= itemCount) {
-            return -1
+        if (position !in 0 until itemCount) {
+            return VIEW_TYPE_PLACEHOLDER
         }
 
         return when (getItem(position)) {
             is TransactionRowView -> R.layout.transaction_row
             is HistoryRowView -> R.layout.transaction_group_header
-            else -> -1
+            else -> VIEW_TYPE_PLACEHOLDER
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistoryViewHolder =
         createHistoryViewHolder(parent, viewType, resources, drawBackground, dashFormat,
-            { itemCount }, { pos -> getItem(pos) }, clickListener)
+            { itemCount }, { pos -> getItemOrNull(pos) }, clickListener)
 
     override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) =
-        bindHistoryViewHolder(holder, getItem(position), position, clickListener)
+        bindHistoryViewHolder(holder, getItemOrNull(position), position, clickListener)
+
+    /** [PagingDataAdapter.getItem] throws for out-of-range positions — never let it. */
+    private fun getItemOrNull(position: Int): HistoryRowView? =
+        if (position in 0 until itemCount) getItem(position) else null
 }
 
 /**
@@ -311,10 +372,10 @@ class CacheTransactionAdapter(
 ) : ListAdapter<HistoryRowView, HistoryViewHolder>(HistoryRowDiffCallback()) {
 
     override fun getItemViewType(position: Int): Int {
-        return when (getItem(position)) {
+        return when (currentList.getOrNull(position)) {
             is TransactionRowView -> R.layout.transaction_row
             is HistoryRowView -> R.layout.transaction_group_header
-            else -> -1
+            else -> VIEW_TYPE_PLACEHOLDER
         }
     }
 
@@ -323,7 +384,7 @@ class CacheTransactionAdapter(
             { itemCount }, { pos -> currentList.getOrNull(pos) }, clickListener)
 
     override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) =
-        bindHistoryViewHolder(holder, getItem(position), position, clickListener)
+        bindHistoryViewHolder(holder, currentList.getOrNull(position), position, clickListener)
 }
 
 private fun createHistoryViewHolder(
@@ -346,7 +407,9 @@ private fun createHistoryViewHolder(
             val binding = TransactionGroupHeaderBinding.inflate(inflater, parent, false)
             TransactionGroupHeaderViewHolder(binding)
         }
-        else -> throw IllegalArgumentException("viewType $viewType isn't recognized")
+        // VIEW_TYPE_PLACEHOLDER (and anything unexpected): an inert zero-size holder.
+        // Never throw here — RecyclerView may ask about stale positions mid-diff.
+        else -> HistoryViewHolder(Space(parent.context))
     }
 }
 
@@ -359,7 +422,8 @@ private fun bindHistoryViewHolder(
     item ?: return
     when (holder) {
         is TransactionViewHolder -> {
-            holder.bind(item as TransactionRowView, position)
+            if (item !is TransactionRowView) return  // stale viewType mid-diff — skip, rebind follows
+            holder.bind(item, position)
             holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
         }
         is TransactionGroupHeaderViewHolder -> {

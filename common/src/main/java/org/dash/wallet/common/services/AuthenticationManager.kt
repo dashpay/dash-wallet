@@ -19,13 +19,21 @@ package org.dash.wallet.common.services
 
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Address
 import org.dash.wallet.common.data.SecuritySystemStatus
 
 interface AuthenticationManager {
     fun authenticate(activity: FragmentActivity, pinOnly: Boolean = false, callback: (String?) -> Unit)
     suspend fun authenticate(activity: FragmentActivity, pinOnly: Boolean = false): String?
-    suspend fun signMessage(address: Address, message: String): String
+    /**
+     * Sign [message] with the private key of [address], returning the
+     * base64 signature.
+     *
+     * Throws [MessageSigningException] on every failure — implementations
+     * must NOT return an empty string when the wallet cannot sign (see that
+     * type's doc for why). [message] must contain no unpaired UTF-16
+     * surrogate.
+     */
+    suspend fun signMessage(address: String, message: String): String
     fun getHealth(): SecuritySystemStatus
     fun observeHealth(): Flow<SecuritySystemStatus>
 }

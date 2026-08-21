@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -51,11 +52,12 @@ fun FeatureItemNumber(
     number: String,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = modifier
             .size(24.dp)
             .background(
-                color = MyTheme.Colors.dashBlue,
+                color = colors.dashBlue,
                 shape = RoundedCornerShape(8.dp)
             ),
         contentAlignment = Alignment.Center
@@ -63,7 +65,7 @@ fun FeatureItemNumber(
         Text(
             text = number,
             fontSize = 14.sp,
-            color = Color.White,
+            color = colors.textPrimary,
             textAlign = TextAlign.Center
         )
     }
@@ -77,6 +79,7 @@ fun FeatureSingleItem(
     icon: ImageVector? = null,
     number: String? = null
 ) {
+    val colors = LocalDashColors.current
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -97,7 +100,7 @@ fun FeatureSingleItem(
                         imageVector = icon,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
-                        tint = MyTheme.Colors.gray300
+                        tint = colors.gray300
                     )
                 }
                 else -> {
@@ -106,7 +109,7 @@ fun FeatureSingleItem(
                             .size(20.dp)
                             .border(
                                 width = 2.5.dp,
-                                color = MyTheme.Colors.gray300,
+                                color = colors.gray300,
                                 shape = RoundedCornerShape(5.dp)
                             )
                     )
@@ -123,13 +126,13 @@ fun FeatureSingleItem(
             Text(
                 text = heading,
                 style = MyTheme.Typography.TitleSmallMedium,
-                color = MyTheme.Colors.textPrimary
+                color = colors.textPrimary
             )
             if (text != null) {
                 Text(
                     text = text,
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textSecondary
+                    color = colors.textSecondary
                 )
             }
         }
@@ -156,13 +159,21 @@ fun FeatureList(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Feature Single Item Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Feature Single Item Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun FeatureSingleItemPreview() {
+    DashWalletTheme {
+        FeatureSingleItemPreviewContent()
+    }
+}
+
+@Composable
+private fun FeatureSingleItemPreviewContent() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(LocalDashColors.current.backgroundPrimary)
             .padding(20.dp)
     ) {
         FeatureSingleItem(
@@ -172,13 +183,21 @@ private fun FeatureSingleItemPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Feature List Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Feature List Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun FeatureListPreview() {
+    DashWalletTheme {
+        FeatureListPreviewContent()
+    }
+}
+
+@Composable
+private fun FeatureListPreviewContent() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(LocalDashColors.current.backgroundPrimary)
             .padding(20.dp)
     ) {
         FeatureList(
@@ -192,13 +211,21 @@ private fun FeatureListPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Feature List w/ Icons Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Feature List w/ Icons Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun FeatureListWithIconsPreview() {
+    DashWalletTheme {
+        FeatureListWithIconsPreviewContent()
+    }
+}
+
+@Composable
+private fun FeatureListWithIconsPreviewContent() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(LocalDashColors.current.backgroundPrimary)
             .padding(20.dp)
     ) {
         FeatureList(
@@ -228,13 +255,21 @@ private fun FeatureListWithIconsPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Feature List w/ Numbers Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Feature List w/ Numbers Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun FeatureListWithNumbersPreview() {
+    DashWalletTheme {
+        FeatureListWithNumbersPreviewContent()
+    }
+}
+
+@Composable
+private fun FeatureListWithNumbersPreviewContent() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(LocalDashColors.current.backgroundPrimary)
             .padding(20.dp)
     ) {
         FeatureList(

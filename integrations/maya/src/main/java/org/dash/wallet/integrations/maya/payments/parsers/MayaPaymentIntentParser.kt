@@ -16,23 +16,20 @@
  */
 package org.dash.wallet.integrations.maya.payments.parsers
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.script.ScriptBuilder
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.payments.parsers.PaymentIntentParser
+import org.dash.wallet.common.payments.parsers.PaymentIntents
 
 abstract class MayaPaymentIntentParser(
     currency: String,
     uriPrefix: String,
     val asset: String,
-    val shortAsset: String? = null,
-    params: NetworkParameters?
+    val shortAsset: String? = null
 ) :
     PaymentIntentParser(
         currency,
         uriPrefix,
-        params
+        null
     ) {
     fun createPaymentIntent(inputStr: String): PaymentIntent {
         val destinationAddress = if (inputStr.lowercase().startsWith(uriPrefix.lowercase() + ":")) {
@@ -48,12 +45,10 @@ abstract class MayaPaymentIntentParser(
                 "metadata is too long ($metadata[${metadata.length}] > 80 bytes).  Is there a shorter asset code?"
             )
         }
-        val outputScript = ScriptBuilder.createOpReturnScript(metadata.toByteArray())
-        return PaymentIntent(
-            null, "maya DASH pool", null,
-            arrayOf(PaymentIntent.Output(Coin.ZERO, outputScript)),
-            "maya swap to $currency", null, null, null, null,
-            null, null, null
+        return PaymentIntents.forOpReturnMemo(
+            "maya DASH pool",
+            metadata.toByteArray(),
+            "maya swap to $currency"
         )
     }
 }

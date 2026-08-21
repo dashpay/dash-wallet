@@ -35,7 +35,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import android.net.Uri
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.PeerGroup.SyncStage
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -128,6 +127,20 @@ class InviteHandlerViewModel @Inject constructor(
 
     suspend fun validateInvitation(): InvitationValidationState = withContext(Dispatchers.IO) {
         _invitation.value?.let { invite ->
+            // The invite that created THIS wallet's identity is not an error
+            // to report back to its owner — that claim succeeded. It can
+            // still arrive again long afterwards, because the identity keeps
+            // its own copy of the link (BlockchainIdentityConfig.INVITE_LINK,
+            // deliberately never cleared) and because a launching intent is
+            // replayed whenever the task is recreated. Drop it silently
+            // instead of telling the user they cannot claim the invite they
+            // already claimed.
+            if (invite.isSameInvitation(blockchainIdentity.value?.invite)) {
+                log.info("dropping the invite that created this wallet's identity")
+                clearInvitation()
+                return@withContext InvitationValidationState.NONE
+            }
+
             var updatedInvitation = invite.copy()
             if (hasIdentity || inVotingPeriod) {
                 // we have an identity, don't check the validity
@@ -139,7 +152,10 @@ class InviteHandlerViewModel @Inject constructor(
                     }
                 )
             } else try {
-                if (blockchainStateProvider.getSyncStage() == SyncStage.BLOCKS) {
+                // Post-cutover, L1 sync is driven by the SDK, so dashj's peerGroup.syncStage
+                // never advances to BLOCKS. Gate on the real synced signal (percentageSync==100)
+                // that the rest of the UI already uses, otherwise the invite stays NOT_SYNCED forever.
+                if (blockchainStateProvider.getState()?.isSynced() == true) {
                     updatedInvitation = updatedInvitation.copy(isValid = topUpRepository.validateInvitation(invite))
                 }
 

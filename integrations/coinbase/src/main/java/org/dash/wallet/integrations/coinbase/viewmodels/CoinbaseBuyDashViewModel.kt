@@ -22,19 +22,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.freshReceiveAddressStringOffMain
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.dashToFiat
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.common.util.toCoin
-import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.common.util.toDash
+import org.dash.wallet.common.util.toFiatValue
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.model.CoinbaseErrorType
 import org.dash.wallet.integrations.coinbase.model.MarketMarketIoc
@@ -47,9 +47,9 @@ import java.util.UUID
 import javax.inject.Inject
 
 data class CoinbaseBuyUIState(
-    val dashAmount: Coin = Coin.ZERO,
-    val order: Fiat? = null,
-    val fee: Fiat? = null,
+    val dashAmount: Dash = Dash.ZERO,
+    val order: FiatValue? = null,
+    val fee: FiatValue? = null,
     val paymentMethod: PaymentMethod? = null
 )
 
@@ -64,7 +64,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CoinbaseBuyUIState())
     val uiState: StateFlow<CoinbaseBuyUIState> = _uiState.asStateFlow()
 
-    suspend fun validateBuyDash(amount: Coin, retryWithDeposit: Boolean): CoinbaseErrorType {
+    suspend fun validateBuyDash(amount: Dash, retryWithDeposit: Boolean): CoinbaseErrorType {
         previewBuyOrder(amount)
 
         val fiatAmount = uiState.value.order ?: return CoinbaseErrorType.NO_EXCHANGE_RATE
@@ -73,7 +73,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(
         } catch (_: NoSuchElementException) {
             return CoinbaseErrorType.NO_USD_ACCOUNT
         }
-        val balance = Fiat.parseFiatInexact(
+        val balance = FiatValue.parseFiatInexact(
             CoinbaseConstants.DEFAULT_CURRENCY_USD,
             fiatAccount.availableBalance.value
         )
@@ -114,7 +114,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(
         val amount = uiState.value.order ?: return
 
         analyticsService.logEvent(AnalyticsConstants.Coinbase.QUOTE_CONFIRM, mapOf())
-        val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode().roundingMode(RoundingMode.UP)
+        val format = Constants.SEND_PAYMENT_LOCAL_MONEY_FORMAT.noCode().roundingMode(RoundingMode.UP)
         val amountStr = format.format(amount).toString()
 
         if (uiState.value.paymentMethod?.paymentMethodType == PaymentMethodType.BankAccount) {
@@ -136,12 +136,14 @@ class CoinbaseBuyDashViewModel @Inject constructor(
         coinBaseRepository.placeBuyOrder(params)
     }
 
-    fun getTransferDashParams(): SendTransactionToWalletParams {
+    suspend fun getTransferDashParams(): SendTransactionToWalletParams {
         return SendTransactionToWalletParams(
             amount = uiState.value.dashAmount.toPlainString(),
             currency = Constants.DASH_CURRENCY,
             idem = UUID.randomUUID().toString(),
-            to = walletDataProvider.freshReceiveAddress().toBase58(),
+            // Off-main: the caller launches this from lifecycleScope (Main), and the
+            // underlying freshReceiveAddress() forces a synchronous full-wallet save.
+            to = walletDataProvider.freshReceiveAddressStringOffMain(),
             type = CoinbaseConstants.TRANSACTION_TYPE_SEND
         )
     }
@@ -162,21 +164,19 @@ class CoinbaseBuyDashViewModel @Inject constructor(
         )
     }
 
-    private suspend fun previewBuyOrder(dashAmount: Coin) {
+    private suspend fun previewBuyOrder(dashAmount: Dash) {
         _uiState.update { it.copy(dashAmount = dashAmount) }
 
-        val coinbaseFee = dashAmount.toBigDecimal().multiply(CoinbaseConstants.BUY_FEE.toBigDecimal()).toCoin()
+        val coinbaseFee = dashAmount.toBigDecimal().multiply(CoinbaseConstants.BUY_FEE.toBigDecimal()).toDash()
         val rates = coinBaseRepository.getExchangeRates(CoinbaseConstants.DEFAULT_CURRENCY_USD)
-        var order: Fiat? = null
-        var feeInFiat: Fiat? = null
+        var order: FiatValue? = null
+        var feeInFiat: FiatValue? = null
 
         rates[Constants.DASH_CURRENCY]?.let { rate ->
             val dashRate = 1.toBigDecimal().divide(rate.toBigDecimal(), 8, RoundingMode.HALF_UP)
-            val exchangeRate = dashRate?.let {
-                ExchangeRate(Coin.COIN, it.toFiat(CoinbaseConstants.DEFAULT_CURRENCY_USD))
-            }
-            order = exchangeRate?.coinToFiat(dashAmount)
-            feeInFiat = exchangeRate?.coinToFiat(coinbaseFee)
+            val dashPrice = dashRate?.toFiatValue(CoinbaseConstants.DEFAULT_CURRENCY_USD)
+            order = dashPrice?.dashToFiat(dashAmount)
+            feeInFiat = dashPrice?.dashToFiat(coinbaseFee)
         }
 
         _uiState.update { it.copy(dashAmount = dashAmount, order = order, fee = feeInFiat) }

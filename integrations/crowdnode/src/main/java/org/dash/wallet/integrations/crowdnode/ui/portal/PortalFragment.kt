@@ -31,11 +31,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.dashToFiat
+import org.dash.wallet.common.money.fiatValue
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.blinkAnimator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.setAmount
+import org.dash.wallet.common.ui.setFormat
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.common.util.toFormattedString
@@ -54,7 +58,7 @@ import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 @AndroidEntryPoint
 class PortalFragment : Fragment(R.layout.fragment_portal) {
     companion object {
-        private val NEGLIGIBLE_AMOUNT: Coin = CrowdNodeConstants.MINIMUM_DASH_DEPOSIT.div(50)
+        private val NEGLIGIBLE_AMOUNT: Dash = CrowdNodeConstants.MINIMUM_DASH_DEPOSIT.div(50)
     }
 
     private val binding by viewBinding(FragmentPortalBinding::bind)
@@ -100,8 +104,8 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             setOnlineAccountStatus(status)
 
             if (viewModel.signUpStatus == SignUpStatus.LinkedOnline) {
-                val crowdNodeBalance = viewModel.crowdNodeBalance.value?.balance ?: Coin.ZERO
-                val walletBalance = viewModel.dashBalance.value ?: Coin.ZERO
+                val crowdNodeBalance = viewModel.crowdNodeBalance.value?.balance ?: Dash.ZERO
+                val walletBalance = viewModel.dashBalance.value ?: Dash.ZERO
 
                 setWithdrawalEnabled(crowdNodeBalance)
                 setDepositsEnabled(walletBalance)
@@ -132,10 +136,13 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
         binding.walletBalanceDash.setFormat(viewModel.dashFormat)
         binding.walletBalanceDash.setApplyMarkup(true)
-        binding.walletBalanceDash.setAmount(Coin.ZERO)
+        binding.walletBalanceDash.setAmount(Dash.ZERO)
 
         // CrowdNode functionality is limited: deposits aren't supported. Only withdrawals are allowed.
-        binding.depositBtn.isVisible = false
+        // The on-chain deposit senders are retired (CrowdNodeBlockchainApi);
+        // this button has no click listener at all, so hiding it is what
+        // keeps the deposit flow unreachable from the portal.
+        binding.depositBtn.isVisible = CrowdNodeConstants.SIGNUP_AND_DEPOSITS_ENABLED
         // online account isn't supported - the button is kept hidden in all states, see setOnlineAccountStatus
         binding.onlineAccountBtn.isVisible = false
 
@@ -167,12 +174,11 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         handleBalance(binding)
     }
 
-    private fun updateFiatAmount(balance: Coin?, exchangeRate: ExchangeRate?) {
-        val fiatRate = exchangeRate?.fiat
+    private fun updateFiatAmount(balance: Dash?, exchangeRate: ExchangeRate?) {
+        val fiatRate = exchangeRate?.fiatValue
 
         if (balance != null && fiatRate != null) {
-            val rate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiatRate)
-            val fiatValue = rate.coinToFiat(balance)
+            val fiatValue = exchangeRate.dashToFiat(balance)
             binding.walletBalanceLocal.text = fiatValue.toFormattedString()
         }
     }
@@ -202,11 +208,11 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
 
         viewModel.exchangeRate.observe(viewLifecycleOwner) { rate ->
-            updateFiatAmount(viewModel.crowdNodeBalance.value?.balance ?: Coin.ZERO, rate)
+            updateFiatAmount(viewModel.crowdNodeBalance.value?.balance ?: Dash.ZERO, rate)
         }
     }
 
-    private fun setWithdrawalEnabled(balance: Coin) {
+    private fun setWithdrawalEnabled(balance: Dash) {
         val isEnabled = balance.isPositive && !isLinkingInProgress
         binding.withdrawBtn.isEnabled = isEnabled
 
@@ -221,7 +227,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
     }
 
-    private fun setDepositsEnabled(balance: Coin) {
+    private fun setDepositsEnabled(balance: Dash) {
         val isEnabled = balance.isPositive && !isLinkingInProgress
         binding.depositBtn.isEnabled = isEnabled
 
@@ -236,7 +242,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
     }
 
-    private fun setMinimumEarningDepositReminder(balance: Coin, isConfirmed: Boolean) {
+    private fun setMinimumEarningDepositReminder(balance: Dash, isConfirmed: Boolean) {
         val balanceLessThanMinimum = balance < CrowdNodeConstants.MINIMUM_DASH_DEPOSIT
 
         if (balanceLessThanMinimum && isConfirmed) {
@@ -377,7 +383,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     private fun continueWithdraw() {
         viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_WITHDRAW)
 
-        if ((viewModel.dashBalance.value ?: Coin.ZERO) >= CrowdNodeConstants.MINIMUM_LEFTOVER_BALANCE) {
+        if ((viewModel.dashBalance.value ?: Dash.ZERO) >= CrowdNodeConstants.MINIMUM_LEFTOVER_BALANCE) {
             safeNavigate(PortalFragmentDirections.portalToTransfer(true))
         } else {
             AdaptiveDialog.create(

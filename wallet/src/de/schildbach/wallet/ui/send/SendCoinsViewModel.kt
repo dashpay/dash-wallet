@@ -23,16 +23,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import org.dash.wallet.common.data.PaymentIntent
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
-import de.schildbach.wallet.database.entity.DashPayContactRequest
-import de.schildbach.wallet.payments.MaxOutputAmountCoinJoinCoinSelector
-import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.platform.sdk.SEND_ALL_FEE_RESERVE_DUFFS
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.AnrException
@@ -40,17 +36,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
-import org.bitcoinj.coinjoin.CoinJoinCoinSelector
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -64,20 +56,27 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
-import kotlin.math.min
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 class SendException(message: String) : Exception(message)
-class InsufficientCoinJoinMoneyException(ex: InsufficientMoneyException) : InsufficientMoneyException(ex.missing, "${ex.message} [coinjoin]")
 
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
-    walletDataProvider: WalletDataProvider,
+    walletDataProvider: WalletData,
     walletApplication: WalletApplication,
     blockchainStateDao: BlockchainStateDao,
     val biometricHelper: BiometricHelper,
@@ -87,13 +86,10 @@ class SendCoinsViewModel @Inject constructor(
     private val notificationService: NotificationService,
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
-    private val dashPayContactRequestDao: DashPayContactRequestDao,
-    coinJoinConfig: CoinJoinConfig,
-    coinJoinService: CoinJoinService
+    private val dashPayContactRequestDao: DashPayContactRequestDao
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
-        private val dryRunKey = ECKey()
     }
 
     enum class State {
@@ -120,10 +116,27 @@ class SendCoinsViewModel @Inject constructor(
     var dryRunException: Exception? = null
         private set
 
+    /**
+     * Whether the last dry run failed for lack of funds, as a plain boolean so
+     * screens do not have to know the dashj exception type (Phase 3 keeps the
+     * dashj surface inside the ViewModel).
+     */
+    val isInsufficientFunds: Boolean
+        get() = dryRunException is InsufficientMoneyException
+
+    /**
+     * Phase 5d: a DISPLAY-only, deterministic fee estimate for the confirm
+     * dialog when the post-cutover dry-run does NOT complete the tx (so
+     * `dryrunSendRequest.tx.fee` is null — no inputs are attached). Null on the
+     * pre-cutover path, where `completeTx` sets the real dashj fee. The SDK
+     * computes and applies the actual (typically much smaller) fee at send.
+     */
+    var dryRunFeeEstimate: Coin? = null
+        private set
+
     private val _dryRunSuccessful = MutableLiveData(false)
     val dryRunSuccessful: LiveData<Boolean>
         get() = _dryRunSuccessful
-    private var dryRunGreedy: Boolean = true
 
     private val _isBlockchainReplaying = MutableLiveData<Boolean>()
     val isBlockchainReplaying: LiveData<Boolean>
@@ -143,32 +156,34 @@ class SendCoinsViewModel @Inject constructor(
     val contactData: LiveData<UsernameSearchResult>
         get() = _contactData
 
-    private var _coinJoinActive = MutableStateFlow(false)
-    val coinJoinActive: Flow<Boolean>
-        get() = _coinJoinActive
-    /** the resulting transaction is an asset lock transaction (default = false) */
-    var isAssetLock = false
 
     init {
         blockchainStateDao.observeState()
             .filterNotNull()
             .onEach { state ->
-                _isBlockchainReplaying.postValue(state.replaying)
+                // NOT-SYNCED is folded into the same UI signal as REPLAYING.
+                // Post-cutover the SDK does a from-scratch compact-filter scan
+                // on first launch; a send attempted inside that window failed
+                // deep in the SDK send path and surfaced the raw exception
+                // text ("…ROLLBACK_CUTOVER…") under "Problem sending coins!".
+                // Gating here reuses the existing, translated
+                // send_coins_fragment_hint_replaying hint and the existing
+                // blockContinue wiring in SendCoinsFragment.
+                //
+                // Deliberately NOT done by flipping the persisted `replaying`
+                // flag: that flag has 15+ consumers (shielded transfers,
+                // mixed-funds migration, exchange-rate stamping, DashPay
+                // contact payments) and must keep its own meaning.
+                _isBlockchainReplaying.postValue(state.replaying || !state.isSynced())
             }
             .launchIn(viewModelScope)
 
-        coinJoinService.observeMixing()
-            .map { isMixing ->
-                _coinJoinActive.value = isMixing
-                if (!isMixing) {
-                    MaxOutputAmountCoinSelector()
-                } else {
-                    MaxOutputAmountCoinJoinCoinSelector(wallet)
-                }
-            }
-            .flatMapLatest { coinSelector ->
-                walletDataProvider.observeBalance(Wallet.BalanceType.ESTIMATED, coinSelector)
-            }
+        // DISPLAY-only "max sendable" feed. Post-cutover the dashj max-output balance
+        // freezes at 0 (dashj is held), so this routes through the cutover overlay in
+        // WalletApplication.observeMaxOutputBalance() and shows the SDK's live total;
+        // pre-cutover it is the dashj max-output value unchanged. The real send's coin
+        // selection is unaffected — SendCoinsTaskRunner owns that separately.
+        walletDataProvider.observeMaxOutputBalance()
             .distinctUntilChanged()
             .onEach(_maxOutputAmount::postValue)
             .launchIn(viewModelScope)
@@ -244,78 +259,55 @@ class SendCoinsViewModel @Inject constructor(
     ): Transaction = withContext(Dispatchers.IO) {
         Context.propagate(wallet.context)
         _state.postValue(State.SENDING)
-        if (isAssetLock) {
-            error("isAssetLock must be false, but is true")
-        }
-        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
+        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
 
         val transaction = try {
             val finalSendRequest = sendCoinsTaskRunner.createSendRequest(
                 basePaymentIntent.mayEditAmount(),
                 finalPaymentIntent,
                 true,
-                dryrunSendRequest!!.ensureMinRequiredFee,
-                dryRunGreedy
+                dryrunSendRequest!!.ensureMinRequiredFee
             )
-            finalSendRequest.memo = basePaymentIntent.memo
-            finalSendRequest.exchangeRate = exchangeRate
-            Context.propagate(wallet.context)
-            sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
-        } catch (ex: Exception) {
-            _state.postValue(State.FAILED)
-            throw ex
-        }
-
-        _state.postValue(State.SENT)
-        transaction
-    }
-
-    suspend fun signAndSendAssetLock(
-        editedAmount: Coin,
-        exchangeRate: ExchangeRate?,
-        checkBalance: Boolean,
-        key: ECKey,
-        emptyWallet: Boolean
-    ): Transaction = withContext(Dispatchers.IO) {
-        _state.postValue(State.SENDING)
-        if (!isAssetLock) {
-            error("isAssetLock must be true, but is false")
-        }
-        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
-
-        val transaction = try {
-            var finalSendRequest = sendCoinsTaskRunner.createAssetLockSendRequest(
-                basePaymentIntent.mayEditAmount(),
-                finalPaymentIntent,
-                true,
-                dryrunSendRequest!!.ensureMinRequiredFee,
-                key,
-                dryRunGreedy
-            )
-            finalSendRequest.memo = basePaymentIntent.memo
-            finalSendRequest.exchangeRate = exchangeRate
-            Context.propagate(wallet.context)
-
-            if (emptyWallet) {
-                sendCoinsTaskRunner.signSendRequest(finalSendRequest)
-                wallet.completeTx(finalSendRequest)
-
-                // make sure that the asset lock payload matches the OP_RETURN output
-                val outputValue = finalSendRequest.tx.outputs.first().value
-                val assetLockedValue = (finalSendRequest.tx as AssetLockTransaction).assetLockPayload.creditOutputs.first().value
-                if (assetLockedValue != outputValue) {
-                    val newRequest = SendRequest.assetLock(wallet.params, key, outputValue, true)
-                    newRequest.coinSelector = finalSendRequest.coinSelector
-                    newRequest.returnChange = finalSendRequest.returnChange
-                    newRequest.aesKey = finalSendRequest.aesKey
-                    finalSendRequest = newRequest
-                } else {
-                    // this shouldn't happen
-                    error("The asset lock value is the same as the output though emptying the wallet")
-                }
+            // Post-cutover, carry the cutover-aware dry-run's send-all decision.
+            // createSendRequest derives emptyWallet from the dashj max-output
+            // balance, which is held at 0 while the engine is cut over, so it can
+            // never flag a real send-max — that would route the Max send as a
+            // plain SDK send of the full balance (no fee headroom → the SDK send
+            // fails closed). executeDryrun is the authority on send-all here.
+            // Pre-cutover both requests compute emptyWallet identically from the
+            // same balance/amount, so this override is gated on the committed
+            // cutover and the dashj path is otherwise untouched.
+            if (sendCoinsTaskRunner.isCutoverCommitted()) {
+                finalSendRequest.emptyWallet = dryrunSendRequest!!.emptyWallet
             }
-
-            sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
+            finalSendRequest.memo = basePaymentIntent.memo
+            finalSendRequest.exchangeRate = exchangeRate
+            Context.propagate(wallet.context)
+            // Thread the payment intent's address — WHO the user is paying —
+            // to the send funnel. Engine-neutral: the funnel needs it to keep
+            // the payment identifiable when the recipient is one of this
+            // wallet's OWN addresses (a self-send: recipient and change are
+            // both "mine", so the request's outputs alone can't name the
+            // payment — the on-device 11.10.44 self-send failure). Null when
+            // the intent has no plain address; the funnel then applies its
+            // usual conservative rules.
+            val intendedRecipient = if (finalPaymentIntent.hasAddress()) {
+                try {
+                    Address.fromString(
+                        Constants.NETWORK_PARAMETERS,
+                        finalPaymentIntent.getAddress(Constants.ADDRESS_NETWORK)
+                    )
+                } catch (ex: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+            sendCoinsTaskRunner.sendCoins(
+                finalSendRequest,
+                checkBalanceConditions = checkBalance,
+                intendedRecipient = intendedRecipient
+            )
         } catch (ex: Exception) {
             _state.postValue(State.FAILED)
             throw ex
@@ -324,6 +316,7 @@ class SendCoinsViewModel @Inject constructor(
         _state.postValue(State.SENT)
         transaction
     }
+
 
     fun allowBiometric(): Boolean {
         val thresholdAmount = Coin.parseCoin(configuration.biometricLimit.toString())
@@ -339,13 +332,21 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     fun shouldAdjustAmount(): Boolean {
+        // Fix 5 (belt-and-suspenders): only auto-adjust when the corrected
+        // amount is strictly positive. A bad `missing` (e.g. missing >= amount)
+        // would otherwise yield a non-positive value that AmountView snaps to
+        // "0", blanking the field mid-entry.
         return dryRunException is InsufficientMoneyException &&
-            currentAmount.isLessThan(maxOutputAmount.value ?: Coin.ZERO)
+            currentAmount.isLessThan(maxOutputAmount.value ?: Coin.ZERO) &&
+            getAdjustedAmount().isGreaterThan(Coin.ZERO)
     }
 
     fun getAdjustedAmount(): Coin {
         val missing = (dryRunException as? InsufficientMoneyException)?.missing ?: Coin.ZERO
-        return currentAmount.subtract(missing)
+        val adjusted = currentAmount.subtract(missing)
+        // Never return a negative amount — the caller feeds this straight into
+        // AmountView.setAmount, and a negative snaps to "0" (clearing the field).
+        return if (adjusted.isNegative) Coin.ZERO else adjusted
     }
 
     fun resetState() {
@@ -402,7 +403,7 @@ class SendCoinsViewModel @Inject constructor(
         return isInitialized && basePaymentIntent.hasOutputs()
     }
 
-    /** creates a send request using the payment intent and [isAssetLock] */
+    /** creates a send request using the payment intent */
     private fun createSendRequest(
         mayEditAmount: Boolean,
         paymentIntent: PaymentIntent,
@@ -410,32 +411,22 @@ class SendCoinsViewModel @Inject constructor(
         forceEnsureMinRequiredFee: Boolean
         //useGreedyAlgorithm: Boolean = true
     ): SendRequest {
-        return if (!isAssetLock) {
-            sendCoinsTaskRunner.createSendRequest(
-                mayEditAmount,
-                paymentIntent,
-                signInputs,
-                forceEnsureMinRequiredFee
-            )
-        } else {
-            sendCoinsTaskRunner.createAssetLockSendRequest(
-                mayEditAmount,
-                paymentIntent,
-                signInputs,
-                forceEnsureMinRequiredFee,
-                dryRunKey
-            )
-        }
+        return sendCoinsTaskRunner.createSendRequest(
+            mayEditAmount,
+            paymentIntent,
+            signInputs,
+            forceEnsureMinRequiredFee
+        )
     }
 
     fun setAmount(amount: Coin) {
         _currentAmount.value = amount
     }
 
-    private fun executeDryrun(amount: Coin) {
+    private suspend fun executeDryrun(amount: Coin) {
         dryrunSendRequest = null
         dryRunException = null
-        dryRunGreedy = false
+        dryRunFeeEstimate = null
 
         if (state.value != State.INPUT || amount == Coin.ZERO) {
             _dryRunSuccessful.postValue(false)
@@ -454,7 +445,7 @@ class SendCoinsViewModel @Inject constructor(
             }
         }
         val dummyAddress = wallet.currentReceiveAddress() // won't be used, tx is never committed
-        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(amount, dummyAddress)
+        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(amount.toNeutralCoin(), dummyAddress.toBase58())
 
         try {
             Context.propagate(wallet.context)
@@ -465,21 +456,89 @@ class SendCoinsViewModel @Inject constructor(
                 signInputs = false,
                 forceEnsureMinRequiredFee = false
             )
-            dryRunGreedy = true
+
+            // Phase 5d (Bug 4): once the cutover is committed the dashj engine is
+            // HELD with 0 UTXOs, so wallet.completeTx below would ALWAYS throw
+            // InsufficientMoneyException and wrongly block the Send button — even
+            // though the real send routes through the SDK (SendCoinsTaskRunner /
+            // SdkL1SendService) which owns its own funds. Validate affordability
+            // against the SDK-overlaid maxOutputAmount instead. This stays a
+            // NON-COMMITTING dry-run: it only reads a balance and builds an
+            // UNSIGNED request — no completeTx / signSendRequest / broadcast — so
+            // the real SDK send (which does its own selection, signing and the
+            // funding-gate/send-all-floor preflight) remains the sole authority
+            // and any true shortfall there still fails closed (NotBroadcast,
+            // pre-broadcast, no double-pay). Pre-cutover this branch is skipped
+            // and the dashj completeTx path below is byte-identical to before.
+            if (sendCoinsTaskRunner.isCutoverCommitted()) {
+                val maxOutput = maxOutputAmount.value ?: Coin.ZERO
+                // Reserve = the SDK's own send-all fee reserve
+                // (SEND_ALL_FEE_RESERVE_DUFFS, SdkL1SendService.kt) — ~40x a
+                // typical 1-in/2-out fee, so the gate is strictly NO LOOSER than
+                // the SDK plain-send precondition (amount + actual fee <=
+                // spendable): a dry-run "pass" cannot reach an SDK send that then
+                // reports insufficient funds. It doubles as the deterministic,
+                // display-only fee preview shown in the confirm dialog.
+                val feeReserve = Coin.valueOf(SEND_ALL_FEE_RESERVE_DUFFS)
+
+                // Send-max (drain) detection. An editable amount equal to the
+                // full SDK-overlaid balance is a send-all: mirrors the
+                // pre-cutover dashj emptyWallet rule (maxOutputBalance == amount,
+                // SendCoinsTaskRunner.createSendRequest) but keyed off the
+                // SDK-overlaid balance — dashj's max-output balance is 0 while the
+                // engine is held, so that rule can never fire post-cutover and the
+                // Max/send-all path would otherwise be routed as a plain send of
+                // the FULL balance (no room for the fee → SDK insufficient-funds
+                // → the send fails). A drain takes the fee OUT of the amount
+                // (delivered = total − fee), so the plain-send reserve-headroom
+                // gate below does NOT apply here. The SDK drain's own send-all
+                // floor (spendable − reserve, SdkL1SendService.kt:602-660) is the
+                // real gate: it fails closed (NotBroadcast, pre-broadcast, no
+                // double-pay) on any shortfall and refuses outright while any
+                // app-locked (CrowdNode) output exists — so passing the dry-run
+                // here can never be looser than what the drain actually accepts.
+                val isSendAll = basePaymentIntent.mayEditAmount() &&
+                    maxOutput.isPositive &&
+                    amount == maxOutput
+
+                if (isSendAll) {
+                    // Flag the UNSIGNED dry-run request as emptyWallet so both the
+                    // confirm dialog (gross/delivered split) and the real send
+                    // (which carries this decision — see signAndSendPayment) route
+                    // through the SDK drain. Still non-committing: no completeTx /
+                    // signSendRequest / broadcast happens here.
+                    sendRequest.emptyWallet = true
+                    dryRunFeeEstimate = feeReserve // display-only floor; the drain pays the smaller real fee
+                    dryrunSendRequest = sendRequest
+                    log.info("executeDryRun finished (cutover-aware: SDK send-all / drain)")
+                    monitorJob.cancel()
+                    _dryRunSuccessful.postValue(true)
+                    return
+                }
+
+                if (amount.add(feeReserve).isGreaterThan(maxOutput)) {
+                    // Same signal the dashj path raises, so the existing
+                    // insufficient-funds message and the (clamped) auto-adjust
+                    // behave identically.
+                    throw InsufficientMoneyException(amount.add(feeReserve).subtract(maxOutput))
+                }
+                dryRunFeeEstimate = feeReserve
+                dryrunSendRequest = sendRequest // UNSIGNED, not completed — never broadcast
+                log.info("executeDryRun finished (cutover-aware: SDK-overlaid affordability)")
+                monitorJob.cancel()
+                _dryRunSuccessful.postValue(true)
+                return
+            }
+
             log.info("  start completeTx")
             wallet.completeTx(sendRequest)
 
-            dryRunGreedy = sendRequest.coinSelector is CoinJoinCoinSelector && !sendRequest.returnChange
             dryrunSendRequest = sendRequest
             log.info("executeDryRun finished")
             monitorJob.cancel()
             _dryRunSuccessful.postValue(true)
         } catch (ex: Exception) {
-            dryRunException = if (ex is InsufficientMoneyException && _coinJoinActive.value && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
-                 InsufficientCoinJoinMoneyException(ex)
-            } else {
-                ex
-            }
+            dryRunException = ex
             monitorJob.cancel()
             _dryRunSuccessful.postValue(false)
         }
@@ -548,26 +607,33 @@ class SendCoinsViewModel @Inject constructor(
         }
 
         val dashPayProfile = userData.dashPayProfile
-        val dashPayContactRequests = dashPayContactRequestDao.loadToOthers(dashPayProfile.userId)
-        val map = HashMap<Long, DashPayContactRequest>(dashPayContactRequests.size)
 
-        // This is currently using the first version, but it should use the version specified
-        // in the ContactInfo.accountRef related to this contact.  Ideally the user should
-        // approve of a change to the "accountReference" that is used.
-        var firstTimestamp = Long.MAX_VALUE
-        for (contactRequest in dashPayContactRequests) {
-            map[contactRequest.timestamp] = contactRequest
-            firstTimestamp = min(firstTimestamp, contactRequest.timestamp)
-        }
+        // The accountReference must come from the contact request THIS contact addressed to US:
+        // that request carries their incoming-funds xpub for our shared friendship chain, and it is
+        // the chain we pay them on. `requestReceived` above guarantees it exists.
+        //
+        // Two things this must not do, because both send money to the wrong person:
+        //  - loadToOthers() is `WHERE userId = :userId`, i.e. EVERY request this contact authored,
+        //    to anyone. It must be narrowed to the ones addressed to us before choosing.
+        //  - when several remain (a re-issued request, a restored wallet with a fuller contact
+        //    graph), the newest is the live channel. The previous code took min(timestamp) under
+        //    the name `mostRecentContactRequest` — the OLDEST — which is how an iOS build with the
+        //    same defect paid a 0.3 tDASH contact payment to a different contact entirely
+        //    (2026-08-06 QA, tx 8d2a994c…).
+        val receivedFromContact = userData.fromContactRequest!!
+        val ourUserId = receivedFromContact.toUserId
+        val contactRequest = dashPayContactRequestDao.loadToOthers(dashPayProfile.userId)
+            .filter { it.toUserId == ourUserId }
+            .maxByOrNull { it.timestamp }
+            ?: receivedFromContact
 
-        val mostRecentContactRequest = map[firstTimestamp]
         val address = identityRepository.getNextContactAddress(
             dashPayProfile.userId,
-            mostRecentContactRequest!!.accountReference
+            contactRequest.accountReference
         )
         return if (address != null) {
             PaymentIntent.fromAddressWithIdentity(
-                Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
+                address.toBase58(),
                 dashPayProfile.userId,
                 paymentIntent.amount
             )
@@ -576,12 +642,4 @@ class SendCoinsViewModel @Inject constructor(
         }
     }
 
-    fun getNextKey(): ECKey {
-        val authGroup = wallet.getKeyChainExtension(
-            AuthenticationGroupExtension.EXTENSION_ID
-        ) as AuthenticationGroupExtension
-        return authGroup.freshKey(
-            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP
-        ) as ECKey
-    }
 }

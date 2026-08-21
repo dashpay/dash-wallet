@@ -17,8 +17,6 @@
 
 package org.dash.wallet.integrations.maya.utils
 
-import org.bitcoinj.core.NetworkParameters
-
 object MayaConstants {
     const val DEFAULT_EXCHANGE_CURRENCY = "USD"
 
@@ -40,10 +38,10 @@ object MayaConstants {
      */
     const val FREE_CURRENCY_API_BASE_URL = "https://api.freecurrencyapi.com/v1/"
 
-    fun getBaseUrl(params: NetworkParameters): String {
+    fun getBaseUrl(): String {
         return MAINNET_BASE_URL
     }
-    fun getLegacyBaseUrl(params: NetworkParameters): String {
+    fun getLegacyBaseUrl(): String {
         return MAINNET_LEGACY_BASE_URL
     }
     const val VALUE_ZERO = "0"

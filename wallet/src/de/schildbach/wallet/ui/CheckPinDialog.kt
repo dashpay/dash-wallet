@@ -102,6 +102,9 @@ open class CheckPinDialog(
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.window?.requestFeature(Window.FEATURE_NO_TITLE)
+        // Window backdrop is otherwise the default light dialog panel; use a themed
+        // color so the area around the card/keyboard follows light/dark mode.
+        dialog.window?.setBackgroundDrawableResource(R.color.background_primary)
         return dialog
     }
 

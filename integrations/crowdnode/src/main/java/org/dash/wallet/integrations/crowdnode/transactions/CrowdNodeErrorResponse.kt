@@ -17,36 +17,28 @@
 
 package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.script.Script
-import org.bitcoinj.script.ScriptPattern
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.transactions.filters.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class CrowdNodeErrorResponse(
-    private val networkParams: NetworkParameters,
-    private val requestValue: Coin
+    networkId: String,
+    private val requestValue: Dash
 ) : CoinsFromAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams),
+    CrowdNodeConstants.getCrowdNodeAddress(networkId),
     requestValue,
     includeFee = true
 ) {
-    override fun matches(tx: Transaction): Boolean {
+    private val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(networkId)
+
+    override fun matches(tx: TxInfo): Boolean {
         return super.matches(tx) || isChangeSentBackToCrowdNode(tx)
     }
 
-    private fun isChangeSentBackToCrowdNode(tx: Transaction): Boolean {
-        val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(networkParams)
+    private fun isChangeSentBackToCrowdNode(tx: TxInfo): Boolean {
         return tx.outputs.size > 2 &&
-            tx.outputs.first().value + (tx.fee ?: Coin.ZERO) == requestValue &&
-            tx.outputs.drop(1).any { addressMatch(it.scriptPubKey, crowdNodeAddress) }
-    }
-
-    private fun addressMatch(script: Script, address: Address): Boolean {
-        return (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-            script.getToAddress(address.parameters) == address
+            tx.outputs.first().valueDuffs + (tx.feeDuffs ?: 0L) == requestValue.duffs &&
+            tx.outputs.drop(1).any { it.address != null && it.address == crowdNodeAddress }
     }
 }

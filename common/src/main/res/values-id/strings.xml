@@ -87,7 +87,6 @@
     <string name="select_currency">Pilih mata uang</string>
     <string name="send_coins_error_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
     <string name="send_coins_error_insufficient_money">Dana tidak mencukupi</string>
-    <string name="send_coins_error_insufficient_mixed_money">Dana campuran tidak mencukupi. Tunggu hingga pencampuran CoinJoin selesai atau nonaktifkan fitur ini di pengaturan untuk menyelesaikan transaksi ini.</string>
     <string name="syncing">Menyingkronkan:</string>
     <string name="no_connection">Tidak ada koneksi internet</string>
     <string name="rate_not_available">Tak tersedia</string>

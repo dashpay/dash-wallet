@@ -37,6 +37,8 @@ import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.blinkAnimator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.setAmount
+import org.dash.wallet.common.ui.setFormat
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
@@ -206,7 +208,7 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         val intent = Intent(requireContext(), UpholdTransferActivity::class.java)
         intent.putExtra(UpholdTransferActivity.EXTRA_TITLE, getString(R.string.uphold_account))
         intent.putExtra(UpholdTransferActivity.EXTRA_MESSAGE, getString(R.string.uphold_withdrawal_instructions))
-        intent.putExtra(UpholdTransferActivity.EXTRA_MAX_AMOUNT, viewModel.uiState.value.balance)
+        intent.putExtra(UpholdTransferActivity.EXTRA_MAX_AMOUNT, viewModel.uiState.value.balance.duffs)
         startActivity(intent)
     }
 

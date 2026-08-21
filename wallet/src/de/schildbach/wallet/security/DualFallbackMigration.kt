@@ -19,7 +19,7 @@ package de.schildbach.wallet.security
 
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.slf4j.LoggerFactory
 
 /**
@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory
 class DualFallbackMigration(
     private val securityPrefs: SharedPreferences,
     private val dualFallbackProvider: DualFallbackEncryptionProvider,
-    private val walletDataProvider: WalletDataProvider?
+    private val walletDataProvider: WalletData?
 ) {
 
     companion object {

@@ -39,7 +39,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.work.BaseWorker
-import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.RescanBlockchainDialogFragment
 import de.schildbach.wallet.ui.more.SettingsScreen
@@ -49,10 +48,10 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.util.observe
@@ -84,7 +83,8 @@ class SettingsFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                SettingsScreen(
+                DashWalletTheme {
+                    SettingsScreen(
                     onBackClick = {
                         findNavController().popBackStack()
                     },
@@ -104,20 +104,6 @@ class SettingsFragment : Fragment() {
                         findNavController().navigate(R.id.settings_to_about)
                     },
                     onNotificationsClick = { systemActions.openNotificationSettings()  },
-                    onCoinJoinClick = {
-                        lifecycleScope.launch {
-                            val shouldShowFirstTimeInfo = viewModel.shouldShowCoinJoinInfo()
-
-                            if (shouldShowFirstTimeInfo) {
-                                viewModel.setCoinJoinInfoShown()
-                            }
-
-                            val intent = Intent(requireContext(), CoinJoinActivity::class.java)
-                            intent.putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, shouldShowFirstTimeInfo)
-                            viewModel.logEvent(AnalyticsConstants.Settings.COINJOIN)
-                            startActivity(intent)
-                        }
-                    },
                     onTransactionMetadataClick = {
                         lifecycleScope.launch {
                             if (viewModel.isTransactionMetadataInfoShown()) {
@@ -139,6 +125,7 @@ class SettingsFragment : Fragment() {
                     },
                     onBatteryOptimizationClick = { batteryOptimization() }
                 )
+                }
             }
         }
     }
@@ -220,7 +207,8 @@ class SettingsFragment : Fragment() {
         lifecycleScope.launch {
             walletUIConfig.set(WalletUIConfig.SELECTED_CURRENCY, code)
             val walletApplication = requireActivity().application as WalletApplication
-            val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED)
+            // Through the seam (not wallet.getBalance directly): cutover-aware.
+            val balance = walletApplication.getWalletBalance()
             WalletBalanceWidgetProvider.updateWidgets(requireContext(), balance)
         }
     }

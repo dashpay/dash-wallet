@@ -42,7 +42,7 @@ abstract class CrowdNodeModule {
             remoteDataSource: RemoteDataSource,
             walletDataProvider: WalletDataProvider
         ): CrowdNodeEndpoint {
-            val baseUrl = CrowdNodeConstants.getCrowdNodeBaseUrl(walletDataProvider.networkParameters)
+            val baseUrl = CrowdNodeConstants.getCrowdNodeBaseUrl(walletDataProvider.networkId)
             return remoteDataSource.buildApi(CrowdNodeEndpoint::class.java, baseUrl)
         }
     }

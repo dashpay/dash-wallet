@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         compileSdk 35
-        minSdkVersion 24
+        minSdkVersion 29
         targetSdkVersion 35
         vectorDrawables.useSupportLibrary = true
 
@@ -18,8 +18,14 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Library-level minification is redundant (the app's release
+            // build minifies the final APK with these consumer rules) and
+            // actively harmful here: the shrunk classes feed :wallet's
+            // release compile/KSP classpath, stripping the Room annotations
+            // off this module's entities — ksp_*ReleaseKotlin then fails
+            // ("must have @PrimaryKey" / "no usable public constructor" /
+            // "no such table"). Matches exploredash/coinbase/crowdnode/maya.
+            minifyEnabled false
             consumerProguardFiles 'proguard-rules.pro'
         }
         debug {
@@ -53,8 +59,10 @@ dependencies {
 
     // Core
     implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'com.google.protobuf:protobuf-javalite:3.17.3'
+    // Needed at compile time by the BIP70 code copied from dashj (payments.bip70.X509Utils);
+    // dashj only exposes bouncycastle as a runtime dependency. Version matches dashj 22.0.3.
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.74'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
 

@@ -24,6 +24,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TxDisplayCacheDao {
@@ -38,6 +39,15 @@ interface TxDisplayCacheDao {
     @Query("SELECT COUNT(*) FROM tx_display_cache")
     suspend fun getCount(): Int
 
+    /**
+     * Epoch-millis of the OLDEST cached row, or null when the cache is empty —
+     * the wallet's first-use date for the startup `WalletHistoryFacts` log
+     * line (restore birth-date calibration; see
+     * [de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService]).
+     */
+    @Query("SELECT MIN(time) FROM tx_display_cache")
+    suspend fun oldestTimeMs(): Long?
+
     /** Fetch all entries ordered newest-first — used for in-memory snapshot on startup. */
     @Query("SELECT * FROM tx_display_cache ORDER BY time DESC")
     suspend fun getAll(): List<TxDisplayCacheEntry>
@@ -50,8 +60,62 @@ interface TxDisplayCacheDao {
     @Query("SELECT * FROM tx_display_cache WHERE rowId IN (:rowIds)")
     suspend fun getEntriesByIds(rowIds: List<String>): List<TxDisplayCacheEntry>
 
+    /**
+     * REACTIVE observation of every corrected display row attributed to one DashPay contact
+     * (existing [TxDisplayCacheEntry.contactUserId] column — no schema change). Emits the current
+     * rows immediately and re-emits whenever any of this contact's rows change (e.g. a just-sent
+     * tx's direction/amount corrects, or its `statusText` flips "Sending"→"Sent" on IS-lock), so
+     * the contact-detail payment rows update LIVE instead of being resolved once at list-build time.
+     *
+     * [CutoverUiDataService] populates `contactUserId` on exactly these contact send/receive rows
+     * (contact-by-txid attribution), and that value is the same Base58 identity id the contact-detail
+     * screen keys on — so filtering by it returns the same rows the one-shot txid lookup did.
+     */
+    @Query("SELECT * FROM tx_display_cache WHERE contactUserId = :userId ORDER BY time DESC")
+    fun observeByContactUserId(userId: String): Flow<List<TxDisplayCacheEntry>>
+
+    /**
+     * One-shot fresh read of every corrected display row attributed to one DashPay contact.
+     *
+     * The reactive [observeByContactUserId] Flow relies on Room's InvalidationTracker to
+     * re-emit, which on-device can miss a just-written flip (pending→confirmed) for minutes.
+     * The contact-detail merge instead re-runs this suspend query on each
+     * [de.schildbach.wallet.service.DisplayCacheRefreshBus] tick so it always sees the current
+     * rows rather than a stale Flow snapshot.
+     */
+    @Query("SELECT * FROM tx_display_cache WHERE contactUserId = :userId ORDER BY time DESC")
+    suspend fun getByContactUserId(userId: String): List<TxDisplayCacheEntry>
+
+    /**
+     * Synchronous (non-suspend) fetch of a single row's signed display value (satoshis,
+     * negative = sent) by rowId (lowercase display-hex txid), or null when no cached row exists.
+     *
+     * Used only on the received-coins notification path, which runs on a bitcoinj wallet-listener
+     * thread (never the main thread), where the SDK-corrected net is preferred over the dashj
+     * misread. Callers MUST wrap this in a try/catch and fail-soft to the dashj value on any error.
+     */
+    @Query("SELECT valueSatoshis FROM tx_display_cache WHERE rowId = :rowId LIMIT 1")
+    fun getValueSatoshisByIdSync(rowId: String): Long?
+
     @Query("DELETE FROM tx_display_cache")
     suspend fun deleteAll()
+
+    /** Delete specific rows by rowId. */
+    @Query("DELETE FROM tx_display_cache WHERE rowId IN (:rowIds)")
+    suspend fun deleteByIds(rowIds: List<String>)
+
+    /**
+     * Atomically upsert group rows while removing the individual rows their member
+     * transactions previously rendered as — used when historical CoinJoin mixing
+     * transactions collapse into their per-day "Mixing" group row. One transaction so
+     * the pager never observes the intermediate state (both the group row AND the
+     * individual member rows, or neither).
+     */
+    @Transaction
+    suspend fun upsertGroupRows(rows: List<TxDisplayCacheEntry>, removeRowIds: List<String>) {
+        if (rows.isNotEmpty()) insertAll(rows)
+        if (removeRowIds.isNotEmpty()) deleteByIds(removeRowIds)
+    }
 
     /**
      * Atomically replace the entire cache: delete all existing rows and insert the new ones

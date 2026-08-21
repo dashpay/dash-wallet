@@ -62,15 +62,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.payments.parsers.isPaymentUriParseError
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
+import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarTitle
 import org.dash.wallet.common.ui.components.Size
@@ -436,10 +436,10 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 return@launch
             }
 
-            val totalAmount = Coin.valueOf(
+            val totalAmount = Dash.valueOf(
                 data.sumOf {
                     if (!it.cryptoAmount.isNullOrEmpty()) {
-                        Coin.parseCoin(it.cryptoAmount).value
+                        Dash.parse(it.cryptoAmount).duffs
                     } else {
                         0L
                     }
@@ -482,10 +482,10 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
-    private suspend fun createSendingRequestFromDashUri(url: String): Sha256Hash? {
+    private suspend fun createSendingRequestFromDashUri(url: String): String? {
         return try {
             viewModel.createSendingRequestFromDashUri(url)
-        } catch (x: InsufficientMoneyException) {
+        } catch (x: InsufficientFundsException) {
             hideLoading()
             log.error("purchaseGiftCard InsufficientMoneyException", x)
             if (isAdded) {
@@ -527,7 +527,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             if (isAdded) {
                 val message = getString(
                     when {
-                        ex.cause is BitcoinURIParseException &&
+                        ex.cause?.isPaymentUriParseError == true &&
                             ex.message?.contains("mismatched network") == true ->
                             R.string.gift_card_error_wrong_network
                         else -> R.string.gift_card_error
@@ -563,7 +563,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
-    private fun showGiftCardDetailsDialog(txId: Sha256Hash) {
+    private fun showGiftCardDetailsDialog(txId: String) {
         if (isAdded) {
             if (viewModel.giftCardOrderInfo.value.entries.sumOf { it.value } > 1) {
                 GiftCardOrderDetailsDialog.newInstance(txId).show(requireActivity()).also {
@@ -618,6 +618,7 @@ internal fun PurchaseGiftCardConfirmView(
     onCancel: () -> Unit = {},
     onConfirm: () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = if (uiState.useExpandedLayout) {
             Modifier
@@ -665,7 +666,7 @@ internal fun PurchaseGiftCardConfirmView(
                         ambientColor = Color(0x1AB8C1CC)
                     )
                     .clip(RoundedCornerShape(20.dp))
-                    .background(MyTheme.Colors.backgroundSecondary)
+                    .background(colors.backgroundSecondary)
                     .padding(6.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
@@ -766,6 +767,7 @@ private fun ConfirmRow(
     isCaption: Boolean = false,
     trailing: @Composable () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -776,7 +778,7 @@ private fun ConfirmRow(
         Text(
             text = label,
             style = if (isCaption) MyTheme.CaptionMedium else MyTheme.Typography.BodyMediumMedium,
-            color = MyTheme.Colors.textTertiary,
+            color = colors.textTertiary,
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
@@ -791,10 +793,11 @@ private fun ConfirmValueText(
     isCaption: Boolean = false,
     textAlign: TextAlign = TextAlign.End
 ) {
+    val colors = LocalDashColors.current
     Text(
         text = text,
         style = if (isCaption) MyTheme.Caption else MyTheme.Typography.BodyMedium,
-        color = MyTheme.Colors.textPrimary,
+        color = colors.textPrimary,
         textAlign = textAlign
     )
 }

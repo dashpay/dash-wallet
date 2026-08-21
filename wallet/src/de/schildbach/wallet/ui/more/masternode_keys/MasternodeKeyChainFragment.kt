@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -58,21 +59,23 @@ class MasternodeKeyChainFragment : Fragment() {
     ): View {
         return ComposeView(requireContext()).apply {
             setContent {
-                MasternodeKeyChainScreen(
-                    uiStateFlow = viewModel.uiState,
-                    onBackClick = { findNavController().popBackStack() },
-                    onAddKeyClick = {
-                        lifecycleScope.launch {
-                            viewModel.addKey(masternodeKeyType)
-                            viewModel.initKeyChainScreen(masternodeKeyType)
+                DashWalletTheme {
+                    MasternodeKeyChainScreen(
+                        uiStateFlow = viewModel.uiState,
+                        onBackClick = { findNavController().popBackStack() },
+                        onAddKeyClick = {
+                            lifecycleScope.launch {
+                                viewModel.addKey(masternodeKeyType)
+                                viewModel.initKeyChainScreen(masternodeKeyType)
+                            }
+                        },
+                        onCopy = { text ->
+                            viewModel.copyToClipboard(text)
+                            Toast(requireContext()).toast(R.string.copied)
+                            log.info("text copied to clipboard: {}", text)
                         }
-                    },
-                    onCopy = { text ->
-                        viewModel.copyToClipboard(text)
-                        Toast(requireContext()).toast(R.string.copied)
-                        log.info("text copied to clipboard: {}", text)
-                    }
-                )
+                    )
+                }
             }
         }
     }

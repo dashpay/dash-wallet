@@ -29,7 +29,10 @@ import org.bitcoinj.core.*
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.dashjTx
+import de.schildbach.wallet.util.toCoin
+import org.dash.wallet.common.data.entity.SwapOrderStatus
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
@@ -53,9 +56,25 @@ data class TransactionRowView(
     val service: String?,
     val txWrapper: TransactionWrapper?,
     /** Pre-resolved status text from the display cache. Used when [statusRes] is -1. */
-    val statusText: String? = null
+    val statusText: String? = null,
+    /** Status of the DEX swap this tx funded, or null if it isn't a swap. Drives the row chip. */
+    val swapStatus: SwapOrderStatus? = null
 ): HistoryRowView() {
     companion object {
+        /**
+         * The row title for a transaction that funded a DEX swap, by order [status].
+         * Single-sourced so the display-cache swap reconciler
+         * ([de.schildbach.wallet.service.planSwapRowDecorations]) cannot drift from the
+         * title this renderer produces — the two must agree or a row would flip between
+         * them on every pass.
+         */
+        @StringRes
+        fun swapTitleRes(status: SwapOrderStatus?): Int = if (status == SwapOrderStatus.COMPLETED) {
+            R.string.transaction_row_converted
+        } else {
+            R.string.transaction_row_conversion
+        }
+
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,
             bag: TransactionBag,
@@ -64,13 +83,13 @@ data class TransactionRowView(
             metadata: PresentableTxMetadata? = null,
             chainLockBlockHeight: Int
         ): TransactionRowView {
-            val firstTx = txWrapper.transactions.values.first()
+            val firstTx = txWrapper.transactions.values.first().dashjTx
 
             return when (txWrapper) {
                 is FullCrowdNodeSignUpTxSet -> TransactionRowView(
                         ResourceString(R.string.crowdnode_account),
                         txWrapper.id,
-                        txWrapper.getValue(bag),
+                        txWrapper.getValue().toCoin(),
                         firstTx.exchangeRate,
                         null,
                         R.drawable.ic_crowdnode_logo,
@@ -89,7 +108,7 @@ data class TransactionRowView(
                 is CoinJoinMixingTxSet -> TransactionRowView(
                     ResourceString(R.string.coinjoin_mixing_transactions),
                     txWrapper.id,
-                    txWrapper.getValue(bag),
+                    txWrapper.getValue().toCoin(),
                     firstTx.exchangeRate,
                     null,
                     R.drawable.ic_coinjoin_mixing_group,
@@ -141,6 +160,17 @@ data class TransactionRowView(
                     },
                     listOf(metadata.title ?: "")
                 )
+            } else if (metadata?.swapOrder != null) {
+                val swapOrder = metadata.swapOrder!!
+                // solid-circle icon (ic_convert alone is a white glyph and washes out on
+                // the pale background) inside the standard halo, like every other tx icon;
+                // the Figma design has no halo — revisit when the icon set is reworked
+                icon = R.drawable.ic_convert_circle
+                iconBackground = R.style.TxOrangeBackground
+                title = ResourceString(
+                    swapTitleRes(swapOrder.status),
+                    listOf(swapOrder.fromAsset, swapOrder.toAsset)
+                )
             } else if (isInternal) {
                 icon = R.drawable.ic_internal
                 iconBackground = R.style.TxSentBackground
@@ -156,6 +186,20 @@ data class TransactionRowView(
                 resourceMapper.getReceivedStatusString(tx, context, chainLockBlockHeight)
             } else {
                 -1
+            }
+
+            // Render-layer visibility: what metadata this ROW received. The
+            // sync-side logging shows what reached the database; this shows what
+            // reached the screen, so "stored but not displayed" is provable
+            // rather than inferred. Only presence/lengths — never memo text.
+            if (metadata?.memo?.isNotEmpty() == true || metadata?.service != null) {
+                org.slf4j.LoggerFactory.getLogger(TransactionRowView::class.java).info(
+                    "row {} bound with metadata: memo={} service={} icon={}",
+                    tx.txId,
+                    metadata.memo.length.takeIf { it > 0 }?.let { "$it chars" } ?: "none",
+                    metadata.service ?: "none",
+                    metadata.icon != null
+                )
             }
 
             return TransactionRowView(
@@ -174,7 +218,8 @@ data class TransactionRowView(
                 resourceMapper.dateTimeFormat,
                 hasErrors,
                 metadata?.service,
-                null
+                null,
+                swapStatus = metadata?.swapOrder?.status
             )
         }
     }

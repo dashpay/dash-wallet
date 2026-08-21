@@ -1,5 +1,6 @@
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,15 +33,16 @@ fun DashCheckbox(
     trailingHelpText: String? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val textPrimary = MyTheme.Colors.textPrimary
-    val textSecondary = MyTheme.Colors.textSecondary
+    val colors = LocalDashColors.current
+    val textPrimary = colors.textPrimary
+    val textSecondary = colors.textSecondary
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 50.dp)
             //.clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
+            .background(colors.backgroundSecondary)
             .padding(horizontal = 10.dp, vertical = 8.dp)
             .clickable(
                 interactionSource = interactionSource,
@@ -89,7 +91,7 @@ fun DashCheckbox(
                     subtitle?.let {
                         Text(
                             text = it,
-                            color = MyTheme.Colors.darkGray,
+                            color = colors.darkGray,
                             style = MyTheme.OverlineCaptionMedium,
                             textAlign = TextAlign.Start
                         )
@@ -120,7 +122,7 @@ fun DashCheckbox(
                     trailingHelpText?.let {
                         Text(
                             text = it,
-                            color = MyTheme.Colors.darkGray,
+                            color = colors.darkGray,
                             style = MyTheme.OverlineCaptionMedium,
                             textAlign = TextAlign.End
                         )
@@ -135,11 +137,11 @@ fun DashCheckbox(
                     .clip(RoundedCornerShape(6.dp))
                     .border(
                         width = 1.5.dp,
-                        color = if (checked) MyTheme.Colors.dashBlue else MyTheme.Colors.darkerGray50,
+                        color = if (checked) colors.dashBlue else colors.darkerGray50,
                         shape = RoundedCornerShape(6.dp)
                     )
                     .background(
-                        if (checked) MyTheme.Colors.dashBlue else Color.Transparent
+                        if (checked) colors.dashBlue else Color.Transparent
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -156,9 +158,17 @@ fun DashCheckbox(
     }
 }
 
+@Preview(name = "Checkbox Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Checkbox Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-@Preview
 fun CheckboxSample() {
+    DashWalletTheme {
+        CheckboxSampleContent()
+    }
+}
+
+@Composable
+private fun CheckboxSampleContent() {
     var isChecked by remember { mutableStateOf(false) }
     var isChecked1 by remember { mutableStateOf(false) }
     var isChecked2 by remember { mutableStateOf(false) }
@@ -168,7 +178,7 @@ fun CheckboxSample() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(LocalDashColors.current.backgroundPrimary)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {

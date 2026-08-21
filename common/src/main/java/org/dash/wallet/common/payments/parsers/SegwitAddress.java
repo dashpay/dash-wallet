@@ -33,29 +33,18 @@ package org.dash.wallet.common.payments.parsers;
  * limitations under the License.
  */
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-
 import java.io.ByteArrayOutputStream;
+import java.util.Collections;
+import java.util.List;
 
 import javax.annotation.Nullable;
-
-import com.google.common.primitives.UnsignedBytes;
-
-import org.bitcoinj.core.AbstractAddress;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.params.Networks;
-import org.bitcoinj.script.Script;
 
 /**
  * <p>Implementation of native segwit addresses. They are composed of two parts:</p>
  *
  * <ul>
- * <li>A human-readable part (HRP) which is a string the specifies the network. See
- * {@link NetworkParameters#getSegwitAddressHrp()}.</li>
+ * <li>A human-readable part (HRP) which is a string that specifies the network. See
+ * {@link AddressNetwork#getSegwitHrp()}.</li>
  * <li>A data part, containing the witness version (encoded as an OP_N operator) and program (encoded by re-arranging
  * bits into groups of 5).</li>
  * </ul>
@@ -63,31 +52,26 @@ import org.bitcoinj.script.Script;
  * <p>See <a href="https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki">BIP350</a> and
  * <a href="https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki">BIP173</a> for details.</p>
  *
- * <p>However, you don't need to care about the internals. Use {@link #fromBech32(NetworkParameters, String)},
- * {@link #fromHash(NetworkParameters, byte[])} or {@link #fromKey(NetworkParameters, ECKey)} to construct a native
- * segwit address.</p>
+ * <p>Fully self-contained (no dashj): validation logic is byte-identical to the previous
+ * bitcoinj-based copy of this class.</p>
  */
-public class SegwitAddress extends AbstractAddress {
+public class SegwitAddress {
     public static final int WITNESS_PROGRAM_LENGTH_PKH = 20;
     public static final int WITNESS_PROGRAM_LENGTH_SH = 32;
     public static final int WITNESS_PROGRAM_LENGTH_TR = 32;
     public static final int WITNESS_PROGRAM_MIN_LENGTH = 2;
     public static final int WITNESS_PROGRAM_MAX_LENGTH = 40;
 
-    /**
-     * Private constructor. Use {@link #fromBech32(NetworkParameters, String)},
-     * {@link #fromHash(NetworkParameters, byte[])} or {@link #fromKey(NetworkParameters, ECKey)}.
-     *
-     * @param params
-     *            network this address is valid for
-     * @param witnessVersion
-     *            version number between 0 and 16
-     * @param witnessProgram
-     *            hash of pubkey, pubkey or script (depending on version)
-     */
-    private SegwitAddress(NetworkParameters params, int witnessVersion, byte[] witnessProgram)
+    /** Networks with a segwit address space known to this module. */
+    private static final List<AddressNetwork> SEGWIT_NETWORKS =
+            Collections.singletonList(AddressNetwork.BITCOIN_MAINNET);
+
+    private final AddressNetwork network;
+    private final byte[] bytes;
+
+    private SegwitAddress(AddressNetwork network, int witnessVersion, byte[] witnessProgram)
             throws AddressFormatException {
-        this(params, encode(witnessVersion, witnessProgram));
+        this(network, encode(witnessVersion, witnessProgram));
     }
 
     /**
@@ -102,18 +86,16 @@ public class SegwitAddress extends AbstractAddress {
     }
 
     /**
-     * Private constructor. Use {@link #fromBech32(NetworkParameters, String)},
-     * {@link #fromHash(NetworkParameters, byte[])} or {@link #fromKey(NetworkParameters, ECKey)}.
-     *
-     * @param params
+     * @param network
      *            network this address is valid for
      * @param data
      *            in segwit address format, before bit re-arranging and bech32 encoding
      * @throws AddressFormatException
      *             if any of the sanity checks fail
      */
-    private SegwitAddress(NetworkParameters params, byte[] data) throws AddressFormatException {
-        super(params, data);
+    private SegwitAddress(AddressNetwork network, byte[] data) throws AddressFormatException {
+        this.network = network;
+        this.bytes = data;
         if (data.length < 1)
             throw new AddressFormatException.InvalidDataLength("Zero data found");
         final int witnessVersion = getWitnessVersion();
@@ -148,34 +130,12 @@ public class SegwitAddress extends AbstractAddress {
         return convertBits(bytes, 1, bytes.length - 1, 5, 8, false);
     }
 
-    @Override
     public byte[] getHash() {
         return getWitnessProgram();
     }
 
-    /**
-     * Get the type of output script that will be used for sending to the address. This is either
-     * {@link Script.ScriptType#P2WPKH} or {@link Script.ScriptType#P2WSH}.
-     *
-     * @return type of output script
-     */
-    @Override
-    public Script.ScriptType getOutputScriptType() {
-        int version = getWitnessVersion();
-        if (version == 0) {
-            int programLength = getWitnessProgram().length;
-            if (programLength == WITNESS_PROGRAM_LENGTH_PKH)
-                return Script.ScriptType.P2WPKH;
-            if (programLength == WITNESS_PROGRAM_LENGTH_SH)
-                return Script.ScriptType.P2WSH;
-            throw new IllegalStateException(); // cannot happen
-        } else if (version == 1) {
-            int programLength = getWitnessProgram().length;
-            //if (programLength == WITNESS_PROGRAM_LENGTH_TR)
-            //    return Script.ScriptType.P2TR;
-            throw new IllegalStateException(); // cannot happen
-        }
-        throw new IllegalStateException("cannot handle: " + version);
+    public AddressNetwork getNetwork() {
+        return network;
     }
 
     @Override
@@ -186,7 +146,7 @@ public class SegwitAddress extends AbstractAddress {
     /**
      * Construct a {@link SegwitAddress} from its textual form.
      *
-     * @param params
+     * @param network
      *            expected network this address is valid for, or null if the network should be derived from the bech32
      * @param bech32
      *            bech32-encoded textual form of the address
@@ -194,24 +154,24 @@ public class SegwitAddress extends AbstractAddress {
      * @throws AddressFormatException
      *             if something about the given bech32 address isn't right
      */
-    public static SegwitAddress fromBech32(@Nullable NetworkParameters params, String bech32)
+    public static SegwitAddress fromBech32(@Nullable AddressNetwork network, String bech32)
             throws AddressFormatException {
         Bech32.Bech32Data bechData = Bech32.decode(bech32);
-        if (params == null) {
-            for (NetworkParameters p : Networks.get()) {
-                if (bechData.hrp.equals(p.getSegwitAddressHrp()))
+        if (network == null) {
+            for (AddressNetwork p : SEGWIT_NETWORKS) {
+                if (bechData.hrp.equals(p.getSegwitHrp()))
                     return fromBechData(p, bechData);
             }
             throw new AddressFormatException.InvalidPrefix("No network found for " + bech32);
         } else {
-            if (bechData.hrp.equals(params.getSegwitAddressHrp()))
-                return fromBechData(params, bechData);
+            if (bechData.hrp.equals(network.getSegwitHrp()))
+                return fromBechData(network, bechData);
             throw new AddressFormatException("Wrong Network: ${bechData.hrp}");
         }
     }
 
-    private static SegwitAddress fromBechData(NetworkParameters params, Bech32.Bech32Data bechData) {
-        final SegwitAddress address = new SegwitAddress(params, bechData.data);
+    private static SegwitAddress fromBechData(AddressNetwork network, Bech32.Bech32Data bechData) {
+        final SegwitAddress address = new SegwitAddress(network, bechData.data);
         final int witnessVersion = address.getWitnessVersion();
         if ((witnessVersion == 0 && bechData.encoding != Bech32.Encoding.BECH32) ||
                 (witnessVersion != 0 && bechData.encoding != Bech32.Encoding.BECH32M))
@@ -223,14 +183,14 @@ public class SegwitAddress extends AbstractAddress {
      * Construct a {@link SegwitAddress} that represents the given hash, which is either a pubkey hash or a script hash.
      * The resulting address will be either a P2WPKH or a P2WSH type of address.
      *
-     * @param params
+     * @param network
      *            network this address is valid for
      * @param hash
      *            20-byte pubkey hash or 32-byte script hash
      * @return constructed address
      */
-    public static SegwitAddress fromHash(NetworkParameters params, byte[] hash) {
-        return new SegwitAddress(params, 0, hash);
+    public static SegwitAddress fromHash(AddressNetwork network, byte[] hash) {
+        return new SegwitAddress(network, 0, hash);
     }
 
     /**
@@ -238,7 +198,7 @@ public class SegwitAddress extends AbstractAddress {
      * or a script hash – depending on the script version. The resulting address will be either a P2WPKH, a P2WSH or
      * a P2TR type of address.
      *
-     * @param params
+     * @param network
      *            network this address is valid for
      * @param witnessVersion
      *            version number between 0 and 16
@@ -246,23 +206,8 @@ public class SegwitAddress extends AbstractAddress {
      *            version dependent witness program
      * @return constructed address
      */
-    public static SegwitAddress fromProgram(NetworkParameters params, int witnessVersion, byte[] witnessProgram) {
-        return new SegwitAddress(params, witnessVersion, witnessProgram);
-    }
-
-    /**
-     * Construct a {@link SegwitAddress} that represents the public part of the given {@link ECKey}. Note that an
-     * address is derived from a hash of the public key and is not the public key itself.
-     *
-     * @param params
-     *            network this address is valid for
-     * @param key
-     *            only the public part is used
-     * @return constructed address
-     */
-    public static SegwitAddress fromKey(NetworkParameters params, ECKey key) {
-        checkArgument(key.isCompressed(), "only compressed keys allowed");
-        return fromHash(params, key.getPubKeyHash());
+    public static SegwitAddress fromProgram(AddressNetwork network, int witnessVersion, byte[] witnessProgram) {
+        return new SegwitAddress(network, witnessVersion, witnessProgram);
     }
 
     /**
@@ -272,9 +217,9 @@ public class SegwitAddress extends AbstractAddress {
      */
     public String toBech32() {
         if (getWitnessVersion() == 0)
-            return Bech32.encode(Bech32.Encoding.BECH32, params.getSegwitAddressHrp(), bytes);
+            return Bech32.encode(Bech32.Encoding.BECH32, network.getSegwitHrp(), bytes);
         else
-            return Bech32.encode(Bech32.Encoding.BECH32M, params.getSegwitAddressHrp(), bytes);
+            return Bech32.encode(Bech32.Encoding.BECH32M, network.getSegwitHrp(), bytes);
     }
 
     /**
@@ -308,19 +253,4 @@ public class SegwitAddress extends AbstractAddress {
         }
         return out.toByteArray();
     }
-
-//    /**
-//     * {@inheritDoc}
-//     *
-//     * @param o other {@code Address} object
-//     * @return comparison result
-//     */
-//    @Override
-//    public int compareTo(Address o) {
-//        int result = compareAddressPartial(o);
-//        if (result != 0) return result;
-//
-//        // Compare the bytes
-//        return UnsignedBytes.lexicographicalComparator().compare(this.bytes, o.bytes);
-//    }
 }

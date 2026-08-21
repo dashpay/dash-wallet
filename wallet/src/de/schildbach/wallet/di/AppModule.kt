@@ -29,7 +29,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
@@ -39,6 +38,9 @@ import de.schildbach.wallet.service.AndroidActionsService
 import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.L1SendProbeService
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.more.tools.ZenLedgerApi
 import de.schildbach.wallet.ui.more.tools.ZenLedgerClient
@@ -48,16 +50,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.NotificationService
+import de.schildbach.wallet.payments.WalletSendPaymentService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.integrations.uphold.api.UpholdClient
-import org.dash.wallet.features.exploredash.network.service.stubs.FakeDashSpendService
+import de.schildbach.wallet.payments.FakeDashSpendService
+import de.schildbach.wallet.payments.MayaBlockchainApiImpl
+import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import javax.inject.Singleton
 
 @Module
@@ -105,19 +110,21 @@ abstract class AppModule {
 
         @Provides
         fun provideSendPaymentService(
-            walletData: WalletDataProvider,
+            walletData: de.schildbach.wallet.data.WalletData,
             walletApplication: WalletApplication,
             securityFunctions: SecurityFunctions,
             packageInfoProvider: PackageInfoProvider,
             analyticsService: AnalyticsService,
             identityConfig: BlockchainIdentityConfig,
-            coinJoinConfig: CoinJoinConfig,
-            coinJoinService: CoinJoinService,
             identityRepository: IdentityRepository,
             platformRepo: PlatformRepo,
-            transactionMetadataProvider: TransactionMetadataProvider
-        ): SendPaymentService {
-            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, coinJoinConfig, coinJoinService, identityRepository, platformRepo, transactionMetadataProvider)
+            transactionMetadataProvider: TransactionMetadataProvider,
+            sdkL1SendService: SdkL1SendService,
+            l1ShadowSyncService: L1ShadowSyncService,
+            l1SendProbeService: L1SendProbeService,
+            bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
+        ): WalletSendPaymentService {
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider, sdkL1SendService, l1ShadowSyncService, l1SendProbeService, bridgedTransactionFactory)
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService
@@ -125,6 +132,9 @@ abstract class AppModule {
                 FakeDashSpendService(realService, walletData)
             }
         }
+
+        @Provides
+        fun provideNeutralSendPaymentService(service: WalletSendPaymentService): SendPaymentService = service
 
         @Provides
         @Singleton
@@ -167,4 +177,10 @@ abstract class AppModule {
     @Singleton
     @Binds
     abstract fun provideDashSystemService(dashSystemService: DashSystemServiceImpl): DashSystemService
+
+    // Bound here rather than in integrations/maya so that the swap-transaction construction
+    // (which requires dashj) stays inside the wallet module.
+    @Binds
+    @Singleton
+    abstract fun bindMayaBlockchainApi(mayaBlockchainApi: MayaBlockchainApiImpl): MayaBlockchainApi
 }

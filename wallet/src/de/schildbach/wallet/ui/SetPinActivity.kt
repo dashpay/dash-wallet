@@ -426,11 +426,28 @@ class SetPinActivity : InteractionAwareActivity() {
                             if (viewModel.biometricHelper.requiresEnabling
                                 && viewModel.configuration.enableFingerprint
                             ) {
+                                // Fully SUSPEND auto-logout for the DURATION of the biometric
+                                // enroll, not merely clear the "locked" flags. shouldLogout() also
+                                // returns true via (autoLogoutEnabled && logoutTimeExceeded): when
+                                // the system enroll dialog takes focus the app counts as
+                                // backgrounded, so the next timer tick fires onLogout() ->
+                                // biometricHelper.cancelPending() and kills the live BiometricPrompt
+                                // (ERROR_CANCELED). turnOffAutoLogout() stops the timer outright;
+                                // turnOnAutoLogout() in finally always restores it, even if the
+                                // enroll throws. The flag clears stay as belt-and-suspenders. See
+                                // LockScreenActivity for the full explanation of this same guard.
+                                walletApplication.autoLogout.deviceWasLocked = false
+                                walletApplication.autoLogout.keepLockedUntilPinEntered = false
+                                turnOffAutoLogout()
                                 lifecycleScope.launch {
-                                    viewModel.biometricHelper.enableBiometricReminder(
-                                        this@SetPinActivity,
-                                        viewModel.getPinAsString()
-                                    )
+                                    try {
+                                        viewModel.biometricHelper.enableBiometricReminder(
+                                            this@SetPinActivity,
+                                            viewModel.getPinAsString()
+                                        )
+                                    } finally {
+                                        turnOnAutoLogout()
+                                    }
 
                                     if (initialPin != null) {
                                         goHome()

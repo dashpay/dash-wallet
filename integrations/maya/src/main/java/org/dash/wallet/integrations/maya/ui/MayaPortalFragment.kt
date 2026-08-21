@@ -22,13 +22,18 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 
 @AndroidEntryPoint
 class MayaPortalFragment : Fragment() {
+
+    private val mayaViewModel by mayaViewModels<MayaViewModel>()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -36,15 +41,27 @@ class MayaPortalFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         return ComposeView(requireContext()).apply {
+            // Without this the default strategy can defer the first composition past the
+            // nav slide-in window, so the (nested-graph start) screen animates while empty
+            // and the content snaps in at the end. Matches the other Maya fragments.
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MayaPortalScreen(
-                    onBackClick = {
-                        findNavController().popBackStack()
-                    },
-                    onConvertClick = {
-                        safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
-                    }
-                )
+                DashWalletTheme {
+                    MayaPortalScreen(
+                        showBuy = mayaViewModel.activeSwapBackend.supportsBuy,
+                        onBackClick = {
+                            findNavController().popBackStack()
+                        },
+                        onBuyClick = {
+                            mayaViewModel.setSwapDirection(SwapDirection.BUY)
+                            safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
+                        },
+                        onSellClick = {
+                            mayaViewModel.setSwapDirection(SwapDirection.SELL)
+                            safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
+                        }
+                    )
+                }
             }
         }
     }

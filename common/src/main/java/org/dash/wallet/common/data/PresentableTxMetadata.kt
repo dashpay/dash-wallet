@@ -19,15 +19,42 @@ package org.dash.wallet.common.data
 
 import android.graphics.Bitmap
 import androidx.room.Ignore
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
+import org.dash.wallet.common.data.entity.SwapOrder
 
 data class PresentableTxMetadata(
-    var txId: Sha256Hash,
+    var txId: TxId,
     var memo: String = "",
     var service: String? = null,
-    var customIconId: Sha256Hash? = null
+    var customIconId: TxId? = null
 ) {
     @Ignore var icon: Bitmap? = null
     @Ignore var title: String? = null
-}
 
+    /** Present when this tx funded a DEX swap; drives the conversion row on the home screen. */
+    @Ignore var swapOrder: SwapOrder? = null
+
+    // The tx display cache diffs these objects to decide which rows to rebuild, so the
+    // @Ignore fields that affect rendering (title, swapOrder) must count in equality.
+    // icon stays excluded: bitmaps are re-decoded per emission and compare by identity,
+    // which would mark every icon'd row as changed on each emission.
+    override fun equals(other: Any?): Boolean {
+        return other is PresentableTxMetadata &&
+            txId == other.txId &&
+            memo == other.memo &&
+            service == other.service &&
+            customIconId == other.customIconId &&
+            title == other.title &&
+            swapOrder == other.swapOrder
+    }
+
+    override fun hashCode(): Int {
+        var result = txId.hashCode()
+        result = 31 * result + memo.hashCode()
+        result = 31 * result + (service?.hashCode() ?: 0)
+        result = 31 * result + (customIconId?.hashCode() ?: 0)
+        result = 31 * result + (title?.hashCode() ?: 0)
+        result = 31 * result + (swapOrder?.hashCode() ?: 0)
+        return result
+    }
+}

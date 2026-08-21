@@ -53,7 +53,6 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import de.schildbach.wallet.WalletBalanceWidgetProvider
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.more.MoreFragment
 import de.schildbach.wallet_test.R
@@ -69,7 +68,6 @@ import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog.Companion.create
 import org.dash.wallet.common.util.openCustomTab
-import kotlin.math.abs
 
 object MainActivityExt {
     private const val STORAGE_TOLERANCE = 500 // MB
@@ -204,11 +202,10 @@ object MainActivityExt {
     fun MainActivity.checkTimeSkew(viewModel: MainViewModel, force: Boolean = false) {
         lifecycleScope.launch {
             val (isTimeSkewed, timeSkew) = withContext(Dispatchers.IO) { viewModel.getDeviceTimeSkew(force) }
-            val coinJoinOn = viewModel.getCoinJoinMode() != CoinJoinMode.NONE
             if (isTimeSkewed && (!timeSkewDialogShown || force)) {
                 timeSkewDialogShown = true
                 // add 1 to round up so 2.2 seconds appears as 3
-                showTimeSkewAlertDialog((if (timeSkew > 0) 1 else -1) + timeSkew / 1000L, coinJoinOn)
+                showTimeSkewAlertDialog((if (timeSkew > 0) 1 else -1) + timeSkew / 1000L)
             }
         }
     }
@@ -282,19 +279,14 @@ object MainActivityExt {
         }
     }
 
-    private fun MainActivity.showTimeSkewAlertDialog(diffSeconds: Long, coinJoin: Boolean) {
+    private fun MainActivity.showTimeSkewAlertDialog(diffSeconds: Long) {
         val settingsIntent = Intent(Settings.ACTION_DATE_SETTINGS)
         val hasSettings = packageManager.resolveActivity(settingsIntent, 0) != null
 
         AdaptiveDialog.create(
             R.drawable.ic_warning,
             getString(R.string.wallet_timeskew_dialog_title),
-            if (coinJoin) {
-                val position = getString(if (diffSeconds > 0) R.string.timeskew_ahead else R.string.timeskew_behind)
-                getString(R.string.wallet_coinjoin_timeskew_dialog_msg, position, abs(diffSeconds))
-            } else {
-                getString(R.string.wallet_timeskew_dialog_msg, diffSeconds / 1000)
-            },
+            getString(R.string.wallet_timeskew_dialog_msg, diffSeconds / 60),
             getString(R.string.button_dismiss),
             if (hasSettings) getString(R.string.button_settings) else null
         ).show(this) { openSettings ->

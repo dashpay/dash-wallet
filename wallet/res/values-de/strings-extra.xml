@@ -467,8 +467,6 @@
     <string name="masternode_key_not_used">Nicht benutzt</string>
     <string name="masternode_key_revoked">Widerrufen</string>
     <string name="masternode_key_private_public_base64">Privater/ Öffentlicher Schlüssel (base64)</string>
-    <string name="timeskew_ahead">weiter</string>
-    <string name="timeskew_behind">zurück</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Die Preise konnten nicht abgerufen werden.  Es ist möglich, dass die Fiat-Werte nicht korrekt sind.</string>

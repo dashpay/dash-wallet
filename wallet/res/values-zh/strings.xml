@@ -13,7 +13,6 @@
     <string name="blockchain_state_progress_stalled">同步已停滞</string>
     <string name="blockchain_state_progress_problem_storage">同步: 存储出现了问题</string>
     <string name="blockchain_state_progress_problem_network">同步: 网络出现了问题</string>
-    <string name="mixing_state_progress_mixing">正在混币 (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Dash地址已复制到剪切板</string>
     <string name="wallet_address_dialog_fragment_hint">为了保护您的隐私, 当您收到一笔交易后您的钱包地址将改变.</string>
     <string name="wallet_balance_fragment_too_much">该金额太庞大了, 随身携带存在安全风险. 请将一部分资金转移到一个安全的地方.</string>
@@ -43,8 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">管理应用程序</string>
     <string name="wallet_timeskew_dialog_title">检查日期 &amp; 时间设置</string>
     <string name="wallet_timeskew_dialog_msg">您的设备停止了 %d 分钟. 由于此原因, 您可能无法发送或接收Dash.\\n\\n您应当检查, 并修正您的日期, 时区设置.</string>
-    <string name="wallet_coinjoin_timeskew_dialog_msg">您的设备时间为 %s %d 秒. 由于此差异, 您无法使用 CoinJoin. \n\n您设备上的时间设置需要变更为“自动设定时间”才能使用CoinJoin.</string>
-    <string name="settings_coinjoin_timeskew_dialog_msg">的设备时间偏差超过 5 秒. 由于此差异, 您无法使用CoinJoin. \n\n使用 CoinJoin 之前, 需要将设备上的时间设定更改为“自动设定时间”.</string>
     <string name="send_coins_activity_title">发送Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">正在从 %s 读取签名…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">获取签名失败</string>

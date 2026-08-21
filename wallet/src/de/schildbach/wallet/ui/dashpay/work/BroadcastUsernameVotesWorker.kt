@@ -33,7 +33,7 @@ import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
@@ -51,7 +51,7 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
     private val analytics: AnalyticsService,
     private val platformBroadcastService: PlatformBroadcastService,
     private val platformSyncService: PlatformSyncService,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val usernameRequestDao: UsernameRequestDao,
     private val usernameVoteDao: UsernameVoteDao
 ) : BaseWorker(context, parameters) {

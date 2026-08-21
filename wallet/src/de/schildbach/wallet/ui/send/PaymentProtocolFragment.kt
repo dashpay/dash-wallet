@@ -35,9 +35,8 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.protocols.payments.PaymentProtocolException
-import org.bitcoinj.utils.MonetaryFormat
-import org.bitcoinj.wallet.SendRequest
+import org.dash.wallet.common.payments.bip70.PaymentProtocolException
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -45,6 +44,16 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.util.toFormattedString
 
 @AndroidEntryPoint
 class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
@@ -89,12 +98,12 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun authenticateOrConfirm() {
-        if (userAuthorizedDuring && (!config.spendingConfirmationEnabled || viewModel.baseSendRequest == null)) {
+        if (userAuthorizedDuring && (!config.spendingConfirmationEnabled || !viewModel.canSendPayment)) {
             confirmWhenAuthorizedAndNoException()
         } else {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
             val amount = viewModel.finalPaymentIntent!!.amount
-            authManager.authenticate(requireActivity(), !amount.isLessThan(thresholdAmount)) { pin ->
+            authManager.authenticate(requireActivity(), !amount.toDashjCoin().isLessThan(thresholdAmount)) { pin ->
                 pin?.let { confirmWhenAuthorizedAndNoException() }
             }
         }
@@ -106,7 +115,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             return
         }
 
-        if (viewModel.baseSendRequest != null) {
+        if (viewModel.canSendPayment) {
             lifecycleScope.launch {
                 viewModel.sendPayment()
             }
@@ -125,7 +134,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     private fun initObservers() {
         viewModel.exchangeRateData.observe(viewLifecycleOwner) {
             if (viewModel.finalPaymentIntent != null && it != null) {
-                displayRequest(viewModel.finalPaymentIntent!!, null)
+                displayRequest(viewModel.finalPaymentIntent!!)
             }
         }
         viewModel.sendRequestLiveData.observe(viewLifecycleOwner) {
@@ -134,7 +143,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                     binding.viewFlipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
-                    displayRequest(viewModel.finalPaymentIntent!!, it!!.data!!)
+                    displayRequest(viewModel.finalPaymentIntent!!)
                     binding.viewFlipper.displayedChild = VIEW_PAYMENT
                 }
                 Status.ERROR -> {
@@ -150,10 +159,10 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         }
                         binding.viewFlipper.displayedChild = VIEW_ERROR
                     } else {
-                        // sendRequest creating error (eg InsufficientMoneyException)
-                        displayRequest(viewModel.finalPaymentIntent!!, null)
+                        // preview build error (eg insufficient funds)
+                        displayRequest(viewModel.finalPaymentIntent!!)
                         binding.viewFlipper.displayedChild = VIEW_PAYMENT
-                        if (userAuthorizedDuring && (viewModel.baseSendRequest == null)) {
+                        if (userAuthorizedDuring && !viewModel.canSendPayment) {
                             handleSendRequestException()
                         }
                     }
@@ -211,7 +220,13 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             is InsufficientMoneyException -> {
                 showInsufficientMoneyDialog()
             }
-            else -> {
+            // The SDK build reports a shortfall as a native error whose
+            // message carries key-wallet's "Insufficient funds" text
+            // (same predicate as isSendAllShortfall) — same dialog as
+            // dashj's InsufficientMoneyException.
+            else -> if (resource.exception?.message?.contains("Insufficient funds", ignoreCase = true) == true) {
+                showInsufficientMoneyDialog()
+            } else {
                 val exception = resource.exception
                 val message = if (exception == null) {
                     resource.message
@@ -243,18 +258,20 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         ).show(requireActivity())
     }
 
-    private fun displayRequest(paymentIntent: PaymentIntent, sendRequest: SendRequest?) {
+    private fun displayRequest(paymentIntent: PaymentIntent) {
         val amount = paymentIntent.amount
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
 
-        val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount)
+        val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount.toDashjCoin())
         val fiatAmountStr = fiatAmount?.toFormattedString() ?: getString(R.string.transaction_row_rate_not_available)
-        val txFee = if (sendRequest != null) sendRequest.tx.fee else PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
+        // The SDK deferred build's exact fee; the fake fee only shows on
+        // a failed preview (send is gated off then anyway).
+        val txFee = viewModel.previewFee ?: PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
 
         binding.paymentRequest.amount.inputValue.text = amountStr
         binding.paymentRequest.amount.fiatValue.text = fiatAmountStr
         binding.paymentRequest.transactionFee.text = txFee.toPlainString()
-        binding.paymentRequest.totalAmount.text = amount.add(txFee).toPlainString()
+        binding.paymentRequest.totalAmount.text = amount.toDashjCoin().add(txFee).toPlainString()
 
         binding.paymentRequest.memo.text = paymentIntent.memo
         if (paymentIntent.payeeVerifiedBy != null) {

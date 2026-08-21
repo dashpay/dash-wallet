@@ -18,9 +18,9 @@ package org.dash.wallet.integrations.maya.payments.parsers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.AddressFormatException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.AddressFormatException
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
@@ -31,14 +31,14 @@ import org.slf4j.LoggerFactory
  * Supports transparent t-addresses (`t1...`, `t3...`), Sapling shielded addresses (`zs1...`),
  * and unified addresses (`u1...`).
  */
-class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZEC", "z", null) {
+class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZEC", "z") {
     private val log = LoggerFactory.getLogger(ZcashPaymentIntentParser::class.java)
     private val addressParser = ZcashAddressParser()
 
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
             try {
-                val address = input.substring(uriPrefix.length + 1)
+                val address = validate(input.substring(uriPrefix.length + 1))
                 return@withContext createPaymentIntent(address)
             } catch (ex: Exception) {
                 log.info("got invalid uri: '$input'", ex)
@@ -49,8 +49,8 @@ class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZE
             }
         } else if (addressParser.exactMatch(input)) {
             try {
-                return@withContext createPaymentIntent(input)
-            } catch (ex: AddressFormatException) {
+                return@withContext createPaymentIntent(normalizeShielded(input))
+            } catch (ex: Exception) {
                 log.info("got invalid address", ex)
                 throw PaymentIntentParserException(
                     ex,
@@ -63,5 +63,20 @@ class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZE
             IllegalArgumentException(input),
             ResourceString(R.string.error, listOf(input))
         )
+    }
+
+    /**
+     * Shielded/unified addresses are bech32 and may be scanned all-caps; lowercase is
+     * canonical. Transparent t-addresses are Base58 (case-sensitive) — left untouched.
+     */
+    private fun normalizeShielded(address: String) =
+        if (address.startsWith("t")) address else address.lowercase()
+
+    /** URI payloads get the same validation as bare addresses before reaching the swap memo. */
+    private fun validate(address: String): String {
+        if (!addressParser.exactMatch(address)) {
+            throw AddressFormatException("not a valid $currency address: $address")
+        }
+        return normalizeShielded(address)
     }
 }

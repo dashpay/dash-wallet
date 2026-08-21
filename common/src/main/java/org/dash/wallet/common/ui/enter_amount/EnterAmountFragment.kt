@@ -34,15 +34,22 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withStarted
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Monetary
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.Monetary
+import org.dash.wallet.common.money.ExchangeRate
+import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentEnterAmountBinding
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.toCoin
+import org.dash.wallet.common.money.toDash
+import org.dash.wallet.common.money.toFiatValue
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.ui.segmented_picker.PickerDisplayMode
@@ -93,6 +100,28 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
                 arguments = args
             }
         }
+
+        /** Neutral counterpart of [newInstance] for modules that don't depend on dashj. */
+        @JvmStatic
+        fun newInstanceDash(
+            dashToFiat: Boolean = false,
+            initialAmount: Dash? = null,
+            isMaxButtonVisible: Boolean = true,
+            showCurrencySelector: Boolean = true,
+            isCurrencyOptionsPickerVisible: Boolean = true,
+            showAmountResultContainer: Boolean = true,
+            faitCurrencyCode: String? = null,
+            requirePinForMaxButton: Boolean = false
+        ): EnterAmountFragment = newInstance(
+            dashToFiat,
+            initialAmount?.toCoin(),
+            isMaxButtonVisible,
+            showCurrencySelector,
+            isCurrencyOptionsPickerVisible,
+            showAmountResultContainer,
+            faitCurrencyCode,
+            requirePinForMaxButton
+        )
     }
 
     private val binding by viewBinding(FragmentEnterAmountBinding::bind)
@@ -145,10 +174,11 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.setOnClickListener {
-            viewModel.onContinueEvent.value = Pair(
-                binding.amountView.dashAmount,
-                binding.amountView.fiatAmount
-            )
+            if (binding.continueProgress.isVisible) return@setOnClickListener
+            val dashAmount = binding.amountView.dashAmount
+            val fiatAmount = binding.amountView.fiatAmount
+            viewModel.onContinueEvent.value = Pair(dashAmount, fiatAmount)
+            viewModel.onContinueDashEvent.value = Pair(dashAmount.toDash(), fiatAmount.toFiatValue())
         }
 
         viewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
@@ -161,6 +191,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
 
         viewModel.canContinue.observe(viewLifecycleOwner) { canContinue ->
+            if (continueLoading) return@observe
             binding.continueBtn.isEnabled = if (!didAuthorize && requirePinForBalance && !viewModel.blockContinue) {
                 viewModel.amount.value?.isPositive == true
             } else {
@@ -185,6 +216,29 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
             binding.errorLabel.isVisible = errorText.isNotEmpty()
         }
     }
+
+    /**
+     * Show a progress circle on the continue button and DISABLE it — for
+     * hosts whose action runs asynchronously after the tap. The disabled
+     * state is sticky: [canContinue] emissions cannot re-enable the button
+     * while loading (that observer would otherwise flip it back on within
+     * milliseconds).
+     */
+    fun setContinueLoading(loading: Boolean) {
+        continueLoading = loading
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.lifecycle.withStarted {
+                binding.continueProgress.isVisible = loading
+                binding.continueBtn.text = if (loading) "" else getString(R.string.button_continue)
+                // isEnabled alone gives the app's standard disabled look: the
+                // button theme already maps it to `disabledBackgroundColor`.
+                binding.continueBtn.isEnabled = !loading
+            }
+        }
+    }
+
+    /** True while [setContinueLoading] holds the button in its busy state. */
+    private var continueLoading = false
 
     fun applyMaxAmount() {
         lifecycleScope.launchWhenStarted {
@@ -218,22 +272,25 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
             ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
         )
         binding.currencyOptions.setContent {
-            SegmentedPicker(
-                currencyOptions,
-                modifier = Modifier
-                    .height(48.dp)
-                    .width(40.dp),
-                selectedIndex = pickedCurrencyOption,
-                style = SegmentedPickerStyle(
-                    displayMode = PickerDisplayMode.Vertical,
-                    cornerRadius = 8f,
-                    backgroundColor = Color.Transparent,
-                    thumbColor = MyTheme.Colors.primary5,
-                    textStyle = MyTheme.Micro,
-                    shadowElevation = 0
-                )
-            ) { currency, _ ->
-                binding.amountView.dashToFiat = currency.title == Constants.DASH_CURRENCY
+            DashWalletTheme {
+                val colors = LocalDashColors.current
+                SegmentedPicker(
+                    currencyOptions,
+                    modifier = Modifier
+                        .height(48.dp)
+                        .width(40.dp),
+                    selectedIndex = pickedCurrencyOption,
+                    style = SegmentedPickerStyle(
+                        displayMode = PickerDisplayMode.Vertical,
+                        cornerRadius = 8f,
+                        backgroundColor = Color.Transparent,
+                        thumbColor = colors.primary5,
+                        textStyle = MyTheme.Micro,
+                        shadowElevation = 0
+                    )
+                ) { currency, _ ->
+                    binding.amountView.dashToFiat = currency.title == Constants.DASH_CURRENCY
+                }
             }
         }
 

@@ -31,17 +31,20 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.freshReceiveAddressStringOffMain
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.MoneyFormat
+import org.dash.wallet.common.money.dashToFiat
+import org.dash.wallet.common.money.moneyFormat
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.util.toCoin
+import org.dash.wallet.common.util.toDash
 import org.dash.wallet.integrations.uphold.api.TopperClient
 import org.dash.wallet.integrations.uphold.api.UpholdClient
 import org.dash.wallet.integrations.uphold.api.checkCapabilities
@@ -57,8 +60,8 @@ import retrofit2.HttpException
 import javax.inject.Inject
 
 data class UpholdPortalUIState(
-    val balance: Coin = Coin.ZERO,
-    val fiatBalance: Fiat? = null,
+    val balance: Dash = Dash.ZERO,
+    val fiatBalance: FiatValue? = null,
     val isBalanceUpdating: Boolean = false,
     val isUserLoggedIn: Boolean = false,
     val errorCode: Int? = null
@@ -84,20 +87,20 @@ class UpholdViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(UpholdPortalUIState(isUserLoggedIn = upholdClient.isAuthenticated))
     val uiState: StateFlow<UpholdPortalUIState> = _uiState.asStateFlow()
 
-    val balanceFormat: MonetaryFormat
-        get() = globalConfig.format.noCode()
+    val balanceFormat: MoneyFormat
+        get() = globalConfig.moneyFormat.noCode()
 
     init {
         globalConfig.lastUpholdBalance?.let { balance ->
-            _uiState.update { it.copy(balance = Coin.parseCoin(balance)) }
+            _uiState.update { it.copy(balance = Dash.parse(balance)) }
         }
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
             .onEach { rate ->
-                exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
-                val fiatBalance = exchangeRate?.coinToFiat(_uiState.value.balance)
+                exchangeRate = rate
+                val fiatBalance = exchangeRate?.dashToFiat(_uiState.value.balance)
                 _uiState.update { it.copy(fiatBalance = fiatBalance) }
             }
             .launchIn(viewModelScope)
@@ -114,9 +117,9 @@ class UpholdViewModel @Inject constructor(
             _uiState.update { it.copy(isBalanceUpdating = true) }
             val balance = upholdClient.getDashBalance()
             globalConfig.lastUpholdBalance = balance.toString()
-            val coin = balance.toCoin()
-            val fiatBalance = exchangeRate?.coinToFiat(coin)
-            _uiState.update { it.copy(balance = coin, fiatBalance = fiatBalance, isBalanceUpdating = false) }
+            val dash = balance.toDash()
+            val fiatBalance = exchangeRate?.dashToFiat(dash)
+            _uiState.update { it.copy(balance = dash, fiatBalance = fiatBalance, isBalanceUpdating = false) }
         } catch (ex: Exception) {
             log.error("Error refreshing balance: ${ex.message}")
 
@@ -187,7 +190,9 @@ class UpholdViewModel @Inject constructor(
     suspend fun topperBuyUrl(walletName: String): String {
         return topperClient.getOnRampUrl(
             walletUIConfig.getExchangeCurrencyCode(),
-            walletData.freshReceiveAddress(),
+            // Off-main: callers launch this from lifecycleScope (Main), and the
+            // underlying freshReceiveAddress() forces a synchronous full-wallet save.
+            walletData.freshReceiveAddressStringOffMain(),
             walletName
         )
     }

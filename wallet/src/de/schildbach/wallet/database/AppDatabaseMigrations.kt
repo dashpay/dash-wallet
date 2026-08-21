@@ -237,6 +237,56 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration20to21 = object : Migration(20, 21) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Tracking of DEX sell swaps (Maya / SwapKit / NEAR Intents) by the DASH tx
+                // that funded them. `depositAddress` is the inbound address the DASH was sent
+                // to; NEAR Intents swaps are tracked by it when the hash lookup fails.
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `swap_orders` (
+                        `txId` BLOB NOT NULL,
+                        `service` TEXT NOT NULL,
+                        `provider` TEXT,
+                        `fromAsset` TEXT NOT NULL,
+                        `toAsset` TEXT NOT NULL,
+                        `toAddress` TEXT NOT NULL,
+                        `depositAddress` TEXT,
+                        `expectedToAmount` TEXT,
+                        `actualToAmount` TEXT,
+                        `status` TEXT NOT NULL,
+                        `outboundTxHash` TEXT,
+                        `timestamp` INTEGER NOT NULL,
+                        `finalisedAt` INTEGER,
+                        `lastChecked` INTEGER NOT NULL,
+                        PRIMARY KEY(`txId`)
+                    )
+                    """
+                )
+                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `swapStatus` TEXT")
+            }
+        }
+
+        val migration21to22 = object : Migration(21, 22) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // App-owned persistence of engine-reported InstantSend locks. The SDK's
+                // own mirror never records them (txos.isInstantLocked is a dead flag and
+                // transactions.context goes 0 -> 3 without passing 1), so without this
+                // table the lock evaporates with the in-process event: the asset-lock
+                // funding preflight cannot count IS-locked coins as final, and a display
+                // row whose lock event raced its insert stays "Processing" until a block.
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `instant_send_locks` (
+                        `txId` TEXT NOT NULL,
+                        `lockedAtMs` INTEGER NOT NULL,
+                        PRIMARY KEY(`txId`)
+                    )
+                    """
+                )
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this

@@ -45,7 +45,7 @@ import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
@@ -59,6 +59,16 @@ import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.util.toFormattedString
 
 @AndroidEntryPoint
 open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
@@ -101,7 +111,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 Toast.makeText(requireContext(), R.string.error_loading_identity, Toast.LENGTH_LONG).show()
             }
             // currentAmount requires viewModel.initPaymentIntent be executed first
-            enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.setAmount(it) }
+            enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.setAmount(it.toDashjCoin()) }
         }
 
         if (savedInstanceState == null) {
@@ -139,7 +149,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         viewModel.dryRunSuccessful.observe(viewLifecycleOwner) { isSuccess ->
             if (!isSuccess && viewModel.shouldAdjustAmount()) {
                 val newAmount = viewModel.getAdjustedAmount()
-                enterAmountFragment?.setAmount(newAmount)
+                enterAmountFragment?.setAmount(newAmount.toNeutralCoin())
             } else {
                 updateView()
             }
@@ -151,7 +161,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             }
         }
         viewModel.maxOutputAmount.observe(viewLifecycleOwner) { balance ->
-            enterAmountViewModel.setMaxAmount(balance)
+            enterAmountViewModel.setMaxAmount(balance.toNeutralCoin())
             updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
         }
 
@@ -162,12 +172,6 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             }
             updateView()
         }
-        viewModel.coinJoinActive.observe(viewLifecycleOwner) { isActive ->
-            if (isActive) {
-                binding.paymentHeader.setBalanceTitle(getString(R.string.coinjoin_mixed_balance))
-            }
-        }
-
         enterAmountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { viewModel.isDashToFiatPreferred = it }
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             lifecycleScope.launch { authenticateOrConfirm() }
@@ -186,7 +190,6 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             log.info("dryRunException:", dryRunException)
             errorMessage = when (dryRunException) {
                 is Wallet.DustySendRequested -> getString(R.string.send_coins_error_dusty_send)
-                is InsufficientCoinJoinMoneyException -> getErrorMessage(R.string.send_coins_error_insufficient_mixed_money)
                 is InsufficientMoneyException -> getErrorMessage(R.string.send_coins_error_insufficient_money)
                 is Wallet.CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
                 else -> dryRunException.toString()
@@ -247,7 +250,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val rate = enterAmountViewModel.selectedExchangeRate.value
 
         if (editedAmount != null) {
-            val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it) }
+            val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it.toDashjFiat()) }
 
             try {
                 viewModel.logSend()
@@ -256,7 +259,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                     viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
                 }
 
-                val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate, checkBalance)
+                val tx = viewModel.signAndSendPayment(editedAmount.toDashjCoin(), exchangeRate, checkBalance)
                 onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
             } catch (ex: LeftoverBalanceException) {
                 if (!isAdded) {
@@ -284,23 +287,28 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
     protected open suspend fun showPaymentConfirmation() {
         val dryRunRequest = viewModel.dryrunSendRequest ?: return
-        val address = viewModel.basePaymentIntent.getAddress(Constants.NETWORK_PARAMETERS)?.toBase58() ?: return
+        val address = viewModel.basePaymentIntent.getAddress(Constants.ADDRESS_NETWORK) ?: return
 
-        val txFee = dryRunRequest.tx.fee
+        // Post-cutover the dry-run does not complete the tx (no inputs attached),
+        // so tx.fee is null; fall back to the deterministic display-only estimate.
+        // Pre-cutover tx.fee is set by completeTx and the fallback is never used.
+        val txFee = dryRunRequest.tx.fee ?: viewModel.dryRunFeeEstimate
         val amount: Coin?
         val total: String?
 
         if (dryRunRequest.emptyWallet) {
-            amount = enterAmountViewModel.amount.value?.minus(txFee)
+            amount = enterAmountViewModel.amount.value?.toDashjCoin()?.minus(txFee)
             total = enterAmountViewModel.amount.value?.toPlainString()
         } else {
-            amount = enterAmountViewModel.amount.value
+            amount = enterAmountViewModel.amount.value?.toDashjCoin()
             total = amount?.add(txFee ?: Coin.ZERO)?.toPlainString()
         }
 
         val rate = enterAmountViewModel.selectedExchangeRate.value
-        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, rate.fiat) }
-        val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
+        val exchangeRate = rate?.let {
+            org.dash.wallet.common.money.ExchangeRate(org.dash.wallet.common.money.Coin.COIN, rate.fiat)
+        }
+        val amountStr = amount?.let { MonetaryFormat.BTC.noCode().format(it).toString() } ?: ""
         val fee = txFee?.toPlainString() ?: ""
 
         var dashPayProfile: DashPayProfile? = null
@@ -398,7 +406,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
-        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat) }
+        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat.toDashjFiat()) }
         var balanceText = viewModel.dashFormat.format(balance).toString()
         exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance).toFormattedString()}" }
         binding.paymentHeader.setBalanceValue(balanceText)
@@ -469,10 +477,23 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         if (!isAdded) {
             return
         }
+        // Type-precise mapping (classifySendFailure): only the SDK engine's
+        // closed funding gate may be blamed on syncing — the 11.10.44 on-device
+        // bug showed "wallet is not fully synced" for a self-send that failed
+        // for ROUTABILITY on a fully-synced wallet. Post-cutover internal
+        // exception text is machinery and is never rendered verbatim; every
+        // other exception keeps the original verbatim rendering.
+        val message = when (classifySendFailure(exception)) {
+            SendFailureKind.NOT_SYNCED -> getString(R.string.send_coins_fragment_hint_replaying)
+            SendFailureKind.NOT_SUPPORTED -> getString(R.string.send_coins_error_not_supported)
+            SendFailureKind.SIGNER_LOCKED -> getString(R.string.send_coins_error_signer_locked)
+            SendFailureKind.GENERIC_INTERNAL -> getString(R.string.send_coins_error_generic)
+            SendFailureKind.VERBATIM -> exception.toString()
+        }
         AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(R.string.send_coins_error_msg),
-            exception.toString(),
+            message,
             getString(R.string.button_dismiss),
             null
         ).showAsync(requireActivity())

@@ -216,6 +216,21 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
         } != null) {
 
             when {
+                // Shielded (and L1-SDK) double-claim surfaces as a plain
+                // IllegalStateException("Invite has already been used") from
+                // CreateIdentityService.claim*Invitation — it does NOT parse to an
+                // IdentityAssetLockTransactionOutPointAlreadyExistsException (that's the
+                // dashj L1 outpoint-collision type), so without this it fell through to a
+                // generic "unknown reason". Match the message and show the same
+                // already-claimed dialog the L1 path uses.
+                blockchainIdentityData.creationStateErrorMessage?.contains(
+                    "Invite has already been used", ignoreCase = true
+                ) == true -> {
+                    showInviteAlreadyClaimedDialog(blockchainIdentityData.invite!!)
+                    identityRepository.clearBlockchainIdentityData()
+                    return true
+                }
+
                 exception is IdentityAssetLockTransactionOutPointAlreadyExistsException -> {
                     showInviteAlreadyClaimedDialog(blockchainIdentityData.invite!!)
                     // now erase the blockchain data

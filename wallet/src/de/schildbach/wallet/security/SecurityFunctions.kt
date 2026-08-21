@@ -23,22 +23,26 @@ import android.os.Build
 import androidx.fragment.app.FragmentActivity
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import de.schildbach.wallet.service.platform.sdk.PWFFI_ERROR_INVALID_PARAMETER
+import de.schildbach.wallet.service.platform.sdk.SdkMessageSigner
 import de.schildbach.wallet.ui.CheckPinDialog
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.SecuritySystemStatus
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.services.MessageSigningException
+import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
@@ -47,11 +51,17 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class SecurityFunctions @Inject constructor(
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val context: Context,
     private val biometricHelper: BiometricHelper,
     private val pinRetryController: PinRetryController,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    /**
+     * The Kotlin SDK's message-signing surface, behind a seam so
+     * [signMessage]'s error mapping is host-JVM testable (the real call
+     * needs `libdash_sdk`).
+     */
+    private val messageSigner: SdkMessageSigner
 ): AuthenticationManager {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
     private val status = MutableStateFlow(SecuritySystemStatus.HEALTHY)
@@ -149,13 +159,39 @@ class SecurityFunctions @Inject constructor(
         return@withContext deterministicSeed
     }
 
-    override suspend fun signMessage(address: Address, message: String): String {
-        val securityGuard = SecurityGuard.getInstance()
-        val password = securityGuard.retrievePassword()
-        val keyParameter = deriveKey(walletData.wallet!!, password)
-        val key = walletData.wallet?.findKeyFromAddress(address)
-        return key?.signMessage(message, keyParameter) ?: ""
-    }
+    /**
+     * Sign [message] with the private key of [address], returning the
+     * base64 signature. Backed by the Dash Platform Kotlin SDK
+     * (`ManagedPlatformWallet.signMessage` via [SdkMessageSigner]); the
+     * dashj key lookup this replaced is gone, with no fallback — the
+     * codebase's fail-closed cutover philosophy (cf. `cutoverSendRoute` in
+     * [SendCoinsTaskRunner]).
+     *
+     * No PIN prompt: the SDK's mnemonic resolver reads the seed Rust-side
+     * from its own Keystore-backed storage, so unlike the dashj path this
+     * neither retrieves the password nor derives the wallet encryption key.
+     *
+     * ## Failure contract
+     *
+     * Throws [MessageSigningException] on EVERY failure — in particular it
+     * no longer returns `""` when the wallet does not own [address]. That
+     * old silent-empty behavior made CrowdNode POST an unsigned request and
+     * fail server-side with an opaque message; the caller now gets
+     * [MessageSigningException.Reason.SIGNING_KEY_UNAVAILABLE] instead.
+     *
+     * ## Message contract
+     *
+     * [message] must be well-formed text: the SDK `require()`s that it
+     * contain no unpaired UTF-16 surrogate, since a lone surrogate cannot
+     * be encoded to the UTF-8 bytes that get hashed, and silently
+     * substituting U+FFFD would sign something other than what the caller
+     * passed. The only production callers are CrowdNode's `RegisterEmail`
+     * (an email address) and `Withdrawal` (a decimal duffs string), so
+     * neither can trip it. A violation surfaces as
+     * [MessageSigningException.Reason.UNAVAILABLE].
+     */
+    override suspend fun signMessage(address: String, message: String): String =
+        signMessageViaSdk(messageSigner, address, message)
 
     override fun getHealth(): SecuritySystemStatus {
         val securityGuard = SecurityGuard.getInstance()
@@ -217,5 +253,79 @@ class SecurityFunctions @Inject constructor(
 
         // Hand back the (possibly changed) encryption key.
         return key
+    }
+}
+
+// ── Message signing (host-testable) ───────────────────────────────────
+
+private val signingLog = LoggerFactory.getLogger("de.schildbach.wallet.security.signMessage")
+
+/**
+ * The whole of [SecurityFunctions.signMessage], lifted out of the class so
+ * it is host-JVM testable: [SecurityFunctions] itself cannot be constructed
+ * in a unit test, because [PinRetryController]'s static initializer builds
+ * an Android-dependent singleton that fails to initialize off-device. Same
+ * "pure logic as a top-level `internal fun`" convention as
+ * `classifyCoreSendFailure` in
+ * [de.schildbach.wallet.service.platform.sdk.SdkL1SendService]; the class
+ * method is a one-line delegation.
+ *
+ * Maps every SDK failure onto [MessageSigningException] — see
+ * [SecurityFunctions.signMessage] for the full contract.
+ */
+internal suspend fun signMessageViaSdk(
+    signer: SdkMessageSigner,
+    address: String,
+    message: String
+): String {
+    return try {
+        signer.signMessage(address, message)
+    } catch (ex: CancellationException) {
+        // Never wrap cancellation — a cancelled scope must stay cancelled.
+        throw ex
+    } catch (ex: DashSdkError.PlatformWallet.SigningKeyUnavailable) {
+        // FFI code 31: the bound wallet holds no private key for this
+        // address. The one case the dashj implementation answered with an
+        // empty string.
+        //
+        // TODO(signing): this may be TRANSIENT after a wallet restore. The
+        //  SDK wallet derives its own address set as it syncs, so until that
+        //  catches up with dashj's discovery an address dashj already knows
+        //  can be genuinely absent SDK-side, and a CrowdNode signature for it
+        //  fails until the sync completes. A widen-the-lookahead-and-retry
+        //  heal is under consideration on the integration line; whether this
+        //  is a real limitation at all is still disputed. Deliberately NOT
+        //  worked around here — a retry or fallback added at this layer would
+        //  mask the distinction between "not ours yet" and "not ours", which
+        //  is exactly the distinction the fail-closed contract depends on.
+        signingLog.error("signMessage: no signing key for address", ex)
+        throw MessageSigningException(
+            MessageSigningException.Reason.SIGNING_KEY_UNAVAILABLE,
+            "the wallet cannot sign for this address",
+            ex
+        )
+    } catch (ex: DashSdkError.PlatformWallet.Generic) {
+        // Platform-wallet native code 2 (`ErrorInvalidParameter`) has no
+        // dedicated Kotlin type — DashSdkError's code mapping falls through
+        // to Generic(2, …) — and is how a malformed address is rejected
+        // Rust-side. Any other Generic code is an unclassified SDK failure.
+        val reason = if (ex.nativeCode == PWFFI_ERROR_INVALID_PARAMETER) {
+            MessageSigningException.Reason.INVALID_ADDRESS
+        } else {
+            MessageSigningException.Reason.UNAVAILABLE
+        }
+        signingLog.error("signMessage: SDK rejected the request (code ${ex.nativeCode})", ex)
+        throw MessageSigningException(reason, "message signing failed", ex)
+    } catch (ex: Exception) {
+        // SDK not startable, no single bound wallet, an EMPTY address or a
+        // message with an unpaired surrogate (both caught by the SDK's own
+        // client-side `require`s, which raise IllegalArgumentException
+        // rather than an FFI code), or any other signing failure.
+        signingLog.error("signMessage: signing unavailable", ex)
+        throw MessageSigningException(
+            MessageSigningException.Reason.UNAVAILABLE,
+            "message signing is unavailable",
+            ex
+        )
     }
 }

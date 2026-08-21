@@ -17,9 +17,11 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
@@ -56,6 +58,7 @@ fun DashSwitch(
     enabled: Boolean = true,
 ) {
     val density = LocalDensity.current
+    val colors = LocalDashColors.current
     
     // Dimensions based on Figma design with larger thumb
     val trackWidth = 32.dp
@@ -78,9 +81,9 @@ fun DashSwitch(
     
     // Colors based on Figma design
     val trackColor = if (checked) {
-        MyTheme.Colors.dashBlue
+        colors.dashBlue
     } else {
-        MyTheme.Colors.gray300
+        colors.gray300
     }
     val thumbColor = Color.White
     
@@ -92,7 +95,7 @@ fun DashSwitch(
                 role = Role.Switch,
                 enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null,
+                indication = null, // no ripple to match Figma
                 onValueChange = { onCheckedChange?.invoke(it) }
             ),
         contentAlignment = Alignment.Center
@@ -134,9 +137,17 @@ fun DashSwitch(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Dash Switch Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dash Switch Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun DashSwitchPreview() {
+    DashWalletTheme {
+        DashSwitchPreviewContent()
+    }
+}
+
+@Composable
+private fun DashSwitchPreviewContent() {
     Box(
         modifier = Modifier.padding(16.dp)
     ) {

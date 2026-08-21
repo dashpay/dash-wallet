@@ -258,7 +258,6 @@ de Dash</b></string>
     <string name="please_note_cant_change_this_later">Por favor ten en cuenta que no podrás cambiar esto más adelante.</string>
     <string name="Intermediate_level_WIFI_Warning">El nivel de privacidad intermedio requiere una conexión a Internet confiable</string>
     <string name="Advanced_level_WIFI_Warning">El nivel de privacidad avanzado requiere una conexión a Internet confiable</string>
-    <string name="privcay_level_WIFI_warning_desc">Se recomienda estar en una red Wi-Fi para evitar incurrir en cargos de mezcla adicionales.</string>
     <string name="continue_anyway">Continuar de todos modos</string>
     <string name="welcome_to_dash_pay">Bienvenido a Dash Pay</string>
     <string name="pay_to_usernames">Paga a los nombres de usuario. No más direcciones alfanuméricas.</string>
@@ -404,34 +403,13 @@ de Dash</b></string>
     <string name="request_username_min_balance_disclaimer">Para solicitar un nombre de usuario en la red Dash, debe tener más de%s Dash</string>
 
     <!-- CoinJoin -->
-    <string name="coinjoin">CoinJoin</string>
     <string name="turned_off">Apagado</string>
-    <string name="coinjoin_info_subtitle">Mezclar tus monedas Dash hará que tus transacciones sean más privadas</string>
-    <string name="coinjoin_description_1">Solo podrás gastar Dash que hayan sido mezclados cuando esto esté activado. Esto se puede desactivar en cualquier momento.</string>
-    <string name="coinjoin_description_2">Los Dash recién recibidos se mezclarán automáticamente cuando se abra la billetera</string>
-    <string name="coinjoin_description_3">Activar esta función resultará en un mayor uso de la batería</string>
-    <string name="coinjoin_mixing_level_title">Seleccionar nivel de mezcla</string>
-    <string name="coinjoin_mixing_level_subtitle">Puede cambiar o detener el nivel de mezcla en cualquier momento.</string>
     <string name="coinjoin_mixing_transactions">Transacciones mixtas</string>
     <string name="coinjoin_transaction_group">Se trata de transacciones mixtas relacionadas.</string>
     <string name="intermediate">Intermedio</string>
     <string name="advanced">Avanzado</string>
     <string name="intermediate_level_card_decs">Los usuarios avanzados que tienen un nivel muy alto de experiencia técnica pueden determinar tu historial de transacciones.</string>
     <string name="advanced_level_card_decs">Sería muy difícil para usuarios avanzados con cualquier nivel de experiencia técnica determinar tu historial de transacciones.</string>
-    <string name="coinjoin_intermediate_time">hasta 30 minutos</string>
-    <string name="coinjoin_advanced_time">Multiples horas</string>
-    <string name="coinjoin_start">Empezar a mezclar</string>
-    <string name="coinjoin_stop">Dejar de mezclar</string>
-    <string name="coinjoin_mixing">Mezclando</string>
-    <string name="coinjoin_mixing_finishing">Acabando</string>
-    <string name="coinjoin_paused">Pausado</string>
-    <string name="coinjoin_not_started">No iniciado</string>
-    <string name="coinjoin_progress_balance">%1$s de %2$s</string>
-    <string name="coinjoin_progress_finished">Completamente mezclado</string>
-    <string name="coinjoin_change_level_confirmation">¿Estás seguro de que deseas cambiar el nivel de privacidad\?</string>
-    <string name="coinjoin_stop_mixing_title">¿Estás seguro de que quieres dejar de mezclar\?</string>
-    <string name="coinjoin_stop_mixing_message">Cualquier fondo que se haya mezclado se combinará con tus fondos no mezclados.</string>
-    <string name="coinjoin_mixed_balance">Balance mixto:</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">Tu saldo de crédito es bajo</string>
@@ -460,9 +438,6 @@ de Dash</b></string>
     <string name="request_username_lost_vote">El nombre de usuario solicitado ha sido proporcionado a otra persona</string>
     <string name="request_username_blocked_message">El nombre de usuario %s fué bloqueado por la red Dash. Inténtalo nuevamente solicitando otro nombre de usuario.</string>
     <string name="request_username_lost_vote_message">Debido al proceso de votación, Dash Network ha decidido asignar el nombre de usuario %s a otra persona. Inténtalo de nuevo solicitando otro nombre de usuario.</string>
-    <string name="mix_dash_mix">Mezclar balance</string>
-    <string name="mix_dash_title">Mezcla tus Dash</string>
-    <string name="mix_dash_message">Para evitar que otras personas vean a quién realiza pagos, se recomienda mezclar tu saldo antes de crear tu nombre de usuario.</string>
     <string name="tools_credits_title">Créditos</string>
     <string name="tools_credits_buy_button">Comprar</string>
     <string name="dashpay_what_are_credits_title">¿Qué son los créditos\?</string>
@@ -531,7 +506,6 @@ de Dash</b></string>
     <string name="invitation_creating_progress_wip">Creando invitación...</string>
     <string name="invitation_fee_confirm_and_pay_button">Confirme y pague</string>
     <string name="error_sending_invite_transaction">Error enviando transacción de invitación</string>
-    <string name="request_username_invitation_not_mixed_message">La invitación fue creada con fondos no mezclados</string>
     <string name="request_username_invitation_only_noncontested_message">Solo puede crear un nombre de usuario no disputado con esta invitación</string>
     <string name="username_types_title">¿Qué son los nombres de usuario disputados y no disputados\?</string>
     <string name="username_types_message">Existen dos tipos de nombres de usuario, disputados y no disputados. Nombres de usuario no disputados tienen al menos un número (2-9) o más de 20 caracteres. Estos serán automáticamente aprobados. Si desea crear un nombre de usuario más corto y sin números, debe registrarse con DashPay sin una invitación, pagar la cuota, y esperar la aprobación de la red después del periodo de votación.</string>

@@ -40,6 +40,8 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Buy &amp; Sell</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_dash_dex">Dash DEX</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Receive</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Import Private Key</string>
@@ -199,6 +201,8 @@
     <string name="notification_explainer_message">Notifications may include alerts, sounds, and icon badges. These can be configured in phone Settings.</string>
     <string name="notification_dashpay_channel_name">DashPay</string>
     <string name="notification_dashpay_channel_description">Status of ongoing DashPay operations.</string>
+    <string name="notification_contacts_channel_name">Contact requests</string>
+    <string name="notification_contacts_channel_description">Alerts you when someone sends you a contact request.</string>
 
     <string name="net_type_indicator" />
 
@@ -309,6 +313,7 @@
     <string name="about_last_explore_server_update">Last Explore server update</string>
     <string name="about_app_version_label">App version</string>
     <string name="about_dashj_label" translatable="false">DashJ</string>
+    <string name="about_kotlin_sdk_label" translatable="false">Dash Kotlin SDK</string>
     <string name="about_platform_label">Platform</string>
     <string name="about_explore_section">Explore Dash</string>
     <string name="about_explore_update">Update</string>
@@ -367,7 +372,7 @@
 
     <string name="sync_status_wait">Please wait for the sync to complete</string>
     <string name="sync_status_syncing_sub_title">with Dash blockchain</string>
-    <string name="sync_status_unable_to_connect">Unable to connect</string>
+    <string name="sync_status_unable_to_connect">Unable to connect to the Dash network</string>
     <string name="sync_status_check_connection">Check your connection</string>
     <string name="sync_status_sync_title">Sync</string>
     <string name="sync_status_sync_completed">Completed</string>
@@ -476,8 +481,6 @@
     <string name="masternode_key_not_used">Not used</string>
     <string name="masternode_key_revoked">Revoked</string>
     <string name="masternode_key_private_public_base64">Private / Public Keys (base64)</string>
-    <string name="timeskew_ahead">ahead</string>
-    <string name="timeskew_behind">behind</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Prices weren\'t retrieved. Fiat values may be incorrect.</string>

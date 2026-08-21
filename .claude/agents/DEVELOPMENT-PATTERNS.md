@@ -78,6 +78,88 @@ component to our component:
 - ListEmptyState - ListEmptyState
 - tablelist-masternodekeys - TableListMasternodeKeyRow
 - EnterAmount (input bar) - EnterAmount
+- TextField-Base / text.field - TextField
+- addressField - AddressField
+
+## Dark Mode Compatibility
+
+Every new screen, dialog, and component must work in both light and dark mode. The app uses `Theme.AppCompat.DayNight` which activates `values-night/` resource qualifiers automatically.
+
+### Compose: The Golden Rule
+
+**One call to `LocalDashColors.current` per composable, at the top. Never use `MyTheme.Colors.*` directly.**
+
+```kotlin
+@Composable
+fun MyComponent(...) {
+    val colors = LocalDashColors.current   // ← always this, nothing else
+    Column(modifier = Modifier.background(colors.backgroundPrimary)) {
+        Text("Hello", color = colors.textPrimary)
+    }
+}
+```
+
+**Root entry point wrapping** — The topmost composable in a Fragment's `setContent { }` block must be wrapped in `DashWalletTheme`:
+
+```kotlin
+composeView.setContent {
+    DashWalletTheme {        // ← selects light or dark colors once
+        MyScreen(...)
+    }
+}
+```
+
+**Rules:**
+- `DashWalletTheme` wraps the root once. Child composables never call `isSystemInDarkTheme()`.
+- `MyTheme.Colors` (light) and `MyTheme.DarkColors` (dark) are the source-of-truth instances; `LocalDashColors.current` resolves to the correct one automatically.
+- Always wrap previews in `DashWalletTheme`. For dark previews add `uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES`:
+
+```kotlin
+@Preview(name = "Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun MyPreviewDark() {
+    DashWalletTheme { MyComponent(...) }
+}
+```
+
+### ColorScheme Fields Reference
+
+Key fields from `MyTheme.ColorScheme` (use via `LocalDashColors.current`):
+
+| Field | Light | Dark | Use for |
+|-------|-------|------|---------|
+| `backgroundPrimary` | `#F5F6F7` | `#10151F` | Page background |
+| `backgroundSecondary` | `#FFFFFF` | `#1D2532` | Cards, sheets, panels |
+| `textPrimary` | `#191C1F` | `#FFFFFF` | Primary text |
+| `textSecondary` | `#6E757C` | `#92929C` | Secondary / helper text |
+| `textTertiary` | `#75808A` | `#75808A` | Tertiary / label text |
+| `dashBlue` | `#008DE4` | `#008DE4` | Brand accent, links |
+| `dividerColor` | `#EDF0F2` | `#2C3748` | Dividers, borders |
+| `disabledButtonBg` | `#EEEEEE` | `#3C3C3C` | Disabled button background |
+| `contentDisabled` | `#92929C` | `#92929C` | Disabled text / icon |
+
+### XML Layouts: Semantic Color Tokens
+
+Use semantic tokens from `values/colors.xml` — they have night overrides in `values-night/colors.xml`. Never use `@android:color/white` or literal hex values for surfaces or text.
+
+| Purpose | Token |
+|---------|-------|
+| Page background | `@color/background_primary` |
+| Card / sheet surface | `@color/background_secondary` |
+| Primary text | `@color/content_primary` |
+| Dividers / borders | `@color/divider_color` |
+
+### XML Drawables: Adaptive Colors
+
+- **Shape drawables** (cards, panels): fill with `@color/background_secondary`, not `@android:color/white`
+- **Vector icons**: set `android:tint="@color/content_primary"` on the `<vector>` element instead of a hardcoded fill
+- **Color state lists** (`<selector>`): the default (last) item must use `@color/content_primary`, not a hardcoded hex
+
+### DashButton Disabled State
+
+`DashButton` handles the disabled state automatically via `colors.disabledButtonBg` and `colors.contentDisabled`. Do not set `alpha` or override colors manually for disabled buttons — just pass `isEnabled = false`.
+
+---
 
 ## NavBar / TopNavBase (Figma: NavBar)
 
@@ -373,7 +455,7 @@ ListItem(
         Icon(
             painter = painterResource(R.drawable.ic_dash_blue_filled),
             contentDescription = null,
-            tint = MyTheme.Colors.dashBlue,
+            tint = LocalDashColors.current.dashBlue,
             modifier = Modifier.size(32.dp)
         )
     }
@@ -414,7 +496,7 @@ ListItem(
         Icon(
             painter = painterResource(R.drawable.ic_menu_row_arrow),
             contentDescription = null,
-            tint = MyTheme.Colors.textTertiary,
+            tint = LocalDashColors.current.textTertiary,
             modifier = Modifier.size(16.dp)
         )
     }
@@ -452,7 +534,7 @@ ListEmptyState(
         Icon(
             painter = painterResource(R.drawable.ic_dash_blue_filled),
             contentDescription = null,
-            tint = MyTheme.Colors.dashBlue,
+            tint = LocalDashColors.current.dashBlue,
             modifier = Modifier.size(48.dp)
         )
     },
@@ -605,7 +687,7 @@ FeatureItemNumber(number = "1")
 
 **Visual Specs**:
 - Size: 20dp circle
-- Background: MyTheme.Colors.dashBlue
+- Background: `colors.dashBlue` (via `LocalDashColors.current`)
 - Border radius: 8dp
 - Text: 12sp, white, centered
 
@@ -813,7 +895,7 @@ A horizontal **amount-input bar** from the design system. Renders, left to right
 **Figma file:** Design system - Android — node `4414:23352`
 
 The component lives in:
-```
+```text
 common/src/main/java/org/dash/wallet/common/ui/components/EnterAmount.kt
 ```
 
@@ -913,6 +995,58 @@ EnterAmount(
 - Typography substitutions vs. the Figma spec: `LabelSmallSemibold` (11 sp) is used in place of the spec's 10 sp SemiBold for the Max label — closest available preset, ~1 sp visual diff.
 - The chevron icon `ic_chevron_down_small.xml` is a small (10 × 6 dp) stroke vector created specifically for this component.
 
+## TextField (Figma: TextField-Base / text.field)
+
+The general-purpose design-system text field lives in:
+```
+common/src/main/java/org/dash/wallet/common/ui/components/TextField.kt
+```
+
+**Figma Design System nodes:** base `4111:12913`, variant set `4112:13707`
+
+A rounded (16 dp) input with a **floating label**: when the field is empty, the label renders
+full-size (`Typography.TitleSmall`, textSecondary) on the text line as the placeholder; once
+there's content it shrinks to a small line above the text (`Typography.LabelMedium`).
+
+### States (driven by focus / content / parameters — no state enum)
+
+| Figma variant | Trigger | Visual |
+|---|---|---|
+| Default | unfocused, empty | `gray400` @ 10% background, label as placeholder |
+| Focused | focused | white background, 1 dp `dashBlue` border, 3 dp `dashBlue` @ 10% focus ring |
+| Typing | focused + text | focused look + automatic clear (✕) trailing button (`ic_clear_input`) |
+| Filled | unfocused + text | resting gray background, small label above text |
+| Error | `isError = true` | `red5` background + 1 dp `red` border; `message` below renders red (wins over focused) |
+| Disabled | `enabled = false` | content at 40% alpha, input ignored |
+
+### Slots
+
+- `label` — floating label inside the field (Figma `label`): full-size on the text line when empty, shrinks above the text once filled
+- `innerLabel` — permanent small label above the text line, always visible even when empty (same as `AddressField.innerLabel`; don't combine with `label`). **Address-input screens use this for "BTC Address"-style text — never a disappearing hint.**
+- `placeholder` — text-line placeholder (hint) when empty; only used when `label` is null
+- `helperTextInside` — right-aligned `Typography.BodySmall` inside the field, below the text line (Figma `helpTextInside`); when null and `maxLength` is set, an automatic `n/max` counter renders here
+- `message` + `isError` — help text below the field (Figma `helpTextOutside`); `isErrorMessage` (defaults to `isError`) controls the message color independently — pass `isErrorMessage = false` for an error-styled field with neutral gray help text (Figma shows both)
+- `trailingIcon` + `onTrailingIconClick` — custom trailing button in a 30 dp / 8 dp-radius touch area (Figma `buttonIcon`); the clear button takes precedence while typing
+- `maxLength`, `singleLine`, `showClearButton`, `keyboardOptions`, `visualTransformation`, `focusRequester`, `onImeAction`
+
+### Example
+
+```kotlin
+TextField(
+    value = uiState.name,
+    onValueChange = viewModel::onNameChanged,
+    label = stringResource(R.string.name_label),
+    message = uiState.nameError?.let { stringResource(it) },
+    isError = uiState.nameError != null,
+    maxLength = 25
+)
+```
+
+### Notes
+
+- For crypto addresses use `AddressField` (QR-scan affordance, long-press-to-paste); for search bars use `SearchField`. `TextField` is the generic single/multi-line input.
+- Layout specs from Figma: min height 58 dp, padding start 16 / end 12 / vertical 10, radius 16, row gap 10, label-to-text gap 2.
+
 ## Typography Mapping (Figma Design System → MyTheme.Typography)
 
 When implementing designs from Figma, use the following typography mappings. All styles are available in `MyTheme.Typography.*`:
@@ -997,18 +1131,21 @@ When implementing designs from Figma, use the following typography mappings. All
 ### Usage Examples
 
 ```kotlin
+// Always read colors at the top of the composable:
+val colors = LocalDashColors.current
+
 // Dialog title - Use Headline S Bold
 Text(
     text = stringResource(R.string.upgrade_pin_title),
     style = MyTheme.Typography.HeadlineSmallBold,
-    color = MyTheme.Colors.textPrimary
+    color = colors.textPrimary
 )
 
 // Dialog description - Use Body M (Regular)
 Text(
     text = stringResource(R.string.upgrade_pin_description),
     style = MyTheme.Typography.BodyMedium,
-    color = MyTheme.Colors.textSecondary
+    color = colors.textSecondary
 )
 
 // List item title - Use Title M Semibold
@@ -1021,7 +1158,7 @@ Text(
 Text(
     text = "2 hours ago",
     style = MyTheme.Typography.LabelMedium,
-    color = MyTheme.Colors.textTertiary
+    color = colors.textTertiary
 )
 
 // Button text - Use Label L Semibold (handled by DashButton)
@@ -1137,10 +1274,11 @@ private fun SettingsScreenContent(
         else -> stringResource(statusId)
     }
     
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         // Top Navigation
         NavBarBack(onBackClick = onBackClick)

@@ -253,7 +253,13 @@ class BiometricHelper(context: Context, private val configuration: Configuration
                 val crypto = CryptoObject(cipher)
                 showPrompt(activity, crypto, forUnlock, authListener)
             } else {
-               throw NullPointerException("cipher is empty")
+                // Null cipher = the keystore key is gone but our stored
+                // fingerprint data survived (the OS deletes auth-bound keys
+                // when the secure lock screen is removed). Unrecoverable —
+                // reset so the user can re-enroll instead of hitting
+                // "cipher is empty" forever.
+                clearBiometricInfo()
+                throw NullPointerException("cipher is empty")
             }
         } catch (t: Throwable) {
             if (t is KeyPermanentlyInvalidatedException) {

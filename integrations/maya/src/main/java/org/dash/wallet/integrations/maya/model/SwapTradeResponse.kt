@@ -20,7 +20,7 @@ import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.money.TxIds
 import java.math.BigDecimal
 
 @Parcelize
@@ -79,8 +79,11 @@ data class SwapTradeUIModel(
     var inputCurrencyName: String = "",
     var outputCurrencyName: String = "",
     var memo: String? = null,
-    var txid: Sha256Hash = Sha256Hash.ZERO_HASH,
-    var expectedOutputAmount: BigDecimal = BigDecimal.ZERO
+    /** hex tx id of the swap transaction; [TxIds.ZERO_HASH_HEX] until sent */
+    var txid: String = TxIds.ZERO_HASH_HEX,
+    var expectedOutputAmount: BigDecimal = BigDecimal.ZERO,
+    val routeName: String? = "",
+    val availableRoutes: List<String> = listOf()
 ) : Parcelable {
     @IgnoredOnParcel
     val inputCurrency = amount.dashCode

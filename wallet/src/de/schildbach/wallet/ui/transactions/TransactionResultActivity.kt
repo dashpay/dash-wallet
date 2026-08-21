@@ -24,18 +24,21 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import de.schildbach.wallet.ui.main.MainActivity
 
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.DashPayProfile
-import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.util.viewOnBlockExplorer
@@ -66,6 +69,7 @@ class TransactionResultActivity : LockScreenActivity() {
         private const val EXTRA_PAYMENT_MEMO = "payee_name"
         private const val EXTRA_PAYEE_VERIFIED_BY = "payee_verified_by"
         private const val EXTRA_USER_DATA = "user_data"
+        private const val STATE_PENDING_FINISH = "pending_finish_on_sheet_dismiss"
 
         @JvmStatic
         fun createIntent(
@@ -128,6 +132,10 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private val viewModel: TransactionResultViewModel by viewModels()
+    // True once we've deferred finish() to the dismissal of a DashPayUserBottomSheet. Persisted so a
+    // configuration change (rotation) re-arms the lifecycle callback and dismissing the recreated
+    // sheet still exits the flow instead of stranding the user on this screen.
+    private var pendingFinishOnSheetDismiss = false
     private lateinit var binding: ActivitySuccessfulTransactionBinding
     private lateinit var contentBinding: TransactionResultContentBinding
     @Inject
@@ -136,6 +144,12 @@ class TransactionResultActivity : LockScreenActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Re-arm the deferred finish before the recreated sheet runs its lifecycle, so dismissing
+        // the restored DashPayUserBottomSheet still finishes this host activity.
+        if (savedInstanceState?.getBoolean(STATE_PENDING_FINISH) == true) {
+            finishWhenUserSheetDismissed()
+        }
 
         val txId = intent.getSerializableExtra(EXTRA_TX_ID) as Sha256Hash
         if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)!!) {
@@ -150,7 +164,12 @@ class TransactionResultActivity : LockScreenActivity() {
             walletData.wallet!!,
             configuration.format.noCode(),
             contentBinding
-        )
+        ) {
+            // The sheet is hosted by this activity's FragmentManager, so don't finish() here —
+            // that would tear the sheet down along with the activity. Dismissing the sheet
+            // returns the user to this transaction result screen.
+            DashPayUserBottomSheet.newInstance(it).show(this)
+        }
 
         viewModel.init(txId)
 
@@ -180,48 +199,52 @@ class TransactionResultActivity : LockScreenActivity() {
             }
         }
 
-        viewModel.topUpWork(txId).observe(this) { workData ->
-            log.info("topup work data: {}", workData)
-            try {
-                val txIdString = workData.data?.outputData?.getString(TopupIdentityWorker.KEY_TOPUP_TX)
-                log.info("txId from work matches viewModel: {} ==? {}", txIdString, txId)
+        // Bug A (parity with TransactionDetailsDialogFragment): the tx is NOT in
+        // the dashj wallet (post-cutover SDK-only tx) — bind the neutral SDK
+        // detail instead of leaving the sheet blank. Metadata (tax category,
+        // private memo) is txid-keyed and works unchanged.
+        viewModel.sdkTxDetail.filterNotNull().observe(this) { detail ->
+            transactionResultViewBinder.bindSdkDetail(detail)
 
-                when (workData.status) {
-                    Status.LOADING -> {
-                        log.info("  loading: {}", workData.data?.outputData)
-                    }
-
-                    Status.SUCCESS -> {
-                        log.info("  success: {}", workData.data?.outputData)
-                    }
-
-                    Status.ERROR -> {
-                        log.info("  error: {}", workData.data?.outputData)
-                        viewModel.topUpError = true
-                        transactionResultViewBinder.setSentToReturn(
-                            viewModel.transaction.value?.versionShort ?: Transaction.SPECIAL_VERSION,
-                            viewModel.transaction.value?.type ?:Transaction.Type.TRANSACTION_ASSET_LOCK,
-                            viewModel.topUpError,
-                            viewModel.topUpComplete
-                        )                    }
-
-                    Status.CANCELED -> {
-                        log.info("  cancel: {}", workData.data?.outputData)
-                    }
+            // SDK top-up: swap the OP_RETURN row's pending label for
+            // "Platform credits" once the credits have landed.
+            lifecycleScope.launch {
+                viewModel.sdkTopUpCredited(txId)?.let { credited ->
+                    transactionResultViewBinder.setSdkTopUpState(error = false, completed = credited)
                 }
-            } catch (e: Exception) {
-                log.error("error processing topup information", e)
+            }
+            contentBinding.openExplorerCard.setOnClickListener {
+                viewOnExplorerByTxId(detail.txIdDisplayHex)
+            }
+            contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
+            contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
+            binding.transactionCloseBtn.setOnClickListener { onTransactionDetailsDismiss() }
+            transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
+
+            viewModel.transactionMetadata.observe(this) { metadata ->
+                if (metadata != null &&
+                    metadata.txId.toString().equals(detail.txIdDisplayHex, ignoreCase = true)
+                ) {
+                    transactionResultViewBinder.setTransactionMetadata(metadata)
+                }
             }
         }
 
+
         viewModel.topUpStatus(txId).observe(this) { topUp ->
-            viewModel.topUpComplete = topUp?.used() == true
-            transactionResultViewBinder.setSentToReturn(
-                viewModel.transaction.value?.versionShort ?: Transaction.SPECIAL_VERSION,
-                viewModel.transaction.value?.type ?: Transaction.Type.TRANSACTION_ASSET_LOCK,
-                viewModel.topUpError,
-                viewModel.topUpComplete
-            )
+            lifecycleScope.launch {
+                // Legacy top-ups have a `topups` row; SDK top-ups don't —
+                // their credited state comes from the SDK's recovery queue
+                // (lock still queued = pending, gone = credited).
+                viewModel.topUpComplete = topUp?.used() == true ||
+                    (topUp == null && viewModel.sdkTopUpCredited(txId) == true)
+                transactionResultViewBinder.setSentToReturn(
+                    viewModel.transaction.value?.versionShort ?: Transaction.SPECIAL_VERSION,
+                    viewModel.transaction.value?.type ?: Transaction.Type.TRANSACTION_ASSET_LOCK,
+                    viewModel.topUpError,
+                    viewModel.topUpComplete
+                )
+            }
         }
     }
 
@@ -232,9 +255,13 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private fun viewOnExplorer(tx: Transaction) {
+        viewOnExplorerByTxId(tx.txId.toString())
+    }
+
+    private fun viewOnExplorerByTxId(txId: String) {
         ComposeBottomSheet(R.style.PrimaryBackground) { dialog ->
             BlockExplorerSelectionView(viewModel.analytics) { explorer ->
-                viewOnBlockExplorer(explorer, "tx/${tx.txId}")
+                viewOnBlockExplorer(explorer, "tx/$txId")
                 dialog.dismiss()
             }
         }.show(this)
@@ -243,7 +270,11 @@ class TransactionResultActivity : LockScreenActivity() {
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-        transactionResultViewBinder.bind(tx, dashPayProfile, payeeName, payeeVerifiedBy)
+        // Bug A: hand the binder the SDK direction/amount override (non-null only
+        // post-cutover, when the held dashj wallet misreads an SDK-authored send).
+        transactionResultViewBinder.bind(
+            tx, dashPayProfile, payeeName, payeeVerifiedBy, viewModel.sdkDirectionOverride.value
+        )
         binding.transactionCloseBtn.setOnClickListener {
             onTransactionDetailsDismiss()
         }
@@ -286,10 +317,11 @@ class TransactionResultActivity : LockScreenActivity() {
                 finish()
             }
             userData != null -> {
-                finish()
-                startActivity(
-                    DashPayUserActivity.createIntent(this@TransactionResultActivity,
-                    userData!!, userData != null))
+                // The sheet is hosted by this activity, so finishing right away would destroy
+                // it too. Defer finish() until the sheet is dismissed, mirroring the old
+                // finish() + DashPayUserActivity flow.
+                finishWhenUserSheetDismissed()
+                DashPayUserBottomSheet.newInstance(userData!!).show(this)
             }
             intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
                 startActivity(MainActivity.createIntent(this))
@@ -298,6 +330,33 @@ class TransactionResultActivity : LockScreenActivity() {
                 startActivity(MainActivity.createIntent(this))
             }
         }
+    }
+
+    /**
+     * Finish this host activity once the [DashPayUserBottomSheet] is genuinely dismissed.
+     * [onFragmentDestroyed] also fires on configuration changes (e.g. rotation), when the sheet
+     * is immediately recreated — finishing then would tear down the screen out from under the
+     * user, so we skip that case via [isChangingConfigurations].
+     */
+    private fun finishWhenUserSheetDismissed() {
+        pendingFinishOnSheetDismiss = true
+        supportFragmentManager.registerFragmentLifecycleCallbacks(
+            object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentDestroyed(fm: FragmentManager, fragment: Fragment) {
+                    if (fragment is DashPayUserBottomSheet && !isChangingConfigurations) {
+                        fm.unregisterFragmentLifecycleCallbacks(this)
+                        pendingFinishOnSheetDismiss = false
+                        finish()
+                    }
+                }
+            },
+            false
+        )
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(STATE_PENDING_FINISH, pendingFinishOnSheetDismiss)
     }
 
     override fun onDestroy() {

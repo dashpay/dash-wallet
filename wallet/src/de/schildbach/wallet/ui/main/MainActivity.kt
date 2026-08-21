@@ -43,14 +43,18 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.ShieldedInviteOverageTopUp
+import de.schildbach.wallet.service.platform.work.ShieldedInviteOverageWorker
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.coinjoin.CoinJoinLevelViewModel
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.ui.staking.createCrowdNodeWithdrawalReminderDialog
 import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
+import de.schildbach.wallet.ui.cutover.CutoverSyncNoticeDialogFragment
+import de.schildbach.wallet.ui.migration.MixedFundsMigrationDialogFragment
 import de.schildbach.wallet.ui.main.MainActivityExt.checkTimeSkew
 import de.schildbach.wallet.ui.main.MainActivityExt.handleFirebaseAction
 import de.schildbach.wallet.ui.main.MainActivityExt.requestDisableBatteryOptimisation
@@ -58,16 +62,14 @@ import de.schildbach.wallet.ui.main.MainActivityExt.setupBottomNavigation
 import de.schildbach.wallet.ui.main.MainActivityExt.showFiatCurrencyChangeDetectedDialog
 import de.schildbach.wallet.ui.main.MainActivityExt.showStaleRatesToast
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
-import de.schildbach.wallet.ui.more.MixDashFirstDialogFragment
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.Nfc
+import de.schildbach.wallet.util.StartupBreadcrumbs
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityMainBinding
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.wallet.DerivationPathFactory
 import org.bitcoinj.wallet.WalletEx
@@ -92,6 +94,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         const val EXTRA_RESET_BLOCKCHAIN = "reset_blockchain"
         private const val EXTRA_INVITE = "extra_invite"
         private const val EXTRA_NAVIGATION_DESTINATION = "extra_destination"
+        private const val EXTRA_NAVIGATION_ARGS = "extra_destination_args"
 
         fun createIntent(context: Context): Intent {
             return Intent(context, MainActivity::class.java).apply {
@@ -107,6 +110,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             }
         }
 
+        /** [createIntent] variant passing [args] to the destination as its fragment arguments. */
+        fun createIntent(context: Context, @NavigationRes destination: Int, args: Bundle): Intent {
+            return createIntent(context, destination).putExtra(EXTRA_NAVIGATION_ARGS, args)
+        }
+
         fun createIntent(context: Context, invite: InvitationLinkData): Intent {
             return Intent(context, MainActivity::class.java).apply {
                 putExtra(EXTRA_NAVIGATION_DESTINATION, R.id.walletFragment)
@@ -118,16 +126,28 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private val baseAlertDialogBuilder = BaseAlertDialogBuilder(this)
     val viewModel: MainViewModel by viewModels()
-    private val createIdentityViewModel: CreateIdentityViewModel by viewModels()
-    private val coinJoinViewModel: CoinJoinLevelViewModel by viewModels()
     private val inviteHandlerViewModel: InviteHandlerViewModel by viewModels()
     @Inject
     lateinit var config: Configuration
+    @Inject
+    lateinit var transparentUsernameCreation: SdkTransparentUsernameCreation
+    @Inject
+    lateinit var shieldedInviteOverageTopUp: ShieldedInviteOverageTopUp
     private lateinit var binding: ActivityMainBinding
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
     private var retryCreationIfInProgress = true
     private var pendingCrowdNodeWithdrawalReminder = false
+
+    /**
+     * The post-upgrade mixed-funds sheet fired while the lock screen was up;
+     * shown as soon as it comes down (same deferral as the CrowdNode
+     * reminder — a sheet rendered under the PIN screen is invisible).
+     */
+    private var pendingMixedFundsMigration = false
+
+    /** Same lock-screen deferral for the one-time post-upgrade sync explainer. */
+    private var pendingCutoverUpgradeNotice = false
     var composeHostFrameLayout: ComposeHostFrameLayout? = null
 
     val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -154,6 +174,19 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         setContentView(binding.root)
         this.setupBottomNavigation(viewModel)
 
+        // The UI is up — recorded immediately, as evidence in the support
+        // report. The launch was already declared COMPLETE at the end of
+        // Application.onCreate (see StartupBreadcrumbs.markLaunchComplete);
+        // neither this marker nor the delayed one below decides that.
+        StartupBreadcrumbs.markMainUiShown()
+        // Belt and braces: after SURVIVAL_DELAY_MS on screen, re-clear the
+        // crash-loop strike counters. Cheap, and it means a healthy session
+        // leaves clean state behind even if the trail file is later lost.
+        binding.root.postDelayed(
+            { StartupBreadcrumbs.markLaunchSurvived() },
+            StartupBreadcrumbs.SURVIVAL_DELAY_MS
+        )
+
         initViewModel()
 
         if (savedInstanceState == null) {
@@ -168,6 +201,30 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             // Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false)
             upgradeWalletCoinJoin(false)
+        }
+
+        // A shielded invite claim whose note exceeded the exit denomination
+        // persists a pending OVERAGE record (the remainder must end up on the
+        // claimed identity). The worker is normally enqueued right after the
+        // claim, but if the app died in between, this launch check is what
+        // resumes it — WorkManager KEEP makes the re-enqueue idempotent.
+        lifecycleScope.launch {
+            try {
+                // Retro-fit first: a COMPLETED claim whose overage was never
+                // recorded (the S22 gap) gets its record minted from persisted
+                // state — one-shot, marker-guarded. Then the normal pending
+                // check drains whatever record exists.
+                val reconciled = shieldedInviteOverageTopUp.reconcileCompletedClaim()
+                if (reconciled || shieldedInviteOverageTopUp.hasPending()) {
+                    log.info(
+                        "invite overage work found at launch (reconciled={}) — enqueueing its worker",
+                        reconciled
+                    )
+                    ShieldedInviteOverageWorker.enqueue(application)
+                }
+            } catch (e: Exception) {
+                log.warn("pending invite-overage check failed at launch", e)
+            }
         }
 
         viewModel.currencyChangeDetected.observe(
@@ -208,11 +265,36 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             if (it != null) {
                 if (retryCreationIfInProgress && it.creationInProgress) {
                     retryCreationIfInProgress = false
-                    // should this be executed after syncing is finished?
-                    if (it.usingInvite) {
-                        startService(CreateIdentityService.createIntentForRetryFromInvite(this, false))
-                    } else {
-                        startService(CreateIdentityService.createIntentForRetry(this, false))
+                    val usingInvite = it.usingInvite
+                    // POST-CUTOVER the SDK executor + RestoreIdentityWorker own
+                    // resumption of an in-progress creation. This legacy dashj
+                    // retry (CreateIdentityService) must NOT fire then: post-cutover
+                    // it throws InsufficientMoney and stamps a spurious error on
+                    // the home tile even though the SDK path is completing fine.
+                    // Gate it on the COMMITTED cutover (the same signal the create
+                    // routing uses). Pre-cutover this is unchanged — the dashj
+                    // retry still fires. retryCreationIfInProgress is cleared above
+                    // so this never lingers or re-fires.
+                    lifecycleScope.launch {
+                        val cutoverCommitted = try {
+                            transparentUsernameCreation.isCutoverCommitted()
+                        } catch (e: Exception) {
+                            log.warn("cutover-state read failed on creation retry; assuming not committed", e)
+                            false
+                        }
+                        if (cutoverCommitted) {
+                            log.info(
+                                "cutover committed — skipping legacy dashj creation retry; " +
+                                    "the SDK executor + RestoreIdentityWorker own resumption"
+                            )
+                            return@launch
+                        }
+                        // should this be executed after syncing is finished?
+                        if (usingInvite) {
+                            startService(CreateIdentityService.createIntentForRetryFromInvite(this@MainActivity, false))
+                        } else {
+                            startService(CreateIdentityService.createIntentForRetry(this@MainActivity, false))
+                        }
                     }
                 }
                 setupBottomNavigation(viewModel)
@@ -220,16 +302,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
 
         viewModel.showCreateUsernameEvent.observe(this) {
-            lifecycleScope.launch {
-                val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
-                if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
-                    startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
-                } else {
-                    MixDashFirstDialogFragment().show(this@MainActivity) {
-                        startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
-                    }
-                }
-            }
+            startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
         }
         viewModel.showCrowdNodeWithdrawalReminder.observe(this) {
             if (lockScreenDisplayed) {
@@ -237,6 +310,20 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 pendingCrowdNodeWithdrawalReminder = true
             } else {
                 presentCrowdNodeWithdrawalReminder()
+            }
+        }
+        viewModel.showMixedFundsMigration.observe(this) {
+            if (lockScreenDisplayed) {
+                pendingMixedFundsMigration = true
+            } else {
+                MixedFundsMigrationDialogFragment.showOnce(this)
+            }
+        }
+        viewModel.showCutoverUpgradeNotice.observe(this) {
+            if (lockScreenDisplayed) {
+                pendingCutoverUpgradeNotice = true
+            } else {
+                CutoverSyncNoticeDialogFragment.showOnce(this)
             }
         }
 
@@ -298,11 +385,21 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         checkWalletEncryptionDialog()
         viewModel.detectUserCountry()
         viewModel.startBlockchainService()
+        // The periodic contact-request poll is scoped to the blockchain service
+        // and can stall across service teardown/restart; force a throttled
+        // refresh here so returning to the home screen promptly surfaces new
+        // contact requests and acceptances without opening the Contacts screen.
+        viewModel.refreshContactsOnResume()
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        handleIntent(intent!!)
+        intent ?: return
+        // Keep getIntent() in step with what is actually being handled: the
+        // activity replays getIntent() when it is recreated, so the extras
+        // handleIntent consumes must be consumed from that same instance.
+        setIntent(intent)
+        handleIntent(intent)
     }
 
     // BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
@@ -350,6 +447,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         if (intent.hasExtra(EXTRA_INVITE)) {
             val invite = intent.extras!!.getParcelable<InvitationLinkData>(EXTRA_INVITE)!!
+            // Consume the invite so it is handled exactly once. Android
+            // redelivers the launching intent every time the task is
+            // recreated (relaunch from Recents, process death, config
+            // change); without this, an invite the user already dealt with
+            // is re-armed on each of those and re-runs validation.
+            intent.removeExtra(EXTRA_INVITE)
             if (inviteHandlerViewModel.invitation.value == null) {
                 handleInvite(invite)
             } else {
@@ -361,7 +464,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             try {
                 val destination = intent.extras!!.getInt(EXTRA_NAVIGATION_DESTINATION)
                 val navController = findNavController(R.id.nav_host_fragment)
-                navController.navigate(destination)
+                navController.navigate(destination, intent.getBundleExtra(EXTRA_NAVIGATION_ARGS))
             } catch (e: IllegalStateException) {
                 // swallow for now, this happens when the MainActivity is first created?
             }
@@ -549,6 +652,21 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         if (pendingCrowdNodeWithdrawalReminder) {
             pendingCrowdNodeWithdrawalReminder = false
             presentCrowdNodeWithdrawalReminder()
+        }
+
+        if (pendingCutoverUpgradeNotice) {
+            pendingCutoverUpgradeNotice = false
+            CutoverSyncNoticeDialogFragment.showOnce(this)
+        }
+
+        if (pendingMixedFundsMigration) {
+            pendingMixedFundsMigration = false
+            MixedFundsMigrationDialogFragment.showOnce(this)
+        } else {
+            // The lock screen may have torn the mixed-funds sheet down before
+            // the user chose; if no choice has been recorded yet the ViewModel
+            // re-fires the prompt (no-op otherwise).
+            viewModel.recheckMixedFundsMigrationPrompt()
         }
     }
 

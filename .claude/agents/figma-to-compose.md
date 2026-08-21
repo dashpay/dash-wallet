@@ -1,7 +1,7 @@
 ---
 name: "figma-to-compose"
 description: "Implements Android Jetpack Compose screens from Figma designs. Fetches design context, maps Figma components to existing Common Components, downloads or creates missing icons as vector drawables, and asks user approval before creating or modifying shared components. Use this agent whenever implementing a new screen or component from a Figma URL."
-tools: ["mcp__figma-dev-mode-mcp-server__get_design_context", "mcp__figma-dev-mode-mcp-server__get_screenshot", "mcp__figma-dev-mode-mcp-server__get_metadata", "mcp__figma-dev-mode-mcp-server__get_variable_defs", "Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch", "AskUserQuestion", "mcp__ide__getDiagnostics"]
+tools: ["mcp__figma-dev-mode-mcp-server__get_design_context", "mcp__figma-dev-mode-mcp-server__get_screenshot", "mcp__figma-dev-mode-mcp-server__get_metadata", "mcp__figma-dev-mode-mcp-server__get_variable_defs", "mcp__figma__get_design_context", "mcp__figma__get_screenshot", "mcp__figma__get_metadata", "mcp__figma__get_variable_defs", "ToolSearch", "Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch", "AskUserQuestion", "mcp__ide__getDiagnostics"]
 ---
 
 # Figma to Jetpack Compose Agent
@@ -12,7 +12,8 @@ This agent implements Android Jetpack Compose screens and components from Figma 
 
 ### 1. Fetch the Design
 
-Call `mcp__figma-dev-mode-mcp-server__get_design_context` with the node ID extracted from the Figma URL:
+Call `mcp__figma-dev-mode-mcp-server__get_design_context` with the node ID extracted from the Figma URL.
+If the `mcp__figma-dev-mode-mcp-server__*` tools are not available in your session, the same Figma tools may be exposed under the `mcp__figma__*` names (`mcp__figma__get_design_context`, `mcp__figma__get_metadata`, `mcp__figma__get_screenshot`, `mcp__figma__get_variable_defs`) — if they appear as deferred tools, load them with ToolSearch (`select:mcp__figma__get_design_context,...`) before calling. **Never implement a Figma design from guesswork: if no Figma tool is reachable, stop and report that instead of inferring the design from sibling components.**
 - URL format: `https://www.figma.com/design/{fileKey}/{name}?node-id={nodeId}`
 - Extract nodeId, replacing `-` with `:` (e.g. `24007-4540` → `24007:4540`)
 - Always set `clientLanguages: "kotlin"` and `clientFrameworks: "jetpack compose, android"`
@@ -62,6 +63,8 @@ You MUST consult the component mapping table for every Figma component before wr
 | `ListEmptyState` | `ListEmptyState` | `org.dash.wallet.common.ui.components.ListEmptyState` |
 | `Toast` | `Toast` composable | `org.dash.wallet.common.ui.components.Toast` |
 | `EnterAmount` (input bar) | `EnterAmount` | `org.dash.wallet.common.ui.components.EnterAmount` |
+| `TextField-Base` / `text.field` | `TextField` | `org.dash.wallet.common.ui.components.TextField` |
+| `addressField` | `AddressField` | `org.dash.wallet.common.ui.components.AddressField` |
 
 See `development-patterns` for full `NavBarBack`/`NavBarBackTitle`/`TopIntro` usage examples and all named NavBar variants.
 
@@ -93,18 +96,20 @@ For list rows, prefer the numbered design-system variants `ListItem1`…`ListIte
 
 #### Color Mapping
 
-| Figma Token | MyTheme Reference | Hex |
-|-------------|-------------------|-----|
-| `text/primary` | `MyTheme.Colors.textPrimary` | `#191C1F` |
-| `text/secondary` | `MyTheme.Colors.textSecondary` | `#6E757C` |
-| `text/tertiary` | `MyTheme.Colors.textTertiary` | `#75808A` |
-| `background/primary` | `MyTheme.Colors.backgroundPrimary` | `#F5F6F7` |
-| `background/secondary` | `MyTheme.Colors.backgroundSecondary` | `#FFFFFF` |
-| `colors/dash-blue` | `MyTheme.Colors.dashBlue` | `#008DE4` |
-| `colors/orange` | `MyTheme.Colors.orange` | `#FA9269` |
-| `colors/red` | `MyTheme.Colors.red` | `#EA3943` |
-| `colors/green` | `MyTheme.Colors.green` | `#3CB878` |
-| `colors/gray` | `MyTheme.Colors.gray` | `#B0B6BC` |
+**Important:** Never reference `MyTheme.Colors.*` directly in composables. Always read the current theme colors via `val colors = LocalDashColors.current` at the top of each composable, then use `colors.*`. This ensures correct values in both light and dark mode.
+
+| Figma Token | `colors.*` field | Light hex | Dark hex |
+|-------------|-----------------|-----------|----------|
+| `text/primary` | `colors.textPrimary` | `#191C1F` | `#FFFFFF` |
+| `text/secondary` | `colors.textSecondary` | `#6E757C` | `#92929C` |
+| `text/tertiary` | `colors.textTertiary` | `#75808A` | `#75808A` |
+| `background/primary` | `colors.backgroundPrimary` | `#F5F6F7` | `#10151F` |
+| `background/secondary` | `colors.backgroundSecondary` | `#FFFFFF` | `#1D2532` |
+| `colors/dash-blue` | `colors.dashBlue` | `#008DE4` | `#008DE4` |
+| `colors/orange` | `colors.orange` | `#FA9269` | `#FA9269` |
+| `colors/red` | `colors.red` | `#EA3943` | `#EA3943` |
+| `colors/green` | `colors.green` | `#3CB878` | `#3CB878` |
+| `colors/gray` | `colors.gray` | `#B0B6BC` | `#B0B6BC` |
 
 ### 4. Handle Icons and Image Assets
 
@@ -299,6 +304,79 @@ After implementation:
 2. Verify all `R.drawable.*` references exist as files in the drawable directory
 3. Verify all `R.string.*` references have entries in strings.xml
 4. Confirm the nav graph `tools:layout` attribute is removed if the fragment uses ComposeView
+
+## Dark Mode Compatibility
+
+Every new screen, dialog, and component must work correctly in both light and dark mode. Follow these rules without exception.
+
+### Compose: Theme Color Access
+
+**Root entry point** — The composable entry point called from a Fragment's `ComposeView.setContent { }` must be wrapped in `DashWalletTheme`:
+
+```kotlin
+// In Fragment.onCreateView or onViewCreated:
+composeView.setContent {
+    DashWalletTheme {
+        MyScreen(...)
+    }
+}
+```
+
+**Inside every composable** — read current colors once at the top:
+
+```kotlin
+@Composable
+fun MyComponent(...) {
+    val colors = LocalDashColors.current
+    // Use colors.textPrimary, colors.backgroundSecondary, etc.
+    // NEVER use MyTheme.Colors.* directly here
+}
+```
+
+**Rules:**
+- Never call `isSystemInDarkTheme()` inside individual components or screens — `DashWalletTheme` handles this once at the root
+- Never use `MyTheme.Colors.*` directly in a composable body — it always returns light-mode values
+- `MyTheme.Colors` and `MyTheme.DarkColors` are the source-of-truth data class instances; `LocalDashColors.current` selects the right one automatically
+
+### Compose: Preview Dark Mode
+
+Always include both a light and dark preview for new components:
+
+```kotlin
+@Composable
+@Preview(name = "Light")
+fun MyComponentPreviewLight() {
+    DashWalletTheme { MyComponent(...) }
+}
+
+@Composable
+@Preview(name = "Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+fun MyComponentPreviewDark() {
+    DashWalletTheme { MyComponent(...) }
+}
+```
+
+### XML Layouts: Semantic Color Tokens
+
+Use semantic color names that have night-mode overrides in `values-night/colors.xml`. Never use raw `@android:color/white` or literal hex values for surfaces or text.
+
+| Purpose | Use this color token |
+|---------|---------------------|
+| Page background | `@color/background_primary` |
+| Card / sheet surface | `@color/background_secondary` |
+| Primary text | `@color/content_primary` |
+| Secondary text | `@color/content_secondary` |
+| Dividers / borders | `@color/divider_color` |
+
+### XML Drawables: Adaptive Colors
+
+- **Shape drawables** (cards, panels): fill with `@color/background_secondary`, not `@android:color/white`
+- **Vector icons**: add `android:tint="@color/content_primary"` to the `<vector>` element instead of hardcoding a fill color
+- **Color state lists** (selectors): default state should use `@color/content_primary`, not a hardcoded dark hex
+
+### DashButton Disabled State
+
+`DashButton` handles disabled appearance automatically through `colors.disabledButtonBg` and `colors.contentDisabled` from `LocalDashColors`. Do not override button colors manually for the disabled case.
 
 ## Common Pitfalls
 
