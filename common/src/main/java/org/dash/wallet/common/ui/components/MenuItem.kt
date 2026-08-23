@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,7 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import android.content.res.Configuration
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -304,7 +304,7 @@ private fun MiddleEllipsisText(
     val density = LocalDensity.current
     BoxWithConstraints(modifier = modifier) {
         val maxWidthPx = with(density) { maxWidth.toPx() }
-        val display = remember(text, maxWidthPx, style) {
+        val display = remember(text, maxWidthPx, style, density.fontScale) {
             middleEllipsizeToFit(text, maxWidthPx, style, measurer)
         }
         Text(text = display, style = style, color = color, maxLines = 1, overflow = TextOverflow.Clip)
