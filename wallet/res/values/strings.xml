@@ -199,6 +199,7 @@
     <string name="network_monitor_stage_filters">Scanning block filters</string>
     <string name="network_monitor_stage_synced">Synced</string>
     <string name="network_monitor_stage_error">Sync error</string>
+    <string name="network_monitor_stage_setup_retrying">Wallet setup incomplete — retrying</string>
     <string name="network_monitor_progress">%1$d%%</string>
     <string name="network_monitor_headers_label">Block headers</string>
     <string name="network_monitor_filters_label">Block filters</string>
@@ -210,6 +211,7 @@
     <string name="network_monitor_connection_searching">Searching for peers…</string>
     <string name="network_monitor_connection_idle">Network engine not started</string>
     <string name="network_monitor_connection_error">Connection error</string>
+    <string name="network_monitor_connection_setup_retrying">Unlock your device to finish wallet setup</string>
     <string name="network_monitor_peer_details_note">The wallet engine does not report individual peer connections.</string>
     <string name="network_monitor_dashj_hint">Peer and block lists come from the dashj diagnostic engine. Turn on dashj sync in Tools to view them.</string>
     <string name="block_row_mining_difficulty_adjustment">Mining difficulty adjustment</string>

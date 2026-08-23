@@ -133,6 +133,12 @@ class NetworkMonitorViewModelTest {
                 buildNetworkMonitorUiState(detail(stage = active), false).connectionRes
             )
         }
+        // MO-995: a bind-failure retry gets the actionable unlock hint, not
+        // the dead "Network engine not started".
+        assertEquals(
+            R.string.network_monitor_connection_setup_retrying,
+            buildNetworkMonitorUiState(detail(stage = L1SyncStage.SETUP_RETRYING), false).connectionRes
+        )
     }
 
     @Test

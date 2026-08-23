@@ -19,6 +19,7 @@ package de.schildbach.wallet.service
 
 import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import de.schildbach.wallet.service.platform.sdk.shadowSyncPercent
@@ -267,8 +268,15 @@ internal fun dashPaySyncSettledWithDeadline(
  * Monitor) — finer-grained than [org.dash.wallet.common.data.SyncStage]
  * (which collapses the filter pipeline for the home header), with NO
  * indication of which engine produced it.
+ *
+ * [SETUP_RETRYING] (MO-995): the engine cannot start because the wallet's
+ * one-time setup (the SDK wallet bind) failed and is being retried — the
+ * keystore-denial outage class. Rendered instead of the dead
+ * [IDLE]/"Not started" so the user learns that unlocking the device
+ * finishes setup, rather than staring at "Network engine not started"
+ * forever.
  */
-enum class L1SyncStage { IDLE, CONNECTING, HEADERS, FILTER_HEADERS, MASTERNODE_LIST, FILTERS, SYNCED, ERROR }
+enum class L1SyncStage { IDLE, CONNECTING, HEADERS, FILTER_HEADERS, MASTERNODE_LIST, FILTERS, SYNCED, ERROR, SETUP_RETRYING }
 
 /**
  * The detailed engine-agnostic L1 sync readout for the Network Monitor:
@@ -340,17 +348,31 @@ internal fun toL1SyncStage(progress: ShadowSyncProgress): L1SyncStage = when {
  *
  * dashj regime: the row is all dashj has (no filter pipeline, no header
  * target), so filter fields stay 0/unknown.
+ *
+ * [bindRetryPending] (MO-995): a failed SDK wallet bind is awaiting retry
+ * ([SdkWalletBinder.bindRetryPending]). In the SDK regime this replaces an
+ * [L1SyncStage.IDLE] stage with [L1SyncStage.SETUP_RETRYING] — IDLE only,
+ * because the pending flag can only coexist with a DEAD engine (an unbound
+ * wallet has no engine to run); any real progress means the wallet bound
+ * and the honest scan stage must win. The dashj regime ignores it: after
+ * the bind-failure rollback dashj is the engine and its real stages render.
  */
 internal fun mergeL1SyncDetail(
     sdkOwnsL1: Boolean,
     progress: ShadowSyncProgress,
     sessionChainLockHeight: Int,
-    state: BlockchainState?
+    state: BlockchainState?,
+    bindRetryPending: Boolean = false
 ): L1SyncDetail = if (sdkOwnsL1) {
     val idleOrConnecting = progress.phase == ShadowSyncPhase.IDLE ||
         progress.phase == ShadowSyncPhase.CONNECTING
+    val scanStage = toL1SyncStage(progress)
     L1SyncDetail(
-        stage = toL1SyncStage(progress),
+        stage = if (bindRetryPending && scanStage == L1SyncStage.IDLE) {
+            L1SyncStage.SETUP_RETRYING
+        } else {
+            scanStage
+        },
         // Restart sawtooth guard: IDLE/CONNECTING carry no scan position,
         // so fall back to the row's (SDK-written, preserved) percent
         // rather than reporting 0 over a previously-synced chain.
@@ -409,6 +431,7 @@ class L1SyncStatusService @Inject constructor(
     l1ShadowSyncService: L1ShadowSyncService,
     blockchainStateProvider: BlockchainStateProvider,
     dashPaySyncStatus: DashPaySyncStatus,
+    sdkWalletBinder: SdkWalletBinder,
     scope: CoroutineScope
 ) {
     /**
@@ -486,14 +509,18 @@ class L1SyncStatusService @Inject constructor(
      * The engine-agnostic DETAIL readout for the Network Monitor
      * ([mergeL1SyncDetail]) — same seam discipline as [status]: the engine
      * choice is made here, reactively, and nothing above can observe it.
+     * The binder's [SdkWalletBinder.bindRetryPending] rides along so a
+     * failed wallet bind renders as [L1SyncStage.SETUP_RETRYING] instead of
+     * the dead "Not started" (MO-995).
      */
     val details: Flow<L1SyncDetail> =
         combine(
             cutoverCoordinator.sdkOwnsL1Flow(),
             l1ShadowSyncService.progress,
             l1ShadowSyncService.chainLockHeight,
-            blockchainStateProvider.observeState()
-        ) { sdkOwnsL1, progress, chainLockHeight, state ->
-            mergeL1SyncDetail(sdkOwnsL1, progress, chainLockHeight, state)
+            blockchainStateProvider.observeState(),
+            sdkWalletBinder.bindRetryPending
+        ) { sdkOwnsL1, progress, chainLockHeight, state, bindRetryPending ->
+            mergeL1SyncDetail(sdkOwnsL1, progress, chainLockHeight, state, bindRetryPending)
         }.distinctUntilChanged()
 }

@@ -78,6 +78,7 @@ internal fun stageNameRes(stage: L1SyncStage): Int = when (stage) {
     L1SyncStage.FILTERS -> R.string.network_monitor_stage_filters
     L1SyncStage.SYNCED -> R.string.network_monitor_stage_synced
     L1SyncStage.ERROR -> R.string.network_monitor_stage_error
+    L1SyncStage.SETUP_RETRYING -> R.string.network_monitor_stage_setup_retrying
 }
 
 /**
@@ -93,6 +94,10 @@ internal fun connectionStatusRes(stage: L1SyncStage): Int = when (stage) {
     L1SyncStage.IDLE -> R.string.network_monitor_connection_idle
     L1SyncStage.CONNECTING -> R.string.network_monitor_connection_searching
     L1SyncStage.ERROR -> R.string.network_monitor_connection_error
+    // MO-995: the engine is down because wallet setup failed — the
+    // connection row carries the actionable hint (unlocking the device is
+    // the heal condition for the keystore-denied bind class).
+    L1SyncStage.SETUP_RETRYING -> R.string.network_monitor_connection_setup_retrying
     else -> R.string.network_monitor_connection_connected
 }
 
