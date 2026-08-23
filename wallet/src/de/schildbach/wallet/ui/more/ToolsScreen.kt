@@ -35,6 +35,7 @@ import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.schildbach.wallet.Constants
 import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashWalletTheme
@@ -56,6 +57,7 @@ fun ToolsScreen(
     onExtendPublicKeyClick: () -> Unit = {},
     onMasternodeKeysClick: () -> Unit = {},
     onCsvExportClick: () -> Unit = {},
+    onConnectionsClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
     onCreditsInfoClick: () -> Unit = {},
     onBuyCredits: () -> Unit = {}
@@ -71,6 +73,7 @@ fun ToolsScreen(
         onExtendPublicKeyClick = onExtendPublicKeyClick,
         onMasternodeKeysClick = onMasternodeKeysClick,
         onCsvExportClick = onCsvExportClick,
+        onConnectionsClick = onConnectionsClick,
         onZenLedgerExport = onZenLedgerExport,
         onCreditsInfoClick = onCreditsInfoClick,
         onBuyCredits = onBuyCredits
@@ -87,6 +90,7 @@ fun ToolsScreen(
     onExtendPublicKeyClick: () -> Unit = {},
     onMasternodeKeysClick: () -> Unit = {},
     onCsvExportClick: () -> Unit = {},
+    onConnectionsClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
     onCreditsInfoClick: () -> Unit = {},
     onBuyCredits: () -> Unit = {}
@@ -102,6 +106,7 @@ fun ToolsScreen(
         onExtendPublicKeyClick = onExtendPublicKeyClick,
         onMasternodeKeysClick = onMasternodeKeysClick,
         onCsvExportClick = onCsvExportClick,
+        onConnectionsClick = onConnectionsClick,
         onZenLedgerExport = onZenLedgerExport,
         onCreditsInfoClick = onCreditsInfoClick,
         onBuyCredits = onBuyCredits
@@ -118,6 +123,7 @@ private fun ToolsScreenContent(
     onExtendPublicKeyClick: () -> Unit = {},
     onMasternodeKeysClick: () -> Unit = {},
     onCsvExportClick: () -> Unit = {},
+    onConnectionsClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
     onCreditsInfoClick: () -> Unit = {},
     onBuyCredits: () -> Unit = {}
@@ -185,6 +191,15 @@ private fun ToolsScreenContent(
                     icon = R.drawable.ic_menu_csv_export,
                     action = onCsvExportClick
                 )
+
+                if (Constants.SUPPORTS_CONNECT) {
+                    // Connections (DashConnect)
+                    MenuItem(
+                        title = stringResource(R.string.dash_connect_connections_title),
+                        icon = R.drawable.ic_menu_connections,
+                        action = onConnectionsClick
+                    )
+                }
             }
 
             if (uiState.hasUsername) {
