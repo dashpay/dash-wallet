@@ -153,6 +153,7 @@
             android:indeterminate="true"
             android:visibility="gone"
             app:indicatorColor="@color/palette_white"
+            app:trackColor="@android:color/transparent"
             app:trackThickness="3dp" />
     </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

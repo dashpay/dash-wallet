@@ -31,6 +31,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
@@ -112,7 +113,12 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
             AuthType.SIGN_IN,
             AuthType.CREATE_ACCOUNT -> {
                 binding.bottomCard.isVisible = false
-                binding.input.postDelayed({ showKeyboard() }, 100)
+                // View-scoped so the delayed showKeyboard() can't read the binding after
+                // onDestroyView().
+                viewLifecycleOwner.lifecycleScope.launch {
+                    delay(100)
+                    showKeyboard()
+                }
                 binding.input.showSoftInputOnFocus = true
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -190,7 +196,9 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
     }
 
     private fun authUser(provider: GiftCardProviderType, email: String, isSignIn: Boolean) {
-        lifecycleScope.launch {
+        // View-scoped: the sign-in call can outlive the view if the user backs out while it is in
+        // flight, and the error/loading handling below touches the binding.
+        viewLifecycleOwner.lifecycleScope.launch {
             var errorMessage: String
 
             try {
@@ -235,7 +243,8 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
     }
 
     private fun verifyEmail(provider: GiftCardProviderType, code: String) {
-        lifecycleScope.launch {
+        // View-scoped for the same reason as authUser().
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val success = viewModel.verifyEmail(provider, code)
                 if (success) {

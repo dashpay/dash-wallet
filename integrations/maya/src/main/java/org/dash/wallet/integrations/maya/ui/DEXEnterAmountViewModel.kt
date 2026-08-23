@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -35,6 +36,7 @@ import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
@@ -75,10 +77,11 @@ data class DEXEnterAmountUIState(
     val isValidating: Boolean = false,
     // False when the device has no network connection; the screen shows a no-connection toast.
     val isOnline: Boolean = true,
-    // True when the entered amount was rejected by the validation quote (e.g. below the route
-    // minimum). The provider's raw message is logged, not shown — the screen renders a single
-    // neutral localized error.
-    val validationFailed: Boolean = false
+    // Non-null when the entered amount was rejected by the validation quote: the localized message
+    // to show under the amount bar, resolved with [assetCurrencyCode] as its format argument. The
+    // provider's raw message is logged, never shown — see [DEXEnterAmountViewModel.onContinueClicked]
+    // for which rejections name a reason and which fall back to the neutral catch-all.
+    @StringRes val validationErrorRes: Int? = null
 )
 
 @HiltViewModel
@@ -200,7 +203,7 @@ class DEXEnterAmountViewModel @Inject constructor(
                 amount = displayString,
                 continueEnabled = anchoredValue.signum() > 0,
                 isValidating = false,
-                validationFailed = false
+                validationErrorRes = null
             )
         }
         persistAmount()
@@ -235,7 +238,7 @@ class DEXEnterAmountViewModel @Inject constructor(
         savedStateHandle.remove<Amount>(KEY_AMOUNT)
         savedStateHandle.remove<String>(KEY_ASSET)
         _uiState.update {
-            it.copy(amount = "0", continueEnabled = false, isValidating = false, validationFailed = false)
+            it.copy(amount = "0", continueEnabled = false, isValidating = false, validationErrorRes = null)
         }
     }
 
@@ -264,7 +267,7 @@ class DEXEnterAmountViewModel @Inject constructor(
             it.copy(
                 amount = updated,
                 continueEnabled = isPositive(updated),
-                validationFailed = false
+                validationErrorRes = null
             )
         }
         // Persist so the typed amount survives process death.
@@ -324,25 +327,41 @@ class DEXEnterAmountViewModel @Inject constructor(
 
         validationJob?.cancel()
         validationJob = viewModelScope.launch {
-            _uiState.update { it.copy(isValidating = true, validationFailed = false, continueEnabled = false) }
+            _uiState.update { it.copy(isValidating = true, validationErrorRes = null, continueEnabled = false) }
             when (val result = swapProvider.validateBuyOrder(asset, sellAmount, exampleAddress)) {
                 is ResponseResource.Success -> {
                     _uiState.update {
-                        it.copy(isValidating = false, validationFailed = false, continueEnabled = isPositive(it.amount))
+                        it.copy(
+                            isValidating = false,
+                            validationErrorRes = null,
+                            continueEnabled = isPositive(it.amount)
+                        )
                     }
                     onValidationPassed.call()
                 }
                 is ResponseResource.Failure -> {
+                    val error = result.throwable.message
                     log.info(
                         "onContinueClicked: amount {} {} rejected: {}",
                         sellAmount,
                         asset,
-                        result.throwable.message
+                        error
                     )
+                    // A below-minimum rejection is the one reason we can name: the provider says so
+                    // explicitly (SwapKit's per-provider `…AmountTooSmall`), so show the backend's
+                    // own below-minimum copy — the user's fix is to raise the amount. Every other
+                    // code stays neutral: they either can't distinguish too-low from
+                    // temporarily-unroutable, or they describe the placeholder refund address used
+                    // here rather than anything the user entered.
+                    val messageRes = if (swapProvider.isAmountTooLowError(error)) {
+                        swapProvider.errorMessageRes(error)
+                    } else {
+                        R.string.dex_enter_amount_invalid
+                    }
                     _uiState.update {
                         it.copy(
                             isValidating = false,
-                            validationFailed = true,
+                            validationErrorRes = messageRes,
                             continueEnabled = isPositive(it.amount)
                         )
                     }

@@ -485,6 +485,28 @@ Output amounts shown are already net of all fees except inbound.
 - A top-level `error` for request-level failures (auth, malformed body, no routes at all).
 - `providerErrors[]` for per-provider failures while other providers still produced routes — **do not treat these as fatal**; they're informational.
 
+But when **every** provider declines, the response is still `200` with `routes: []`, a **null** top-level `error`, and the only explanation in `providerErrors[].errorCode` — e.g. a 0.0005 DASH → `THOR.RUNE` quote answers:
+
+```json
+{ "routes": [], "providerErrors": [
+  { "provider": "MAYACHAIN_STREAMING", "errorCode": "sellAssetAmountTooSmall",
+    "message": "Sell asset amount too small for provider MAYACHAIN." } ] }
+```
+
+So a no-route response must derive its error from `providerErrors[0].errorCode` (see
+`SwapKitApiAggregator.noRouteError()`, which renders `"<errorCode>: <message>"` via
+`SwapKitErrors.providerErrorMessage()` and falls back to `noRoutesFound` when no provider reported
+a code). Forwarding the human `message` alone loses the code and sends the failure to the
+generic-error dialog instead of the inline below-minimum banner.
+
+Provider error codes are not enumerated in SwapKit's docs; anything ending in `AmountTooSmall` or
+`AmountTooLow` (`sellAssetAmountTooSmall`, …) is classified as below-minimum by
+`SwapKitErrors.isAmountTooLow` (which also accepts the ambiguous top-level `noRoutesFound`).
+
+Conversely, `providerErrors` **alongside returned routes** stay informational: `mapToSwapQuote`
+sets `SwapQuote.error` only when no route came back, because callers read a non-null `error` as
+"unusable quote" (`MayaAddressInputFragment` refuses to continue on it).
+
 ### Compatibility With Existing Maya Module
 
 - Asset notation and the general routing model overlap heavily, so `model/Amount.kt`, `model/SwapQuoteRequest.kt`, and the existing fiat-rate stack can mostly be reused.
@@ -494,19 +516,26 @@ Output amounts shown are already net of all fees except inbound.
 
 ## User-Facing Error Display (per flow / screen)
 
-SwapKit failures carry a machine code in the top-level `error` field (§4 quote, §5 swap).
-`swapkit/SwapKitErrors.messageResFor()` maps the code to a localized string in
+SwapKit failures carry a machine code in the top-level `error` field (§4 quote, §5 swap) — or, when
+all providers declined a quote, in `providerErrors[].errorCode` (see "Provider Errors vs Top-Level
+Errors"). `swapkit/SwapKitErrors.messageResFor()` maps the code to a localized string in
 `res/values/strings-maya.xml`; which screens use that mapping — and which show their own
 fixed copy instead — is listed below. English text as of this writing; `%1$s` is the coin
 code (e.g. "BTC"). Codes not listed fall back to `dex_error_generic`.
 
 ### Buy flow (SwapKit backend only)
 
-**Enter Amount** (`DEXEnterAmountScreen`) — red text under the amount bar. Does NOT use the
-code→message table: every Continue-validation quote failure (including `noRoutesFound`) shows
-the single fixed string `dex_enter_amount_invalid`:
+**Enter Amount** (`DEXEnterAmountScreen`) — red text under the amount bar. Uses the table only for
+amount-too-low-classified failures (`SwapProvider.isAmountTooLowError`), since those are the only
+ones the user can act on by changing the amount; everything else shows the neutral catch-all, as
+the remaining codes either can't distinguish too-low from temporarily-unroutable or describe the
+placeholder refund address this screen quotes with rather than anything the user entered:
 
-> This amount can't be swapped right now. Try a different amount, or try again shortly.
+| Error | String id | English text |
+|---|---|---|
+| `*AmountTooSmall` (provider error) | `dex_error_amount_too_small` | This amount is below the minimum for this swap. Please enter a larger amount. |
+| `noRoutesFound` | `dex_error_no_route` | This amount can't be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount. |
+| anything else | `dex_enter_amount_invalid` | This amount can't be swapped right now. Try a different amount, or try again shortly. |
 
 **Refund Address** (`DEXRefundAddressScreen`) — red text under the address field. The only buy
 screen using the full `SwapKitErrors` table; `createBuyOrder` calls both `/v3/quote` and
@@ -516,6 +545,7 @@ screen using the full `SwapKitErrors` table; `createBuyOrder` calls both `/v3/qu
 |---|---|---|
 | local address check (not a SwapKit code) | `not_valid_address` (common) | Not a valid %1$s Address or URL request |
 | `noRoutesFound` | `dex_error_no_route` | This amount can't be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount. |
+| `*AmountTooSmall` (provider error, e.g. `sellAssetAmountTooSmall`) | `dex_error_amount_too_small` | This amount is below the minimum for this swap. Please enter a larger amount. |
 | `blackListAsset` | `dex_error_blacklisted` | %1$s can't be swapped at the moment. |
 | `invalidRequest`, `validation_error` | `dex_error_validation` | We couldn't set up your swap. Please check the amount and address, then try again. |
 | `apiKeyInvalid`, `unauthorized` | `dex_error_unavailable` | Swaps are temporarily unavailable. Please try again later. |
@@ -546,19 +576,26 @@ transaction is built locally).
 | Error | String id | English text |
 |---|---|---|
 | `noRoutesFound` | `dex_error_no_route` | This amount can't be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount. |
+| `*AmountTooSmall` (provider error, e.g. `sellAssetAmountTooSmall`) | `dex_error_amount_too_small` | This amount is below the minimum for this swap. Please enter a larger amount. |
 | `blackListAsset` | `dex_error_blacklisted` | %1$s can't be swapped at the moment. |
 | `invalidRequest`, `validation_error` | `dex_error_validation` | We couldn't set up your swap. Please check the amount and address, then try again. |
 | `apiKeyInvalid`, `unauthorized` | `dex_error_unavailable` | Swaps are temporarily unavailable. Please try again later. |
 | anything else | `dex_error_generic` | Something went wrong setting up your swap. Please try again. |
 
+(The bootstrap quote here also *retries* an amount-too-low error at 2× then 4× the indicative
+1 DASH before surfacing it — see `MayaAddressInputViewModel.getDefaultQuote`, which classifies via
+the same `isAmountTooLowError`.)
+
 **Sell Enter Amount** (`MayaConvertCryptoFragment`) — an amount-too-low-classified error shows
 the red banner (no modal, so the user can raise the amount and retry); all other codes pop an
 `AdaptiveDialog` with the mapped message. The banner text comes from the active backend's
-`errorMessageRes`, so Maya's genuine amount-too-low keeps its minimum copy while SwapKit's
-ambiguous `noRoutesFound` gets the neutral no-route copy:
+`errorMessageRes`, so Maya's genuine amount-too-low keeps its minimum copy, SwapKit's explicit
+`*AmountTooSmall` gets below-the-minimum copy, and its ambiguous `noRoutesFound` gets the neutral
+no-route copy:
 
 | Error | Shown as | String id | English text |
 |---|---|---|---|
+| `*AmountTooSmall` (SwapKit provider error) | banner | `dex_error_amount_too_small` | This amount is below the minimum for this swap. Please enter a larger amount. |
 | `noRoutesFound` (SwapKit backend) | banner | `dex_error_no_route` | This amount can't be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount. |
 | amount too low (Maya backend) | banner | `maya_error_below_allowed_minimum` | Entered amount is lower than the allowed minimum |
 | `blackListAsset` | dialog | `dex_error_blacklisted` | %1$s can't be swapped at the moment. |

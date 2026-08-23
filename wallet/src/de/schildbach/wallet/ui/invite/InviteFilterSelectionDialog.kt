@@ -26,6 +26,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogInviteFilterBinding
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.getStringArrayOrDefault
 
 @AndroidEntryPoint
 class InviteFilterSelectionDialog(
@@ -46,7 +47,10 @@ class InviteFilterSelectionDialog(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val array = view.context.resources.getStringArray(R.array.invite_filter)
+        val array = view.context.getStringArrayOrDefault(
+            R.array.invite_filter,
+            InvitesHistoryViewModel.Filter.entries.size
+        )
         binding.firstItem.text = array[0]
         binding.secondItem.text = array[1]
         binding.thirdItem.text = array[2]

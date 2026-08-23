@@ -17,7 +17,9 @@
 
 package org.dash.wallet.integrations.maya.api
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -108,7 +110,7 @@ class FiatExchangeRateAggregatedProvider @Inject constructor(
     }
 
     private val responseScope = CoroutineScope(
-        Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+        SupervisorJob() + Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     )
     private var poolListLastUpdated: Long = 0
     override val fiatExchangeRate = MutableStateFlow(ExchangeRate(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, "1.0"))
@@ -120,8 +122,14 @@ class FiatExchangeRateAggregatedProvider @Inject constructor(
 
     private fun refreshRates(currencyCode: String) {
         responseScope.launch {
-            updateExchangeRates(currencyCode)
-            poolListLastUpdated = System.currentTimeMillis()
+            try {
+                updateExchangeRates(currencyCode)
+                poolListLastUpdated = System.currentTimeMillis()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.error("failed to refresh fiat exchange rates", e)
+            }
         }
     }
 

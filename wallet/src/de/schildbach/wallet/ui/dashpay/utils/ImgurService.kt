@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -41,35 +42,37 @@ class ImgurService @Inject constructor(
 
         val avatarBytes = file.readBytes()
 
-        val imageBodyPart = RequestBody.create("image/*jpg".toMediaTypeOrNull(), avatarBytes)
+        val imageBodyPart = avatarBytes.toRequestBody("image/*jpg".toMediaTypeOrNull())
         val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("image", "profile.jpg", imageBodyPart).build()
         val uploadRequest = requestBuilder.url(imgurUploadUrl).post(requestBody).build()
 
         try {
             uploadProfilePictureCall = client.newCall(uploadRequest)
-            val response = uploadProfilePictureCall!!.execute()
-            val responseBody = response.body
+            uploadProfilePictureCall!!.execute().use { response ->
+                val responseBody = response.body
 
-            if (responseBody != null && response.isSuccessful) {
-                val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
-                val jsonAdapter = moshi.adapter(ImgurUploadResponse::class.java)
-                val imgurUploadResponse = jsonAdapter.fromJson(responseBody.string())
-                log.info("imgur: response: $imgurUploadResponse")
-                if (imgurUploadResponse?.success == true && imgurUploadResponse.data != null) {
-                    config.imgurDeleteHash = imgurUploadResponse.data.deletehash
-                    val avatarUrl = imgurUploadResponse.data.link
-                    log.info("imgur: upload successful (${response.code})")
-                    return@withContext avatarUrl
+                if (responseBody != null && response.isSuccessful) {
+                    val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+                    val jsonAdapter = moshi.adapter(ImgurUploadResponse::class.java)
+                    val imgurUploadResponse = jsonAdapter.fromJson(responseBody.string())
+                    log.info("imgur: response: $imgurUploadResponse")
+                    if (imgurUploadResponse?.success == true && imgurUploadResponse.data != null) {
+                        config.imgurDeleteHash = imgurUploadResponse.data.deletehash
+                        val avatarUrl = imgurUploadResponse.data.link
+                        log.info("imgur: upload successful (${response.code})")
+                        return@withContext avatarUrl
+                    } else {
+                        log.error("imgur: upload failed: response invalid")
+                        analytics.logError(Exception(response.message), "Failed to upload profile picture: ImgUr")
+                        throw Exception(response.message)
+                    }
                 } else {
-                    log.error("imgur: upload failed: response invalid")
+                    val errorBody = responseBody?.readDiagnosticPrefix()
+                    log.error("imgur: upload failed (${response.code}): ${response.message}, body: $errorBody")
                     analytics.logError(Exception(response.message), "Failed to upload profile picture: ImgUr")
                     throw Exception(response.message)
                 }
-            } else {
-                log.error("imgur: upload failed (${response.code}): ${response.message}")
-                analytics.logError(Exception(response.message), "Failed to upload profile picture: ImgUr")
-                throw Exception(response.message)
             }
         } catch (e: Exception) {
             var canceled = false
@@ -90,17 +93,18 @@ class ImgurService @Inject constructor(
         val deleteRequest = requestBuilder.url(imgurDeleteUrl).delete().build()
         try {
             uploadProfilePictureCall = client.newCall(deleteRequest)
-            val deleteResponse = uploadProfilePictureCall!!.execute()
-            if (!deleteResponse.isSuccessful) {
-                // if we cannot delete it, the cause is probably because the IMGUR_CLIENT_* values
-                // are not specified
-                // for now, clear the delete hash to allow the next upload operation to succeed
-                log.info("imgur: attempt to delete last image failed: check IMGUR_CLIENT_* values")
-                config.imgurDeleteHash = ""
-                throw Exception(deleteResponse.message)
-            } else {
-                log.info("imgur: delete successful ($imgurDeleteUrl)")
-                config.imgurDeleteHash = ""
+            uploadProfilePictureCall!!.execute().use { deleteResponse ->
+                if (!deleteResponse.isSuccessful) {
+                    // if we cannot delete it, the cause is probably because the IMGUR_CLIENT_* values
+                    // are not specified
+                    // for now, clear the delete hash to allow the next upload operation to succeed
+                    log.info("imgur: attempt to delete last image failed: check IMGUR_CLIENT_* values")
+                    config.imgurDeleteHash = ""
+                    throw Exception(deleteResponse.message)
+                } else {
+                    log.info("imgur: delete successful ($imgurDeleteUrl)")
+                    config.imgurDeleteHash = ""
+                }
             }
         } catch (e: Exception) {
             var canceled = false
@@ -118,5 +122,19 @@ class ImgurService @Inject constructor(
 
     fun cancelUploadRequest() {
         uploadProfilePictureCall?.cancel()
+    }
+
+    /**
+     * Reads at most [limit] bytes of the body for logging, so that an unexpectedly large
+     * (or endless) error response cannot be pulled into memory in full.
+     */
+    private fun ResponseBody.readDiagnosticPrefix(limit: Long = DIAGNOSTIC_BODY_LIMIT): String {
+        val source = source()
+        source.request(limit)
+        return source.buffer.readUtf8(minOf(limit, source.buffer.size))
+    }
+
+    companion object {
+        private const val DIAGNOSTIC_BODY_LIMIT = 8L * 1024
     }
 } 

@@ -59,6 +59,23 @@ class SwapKitErrorsTest {
         )
     }
 
+    /**
+     * SwapKit doesn't enumerate the per-provider vocabulary, so below-minimum codes are
+     * family-matched by suffix: any side/field prefix counts, and `AmountTooLow` reads the same
+     * as `AmountTooSmall`.
+     */
+    @Test
+    fun belowMinimumFamily_isMatchedBySuffixNotEnumerated() {
+        assertTrue(SwapKitErrors.isAmountTooLow("buyAssetAmountTooSmall"))
+        assertTrue(SwapKitErrors.isAmountTooLow("sellAmountTooLow: below the route minimum"))
+        assertEquals(
+            R.string.dex_error_amount_too_small,
+            SwapKitErrors.messageResFor("buyAssetAmountTooSmall")
+        )
+        // "Amount" is required in the code, so an unrelated below-threshold code stays out.
+        assertFalse(SwapKitErrors.isAmountTooLow("inboundFeeTooLow"))
+    }
+
     @Test
     fun noRoutesFound_staysAnAmountTooLowError() {
         assertEquals(R.string.dex_error_no_route, SwapKitErrors.messageResFor("noRoutesFound"))
@@ -68,6 +85,7 @@ class SwapKitErrorsTest {
     @Test
     fun otherErrors_areNotAmountTooLow() {
         assertFalse(SwapKitErrors.isAmountTooLow(null))
+        assertFalse(SwapKitErrors.isAmountTooLow(""))
         assertFalse(SwapKitErrors.isAmountTooLow("isSanctionedAddress"))
         // The prose alone must not be treated as too-low; only the code counts.
         assertFalse(SwapKitErrors.isAmountTooLow("Sell asset amount too small for provider MAYACHAIN."))

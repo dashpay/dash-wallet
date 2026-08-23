@@ -46,6 +46,8 @@ import org.dash.wallet.integrations.maya.utils.MayaConstants
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -88,6 +90,9 @@ abstract class MayaModule {
         @Singleton
         fun provideSwapKitEndpoint(): SwapKitEndpoint {
             val client = OkHttpClient.Builder()
+                .connectTimeout(20.seconds.toJavaDuration())
+                .callTimeout(20.seconds.toJavaDuration())
+                .readTimeout(20.seconds.toJavaDuration())
                 .addInterceptor(SwapKitAuthInterceptor(SwapKitConstants.API_KEY))
                 .also { builder ->
                     if (BuildConfig.DEBUG) {

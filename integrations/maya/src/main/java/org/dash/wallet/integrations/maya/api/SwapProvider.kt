@@ -180,7 +180,8 @@ interface SwapProvider {
     /**
      * True when [error] means the entered amount is below the route's/pool's minimum — the one case
      * the UI surfaces inline (a red banner the user can fix by raising the amount) rather than as a
-     * modal. Backend-specific: Maya's "not enough asset to pay for fees", SwapKit's `noRoutesFound`.
+     * modal. Backend-specific: Maya's "not enough asset to pay for fees", SwapKit's per-provider
+     * `…AmountTooSmall` codes and its ambiguous `noRoutesFound`.
      */
     fun isAmountTooLowError(error: String?): Boolean = false
 }

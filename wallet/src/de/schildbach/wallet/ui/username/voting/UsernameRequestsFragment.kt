@@ -46,6 +46,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
+import org.dash.wallet.common.util.getStringArrayOrDefault
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dashj.platform.dpp.voting.AbstainVoteChoice
@@ -142,7 +143,10 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         viewModel.filterState.observe(viewLifecycleOwner) { state ->
             val isDefault = state.isDefault()
             binding.appliedFiltersPanel.isVisible = !isDefault && !keyboardUtil.isKeyboardShown
-            val typeOptionNames = binding.root.resources.getStringArray(R.array.usernames_type_options)
+            val typeOptionNames = requireContext().getStringArrayOrDefault(
+                R.array.usernames_type_options,
+                UsernameTypeOption.entries.size
+            )
             binding.filterTitle.text = typeOptionNames[state.typeOption.ordinal]
 
             if (!isDefault) {
@@ -366,7 +370,10 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
     }
 
     private fun populateAppliedFilters(state: FiltersUIState) {
-        val sortByOptionNames = binding.root.resources.getStringArray(R.array.usernames_sort_by_options)
+        val sortByOptionNames = requireContext().getStringArrayOrDefault(
+            R.array.usernames_sort_by_options,
+            UsernameSortOption.entries.size
+        )
         val appliedFilterNames = mutableListOf<String>()
 
         if (state.sortByOption != UsernameSortOption.DateDescending) {

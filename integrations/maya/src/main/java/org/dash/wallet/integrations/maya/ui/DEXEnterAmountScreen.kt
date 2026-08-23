@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,7 +65,8 @@ fun DEXEnterAmountScreen(
         continueEnabled = uiState.continueEnabled,
         isValidating = uiState.isValidating,
         isOnline = uiState.isOnline,
-        validationFailed = uiState.validationFailed,
+        validationErrorRes = uiState.validationErrorRes,
+        assetCurrencyCode = uiState.assetCurrencyCode,
         assetDisplayCode = uiState.assetDisplayCode,
         onKeyInput = viewModel::onKeyInput,
         onCurrencySelected = viewModel::onCurrencySelected,
@@ -81,7 +83,12 @@ private fun DEXEnterAmountScreenContent(
     continueEnabled: Boolean,
     isValidating: Boolean,
     isOnline: Boolean,
-    validationFailed: Boolean,
+    // Non-null when the validation quote rejected the entered amount: the message to show under
+    // the amount bar (see DEXEnterAmountUIState.validationErrorRes).
+    @StringRes validationErrorRes: Int?,
+    // Plain code of the asset being bought ("BTC"), the format argument for validation messages
+    // that name the coin.
+    assetCurrencyCode: String,
     // Heading form of the asset being bought: tokens qualified with their host network
     // ("USDT (Ethereum)"); native L1 coins just the code ("BTC").
     assetDisplayCode: String,
@@ -130,13 +137,14 @@ private fun DEXEnterAmountScreenContent(
                     onCurrencyPickerSelect = { _, index -> onCurrencySelected(index) }
                 )
 
-                if (validationFailed) {
-                    // SwapKit's noRoutesFound can't tell us whether the amount is too low, too high, or
-                    // simply unroutable right now, and the entered value is in the selected display
-                    // currency — so any min/max guess would be misleading. Show a single neutral message
-                    // that points the user back at the amount they entered.
+                validationErrorRes?.let { errorRes ->
+                    // The message is chosen in the ViewModel: a below-minimum rejection names itself,
+                    // anything else falls back to the neutral catch-all (SwapKit's noRoutesFound
+                    // can't tell too-low from temporarily-unroutable, and the entered value is in the
+                    // selected display currency — so any min/max guess would be misleading). Messages
+                    // without a %1$s placeholder simply ignore the coin code.
                     Text(
-                        text = stringResource(R.string.dex_enter_amount_invalid),
+                        text = stringResource(errorRes, assetCurrencyCode),
                         style = MyTheme.Body2Regular,
                         color = LocalDashColors.current.red,
                         modifier = Modifier.padding(top = 8.dp)
@@ -197,7 +205,8 @@ private fun DEXEnterAmountScreenZeroPreview() {
         continueEnabled = false,
         isValidating = false,
         isOnline = true,
-        validationFailed = false,
+        validationErrorRes = null,
+        assetCurrencyCode = "BTC",
         assetDisplayCode = "BTC",
         onKeyInput = {},
         onCurrencySelected = {},
@@ -216,7 +225,29 @@ private fun DEXEnterAmountScreenEnabledPreview() {
         continueEnabled = true,
         isValidating = false,
         isOnline = true,
-        validationFailed = false,
+        validationErrorRes = null,
+        assetCurrencyCode = "BTC",
+        assetDisplayCode = "BTC",
+        onKeyInput = {},
+        onCurrencySelected = {},
+        onBackClick = {},
+        onContinueClick = {}
+    )
+}
+
+/** Amount rejected by the validation quote as below the route's minimum. */
+@Preview(showBackground = true, widthDp = 393, heightDp = 760)
+@Composable
+private fun DEXEnterAmountScreenBelowMinimumPreview() {
+    DEXEnterAmountScreenContent(
+        amount = "0.01",
+        currencyCodes = listOf("USD", DASH_CURRENCY_CODE, "BTC"),
+        selectedCurrencyIndex = 0,
+        continueEnabled = true,
+        isValidating = false,
+        isOnline = true,
+        validationErrorRes = R.string.dex_error_amount_too_small,
+        assetCurrencyCode = "BTC",
         assetDisplayCode = "BTC",
         onKeyInput = {},
         onCurrencySelected = {},
@@ -238,7 +269,8 @@ private fun DEXEnterAmountScreenGermanPreview() {
         continueEnabled = true,
         isValidating = false,
         isOnline = true,
-        validationFailed = false,
+        validationErrorRes = null,
+        assetCurrencyCode = "BTC",
         assetDisplayCode = "BTC",
         onKeyInput = {},
         onCurrencySelected = {},
