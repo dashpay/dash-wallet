@@ -318,7 +318,7 @@ private fun middleEllipsizeToFit(text: String, maxWidthPx: Float, style: TextSty
 
     var head = (text.length + 1) / 2
     var tail = text.length - head
-    while (head + tail > 1) {
+    while (head + tail > 0) {
         val candidate = "${text.take(head)}…${text.takeLast(tail)}"
         if (widthOf(candidate) <= maxWidthPx) return candidate
         if (head >= tail) head-- else tail--
