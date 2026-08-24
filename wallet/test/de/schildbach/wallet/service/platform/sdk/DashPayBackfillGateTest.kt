@@ -1183,4 +1183,131 @@ class DashPayBackfillGateTest {
         assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
         assertEquals(2_518_646L, store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
     }
+
+    // ── durable coverage invalidation on new registrations (the crash-safe
+    //    half of the post-drain follow-up sweep) ──────────────────────────
+
+    @Test
+    fun noteAccountBuildsRegistered_clearsPersistedCoverageDurably_andReportsAccepted() = runBlocking {
+        // The in-memory re-provision signal dies with the process; the
+        // persisted coverage does not. Accepted registrations must therefore
+        // clear the coverage IN THE STORE — the same four-key removal the
+        // address-window heal performs — before the note returns.
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR] = 2_237_130L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH] = 2_521_270L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT] = fingerprintA
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED] = true
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+
+        assertTrue(gate.noteAccountBuildsRegistered(29))
+
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH])
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT])
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED])
+    }
+
+    @Test
+    fun noteThenProcessDeath_nextLaunchProvisionsAgain() = runBlocking {
+        // The crash-between-drain-and-sweep case the durable half exists for:
+        // launch A's drain registers accounts, the process dies before the
+        // follow-up sweep, and the in-memory signal is gone. Without the
+        // durable invalidation, the untouched coverage + unchanged contact
+        // set would skip the sweep on every later launch — those contacts'
+        // historical payments would never be backfilled.
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR] = 2_237_130L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH] = 2_521_270L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT] = fingerprintA
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED] = true
+
+        val launchA = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        launchA.noteAccountBuildsRegistered(29)
+        // …process death before the follow-up sweep…
+
+        val launchB = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140) // contact set UNCHANGED
+        )
+        assertTrue(launchB.evaluate(walletId, identityId, userId).shouldRun)
+    }
+
+    @Test
+    fun noteOfZeroBuilds_keepsCoverageAndReportsNothingOwed() = runBlocking {
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR] = 2_237_130L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH] = 2_521_270L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT] = fingerprintA
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED] = true
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+
+        assertFalse(gate.noteAccountBuildsRegistered(0))
+
+        assertEquals(2_237_130L, store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
+    }
+
+    @Test
+    fun noteMutedByTheLoopGuard_keepsCoverageAndReportsNothingOwed() = runBlocking {
+        // Re-builds of already-swept accounts (the S22 loop) must invalidate
+        // nothing: clearing coverage for them would re-scan on every launch.
+        val store = FakeStore()
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(2_521_270L, 2_167_130L, 61, 2_167_130L)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 145, fromUs = 140)
+        )
+        // Set the cap (an evaluate records the observation: 61 SDK contact
+        // requests) and exhaust it with the first, genuinely-new batch.
+        gate.evaluate(walletId, identityId, userId)
+        assertTrue(gate.noteAccountBuildsRegistered(61))
+
+        // Coverage recorded afterwards…
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR] = 2_237_130L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH] = 2_521_270L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT] = fingerprintA
+        store.values[DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED] = true
+
+        // …survives the capped re-build note.
+        assertFalse(gate.noteAccountBuildsRegistered(5))
+        assertEquals(2_237_130L, store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
+    }
+
+    @Test
+    fun gate_concludeNoRewind_refusesWhileARegistrationIsOutstanding() = runBlocking {
+        // The quiet-window conclusion says "nothing needed backfilling" — but
+        // a receival account registered since the sweep is POSITIVE evidence
+        // a sweep is still owed, and coverage recorded under it would
+        // suppress exactly the backfill that account needs (forever, after a
+        // crash that loses the in-memory signal).
+        val outgoingOnly = contactSetFingerprint(0, 140, 1_700_000_000_000L, 1_699_000_000_000L)
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET] = 1_000_000L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT] = outgoingOnly
+
+        val gate = DashPayBackfillGateImpl(
+            sdkService = sdk(DashPayBackfillSignals(1_000_042L, 790_000L, 140, null)),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 0, fromUs = 140)
+        )
+        gate.noteAccountBuildsRegistered(3)
+
+        assertFalse(gate.concludeNoRewindObserved(walletId, identityId, userId))
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
+        // The marker survives, so the next launch provisions again.
+        assertEquals(1_000_000L, store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
+    }
 }

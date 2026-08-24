@@ -172,6 +172,17 @@ class SdkWalletBinderTest {
         override suspend fun dashPayPendingAccountBuilds(walletIdHex: String): Int? =
             pendingAccountBuilds
 
+        /** Receival-coverage diagnostics served to the post-drain log line. */
+        var receivalCoverage: DashPayReceivalCoverage? = null
+        var receivalCoverageReads = 0
+        override suspend fun readDashPayReceivalCoverage(
+            walletIdHex: String,
+            ownerIdentityId: ByteArray
+        ): DashPayReceivalCoverage? {
+            receivalCoverageReads++
+            return receivalCoverage
+        }
+
         /**
          * Backfill signals the gate reads. Default UNKNOWN → the gate can
          * prove nothing and always forces the pass, so every pre-existing
@@ -328,6 +339,26 @@ class SdkWalletBinderTest {
         var lastIdentityId: ByteArray? = null
         var lastUserId: String? = null
 
+        /**
+         * Whether a note of registered builds is accepted as NEW (false
+         * models the real gate's per-process loop guard muting re-builds).
+         */
+        var acceptRegistrations = true
+
+        /**
+         * Whether an outstanding registration flips the next [evaluate] to
+         * shouldRun — the real decision core's registration branches. False
+         * models the states where the gate still refuses (a watch in flight).
+         */
+        var reprovisionOnRegistration = true
+
+        /** The re-sweep debt: raised by an accepted note, consumed by [recordPassOutcome]. */
+        var registrationOutstanding = false
+
+        /** Durable-coverage stand-in: true while a coverage record is "persisted". */
+        var persistedCoverage = false
+        var coverageInvalidations = 0
+
         override suspend fun evaluate(
             walletIdHex: String,
             ownerIdentityId: ByteArray,
@@ -337,8 +368,9 @@ class SdkWalletBinderTest {
             lastWalletId = walletIdHex
             lastIdentityId = ownerIdentityId
             lastUserId = ownerUserId
+            val run = shouldRun || (reprovisionOnRegistration && registrationOutstanding)
             return BackfillDecision(
-                shouldRun = shouldRun,
+                shouldRun = run,
                 reason = "test",
                 armedToWrite = armed
             )
@@ -350,6 +382,10 @@ class SdkWalletBinderTest {
             report: DashPayContactProvisionReport
         ) {
             recordCalls++
+            // Mirror the real gate: the sweep this pass just ran consumes the
+            // outstanding debt, then the pass's OWN drain may re-raise it.
+            registrationOutstanding = false
+            noteAccountBuildsRegistered(report.built)
         }
 
         override suspend fun isRewindAccountedFor(): Boolean {
@@ -360,11 +396,25 @@ class SdkWalletBinderTest {
         /** Account builds the binder reported as REGISTERED (drain path). */
         var registeredBuilds = 0
 
-        override fun noteAccountBuildsRegistered(built: Int) {
+        override suspend fun noteAccountBuildsRegistered(built: Int): Boolean {
             registeredBuilds += built
+            if (built <= 0 || !acceptRegistrations) return false
+            registrationOutstanding = true
+            // Mirror DashPayBackfillGateImpl's contract (proven by its own
+            // tests): accepting registrations durably invalidates any
+            // persisted coverage BEFORE returning.
+            if (persistedCoverage) {
+                persistedCoverage = false
+                coverageInvalidations++
+            }
+            return true
         }
 
-        override suspend fun readBackfillStatus() = DashPayBackfillStatus.SETTLED
+        override suspend fun readBackfillStatus() = DashPayBackfillStatus(
+            armed = false,
+            replaying = false,
+            registrationOutstanding = registrationOutstanding
+        )
 
         /** Set true to have the no-rewind conclusion succeed when the watch reaches it. */
         var concludesNoRewind: Boolean = false
@@ -1339,9 +1389,11 @@ class SdkWalletBinderTest {
 
         binder.provisionContactAccountsIfEnabled(force = true)
 
-        assertEquals(0, sdk.provisionCalls)
         assertEquals(1, sdk.drainCalls)
         assertEquals(walletId, sdk.lastDrainWalletId)
+        // The 176 registrations owe the SDK's rescan reconcile a second look
+        // IN THIS CYCLE (the restored-wallet fix): exactly one follow-up sweep.
+        assertEquals(1, sdk.provisionCalls)
     }
 
     @Test
@@ -1405,6 +1457,243 @@ class SdkWalletBinderTest {
         binder.provisionContactAccountsIfEnabled(force = true)
 
         assertEquals(1, sdk.drainCalls)
+    }
+
+    // ── post-drain follow-up sweep + durable invalidation (restored-wallet
+    //    dark-contact fix) ─────────────────────────────────────────────────
+    //
+    // Field root cause: provisionDashPayContactAccounts runs the SDK sweep
+    // (whose rescan reconcile rewinds for the receival accounts that exist AT
+    // THAT MOMENT) and only THEN the drain that REGISTERS those accounts. On
+    // the first post-restore pass the reconcile sees zero accounts and
+    // backfills nothing; the accounts appear seconds later on a path that
+    // never rewinds — and on gate-skip launches the standalone drain
+    // registered accounts nothing ever swept for. The fix: a drain that
+    // registered NEW accounts durably invalidates the gate's coverage (so a
+    // crash self-heals next launch) and buys AT MOST ONE follow-up sweep in
+    // the same provisioning cycle.
+
+    @Test
+    fun gateSkip_drainRegistersAccounts_runsExactlyOneFollowUpSweep() = runBlocking {
+        val sdk = readySdk()
+        sdk.onDrain = { _ ->
+            DashPayContactDrainReport(bound = true, queuedBefore = 29, drainScheduled = true, queuedAfter = 0)
+        }
+        // The follow-up pass's own drain "builds" again (the SDK re-enqueues
+        // per sweep) — the cycle must STILL stop after one follow-up.
+        sdk.onProvision = { _ ->
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0,
+                pendingBefore = 29, drainScheduled = true, pendingAfter = 0
+            )
+        }
+        val gate = FakeBackfillGate(shouldRun = false)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.drainCalls)
+        assertEquals(1, sdk.provisionCalls) // the follow-up sweep — and ONLY one
+        assertEquals(1, gate.recordCalls) // accounted to the gate like any pass
+    }
+
+    @Test
+    fun gateSkip_drainRegistersNothing_noFollowUpSweep() = runBlocking {
+        val sdk = readySdk() // default onDrain: queued=0, built=0
+        val gate = FakeBackfillGate(shouldRun = false)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.drainCalls)
+        assertEquals(0, sdk.provisionCalls)
+        assertEquals(1, gate.evaluateCalls) // not even a follow-up consultation
+    }
+
+    @Test
+    fun gateSkip_reBuildsMutedByTheLoopGuard_noFollowUpSweep() = runBlocking {
+        // The gate's per-process cap says these 29 "builds" are RE-builds of
+        // already-swept accounts. A follow-up sweep for them would be the
+        // rewind→sweep→re-build livelock the cap exists to end.
+        val sdk = readySdk()
+        sdk.onDrain = { _ ->
+            DashPayContactDrainReport(bound = true, queuedBefore = 29, drainScheduled = true, queuedAfter = 0)
+        }
+        val gate = FakeBackfillGate(shouldRun = false)
+        gate.acceptRegistrations = false
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.drainCalls)
+        assertEquals(0, sdk.provisionCalls)
+    }
+
+    @Test
+    fun gateSkip_gateStillRefusesAfterTheDrain_noSweep_debtStaysRecorded() = runBlocking {
+        // A watch in flight must not be interrupted even by fresh
+        // registrations (re-lowering the floor mid-climb is the livelock the
+        // gate exists to prevent). The binder asks the gate again and accepts
+        // the refusal — the debt survives (durably + in-memory) for a later
+        // consultation.
+        val sdk = readySdk()
+        sdk.onDrain = { _ ->
+            DashPayContactDrainReport(bound = true, queuedBefore = 29, drainScheduled = true, queuedAfter = 0)
+        }
+        val gate = FakeBackfillGate(shouldRun = false)
+        gate.reprovisionOnRegistration = false
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(2, gate.evaluateCalls) // the follow-up WAS offered to the gate
+        assertEquals(0, sdk.provisionCalls) // …and its refusal respected
+        assertTrue(gate.registrationOutstanding) // the debt is still on record
+    }
+
+    @Test
+    fun runPath_passDrainRegistersAccounts_runsOneFollowUpSweepSameCycle() = runBlocking {
+        // The first-post-restore pass: the sweep reconciles against ZERO
+        // receival accounts; its own step-2 drain registers 29 seconds later.
+        // The same cycle must sweep once more so the rescan reconcile sees
+        // them — the field wallet instead needed a manual restart.
+        val sdk = readySdk()
+        sdk.onProvision = { _ ->
+            if (sdk.provisionCalls == 1) {
+                DashPayContactProvisionReport(
+                    bound = true, syncSuccess = 1, syncErrors = 0,
+                    pendingBefore = 29, drainScheduled = true, pendingAfter = 0 // built 29
+                )
+            } else {
+                DashPayContactProvisionReport(
+                    bound = true, syncSuccess = 1, syncErrors = 0,
+                    pendingBefore = 0, drainScheduled = false // follow-up: steady
+                )
+            }
+        }
+        val gate = FakeBackfillGate(shouldRun = true)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(2, sdk.provisionCalls) // primary + exactly one follow-up
+        assertEquals(2, gate.recordCalls) // both passes accounted to the gate
+    }
+
+    @Test
+    fun runPath_everyPassBuilds_atMostOneFollowUpPerCycle() = runBlocking {
+        val sdk = readySdk()
+        sdk.onProvision = { _ ->
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0,
+                pendingBefore = 29, drainScheduled = true, pendingAfter = 0
+            )
+        }
+        val gate = FakeBackfillGate(shouldRun = true)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(2, sdk.provisionCalls) // never a third in one cycle
+    }
+
+    @Test
+    fun gateSkip_invalidationLandsBeforeTheFollowUpSweep() = runBlocking {
+        // Requirement: the durable coverage invalidation must be ON RECORD
+        // BEFORE the follow-up sweep runs, so a crash between drain and sweep
+        // self-heals on the next launch. The fake gate invalidates inside
+        // noteAccountBuildsRegistered exactly like DashPayBackfillGateImpl
+        // (proven by that class's own tests); this proves the binder
+        // sequences drain → note → sweep, never sweep first.
+        val sdk = readySdk()
+        val gate = FakeBackfillGate(shouldRun = false)
+        gate.persistedCoverage = true
+        var coverageStillPersistedAtSweep: Boolean? = null
+        sdk.onDrain = { _ ->
+            DashPayContactDrainReport(bound = true, queuedBefore = 29, drainScheduled = true, queuedAfter = 0)
+        }
+        sdk.onProvision = { _ ->
+            coverageStillPersistedAtSweep = gate.persistedCoverage
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+            )
+        }
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, gate.coverageInvalidations)
+        assertEquals(false, coverageStillPersistedAtSweep)
+    }
+
+    @Test
+    fun runPath_invalidationLandsBeforeTheFollowUpSweep() = runBlocking {
+        val sdk = readySdk()
+        val gate = FakeBackfillGate(shouldRun = true)
+        gate.persistedCoverage = true
+        val coverageAtSweep = mutableListOf<Boolean>()
+        sdk.onProvision = { _ ->
+            coverageAtSweep.add(gate.persistedCoverage)
+            if (sdk.provisionCalls == 1) {
+                DashPayContactProvisionReport(
+                    bound = true, syncSuccess = 1, syncErrors = 0,
+                    pendingBefore = 29, drainScheduled = true, pendingAfter = 0
+                )
+            } else {
+                DashPayContactProvisionReport(
+                    bound = true, syncSuccess = 1, syncErrors = 0,
+                    pendingBefore = 0, drainScheduled = false
+                )
+            }
+        }
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        // The primary sweep ran before anything was known (coverage still
+        // recorded); the pass's registrations then invalidated it, and the
+        // follow-up sweep observed the already-cleared state.
+        assertEquals(listOf(true, false), coverageAtSweep)
+        assertEquals(1, gate.coverageInvalidations)
+    }
+
+    // ── post-drain dark-contact diagnostics ──────────────────────────────
+
+    @Test
+    fun gateSkip_drain_readsReceivalCoverageDiagnostics() = runBlocking {
+        val sdk = readySdk()
+        sdk.receivalCoverage = DashPayReceivalCoverage(
+            establishedContacts = 61, receivalAccounts = 32, darkContacts = 29,
+            darkContactIdSample = listOf("9darkContactIdA", "9darkContactIdB")
+        )
+        val gate = FakeBackfillGate(shouldRun = false)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.receivalCoverageReads)
+    }
+
+    @Test
+    fun runPath_sweepPassAlsoReadsReceivalCoverageDiagnostics() = runBlocking {
+        val sdk = readySdk() // default report: nothing built, no follow-up
+        val gate = FakeBackfillGate(shouldRun = true)
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        // One drain (inside the pass) → one diagnostics line.
+        assertEquals(1, sdk.receivalCoverageReads)
     }
 
     @Test

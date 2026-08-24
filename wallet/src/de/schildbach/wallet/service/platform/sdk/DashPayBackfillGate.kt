@@ -830,8 +830,24 @@ interface DashPayBackfillGate {
      * accounts. Any positive count means the last sweep reconciled the rewind
      * before those accounts existed, so another sweep is owed; see
      * [decideDashPayBackfill]. Zero is ignored. Never throws.
+     *
+     * Accepting the registrations also DURABLY invalidates any persisted
+     * coverage — the same four-key removal the address-window heal performs
+     * ([SdkWalletBinder.maybeWidenAddressWindows]). The in-memory re-provision
+     * signal dies with the process, and a recorded coverage describes a scan
+     * that ran WITHOUT the just-registered accounts' addresses in the watched
+     * script set: surviving a crash between the drain and the follow-up
+     * sweep, it would suppress the backfill those accounts are owed on every
+     * later launch. The clear lands BEFORE this call returns — i.e. before
+     * any follow-up sweep the caller runs on the verdict — so a process death
+     * in between self-heals on the next launch.
+     *
+     * @return true when the registrations were accepted as NEW — a follow-up
+     *   sweep is owed for them and the caller may run one now; false for
+     *   zero/negative counts and for re-builds muted by the per-process loop
+     *   guard (see [DashPayBackfillGateImpl.buildsNotedThisProcess]).
      */
-    fun noteAccountBuildsRegistered(built: Int)
+    suspend fun noteAccountBuildsRegistered(built: Int): Boolean
 
     /**
      * The persisted bookkeeping, for consumers that must not treat a
@@ -855,7 +871,9 @@ interface DashPayBackfillGate {
      * anything IS accounted for, so still being unaccounted-for after several
      * minutes of polling is itself the evidence that no rewind is coming.
      * Re-checks the height and fingerprint itself and refuses if a rewind did
-     * land. Returns whether coverage was recorded. Never throws.
+     * land — or if account builds were registered since the last sweep (a
+     * sweep is then still OWED, so quiet is not evidence of anything).
+     * Returns whether coverage was recorded. Never throws.
      */
     suspend fun concludeNoRewindObserved(
         walletIdHex: String,
@@ -885,7 +903,8 @@ interface DashPayBackfillGate {
             // Nothing is ever armed, so there is never anything to watch for.
             override suspend fun isRewindAccountedFor() = true
 
-            override fun noteAccountBuildsRegistered(built: Int) = Unit
+            // Nothing is recorded, so nothing is owed a follow-up sweep.
+            override suspend fun noteAccountBuildsRegistered(built: Int) = false
 
             // Nothing is ever recorded, so nothing is ever owed.
             override suspend fun readBackfillStatus() = DashPayBackfillStatus.SETTLED
@@ -960,8 +979,8 @@ class DashPayBackfillGateImpl @Inject constructor(
      */
     private val buildsNotedThisProcess = java.util.concurrent.atomic.AtomicInteger(0)
 
-    override fun noteAccountBuildsRegistered(built: Int) {
-        if (built <= 0) return
+    override suspend fun noteAccountBuildsRegistered(built: Int): Boolean {
+        if (built <= 0) return false
         val cap = lastObservation.sdkContactCount
         if (cap > 0 && buildsNotedThisProcess.get() >= cap) {
             log.info(
@@ -970,7 +989,7 @@ class DashPayBackfillGateImpl @Inject constructor(
                     "already-swept accounts, NOT raising the re-provision signal (loop guard)",
                 built, buildsNotedThisProcess.get(), cap
             )
-            return
+            return false
         }
         buildsNotedThisProcess.addAndGet(built)
         if (accountsRegisteredSincePass.compareAndSet(false, true)) {
@@ -982,6 +1001,34 @@ class DashPayBackfillGateImpl @Inject constructor(
                 built
             )
         }
+        // The DURABLE half (see the interface KDoc): the flag above dies with
+        // the process, so a persisted coverage record — written over a scan
+        // that never watched these accounts' addresses — must be invalidated
+        // in the store NOW, before the caller's follow-up sweep gets a chance
+        // to run. A crash between this drain and that sweep then self-heals:
+        // the next launch finds no coverage and provisions again. Same
+        // four-key removal as the address-window heal's invalidation.
+        try {
+            if (readCoverage() != null) {
+                clearCoverage()
+                log.info(
+                    "DashPay coreHeight backfill coverage invalidated — receival account(s) " +
+                        "registered after it was recorded; the next gate pass rewinds with " +
+                        "the enlarged script set"
+                )
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // The in-memory signal still forces the next in-process
+            // consultation; only crash-durability is degraded. Never throw —
+            // the drain path must survive a store hiccup.
+            log.warn(
+                "failed to durably invalidate the DashPay backfill coverage; the in-memory " +
+                    "registration signal still forces a re-sweep this process", e
+            )
+        }
+        return true
     }
 
     /**
@@ -1141,6 +1188,21 @@ class DashPayBackfillGateImpl @Inject constructor(
             armed == null -> false
             // Something already accounted for the pass; leave it alone.
             readInProgress() != null || readCoverage() != null -> false
+            // A receival account registered since the last sweep is POSITIVE
+            // evidence a sweep is still owed — "no rewind observed" cannot
+            // mean "none was needed" while the sweep that would fire it has
+            // not run. Recording coverage here would suppress exactly the
+            // backfill that account needs (forever, if a crash then loses
+            // the in-memory signal before the owed sweep runs). Refusing
+            // leaves the armed marker, so the next consultation provisions.
+            accountsRegisteredSincePass.get() -> {
+                log.info(
+                    "DashPay coreHeight backfill: NOT concluding no-rewind — account build(s) " +
+                        "were registered since the last sweep, so a sweep (and possibly its " +
+                        "rewind) is still owed; leaving the armed marker in place"
+                )
+                false
+            }
             else -> {
                 val signals = sdkService.readDashPayBackfillSignals(walletIdHex, ownerIdentityId)
                 val height = signals.syncedHeight

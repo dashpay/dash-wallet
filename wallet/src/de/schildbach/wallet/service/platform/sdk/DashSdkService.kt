@@ -163,6 +163,35 @@ data class DashPayContactDrainReport(
 }
 
 /**
+ * How completely the bound SDK wallet's DIP-15 receival accounts cover its
+ * established (RECEIVED-request) DashPay contacts — the drain-time
+ * diagnostic that names the DARK contacts: an established contact with NO
+ * `dashpayReceivingFunds` account has its receiving addresses in no watched
+ * script set, so its payments can never match a filter. Under the SDK's
+ * known re-enqueue asymmetry such a contact can stay dark PERMANENTLY (the
+ * sweep re-enqueues builds per contact, but a build that keeps failing is
+ * indistinguishable from one that merely has not run yet), and this report
+ * is what lets a field log say exactly which contact is stuck.
+ *
+ * Pure Room reads, diagnostics only — never load-bearing for the gate.
+ */
+data class DashPayReceivalCoverage(
+    /** Distinct contact identities with a RECEIVED contact request (the receival-account universe). */
+    val establishedContacts: Int,
+    /** Registered `dashpayReceivingFunds` accounts on the bound wallet. */
+    val receivalAccounts: Int,
+    /** Established contacts with NO receival account — the permanently-dark candidates. */
+    val darkContacts: Int,
+    /** Up to [DARK_CONTACT_SAMPLE_LIMIT] dark contact identity ids (base58, untruncated). */
+    val darkContactIdSample: List<String>
+) {
+    companion object {
+        /** Sample size for [darkContactIdSample] — enough to name the stuck contacts, bounded for one log line. */
+        const val DARK_CONTACT_SAMPLE_LIMIT = 5
+    }
+}
+
+/**
  * The two read-only signals the app-side DIP-15 backfill gate
  * ([DashPayBackfillGate]) needs to tell "the coreHeight backfill is still
  * running" from "it has provably finished", WITHOUT any SDK change.
@@ -632,6 +661,23 @@ interface DashSdkService {
      * "none queued".
      */
     suspend fun dashPayPendingAccountBuilds(walletIdHex: String): Int?
+
+    /**
+     * Read-only receival-account coverage of the wallet's established
+     * DashPay contacts — see [DashPayReceivalCoverage] for what it names and
+     * why. Pure Room reads through [databaseOrNull] (no [ensureStarted], no
+     * native call, no sweep — the same posture as
+     * [readDashPayBackfillSignals]); null when the SDK is down, the wallet id
+     * is malformed, or the read failed. Never throws. Default null so
+     * read-only fakes stay source-compatible.
+     *
+     * @param walletIdHex the bound wallet id ([bindAppWallet]'s return).
+     * @param ownerIdentityId our 32-byte platform identity id.
+     */
+    suspend fun readDashPayReceivalCoverage(
+        walletIdHex: String,
+        ownerIdentityId: ByteArray
+    ): DashPayReceivalCoverage? = null
 
     /**
      * Read-only snapshot of the two signals the app-side DIP-15 backfill
