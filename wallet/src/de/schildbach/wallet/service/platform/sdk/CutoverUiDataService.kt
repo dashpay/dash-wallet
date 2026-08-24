@@ -58,6 +58,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.NotificationService
 import org.slf4j.LoggerFactory
@@ -486,6 +488,14 @@ internal fun planL1DisplaySync(
     // direction/value (and, once a row is cached correctly, is never regressed —
     // the re-plan only fires when an authoritative net is present).
     signedNetByTxid: Map<String, Long> = emptyMap(),
+    // Presentable tx metadata per txid (memo / service / custom icon), read app-side
+    // before this pure planner runs — the SAME join the dashj-era builder applies
+    // ([de.schildbach.wallet.service.TxDisplayCacheService]'s renderEntry), so a row
+    // whose metadata already exists at build time (platform metadata synced before
+    // the L1 scan reached the tx) is born decorated instead of waiting for a
+    // metadata-change emission. Decoration only — never direction/value. Empty = no
+    // metadata known (rows insert bare, as before).
+    metadataByTxid: Map<String, PresentableTxMetadata> = emptyMap(),
     // Whether [records] came from the SDK's persisted `transactions` table (the Room
     // SNAPSHOT feed) — one wallet-wide row per txid, and therefore DEFINITIVE for a
     // plain row's direction/amount. False for the engine's instant tx feed, whose
@@ -526,6 +536,10 @@ internal fun planL1DisplaySync(
         val existing = existingByRowId[record.txidHex]
 
         if (existing == null) {
+            // Build-time metadata join (renderEntry parity): memo, service and the
+            // custom (merchant/service) icon. The direction shape above stays the
+            // record's — metadata never drives value or direction.
+            val meta = metadataByTxid[record.txidHex]
             inserts += TxDisplayCacheEntry(
                 rowId = plan.rowId,
                 title = resolve(plan.titleRes),
@@ -533,11 +547,11 @@ internal fun planL1DisplaySync(
                 iconType = plan.iconType,
                 iconBgType = plan.iconBgType,
                 statusText = if (plan.statusRes != -1) resolve(plan.statusRes) else "",
-                comment = "",
+                comment = meta?.memo ?: "",
                 transactionAmount = 1,
                 time = if (plan.timestampMs > 0) plan.timestampMs else nowMs,
                 hasErrors = false,
-                service = null,
+                service = meta?.service,
                 // Stamp the current fiat rate on every fresh SDK-discovered row,
                 // mirroring BlockchainServiceImpl.onCoinsReceived — the held dashj
                 // wallet never sees these SDK-only txs, so nothing else records
@@ -556,7 +570,8 @@ internal fun planL1DisplaySync(
                 contactDisplayName = contact?.displayName,
                 contactAvatarUrl = contact?.avatarUrl,
                 contactUserId = contact?.userId,
-                filterFlags = plan.filterFlags
+                filterFlags = plan.filterFlags,
+                customIconId = meta?.customIconId?.toString()
             )
             sdkAuthoritative += plan.rowId
             if (plan.isIncoming && record.netAmountDuffs > 0 &&
@@ -1756,6 +1771,17 @@ class CutoverUiDataService internal constructor(
      */
     private val resolveOwnedInvolvement: suspend (String) -> Boolean? = { null },
     /**
+     * Presentable tx metadata (memo / service / custom icon) for the given display-hex
+     * txids, from the app's `transaction_metadata` table — the store
+     * [de.schildbach.wallet.service.WalletTransactionMetadataProvider] maintains and
+     * platform metadata sync merges into. Joined onto the rows a sync pass INSERTS
+     * ([planL1DisplaySync]'s `metadataByTxid`) so a row planned AFTER its metadata
+     * arrived (restored device: platform sync done, L1 scan still walking) is born
+     * with its memo instead of never learning it. Default empty for the snapshot tests.
+     */
+    private val resolveMetadata: suspend (Collection<String>) -> Map<String, PresentableTxMetadata> =
+        { emptyMap() },
+    /**
      * The engine's instant tx feed ([L1ShadowSyncService.txEvents]) —
      * mempool detections and IS locks, consumed by [txPipeline] ahead of
      * the Room snapshot so receives render pre-block. Empty by default
@@ -1901,6 +1927,7 @@ class CutoverUiDataService internal constructor(
         l1SyncStatusService: de.schildbach.wallet.service.L1SyncStatusService,
         assetLockKindResolver: AssetLockKindResolver,
         sdkTxContactResolver: SdkTxContactResolver,
+        transactionMetadataDao: de.schildbach.wallet.database.dao.TransactionMetadataDao,
         instantSendLockDao: de.schildbach.wallet.database.dao.InstantSendLockDao,
         dashPayBackfillGate: DashPayBackfillGate,
         dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus
@@ -1917,6 +1944,14 @@ class CutoverUiDataService internal constructor(
         resolveContact = { txDisplayHex -> sdkTxContactResolver.contactFor(txDisplayHex) },
         resolveWalletNets = { txids -> sdkTxContactResolver.signedNetsFor(txids) },
         resolveOwnedInvolvement = { txid -> sdkTxContactResolver.ownedInvolvementFor(txid) },
+        resolveMetadata = { txids ->
+            // Chunked: SQLite's IN-clause variable cap is 999. Keys go out as
+            // display-hex (TxId.toString round-trips the same hex).
+            txids.map { hex -> TxId.wrap(hex) }
+                .chunked(500)
+                .flatMap { chunk -> transactionMetadataDao.loadPresentableMetadata(chunk).entries }
+                .associate { (id, meta) -> id.toString() to meta }
+        },
         clearContactResolutionCaches = { sdkTxContactResolver.clearNegativeCache() },
         txEvents = l1ShadowSyncService.txEvents,
         isTxFeedTapActive = { l1ShadowSyncService.isTapActive },
@@ -3324,6 +3359,27 @@ class CutoverUiDataService internal constructor(
                 }
             }
 
+            // Presentable metadata for the rows this pass will INSERT — the build-time
+            // join. Existing rows are deliberately excluded: their late-arriving
+            // metadata is decorated by the metadata-change observer
+            // ([TxDisplayCacheService]), which works off the display row by txid.
+            // Fail-soft: a failed read inserts the rows bare, and that same observer
+            // (every launch re-emits the full metadata map) converges them.
+            val insertTxids = records.mapNotNull { r ->
+                r.txidHex.takeIf { it !in grouped && it !in existing }
+            }
+            val metadataByTxid = if (insertTxids.isEmpty()) {
+                emptyMap()
+            } else {
+                try {
+                    resolveMetadata(insertTxids)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("presentable metadata read failed; rows insert undecorated this pass", t)
+                    emptyMap()
+                }
+            }
+
             val plan = planL1DisplaySync(
                 records, existing, grouped, resolveString, nowMs(),
                 incomingFiatCode = fiat?.currencyCode,
@@ -3331,6 +3387,7 @@ class CutoverUiDataService internal constructor(
                 kindByTxid = kindByTxid,
                 contactByTxid = contactByTxid,
                 signedNetByTxid = signedNetByTxid,
+                metadataByTxid = metadataByTxid,
                 restampFromDefinitiveRecord = !fromEngineEvent
             )
             // Claim SDK AUTHORITY over every row this pass planned or verified, so the

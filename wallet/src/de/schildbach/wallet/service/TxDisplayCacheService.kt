@@ -425,6 +425,33 @@ class TxDisplayCacheService @Inject constructor(
                     }
                     txDisplayCacheDao.insertAll(entries)
                 }
+
+                // Changed txids with NO resolvable wrapper: on a restored post-cutover
+                // device the affected rows are SDK-planned "fallback" metadata rows the
+                // held dashj wallet cannot render, so the rebuild above never reaches
+                // them — decorate the display-cache row directly by txid instead
+                // (memo/service/custom icon only; see [planMetadataRowDecorations]).
+                val wrappedTxIds = affectedWrappers.flatMapTo(mutableSetOf()) { it.transactions.keys }
+                val wrapperlessIds = changedIds.filterNot { it in wrappedTxIds }
+                if (wrapperlessIds.isNotEmpty()) {
+                    val existingRows = HashMap<String, TxDisplayCacheEntry>(wrapperlessIds.size)
+                    for (chunk in wrapperlessIds.chunked(500)) {
+                        txDisplayCacheDao.getEntriesByIds(chunk).forEach { existingRows[it.rowId] = it }
+                    }
+                    val decorated = planMetadataRowDecorations(
+                        wrapperlessIds.associateWith { id -> newMetadata[TxId.wrap(id)] },
+                        existingRows
+                    )
+                    if (decorated.isNotEmpty()) {
+                        txDisplayCacheDao.insertAll(decorated)
+                        _currentPagingSource.value?.invalidate()
+                        log.info(
+                            "metadata re-decorated {} wrapperless row(s): {}",
+                            decorated.size,
+                            decorated.take(8).joinToString { "${it.rowId.take(8)} memo=${it.comment.length} chars" }
+                        )
+                    }
+                }
             }
             .catch { e -> log.error("metadata flow error", e) }
             .launchIn(serviceScope)
@@ -1436,6 +1463,45 @@ internal fun planSwapRowDecorations(
         // planner's plain-send re-stamp off this row).
         service = meta.service ?: existing.service,
         swapStatus = order.status.name
+    )
+    decorated.takeIf { it != existing }
+}
+
+/**
+ * PURE planner for the METADATA DECORATION of already-cached display rows whose
+ * transaction the held dashj wallet cannot render — the host-testable core of
+ * [TxDisplayCacheService]'s wrapperless metadata re-decoration.
+ *
+ * The metadata-change observer's rebuild path needs a dashj [TransactionWrapper], but on
+ * a restored post-cutover device the display rows are SDK-planned and their metadata
+ * arrives as "SDK fallback rows" ([WalletTransactionMetadataProvider]) for txs the
+ * wallet does not hold — so no wrapper ever resolves and the row could never learn its
+ * memo (verified in the field: "platform metadata merged" with zero "row … bound with
+ * metadata" renders across whole sessions). Like [planSwapRowDecorations], this planner
+ * works off the display-cache row keyed by txid instead.
+ *
+ * Decoration ONLY, mirroring what the wrapper path's SDK-stamp preserve-guards let
+ * metadata drive on such a row: [TxDisplayCacheEntry.comment] (the memo — metadata is
+ * its source of truth, so a removed metadata row clears it), [TxDisplayCacheEntry.service]
+ * (never un-classified) and [TxDisplayCacheEntry.customIconId] (the merchant/service
+ * icon, rendered from live metadata at display time). Value, direction, icon, title,
+ * status, time, rate, contact identity and the filter bucket are never touched.
+ * Idempotent: a row that already matches is not returned.
+ *
+ * @param metadataByTxId the CHANGED txids mapped to their new presentable metadata
+ *        (null = the metadata row was removed).
+ */
+internal fun planMetadataRowDecorations(
+    metadataByTxId: Map<String, PresentableTxMetadata?>,
+    existingByRowId: Map<String, TxDisplayCacheEntry>
+): List<TxDisplayCacheEntry> = metadataByTxId.mapNotNull { (txId, meta) ->
+    // Only rows the cache already displays are decorated; a row planned LATER is
+    // born decorated by the SDK planner's own build-time join.
+    val existing = existingByRowId[txId] ?: return@mapNotNull null
+    val decorated = existing.copy(
+        comment = meta?.memo ?: "",
+        service = meta?.service ?: existing.service,
+        customIconId = meta?.customIconId?.toString() ?: existing.customIconId
     )
     decorated.takeIf { it != existing }
 }

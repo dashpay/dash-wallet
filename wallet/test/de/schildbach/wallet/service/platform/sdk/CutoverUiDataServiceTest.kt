@@ -40,6 +40,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.WalletUIConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -270,6 +272,31 @@ class CutoverUiDataServiceTest {
         val plan = planL1DisplaySync(listOf(old), emptyMap(), emptySet(), resolve, now)
         assertEquals(1, plan.inserts.size)
         assertTrue(plan.notifyIncoming.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_insertJoinsPresentableMetadata() {
+        val r = record(firstByte = 7, net = 1_000_000, context = 1, direction = 0)
+        val iconId = TxId.wrap(ByteArray(32) { 0x2a })
+        val meta = PresentableTxMetadata(
+            txId = TxId.wrap(displayHex(7)),
+            memo = "table for two",
+            service = "CrowdNode",
+            customIconId = iconId
+        )
+        val plan = planL1DisplaySync(
+            listOf(r), emptyMap(), emptySet(), resolve, now,
+            metadataByTxid = mapOf(displayHex(7) to meta)
+        )
+
+        val row = plan.inserts.single()
+        assertEquals("table for two", row.comment)
+        assertEquals("CrowdNode", row.service)
+        assertEquals(iconId.toString(), row.customIconId)
+        // Decoration only — the direction shape still comes from the SDK record.
+        assertEquals(resolve(R.string.transaction_row_status_received), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_RECEIVED, row.iconType)
+        assertEquals(1_000_000L, row.valueSatoshis)
     }
 
     @Test
@@ -825,7 +852,9 @@ class CutoverUiDataServiceTest {
          */
         ownedInvolvement: suspend (String) -> Boolean? = { true },
         /** Foreign-excluded store nets for the negative-event validation and contact rows. */
-        walletNets: suspend (Set<String>) -> Map<String, Long> = { emptyMap() }
+        walletNets: suspend (Set<String>) -> Map<String, Long> = { emptyMap() },
+        /** Presentable metadata store for the build-time row join; default = none known. */
+        metadata: Map<String, PresentableTxMetadata> = emptyMap()
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -848,6 +877,7 @@ class CutoverUiDataServiceTest {
         },
         resolveOwnedInvolvement = ownedInvolvement,
         resolveWalletNets = walletNets,
+        resolveMetadata = { txids -> metadata.filterKeys { it in txids } },
         nowMs = { now }
     )
 
@@ -1265,6 +1295,36 @@ class CutoverUiDataServiceTest {
         assertEquals(displayHex(7), inserted.captured.first().rowId)
         assertEquals(resolve(R.string.transaction_row_status_received), inserted.captured.first().title)
         assertEquals(listOf(1_000_000L), notified)
+    }
+
+    @Test
+    fun postCutover_insertJoinsMetadataPresentAtBuildTime() = runTest {
+        // Restored-device ordering: platform metadata synced BEFORE the L1 scan
+        // reached this tx, so the metadata store already holds the memo when the
+        // row is planned. The inserted row must be born with it.
+        val incoming = record(firstByte = 7, net = 1_000_000, context = 1, direction = 0)
+        val source = FakeSource(records = MutableStateFlow(listOf(incoming)))
+        val displayDao = mockk<TxDisplayCacheDao>(relaxed = true)
+        coEvery { displayDao.getEntriesByIds(any()) } returns emptyList()
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao,
+            metadata = mapOf(
+                displayHex(7) to PresentableTxMetadata(
+                    txId = TxId.wrap(displayHex(7)),
+                    memo = "curry night"
+                )
+            )
+        )
+        service.start()
+        runCurrent()
+
+        val inserted = slot<List<TxDisplayCacheEntry>>()
+        coVerify { displayDao.insertAll(capture(inserted)) }
+        assertEquals("curry night", inserted.captured.single().comment)
     }
 
     @Test
