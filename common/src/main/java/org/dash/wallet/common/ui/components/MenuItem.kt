@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,12 +33,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import android.content.res.Configuration
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,6 +53,10 @@ fun MenuItem(
     helpTextAbove: String? = null,
     subtitle: String? = null,
     subtitleMaxLines: Int = Int.MAX_VALUE,
+    // Truncates `subtitle` from the middle to fit the available width (e.g. for addresses,
+    // where both the start and end need to stay checkable) instead of the standard end-ellipsis.
+    // Width-measured so it stays correct at any font scale, unlike a fixed character count.
+    subtitleMiddleEllipsis: Boolean = false,
     subtitle2: String? = null,
     icon: Int? = null,
     // Custom icon slot (e.g. a Coil AsyncImage for coin logos); used when `icon` is null
@@ -168,14 +176,23 @@ fun MenuItem(
 
                 // Subtitle
                 subtitle?.let {
-                    Text(
-                        text = it,
-                        style = MyTheme.Typography.BodyMedium,
-                        color = colors.textSecondary,
-                        maxLines = subtitleMaxLines,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (subtitleMiddleEllipsis) {
+                        MiddleEllipsisText(
+                            text = it,
+                            style = MyTheme.Typography.BodyMedium,
+                            color = colors.textSecondary,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        Text(
+                            text = it,
+                            style = MyTheme.Typography.BodyMedium,
+                            color = colors.textSecondary,
+                            maxLines = subtitleMaxLines,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 // Second subtitle
@@ -269,6 +286,44 @@ fun MenuItem(
                 )
             }
         }
+}
+
+/**
+ * Single-line text that keeps the start and end of [text] visible, truncating the middle
+ * with "…" only as much as needed to fit the measured width. Unlike a fixed character-count
+ * cut, this stays correct across screen widths, locales and font scales.
+ */
+@Composable
+private fun MiddleEllipsisText(
+    text: String,
+    style: TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    BoxWithConstraints(modifier = modifier) {
+        val maxWidthPx = with(density) { maxWidth.toPx() }
+        val display = remember(text, maxWidthPx, style, density.fontScale) {
+            middleEllipsizeToFit(text, maxWidthPx, style, measurer)
+        }
+        Text(text = display, style = style, color = color, maxLines = 1, overflow = TextOverflow.Clip)
+    }
+}
+
+private fun middleEllipsizeToFit(text: String, maxWidthPx: Float, style: TextStyle, measurer: TextMeasurer): String {
+    fun widthOf(s: String) = measurer.measure(text = s, style = style, softWrap = false).size.width
+
+    if (maxWidthPx <= 0f || widthOf(text) <= maxWidthPx) return text
+
+    var head = (text.length + 1) / 2
+    var tail = text.length - head
+    while (head + tail > 0) {
+        val candidate = "${text.take(head)}…${text.takeLast(tail)}"
+        if (widthOf(candidate) <= maxWidthPx) return candidate
+        if (head >= tail) head-- else tail--
+    }
+    return "…"
 }
 
 @Preview(name = "MenuItem Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)

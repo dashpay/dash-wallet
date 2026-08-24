@@ -42,6 +42,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
@@ -67,7 +68,12 @@ data class SegmentedPickerStyle(
     val thumbColor: Color? = null,
     val cornerRadius: Float = 12f,
     val textStyle: TextStyle = MyTheme.CaptionMedium,
-    val shadowElevation: Int = 2
+    val shadowElevation: Int = 2,
+    // Extra inset drawn around each option's text/icon, on top of the option's own weighted
+    // slot. Zero by default so existing fixed-height horizontal/vertical toggles are unaffected;
+    // set this for pickers whose options should have visible breathing room between them.
+    val optionPaddingHorizontal: Float = 0f,
+    val optionPaddingVertical: Float = 0f
 )
 
 @Composable
@@ -205,7 +211,9 @@ fun SegmentedPicker(
                             internalSelectedIndex = index
                             onOptionSelected(option, index)
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        paddingHorizontal = style.optionPaddingHorizontal.dp,
+                        paddingVertical = style.optionPaddingVertical.dp
                     )
                 }
             }
@@ -225,7 +233,9 @@ fun SegmentedPicker(
                             onOptionSelected(option, index)
                         },
                         modifier = Modifier.weight(1f),
-                        isHorizontal = false
+                        isHorizontal = false,
+                        paddingHorizontal = style.optionPaddingHorizontal.dp,
+                        paddingVertical = style.optionPaddingVertical.dp
                     )
                 }
             }
@@ -240,7 +250,9 @@ private fun OptionContent(
     textStyle: TextStyle,
     onSelect: () -> Unit,
     modifier: Modifier = Modifier,
-    isHorizontal: Boolean = true
+    isHorizontal: Boolean = true,
+    paddingHorizontal: Dp = 0.dp,
+    paddingVertical: Dp = 0.dp
 ) {
     Box(
         modifier = modifier
@@ -254,9 +266,9 @@ private fun OptionContent(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.then(
-                if (isHorizontal) Modifier.fillMaxHeight() else Modifier.fillMaxWidth()
-            )
+            modifier = Modifier
+                .then(if (isHorizontal) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
+                .padding(horizontal = paddingHorizontal, vertical = paddingVertical)
         ) {
             val colors = LocalDashColors.current
             option.icon?.let {
