@@ -411,4 +411,76 @@ class DashSdkServiceImplTest {
         assertFalse(report.allSignable)
         assertFalse(report.settled)
     }
+
+    // ── computeDashPayReceivalCoverage (dark-contact drain diagnostics) ──
+
+    private fun contactId(seed: Int) = ByteArray(32) { seed.toByte() }
+
+    @Test
+    fun receivalCoverage_contactsWithoutAccounts_areDark_andSampled() {
+        val coverage = computeDashPayReceivalCoverage(
+            receivedContactIds = listOf(contactId(1), contactId(2), contactId(3)),
+            receivalAccountFriendIds = listOf(contactId(2))
+        )
+
+        assertEquals(3, coverage.establishedContacts)
+        assertEquals(1, coverage.receivalAccounts)
+        assertEquals(2, coverage.darkContacts)
+        // Byte-equality match, base58 sample, contact order preserved.
+        assertEquals(
+            listOf(
+                org.bitcoinj.core.Base58.encode(contactId(1)),
+                org.bitcoinj.core.Base58.encode(contactId(3))
+            ),
+            coverage.darkContactIdSample
+        )
+    }
+
+    @Test
+    fun receivalCoverage_fullyCovered_hasNoDarkContacts() {
+        val coverage = computeDashPayReceivalCoverage(
+            receivedContactIds = listOf(contactId(1), contactId(2)),
+            receivalAccountFriendIds = listOf(contactId(1), contactId(2))
+        )
+
+        assertEquals(0, coverage.darkContacts)
+        assertTrue(coverage.darkContactIdSample.isEmpty())
+    }
+
+    @Test
+    fun receivalCoverage_duplicateContactRows_collapse() {
+        // The SDK can hold several request rows per contact pair; the
+        // receival-account universe is DISTINCT contact identities.
+        val coverage = computeDashPayReceivalCoverage(
+            receivedContactIds = listOf(contactId(1), contactId(1), contactId(2)),
+            receivalAccountFriendIds = emptyList()
+        )
+
+        assertEquals(2, coverage.establishedContacts)
+        assertEquals(2, coverage.darkContacts)
+    }
+
+    @Test
+    fun receivalCoverage_sampleIsCappedAtFive_countStaysComplete() {
+        val coverage = computeDashPayReceivalCoverage(
+            receivedContactIds = (1..9).map { contactId(it) },
+            receivalAccountFriendIds = listOf(contactId(9))
+        )
+
+        assertEquals(8, coverage.darkContacts) // the full delta…
+        assertEquals(5, coverage.darkContactIdSample.size) // …named up to the cap
+    }
+
+    @Test
+    fun receivalCoverage_accountForAnUnknownFriend_doesNotHideAnyContact() {
+        // A receival account whose friend id matches no received request
+        // (stale row, direction quirk) must not mask a genuinely dark one.
+        val coverage = computeDashPayReceivalCoverage(
+            receivedContactIds = listOf(contactId(1)),
+            receivalAccountFriendIds = listOf(contactId(7))
+        )
+
+        assertEquals(1, coverage.darkContacts)
+        assertEquals(1, coverage.receivalAccounts)
+    }
 }

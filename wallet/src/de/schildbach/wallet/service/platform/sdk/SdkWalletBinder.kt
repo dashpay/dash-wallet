@@ -661,14 +661,69 @@ class SdkWalletBinder internal constructor(
                         // short — and before this, the queue was only ever
                         // drained on a pass the gate allowed through, i.e. on
                         // almost no launch after the first.
-                        drainDeferredAccountBuilds(walletId)
+                        val registeredNew = drainDeferredAccountBuilds(walletId, identityId)
+                        // Post-drain follow-up sweep, at most ONE per cycle:
+                        // accounts this drain just REGISTERED were not there
+                        // when any sweep's rescan reconcile ran, so the SDK's
+                        // per-contact rescan guard has never fired for them.
+                        // The gate's registration signal is set (and its
+                        // coverage durably invalidated) by the note inside
+                        // the drain — consult it again and give the reconcile
+                        // its second look NOW, in this same cycle, instead of
+                        // leaving the money invisible until a relaunch.
+                        if (registeredNew) {
+                            val followUp = backfillGate.evaluate(walletId, identityId, userId)
+                            if (followUp.shouldRun) {
+                                if (followUp.armedToWrite != null) armedRewind = true
+                                log.info(
+                                    "DashPay follow-up sweep on {}…: the drain registered " +
+                                        "receival account(s) no sweep's rescan reconcile has " +
+                                        "seen — sweeping again in this cycle",
+                                    walletId.take(8)
+                                )
+                                runProvisioningSweep(walletId, identityId)
+                            } else {
+                                // e.g. a backfill replay in flight, which a
+                                // registration must never interrupt. The debt
+                                // is recorded (durably invalidated coverage +
+                                // the in-memory signal) for a later pass.
+                                log.info(
+                                    "DashPay follow-up sweep withheld on {}…: {} — the " +
+                                        "registration debt stays recorded for a later pass",
+                                    walletId.take(8), followUp.reason
+                                )
+                            }
+                        }
+                        if (armedRewind) {
+                            watchArmedBackfillRewind(walletId, identityId, userId)
+                        }
                         return
                     }
                     armedRewind = decision.armedToWrite != null
                 }
 
-                val report = sdkService.provisionDashPayContactAccounts(walletId)
-                identityId?.let { backfillGate.recordPassOutcome(walletId, it, report) }
+                val registrationOutstanding = runProvisioningSweep(walletId, identityId)
+                // Post-drain follow-up sweep (run path), at most ONE per
+                // cycle: this pass's own step-2 drain registered receival
+                // accounts AFTER its sweep reconciled the rewind — the exact
+                // ordering defect behind the restored-wallet dark contacts
+                // (sweep at 17:20:08 against zero accounts, 29 registered
+                // 17:20:11–31, no rewind until a manual restart). The gate's
+                // registration branches turn the signal recordPassOutcome
+                // re-raised into a permitted, re-armed pass.
+                if (registrationOutstanding && identityId != null) {
+                    val followUp = backfillGate.evaluate(walletId, identityId, userId)
+                    if (followUp.shouldRun) {
+                        if (followUp.armedToWrite != null) armedRewind = true
+                        log.info(
+                            "DashPay follow-up sweep on {}…: this pass's drain registered " +
+                                "receival account(s) after its sweep reconciled — sweeping " +
+                                "again in this cycle",
+                            walletId.take(8)
+                        )
+                        runProvisioningSweep(walletId, identityId)
+                    }
+                }
                 // The pass we just armed rewinds the SPV synced height, but the
                 // drop only becomes DURABLE ~9-60 s later, and it stays visible
                 // only until the scan climbs back out of it. recordPassOutcome
@@ -679,30 +734,6 @@ class SdkWalletBinder internal constructor(
                 // launch re-ran the whole rewind, forever. Poll for it instead.
                 if (armedRewind && identityId != null) {
                     watchArmedBackfillRewind(walletId, identityId, userId)
-                }
-                // The sweep is a long native op: its SDK lines sat in the
-                // logcat buffer until the bridge's next 30 s / 5 min poll and
-                // were routinely rolled over before then. Pull them into
-                // wallet.log NOW, while they are still there — cheap,
-                // bounded, never throws, and we are on a background
-                // coroutine, not the main thread.
-                NativeLogBridge.drainNow()
-                when {
-                    !report.bound -> log.debug(
-                        "DashPay friend-chain provisioning: SDK wallet {}… not loaded yet",
-                        walletId.take(8)
-                    )
-                    report.pendingBefore > 0 || report.drainScheduled -> log.info(
-                        "DashPay friend-chain provisioning on {}…: sweep ok={}/err={}, " +
-                            "{} account build(s) queued, drainScheduled={}",
-                        walletId.take(8), report.syncSuccess, report.syncErrors,
-                        report.pendingBefore, report.drainScheduled
-                    )
-                    else -> log.debug(
-                        "DashPay friend-chain provisioning on {}…: steady " +
-                            "(sweep ok={}/err={}, nothing queued)",
-                        walletId.take(8), report.syncSuccess, report.syncErrors
-                    )
                 }
             } finally {
                 provisioning.set(false)
@@ -715,6 +746,87 @@ class SdkWalletBinder internal constructor(
                     "discovery may lag until the next pass",
                 t
             )
+        }
+    }
+
+    /**
+     * One provisioning pass — the SDK sweep + drain
+     * ([DashSdkService.provisionDashPayContactAccounts]) with its gate
+     * accounting, wallet.log lines and post-drain receival-coverage
+     * diagnostics. Throws freely; the caller
+     * ([provisionContactAccountsIfEnabled]) contains the fallout.
+     *
+     * @return whether the pass's own drain left a registration OUTSTANDING —
+     *   the gate's signal, consumed and then re-raised from the pass's built
+     *   count by [DashPayBackfillGate.recordPassOutcome] — i.e. whether a
+     *   follow-up sweep is owed. Always false without an identity, and with
+     *   a gate that records nothing ([DashPayBackfillGate.ALWAYS_RUN]).
+     */
+    private suspend fun runProvisioningSweep(walletId: String, identityId: ByteArray?): Boolean {
+        val report = sdkService.provisionDashPayContactAccounts(walletId)
+        identityId?.let { backfillGate.recordPassOutcome(walletId, it, report) }
+        // The sweep is a long native op: its SDK lines sat in the
+        // logcat buffer until the bridge's next 30 s / 5 min poll and
+        // were routinely rolled over before then. Pull them into
+        // wallet.log NOW, while they are still there — cheap,
+        // bounded, never throws, and we are on a background
+        // coroutine, not the main thread.
+        NativeLogBridge.drainNow()
+        when {
+            !report.bound -> log.debug(
+                "DashPay friend-chain provisioning: SDK wallet {}… not loaded yet",
+                walletId.take(8)
+            )
+            report.pendingBefore > 0 || report.drainScheduled -> log.info(
+                "DashPay friend-chain provisioning on {}…: sweep ok={}/err={}, " +
+                    "{} account build(s) queued, drainScheduled={}",
+                walletId.take(8), report.syncSuccess, report.syncErrors,
+                report.pendingBefore, report.drainScheduled
+            )
+            else -> log.debug(
+                "DashPay friend-chain provisioning on {}…: steady " +
+                    "(sweep ok={}/err={}, nothing queued)",
+                walletId.take(8), report.syncSuccess, report.syncErrors
+            )
+        }
+        if (identityId != null && report.bound) {
+            logReceivalCoverageDiagnostics(walletId, identityId)
+        }
+        return identityId != null && backfillGate.readBackfillStatus().registrationOutstanding
+    }
+
+    /**
+     * The dark-contact diagnostic, one line per drain: how many established
+     * contacts have NO receival account. Such a contact's receiving addresses
+     * are in no watched script set, and under the SDK's re-enqueue asymmetry
+     * a build that keeps failing is re-enqueued forever without ever
+     * registering — so a delta that persists across drains is the fingerprint
+     * of a PERMANENTLY dark contact, and the sampled ids let a field log name
+     * exactly which one is stuck. Never throws; an unavailable read logs
+     * nothing (the drain line above it already proves the pass ran).
+     */
+    private suspend fun logReceivalCoverageDiagnostics(walletId: String, identityId: ByteArray) {
+        try {
+            val coverage = sdkService.readDashPayReceivalCoverage(walletId, identityId) ?: return
+            val sample = if (coverage.darkContactIdSample.isEmpty()) {
+                ""
+            } else {
+                coverage.darkContactIdSample.joinToString(
+                    prefix = " [", separator = ", ",
+                    postfix = if (coverage.darkContacts > coverage.darkContactIdSample.size) ", …]" else "]"
+                ) { "${it.take(8)}…" }
+            }
+            log.info(
+                "DashPay receival-account coverage on {}…: establishedContacts={}, " +
+                    "receivalAccounts={}, dark={}{} — a dark contact's receiving addresses " +
+                    "are in no watched script set (permanently-dark candidate under the SDK's " +
+                    "re-enqueue asymmetry)",
+                walletId.take(8), coverage.establishedContacts, coverage.receivalAccounts,
+                coverage.darkContacts, sample
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.debug("receival-coverage diagnostics unavailable: {}", t.message)
         }
     }
 
@@ -734,9 +846,15 @@ class SdkWalletBinder internal constructor(
      *
      * Never throws: an unavailable drain (locked device, seed verify) is a
      * normal state and the queue survives for the next pass.
+     *
+     * @return whether the drain's registrations were accepted as NEW by the
+     *   gate ([DashPayBackfillGate.noteAccountBuildsRegistered] — which has
+     *   also durably invalidated any recorded coverage by the time it
+     *   answers), i.e. whether a follow-up sweep is owed in THIS cycle.
+     *   False for an empty/muted/failed drain.
      */
-    private suspend fun drainDeferredAccountBuilds(walletId: String) {
-        try {
+    private suspend fun drainDeferredAccountBuilds(walletId: String, identityId: ByteArray): Boolean {
+        return try {
             val report = sdkService.drainDashPayContactAccountBuilds(walletId)
             log.info(
                 "DashPay account-build drain on {}…: {}",
@@ -744,9 +862,14 @@ class SdkWalletBinder internal constructor(
             )
             // Accounts that only exist NOW were not there when the last sweep
             // reconciled the DIP-15 rewind, so a sweep is owed for them; the
-            // gate turns this into a re-provision on its next consultation
-            // instead of leaving the money invisible until a relaunch.
-            backfillGate.noteAccountBuildsRegistered(report.built)
+            // gate records that debt durably (coverage invalidation) and its
+            // verdict lets THIS cycle pay it with a follow-up sweep instead
+            // of leaving the money invisible until a relaunch.
+            val registeredNew = backfillGate.noteAccountBuildsRegistered(report.built)
+            if (report.bound) {
+                logReceivalCoverageDiagnostics(walletId, identityId)
+            }
+            registeredNew
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn(
@@ -754,6 +877,7 @@ class SdkWalletBinder internal constructor(
                     "unwatched until the next pass",
                 t
             )
+            false
         }
     }
 

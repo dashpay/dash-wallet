@@ -310,6 +310,40 @@ internal suspend fun healIdentityKeys(
 }
 
 /**
+ * Fold the SDK's persisted DashPay rows into a [DashPayReceivalCoverage] —
+ * pure (no Room, no native, no I/O) so the dark-contact set logic is
+ * host-testable on the plain JVM.
+ *
+ * [receivedContactIds] are the contact identity ids of the owner's RECEIVED
+ * contact requests (the receival-account universe; duplicates collapse), and
+ * [receivalAccountFriendIds] the `friendIdentityId`s of the wallet's
+ * registered `dashpayReceivingFunds` accounts. A contact with no matching
+ * account is DARK: its receiving addresses are in no watched script set, so
+ * its payments can never match a filter. Ids compare byte-wise; the sample
+ * is base58 (the same encoding the app's userId and the SDK's identity row
+ * keys use), in the order the contact rows were supplied — deterministic, so
+ * consecutive drains name the same stuck contacts.
+ */
+internal fun computeDashPayReceivalCoverage(
+    receivedContactIds: List<ByteArray>,
+    receivalAccountFriendIds: List<ByteArray>,
+    sampleLimit: Int = DashPayReceivalCoverage.DARK_CONTACT_SAMPLE_LIMIT
+): DashPayReceivalCoverage {
+    val covered = receivalAccountFriendIds.mapTo(HashSet()) { it.toList() }
+    val contacts = LinkedHashSet<List<Byte>>()
+    receivedContactIds.forEach { contacts.add(it.toList()) }
+    val dark = contacts.filter { it !in covered }
+    return DashPayReceivalCoverage(
+        establishedContacts = contacts.size,
+        receivalAccounts = receivalAccountFriendIds.size,
+        darkContacts = dark.size,
+        darkContactIdSample = dark.take(sampleLimit).map {
+            org.bitcoinj.core.Base58.encode(it.toByteArray())
+        }
+    )
+}
+
+/**
  * Default [DashSdkService] implementation — the Phase 3 bootstrap scaffold
  * (`docs/kotlin-sdk-migration-plan.md`).
  *
@@ -994,6 +1028,42 @@ class DashSdkServiceImpl @Inject constructor(
                 walletIdHex.take(8), e
             )
             DashPayBackfillSignals.UNKNOWN
+        }
+    }
+
+    /**
+     * See [DashSdkService.readDashPayReceivalCoverage]. Pure Room reads via
+     * [databaseOrNull] — the same posture as [readDashPayBackfillSignals]:
+     * no [ensureStarted], no native call, no sweep. Established contacts =
+     * distinct RECEIVED (`isOutgoing == false`) contact-request senders;
+     * receival accounts = the wallet's `dashpayReceivingFunds` rows
+     * ([ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS]), matched by their
+     * `friendIdentityId`. Never throws — null means "unavailable".
+     */
+    override suspend fun readDashPayReceivalCoverage(
+        walletIdHex: String,
+        ownerIdentityId: ByteArray
+    ): DashPayReceivalCoverage? {
+        return try {
+            val database = databaseOrNull() ?: return null
+            val walletId = walletIdFromHex(walletIdHex) ?: return null
+            val receivedContactIds = database.dashpayDao()
+                .getContactRequestsByOwner(ownerIdentityId)
+                .filterNot { it.isOutgoing }
+                .map { it.contactIdentityId }
+            val receivalFriendIds = database.accountDao()
+                .observeByWallet(walletId).first()
+                .filter { it.accountType == ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS }
+                .mapNotNull { it.friendIdentityId }
+            computeDashPayReceivalCoverage(receivedContactIds, receivalFriendIds)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.debug(
+                "failed to read DashPay receival coverage for {}…: {}",
+                walletIdHex.take(8), e.message
+            )
+            null
         }
     }
 
