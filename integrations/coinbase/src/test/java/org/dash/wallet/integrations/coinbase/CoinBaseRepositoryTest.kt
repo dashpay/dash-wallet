@@ -107,15 +107,16 @@ class CoinBaseRepositoryTest {
     @Test
     fun `getUserAccount follows the pagination cursor across pages`() {
         mockEmptyAccountCache()
-        coEvery { coinBaseServicesApi.getAccounts(any(), any()) } returnsMany listOf(
-            AccountsResponse(listOf(account("BTC")), hasNext = true, cursor = "cursor-1"),
+        coEvery { coinBaseServicesApi.getAccounts(any(), null) } returns
+            AccountsResponse(listOf(account("BTC")), hasNext = true, cursor = "cursor-1")
+        coEvery { coinBaseServicesApi.getAccounts(any(), "cursor-1") } returns
             AccountsResponse(listOf(account("USDC")), hasNext = false, cursor = null)
-        )
 
         val usdcAccount = runBlocking { coinBaseRepository.getUserAccount("USDC") }
 
         assertThat(usdcAccount.currency, `is`("USDC"))
-        coVerify(exactly = 2) { coinBaseServicesApi.getAccounts(any(), any()) }
+        coVerify(exactly = 1) { coinBaseServicesApi.getAccounts(any(), null) }
+        coVerify(exactly = 1) { coinBaseServicesApi.getAccounts(any(), "cursor-1") }
     }
 
     @Test
