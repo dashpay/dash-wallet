@@ -580,7 +580,10 @@ internal class DashSdkShieldedSource(
             .map { PendingWalletShieldLock(it.outPointHex, it.statusRaw, it.amountDuffs) }
 
     override suspend fun estimateShieldFeeCredits(): Long =
-        ShieldedProver.estimateFee(ShieldedProver.FeeKind.TransferOrShield, SHIELD_NUM_ACTIONS)
+        // v42int5: fee estimation moved from the ShieldedProver companion to the
+        // manager surface (PlatformWalletManager.estimateShieldedFee); FeeKind
+        // itself still lives on ShieldedProver.
+        manager().estimateShieldedFee(ShieldedProver.FeeKind.TransferOrShield, SHIELD_NUM_ACTIONS)
 
     private companion object {
         /** `AssetLockFundingType::AssetLockShieldedAddressTopUp` discriminant. */
