@@ -75,9 +75,20 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
 
         if (result.resultCode == Activity.RESULT_OK && intent != null) {
             val input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
-            input?.let { viewModel.setInput(input) }
+            input?.let {
+                if (!handleSpecialInput(input)) {
+                    viewModel.setInput(input)
+                }
+            }
         }
     }
+
+    /**
+     * Gives subclasses a chance to consume scanned or entered input that is not an address
+     * (e.g. a DashConnect `dash-key:` QR) before it reaches the payment-intent parser.
+     * Return true if the input was handled and normal processing should stop.
+     */
+    protected open fun handleSpecialInput(input: String): Boolean = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -185,6 +196,9 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
     private fun doContinueAction() {
         lifecycleScope.launch {
             val input = binding.addressInput.text.toString().trim()
+            if (handleSpecialInput(input)) {
+                return@launch
+            }
             try {
                 viewModel.parsePaymentIntent(input)
                 viewModel.setAddressResult(input)

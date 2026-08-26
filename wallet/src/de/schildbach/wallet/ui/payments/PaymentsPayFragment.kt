@@ -36,6 +36,7 @@ import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.FrequentContactsAdapter
 import de.schildbach.wallet.ui.dashpay.OnContactItemClickListener
+import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
 import de.schildbach.wallet.Constants
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
@@ -52,6 +53,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -157,6 +159,13 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     }
 
     private fun handleString(input: String) {
+        if (Constants.SUPPORTS_CONNECT && (DashConnectUri.isKeyUri(input) || DashConnectUri.isStUri(input))) {
+            // DashConnect QR (dash-key:/dash-st:) — handled by the Connections screen. Where the
+            // feature is off (prod) these URIs fall through to the normal unrecognised-QR error
+            // rather than opening a screen that only reports the feature is unavailable.
+            safeNavigate(PaymentsFragmentDirections.paymentsToConnections(input))
+            return
+        }
         lifecycleScope.launch {
             try {
                 val paymentIntent = DashPaymentIntentParser(Constants.NETWORK_PARAMETERS).parse(input, true)

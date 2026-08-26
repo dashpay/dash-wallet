@@ -368,6 +368,7 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
         private val hints: MutableMap<DecodeHintType, Any?> = EnumMap(
             DecodeHintType::class.java
         )
+        private var frameCount = 0
 
         override fun run() {
             cameraManager.requestPreviewFrame() { data, _ ->
@@ -376,9 +377,19 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
         }
 
         private fun decode(data: ByteArray) {
-            val source = cameraManager.buildLuminanceSource(data)
+            frameCount++
+            // Alternate between the camera image and a highlight-stretched variant that
+            // recovers codes the camera overexposed (bright QR card on a dark screen).
+            val source = if (frameCount % 2 == 0) {
+                cameraManager.buildStretchedLuminanceSource(data)
+            } else {
+                cameraManager.buildLuminanceSource(data)
+            }
             val bitmap = BinaryBitmap(HybridBinarizer(source))
             try {
+                // Spend more time searching the frame — needed for dense codes like
+                // DashConnect login/registration QRs (small modules at preview resolution).
+                hints[DecodeHintType.TRY_HARDER] = true
                 hints[DecodeHintType.NEED_RESULT_POINT_CALLBACK] = ResultPointCallback { dot ->
                     runOnUiThread {
                         scannerView.addDot(dot)
@@ -386,12 +397,14 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
                 }
                 try {
                     val scanResult = reader.decode(bitmap, hints)
+                    log.info("decoded QR after {} frames", frameCount)
                     runOnUiThread { handleResult(scanResult) }
                 } catch (x: ReaderException) {
                     // Invert and check for a code
                     val invertedSource = source.invert()
                     val invertedBitmap = BinaryBitmap(HybridBinarizer(invertedSource))
                     val invertedScanResult = reader.decode(invertedBitmap, hints)
+                    log.info("decoded inverted QR after {} frames", frameCount)
                     runOnUiThread { handleResult(invertedScanResult) }
                 }
             } catch (x: ReaderException) {

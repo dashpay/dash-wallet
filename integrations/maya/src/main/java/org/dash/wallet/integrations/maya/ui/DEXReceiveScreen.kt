@@ -248,8 +248,11 @@ private fun DepositInfoRow(text: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(end = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(LocalDashColors.current.warningYellow)
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
     ) {
         Box(
             modifier = Modifier

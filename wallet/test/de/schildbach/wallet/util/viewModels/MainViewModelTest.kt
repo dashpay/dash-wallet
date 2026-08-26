@@ -41,6 +41,7 @@ import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -126,13 +127,18 @@ class MainViewModelTest {
         every { applicationContext } returns mockk()
         every { mainLooper } returns Looper.getMainLooper()
     }
-    private val platformService = mockk<PlatformService>()
+    private val platformService = mockk<PlatformService> {
+        coEvery { isPlatformAvailable() } returns false
+    }
     private val platformSyncService = mockk<PlatformSyncService>()
     private val mockIdentityData = BlockchainIdentityBaseData(IdentityCreationState.NONE, null, null, null, null, false,null, false)
     private val blockchainIdentityConfigMock = mockk<BlockchainIdentityConfig> {
         coEvery { loadBase() } returns mockIdentityData
         every { observe() } returns flow { }
         every { observeBase() } returns MutableStateFlow(mockIdentityData)
+        every { observe() } returns MutableStateFlow(
+            BlockchainIdentityData(IdentityCreationState.NONE, null, null, null, null, false)
+        )
         every { observe(BlockchainIdentityConfig.IDENTITY_ID) } returns MutableStateFlow(identityId)
     }
     private val dashPayProfileDaoMock = mockk<DashPayProfileDao> {
