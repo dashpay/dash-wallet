@@ -67,7 +67,7 @@ data class SegmentedPickerStyle(
     val backgroundColor: Color? = null,
     val thumbColor: Color? = null,
     val cornerRadius: Float = 12f,
-    val textStyle: TextStyle = MyTheme.CaptionMedium,
+    val textStyle: TextStyle = MyTheme.Typography.FootnoteMedium,
     val shadowElevation: Int = 2,
     // Extra inset drawn around each option's text/icon, on top of the option's own weighted
     // slot. Zero by default so existing fixed-height horizontal/vertical toggles are unaffected;

@@ -17,13 +17,18 @@
 package org.dash.wallet.integrations.coinbase
 
 import io.mockk.MockKAnnotations
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
+import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
+import org.dash.wallet.integrations.coinbase.model.AccountsResponse
+import org.dash.wallet.integrations.coinbase.model.Balance
+import org.dash.wallet.integrations.coinbase.model.CoinbaseAccount
 import org.dash.wallet.integrations.coinbase.model.SendTransactionToWalletParams
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepository
@@ -32,8 +37,10 @@ import org.dash.wallet.integrations.coinbase.service.CoinBaseServicesApi
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.`is`
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
+import java.util.UUID
 
 class CoinBaseRepositoryTest {
     @MockK lateinit var coinBaseServicesApi: CoinBaseServicesApi
@@ -79,5 +86,63 @@ class CoinBaseRepositoryTest {
 
         runBlocking { coinBaseRepository.sendFundsToWallet(params,"2345") }
         coVerify { coinBaseServicesApi.sendCoinsToWallet(api2FATokenVersion = "2345",accountId = accountId, sendTransactionToWalletParams = params) }
+    }
+
+    private fun account(currency: String, name: String = "$currency Wallet") = CoinbaseAccount(
+        uuid = UUID.randomUUID(),
+        name = name,
+        currency = currency,
+        availableBalance = Balance("0", currency),
+        default = false,
+        active = true,
+        type = "ACCOUNT_TYPE_CRYPTO",
+        ready = true
+    )
+
+    private fun mockEmptyAccountCache() {
+        coEvery { config.getAccounts() } returns emptyMap()
+        coEvery { config.setAccounts(any()) } just Runs
+    }
+
+    @Test
+    fun `getUserAccount follows the pagination cursor across pages`() {
+        mockEmptyAccountCache()
+        coEvery { coinBaseServicesApi.getAccounts(any(), null) } returns
+            AccountsResponse(listOf(account("BTC")), hasNext = true, cursor = "cursor-1")
+        coEvery { coinBaseServicesApi.getAccounts(any(), "cursor-1") } returns
+            AccountsResponse(listOf(account("USDC")), hasNext = false, cursor = null)
+
+        val usdcAccount = runBlocking { coinBaseRepository.getUserAccount("USDC") }
+
+        assertThat(usdcAccount.currency, `is`("USDC"))
+        coVerify(exactly = 1) { coinBaseServicesApi.getAccounts(any(), null) }
+        coVerify(exactly = 1) { coinBaseServicesApi.getAccounts(any(), "cursor-1") }
+    }
+
+    @Test
+    fun `getUserAccount throws when has_next comes without a cursor`() {
+        mockEmptyAccountCache()
+        coEvery { coinBaseServicesApi.getAccounts(any(), any()) } returns
+            AccountsResponse(listOf(account("USDC")), hasNext = true, cursor = null)
+
+        // Partial data must never be returned, even if the target currency is already in it:
+        // a truncated list is indistinguishable from "no account" for every other currency.
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { coinBaseRepository.getUserAccount("USDC") }
+        }
+    }
+
+    @Test
+    fun `getUserAccount throws when the page limit is exhausted with has_next still true`() {
+        mockEmptyAccountCache()
+        coEvery { coinBaseServicesApi.getAccounts(any(), any()) } answers {
+            AccountsResponse(listOf(account("BTC")), hasNext = true, cursor = "cursor-loop")
+        }
+
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { coinBaseRepository.getUserAccount("USDC") }
+        }
+        // Bounded: the runaway guard stops the loop at 40 pages.
+        coVerify(exactly = 40) { coinBaseServicesApi.getAccounts(any(), any()) }
     }
 }

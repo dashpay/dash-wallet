@@ -27,5 +27,18 @@ data class AddressSource(
     @DrawableRes
     val icon: Int,
     val address: String?,
-    val currency: String?
+    val currency: String?,
+    /**
+     * True when this exchange is connected but cannot hold the selected asset on the selected
+     * network (its deposit address is for a different chain). The row is shown disabled with an
+     * explanation instead of being silently dropped. [address] is left null in that case so the
+     * wrong-network address can never be pasted.
+     */
+    val unsupported: Boolean = false,
+    /**
+     * True when the user is signed in to this exchange, regardless of whether an address was
+     * obtained. Distinct from address-presence: a connected exchange whose deposit-address lookup
+     * failed has [isConnected] true and [address] null, and must not be offered a "Log in" action.
+     */
+    val isConnected: Boolean = false
 )

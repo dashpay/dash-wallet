@@ -263,7 +263,7 @@ fun SectionTitle(titleId: Int) {
         Text(
             text = stringResource(titleId),
             color = colors.textSecondary,
-            style = MyTheme.CaptionMedium
+            style = MyTheme.Typography.FootnoteMedium
         )
     }
 }
@@ -279,7 +279,7 @@ fun SectionTitle(title: String) {
         Text(
             text = title,
             color = colors.textSecondary,
-            style = MyTheme.CaptionMedium
+            style = MyTheme.Typography.FootnoteMedium
         )
     }
 }

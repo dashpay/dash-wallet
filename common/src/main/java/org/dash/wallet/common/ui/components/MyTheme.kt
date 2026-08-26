@@ -46,7 +46,10 @@ object MyTheme {
         textAlign = TextAlign.Center,
     )
 
-    @Deprecated(message = "obsolete font")
+    @Deprecated(
+        message = "obsolete font",
+        replaceWith = ReplaceWith("MyTheme.Typography.Footnote")
+    )
     val Caption = TextStyle(
         fontSize = 13.sp,
         lineHeight = 18.sp,
@@ -54,7 +57,10 @@ object MyTheme {
         fontWeight = FontWeight(400)
     )
 
-    @Deprecated(message = "obsolete font")
+    @Deprecated(
+        message = "obsolete font",
+        replaceWith = ReplaceWith("MyTheme.Typography.FootnoteMedium")
+    )
     val CaptionMedium = TextStyle(
         fontSize = 13.sp,
         lineHeight = 18.sp,
@@ -384,6 +390,37 @@ object MyTheme {
             fontWeight = FontWeight(400)
         )
 
+        // Subhead styles - between Title Small and Body. From the "New/Text" styles that design
+        // system components apply (e.g. SystemMessage's title, node 8378:445); not yet on the
+        // documented typography page (node 5856:804).
+        val SubheadBold = TextStyle(
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val SubheadSemibold = TextStyle(
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val SubheadMedium = TextStyle(
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val Subhead = TextStyle(
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
         // Body styles - Main body text
         val BodyLargeBold = TextStyle(
             fontSize = 16.sp,
@@ -465,6 +502,38 @@ object MyTheme {
         val BodySmall = TextStyle(
             fontSize = 12.sp,
             lineHeight = 16.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        // Footnote styles - secondary/explanatory text. From the "New/Text" styles that design
+        // system components apply (e.g. SystemMessage's description, node 8378:445); not yet on
+        // the documented typography page (node 5856:804). Same metrics as the deprecated
+        // [MyTheme.Caption] - new code should use these instead.
+        val FootnoteBold = TextStyle(
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val FootnoteSemibold = TextStyle(
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val FootnoteMedium = TextStyle(
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val Footnote = TextStyle(
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
             fontFamily = interRegular,
             fontWeight = FontWeight(400)
         )
@@ -615,6 +684,12 @@ object MyTheme {
         val inputErrorBackground: Color,
         val disabledButtonBg: Color,
         val buttonRipple: Color,
+        /**
+         * Background for warning / "system message" cards. Deliberately translucent (10% yellow)
+         * so it tints the surface behind it instead of forcing a light background: over a white
+         * card it reads as #FFF9ED, over a dark card as a dark amber, keeping [textPrimary]
+         * readable in both themes.
+         */
         val warningYellow: Color,
         // Transaction row backgrounds
         val txSentBackground: Color,
@@ -678,6 +753,10 @@ object MyTheme {
 
             // Red
             val Red = Color(0xFFEA3943)
+
+            // Yellow
+            val Yellow = Color(0xFFFFC043)
+            val YellowAlpha10 = Color(0x1AFFC043)
 
             // White
             val White = Color(0xFFFFFFFF)
@@ -744,7 +823,7 @@ object MyTheme {
         inputErrorBackground = Color(0x1AE85C4A),
         disabledButtonBg = Color(0xFFEEEEEE),
         buttonRipple = Color(0x1F000000),
-        warningYellow = Color(0xFFFFF9ED),
+        warningYellow = ColorScheme.YellowAlpha10,
         // Transaction row backgrounds
         txSentBackground = Color(0xFFE7F4FB),
         txReceivedBackground = Color(0xFFEDF8F2),
@@ -808,7 +887,7 @@ object MyTheme {
         inputErrorBackground = Color(0x1AE85C4A),
         disabledButtonBg = Color(0xFF3C3C3C),
         buttonRipple = Color(0x30FFFFFF),
-        warningYellow = Color(0xFFFFF9ED),
+        warningYellow = ColorScheme.YellowAlpha10,
         // Transaction row backgrounds
         txSentBackground = Color(0xFF20262E),
         txReceivedBackground = Color(0xFF232826),

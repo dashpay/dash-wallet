@@ -272,7 +272,7 @@ private fun MerchantHeader(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = getMerchantTypeText(merchant.type, isOnline),
-                style = MyTheme.Caption,
+                style = MyTheme.Typography.Footnote,
                 color = colors.textSecondary
             )
         }
@@ -291,7 +291,7 @@ private fun MultipleProvidersSection(
     Column {
         Text(
             text = stringResource(R.string.select_gift_card_provider),
-            style = MyTheme.CaptionMedium,
+            style = MyTheme.Typography.FootnoteMedium,
             color = colors.textSecondary,
             modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 2.dp)
         )

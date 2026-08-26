@@ -778,7 +778,7 @@ private fun ConfirmRow(
     ) {
         Text(
             text = label,
-            style = if (isCaption) MyTheme.CaptionMedium else MyTheme.Typography.BodyMediumMedium,
+            style = if (isCaption) MyTheme.Typography.FootnoteMedium else MyTheme.Typography.BodyMediumMedium,
             color = colors.textTertiary,
             maxLines = 1,
             modifier = Modifier.weight(1f)
@@ -797,7 +797,7 @@ private fun ConfirmValueText(
     val colors = LocalDashColors.current
     Text(
         text = text,
-        style = if (isCaption) MyTheme.Caption else MyTheme.Typography.BodyMedium,
+        style = if (isCaption) MyTheme.Typography.Footnote else MyTheme.Typography.BodyMedium,
         color = colors.textPrimary,
         textAlign = textAlign
     )

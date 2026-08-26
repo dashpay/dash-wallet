@@ -669,12 +669,12 @@ private fun DayGroupCard(
         ) {
             Text(
                 text = dayLabel(group.date),
-                style = MyTheme.CaptionMedium,
+                style = MyTheme.Typography.FootnoteMedium,
                 color = colors.textPrimary
             )
             Text(
                 text = DateTimeFormatter.ofPattern("EEEE", Locale.getDefault()).format(group.date),
-                style = MyTheme.Caption,
+                style = MyTheme.Typography.Footnote,
                 color = colors.textSecondary
             )
         }
@@ -713,7 +713,7 @@ private fun FilterButton(
             )
             Text(
                 text = stringResource(R.string.activity_buy_and_sell_dash_filter),
-                style = MyTheme.CaptionMedium,
+                style = MyTheme.Typography.FootnoteMedium,
                 color = colors.textPrimary
             )
         }

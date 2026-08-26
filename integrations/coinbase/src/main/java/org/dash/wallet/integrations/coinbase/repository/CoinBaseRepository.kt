@@ -81,6 +81,13 @@ class CoinBaseRepository @Inject constructor(
     private val coinbaseAddressMapper: CoinbaseAddressMapper,
     private val exchangeRates: ExchangeRatesProvider
 ) : CoinBaseRepositoryInt {
+    companion object {
+        // Runaway guard for the accounts pagination loop: 40 pages x 250 = 10,000 accounts,
+        // far beyond any real Coinbase profile. Exceeding it throws rather than returning
+        // partial data (see fetchAllAccounts).
+        private const val MAX_ACCOUNT_PAGES = 40
+    }
+
     private val configScope = CoroutineScope(Dispatchers.IO)
     private var userAccountInfo: List<CoinbaseAccount> = listOf()
 
@@ -107,9 +114,42 @@ class CoinBaseRepository @Inject constructor(
         config.setAccounts(accountMap)
     }
 
+    /**
+     * Fetches every brokerage account, following the pagination cursor. Coinbase creates one
+     * account per asset the user has ever held, so a long-time user can exceed the 250-per-page
+     * maximum -- a single-page fetch would then miss any currency that sorts onto a later page
+     * and misreport it as "no account".
+     *
+     * Never returns partial data: a truncated list would be indistinguishable from "the account
+     * doesn't exist" to the callers, which is exactly the misreport this method exists to
+     * prevent. If the API claims another page without providing a cursor, or still claims one
+     * after [MAX_ACCOUNT_PAGES] pages, this throws instead of returning what it has.
+     */
+    private suspend fun fetchAllAccounts(): List<CoinbaseAccount> {
+        val accounts = mutableListOf<CoinbaseAccount>()
+        var cursor: String? = null
+
+        repeat(MAX_ACCOUNT_PAGES) {
+            val response = servicesApi.getAccounts(cursor = cursor)
+            accounts += response.accounts
+
+            if (!response.hasNext) {
+                return accounts
+            }
+
+            cursor = response.cursor?.takeIf { it.isNotEmpty() }
+                ?: throw IllegalStateException(
+                    "Coinbase accounts pagination incomplete: has_next with no cursor"
+                )
+        }
+
+        throw IllegalStateException(
+            "Coinbase accounts pagination incomplete: still has_next after $MAX_ACCOUNT_PAGES pages"
+        )
+    }
+
     override suspend fun getUserAccount(): CoinbaseAccount {
-        val accountsResponse = servicesApi.getAccounts()
-        userAccountInfo = accountsResponse.accounts
+        userAccountInfo = fetchAllAccounts()
         val userAccountData = userAccountInfo.firstOrNull {
             it.currency == Constants.DASH_CURRENCY
         } ?: throw IllegalStateException("No DASH account found")
@@ -126,8 +166,7 @@ class CoinBaseRepository @Inject constructor(
         val account = config.getAccounts()[cryptoCurrency]
 
         if (account == null || userAccountInfo.isEmpty()) {
-            val accountsResponse = servicesApi.getAccounts()
-            userAccountInfo = accountsResponse.accounts
+            userAccountInfo = fetchAllAccounts()
             saveUserAccountInfo()
         }
 

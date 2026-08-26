@@ -139,7 +139,7 @@ fun SearchField(
         if (onCancel != null) {
             Text(
                 text = cancelText,
-                style = MyTheme.CaptionMedium,
+                style = MyTheme.Typography.FootnoteMedium,
                 color = LocalDashColors.current.textPrimary,
                 modifier = Modifier
                     .clip(RoundedCornerShape(11.dp))

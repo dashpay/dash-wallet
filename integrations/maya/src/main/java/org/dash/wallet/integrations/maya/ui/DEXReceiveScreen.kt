@@ -53,12 +53,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.dash.wallet.common.ui.components.DarkPreviewTheme
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.ui.components.SystemMessage
+import org.dash.wallet.common.ui.components.SystemMessageStyle
 import org.dash.wallet.common.ui.components.Toast
 import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.components.TopIntro
@@ -188,13 +191,16 @@ private fun DEXReceiveScreenContent(
                             }
 
                             // Expiry warning, inside the card below the address (Figma 38669:7486).
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp)
-                            ) {
-                                ExpiryWarning(coinCode = coinCode)
-                            }
+                            SystemMessage(
+                                title = stringResource(R.string.dex_receive_expiry_title),
+                                description = stringResource(
+                                    R.string.dex_receive_expiry_message,
+                                    coinCode
+                                ),
+                                style = SystemMessageStyle.Yellow,
+                                iconRes = CommonR.drawable.ic_warning_triangle,
+                                modifier = Modifier.padding(20.dp)
+                            )
                         }
                     }
 
@@ -232,48 +238,6 @@ private fun DEXReceiveScreenContent(
     }
 }
 
-/** Yellow "system message" card warning that the deposit address expires (Figma 38669:7448). */
-@Composable
-private fun ExpiryWarning(coinCode: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(LocalDashColors.current.warningYellow)
-            .padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier.size(30.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(CommonR.drawable.ic_warning_triangle),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(vertical = 5.dp),
-            verticalArrangement = Arrangement.spacedBy(1.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.dex_receive_expiry_title),
-                style = MyTheme.Typography.TitleMediumMedium,
-                color = LocalDashColors.current.textPrimary
-            )
-            Text(
-                text = stringResource(R.string.dex_receive_expiry_message, coinCode),
-                style = MyTheme.Body2Regular,
-                color = LocalDashColors.current.textSecondary
-            )
-        }
-    }
-}
-
 /**
  * Icon + text row explaining what happens after the deposit is confirmed (Figma 38669:27832),
  * sitting below the card. The extra end padding (on top of the screen's 20dp side inset) matches
@@ -284,8 +248,11 @@ private fun DepositInfoRow(text: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(end = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(LocalDashColors.current.warningYellow)
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
     ) {
         Box(
             modifier = Modifier
@@ -361,16 +328,16 @@ private fun LabeledCopyRow(label: String, value: String, onCopyClick: () -> Unit
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            // Footnote (13sp, text/secondary): closest existing token is MyTheme.Caption (13sp).
+            // Footnote (13sp, text/secondary)
             Text(
                 text = label,
-                style = MyTheme.Caption,
+                style = MyTheme.Typography.Footnote,
                 color = LocalDashColors.current.textSecondary
             )
-            // Subhead (15sp, text/primary): no 15sp token exists; closest is BodyMedium (14sp).
+            // Subhead (15sp, text/primary)
             Text(
                 text = value,
-                style = MyTheme.Typography.BodyMedium,
+                style = MyTheme.Typography.Subhead,
                 color = LocalDashColors.current.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -428,6 +395,30 @@ private fun DEXReceiveScreenLoadedPreview() {
         onBackHomeClick = {},
         onCopyClick = {}
     )
+}
+
+/**
+ * Loaded state in dark mode, to check the expiry [SystemMessage] card: its background is the
+ * translucent YellowAlpha10, which has to tint the dark card enough for the title (textPrimary)
+ * and description (textSecondary) to stay readable.
+ */
+@Preview(showBackground = true, widthDp = 393, heightDp = 760)
+@Composable
+private fun DEXReceiveScreenLoadedDarkPreview() {
+    DarkPreviewTheme {
+        DEXReceiveScreenContent(
+            coinCode = "BTC",
+            address = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+            uri = "bitcoin:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+            memo = "",
+            isLoading = false,
+            errorMessageRes = null,
+            isOnline = true,
+            onBackClick = {},
+            onBackHomeClick = {},
+            onCopyClick = {}
+        )
+    }
 }
 
 // Mirrors a real Galaxy S22 (SM-S901U): 1080x2340px @ 480dpi (xxhdpi, scale 3.0) measures to

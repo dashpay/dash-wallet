@@ -37,6 +37,10 @@
     <string name="maya_paste_address_from">Paste address from</string>
     <!-- Title of the clipboard row in the address-sources card -->
     <string name="maya_clipboard">Clipboard</string>
+    <!-- Warning shown under a connected exchange that can't hold the selected coin on the selected
+         network (Figma 39439:35111). %1$s = exchange name, %2$s = coin code, %3$s = network name,
+         e.g. "Coinbase doesn't support USDC on the TRON network" -->
+    <string name="maya_exchange_unsupported_network">%1$s doesn\'t support %2$s on the %3$s network</string>
     <string name="maya_crypto_convert_title">Convert Dash</string>
     <string name="maya_crypto_convert_order_preview_title">Order Preview</string>
 

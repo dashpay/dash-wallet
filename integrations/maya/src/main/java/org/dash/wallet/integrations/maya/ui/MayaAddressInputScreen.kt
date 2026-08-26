@@ -34,14 +34,17 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.dash.wallet.common.ui.components.ActionItem
+import org.dash.wallet.common.ui.components.DarkPreviewTheme
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
-import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackTitle
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.ui.components.SystemMessage
+import org.dash.wallet.common.ui.components.SystemMessageStyle
 import org.dash.wallet.common.ui.components.TextField
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.common.R as CommonR
@@ -52,8 +55,19 @@ data class AddressSourceUIState(
     /** Resolved display name, e.g. "Uphold". */
     val name: String,
     @DrawableRes val icon: Int,
-    /** Deposit address when connected; null/empty shows the Connect action instead. */
-    val address: String?
+    /** Deposit address, when one was obtained. */
+    val address: String?,
+    /**
+     * True when the user is signed in to this exchange. A connected row never shows "Log in":
+     * with an address it pastes on tap; without one (the lookup failed) tapping retries it.
+     */
+    val isConnected: Boolean = false,
+    /**
+     * Set when this exchange is connected but can't hold the asset on the selected network
+     * (Figma 39439:35111): the row is shown disabled with this message in a yellow system-message
+     * card below it, and neither the address nor the "Log in" action is offered.
+     */
+    val unsupportedMessage: String? = null
 )
 
 /**
@@ -141,14 +155,14 @@ fun MayaAddressInputScreen(
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
 
-            // "Paste address from" card: connected exchanges (or their Connect action) and the
+            // "Paste address from" card: connected exchanges (or their "Log in" action) and the
             // clipboard, when it holds a valid address for this currency.
             if (state.addressSources.isNotEmpty() || state.clipboardAddress != null) {
                 Column(modifier = Modifier.padding(top = 20.dp)) {
                     Menu {
                         Text(
                             text = stringResource(R.string.maya_paste_address_from),
-                            style = MyTheme.Caption,
+                            style = MyTheme.Typography.Footnote,
                             color = LocalDashColors.current.textSecondary,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -156,31 +170,53 @@ fun MayaAddressInputScreen(
                         )
 
                         state.addressSources.forEach { source ->
-                            val connected = !source.address.isNullOrEmpty()
-                            MenuItem(
+                            val connected = source.isConnected
+                            val unsupported = source.unsupportedMessage != null
+                            // An unsupported source offers nothing to tap: no address to paste and
+                            // no point connecting again, so the whole row is disabled (dimmed,
+                            // icon and label alike) and the trailing button is hidden.
+                            ActionItem(
                                 title = source.name,
+                                enabled = !unsupported,
                                 subtitle = source.address?.takeIf { it.isNotEmpty() },
                                 subtitleMaxLines = 1,
                                 subtitleMiddleEllipsis = true,
                                 icon = source.icon,
-                                trailingButtonText = if (connected) {
+                                trailingButtonText = if (connected || unsupported) {
                                     null
                                 } else {
-                                    stringResource(CommonR.string.input_connect)
+                                    stringResource(CommonR.string.input_log_in)
                                 },
-                                onTrailingButtonClick = if (connected) null else ({ onSourceClick(source) }),
-                                action = { onSourceClick(source) }
+                                onTrailingButtonClick = if (connected || unsupported) {
+                                    null
+                                } else {
+                                    ({ onSourceClick(source) })
+                                },
+                                onClick = { onSourceClick(source) }
                             )
+
+                            // Yellow system message explaining why the exchange above is unusable,
+                            // e.g. "Coinbase doesn't support USDC on the TRON network"
+                            // (Figma SystemMessage, node 39439:35535). Inset from the Menu card
+                            // content edge like in Figma.
+                            source.unsupportedMessage?.let { message ->
+                                SystemMessage(
+                                    description = message,
+                                    style = SystemMessageStyle.Yellow,
+                                    iconRes = CommonR.drawable.ic_warning_triangle,
+                                    modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
+                                )
+                            }
                         }
 
                         state.clipboardAddress?.let { clipboardAddress ->
-                            MenuItem(
+                            ActionItem(
                                 title = stringResource(R.string.maya_clipboard),
                                 subtitle = clipboardAddress,
                                 subtitleMaxLines = 1,
                                 subtitleMiddleEllipsis = true,
                                 icon = R.drawable.ic_maya_clipboard,
-                                action = onClipboardClick
+                                onClick = onClipboardClick
                             )
                         }
                     }
@@ -218,7 +254,8 @@ private fun MayaAddressInputScreenPreview() {
                     id = "uphold",
                     name = "Uphold",
                     icon = CommonR.drawable.ic_dash_blue_filled,
-                    address = "XsQwPTRMtjzJmccAzYcCzNVbG1UsBGffNc"
+                    address = "XsQwPTRMtjzJmccAzYcCzNVbG1UsBGffNc",
+                    isConnected = true
                 ),
                 AddressSourceUIState(
                     id = "coinbase",
@@ -258,4 +295,67 @@ private fun MayaAddressInputScreenErrorPreview() {
         onContinueClick = {},
         autoFocus = false
     )
+}
+
+/**
+ * State behind the two "unsupported network" previews: Coinbase is connected but only holds USDC on
+ * Ethereum, so its row is dimmed and unusable and a yellow system message says why, instead of the
+ * row silently vanishing (Figma 39439:35111).
+ */
+private fun unsupportedNetworkPreviewState() = MayaAddressInputUIState(
+    title = "Enter Address",
+    fieldLabel = "USDC address (TRON)",
+    addressSources = listOf(
+        AddressSourceUIState(
+            id = "uphold",
+            name = "Uphold",
+            icon = CommonR.drawable.ic_dash_blue_filled,
+            address = null
+        ),
+        AddressSourceUIState(
+            id = "coinbase",
+            name = "Coinbase",
+            icon = CommonR.drawable.ic_dash_blue_filled,
+            address = null,
+            isConnected = true,
+            unsupportedMessage = "Coinbase doesn't support USDC on the TRON network"
+        )
+    )
+)
+
+@Preview(showBackground = true, widthDp = 393, heightDp = 760)
+@Composable
+private fun MayaAddressInputScreenUnsupportedNetworkPreview() {
+    MayaAddressInputScreen(
+        state = unsupportedNetworkPreviewState(),
+        onBackClick = {},
+        onAddressChanged = {},
+        onScanClick = {},
+        onSourceClick = {},
+        onClipboardClick = {},
+        onContinueClick = {},
+        autoFocus = false
+    )
+}
+
+/**
+ * Same state in dark mode. Worth its own preview because the warning card's background is the
+ * translucent YellowAlpha10: it has to tint the dark card enough for textSecondary
+ * (WhiteAlpha80) to stay readable.
+ */
+@Preview(showBackground = true, widthDp = 393, heightDp = 760)
+@Composable
+private fun MayaAddressInputScreenUnsupportedNetworkDarkPreview() {
+    DarkPreviewTheme {
+        MayaAddressInputScreen(
+            state = unsupportedNetworkPreviewState(),
+            onBackClick = {},
+            onAddressChanged = {},
+            onScanClick = {},
+            onSourceClick = {},
+            onClipboardClick = {},
+            onContinueClick = {},
+            autoFocus = false
+        )
+    }
 }

@@ -25,7 +25,8 @@ import retrofit2.http.*
 interface CoinBaseServicesApi {
     @GET("api/v3/brokerage/accounts")
     suspend fun getAccounts(
-        @Query("limit") limit: Int = 250
+        @Query("limit") limit: Int = 250,
+        @Query("cursor") cursor: String? = null
     ): AccountsResponse
 
     @GET("api/v3/brokerage/products")

@@ -5,9 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.integrations.ExchangeIntegration
@@ -18,6 +19,32 @@ import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import javax.inject.Inject
+
+/**
+ * Screen state owned by [MayaAddressInputViewModel], kept in a single immutable snapshot per the
+ * ViewModel state contract. The fragment maps it into the Compose [MayaAddressInputUIState] it
+ * owns (which also carries view-scoped state such as the entered address).
+ */
+data class MayaAddressInputState(
+    /** Selected asset, e.g. "TRON.USDT"; empty until the nav argument is applied. */
+    val asset: String = "",
+    /** Currency code driving the deposit-address lookup, e.g. "USDT". */
+    val inputCurrency: String? = null,
+    /** Connected/connectable exchange address sources for [inputCurrency]. */
+    val addressSources: List<AddressSource> = emptyList(),
+    /** Coin code of [asset], e.g. "USDT" for "TRON.USDT". */
+    val assetCoinCode: String = "",
+    /**
+     * Host-network name of [asset], e.g. "TRON" for "TRON.USDT". Native L1 coins have no network
+     * qualifier of their own, so their coin name doubles as the network name ("Bitcoin" for
+     * "BTC.BTC").
+     */
+    val assetNetworkName: String = "",
+    /** Inline validation / quote error; held here so it survives configuration changes. */
+    val inlineErrorMessage: String? = null,
+    /** Address [inlineErrorMessage] was shown for; lets the fragment tell an edit from a replay. */
+    val lastSeenAddress: String? = null
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -35,7 +62,19 @@ class MayaAddressInputViewModel @Inject constructor(
         private const val MAX_QUOTE_DOUBLINGS = 2
     }
 
-    lateinit var asset: String
+    private val _uiState = MutableStateFlow(MayaAddressInputState())
+    val uiState: StateFlow<MayaAddressInputState> = _uiState.asStateFlow()
+
+    /** Selected asset (e.g. "TRON.USDT"). Setting it recomputes the derived display values. */
+    var asset: String
+        get() = _uiState.value.asset
+        set(value) = _uiState.update {
+            it.copy(
+                asset = value,
+                assetCoinCode = deriveAssetCoinCode(value),
+                assetNetworkName = deriveAssetNetworkName(value)
+            )
+        }
 
     private val dashAddressParser = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
 
@@ -51,49 +90,67 @@ class MayaAddressInputViewModel @Inject constructor(
 
     // Source of truth for the inline validation error and the address it was shown for:
     // the Compose UIState lives in the fragment and is recreated with the view, so they
-    // are kept here to survive configuration changes. lastSeenAddress lets the fragment
-    // distinguish a real address edit (which invalidates the error) from the replay of
-    // the persisted address right after recreation.
-    var inlineErrorMessage: String? = null
-    var lastSeenAddress: String? = null
+    // are kept in [uiState] to survive configuration changes. lastSeenAddress lets the
+    // fragment distinguish a real address edit (which invalidates the error) from the
+    // replay of the persisted address right after recreation.
+    var inlineErrorMessage: String?
+        get() = _uiState.value.inlineErrorMessage
+        set(value) = _uiState.update { it.copy(inlineErrorMessage = value) }
 
-    private val inputCurrency = MutableStateFlow<String?>(null)
-    private val _addressSources = MutableStateFlow(listOf<AddressSource>())
-    val addressSources: Flow<List<AddressSource>>
-        get() = _addressSources.asStateFlow()
+    var lastSeenAddress: String?
+        get() = _uiState.value.lastSeenAddress
+        set(value) = _uiState.update { it.copy(lastSeenAddress = value) }
 
     private fun refreshAddressSources(integrations: List<ExchangeIntegration>) {
         // The selected [asset] (e.g. "TRON.USDT") pins the destination network. An
         // exchange such as Coinbase may only support some networks for a coin (e.g.
         // ERC-20 USDT, not TRON.USDT) and hand back a deposit address on the wrong
-        // network. Sending the swap output there would lose funds, so drop any
-        // connected source whose address doesn't validate against this asset's own
-        // parser. Sources without an address yet (not connected) are kept so the user
-        // can still connect.
-        val addressParser = if (::asset.isInitialized) MayaCurrencyList[asset]?.addressParser else null
+        // network. Sending the swap output there would lose funds, so a connected source
+        // whose address doesn't validate against this asset's own parser is flagged
+        // [AddressSource.unsupported] — the row stays visible but disabled, with an
+        // explanation, rather than disappearing without a reason (Figma 39439:35111).
+        // Its address is dropped so it can never be pasted. Sources without an address
+        // yet (not connected) are left alone so the user can still connect.
+        val addressParser = asset.takeIf { it.isNotEmpty() }?.let { MayaCurrencyList[it]?.addressParser }
         val sources = integrations
-            .filter { integration ->
-                val address = integration.address
-                address == null || addressParser == null || addressParser.exactMatch(address.trim())
-            }
             .map { integration ->
+                val address = integration.address
+                val unsupported = !address.isNullOrEmpty() &&
+                    addressParser != null &&
+                    !addressParser.exactMatch(address.trim())
                 AddressSource(
                     integration.id,
                     integration.name,
                     integration.iconId,
-                    integration.address,
-                    integration.currency
+                    if (unsupported) null else address,
+                    integration.currency,
+                    unsupported,
+                    integration.isConnected
                 )
             }
-        _addressSources.value = sources
+        _uiState.update { it.copy(addressSources = sources) }
+    }
+
+    private fun deriveAssetCoinCode(asset: String): String = if (asset.isEmpty()) {
+        ""
+    } else {
+        MayaCurrencyList[asset]?.code ?: asset.substringAfter(".").substringBefore("-")
+    }
+
+    private fun deriveAssetNetworkName(asset: String): String = if (asset.isEmpty()) {
+        ""
+    } else {
+        MayaCurrencyList.networkName(asset)
+            ?: MayaCurrencyList[asset]?.name
+            ?: asset.substringBefore(".")
     }
 
     fun setCurrency(currency: String) {
-        inputCurrency.value = currency
+        _uiState.update { it.copy(inputCurrency = currency) }
     }
 
     fun refreshAddressSources() {
-        inputCurrency.value?.let {
+        _uiState.value.inputCurrency?.let {
             viewModelScope.launch {
                 refreshAddressSources(exchangeIntegrationProvider.getDepositAddresses(it))
             }
