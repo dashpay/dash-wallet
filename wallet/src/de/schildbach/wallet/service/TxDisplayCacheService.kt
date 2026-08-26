@@ -1488,6 +1488,12 @@ internal fun planSwapRowDecorations(
  * status, time, rate, contact identity and the filter bucket are never touched.
  * Idempotent: a row that already matches is not returned.
  *
+ * Stamping `service` here does NOT opt the row out of the SDK planner's later status
+ * transitions: [de.schildbach.wallet.service.platform.sdk.planL1DisplaySync] and
+ * [de.schildbach.wallet.service.platform.sdk.planL1InstantLockRowUpdate] treat a
+ * service classification as decoration, not as the never-touch rich-row signal —
+ * a row decorated while "Sending"/"Processing" still settles on its lock.
+ *
  * @param metadataByTxId the CHANGED txids mapped to their new presentable metadata
  *        (null = the metadata row was removed).
  */

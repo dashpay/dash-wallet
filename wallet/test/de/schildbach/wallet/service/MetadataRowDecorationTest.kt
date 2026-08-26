@@ -18,6 +18,8 @@
 package de.schildbach.wallet.service
 
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
+import de.schildbach.wallet.service.platform.sdk.planL1InstantLockRowUpdate
+import de.schildbach.wallet_test.R
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TxId
 import org.junit.Assert.assertEquals
@@ -150,5 +152,30 @@ class MetadataRowDecorationTest {
 
         assertEquals("", decorated.comment)
         assertEquals("CrowdNode", decorated.service)
+    }
+
+    @Test
+    fun lateMetadata_decoratedPendingRowStillSettlesOnLock() {
+        // CodeRabbit #1545 regression, end to end: metadata classifies the row
+        // while it is still "Sending"/"Processing", and the IS lock lands AFTER —
+        // the service tag must not trip the SDK planner's never-touch guard, or
+        // the row sticks pending forever.
+        val resolve: (Int) -> String = { id -> "str:$id" }
+        val pending = sdkPlannedRow().copy(
+            title = resolve(R.string.transaction_row_status_sending),
+            statusText = resolve(R.string.transaction_row_status_processing)
+        )
+        val decorated = planMetadataRowDecorations(
+            mapOf(txHex to metadata(memo = "top-up", service = "CrowdNode")),
+            mapOf(txHex to pending)
+        ).single()
+        assertEquals("CrowdNode", decorated.service)
+
+        val settled = planL1InstantLockRowUpdate(decorated, resolve)!!
+        assertEquals(resolve(R.string.transaction_row_status_sent), settled.title)
+        assertEquals("", settled.statusText)
+        // The decoration itself survives the settle.
+        assertEquals("CrowdNode", settled.service)
+        assertEquals("top-up", settled.comment)
     }
 }

@@ -451,13 +451,16 @@ internal const val L1_NOTIFY_RECENCY_WINDOW_MS = 24L * 60 * 60 * 1000
  *   record; incoming inserts within the recency window also notify.
  * - Existing rows are updated ONLY to reflect lock knowledge dashj is
  *   blind to post-cutover, and only when the row is a plain send/receive
- *   (no service, no gift card, no error, not CoinJoin):
+ *   (no gift card, no swap, no error, not CoinJoin):
  *   - title "Sending" → "Sent" once the SDK saw any lock/confirmation;
  *   - secondary "Processing" cleared once the tx is locked OR in a block
  *     (dashj never shows "Processing" for a BUILDING tx — see
  *     [de.schildbach.wallet.ui.transactions.TxResourceMapper]);
  *   - secondary "Confirming" cleared only once INSTANT_LOCKED or
  *     CHAINLOCKED (dashj keeps it while building unlocked <6 confs).
+ *   A row whose only extra semantics is a metadata-supplied `service`
+ *   classification still takes these status edges (its title/status ARE
+ *   the plain pending texts) but none of the value/rate/shape re-stamps.
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -587,7 +590,7 @@ internal fun planL1DisplaySync(
         //
         // A DEX swap row is one of those: its title/icon come from the `swap_orders`
         // record ([de.schildbach.wallet.service.planSwapRowDecorations]) and the SDK
-        // record cannot reproduce them. `swapStatus` is checked as well as `service`
+        // record cannot reproduce them. `swapStatus` is checked rather than `service`
         // because the service column alone is not proof: a rebuild that raced an
         // unpopulated metadata map leaves a swap row plainly rendered with service
         // null, and the definitive re-stamp below would then re-title it "Sending" —
@@ -595,13 +598,26 @@ internal fun planL1DisplaySync(
         // (verified on-device, 2026-08-07 Maya field test). The swap reconciler
         // restores swapStatus on the next display-cache write signal, so this guard
         // then holds the row stable instead of flip-flopping once per sync pass.
-        if (existing.hasErrors || existing.service != null || existing.swapStatus != null ||
+        if (existing.hasErrors || existing.swapStatus != null ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0 ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0
         ) {
             continue
         }
-        sdkAuthoritative += record.txidHex
+        // A service-CLASSIFIED row is only half-rich. The service column is a
+        // metadata tag (build-time join above, or the late-metadata decoration in
+        // [de.schildbach.wallet.service.planMetadataRowDecorations]) that drives
+        // click-through and the merchant icon — its title/status still read
+        // "Sending"/"Processing" and must keep transitioning, or a row classified
+        // while pending sticks there past its lock (the metadata tag is not an
+        // alternate status feed the way `swap_orders` is). So such a row takes
+        // ONLY the two surgical status edges below; every value/rate/shape
+        // re-stamp further down stays off it, and it is never claimed
+        // SDK-authoritative — same as before the guard split.
+        val serviceClassified = existing.service != null
+        if (!serviceClassified) {
+            sdkAuthoritative += record.txidHex
+        }
 
         var updated = existing
         if (existing.title == resolve(R.string.transaction_row_status_sending) &&
@@ -624,6 +640,11 @@ internal fun planL1DisplaySync(
                 (locked && updated.statusText == resolve(R.string.transaction_row_status_confirming)))
         ) {
             updated = updated.copy(statusText = "")
+        }
+        if (serviceClassified) {
+            // Status transitions only (see the guard split above).
+            if (updated != existing) updates += updated
+            continue
         }
 
         // Re-stamp degenerate carried-over / pre-block rows. A dashj-era or
@@ -857,17 +878,21 @@ internal fun l1TxUiRecordFromEvent(event: L1TxEvent.Detected, nowMs: Long): L1Tx
  * event, so the flip happens the moment the IS lock lands instead of on
  * the next Room emission. The event carries only a txid (no direction),
  * so the row itself tells us which edges apply. Same never-touch guards
- * as the planner: rows with richer semantics (service, gift card, error,
- * CoinJoin) are left byte-identical. Returns null when nothing changes.
- * Pure — host-testable.
+ * as the planner: rows with richer semantics (gift card, swap, error,
+ * CoinJoin) are left byte-identical, while a metadata-supplied `service`
+ * classification alone does NOT opt a row out — its title/status are the
+ * plain pending texts and these are exactly the two edges that must keep
+ * firing on it. Returns null when nothing changes. Pure — host-testable.
  */
 internal fun planL1InstantLockRowUpdate(
     existing: TxDisplayCacheEntry,
     resolve: (Int) -> String
 ): TxDisplayCacheEntry? {
     // Same never-touch set as [planL1DisplaySync]'s update path, swap rows included
-    // (their title comes from `swap_orders`, not from a lock).
-    if (existing.hasErrors || existing.service != null || existing.swapStatus != null ||
+    // (their title comes from `swap_orders`, not from a lock). `service` is
+    // deliberately absent: a serviced row still takes the status edges (see the
+    // planner's guard split).
+    if (existing.hasErrors || existing.swapStatus != null ||
         (existing.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0 ||
         (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0
     ) {
