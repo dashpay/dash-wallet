@@ -26,6 +26,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -350,6 +353,70 @@ class SdkWalletBinder internal constructor(
      */
     @Volatile
     private var completed = false
+
+    /**
+     * MO-995: whether the last bind pass that ATTEMPTED to establish the
+     * SDK wallet FAILED, leaving no bound wallet — i.e. a retry is owed.
+     *
+     * The field-observed outage class: the SDK's `createWallet` dies inside
+     * the Android keystore (`UserNotAuthenticatedException` from a
+     * `setUnlockedDeviceRequired` key — Keystore2 believing the device is
+     * locked, sometimes falsely), the SDK rolls its wallet back cleanly, and
+     * the binder used to stay failed FOREVER (every trigger is opportunistic
+     * and nothing re-armed one), while a fresh-wallet cutover commit held
+     * dashj — leaving the user with NO sync engine at all.
+     *
+     * True only while `boundWalletIdHex == null` after a pass that threw;
+     * cleared the moment any pass leaves the wallet bound. Consumed by
+     * [SdkBindRetryService] (backoff-capped re-invocation + the
+     * device-unlock heal) and surfaced by
+     * [de.schildbach.wallet.service.L1SyncStatusService] so the Network
+     * Monitor can say "wallet setup retrying" instead of the dead
+     * "Not started".
+     */
+    private val _bindRetryPending = MutableStateFlow(false)
+    val bindRetryPending: StateFlow<Boolean> = _bindRetryPending.asStateFlow()
+
+    /**
+     * CONSECUTIVE bind passes that attempted and failed without leaving a
+     * bound wallet — the rollback counter [SdkBindRetryService] consults
+     * before rolling a committed cutover back to dashj
+     * ([CutoverCoordinator.rollbackForFailedBind]). Reset to 0 by any pass
+     * that leaves the wallet bound. Passes SKIPPED by the eligibility gate
+     * (flags off, no unlock available) count neither way — they carry no
+     * evidence about the keystore.
+     */
+    @Volatile
+    private var consecutiveBindFailuresCount = 0
+    internal val consecutiveBindFailures: Int get() = consecutiveBindFailuresCount
+
+    /**
+     * Record one attempted pass's outcome for the MO-995 retry machinery.
+     * Failed = the pass threw AND left no bound wallet; any pass that
+     * leaves [boundWalletIdHex] set is a success for this signal even if a
+     * LATER stage (discovery/key heal) failed — those have their own
+     * retries and do not strand the L1 engine.
+     */
+    private fun noteBindOutcome(failed: Boolean) {
+        if (failed) {
+            consecutiveBindFailuresCount++
+            _bindRetryPending.value = true
+            log.warn(
+                "SDK wallet bind still not established ({} consecutive failed pass(es)); " +
+                    "a bind retry is pending",
+                consecutiveBindFailuresCount
+            )
+        } else {
+            if (_bindRetryPending.value || consecutiveBindFailuresCount > 0) {
+                log.info(
+                    "SDK wallet bind established after {} failed pass(es); retry pressure cleared",
+                    consecutiveBindFailuresCount
+                )
+            }
+            consecutiveBindFailuresCount = 0
+            _bindRetryPending.value = false
+        }
+    }
 
     /**
      * Single-flights the DIP-15 friend-chain provisioning pass. Distinct
@@ -722,8 +789,18 @@ class SdkWalletBinder internal constructor(
                     throw t
                 }
             }
+            // MO-995: a non-throwing pass that left the wallet bound clears
+            // the retry pressure (a pass the eligibility gate skipped left
+            // the id null and changes nothing either way).
+            if (boundWalletIdHex != null) noteBindOutcome(failed = false)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
+            // MO-995: a throw with no bound wallet is the stranding failure
+            // class (e.g. the keystore denying the SDK's createWallet key);
+            // arm the retry machinery. A throw AFTER the bind established
+            // the wallet (discovery/heal) is not — those retry on their own
+            // triggers and the L1 engine is not blocked on them.
+            noteBindOutcome(failed = boundWalletIdHex == null)
             // Opportunistic by contract: never break the calling flow.
             log.warn("SDK wallet binding pass failed; dashj behavior unchanged", t)
         }

@@ -920,7 +920,9 @@ class CutoverUiDataServiceTest {
         /** Foreign-excluded store nets for the negative-event validation and contact rows. */
         walletNets: suspend (Set<String>) -> Map<String, Long> = { emptyMap() },
         /** Presentable metadata store for the build-time row join; default = none known. */
-        metadata: Map<String, PresentableTxMetadata> = emptyMap()
+        metadata: Map<String, PresentableTxMetadata> = emptyMap(),
+        /** MO-995: the bind-retry consultation the bound-wallet wait loop drives. */
+        retryBind: suspend () -> Unit = {}
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -944,6 +946,7 @@ class CutoverUiDataServiceTest {
         resolveOwnedInvolvement = ownedInvolvement,
         resolveWalletNets = walletNets,
         resolveMetadata = { txids -> metadata.filterKeys { it in txids } },
+        retryBind = retryBind,
         nowMs = { now }
     )
 
@@ -977,6 +980,38 @@ class CutoverUiDataServiceTest {
         // The overlay is the dashj feed, unchanged.
         val dashj = Coin.valueOf(4242)
         assertEquals(dashj, service.overlayTotalBalance(flowOf(dashj)).first())
+    }
+
+    @Test
+    fun postCutover_waitLoopReInvokesTheBindRetry_untilBound() = runTest {
+        // MO-995: the 5 s bound-wallet wait loop used to only OBSERVE the
+        // bound state — a single failed (keystore-denied) bind pass stranded
+        // it forever. It must now consult the retry machinery every poll and
+        // stop the moment the wallet binds.
+        val source = FakeSource(boundWalletId = null)
+        var retries = 0
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            retryBind = { retries++ }
+        )
+        service.start()
+        runCurrent()
+        assertTrue("the first poll consults the retry machinery", retries >= 1)
+
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        assertTrue("each poll re-consults while unbound", retries >= 2)
+
+        // The bind heals: the loop hands off to the pipelines and stops
+        // consulting the retry machinery.
+        source.boundWalletId = "cd".repeat(32)
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        val consultationsAtBind = retries
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS * 3)
+        runCurrent()
+        assertEquals("no consultations once bound", consultationsAtBind, retries)
+        assertTrue("the pipelines actually started", source.balanceSubscriptions >= 1)
     }
 
     @Test

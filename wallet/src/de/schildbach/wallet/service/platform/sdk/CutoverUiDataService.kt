@@ -1921,6 +1921,16 @@ class CutoverUiDataService internal constructor(
      * snapshot-only tests.
      */
     private val loadPersistedInstantLocks: suspend (Collection<String>) -> Set<String> = { emptySet() },
+    /**
+     * MO-995: re-arm a FAILED [SdkWalletBinder] pass while [awaitBoundWallet]
+     * is stuck waiting — [SdkBindRetryService.maybeRetry], which self-gates
+     * on a pending bind failure and its own capped backoff, so calling it on
+     * every 5 s poll is cheap and correct. Without this the wait loop only
+     * ever OBSERVED the bound state and a single keystore-denied bind pass
+     * stranded the pipelines (and the user's sync engine) forever. Default
+     * no-op for the fake-fed tests.
+     */
+    private val retryBind: suspend () -> Unit = {},
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val refreshIntervalMs: Long = REFRESH_INTERVAL_MS,
     private val walletBindRetryMs: Long = WALLET_BIND_RETRY_MS,
@@ -1955,7 +1965,8 @@ class CutoverUiDataService internal constructor(
         transactionMetadataDao: de.schildbach.wallet.database.dao.TransactionMetadataDao,
         instantSendLockDao: de.schildbach.wallet.database.dao.InstantSendLockDao,
         dashPayBackfillGate: DashPayBackfillGate,
-        dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus
+        dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus,
+        sdkBindRetryService: SdkBindRetryService
     ) : this(
         source = DashSdkCutoverUiSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1985,6 +1996,7 @@ class CutoverUiDataService internal constructor(
         // this was a second hand-copied `synced || scanCaughtUpToTip`
         // expression that had to be kept in lockstep by hand.
         l1Synced = l1SyncStatusService.sdkScanCaughtUp,
+        retryBind = { sdkBindRetryService.maybeRetry("cutover-ui bound-wallet wait") },
         rescanRecentlyArmed = { sdkService.spvRescanArmedWithin(RESCAN_ARM_PERSIST_HOLD_MS) },
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
         dashPayBackfillStatus = { dashPayBackfillGate.readBackfillStatus() },
@@ -2485,6 +2497,13 @@ class CutoverUiDataService internal constructor(
      * post-reset/restore orphan window, until the binder's orphan prune runs) —
      * that state used to park the ENTIRE cutover UI pipeline with zero log
      * output; now it says so once a minute.
+     *
+     * MO-995: each poll also CONSULTS the bind retry machinery ([retryBind])
+     * — this loop runs exactly while the cutover holds dashj but no SDK
+     * wallet is bound, which is the stranded no-engine state a single failed
+     * (keystore-denied) bind pass used to leave behind forever. The retry
+     * service applies its own capped backoff, so the 5 s poll cadence never
+     * hammers the keystore.
      */
     private suspend fun awaitBoundWallet(): String {
         var attempts = 0
@@ -2497,10 +2516,19 @@ class CutoverUiDataService internal constructor(
                 null
             }
             if (id != null) return id
+            try {
+                retryBind()
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                // Belt over the retry service's own never-throws contract:
+                // this wait loop must survive anything the retry does.
+                log.warn("bind retry consultation failed; the wait loop continues", t)
+            }
             if (attempts++ % 12 == 0) {
                 log.warn(
                     "cutover UI pipelines waiting for a SINGLE bound SDK wallet (none, or more than " +
-                        "one loaded — post-reset orphan not pruned yet?); retrying every {}ms",
+                        "one loaded — post-reset orphan not pruned yet, or a failed bind pending " +
+                        "retry?); retrying every {}ms",
                     walletBindRetryMs
                 )
             }
