@@ -63,6 +63,7 @@ import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.databinding.ScanActivityBinding
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.OnFirstPreDraw
+import org.dash.wallet.common.util.openAppSettings
 import org.slf4j.LoggerFactory
 import java.util.EnumMap
 
@@ -203,19 +204,55 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
     private fun showProblemWarnDialog() {
         AdaptiveDialog.create(
             null,
-            getString(R.string.scan_camera_permission_dialog_title),
+            getString(R.string.scan_camera_problem_dialog_title),
             getString(R.string.scan_camera_problem_dialog_message),
             getString(R.string.button_dismiss)
-        ).show(this)
+        ).show(this) { leaveScanner() }
     }
 
     private fun showPermissionWarnDialog() {
+        // Asked after a refusal, a false rationale flag means the system will not prompt again
+        // (the user chose "don't allow" twice, or picked "don't ask again"), so re-requesting
+        // is a no-op and App info is the only way back. A true flag means we may still ask
+        // in-app, which is a far smaller detour than sending the user to system settings.
+        val canAskAgain = shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)
+
         AdaptiveDialog.create(
             null,
             getString(R.string.scan_camera_permission_dialog_title),
-            getString(R.string.scan_camera_permission_dialog_message),
-            getString(R.string.button_dismiss)
-        ).show(this)
+            getString(
+                if (canAskAgain) {
+                    R.string.scan_camera_permission_dialog_message
+                } else {
+                    R.string.scan_camera_permission_denied_dialog_message
+                }
+            ),
+            getString(R.string.button_not_now),
+            getString(if (canAskAgain) R.string.permission_allow else R.string.button_settings)
+        ).show(this) { accepted ->
+            if (accepted == true) {
+                if (canAskAgain) {
+                    requestCameraPermission()
+                } else {
+                    // onResume() opens the camera on the way back, so granting it in system
+                    // settings drops the user straight into a working scanner.
+                    openAppSettings()
+                }
+            } else {
+                leaveScanner()
+            }
+        }
+    }
+
+    /**
+     * Leaves a scanner that has nothing left to offer. The screen has one job and cannot do it,
+     * so rather than parking the user on a dead camera preview behind a dismissed dialog, hand
+     * them back to where they came from — every caller has another way in, whether that is
+     * typing an address, pasting one, or picking a contact.
+     */
+    private fun leaveScanner() {
+        setResult(RESULT_CANCELED)
+        finish()
     }
 
     private fun requestCameraPermission() {
