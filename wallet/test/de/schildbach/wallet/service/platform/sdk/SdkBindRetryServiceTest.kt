@@ -367,7 +367,7 @@ class SdkBindRetryServiceTest {
             deviceProvablyLocked = { false },
             now = { nowMs }
         )
-        repeat(SdkBindRetryService.ROLLBACK_AFTER_CONSECUTIVE_FAILURES) {
+        repeat(SdkBindRetryService.ROLLBACK_AFTER_CONSECUTIVE_FAILURES - 1) {
             nowMs += 3_600_000
             retryService.maybeRetry("poll")
         }
