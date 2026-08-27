@@ -312,6 +312,52 @@ class L1SyncStatusServiceTest {
         )
     }
 
+    // ── MO-995: a failed wallet bind must not render as a dead "Not started" ──
+
+    @Test
+    fun detail_sdkRegime_pendingBindRetryReplacesTheDeadIdleStage() {
+        // The Andrei readout: cutover committed, bind failed, engine never
+        // started — the monitor used to show "Not started"/"Network engine
+        // not started" forever. The pending retry now names the real state.
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            progress = progress(phase = ShadowSyncPhase.IDLE),
+            sessionChainLockHeight = 0,
+            state = null,
+            bindRetryPending = true
+        )
+        assertEquals(L1SyncStage.SETUP_RETRYING, detail.stage)
+        assertFalse(detail.isSynced)
+    }
+
+    @Test
+    fun detail_sdkRegime_realScanProgressAlwaysBeatsThePendingFlag() {
+        // A pending flag can only coexist with a DEAD engine; if the scan is
+        // actually running (the wallet bound after all), the honest stage wins.
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            progress = progress(phase = ShadowSyncPhase.FILTERS),
+            sessionChainLockHeight = 0,
+            state = null,
+            bindRetryPending = true
+        )
+        assertEquals(L1SyncStage.FILTERS, detail.stage)
+    }
+
+    @Test
+    fun detail_dashjRegime_ignoresThePendingBindRetry() {
+        // Post-rollback dashj is the engine: its real stages render and the
+        // bind retry (now background-healing) must not mask them.
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = false,
+            progress = progress(phase = ShadowSyncPhase.IDLE),
+            sessionChainLockHeight = 0,
+            state = dashjState(percentageSync = 50),
+            bindRetryPending = true
+        )
+        assertEquals(L1SyncStage.HEADERS, detail.stage)
+    }
+
     @Test
     fun merge_postCutoverSyncedPredicate_matchesTheBalanceHoldGateExactly() {
         // The lockstep requirement: the blinking "Syncing balance" label

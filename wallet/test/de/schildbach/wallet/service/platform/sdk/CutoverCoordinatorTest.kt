@@ -442,4 +442,39 @@ class CutoverCoordinatorTest {
         assertEquals("the UPGRADE seam is the one that wrote CUT_OVER", CutoverState.CUT_OVER.name, current)
         assertFalse("…but a fresh setup ran this launch, so no upgrade explainer", noticeArmed)
     }
+
+    // ── MO-995: the bind-failure rollback ─────────────────────────────
+
+    @Test
+    fun rollbackForFailedBind_rollsACommittedCutoverBackToDualRunning() = runBlocking {
+        // The Andrei outage end-state guard: the fresh-wallet commit held
+        // dashj, the SDK bind kept failing — the rollback must restore
+        // dashjEngineMayStart so the wallet is never left with NO engine.
+        val (coordinator, stored) = coordinator(stored = CutoverState.CUT_OVER.name)
+        assertFalse(coordinator.dashjEngineMayStart())
+        val status = coordinator.rollbackForFailedBind(consecutiveFailures = 5)
+        assertEquals(CutoverState.DUAL_RUNNING, status.state)
+        assertEquals(CutoverState.DUAL_RUNNING.name, stored())
+        assertTrue(coordinator.dashjEngineMayStart())
+    }
+
+    @Test
+    fun rollbackForFailedBind_isANoOpFromDualRunning() = runBlocking {
+        val (coordinator, stored) = coordinator(stored = CutoverState.DUAL_RUNNING.name)
+        val status = coordinator.rollbackForFailedBind(consecutiveFailures = 5)
+        assertEquals(CutoverState.DUAL_RUNNING, status.state)
+        assertEquals(CutoverState.DUAL_RUNNING.name, stored())
+        assertTrue(coordinator.dashjEngineMayStart())
+    }
+
+    @Test
+    fun rollbackForFailedBind_neverRegressesSettled() = runBlocking {
+        // SETTLED is past the migration horizon (mirrors the state
+        // machine's ROLLBACK edge): the direct rollback must not regress
+        // it either.
+        val (coordinator, stored) = coordinator(stored = CutoverState.SETTLED.name)
+        val status = coordinator.rollbackForFailedBind(consecutiveFailures = 5)
+        assertEquals(CutoverState.SETTLED, status.state)
+        assertEquals(CutoverState.SETTLED.name, stored())
+    }
 }

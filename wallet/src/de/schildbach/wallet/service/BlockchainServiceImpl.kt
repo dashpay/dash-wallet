@@ -207,6 +207,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         override fun onStart(owner: LifecycleOwner) {
             log.info("App moved to foreground")
             isAppInBackground = false
+            // MO-995: a pending SDK bind retry escapes the hourly backoff
+            // tail the moment the user is actually looking at the app.
+            if (::sdkBindRetryService.isInitialized) {
+                sdkBindRetryService.noteAppForeground()
+            }
         }
 
         override fun onStop(owner: LifecycleOwner) {
@@ -285,6 +290,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Inject lateinit var dashPayConfig: de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
     @Inject lateinit var l1ShadowSyncService: de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
     @Inject lateinit var sdkWalletBinder: de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
+    @Inject lateinit var sdkBindRetryService: de.schildbach.wallet.service.platform.sdk.SdkBindRetryService
     @Inject lateinit var dashjDiagnosticSyncState: DashjDiagnosticSyncState
 
     /**
@@ -1531,6 +1537,49 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
             }
         }
+
+        /**
+         * MO-995: a cutover ROLLBACK must un-hold the dashj engine on the
+         * LIVE service. The engine gate is resolved once per launch
+         * (onCreate), so when [CutoverCoordinator.rollbackForFailedBind]
+         * rolls a bind-stranded fresh wallet back to DUAL_RUNNING mid-launch
+         * (or the debug ROLLBACK_CUTOVER broadcast fires), nothing used to
+         * start the fallback engine until the next app launch — exactly the
+         * "no sync engine at all" outage this exists to end. Mirrors
+         * [onDashjDiagnosticChanged]'s live re-resolution under [checkMutex].
+         *
+         * Deliberately UN-HOLD only: the commit direction (a mid-launch
+         * auto-commit flipping `coordinatorAllowsDashj` false) keeps today's
+         * behavior — the running dashj engine finishes the launch and the
+         * hold takes effect on the next one. Stopping a live primary engine
+         * on commit is a separate decision this fix does not make.
+         */
+        fun onCutoverStateChanged() {
+            serviceScope.launch {
+                onCreateCompleted.await()
+                checkMutex.withLock {
+                    try {
+                        val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
+                            .getOrDefault(true)
+                        val newEngineMayStart = coordinatorAllowsDashj || dashjSyncDiagnostic
+                        if (!coordinatorAllowsDashj || newEngineMayStart == dashjEngineMayStart) {
+                            return@withLock
+                        }
+                        dashjHeldByCutover = false
+                        dashjEngineMayStart = true
+                        log.info(
+                            "cutover state rolled back mid-launch — un-holding the dashj L1 " +
+                                "engine (dashjEngineMayStart=true); starting the fallback sync"
+                        )
+                        if (peerGroup == null) {
+                            checkService()
+                        }
+                    } catch (e: Exception) {
+                        log.error("onCutoverStateChanged failed", e)
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -2110,6 +2159,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 dashPayConfig.observeDashjSyncDiagnostic()
                     .distinctUntilChanged()
                     .onEach { enabled -> (networkCallback as? NetworkCallbackImpl)?.onDashjDiagnosticChanged(enabled) }
+                    .launchIn(serviceScope)
+
+                // MO-995: keep the cutover ROLLBACK effective on a LIVE service —
+                // the bind-failure fallback (CutoverCoordinator.rollbackForFailedBind)
+                // rolls CUT_OVER back to DUAL_RUNNING mid-launch, and the one-shot
+                // gate above would otherwise leave the wallet engine-less until the
+                // next app launch. Un-hold direction only; the first (current-value)
+                // emission is a no-op (the gate was just resolved from it).
+                dashPayConfig.observe(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.CUTOVER_STATE)
+                    .distinctUntilChanged()
+                    .onEach { (networkCallback as? NetworkCallbackImpl)?.onCutoverStateChanged() }
                     .launchIn(serviceScope)
 
                 onCreateCompleted.complete(Unit)
