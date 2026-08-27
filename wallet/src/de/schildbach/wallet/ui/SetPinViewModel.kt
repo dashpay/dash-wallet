@@ -65,6 +65,10 @@ class SetPinViewModel @Inject constructor(
     }
 
     fun savePinAndEncrypt(pin: String, initialize: Boolean) {
+        if (encryptWalletLiveData.isEncrypting) {
+            log.warn("savePinAndEncrypt called while wallet encryption is already in progress, ignoring")
+            return
+        }
         encryptWalletLiveData.savePin(pin)
         encryptWallet(initialize)
     }

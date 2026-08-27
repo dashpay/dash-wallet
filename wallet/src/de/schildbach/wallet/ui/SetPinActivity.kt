@@ -94,6 +94,11 @@ class SetPinActivity : InteractionAwareActivity() {
 
     private var state = State.SET_PIN
 
+    // set once the confirmed PIN has been handed off for encryption / PIN change;
+    // blocks nextStep() re-entry (double-tap or a stray extra keypress) from invoking
+    // savePinAndEncrypt()/changePin() a second time
+    private var pinConfirmed = false
+
     companion object {
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
         private const val EXTRA_PASSWORD = "extra_password"
@@ -209,6 +214,10 @@ class SetPinActivity : InteractionAwareActivity() {
                 if (pin.size < viewModel.pinLength || state == State.DECRYPT) {
                     pin.add(number)
                     pinPreviewView.next()
+                } else {
+                    // the PIN is already complete; ignore extra taps so nextStep()
+                    // cannot fire a second time for the same PIN
+                    return
                 }
 
                 if (state == State.DECRYPT) {
@@ -245,6 +254,10 @@ class SetPinActivity : InteractionAwareActivity() {
     private fun nextStep() {
         if (state == State.CONFIRM_PIN) {
             if (pin == viewModel.pinArray) {
+                if (pinConfirmed) {
+                    return
+                }
+                pinConfirmed = true
                 Handler().postDelayed({
                     if (changePin) {
                         viewModel.changePin()
@@ -271,6 +284,11 @@ class SetPinActivity : InteractionAwareActivity() {
     }
 
     private fun setState(newState: State) {
+        if (newState != State.ENCRYPTING && newState != State.DECRYPTING) {
+            // back on an input state (including CONFIRM_PIN after an encryption
+            // error) — allow the PIN to be submitted again
+            pinConfirmed = false
+        }
         when (newState) {
             State.DECRYPT -> {
                 pinPreviewView.mode = PinPreviewView.PinType.CUSTOM

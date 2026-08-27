@@ -43,18 +43,33 @@ class EncryptWalletLiveData(
     private var scryptIterationsTarget: Int = Constants.SCRYPT_ITERATIONS_TARGET
     private val securityGuard = SecurityGuard.getInstance()
 
+    val isEncrypting: Boolean
+        get() = encryptWalletTask != null
+
     /**
      * will save the PIN and also will save the fallbacks
      * assumes the wallet is not encrypted.
      */
     fun savePin(pin: String) {
+        val wallet = walletApplication.wallet!!
+        if (wallet.isEncrypted) {
+            // a repeated invocation can race the encrypt task (UI re-entry); if the
+            // wallet was already encrypted using this same PIN, the first invocation
+            // did all the work and this one is a harmless no-op
+            val alreadySavedSamePin = try {
+                securityGuard.checkPin(pin)
+            } catch (x: Exception) {
+                false
+            }
+            if (alreadySavedSamePin) {
+                log.warn("savePin called again after the wallet was encrypted with the same PIN, ignoring")
+                return
+            }
+            error("the wallet should not be encrypted")
+        }
         securityGuard.removeKeys()
         securityGuard.savePin(pin)
         securityGuard.ensurePinFallback(pin)
-        val wallet = walletApplication.wallet!!
-        if (wallet.isEncrypted) {
-            error("the wallet should not be encrypted")
-        }
         val words = wallet.keyChainSeed.mnemonicCode
         securityGuard.ensureMnemonicFallbacks(words)
     }

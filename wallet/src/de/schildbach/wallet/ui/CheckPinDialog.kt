@@ -133,11 +133,14 @@ open class CheckPinDialog(
                 if (viewModel.pin.length < viewModel.pinLength) {
                     viewModel.pin.append(number)
                     binding.pinPreview.next()
-                }
-                if (viewModel.pin.length == viewModel.pinLength) {
-                    binding.pinPreview.postDelayed({
-                        checkPin(viewModel.pin.toString())
-                    }, 200)
+
+                    // only the tap that completes the PIN may submit it; extra taps
+                    // on a full PIN must not post checkPin() again
+                    if (viewModel.pin.length == viewModel.pinLength) {
+                        binding.pinPreview.postDelayed({
+                            checkPin(viewModel.pin.toString())
+                        }, 200)
+                    }
                 }
             }
 
