@@ -49,10 +49,18 @@ interface TransactionMetadataDao {
 
     @MapInfo(keyColumn = "txId")
     @Query(
-        """SELECT txId, memo, service, customIconId FROM transaction_metadata 
+        """SELECT txId, memo, service, customIconId FROM transaction_metadata
         WHERE memo != '' OR service IS NOT NULL OR customIconId IS NOT NULL"""
     )
     fun observePresentableMetadata(): Flow<Map<TxId, PresentableTxMetadata>>
+
+    /** One-shot [observePresentableMetadata] restricted to [txIds] (callers chunk below SQLite's 999-variable cap). */
+    @MapInfo(keyColumn = "txId")
+    @Query(
+        """SELECT txId, memo, service, customIconId FROM transaction_metadata
+        WHERE txId IN (:txIds) AND (memo != '' OR service IS NOT NULL OR customIconId IS NOT NULL)"""
+    )
+    suspend fun loadPresentableMetadata(txIds: List<TxId>): Map<TxId, PresentableTxMetadata>
 
     @Query("SELECT * FROM transaction_metadata WHERE timestamp <= :end and timestamp >= :start")
     fun observeByTimestampRange(start: Long, end: Long): Flow<List<TransactionMetadata>>

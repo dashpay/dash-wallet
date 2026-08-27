@@ -58,6 +58,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.NotificationService
 import org.slf4j.LoggerFactory
@@ -449,13 +451,16 @@ internal const val L1_NOTIFY_RECENCY_WINDOW_MS = 24L * 60 * 60 * 1000
  *   record; incoming inserts within the recency window also notify.
  * - Existing rows are updated ONLY to reflect lock knowledge dashj is
  *   blind to post-cutover, and only when the row is a plain send/receive
- *   (no service, no gift card, no error, not CoinJoin):
+ *   (no gift card, no swap, no error, not CoinJoin):
  *   - title "Sending" → "Sent" once the SDK saw any lock/confirmation;
  *   - secondary "Processing" cleared once the tx is locked OR in a block
  *     (dashj never shows "Processing" for a BUILDING tx — see
  *     [de.schildbach.wallet.ui.transactions.TxResourceMapper]);
  *   - secondary "Confirming" cleared only once INSTANT_LOCKED or
  *     CHAINLOCKED (dashj keeps it while building unlocked <6 confs).
+ *   A row whose only extra semantics is a metadata-supplied `service`
+ *   classification still takes these status edges (its title/status ARE
+ *   the plain pending texts) but none of the value/rate/shape re-stamps.
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -486,6 +491,14 @@ internal fun planL1DisplaySync(
     // direction/value (and, once a row is cached correctly, is never regressed —
     // the re-plan only fires when an authoritative net is present).
     signedNetByTxid: Map<String, Long> = emptyMap(),
+    // Presentable tx metadata per txid (memo / service / custom icon), read app-side
+    // before this pure planner runs — the SAME join the dashj-era builder applies
+    // ([de.schildbach.wallet.service.TxDisplayCacheService]'s renderEntry), so a row
+    // whose metadata already exists at build time (platform metadata synced before
+    // the L1 scan reached the tx) is born decorated instead of waiting for a
+    // metadata-change emission. Decoration only — never direction/value. Empty = no
+    // metadata known (rows insert bare, as before).
+    metadataByTxid: Map<String, PresentableTxMetadata> = emptyMap(),
     // Whether [records] came from the SDK's persisted `transactions` table (the Room
     // SNAPSHOT feed) — one wallet-wide row per txid, and therefore DEFINITIVE for a
     // plain row's direction/amount. False for the engine's instant tx feed, whose
@@ -526,6 +539,10 @@ internal fun planL1DisplaySync(
         val existing = existingByRowId[record.txidHex]
 
         if (existing == null) {
+            // Build-time metadata join (renderEntry parity): memo, service and the
+            // custom (merchant/service) icon. The direction shape above stays the
+            // record's — metadata never drives value or direction.
+            val meta = metadataByTxid[record.txidHex]
             inserts += TxDisplayCacheEntry(
                 rowId = plan.rowId,
                 title = resolve(plan.titleRes),
@@ -533,11 +550,11 @@ internal fun planL1DisplaySync(
                 iconType = plan.iconType,
                 iconBgType = plan.iconBgType,
                 statusText = if (plan.statusRes != -1) resolve(plan.statusRes) else "",
-                comment = "",
+                comment = meta?.memo ?: "",
                 transactionAmount = 1,
                 time = if (plan.timestampMs > 0) plan.timestampMs else nowMs,
                 hasErrors = false,
-                service = null,
+                service = meta?.service,
                 // Stamp the current fiat rate on every fresh SDK-discovered row,
                 // mirroring BlockchainServiceImpl.onCoinsReceived — the held dashj
                 // wallet never sees these SDK-only txs, so nothing else records
@@ -556,7 +573,8 @@ internal fun planL1DisplaySync(
                 contactDisplayName = contact?.displayName,
                 contactAvatarUrl = contact?.avatarUrl,
                 contactUserId = contact?.userId,
-                filterFlags = plan.filterFlags
+                filterFlags = plan.filterFlags,
+                customIconId = meta?.customIconId?.toString()
             )
             sdkAuthoritative += plan.rowId
             if (plan.isIncoming && record.netAmountDuffs > 0 &&
@@ -572,7 +590,7 @@ internal fun planL1DisplaySync(
         //
         // A DEX swap row is one of those: its title/icon come from the `swap_orders`
         // record ([de.schildbach.wallet.service.planSwapRowDecorations]) and the SDK
-        // record cannot reproduce them. `swapStatus` is checked as well as `service`
+        // record cannot reproduce them. `swapStatus` is checked rather than `service`
         // because the service column alone is not proof: a rebuild that raced an
         // unpopulated metadata map leaves a swap row plainly rendered with service
         // null, and the definitive re-stamp below would then re-title it "Sending" —
@@ -580,13 +598,26 @@ internal fun planL1DisplaySync(
         // (verified on-device, 2026-08-07 Maya field test). The swap reconciler
         // restores swapStatus on the next display-cache write signal, so this guard
         // then holds the row stable instead of flip-flopping once per sync pass.
-        if (existing.hasErrors || existing.service != null || existing.swapStatus != null ||
+        if (existing.hasErrors || existing.swapStatus != null ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0 ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0
         ) {
             continue
         }
-        sdkAuthoritative += record.txidHex
+        // A service-CLASSIFIED row is only half-rich. The service column is a
+        // metadata tag (build-time join above, or the late-metadata decoration in
+        // [de.schildbach.wallet.service.planMetadataRowDecorations]) that drives
+        // click-through and the merchant icon — its title/status still read
+        // "Sending"/"Processing" and must keep transitioning, or a row classified
+        // while pending sticks there past its lock (the metadata tag is not an
+        // alternate status feed the way `swap_orders` is). So such a row takes
+        // ONLY the two surgical status edges below; every value/rate/shape
+        // re-stamp further down stays off it, and it is never claimed
+        // SDK-authoritative — same as before the guard split.
+        val serviceClassified = existing.service != null
+        if (!serviceClassified) {
+            sdkAuthoritative += record.txidHex
+        }
 
         var updated = existing
         if (existing.title == resolve(R.string.transaction_row_status_sending) &&
@@ -609,6 +640,11 @@ internal fun planL1DisplaySync(
                 (locked && updated.statusText == resolve(R.string.transaction_row_status_confirming)))
         ) {
             updated = updated.copy(statusText = "")
+        }
+        if (serviceClassified) {
+            // Status transitions only (see the guard split above).
+            if (updated != existing) updates += updated
+            continue
         }
 
         // Re-stamp degenerate carried-over / pre-block rows. A dashj-era or
@@ -842,17 +878,21 @@ internal fun l1TxUiRecordFromEvent(event: L1TxEvent.Detected, nowMs: Long): L1Tx
  * event, so the flip happens the moment the IS lock lands instead of on
  * the next Room emission. The event carries only a txid (no direction),
  * so the row itself tells us which edges apply. Same never-touch guards
- * as the planner: rows with richer semantics (service, gift card, error,
- * CoinJoin) are left byte-identical. Returns null when nothing changes.
- * Pure — host-testable.
+ * as the planner: rows with richer semantics (gift card, swap, error,
+ * CoinJoin) are left byte-identical, while a metadata-supplied `service`
+ * classification alone does NOT opt a row out — its title/status are the
+ * plain pending texts and these are exactly the two edges that must keep
+ * firing on it. Returns null when nothing changes. Pure — host-testable.
  */
 internal fun planL1InstantLockRowUpdate(
     existing: TxDisplayCacheEntry,
     resolve: (Int) -> String
 ): TxDisplayCacheEntry? {
     // Same never-touch set as [planL1DisplaySync]'s update path, swap rows included
-    // (their title comes from `swap_orders`, not from a lock).
-    if (existing.hasErrors || existing.service != null || existing.swapStatus != null ||
+    // (their title comes from `swap_orders`, not from a lock). `service` is
+    // deliberately absent: a serviced row still takes the status edges (see the
+    // planner's guard split).
+    if (existing.hasErrors || existing.swapStatus != null ||
         (existing.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0 ||
         (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0
     ) {
@@ -1756,6 +1796,17 @@ class CutoverUiDataService internal constructor(
      */
     private val resolveOwnedInvolvement: suspend (String) -> Boolean? = { null },
     /**
+     * Presentable tx metadata (memo / service / custom icon) for the given display-hex
+     * txids, from the app's `transaction_metadata` table — the store
+     * [de.schildbach.wallet.service.WalletTransactionMetadataProvider] maintains and
+     * platform metadata sync merges into. Joined onto the rows a sync pass INSERTS
+     * ([planL1DisplaySync]'s `metadataByTxid`) so a row planned AFTER its metadata
+     * arrived (restored device: platform sync done, L1 scan still walking) is born
+     * with its memo instead of never learning it. Default empty for the snapshot tests.
+     */
+    private val resolveMetadata: suspend (Collection<String>) -> Map<String, PresentableTxMetadata> =
+        { emptyMap() },
+    /**
      * The engine's instant tx feed ([L1ShadowSyncService.txEvents]) —
      * mempool detections and IS locks, consumed by [txPipeline] ahead of
      * the Room snapshot so receives render pre-block. Empty by default
@@ -1911,6 +1962,7 @@ class CutoverUiDataService internal constructor(
         l1SyncStatusService: de.schildbach.wallet.service.L1SyncStatusService,
         assetLockKindResolver: AssetLockKindResolver,
         sdkTxContactResolver: SdkTxContactResolver,
+        transactionMetadataDao: de.schildbach.wallet.database.dao.TransactionMetadataDao,
         instantSendLockDao: de.schildbach.wallet.database.dao.InstantSendLockDao,
         dashPayBackfillGate: DashPayBackfillGate,
         dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus,
@@ -1928,6 +1980,14 @@ class CutoverUiDataService internal constructor(
         resolveContact = { txDisplayHex -> sdkTxContactResolver.contactFor(txDisplayHex) },
         resolveWalletNets = { txids -> sdkTxContactResolver.signedNetsFor(txids) },
         resolveOwnedInvolvement = { txid -> sdkTxContactResolver.ownedInvolvementFor(txid) },
+        resolveMetadata = { txids ->
+            // Chunked: SQLite's IN-clause variable cap is 999. Keys go out as
+            // display-hex (TxId.toString round-trips the same hex).
+            txids.map { hex -> TxId.wrap(hex) }
+                .chunked(500)
+                .flatMap { chunk -> transactionMetadataDao.loadPresentableMetadata(chunk).entries }
+                .associate { (id, meta) -> id.toString() to meta }
+        },
         clearContactResolutionCaches = { sdkTxContactResolver.clearNegativeCache() },
         txEvents = l1ShadowSyncService.txEvents,
         isTxFeedTapActive = { l1ShadowSyncService.isTapActive },
@@ -3352,6 +3412,27 @@ class CutoverUiDataService internal constructor(
                 }
             }
 
+            // Presentable metadata for the rows this pass will INSERT — the build-time
+            // join. Existing rows are deliberately excluded: their late-arriving
+            // metadata is decorated by the metadata-change observer
+            // ([TxDisplayCacheService]), which works off the display row by txid.
+            // Fail-soft: a failed read inserts the rows bare, and that same observer
+            // (every launch re-emits the full metadata map) converges them.
+            val insertTxids = records.mapNotNull { r ->
+                r.txidHex.takeIf { it !in grouped && it !in existing }
+            }
+            val metadataByTxid = if (insertTxids.isEmpty()) {
+                emptyMap()
+            } else {
+                try {
+                    resolveMetadata(insertTxids)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("presentable metadata read failed; rows insert undecorated this pass", t)
+                    emptyMap()
+                }
+            }
+
             val plan = planL1DisplaySync(
                 records, existing, grouped, resolveString, nowMs(),
                 incomingFiatCode = fiat?.currencyCode,
@@ -3359,6 +3440,7 @@ class CutoverUiDataService internal constructor(
                 kindByTxid = kindByTxid,
                 contactByTxid = contactByTxid,
                 signedNetByTxid = signedNetByTxid,
+                metadataByTxid = metadataByTxid,
                 restampFromDefinitiveRecord = !fromEngineEvent
             )
             // Claim SDK AUTHORITY over every row this pass planned or verified, so the

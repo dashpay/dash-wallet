@@ -40,6 +40,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.WalletUIConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -273,6 +275,31 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun syncPlan_insertJoinsPresentableMetadata() {
+        val r = record(firstByte = 7, net = 1_000_000, context = 1, direction = 0)
+        val iconId = TxId.wrap(ByteArray(32) { 0x2a })
+        val meta = PresentableTxMetadata(
+            txId = TxId.wrap(displayHex(7)),
+            memo = "table for two",
+            service = "CrowdNode",
+            customIconId = iconId
+        )
+        val plan = planL1DisplaySync(
+            listOf(r), emptyMap(), emptySet(), resolve, now,
+            metadataByTxid = mapOf(displayHex(7) to meta)
+        )
+
+        val row = plan.inserts.single()
+        assertEquals("table for two", row.comment)
+        assertEquals("CrowdNode", row.service)
+        assertEquals(iconId.toString(), row.customIconId)
+        // Decoration only — the direction shape still comes from the SDK record.
+        assertEquals(resolve(R.string.transaction_row_status_received), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_RECEIVED, row.iconType)
+        assertEquals(1_000_000L, row.valueSatoshis)
+    }
+
+    @Test
     fun syncPlan_groupedTxIsNeverTouched() {
         val r = record(firstByte = 7)
         val plan = planL1DisplaySync(listOf(r), emptyMap(), setOf(displayHex(7)), resolve, now)
@@ -383,16 +410,71 @@ class CutoverUiDataServiceTest {
             rowId = displayHex(9), title = sendingTitle,
             filterFlags = TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
         )
-        val withService = cacheEntry(rowId = displayHex(9), title = sendingTitle, service = "CrowdNode")
         val errored = cacheEntry(rowId = displayHex(9), title = sendingTitle, hasErrors = true)
 
-        for (entry in listOf(giftCard, withService, errored)) {
+        for (entry in listOf(giftCard, errored)) {
             val plan = planL1DisplaySync(
                 listOf(r), mapOf(entry.rowId to entry), emptySet(), resolve, now
             )
             assertTrue(plan.inserts.isEmpty())
             assertTrue(plan.updates.isEmpty())
         }
+    }
+
+    @Test
+    fun syncPlan_metadataServicedPendingRowStillSettlesOnLock() {
+        // CodeRabbit #1545 regression: a row inserted (or late-decorated) while
+        // pending with a METADATA-supplied service classification must keep taking
+        // the SDK status transitions — the service tag is decoration, not the
+        // never-touch rich-row signal, or the row sticks at "Sending"/"Processing"
+        // past its confirmation.
+        val pending = record(firstByte = 9, net = -1_000_146, fee = 146, context = 0, direction = 1)
+        val meta = PresentableTxMetadata(
+            txId = TxId.wrap(displayHex(9)),
+            memo = "top-up",
+            service = "CrowdNode"
+        )
+        val born = planL1DisplaySync(
+            listOf(pending), emptyMap(), emptySet(), resolve, now,
+            metadataByTxid = mapOf(displayHex(9) to meta)
+        ).inserts.single()
+        assertEquals("CrowdNode", born.service)
+        assertEquals(resolve(R.string.transaction_row_status_sending), born.title)
+
+        // IS lock lands on the next pass: title settles, the classification stays.
+        val locked = record(firstByte = 9, net = -1_000_146, fee = 146, context = 1, direction = 1)
+        val plan = planL1DisplaySync(
+            listOf(locked), mapOf(born.rowId to born), emptySet(), resolve, now
+        )
+        val settled = plan.updates.single()
+        assertEquals(resolve(R.string.transaction_row_status_sent), settled.title)
+        assertEquals("CrowdNode", settled.service)
+        assertEquals("top-up", settled.comment)
+        assertEquals(born.valueSatoshis, settled.valueSatoshis)
+    }
+
+    @Test
+    fun syncPlan_metadataServicedProcessingRowClearsOnInBlock() {
+        // Same regression, receive side: metadata-classified while "Processing",
+        // then a plain in-block record — the secondary status must still clear.
+        val processing = cacheEntry(
+            rowId = displayHex(5),
+            title = resolve(R.string.transaction_row_status_received),
+            statusText = resolve(R.string.transaction_row_status_processing),
+            service = "uphold",
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+        ).copy(
+            valueSatoshis = 1000L,
+            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+            iconBgType = TxDisplayCacheEntry.BG_RECEIVED
+        )
+        val plan = planL1DisplaySync(
+            listOf(record(firstByte = 5, net = 1000, context = 2, direction = 0)),
+            mapOf(processing.rowId to processing), emptySet(), resolve, now
+        )
+        val cleared = plan.updates.single()
+        assertEquals("", cleared.statusText)
+        assertEquals("uphold", cleared.service)
     }
 
     @Test
@@ -592,7 +674,7 @@ class CutoverUiDataServiceTest {
             )
             assertTrue("re-stamped ${resolve(titleRes)}", plan.updates.isEmpty())
         }
-        // The service / gift-card / error / CoinJoin-flag carve-outs stay untouchable
+        // The gift-card / error / CoinJoin-flag carve-outs stay untouchable
         // AND are never claimed as SDK-authoritative.
         val sendingTitle = resolve(R.string.transaction_row_status_sending)
         val carved = listOf(
@@ -600,7 +682,6 @@ class CutoverUiDataServiceTest {
                 rowId = displayHex(9), title = sendingTitle,
                 filterFlags = TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
             ),
-            cacheEntry(rowId = displayHex(9), title = sendingTitle, service = "CrowdNode"),
             cacheEntry(rowId = displayHex(9), title = sendingTitle, hasErrors = true),
             cacheEntry(
                 rowId = displayHex(9), title = sendingTitle,
@@ -614,6 +695,18 @@ class CutoverUiDataServiceTest {
             assertTrue(plan.updates.isEmpty())
             assertTrue(plan.sdkAuthoritative.isEmpty())
         }
+        // A service-classified row takes ONLY the status edges: the title settles,
+        // but the definitive value re-stamp stays off it and it is never claimed
+        // as SDK-authoritative.
+        val serviced = cacheEntry(rowId = displayHex(9), title = sendingTitle, service = "CrowdNode")
+        val servicedPlan = planL1DisplaySync(
+            listOf(r), mapOf(serviced.rowId to serviced), emptySet(), resolve, now
+        )
+        val servicedRow = servicedPlan.updates.single()
+        assertEquals(resolve(R.string.transaction_row_status_sent), servicedRow.title)
+        assertEquals(serviced.valueSatoshis, servicedRow.valueSatoshis)
+        assertEquals(serviced.iconType, servicedRow.iconType)
+        assertTrue(servicedPlan.sdkAuthoritative.isEmpty())
     }
 
     @Test
@@ -826,6 +919,8 @@ class CutoverUiDataServiceTest {
         ownedInvolvement: suspend (String) -> Boolean? = { true },
         /** Foreign-excluded store nets for the negative-event validation and contact rows. */
         walletNets: suspend (Set<String>) -> Map<String, Long> = { emptyMap() },
+        /** Presentable metadata store for the build-time row join; default = none known. */
+        metadata: Map<String, PresentableTxMetadata> = emptyMap(),
         /** MO-995: the bind-retry consultation the bound-wallet wait loop drives. */
         retryBind: suspend () -> Unit = {}
     ) = CutoverUiDataService(
@@ -850,6 +945,7 @@ class CutoverUiDataServiceTest {
         },
         resolveOwnedInvolvement = ownedInvolvement,
         resolveWalletNets = walletNets,
+        resolveMetadata = { txids -> metadata.filterKeys { it in txids } },
         retryBind = retryBind,
         nowMs = { now }
     )
@@ -1303,6 +1399,36 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun postCutover_insertJoinsMetadataPresentAtBuildTime() = runTest {
+        // Restored-device ordering: platform metadata synced BEFORE the L1 scan
+        // reached this tx, so the metadata store already holds the memo when the
+        // row is planned. The inserted row must be born with it.
+        val incoming = record(firstByte = 7, net = 1_000_000, context = 1, direction = 0)
+        val source = FakeSource(records = MutableStateFlow(listOf(incoming)))
+        val displayDao = mockk<TxDisplayCacheDao>(relaxed = true)
+        coEvery { displayDao.getEntriesByIds(any()) } returns emptyList()
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao,
+            metadata = mapOf(
+                displayHex(7) to PresentableTxMetadata(
+                    txId = TxId.wrap(displayHex(7)),
+                    memo = "curry night"
+                )
+            )
+        )
+        service.start()
+        runCurrent()
+
+        val inserted = slot<List<TxDisplayCacheEntry>>()
+        coVerify { displayDao.insertAll(capture(inserted)) }
+        assertEquals("curry night", inserted.captured.single().comment)
+    }
+
+    @Test
     fun postCutover_knownRowsProduceNoWrites() = runTest {
         val sent = record(firstByte = 9, net = -1_000_146, fee = 146, context = 1, direction = 1)
         val existing = cacheEntry(
@@ -1439,7 +1565,6 @@ class CutoverUiDataServiceTest {
                 filterFlags = flags
             )
         }
-        assertNull(planL1InstantLockRowUpdate(pendingLook(TxDisplayCacheEntry.FLAG_SENT, "crowdnode", false), resolve))
         assertNull(planL1InstantLockRowUpdate(pendingLook(TxDisplayCacheEntry.FLAG_SENT, null, true), resolve))
         assertNull(
             planL1InstantLockRowUpdate(
@@ -1453,6 +1578,24 @@ class CutoverUiDataServiceTest {
                 resolve
             )
         )
+    }
+
+    @Test
+    fun isLockPlan_metadataServicedRowStillSettles() {
+        // CodeRabbit #1545 regression, IS-lock edge: a metadata-supplied service
+        // classification must not freeze the row — the lock still flips
+        // "Sending" → "Sent" and clears "Processing", with the tag preserved.
+        val serviced = cacheEntry(
+            rowId = displayHex(6),
+            title = resolve(R.string.transaction_row_status_sending),
+            statusText = resolve(R.string.transaction_row_status_processing),
+            service = "crowdnode"
+        )
+        val updated = planL1InstantLockRowUpdate(serviced, resolve)!!
+        assertEquals(resolve(R.string.transaction_row_status_sent), updated.title)
+        assertEquals("", updated.statusText)
+        assertEquals("crowdnode", updated.service)
+        assertEquals(serviced.valueSatoshis, updated.valueSatoshis)
     }
 
     /** A stateful display-cache fake: inserts land in [store], reads see them. */
