@@ -22,6 +22,9 @@ import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -1308,6 +1311,102 @@ class DashPayBackfillGateTest {
         assertFalse(gate.concludeNoRewindObserved(walletId, identityId, userId))
         assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
         // The marker survives, so the next launch provisions again.
+        assertEquals(1_000_000L, store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
+    }
+
+    // ── registration racing the conclusion (the barrier cases) ───────────
+
+    /**
+     * An SDK fake whose signal read parks on [reached]/[resume] — the seam
+     * inside [DashPayBackfillGateImpl.concludeNoRewindObserved] between its
+     * registration check and its coverage write, where a concurrent drain
+     * lands in the field.
+     */
+    private fun barrierSdk(
+        signals: DashPayBackfillSignals,
+        reached: CompletableDeferred<Unit>,
+        resume: CompletableDeferred<Unit>
+    ): DashSdkService = mockk {
+        coEvery { readDashPayBackfillSignals(any(), any()) } coAnswers {
+            reached.complete(Unit)
+            resume.await()
+            signals
+        }
+    }
+
+    @Test
+    fun registrationDuringAConclusion_refusesToRecordCoverage() = runBlocking {
+        // The interleaving the gate mutex exists for: the conclusion passes
+        // its registration check, THEN a drain registers receival accounts
+        // and finds no coverage to invalidate, and the conclusion writes
+        // coverage anyway. The in-memory signal covers this process; a death
+        // right after leaves coverage for a scan those accounts' addresses
+        // were never watched during, suppressing their backfill forever.
+        val outgoingOnly = contactSetFingerprint(0, 140, 1_700_000_000_000L, 1_699_000_000_000L)
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET] = 1_000_000L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT] = outgoingOnly
+
+        val conclusionReachedTheSdk = CompletableDeferred<Unit>()
+        val registrationLanded = CompletableDeferred<Unit>()
+        val gate = DashPayBackfillGateImpl(
+            sdkService = barrierSdk(
+                DashPayBackfillSignals(1_000_042L, 790_000L, 140, null),
+                reached = conclusionReachedTheSdk,
+                resume = registrationLanded
+            ),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 0, fromUs = 140)
+        )
+
+        val conclusion = async(Dispatchers.Default) {
+            gate.concludeNoRewindObserved(walletId, identityId, userId)
+        }
+        conclusionReachedTheSdk.await()
+        // …the drain, mid-conclusion.
+        assertTrue(gate.noteAccountBuildsRegistered(3))
+        registrationLanded.complete(Unit)
+
+        assertFalse(conclusion.await())
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
+        // The marker survives, so the owed sweep still happens.
+        assertEquals(1_000_000L, store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
+    }
+
+    @Test
+    fun latchedRewindDuringAConclusion_refusesToRecordCoverage() = runBlocking {
+        // The same seam, other cause: a pass latches the REAL rewind while
+        // the conclusion is being reasoned out. Concluding "nothing needed
+        // backfilling" over an in-flight replay would clear the armed marker
+        // and record an assumed floor for a range still being re-scanned.
+        val outgoingOnly = contactSetFingerprint(0, 140, 1_700_000_000_000L, 1_699_000_000_000L)
+        val store = FakeStore()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET] = 1_000_000L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_FINGERPRINT] = outgoingOnly
+
+        val conclusionReachedTheSdk = CompletableDeferred<Unit>()
+        val replayLatched = CompletableDeferred<Unit>()
+        val gate = DashPayBackfillGateImpl(
+            sdkService = barrierSdk(
+                DashPayBackfillSignals(1_000_042L, 790_000L, 140, null),
+                reached = conclusionReachedTheSdk,
+                resume = replayLatched
+            ),
+            dashPayConfig = store.config(),
+            contactRequestDao = dao(toUs = 0, fromUs = 140)
+        )
+
+        val conclusion = async(Dispatchers.Default) {
+            gate.concludeNoRewindObserved(walletId, identityId, userId)
+        }
+        conclusionReachedTheSdk.await()
+        store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_FLOOR] = 790_000L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_TARGET] = 1_000_000L
+        store.values[DashPayConfig.DASHPAY_BACKFILL_PENDING_FINGERPRINT] = outgoingOnly
+        replayLatched.complete(Unit)
+
+        assertFalse(conclusion.await())
+        assertNull(store.values[DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR])
         assertEquals(1_000_000L, store.values[DashPayConfig.DASHPAY_BACKFILL_ARMED_TARGET])
     }
 }
