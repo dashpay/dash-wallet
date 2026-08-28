@@ -2148,6 +2148,32 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }.onFailure {
                         log.warn("failed to wire SDK-sourced quorums for Platform", it)
                     }
+
+                    // MO-995 / MO-998: restart the SDK's L1 (SPV) engine on EVERY
+                    // service (re)start, not just the first one of the process.
+                    //
+                    // platformSyncService.resume() — the only in-process path that
+                    // re-kicks the SDK engines — used to live solely in
+                    // checkService()'s peergroup-start block, BELOW the
+                    // `!dashjEngineMayStart` early return. Post-cutover that return
+                    // always fires, so resume() was unreachable and the engines only
+                    // ever came up from PlatformSyncService.init() (once per process,
+                    // from WalletApplication). Any service teardown that stops them
+                    // (release-build shutdown() -> stopSdkEngines(), reached from
+                    // onTrimMemory's low-memory stopSelf(), the idle detector, or the
+                    // Android 15 FGS timeout) therefore killed L1 sync for the rest
+                    // of the process: no incoming transactions, the sync UI stuck at
+                    // "syncing", and sends/top-ups failing with "SPV client not
+                    // started". Worse, the idle detector samples this same engine's
+                    // progress post-cutover, so a dead engine reads as idle and keeps
+                    // tearing the service down — a latch, not a transient.
+                    //
+                    // resume() is idempotent (single-flight bind + idempotent
+                    // startIfEnabled), so the first service start of a process
+                    // harmlessly re-kicks what init() already started. Scoped to the
+                    // post-cutover branch: the pre-cutover path keeps its original
+                    // resume()-at-peergroup-start behavior, unchanged.
+                    platformSyncService.resume()
                 }
 
                 // FIX 2: keep the DASHJ_SYNC_DIAGNOSTIC toggle effective on a LIVE
