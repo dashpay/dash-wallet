@@ -313,6 +313,30 @@ class SdkL1SendServiceTest {
     }
 
     @Test
+    fun classify_staleReservationToken_isNotBroadcast_onTheAtomicSendPath() {
+        // dashpay/platform#4309 age-guards the ATOMIC finalize → broadcast
+        // path (plain send and drain) against the same reservation bound as
+        // the deferred surface, reusing native code 34. The guard refuses
+        // BEFORE touching the broadcaster and releases the reservation
+        // owner-guarded, so this is definitively pre-network — Ambiguous here
+        // would show a payment that never left the device as "may be on the
+        // network" and block the dashj fallback.
+        val stale = DashSdkError.PlatformWallet.StaleReservationToken(
+            "finalized transaction reservation has outlived its lifetime; rebuild the payment"
+        )
+        val result = classifyCoreSendFailure(stale)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertSame(stale, (result as SdkWriteResult.NotBroadcast).cause)
+        // The ambiguous broadcast sibling must not be dragged along: only the
+        // pre-network refusal downgrades.
+        assertTrue(
+            classifyCoreSendFailure(
+                DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed("timeout after send")
+            ) is SdkWriteResult.Ambiguous
+        )
+    }
+
+    @Test
     fun classify_typedArms_reachTheDeferredTableToo() {
         // classifyDeferredBroadcastFailure defers to classifyCoreSendFailure,
         // so the typed trio must classify identically on the BIP70 deferred
@@ -321,7 +345,8 @@ class SdkL1SendServiceTest {
             error in listOf<Throwable>(
                 DashSdkError.PlatformWallet.WalletOperation("transaction build failed: bad recipients blob"),
                 DashSdkError.PlatformWallet.SigningKeyUnavailable("keystore locked"),
-                DashSdkError.PlatformWallet.TransactionBroadcastRejected("rejected by core")
+                DashSdkError.PlatformWallet.TransactionBroadcastRejected("rejected by core"),
+                DashSdkError.PlatformWallet.StaleReservationToken("reservation aged out")
             )
         ) {
             assertTrue(
