@@ -58,11 +58,13 @@ import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
+import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer_fragment) {
 
     companion object {
+        private val log = LoggerFactory.getLogger(EnterAmountToTransferFragment::class.java)
         private const val DECIMAL_SEPARATOR = '.'
         fun newInstance() = EnterAmountToTransferFragment()
     }
@@ -162,15 +164,18 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
 
     private fun formatTransferredAmount(value: String) {
         val text = viewModel.applyNewValue(value, pickedCurrencyOption)
+        val span = amountCurrencySpan(
+            text = text,
+            isDashSelected = pickedCurrencyIndex == 0,
+            formattedValue = viewModel.formattedValue,
+            fiatBalance = viewModel.fiatBalance,
+            isCurrencyFirst = viewModel.fiatAmount?.isCurrencyFirst() == true
+        )
         val spannableString = SpannableString(text).apply {
-            if (pickedCurrencyIndex == 0) {
-                spanAmount(this, viewModel.formattedValue.length, text.length)
+            if (span != null) {
+                spanAmount(this, span.from, span.to)
             } else {
-                if (viewModel.fiatAmount?.isCurrencyFirst() == true && text.length - viewModel.fiatBalance.length > 0) {
-                    spanAmount(this, 0, text.length - viewModel.fiatBalance.length)
-                } else {
-                    spanAmount(this, viewModel.inputValue.length, text.length)
-                }
+                log.warn("no valid currency span for amount text of length {}", text.length)
             }
         }
 
@@ -285,4 +290,50 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             }
         }
     }
+}
+
+/** The slice of the amount text that renders in the smaller currency style. */
+internal data class AmountCurrencySpan(val from: Int, val to: Int)
+
+/**
+ * Which slice of [text] is the currency label (rendered smaller) rather than the
+ * amount itself, or `null` when there is nothing valid to style.
+ *
+ * Pure and host-testable on purpose. The three branches take their bounds from
+ * separate mutable ViewModel fields, and `applyNewValue` refreshes only the one
+ * belonging to the branch it took — `formattedValue` for DASH, `fiatBalance` for
+ * fiat. Mixing a field from the other branch produces bounds that do not describe
+ * [text] at all, and `Spannable.setSpan` throws on those rather than ignoring them.
+ *
+ * MO-995: the fiat currency-last branch used the raw `inputValue` length. The fiat
+ * branch of `applyNewValue` sets `fiatBalance = inputValue` only when the input has
+ * at most 2 decimals; otherwise `fiatBalance` is the 2-dp formatted figure, which is
+ * SHORTER. Tapping USD converts the DASH amount through `formatInput`, yielding many
+ * decimals — so `from` (12) overshot `to` (7) and setSpan crashed the screen.
+ */
+internal fun amountCurrencySpan(
+    text: String,
+    isDashSelected: Boolean,
+    formattedValue: String,
+    fiatBalance: String,
+    isCurrencyFirst: Boolean
+): AmountCurrencySpan? {
+    val from: Int
+    val to: Int
+    if (isDashSelected) {
+        // text == "$formattedValue $DASH" — the trailing code.
+        from = formattedValue.length
+        to = text.length
+    } else if (isCurrencyFirst && text.length - fiatBalance.length > 0) {
+        // text == "$symbol $fiatBalance" — the leading symbol.
+        from = 0
+        to = text.length - fiatBalance.length
+    } else {
+        // text == "$fiatBalance $symbol" — the trailing symbol.
+        from = fiatBalance.length
+        to = text.length
+    }
+    // A stale or mismatched field must degrade to an unstyled amount, never crash.
+    if (from < 0 || to > text.length || from >= to) return null
+    return AmountCurrencySpan(from, to)
 }
