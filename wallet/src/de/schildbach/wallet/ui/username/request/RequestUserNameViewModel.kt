@@ -561,7 +561,7 @@ class RequestUserNameViewModel @Inject constructor(
         val inviteBalance = _inviteBalance.value
         return when {
             isUsingInvite() && contestable -> inviteBalance >= ContestedUsernameFees.fee
-            isUsingInvite() -> inviteBalance >= Constants.DASH_PAY_FEE
+            isUsingInvite() -> inviteBalance >= Constants.DASH_PAY_INVITE_MIN
             identityBalance > 0L -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 (if (contestable) CONTEST_DOCUMENT_FEE else NON_CONTEST_DOCUMENT_FEE) / 1000)
             identityBalance == 0L -> walletBalance >= if (contestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
