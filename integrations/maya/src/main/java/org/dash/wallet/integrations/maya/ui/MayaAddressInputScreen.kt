@@ -179,7 +179,6 @@ fun MayaAddressInputScreen(
                                 title = source.name,
                                 enabled = !unsupported,
                                 subtitle = source.address?.takeIf { it.isNotEmpty() },
-                                subtitleMaxLines = 1,
                                 subtitleMiddleEllipsis = true,
                                 icon = source.icon,
                                 trailingButtonText = if (connected || unsupported) {
@@ -213,7 +212,6 @@ fun MayaAddressInputScreen(
                             ActionItem(
                                 title = stringResource(R.string.maya_clipboard),
                                 subtitle = clipboardAddress,
-                                subtitleMaxLines = 1,
                                 subtitleMiddleEllipsis = true,
                                 icon = R.drawable.ic_maya_clipboard,
                                 onClick = onClipboardClick
