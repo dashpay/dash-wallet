@@ -290,8 +290,6 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.ACCEPT_REQUEST)
         // need to check balance
-        dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
-
         lifecycleScope.launch {
             val enough = dashPayViewModel.hasEnoughCredits()
             if (enough == null) {
@@ -317,7 +315,7 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
                     if (answer == true) {
                     SendCoinsActivity.startBuyCredits(requireActivity())
                     } else {
-                        if (shouldWarn)
+                        if (!isEmpty)
                             dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
                     }
                 } else {
