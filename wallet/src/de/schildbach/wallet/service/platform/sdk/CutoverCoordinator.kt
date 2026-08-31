@@ -311,32 +311,10 @@ class CutoverCoordinator @Inject constructor(
                 return@launch
             }
 
-            // MO-995 GATE 2 — never hand L1 to an SDK that has never proved it
-            // can bind on this install. Committing holds the dashj engine, so
-            // committing while the bind is broken leaves the wallet with NO L1
-            // engine: no sync, no incoming transactions, "setup is incomplete".
-            // walletC/D show the commit today runs 3-7 seconds BEFORE the first
-            // bind is even attempted, so success there was luck, not design.
-            //
-            // Deliberately NOT a deferred/awaited commit: BlockchainServiceImpl
-            // resolves its engine gate once at service onCreate and
-            // `onCutoverStateChanged` is un-hold-only, so a commit landing
-            // mid-launch cannot stop a live dashj peergroup. Declining outright
-            // keeps dashj as the single engine for this launch; once a bind
-            // succeeds, the auto-commit observer earns CUT_OVER through the
-            // normal readiness policy.
-            val bindEverSucceeded =
-                runCatching { dashPayConfig.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) == true }
-                    .getOrDefault(false)
-            if (!bindEverSucceeded) {
-                log.warn(
-                    "upgrade seam declining to commit the cutover: the SDK wallet bind has never " +
-                        "succeeded on this install, so handing L1 to the SDK would hold dashj and " +
-                        "leave no L1 engine — staying on dashj until a bind succeeds"
-                )
-                return@launch
-            }
-
+            // GATE 2 (bind evidence) now lives in commitLocked /
+            // refusesCutOverWithoutBindEvidence, so EVERY commit path inherits
+            // it — the seam, the fresh-wallet commit, and the readiness-driven
+            // auto-commit that used to bypass it entirely.
             val (_, justCutOver) = mutex.withLock { commitLocked("upgraded-wallet launch") }
             if (!justCutOver) return@launch
             if (freshWalletSetupThisLaunch) {
@@ -415,6 +393,49 @@ class CutoverCoordinator @Inject constructor(
      * corrupted by a racing commit — the property the one-time upgrade
      * explainer depends on. Must be called under [mutex].
      */
+    /**
+     * Whether the SDK has ever proved, on THIS install, that it can bind the
+     * app wallet — i.e. that its Keystore-backed master alias is usable. Set by
+     * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] on the first
+     * successful pass. Absent reads as false: fail safe, not fail open.
+     */
+    private suspend fun sdkBindEverSucceeded(): Boolean =
+        runCatching { dashPayConfig.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) == true }
+            .getOrDefault(false)
+
+    /**
+     * MO-995: refuse ANY transition into CUT_OVER while the SDK has never bound.
+     *
+     * Committing HOLDS the dashj engine, so committing onto an SDK that cannot
+     * bind leaves the wallet with NO L1 engine — no sync, no incoming
+     * transactions, "setup is incomplete" (walletB, HONOR PTP-N49, 16
+     * consecutive `KeystoreDeviceLockedException` denials on the lock-bound
+     * master alias).
+     *
+     * WHY HERE AND NOT ONLY AT THE SEAM: the gate first lived in
+     * [commitForUpgradedWalletAsync], which left the readiness-driven path
+     * wide open. On the emulator, with every bind failing,
+     * [CutoverAutoCommitObserver] still committed FOUR times —
+     * `READY_OBSERVED -> CUT_OVER on COMMIT_CUTOVER (ready=true)` followed by
+     * "SDK is now L1-primary (dashj held)" — reaching walletB's end state
+     * through a different door. The readiness evaluator has no notion of
+     * whether the wallet is bound, so this has to be checked where the write
+     * happens: [commitLocked] AND [transition] both consult it.
+     *
+     * Only CUT_OVER is guarded. ROLLBACK and the wipe reset move AWAY from a
+     * committed state and must never be blocked — that is the escape hatch.
+     */
+    private suspend fun refusesCutOverWithoutBindEvidence(to: CutoverState): Boolean {
+        if (to != CutoverState.CUT_OVER) return false
+        if (sdkBindEverSucceeded()) return false
+        log.warn(
+            "declining to commit the cutover: the SDK wallet bind has never succeeded on this " +
+                "install, so handing L1 to the SDK would hold dashj and leave no L1 engine — " +
+                "staying on dashj until a bind succeeds"
+        )
+        return true
+    }
+
     private suspend fun commitLocked(reason: String): Pair<CutoverStatus, Boolean> {
         val current = currentState()
         if (current == CutoverState.CUT_OVER || current == CutoverState.SETTLED) {
@@ -426,6 +447,9 @@ class CutoverCoordinator @Inject constructor(
                     "engine is inactive, so dashj must keep owning L1 (staying {})",
                 current
             )
+            return CutoverStatus(current, READY_VERDICT) to false
+        }
+        if (refusesCutOverWithoutBindEvidence(CutoverState.CUT_OVER)) {
             return CutoverStatus(current, READY_VERDICT) to false
         }
         val status = writeState(current, CutoverState.CUT_OVER, reason)
@@ -493,6 +517,11 @@ class CutoverCoordinator @Inject constructor(
             return@withLock CutoverStatus(current, CutoverVerdict(setOf(CutoverBlocker.PARITY_EVIDENCE_STALE)))
         }
         val next = nextCutoverState(current, action, verdict.ready)
+        if (next != current && refusesCutOverWithoutBindEvidence(next)) {
+            // Readiness said yes, but the SDK cannot own L1. Report the state
+            // unchanged so the observer keeps observing instead of standing down.
+            return@withLock CutoverStatus(current, verdict)
+        }
         if (next != current) {
             runCatching { dashPayConfig.set(DashPayConfig.CUTOVER_STATE, next.name) }
                 .onFailure {
@@ -518,7 +547,7 @@ class CutoverCoordinator @Inject constructor(
          * one-time upgrade sync explainer arms only for upgrades crossing
          * this boundary.
          */
-        const val FIRST_CUTOVER_VERSION_CODE = 11100000
+        const val FIRST_CUTOVER_VERSION_CODE = 12000000
 
         /**
          * The verdict reported by the DIRECT (non-readiness) state moves
