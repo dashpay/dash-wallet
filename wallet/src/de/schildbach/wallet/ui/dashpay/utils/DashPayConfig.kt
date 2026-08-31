@@ -427,6 +427,48 @@ open class DashPayConfig @Inject constructor(
         val CUTOVER_UPGRADE_NOTICE_PENDING = booleanPreferencesKey("cutover_upgrade_notice_pending")
 
         /**
+         * MO-995: set the first time the SDK wallet bind succeeds on this
+         * install, and never cleared except by a wallet wipe. It is the
+         * evidence the UPGRADE cutover seam requires before it will hand L1
+         * to the SDK — see
+         * [de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
+         * .commitForUpgradedWalletAsync].
+         *
+         * WHY PERSISTED and not the binder's in-memory state: the upgrade seam
+         * runs from `finalizeInitialization`, BEFORE the first bind pass of the
+         * process (platform sync starts the binder). An in-process signal is
+         * therefore always false at the seam and would defer every upgrade to
+         * the readiness-gated auto-commit. Persisting it means a device that
+         * has ever bound successfully still commits promptly, while a device
+         * whose keystore denies the bind never commits at all — the difference
+         * between walletC/D (bind fine, cut over) and walletB (16 keystore
+         * denials, cut over anyway, left with NO L1 engine).
+         */
+        val SDK_BIND_EVER_SUCCEEDED = booleanPreferencesKey("sdk_bind_ever_succeeded")
+
+        /**
+         * MO-995: set the first time a launch is seen to have crossed the
+         * cutover boundary (the previous launch ran a pre-11.10 build), and
+         * never cleared except by a wallet wipe.
+         *
+         * WHY THIS EXISTS: `Configuration.lastVersionCode` is "the version the
+         * PREVIOUS LAUNCH ran", not "the version this install upgraded from" —
+         * `updateLastVersionCode` overwrites it on every startup. So the fact
+         * that an install crossed the boundary is visible for exactly ONE
+         * launch, and that is the very launch on which the SDK bind has not
+         * run yet (the seam is in `finalizeInitialization`; the binder starts
+         * with platform sync). Without a durable latch, the upgrade seam's
+         * two conditions could never both hold and it would never commit
+         * again — losing the one-time sync explainer with it.
+         *
+         * Latching it means the commit can land on whichever later launch
+         * first has a working bind, which is what a device like walletB needs:
+         * its keystore may deny the bind for many launches before it heals.
+         */
+        val CUTOVER_UPGRADE_BOUNDARY_CROSSED =
+            booleanPreferencesKey("cutover_upgrade_boundary_crossed")
+
+        /**
          * DIAGNOSTIC toggle (Tools screen, debug instrumentation): un-hold the
          * dashj L1 engine AFTER the Phase 5d cutover has committed, so the
          * legacy peergroup syncs normally alongside the SDK — a backup /
