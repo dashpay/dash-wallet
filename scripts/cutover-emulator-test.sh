@@ -37,7 +37,10 @@ set -uo pipefail
 PKG=hashengineering.darkcoin.wallet_test
 SVC=$PKG/de.schildbach.wallet.service.BlockchainServiceImpl
 AVD=Pixel_9_API_36_AOPS
-PIN=REDACTED
+# Device lock PIN, for the scenarios that must lock and unlock the emulator.
+# NEVER hardcode it — supply it per run:  EMULATOR_PIN=... ./this-script s3
+# Only the scenarios that lock the screen need it (s2, and s3's unlock).
+PIN="${EMULATOR_PIN:-}"
 PREV_VERSION_PRE_CUTOVER=11090000   # any value < FIRST_CUTOVER_VERSION_CODE (11100000)
 BT=~/Library/Android/sdk/build-tools/35.0.1
 APK_DIR=wallet/build/outputs/apk/_testNet3/release
@@ -253,6 +256,11 @@ keep_awake()    { adbs svc power stayon true >/dev/null 2>&1
 # scenarios that needed a working bind. KEYCODE_0 is 7, so digit d -> 7+d.
 pin_keyevents() {
   local i ch
+  if [ -z "$PIN" ]; then
+    note "no PIN supplied — set EMULATOR_PIN=<pin> to let the script unlock the device,"
+    note "or unlock it by hand before running this scenario."
+    return 1
+  fi
   for (( i=0; i<${#PIN}; i++ )); do
     ch=${PIN:$i:1}
     adbs input keyevent $((7 + ch))
@@ -337,8 +345,13 @@ setup)
   fi
   note "installed: $(adbs "dumpsys package $PKG | grep -m1 versionName" | tr -d ' \r')"
   say "Ensure a secure lock screen (this is what makes the master alias lock-bound)"
-  adbs locksettings set-pin "$PIN" 2>/dev/null && note "PIN set to $PIN" \
-    || note "locksettings unavailable — set a PIN via Settings before running s2"
+  if [ -n "$PIN" ]; then
+    adbs locksettings set-pin "$PIN" >/dev/null 2>&1 \
+      && note "device PIN set from EMULATOR_PIN" \
+      || note "locksettings unavailable — set a device PIN via Settings before running s2"
+  else
+    note "no EMULATOR_PIN given — set a device PIN yourself; s2/s3 need one to lock+unlock"
+  fi
   note "then run: $0 s1"
   ;;
 
