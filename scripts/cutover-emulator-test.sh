@@ -28,7 +28,8 @@
 #         ./scripts/cutover-emulator-test.sh setup      # build+sign+upgrade-install
 #         ./scripts/cutover-emulator-test.sh s1        # upgrade, bind works
 #         ./scripts/cutover-emulator-test.sh s2        # upgrade, bind denied
-#         ./scripts/cutover-emulator-test.sh s3        # denied then healed
+#         ./scripts/cutover-emulator-test.sh s3        # denied then healed in-session
+#         ./scripts/cutover-emulator-test.sh s3b       # ...and the next launch commits
 #         ./scripts/cutover-emulator-test.sh s4        # trim -> SPV restart
 #         ./scripts/cutover-emulator-test.sh log       # pull + tail wallet.log
 set -uo pipefail
@@ -136,6 +137,22 @@ refute_log() {
     printf '   \033[31mFAIL\033[0m %s\n        (unexpected: %s)\n' "$label" "$pat"
     grep -E "$pat" "$w" | head -2 | sed 's/^/          /'
   else printf '   \033[32mPASS\033[0m %s\n' "$label"; fi
+}
+
+# assert_not_committed <label> — reads the PERSISTED state, not the log.
+# The engine-gate lines (`dashjEngineMayStart=`, `starting peergroup`) are only
+# emitted at service onCreate. A scenario that deliberately keeps ONE process
+# alive has no new onCreate, so those lines cannot appear in its window and
+# asserting on them is a guaranteed false FAIL. The DataStore is the durable
+# source of truth for who owns L1.
+assert_not_committed() {
+  local label="$1" raw
+  raw=$(adbs "strings /data/data/$PKG/files/datastore/dashpay.preferences_pb 2>/dev/null" | tr -d '\r')
+  if echo "$raw" | grep -qE "CUT_OVER|SETTLED"; then
+    printf '   \033[31mFAIL\033[0m %s\n        (persisted state is committed)\n' "$label"
+  else
+    printf '   \033[32mPASS\033[0m %s\n' "$label"
+  fi
 }
 
 fake_pre_cutover_previous_launch() {
@@ -364,18 +381,49 @@ s2)
   ;;
 
 s3)
-  say "S3 — denied, then healed (recovery path; expected to expose the noteAppForeground gap)"
+  say "S3 — denied, then healed IN-SESSION (the walletB recovery path)"
   require_device; require_root
-  note "assumes S2 just ran: state DUAL_RUNNING, bind marker unset"
+  note "assumes S2 just ran: state DUAL_RUNNING, bind marker unset, screen locked"
   show_state
-  mark_log          # S3 had NO mark, so its assertions matched the whole log history
+  mark_log
   wake_unlock
   launch_app
-  assert_log "bind succeeded after unlock"       "app wallet (bound to new|already bound to) SDK wallet"
-  note "does it recover WITHOUT a restart? (this is the open question)"
-  assert_log "committed in-session"              "cutover state DUAL_RUNNING -> CUT_OVER"
-  note "if the line above FAILED, restart the app and re-check — needing a restart confirms"
-  note "that noteAppForeground() only resets a backoff nothing reads once the wait loop ended"
+
+  # The recovery chain, in order. Each of these was broken until b49ef25b0:
+  #   - ProcessLifecycleOwner never fired, so the foreground signal never existed
+  #   - noteAppForeground was state-only, so nothing drove a retry
+  #   - nothing else calls maybeRetry once the cutover correctly declines to commit
+  assert_log "app-foreground signal fired"       "App moved to foreground"
+  assert_log "foreground drove a bind retry"     "app foregrounded with an SDK bind retry pending"
+  assert_log "the retry ran a pass"              "SDK bind retry [0-9]+ \(app foreground\)"
+  assert_log "bind healed after the unlock"      "app wallet (bound to new|already bound to) SDK wallet"
+  assert_log "retry pressure cleared"            "bind established after [0-9]+ failed pass"
+
+  # …and it must be the SAME process: a restart would heal it trivially and prove
+  # nothing. walletB restarted repeatedly and never recovered.
+  refute_log "healed WITHOUT a process restart"  "WalletApplication.onCreate\(\)"
+
+  # dashj must still own L1 for this launch. The commit is NOT expected here and
+  # asserting it was my error: the upgrade seam only runs at process start, so
+  # in-session the only route is the readiness-gated auto-commit, which needs
+  # MIN_PARITY_STREAK readings at a 10s throttle AND the SDK scan caught up to
+  # tip. 45s cannot satisfy that, so a missing commit here is correct deferral,
+  # not a defect. The commit is checked on the NEXT launch instead — see s3b.
+  assert_not_committed "dashj still owns L1 (state not committed)"
+  note "commit is deliberately NOT asserted here — run s3b to check the next launch"
+  ;;
+
+s3b)
+  say "S3b — the launch AFTER an in-session heal should commit"
+  require_device; require_root
+  show_state
+  note "the bind marker must be set by now (s3 healed it); the seam can act at process start"
+  adbs am force-stop "$PKG"; sleep 3
+  mark_log
+  wake_unlock
+  launch_app
+  assert_log "committed on the next launch"      "cutover state DUAL_RUNNING -> CUT_OVER|READY_OBSERVED -> CUT_OVER"
+  assert_log "SDK L1 engine started"             "L1 shadow SPV started"
   ;;
 
 s4)
