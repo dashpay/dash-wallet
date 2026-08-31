@@ -273,6 +273,70 @@ class CutoverCoordinator @Inject constructor(
      */
     fun commitForUpgradedWalletAsync(previousVersionCode: Int) {
         scope.launch {
+            // MO-995 GATE 1 — this must be a REAL upgrade across the cutover
+            // boundary. The same `previousVersionCode` test below used to gate
+            // only the explainer, while the commit itself ran unconditionally.
+            // walletB reached here on a SAME-VERSION relaunch (previous code
+            // 12000001 == this build): the seam committed, dashj was held, the
+            // SDK bind then failed on the keystore, and the wallet was left
+            // with no L1 engine at all. If this launch did not cross the
+            // boundary, the upgrade seam has no business committing — the
+            // readiness-gated auto-commit observer owns that decision.
+            // `previousVersionCode` is the version the PREVIOUS LAUNCH ran, and
+            // `Configuration.updateLastVersionCode` overwrites it every startup
+            // — so the boundary crossing is visible for exactly one launch, and
+            // that is the one launch on which GATE 2 below cannot yet be
+            // satisfied (the bind runs after this seam). Latch it durably so a
+            // later launch with a working bind can still commit.
+            val crossedNow = isPreCutoverUpgrade(previousVersionCode)
+            if (crossedNow) {
+                runCatching {
+                    dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, true)
+                }.onFailure {
+                    if (it is CancellationException) throw it
+                    log.warn("failed to latch the cutover boundary crossing", it)
+                }
+            }
+            val crossedEver = crossedNow || runCatching {
+                dashPayConfig.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) == true
+            }.getOrDefault(false)
+            if (!crossedEver) {
+                log.info(
+                    "upgrade seam declining to commit the cutover: previous version code {} is " +
+                        "not a pre-{} upgrade (0 = fresh install, >= {} = already on 11.10+) and " +
+                        "no boundary crossing was ever latched — leaving the state alone for the " +
+                        "readiness-gated auto-commit",
+                    previousVersionCode, FIRST_CUTOVER_VERSION_CODE, FIRST_CUTOVER_VERSION_CODE
+                )
+                return@launch
+            }
+
+            // MO-995 GATE 2 — never hand L1 to an SDK that has never proved it
+            // can bind on this install. Committing holds the dashj engine, so
+            // committing while the bind is broken leaves the wallet with NO L1
+            // engine: no sync, no incoming transactions, "setup is incomplete".
+            // walletC/D show the commit today runs 3-7 seconds BEFORE the first
+            // bind is even attempted, so success there was luck, not design.
+            //
+            // Deliberately NOT a deferred/awaited commit: BlockchainServiceImpl
+            // resolves its engine gate once at service onCreate and
+            // `onCutoverStateChanged` is un-hold-only, so a commit landing
+            // mid-launch cannot stop a live dashj peergroup. Declining outright
+            // keeps dashj as the single engine for this launch; once a bind
+            // succeeds, the auto-commit observer earns CUT_OVER through the
+            // normal readiness policy.
+            val bindEverSucceeded =
+                runCatching { dashPayConfig.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) == true }
+                    .getOrDefault(false)
+            if (!bindEverSucceeded) {
+                log.warn(
+                    "upgrade seam declining to commit the cutover: the SDK wallet bind has never " +
+                        "succeeded on this install, so handing L1 to the SDK would hold dashj and " +
+                        "leave no L1 engine — staying on dashj until a bind succeeds"
+                )
+                return@launch
+            }
+
             val (_, justCutOver) = mutex.withLock { commitLocked("upgraded-wallet launch") }
             if (!justCutOver) return@launch
             if (freshWalletSetupThisLaunch) {
@@ -283,15 +347,10 @@ class CutoverCoordinator @Inject constructor(
                 )
                 return@launch
             }
-            if (previousVersionCode <= 0 || previousVersionCode >= FIRST_CUTOVER_VERSION_CODE) {
-                log.info(
-                    "upgrade seam committed the cutover, but the previous version code {} is not " +
-                        "a pre-11.10 upgrade (0 = fresh install, >= {} = already on 11.10+) — " +
-                        "suppressing the one-time UPGRADE sync explainer",
-                    previousVersionCode, FIRST_CUTOVER_VERSION_CODE
-                )
-                return@launch
-            }
+            // The version-code condition that used to gate ONLY the explainer
+            // here is now GATE 1 above and gates the commit itself, so reaching
+            // this line already means a genuine pre-cutover upgrade. Arming is
+            // unconditional from here.
             runCatching { dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, true) }
                 .onSuccess { log.info("upgrade cutover: one-time sync explainer armed") }
                 .onFailure {
@@ -470,3 +529,22 @@ class CutoverCoordinator @Inject constructor(
         private val READY_VERDICT = CutoverVerdict(emptySet())
     }
 }
+
+/**
+ * Whether [previousVersionCode] — the versionCode recorded by the launch
+ * BEFORE this one — means this launch genuinely crossed the cutover boundary,
+ * i.e. the app was last run on a pre-11.10 build.
+ *
+ * `0` means the app was never run before (fresh install), and anything at or
+ * above [CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE] means the previous
+ * launch was already on 11.10+ — including a relaunch of the SAME build,
+ * which is what walletB hit (previous code 12000001 on a 12000001 build).
+ * Neither is an upgrade across the boundary, so neither may drive the
+ * UPGRADE seam's commit.
+ *
+ * Pure and host-testable: this is the predicate that decides whether the
+ * upgrade seam is allowed to hand L1 to the SDK at all.
+ */
+internal fun isPreCutoverUpgrade(previousVersionCode: Int): Boolean =
+    previousVersionCode > 0 &&
+        previousVersionCode < CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE

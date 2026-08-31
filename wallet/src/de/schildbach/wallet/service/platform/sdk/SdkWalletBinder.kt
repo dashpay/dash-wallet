@@ -1020,6 +1020,17 @@ class SdkWalletBinder internal constructor(
             sdkService.bindAppWallet(words, birthTimeSecs).also {
                 boundWalletIdHex = it
                 boundWalletFingerprint = fingerprint
+                // MO-995: durable evidence that this install's keystore can
+                // actually serve the SDK bind. The UPGRADE cutover seam refuses
+                // to hand L1 to the SDK until this is set, so a device whose
+                // Keystore denies the lock-bound master alias stays on dashj
+                // instead of being left with no engine at all. Best-effort:
+                // a failed write only delays the next launch's commit.
+                runCatching { dashPayConfig.set(DashPayConfig.SDK_BIND_EVER_SUCCEEDED, true) }
+                    .onFailure { t ->
+                        if (t is CancellationException) throw t
+                        log.warn("failed to persist the SDK bind-success marker", t)
+                    }
             }
         }
 
