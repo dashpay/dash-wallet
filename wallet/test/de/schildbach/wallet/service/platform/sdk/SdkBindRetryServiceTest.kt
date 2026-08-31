@@ -177,7 +177,7 @@ class SdkBindRetryServiceTest {
     }
 
     @Test
-    fun noteAppForeground_collapsesTheBackoffWindow() = runTest {
+    fun noteAppForeground_drivesARetryImmediately() = runTest {
         val h = Harness()
         h.signal.primeFailed()
         val service = h.service(backgroundScope)
@@ -194,10 +194,19 @@ class SdkBindRetryServiceTest {
         service.maybeRetry("poll")
         assertEquals(5, h.signal.passes)
 
-        // …until the app foregrounds, which resets the ladder.
+        // …until the app foregrounds, which now DRIVES a pass itself rather than
+        // only resetting the ladder for some other trigger to notice.
+        //
+        // MO-995: the old state-only behaviour depended on `maybeRetry` being
+        // called by CutoverUiDataService's bound-wallet wait loop — a loop that
+        // only runs while the cutover holds dashj with NO bound wallet. Once the
+        // coordinator refuses to commit onto an unbindable SDK that state never
+        // happens, so nothing ever polled and nothing ever retried (emulator S3:
+        // unlock + foreground produced zero binder activity; only an app restart
+        // healed it).
         service.noteAppForeground()
-        service.maybeRetry("poll")
-        assertEquals(6, h.signal.passes)
+        runCurrent()
+        assertEquals("foregrounding must itself run a bind pass", 6, h.signal.passes)
     }
 
     // ── The unlock heal receiver ──────────────────────────────────────
@@ -560,5 +569,46 @@ class SdkBindRetryServiceTest {
                 "path established the bind — otherwise the upgrade seam declines forever",
             markerWritten
         )
+    }
+
+    /**
+     * The emulator S3 scenario, reduced: a pending retry, and NOTHING polling.
+     *
+     * This is the state the wallet is actually in after the coordinator
+     * declines to commit onto an unbindable SDK — CutoverUiDataService's
+     * bound-wallet wait loop (the sole caller of [SdkBindRetryService.maybeRetry])
+     * never runs, so no poll ever arrives. Foregrounding the app must be
+     * sufficient on its own, with no `maybeRetry` call anywhere in the test.
+     */
+    @Test
+    fun noteAppForeground_recoversWithNoPollingTriggerAtAll() = runTest {
+        val h = Harness()
+        h.signal.primeFailed()
+        val service = h.service(backgroundScope)
+
+        assertEquals("no poll has happened", 0, h.signal.passes)
+
+        service.noteAppForeground()
+        runCurrent()
+
+        assertEquals("a foreground visit alone must retry the bind", 1, h.signal.passes)
+    }
+
+    /**
+     * Foregrounding also ARMS the unlock receiver. Arming used to happen only
+     * inside [SdkBindRetryService.maybeRetry], so in the no-polling state above
+     * the receiver was never registered either — walletB logged
+     * "unlock-heal receiver registered" zero times.
+     */
+    @Test
+    fun noteAppForeground_armsTheUnlockReceiver() = runTest {
+        val h = Harness()
+        h.signal.primeFailed()
+        val service = h.service(backgroundScope)
+
+        service.noteAppForeground()
+        runCurrent()
+
+        assertEquals("the unlock-heal receiver must be armed by a foreground visit", 1, h.registrations)
     }
 }
