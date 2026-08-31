@@ -353,14 +353,21 @@ class CutoverCoordinatorTest {
     private val pre1110VersionCode = 11090002
 
     /** A previous-launch versionCode already ON the 11.10 line (11.10.1). */
-    private val on1110VersionCode = 11100100
+    /**
+     * A previous-launch versionCode AT/ABOVE the cutover line — i.e. the
+     * previous launch already had the SDK cutover, so this launch did not cross
+     * the boundary. DERIVED from the constant on purpose: this was hardcoded to
+     * 11100100 and silently became a *pre*-cutover value when the boundary moved
+     * from 11100000 to 12000000, inverting what the test asserted.
+     */
+    private val onOrAfterCutoverVersionCode = CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE + 100
 
     /**
      * The versionCode of THIS build — what `lastVersionCode` reads on every
      * launch after the first one. walletB reached the seam with exactly this
      * shape (previous code 12000001 on a 12000001 build).
      */
-    private val sameBuildVersionCode = 12000001
+    private val sameBuildVersionCode = CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE + 1
 
     @Test
     fun upgradeNotice_armed_onAGenuineUpgradeFromPre1110ThatFlipsTheState() = runBlocking {
@@ -378,19 +385,19 @@ class CutoverCoordinatorTest {
     }
 
     @Test
-    fun upgradeNotice_notArmed_whenPreviousVersionIsAlready1110() = runBlocking {
-        // 11.10.x -> 11.10.y update: the state still flips here (e.g. the SDK
-        // L1 flag was off on the earlier 11.10.x launches), but the user is not
-        // crossing the pre-cutover boundary — no explainer.
+    fun upgradeNotice_notArmed_whenPreviousVersionIsAlreadyAtOrAfterCutover() = runBlocking {
+        // An update from a build that ALREADY had the cutover: the user is not
+        // crossing the pre-cutover boundary, so neither the commit nor the
+        // explainer may fire.
         val (coordinator, stored, armed) = noticeCoordinator(stored = null)
-        coordinator.commitForUpgradedWalletAsync(on1110VersionCode)
+        coordinator.commitForUpgradedWalletAsync(onOrAfterCutoverVersionCode)
         // MO-995 GATE 1 (behaviour CHANGE): the version-code test now gates the
         // COMMIT too, not just the explainer. An 11.10+ previous code means this
         // launch did not cross the cutover boundary, so the upgrade seam must
         // leave the state alone — walletB committed here on a same-version
         // relaunch and was left with no L1 engine when its bind then failed.
         assertNull("a non-boundary-crossing launch must not commit", stored())
-        assertFalse("an 11.10.x -> 11.10.y update must not re-explain the resync", armed())
+        assertFalse("an already-cut-over update must not re-explain the resync", armed())
     }
 
     @Test
@@ -408,9 +415,10 @@ class CutoverCoordinatorTest {
     }
 
     @Test
-    fun upgradeNotice_armed_atTheLastPre1110Code_andNotAtTheBoundaryItself() = runBlocking {
-        // Boundary pin: FIRST_CUTOVER_VERSION_CODE (11.10.0 = 11100000) is the
-        // first code that does NOT arm; one below it still does.
+    fun upgradeNotice_armed_atTheLastPreCutoverCode_andNotAtTheBoundaryItself() = runBlocking {
+        // Boundary pin: FIRST_CUTOVER_VERSION_CODE is the first code that does
+        // NOT arm; one below it still does. Expressed relative to the constant
+        // so moving the cutover release cannot invert the assertion.
         val below = CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE - 1
         val (armedCoordinator, _, armedBelow) = noticeCoordinator(stored = null)
         armedCoordinator.commitForUpgradedWalletAsync(below)
@@ -418,7 +426,7 @@ class CutoverCoordinatorTest {
 
         val (boundaryCoordinator, _, armedAt) = noticeCoordinator(stored = null)
         boundaryCoordinator.commitForUpgradedWalletAsync(CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE)
-        assertFalse("previous code 11100000 is already 11.10 — must not arm", armedAt())
+        assertFalse("the boundary code itself is already cut over — must not arm", armedAt())
     }
 
     @Test
@@ -549,7 +557,7 @@ class CutoverCoordinatorTest {
     fun isPreCutoverUpgrade_pinsTheBoundary() {
         assertFalse("0 = fresh install, never ran before", isPreCutoverUpgrade(0))
         assertFalse("negative is nonsense — fail safe", isPreCutoverUpgrade(-1))
-        assertTrue("11.9.0 crossed the boundary", isPreCutoverUpgrade(11090000))
+        assertTrue("a pre-cutover release crossed the boundary", isPreCutoverUpgrade(11090000))
         assertTrue(
             "one below the line still crosses it",
             isPreCutoverUpgrade(CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE - 1)
@@ -558,7 +566,10 @@ class CutoverCoordinatorTest {
             "the line itself is already 11.10",
             isPreCutoverUpgrade(CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE)
         )
-        assertFalse("walletB: a relaunch of the SAME 12.x build is not an upgrade", isPreCutoverUpgrade(12000001))
+        assertFalse(
+            "walletB: a relaunch of the SAME build is not an upgrade",
+            isPreCutoverUpgrade(CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE + 1)
+        )
     }
 
     @Test

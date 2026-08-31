@@ -486,4 +486,71 @@ class SdkBindRetryServiceTest {
         assertFalse(binder.bindRetryPending.value)
         assertEquals(0, binder.consecutiveBindFailures)
     }
+
+    /**
+     * MO-995: the durable bind-success marker must be written on EVERY
+     * successful pass, including the "app wallet already bound" path — not only
+     * when a new SDK wallet is created.
+     *
+     * REGRESSION: the marker first lived inside `bindAppWallet(...).also { }`,
+     * which only runs on a fresh bind. On any launch that found the SDK wallet
+     * already bound, the marker was never written, so
+     * `CutoverCoordinator.commitForUpgradedWalletAsync` declined forever and
+     * the cutover never committed. Caught on the emulator: launch 2 of a clean
+     * run still logged "bind has never succeeded" while the L1 engine was
+     * demonstrably running.
+     */
+    @Test
+    fun binder_persistsTheBindSuccessMarker_evenWhenTheWalletWasAlreadyBound() = runBlocking {
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) } returns false
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) } returns false
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns false
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        coEvery { config.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) } returns
+            SdkWalletBinder.GAP_WIDEN_HEAL_VERSION
+        var markerWritten = false
+        coEvery { config.set(DashPayConfig.SDK_BIND_EVER_SUCCEEDED, any<Boolean>()) } answers {
+            markerWritten = secondArg()
+            Unit
+        }
+        val walletId = "cd".repeat(32)
+        val sdk = mockk<DashSdkService>(relaxed = true)
+        coEvery { sdk.bindAppWallet(any(), any()) } returns walletId
+        // The ALREADY-BOUND path: the SDK reports the wallet is already loaded,
+        // so a fresh bindAppWallet() is not what establishes it.
+        coEvery { sdk.loadedWalletIds() } returns setOf(walletId)
+        val identityConfig = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityConfig> {
+            coEvery { loadBase() } returns de.schildbach.wallet.database.entity.BlockchainIdentityBaseData(
+                creationState = de.schildbach.wallet.database.entity.IdentityCreationState.NONE,
+                creationStateErrorMessage = null,
+                username = null,
+                usernameSecondary = null,
+                userId = null,
+                restoring = false
+            )
+        }
+        val binder = SdkWalletBinder(
+            sdkService = sdk,
+            mnemonicProvider = object : PlatformMnemonicProvider {
+                override suspend fun getMnemonicWords(unlock: WalletUnlock) =
+                    listOf("abandon", "abandon", "about")
+            },
+            identityConfig = identityConfig,
+            dashPayConfig = config,
+            walletData = mockk { io.mockk.every { wallet } returns null },
+            blockchainServiceConfig = mockk { coEvery { getWalletCreationDate() } returns null },
+            scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined),
+            supportsPlatform = { true },
+            backfillGate = DashPayBackfillGate.ALWAYS_RUN
+        )
+
+        binder.bindIfEnabled { WalletUnlock.Unencrypted }
+
+        assertTrue(
+            "a successful pass must persist SDK_BIND_EVER_SUCCEEDED regardless of which " +
+                "path established the bind — otherwise the upgrade seam declines forever",
+            markerWritten
+        )
+    }
 }

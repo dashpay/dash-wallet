@@ -1,0 +1,373 @@
+#!/bin/bash
+#
+# MO-995 cutover / SPV-restart test harness for the Android emulator.
+#
+# WHY A RELEASE BUILD: PlatformSyncService.shutdown() skips stopSdkEngines()
+# when BuildConfig.DEBUG (PlatformSyncService.kt:656) — a deliberate warm-SPV
+# battery trade-off. On a debug build the SDK engine never stops on teardown,
+# so neither MO-995 nor its fix can be observed. Everything below needs the
+# _testNet3Release variant.
+#
+# WHY THE AOSP EMULATOR IMAGE: steps 1-3 fake the previous-launch versionCode
+# by writing shared_prefs directly, which needs `adb root`. The
+# android-36/google_apis_playstore image blocks root; android-36/default
+# allows it. Use Pixel_9_API_36_AOPS (Android 16, arm64-v8a — matches all four
+# field devices).
+#
+# WHAT THIS CANNOT REPRODUCE: walletB's FALSE-LOCKED classification
+# (KeyguardManager reports unlocked while Keystore denies). That is the HONOR
+# PTP-N49 OEM defect; on AOSP every denial classifies as "genuinely locked".
+# The false-locked branch is covered by SdkBindRetryServiceTest instead. A
+# green run here does NOT clear the HONOR case.
+#
+# ORDER OF OPERATIONS: you install the PRE-CUTOVER build yourself and onboard
+# /sync it. Then `setup` builds, signs and installs the fix build OVER it —
+# that install is the upgrade under test. The scenarios run after that.
+#
+# Usage:  ./scripts/cutover-emulator-test.sh <step>
+#         ./scripts/cutover-emulator-test.sh setup      # build+sign+upgrade-install
+#         ./scripts/cutover-emulator-test.sh s1        # upgrade, bind works
+#         ./scripts/cutover-emulator-test.sh s2        # upgrade, bind denied
+#         ./scripts/cutover-emulator-test.sh s3        # denied then healed
+#         ./scripts/cutover-emulator-test.sh s4        # trim -> SPV restart
+#         ./scripts/cutover-emulator-test.sh log       # pull + tail wallet.log
+set -uo pipefail
+
+PKG=hashengineering.darkcoin.wallet_test
+SVC=$PKG/de.schildbach.wallet.service.BlockchainServiceImpl
+AVD=Pixel_9_API_36_AOPS
+PIN=1234
+PREV_VERSION_PRE_CUTOVER=11090000   # any value < FIRST_CUTOVER_VERSION_CODE (11100000)
+BT=~/Library/Android/sdk/build-tools/35.0.1
+APK_DIR=wallet/build/outputs/apk/_testNet3/release
+OUT=/tmp/mo995-emulator
+mkdir -p "$OUT"
+
+say()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
+note() { printf '   %s\n' "$*"; }
+adbs() { adb shell "$@"; }
+
+require_device() {
+  adb get-state >/dev/null 2>&1 || { echo "No device. Start it: emulator -avd $AVD -no-snapshot-load"; exit 1; }
+}
+
+# Root is required for the shared_prefs poke and for `run-as`-free log reads.
+require_root() {
+  adb root >/dev/null 2>&1
+  adb wait-for-device >/dev/null 2>&1
+  if [ "$(adbs id -u | tr -d '\r')" != "0" ]; then
+    echo "adb root failed — are you on the google_apis_playstore image? Use $AVD (android-36/default)."
+    exit 1
+  fi
+}
+
+# Pull the log, NEVER silently truncating our copy. The old version fell back
+# to `run-as`, which cannot work on a release build (not debuggable) — so a
+# failed pull wrote an EMPTY file and every assertion reported a false FAIL
+# while the log on the device was fine. Now: re-assert root, retry, and keep
+# the previous copy rather than clobbering it with nothing.
+pull_log() {
+  local dst="$OUT/wallet.log" tmp="$OUT/.wallet.pull" i
+  for i in 1 2 3; do
+    rm -f "$tmp"
+    if adb pull "/data/data/$PKG/files/log/wallet.log" "$tmp" >/dev/null 2>&1 && [ -s "$tmp" ]; then
+      mv -f "$tmp" "$dst"; echo "$dst"; return 0
+    fi
+    adb root >/dev/null 2>&1; adb wait-for-device >/dev/null 2>&1; sleep 2
+  done
+  rm -f "$tmp"
+  if [ -s "$dst" ]; then
+    echo "   WARN: could not refresh the log (adb pull failed) — asserting on the last good copy" >&2
+    echo "$dst"; return 0
+  fi
+  echo "   ERROR: cannot read wallet.log from the device (need adb root; release builds are not run-as-able)" >&2
+  : > "$dst"; echo "$dst"; return 1
+}
+
+# Assertions are SCOPED TO LINES ADDED SINCE mark_log(), not to a truncated
+# file. `rm`-ing wallet.log proved unreliable (logback may hold or recreate the
+# handle), and a stale line from an earlier run silently satisfied a refute —
+# which is exactly how a contaminated S1 reported a false failure. Line-offset
+# scoping is immune to that, and to log rotation (guarded below).
+LOG_MARK=0
+
+mark_log() {
+  local f; f=$(pull_log)
+  LOG_MARK=$(wc -l < "$f" 2>/dev/null | tr -d ' ')
+  : "${LOG_MARK:=0}"
+  note "log marked at line $LOG_MARK — assertions below only see NEW lines"
+}
+
+# Lines appended since the mark. If the log shrank (rotation/truncation),
+# fall back to the whole file rather than silently asserting on nothing.
+# Writes the window to a FILE and echoes its path. Callers must grep the file,
+# never `since_mark | grep -q`: under `set -o pipefail`, grep -q exits on the
+# first match, tail dies of SIGPIPE, and the pipeline reports 141 — so a match
+# looks like a failure. That produced false FAILs for patterns appearing early
+# in a large window while later ones passed.
+since_mark() {
+  local f n out="$OUT/.window"; f=$(pull_log); n=$(wc -l < "$f" | tr -d ' ')
+  if [ "${n:-0}" -lt "${LOG_MARK:-0}" ]; then cp -f "$f" "$out"
+  else tail -n +$((LOG_MARK + 1)) "$f" > "$out"; fi
+  echo "$out"
+}
+
+# assert_log <label> <grep-pattern> [timeout-secs]
+# POLLS rather than sampling once: engine startup on the emulator has been seen
+# to take 15s+ (STARTUP breadcrumb SDK_L1_ENGINE_STARTING +15910ms), so a fixed
+# sleep followed by a single check reports false FAILs for a healthy engine.
+assert_log() {
+  local label="$1" pat="$2" budget="${3:-45}" waited=0
+  while [ "$waited" -lt "$budget" ]; do
+    if grep -qE "$pat" "$(since_mark)"; then
+      printf '   \033[32mPASS\033[0m %s%s\n' "$label" "$([ "$waited" -gt 0 ] && echo " (after ${waited}s)")"
+      return 0
+    fi
+    sleep 5; waited=$((waited + 5))
+  done
+  printf '   \033[31mFAIL\033[0m %s\n        (no match in %ss for: %s)\n' "$label" "$budget" "$pat"
+}
+
+# refute_log <label> <grep-pattern>   — PASS if absent from the new lines
+refute_log() {
+  local label="$1" pat="$2"
+  local w; w=$(since_mark)
+  if grep -qE "$pat" "$w"; then
+    printf '   \033[31mFAIL\033[0m %s\n        (unexpected: %s)\n' "$label" "$pat"
+    grep -E "$pat" "$w" | head -2 | sed 's/^/          /'
+  else printf '   \033[32mPASS\033[0m %s\n' "$label"; fi
+}
+
+fake_pre_cutover_previous_launch() {
+  # Configuration.lastVersionCode is read from the default SharedPreferences
+  # ("last_version", Configuration.java:61) at construction. Writing it here is
+  # exactly equivalent to "the previous launch ran a pre-11.10 build", which is
+  # what CutoverCoordinator's GATE 1 tests — without needing a real v11.9.0 APK
+  # signed with matching keys.
+  #
+  # CAVEAT: this exercises the GATE logic, not real upgrade mechanics (Room
+  # migrations, wallet-protobuf format). For a true upgrade rehearsal, build
+  # tag v11.9.0 with the same signing config and install that first instead.
+  local f="/data/data/$PKG/shared_prefs/${PKG}_preferences.xml"
+  adbs am force-stop "$PKG"
+  sleep 1
+  if ! adbs "test -f $f" 2>/dev/null; then
+    note "prefs file not present yet — launch the app once, complete onboarding, then re-run"
+    return 1
+  fi
+  # If a REAL upgrade was just installed over a pre-11.10 build, lastVersionCode
+  # already holds the genuine value — leave it alone. Faking it would only
+  # overwrite the truth with the same thing, and hide a mismatch if the real
+  # upgrade did not record what we expect.
+  local cur
+  cur=$(adbs "grep -o 'last_version\" value=\"[0-9]*' $f" 2>/dev/null | grep -o '[0-9]*$' | tr -d '\r')
+  if [ -n "$cur" ] && [ "$cur" -gt 0 ] && [ "$cur" -lt 11100000 ]; then
+    note "REAL pre-cutover upgrade detected (last_version=$cur) — not faking it"
+    return 0
+  fi
+  note "no real pre-cutover previous launch (last_version=${cur:-unset}) — faking it"
+  adbs "sed -i 's#<int name=\"last_version\" value=\"[0-9]*\" />#<int name=\"last_version\" value=\"$PREV_VERSION_PRE_CUTOVER\" />#' $f"
+  note "last_version now: $(adbs "grep -o 'last_version\" value=\"[0-9]*' $f" | tr -d '\r')"
+}
+
+clear_cutover_state() {
+  # DashPayConfig is an androidx preferences DataStore named "dashpay"
+  # (DashPayConfig.kt:107). Deleting it resets cutover_state,
+  # sdk_bind_ever_succeeded and cutover_upgrade_boundary_crossed together.
+  #
+  # OPT-IN ONLY (RESET=1). After a REAL upgrade from a pre-cutover build, this
+  # state IS the thing under test — wiping it would destroy the scenario and
+  # silently turn a real upgrade run into a synthetic one.
+  if [ "${RESET:-0}" != "1" ]; then
+    note "keeping the existing cutover state (set RESET=1 to wipe it for a synthetic run)"
+    adbs "ls /data/data/$PKG/files/datastore/ 2>/dev/null" | tr -d '\r' | sed 's/^/     datastore: /'
+    return 0
+  fi
+  adbs am force-stop "$PKG"
+  sleep 1
+  adbs "rm -f /data/data/$PKG/files/datastore/dashpay.preferences_pb"
+  note "cutover DataStore CLEARED (state, bind marker, boundary latch)"
+}
+
+# Print the persisted cutover state. Contaminated preconditions are what make
+# these scenarios silently meaningless, so every run shows its starting point.
+show_state() {
+  local pb="/data/data/$PKG/files/datastore/dashpay.preferences_pb"
+  local raw; raw=$(adbs "strings $pb 2>/dev/null" | tr -d '\r')
+  local st="DUAL_RUNNING(default)"
+  echo "$raw" | grep -q "CUT_OVER"  && st="CUT_OVER"
+  echo "$raw" | grep -q "SETTLED"   && st="SETTLED"
+  local bind="unset" latch="unset"
+  echo "$raw" | grep -q "sdk_bind_ever_succeeded"          && bind="present"
+  echo "$raw" | grep -q "cutover_upgrade_boundary_crossed"  && latch="present"
+  note "state: $st | bind marker: $bind | boundary latch: $latch"
+  note "installed: $(adbs "dumpsys package $PKG | grep -m1 versionName" | tr -d ' \r')"
+}
+
+# require_state <CUT_OVER|PRECOMMIT> — refuse to run a scenario whose
+# precondition is already violated, instead of reporting a bogus FAIL.
+require_state() {
+  local want="$1" pb="/data/data/$PKG/files/datastore/dashpay.preferences_pb" raw
+  raw=$(adbs "strings $pb 2>/dev/null" | tr -d '\r')
+  local committed=no
+  echo "$raw" | grep -qE "CUT_OVER|SETTLED" && committed=yes
+  case "$want" in
+    PRECOMMIT) [ "$committed" = no ]  || { echo "   ABORT: needs a pre-commit state but the cutover is already committed."; echo "          Re-run with RESET=1 to start clean."; exit 2; } ;;
+    CUT_OVER)  [ "$committed" = yes ] || { echo "   ABORT: needs a committed cutover — run s1 first."; exit 2; } ;;
+  esac
+}
+
+lock_screen()   { adbs input keyevent 26; sleep 2; }   # power -> screen off, keyguard on
+wake_unlock()   { adbs input keyevent 26; sleep 1; adbs input keyevent 82; sleep 1
+                  adbs input text "$PIN"; adbs input keyevent 66; sleep 3; }
+launch_app()    { adbs monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; sleep 12; }
+start_service() { adbs am start-foreground-service -n "$SVC" >/dev/null 2>&1; sleep 12; }
+
+case "${1:-}" in
+
+setup)
+  say "Build the RELEASE testnet APK"
+  ./gradlew :wallet:assemble_testNet3Release || exit 1
+  # archivesBaseName is 'dash-wallet' but the concrete name has varied
+  # (dash-wallet-*-release-unsigned.apk vs wallet-*-release-unsigned.apk), and
+  # the flavor dir is '_testNet3'. Discover it instead of hardcoding.
+  UNSIGNED=$(find wallet/build/outputs/apk -path '*release*' -name '*unsigned*.apk' -newermt '-30 minutes' 2>/dev/null | grep -i testnet | head -1)
+  [ -n "$UNSIGNED" ] || UNSIGNED=$(find wallet/build/outputs/apk -path '*release*' -name '*unsigned*.apk' 2>/dev/null | grep -i testnet | head -1)
+  if [ -n "$UNSIGNED" ]; then
+    # The APK must be signed with the SAME key as the build already installed,
+    # or `adb install -r` fails with INSTALL_FAILED_UPDATE_INCOMPATIBLE. The
+    # keystore holds more than one key, so the alias matters:
+    #   KS_ALIAS=<alias>            pick the key (default: keystore's first)
+    #   KEYSTORE=/path/to.keystore  use a different keystore entirely
+    # Find the right one by comparing certs with the installed build:
+    #   keytool -list -v -keystore ~/.android/hashengineering.keystore
+    note "signing $UNSIGNED with ${KEYSTORE:-~/.android/hashengineering.keystore}${KS_ALIAS:+ (alias $KS_ALIAS)}"
+    "$BT/zipalign" -p -f 4 "$UNSIGNED" "$OUT/aligned.apk"
+    if [ -n "${KS_ALIAS:-}" ]; then
+      "$BT/apksigner" sign --ks "${KEYSTORE:-$HOME/.android/hashengineering.keystore}" \
+        --ks-key-alias "$KS_ALIAS" --out "$OUT/test.apk" "$OUT/aligned.apk" || exit 1
+    else
+      "$BT/apksigner" sign --ks "${KEYSTORE:-$HOME/.android/hashengineering.keystore}" \
+        --out "$OUT/test.apk" "$OUT/aligned.apk" || exit 1
+    fi
+    rm -f "$OUT/aligned.apk"
+    APK="$OUT/test.apk"
+  else
+    APK=$(find wallet/build/outputs/apk -path '*release*' -name '*.apk' 2>/dev/null | grep -i testnet | head -1)
+  fi
+  [ -n "${APK:-}" ] && [ -f "$APK" ] || { echo "No testnet release APK found under wallet/build/outputs/apk"; exit 1; }
+  say "Install the fix build OVER the previous version already on the device"
+  require_device; require_root
+  PREV_NAME=$(adbs "dumpsys package $PKG | grep -m1 versionName" 2>/dev/null | tr -d ' \r')
+  PREV_CODE=$(adbs "dumpsys package $PKG | grep -m1 versionCode" 2>/dev/null | tr -d '\r' | sed 's/^ *//')
+  if [ -n "$PREV_NAME" ]; then
+    note "currently installed: $PREV_NAME  ($PREV_CODE)"
+  else
+    note "WARNING: $PKG is not installed — this will be a CLEAN INSTALL, not an upgrade."
+    note "Install your pre-cutover build first if you want the upgrade path tested."
+  fi
+  if ! adb install -r "$APK"; then
+    echo
+    echo "Install failed. If it was INSTALL_FAILED_UPDATE_INCOMPATIBLE, the signing keys differ."
+    echo "Compare them:"
+    echo "  adb shell pm path $PKG                     # then: adb pull <path> old.apk"
+    echo "  $BT/apksigner verify --print-certs old.apk"
+    echo "  $BT/apksigner verify --print-certs $APK"
+    echo "Then re-run with the matching alias, e.g.:"
+    echo "  KS_ALIAS=<alias> $0 setup"
+    exit 1
+  fi
+  note "installed: $(adbs "dumpsys package $PKG | grep -m1 versionName" | tr -d ' \r')"
+  say "Ensure a secure lock screen (this is what makes the master alias lock-bound)"
+  adbs locksettings set-pin "$PIN" 2>/dev/null && note "PIN set to $PIN" \
+    || note "locksettings unavailable — set a PIN via Settings before running s2"
+  note "then run: $0 s1"
+  ;;
+
+s1)
+  say "S1 — upgrade with a WORKING bind (walletC/D shape; regression check)"
+  require_device; require_root
+  clear_cutover_state
+  show_state
+  require_state PRECOMMIT
+  fake_pre_cutover_previous_launch || exit 1
+  mark_log
+  note "launch 1: boundary should latch, commit should DECLINE (bind has not run yet)"
+  wake_unlock; launch_app
+  assert_log "launch 1 declined the commit"      "declining to commit .*bind has never succeeded"
+  refute_log "launch 1 did NOT cut over"         "DUAL_RUNNING -> CUT_OVER"
+  note "launch 2: bind marker now set, latch carries the crossing -> should commit"
+  adbs am force-stop "$PKG"; sleep 2; launch_app
+  assert_log "launch 2 committed"                "cutover state DUAL_RUNNING -> CUT_OVER \(upgraded-wallet launch\)"
+  assert_log "explainer armed"                   "one-time sync explainer armed"
+  assert_log "SDK L1 engine started"             "L1 shadow SPV started"
+  ;;
+
+s2)
+  say "S2 — upgrade with a DENIED bind (walletB shape; the core fix)"
+  require_device; require_root
+  clear_cutover_state
+  show_state
+  require_state PRECOMMIT
+  fake_pre_cutover_previous_launch || exit 1
+  mark_log
+  note "locking the screen so the bind runs while Keystore's super key is zeroed"
+  lock_screen
+  start_service
+  assert_log "keystore denied the master alias"  "Keystore denied '(encrypt|createWallet)' on lock-bound alias"
+  assert_log "commit declined on a broken bind"  "declining to commit .*bind has never succeeded"
+  refute_log "did NOT cut over"                  "DUAL_RUNNING -> CUT_OVER"
+  assert_log "dashj is the live engine"          "starting peergroup"
+  refute_log "wallet is NOT engine-less"         "holding the dashj L1 engine"
+  note "the old bug looked like: 'holding the dashj L1 engine' with no 'L1 shadow SPV started'"
+  ;;
+
+s3)
+  say "S3 — denied, then healed (recovery path; expected to expose the noteAppForeground gap)"
+  require_device; require_root
+  note "assumes S2 just ran: state DUAL_RUNNING, bind marker unset"
+  wake_unlock
+  launch_app
+  assert_log "bind succeeded after unlock"       "app wallet (bound to new|already bound to) SDK wallet"
+  note "does it recover WITHOUT a restart? (this is the open question)"
+  assert_log "committed in-session"              "cutover state DUAL_RUNNING -> CUT_OVER"
+  note "if the line above FAILED, restart the app and re-check — needing a restart confirms"
+  note "that noteAppForeground() only resets a backoff nothing reads once the wait loop ended"
+  ;;
+
+s4)
+  say "S4 — memory trim -> SPV engine restart (the ea506f978 fix)"
+  require_device; require_root
+  show_state
+  require_state CUT_OVER
+  # Force-stop and mark BEFORE launching, so the engine's start is a NEW line.
+  # Marking while the app is already up leaves nothing to observe and reports a
+  # bogus FAIL for a healthy engine.
+  adbs am force-stop "$PKG"; sleep 3
+  mark_log
+  launch_app
+  assert_log "engine started on a cold launch"   "L1 shadow SPV started"
+  note "firing TRIM_MEMORY_BACKGROUND deterministically"
+  adbs am send-trim-memory "$PKG" BACKGROUND; sleep 6
+  assert_log "service tore down"                 "low memory detected, stopping service"
+  assert_log "engine stopped (release build)"    "L1 shadow sync stopped"
+  note "bringing the app back — the engine MUST restart"
+  launch_app
+  COUNT=$(grep -c "L1 shadow SPV started" "$(since_mark)")
+  if [ "${COUNT:-0}" -ge 2 ]; then
+    printf '   \033[32mPASS\033[0m engine restarted after the teardown (%s starts)\n' "$COUNT"
+  else
+    printf '   \033[31mFAIL\033[0m engine did NOT restart — MO-995 latch still present (%s starts)\n' "$COUNT"
+  fi
+  ;;
+
+log)
+  require_device
+  f=$(pull_log); echo "$f"
+  grep -nE "cutover state|declining to commit|Keystore denied|L1 shadow SPV started|L1 shadow sync stopped|low memory detected|idling detected|starting peergroup|holding the dashj L1 engine|bind has never succeeded|explainer armed" "$f" | tail -40
+  ;;
+
+*)
+  sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'
+  ;;
+esac
