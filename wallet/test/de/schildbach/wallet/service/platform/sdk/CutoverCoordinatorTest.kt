@@ -296,6 +296,10 @@ class CutoverCoordinatorTest {
         val config = mockk<DashPayConfig>()
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        // This test is about WHICH SCOPE the commit runs on, not about gating —
+        // give it the bind evidence every commit path now requires.
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns true
         coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
             current = secondArg()
             Unit
@@ -618,5 +622,55 @@ class CutoverCoordinatorTest {
         val (coordinator, stored, _) = noticeCoordinator(stored = null, bindEverSucceeded = true)
         coordinator.commitForUpgradedWalletAsync(sameBuildVersionCode)
         assertNull("no crossing ever seen — the seam stays out of it", stored())
+    }
+
+    /**
+     * MO-995: the readiness-driven path must ALSO refuse to commit onto an SDK
+     * that has never bound.
+     *
+     * REGRESSION THIS PINS: the bind-evidence gate first lived only in
+     * `commitForUpgradedWalletAsync`, leaving `autoAdvanceToCutover` wide open.
+     * On the emulator, with every bind failing on a real
+     * `KeystoreDeviceLockedException`, CutoverAutoCommitObserver still committed
+     * FOUR separate times — "READY_OBSERVED -> CUT_OVER on COMMIT_CUTOVER
+     * (ready=true)" then "SDK is now L1-primary (dashj held)" — reaching
+     * walletB's engine-less end state through a different door. The readiness
+     * evaluator has no notion of whether the wallet is bound.
+     */
+    @Test
+    fun autoAdvance_refusesToCommit_whenTheSdkBindHasNeverSucceeded() = runBlocking {
+        val (coordinator, stored) = coordinator(stored = null, bindEverSucceeded = false)
+
+        val status = coordinator.autoAdvanceToCutover()
+
+        assertFalse(
+            "readiness must not be able to hand L1 to an SDK that cannot bind",
+            stored() == CutoverState.CUT_OVER.name
+        )
+        assertFalse("and dashj must stay available as the only engine", !coordinator.dashjEngineMayStart())
+        assertFalse("the state must not report CUT_OVER", status.state == CutoverState.CUT_OVER)
+    }
+
+    @Test
+    fun autoAdvance_commits_onceTheBindHasSucceeded() = runBlocking {
+        // Same evidence, same readiness — only the bind marker differs.
+        val (coordinator, stored) = coordinator(stored = null, bindEverSucceeded = true)
+
+        coordinator.autoAdvanceToCutover()
+
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+    }
+
+    @Test
+    fun freshWalletCommit_refusesWithoutBindEvidence() = runBlocking {
+        // The clean-install exposure: committing here would hold dashj while the
+        // SDK cannot bind, leaving a brand-new wallet with no L1 engine at all.
+        val (coordinator, stored) = coordinator(stored = null, bindEverSucceeded = false)
+
+        val status = coordinator.commitForFreshWalletSetup()
+
+        assertNull("a fresh wallet must not be handed to an unbindable SDK", stored())
+        assertEquals(CutoverState.DUAL_RUNNING, status.state)
+        assertTrue(coordinator.dashjEngineMayStart())
     }
 }

@@ -302,6 +302,14 @@ class SdkBindRetryServiceTest {
         val config = mockk<DashPayConfig>()
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { storedState }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        // "Has EVER bound" is true here on purpose: this models a wallet that
+        // bound successfully at some point and whose Keystore then started
+        // denying (e.g. the device locked). The commit is therefore legal, and
+        // the rollback is exactly the safety net under test. A never-bound
+        // wallet is refused up front instead — see
+        // CutoverCoordinatorTest.autoAdvance_refusesToCommit_*.
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns true
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) } returns false
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) } returns false
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns false
