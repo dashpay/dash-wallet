@@ -415,6 +415,34 @@ class SdkWalletBinder internal constructor(
             }
             consecutiveBindFailuresCount = 0
             _bindRetryPending.value = false
+            markBindEverSucceeded()
+        }
+    }
+
+    /**
+     * MO-995: durable evidence that this install's Keystore can actually serve
+     * the SDK bind. The UPGRADE cutover seam refuses to hand L1 to the SDK until
+     * this is set, so a device whose Keystore denies the lock-bound master alias
+     * (HONOR PTP-N49, walletB) stays on dashj instead of being left with no L1
+     * engine at all.
+     *
+     * WRITTEN FROM THE SUCCESS SIGNAL, NOT FROM THE BIND CALL. It first lived
+     * inside `bindAppWallet(...).also { }`, which only runs when a NEW SDK
+     * wallet is created — so on every launch that took the "app wallet already
+     * bound" path the marker was never written and the seam declined forever.
+     * Caught on the emulator: launch 2 of a clean run still logged "bind has
+     * never succeeded" while the L1 engine was demonstrably running.
+     *
+     * Best-effort and idempotent: a failed write only delays the next launch's
+     * commit, and re-writing true is free.
+     */
+    private fun markBindEverSucceeded() {
+        scope.launch {
+            runCatching { dashPayConfig.set(DashPayConfig.SDK_BIND_EVER_SUCCEEDED, true) }
+                .onFailure { t ->
+                    if (t is CancellationException) throw t
+                    log.warn("failed to persist the SDK bind-success marker", t)
+                }
         }
     }
 
@@ -1020,17 +1048,6 @@ class SdkWalletBinder internal constructor(
             sdkService.bindAppWallet(words, birthTimeSecs).also {
                 boundWalletIdHex = it
                 boundWalletFingerprint = fingerprint
-                // MO-995: durable evidence that this install's keystore can
-                // actually serve the SDK bind. The UPGRADE cutover seam refuses
-                // to hand L1 to the SDK until this is set, so a device whose
-                // Keystore denies the lock-bound master alias stays on dashj
-                // instead of being left with no engine at all. Best-effort:
-                // a failed write only delays the next launch's commit.
-                runCatching { dashPayConfig.set(DashPayConfig.SDK_BIND_EVER_SUCCEEDED, true) }
-                    .onFailure { t ->
-                        if (t is CancellationException) throw t
-                        log.warn("failed to persist the SDK bind-success marker", t)
-                    }
             }
         }
 
