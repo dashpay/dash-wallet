@@ -48,10 +48,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.AppForegroundMonitor
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRescan
@@ -203,21 +203,36 @@ import de.schildbach.wallet.util.toSha256Hash
 @AndroidEntryPoint
 class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
-    private val appLifecycleObserver = object : DefaultLifecycleObserver {
-        override fun onStart(owner: LifecycleOwner) {
-            log.info("App moved to foreground")
-            isAppInBackground = false
-            // MO-995: a pending SDK bind retry escapes the hourly backoff
-            // tail the moment the user is actually looking at the app.
-            if (::sdkBindRetryService.isInitialized) {
-                sdkBindRetryService.noteAppForeground()
+    /**
+     * MO-995: observe the app's foreground state from [AppForegroundMonitor],
+     * NOT from `ProcessLifecycleOwner`.
+     *
+     * This was a `ProcessLifecycleOwner` observer, and it never fired once:
+     * AndroidManifest.xml removes `androidx.startup.InitializationProvider`
+     * (`tools:node="remove"`), so `lifecycle-process`'s initializer never runs
+     * and the process owner never leaves INITIALIZED. Across a 27,000-line
+     * field log with 36 service onCreate()s, "App moved to foreground" appears
+     * zero times — so `isAppInBackground` was frozen and
+     * [SdkBindRetryService.noteAppForeground] had never once been called.
+     * [AppForegroundMonitor] takes the same edges from
+     * [de.schildbach.wallet.WalletActivityTracker], which is registered the
+     * plain way and demonstrably works.
+     */
+    private fun observeAppForeground() {
+        // StateFlow is already conflated+distinct; no distinctUntilChanged needed.
+        AppForegroundMonitor.isForeground
+            .onEach { foreground ->
+                isAppInBackground = !foreground
+                if (foreground && ::sdkBindRetryService.isInitialized) {
+                    // A pending SDK bind retry runs the moment the user is
+                    // actually looking at the app — the device is then provably
+                    // unlocked, which is the heal condition for a device-locked
+                    // keystore denial, and no broadcast has to survive an OEM's
+                    // background restrictions.
+                    sdkBindRetryService.noteAppForeground()
+                }
             }
-        }
-
-        override fun onStop(owner: LifecycleOwner) {
-            log.info("App moved to background")
-            isAppInBackground = true
-        }
+            .launchIn(serviceScope)
     }
 
     companion object {
@@ -1745,7 +1760,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName)
 
         // Register for app lifecycle events to detect background/foreground transitions
-        ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
+        observeAppForeground()
 
         // DIAGNOSTIC (Tools toggle): while the readout is holding at 99%
         // waiting for a fresh post-catchup parity report (see
@@ -2478,7 +2493,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             networkCallbackRegistered = false
             availableNetworks.clear()
         }
-        ProcessLifecycleOwner.get().lifecycle.removeObserver(appLifecycleObserver)
 
         log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
 
