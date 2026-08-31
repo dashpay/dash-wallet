@@ -195,14 +195,38 @@ class SdkBindRetryService internal constructor(
     }
 
     /**
-     * App came to the foreground: reset the ladder so the next wait-loop
-     * poll retries within seconds instead of the hourly tail. State-only —
-     * the actual retry rides the existing triggers.
+     * App came to the foreground with a bind retry pending: DRIVE a retry, and
+     * arm the unlock receiver while we are here.
+     *
+     * MO-995 — this used to be state-only ("reset the ladder so the next
+     * wait-loop poll retries"), which relied on a trigger that does not exist
+     * in the state that needs it most. The only caller of [maybeRetry] is
+     * `CutoverUiDataService.awaitBoundWallet()`, and that loop runs only while
+     * the cutover holds dashj with no bound wallet. Once the coordinator
+     * correctly REFUSES to commit onto an unbindable SDK, that state never
+     * occurs — so the loop never runs, [maybeRetry] is never called, the
+     * unlock receiver is never armed, and nothing ever retries. Reproduced on
+     * the emulator (S3): after a Keystore denial, unlocking the device and
+     * returning to the app produced ZERO binder activity; only a full app
+     * restart healed it.
+     *
+     * App-foreground is the right trigger precisely because it depends on
+     * neither the cutover state nor a broadcast: the user is looking at the
+     * app, so the device is provably unlocked — which is the heal condition
+     * for the device-locked keystore denial — and no receiver has to survive
+     * an OEM's background restrictions. walletB's HONOR PTP-N49 delivered
+     * `ACTION_USER_PRESENT` zero times in ten hours; MagicOS suppresses
+     * exactly that kind of broadcast.
+     *
+     * [retryNowInBackground] resets the ladder and runs one pass, which also
+     * consults the rollback — so a foreground visit both heals a recoverable
+     * denial and, when the bind is truly dead, lets the engine fall back.
      */
     fun noteAppForeground() {
         if (!bindRetryPending()) return
-        log.info("app foregrounded with an SDK bind retry pending — resetting the retry backoff")
-        resetBackoff()
+        log.info("app foregrounded with an SDK bind retry pending — retrying the bind now")
+        armUnlockReceiver()
+        retryNowInBackground("app foreground")
     }
 
     private fun resetBackoff() {
