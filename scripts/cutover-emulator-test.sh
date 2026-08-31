@@ -36,7 +36,7 @@ set -uo pipefail
 PKG=hashengineering.darkcoin.wallet_test
 SVC=$PKG/de.schildbach.wallet.service.BlockchainServiceImpl
 AVD=Pixel_9_API_36_AOPS
-PIN=1234
+PIN=REDACTED
 PREV_VERSION_PRE_CUTOVER=11090000   # any value < FIRST_CUTOVER_VERSION_CODE (11100000)
 BT=~/Library/Android/sdk/build-tools/35.0.1
 APK_DIR=wallet/build/outputs/apk/_testNet3/release
@@ -230,12 +230,37 @@ lock_screen()   { adbs input keyevent 26; sleep 2; }   # power -> screen off, ke
 keep_awake()    { adbs svc power stayon true >/dev/null 2>&1
                   adbs settings put system screen_off_timeout 1800000 >/dev/null 2>&1; }
 
-wake_unlock()   { keep_awake; adbs input keyevent 224; sleep 2
-                  if adbs dumpsys window 2>/dev/null | grep -q "mDreamingLockscreen=true"; then
-                    note "WARNING: device still shows a keyguard — unlock it by hand, then re-run."
-                    note "         a locked device denies the master-alias keystore op and this"
-                    note "         scenario needs a WORKING bind."
-                  fi; }
+# Enter $PIN on the keyguard using DIGIT KEYEVENTS. `input text` does not reach
+# the keyguard PIN pad — that is why earlier scripted unlocks silently failed and
+# left the device locked, which then denied the master-alias keystore op inside
+# scenarios that needed a working bind. KEYCODE_0 is 7, so digit d -> 7+d.
+pin_keyevents() {
+  local i ch
+  for (( i=0; i<${#PIN}; i++ )); do
+    ch=${PIN:$i:1}
+    adbs input keyevent $((7 + ch))
+  done
+  adbs input keyevent 66   # ENTER
+}
+
+# Wake and, if a keyguard is up, dismiss it. Never `keyevent 26` (power), which
+# TOGGLES and would turn the screen OFF on an already-unlocked device.
+wake_unlock() {
+  keep_awake
+  adbs input keyevent 224; sleep 2
+  if adbs dumpsys window 2>/dev/null | grep -q "mDreamingLockscreen=true"; then
+    adbs input swipe 540 2000 540 600 300; sleep 2
+    pin_keyevents; sleep 4
+  fi
+  if adbs dumpsys window 2>/dev/null | grep -q "mDreamingLockscreen=true"; then
+    note "WARNING: keyguard still up after entering \$PIN — unlock by hand, then re-run."
+    note "         a locked device denies the master-alias keystore op and this"
+    note "         scenario needs a WORKING bind."
+  else
+    note "device unlocked"
+  fi
+}
+
 launch_app()    { adbs monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; sleep 12; }
 start_service() { adbs am start-foreground-service -n "$SVC" >/dev/null 2>&1; sleep 12; }
 
