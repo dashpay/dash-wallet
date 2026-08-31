@@ -58,13 +58,6 @@ public class WalletActivityTracker extends ActivitiesTracker {
     @Override
     protected void onStartedAny(boolean isTheFirstOne, Activity activity) {
         super.onStartedAny(isTheFirstOne, activity);
-        // MO-995: the app-foreground signal. ProcessLifecycleOwner cannot supply
-        // it because AndroidManifest.xml removes androidx.startup's
-        // InitializationProvider, so lifecycle-process's initializer never runs
-        // and its onStart/onStop never fire. See AppForegroundMonitor.
-        if (isTheFirstOne) {
-            AppForegroundMonitor.INSTANCE.noteForeground();
-        }
         // force restart if the app was updated
         // this ensures that v6.x or previous will go through the PIN upgrade process
         if (!BuildConfig.DEBUG && app.myPackageReplaced) {
@@ -76,7 +69,6 @@ public class WalletActivityTracker extends ActivitiesTracker {
 
     @Override
     protected void onStoppedLast() {
-        AppForegroundMonitor.INSTANCE.noteBackground();
         autoLogout.setAppWentBackground(true);
         if (config.getAutoLogoutEnabled() && config.getAutoLogoutMinutes() == 0) {
             app.sendBroadcast(new Intent(InteractionAwareActivity.FORCE_FINISH_ACTION));
@@ -119,12 +111,25 @@ public class WalletActivityTracker extends ActivitiesTracker {
     public void onActivityStarted(@NonNull Activity activity) {
         visibleActivityCount++;
         currentActivity = activity;
+        // MO-995: the app-foreground signal, derived from THIS counter rather
+        // than the ActivitiesTracker base's onStartedFirst/onStoppedLast hooks —
+        // those never run, because this class overrides onActivityStarted /
+        // onActivityStopped without calling super, so the base's numStarted
+        // never advances. visibleActivityCount is the counter that actually
+        // tracks reality. See AppForegroundMonitor for why
+        // ProcessLifecycleOwner cannot supply this at all.
+        if (visibleActivityCount == 1) {
+            AppForegroundMonitor.INSTANCE.noteForeground();
+        }
         logState();
     }
 
     public void onActivityStopped(@NonNull Activity activity) {
         visibleActivityCount--;
         currentActivity = activity;
+        if (visibleActivityCount == 0) {
+            AppForegroundMonitor.INSTANCE.noteBackground();
+        }
         logState();
     }
 
