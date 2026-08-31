@@ -218,8 +218,24 @@ require_state() {
 }
 
 lock_screen()   { adbs input keyevent 26; sleep 2; }   # power -> screen off, keyguard on
-wake_unlock()   { adbs input keyevent 26; sleep 1; adbs input keyevent 82; sleep 1
-                  adbs input text "$PIN"; adbs input keyevent 66; sleep 3; }
+# WAKE ONLY — never `keyevent 26` (power), which TOGGLES: on an already-unlocked
+# device it turns the screen OFF and re-locks it, which silently re-created the
+# Keystore device-locked denial in the middle of a scenario that needs a working
+# bind. Also note `input text` does NOT reach the keyguard PIN pad (digits need
+# keyevents 8-11); scripted PIN entry proved unreliable, so an actually-locked
+# device must be unlocked by hand before running the unlocked scenarios.
+# Keep the screen on for the whole run: the scenarios poll for up to 45s and a
+# screen-off re-locks the device, which re-creates the Keystore denial in the
+# middle of a scenario that needs a working bind.
+keep_awake()    { adbs svc power stayon true >/dev/null 2>&1
+                  adbs settings put system screen_off_timeout 1800000 >/dev/null 2>&1; }
+
+wake_unlock()   { keep_awake; adbs input keyevent 224; sleep 2
+                  if adbs dumpsys window 2>/dev/null | grep -q "mDreamingLockscreen=true"; then
+                    note "WARNING: device still shows a keyguard — unlock it by hand, then re-run."
+                    note "         a locked device denies the master-alias keystore op and this"
+                    note "         scenario needs a WORKING bind."
+                  fi; }
 launch_app()    { adbs monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; sleep 12; }
 start_service() { adbs am start-foreground-service -n "$SVC" >/dev/null 2>&1; sleep 12; }
 
@@ -326,6 +342,8 @@ s3)
   say "S3 — denied, then healed (recovery path; expected to expose the noteAppForeground gap)"
   require_device; require_root
   note "assumes S2 just ran: state DUAL_RUNNING, bind marker unset"
+  show_state
+  mark_log          # S3 had NO mark, so its assertions matched the whole log history
   wake_unlock
   launch_app
   assert_log "bind succeeded after unlock"       "app wallet (bound to new|already bound to) SDK wallet"
