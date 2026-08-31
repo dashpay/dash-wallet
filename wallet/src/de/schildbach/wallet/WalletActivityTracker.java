@@ -58,6 +58,13 @@ public class WalletActivityTracker extends ActivitiesTracker {
     @Override
     protected void onStartedAny(boolean isTheFirstOne, Activity activity) {
         super.onStartedAny(isTheFirstOne, activity);
+        // MO-995: the app-foreground signal. ProcessLifecycleOwner cannot supply
+        // it because AndroidManifest.xml removes androidx.startup's
+        // InitializationProvider, so lifecycle-process's initializer never runs
+        // and its onStart/onStop never fire. See AppForegroundMonitor.
+        if (isTheFirstOne) {
+            AppForegroundMonitor.INSTANCE.noteForeground();
+        }
         // force restart if the app was updated
         // this ensures that v6.x or previous will go through the PIN upgrade process
         if (!BuildConfig.DEBUG && app.myPackageReplaced) {
@@ -69,6 +76,7 @@ public class WalletActivityTracker extends ActivitiesTracker {
 
     @Override
     protected void onStoppedLast() {
+        AppForegroundMonitor.INSTANCE.noteBackground();
         autoLogout.setAppWentBackground(true);
         if (config.getAutoLogoutEnabled() && config.getAutoLogoutMinutes() == 0) {
             app.sendBroadcast(new Intent(InteractionAwareActivity.FORCE_FINISH_ACTION));
