@@ -41,12 +41,13 @@ import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.R
 import org.dash.wallet.integrations.coinbase.databinding.EnterAmountToTransferFragmentBinding
 import org.dash.wallet.integrations.coinbase.viewmodels.EnterAmountToTransferViewModel
+import org.dash.wallet.integrations.coinbase.viewmodels.CANONICAL_SEPARATOR
 import org.dash.wallet.integrations.coinbase.viewmodels.coinbaseViewModels
+import org.dash.wallet.integrations.coinbase.viewmodels.wouldExceedDecimals
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -62,7 +63,6 @@ import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer_fragment) {
 
     companion object {
-        private const val DECIMAL_SEPARATOR = '.'
         fun newInstance() = EnterAmountToTransferFragment()
     }
 
@@ -71,12 +71,6 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
     private var exchangeRate: ExchangeRate? = null
     private var pickedCurrencyIndex by mutableIntStateOf(0)
     private var currencyOptions by mutableStateOf(listOf<SegmentedOption>())
-    private val pickedCurrencyOption: String
-        get() = if (currencyOptions.size > pickedCurrencyIndex) {
-            currencyOptions[pickedCurrencyIndex].title
-        } else {
-            ""
-        }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -93,10 +87,6 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
 
         binding.currencyOptions.setViewCompositionStrategy(
             ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
-        )
-        currencyOptions = listOf(
-            SegmentedOption(Constants.DASH_CURRENCY),
-            SegmentedOption(viewModel.localCurrencyCode)
         )
         binding.currencyOptions.setContent {
             DashWalletTheme {
@@ -150,6 +140,17 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             formatTransferredAmount(viewModel.maxValue)
         }
 
+        // The selected currency loads asynchronously. Rebuilding on every emission is what
+        // keeps the fiat option off the seeded USD default (MO-995 C) -- and the amount text
+        // carries the same currency's symbol, so it has to be re-rendered alongside it.
+        viewModel.localCurrencyCodeState.observe(viewLifecycleOwner) { currencyCode ->
+            currencyOptions = listOf(
+                SegmentedOption(Constants.DASH_CURRENCY),
+                SegmentedOption(currencyCode)
+            )
+            formatTransferredAmount(viewModel.inputValue)
+        }
+
         viewModel.localCurrencyExchangeRate.observe(viewLifecycleOwner) {
             exchangeRate = it?.let { ExchangeRate(Coin.COIN, it.fiat) }
         }
@@ -160,17 +161,11 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
     }
 
     private fun formatTransferredAmount(value: String) {
-        val text = viewModel.applyNewValue(value, pickedCurrencyOption)
+        // One call produces the text, the bounds of its currency label and the keypad's
+        // decimal limit together, so they cannot describe different amounts (MO-995).
+        val text = viewModel.applyNewValue(value, viewModel.isFiatSelected)
         val spannableString = SpannableString(text).apply {
-            if (pickedCurrencyIndex == 0) {
-                spanAmount(this, viewModel.formattedValue.length, text.length)
-            } else {
-                if (viewModel.fiatAmount?.isCurrencyFirst() == true && text.length - viewModel.fiatBalance.length > 0) {
-                    spanAmount(this, 0, text.length - viewModel.fiatBalance.length)
-                } else {
-                    spanAmount(this, viewModel.inputValue.length, text.length)
-                }
-            }
+            viewModel.currencySpan?.let { span -> spanAmount(this, span.from, span.to) }
         }
 
         binding.inputAmount.text = spannableString
@@ -203,15 +198,10 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
 
         private fun refreshValue() {
             value.clear()
-            val inputValue = if (pickedCurrencyIndex == 1) {
-                val localCurrencySymbol =
-                    GenericUtils.getLocalCurrencySymbol(viewModel.localCurrencyCode)
-                binding.inputAmount.text.split(" ")
-                    .first { it != localCurrencySymbol }
-            } else {
-                binding.inputAmount.text.split(" ")
-                    .first { it != pickedCurrencyOption }
-            }
+            // Read the digits back from the same field that produced them rather than
+            // splitting the rendered text on spaces -- a grouping separator or a symbol
+            // containing a space would otherwise hand back the wrong slice.
+            val inputValue = viewModel.amountPart
             if (inputValue != CoinbaseConstants.VALUE_ZERO) {
                 value.append(inputValue)
             }
@@ -231,19 +221,13 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
 
         override fun onNumber(number: Int) {
             refreshValue()
-            if (value.toString() == CoinbaseConstants.VALUE_ZERO && !value.toString().contains(DECIMAL_SEPARATOR)) {
+            if (value.toString() == CoinbaseConstants.VALUE_ZERO && !value.toString().contains(CANONICAL_SEPARATOR)) {
                 value.clear()
             }
-            val formattedValue = value.toString()
-            val isFraction = formattedValue.indexOf(viewModel.decimalSeparator) > -1
-
-            if (isFraction) {
-                val lengthOfDecimalPart = formattedValue.length - formattedValue.indexOf(viewModel.decimalSeparator)
-                val decimalsThreshold = if (pickedCurrencyIndex == 1) 2 else 8
-
-                if (lengthOfDecimalPart > decimalsThreshold) {
-                    return
-                }
+            // viewModel.maxDecimals belongs to the mode that formatted the text now on
+            // screen, so the gate can't disagree with it (MO-995 B).
+            if (wouldExceedDecimals(value.toString(), CANONICAL_SEPARATOR, viewModel.maxDecimals)) {
+                return
             }
 
             if (!viewModel.isMaxAmountSelected) {
@@ -266,11 +250,11 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
         override fun onFunction() {
             if (viewModel.isMaxAmountSelected) return
             refreshValue()
-            if (value.indexOf(DECIMAL_SEPARATOR) < 0) {
+            if (value.indexOf(CANONICAL_SEPARATOR) < 0) {
                 if (value.isEmpty()) {
                     value.append(CoinbaseConstants.VALUE_ZERO)
                 }
-                value.append(DECIMAL_SEPARATOR)
+                value.append(CANONICAL_SEPARATOR)
             }
             formatTransferredAmount(value.toString())
         }

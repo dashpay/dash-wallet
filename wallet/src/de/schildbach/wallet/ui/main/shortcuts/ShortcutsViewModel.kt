@@ -84,10 +84,17 @@ class ShortcutsViewModel @Inject constructor(
     var shortcuts by mutableStateOf(getPresetShortcuts().take(maxShortcuts))
     var showShortcutInfo by mutableStateOf(false)
 
-    val isCoinbaseAuthenticated: Boolean
-        get() = coinBaseRepository.isAuthenticated
+    // Tracked rather than read through to the repository on every tap: the repository's
+    // cached flag can still be a startup-race `false`, and a wrong answer here routes the
+    // user to the "connect Coinbase" flow when they are already connected (MO-995).
+    var isCoinbaseAuthenticated by mutableStateOf(false)
+        private set
 
     init {
+        coinBaseRepository.isAuthenticatedFlow
+            .onEach { isCoinbaseAuthenticated = it }
+            .launchIn(viewModelScope)
+
         shortcutProvider.customShortcuts
             .onEach { Log.i("SHORTCUTS", "size: ${it.size}") }
             .filterNot { it.isEmpty() }

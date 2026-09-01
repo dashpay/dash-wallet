@@ -266,9 +266,17 @@ class ConvertViewViewModel @Inject constructor(
                 }
             }
 
-            val bd = toDashValue(enteredConvertAmount, account)
+            // The DASH leg has to switch on the same input type as the fiat leg above. It
+            // used to call toDashValue unconditionally, which only yielded DASH when the
+            // entry was the account's crypto: a fiat entry was scaled by DASH-per-crypto,
+            // and a DASH entry -- already DASH -- was scaled a second time.
+            val dashAmount = when (currencyInputType) {
+                CurrencyInputType.Crypto -> toDashValue(enteredConvertAmount, account, fromCrypto = true).toString()
+                CurrencyInputType.Fiat -> toDashValue(enteredConvertAmount, account).toString()
+                else -> GenericUtils.formatFiatWithoutComma(enteredConvertAmount)
+            }
             val coin = try {
-                Coin.parseCoin(bd.toString())
+                Coin.parseCoin(dashAmount)
             } catch (x: Exception) {
                 Coin.ZERO
             }
@@ -278,17 +286,31 @@ class ConvertViewViewModel @Inject constructor(
         return Pair(null, null)
     }
 
+    /**
+     * Converts [valueToBind] into DASH.
+     *
+     * [fromCrypto] picks the rate: the value is either an amount of the Coinbase account's
+     * crypto, or an amount of the user's local currency. Coinbase quotes both rates per one
+     * unit of the local currency, so DASH-per-crypto is the ratio of the two and
+     * DASH-per-local-currency is the raw rate.
+     *
+     * Both branches used to read `getCryptoToDashExchangeRate()` -- the `if` and the `else`
+     * were the same expression -- so a local-currency amount was scaled by DASH-per-crypto
+     * and came out wrong by the entire crypto/fiat price ratio.
+     */
     fun toDashValue(
         valueToBind: String,
         userAccountData: CoinBaseUserAccountDataUIModel,
         fromCrypto: Boolean = false
     ): BigDecimal {
-        val convertedValue = if (fromCrypto) {
-            valueToBind.toBigDecimal() * userAccountData.getCryptoToDashExchangeRate()
+        val amount = GenericUtils.formatFiatWithoutComma(valueToBind).toBigDecimalOrNull()
+            ?: return BigDecimal.ZERO
+        val rate = if (fromCrypto) {
+            userAccountData.getCryptoToDashExchangeRate() // DASH per unit of the account's crypto
         } else {
-            valueToBind.toBigDecimal() * userAccountData.getCryptoToDashExchangeRate()
-        }.setScale(8, RoundingMode.HALF_UP)
-        return convertedValue
+            userAccountData.currencyToDashExchangeRate // DASH per unit of local currency
+        }
+        return (amount * rate).setScale(8, RoundingMode.HALF_UP)
     }
 
     private fun setDashWalletBalance() {
