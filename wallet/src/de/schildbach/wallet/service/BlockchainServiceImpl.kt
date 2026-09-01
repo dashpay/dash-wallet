@@ -197,6 +197,26 @@ import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
 
 /**
+ * Whether a dashj `onCoinsReceived` delivery should raise the "Received x" push.
+ *
+ * The whole decision, in one pure place, over the two inputs that matter:
+ *
+ * - [walletAuthored] — this wallet built the transaction, so it is a SEND however dashj values it.
+ *   Post-cutover the SDK authors every send and
+ *   [de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory] commits it into the
+ *   dashj wallet-of-record; dashj cannot attribute the SDK-owned inputs, values the tx by its
+ *   `+change` output alone and delivers it here as if money had arrived.
+ * - [correctedNet] — the signed net effect on the wallet, SDK-corrected where a display row exists.
+ *   Must be the SAME value the notification goes on to announce: reading it twice is what let the
+ *   gate say "received" while the announced amount read "-0.0x" (MO-995).
+ *
+ * Pre-cutover this changes nothing: a dashj-authored send is valued negative and already failed the
+ * sign test, and a genuine receive is neither self-authored nor negative.
+ */
+internal fun shouldAnnounceCoinsReceived(walletAuthored: Boolean, correctedNet: Coin): Boolean =
+    !walletAuthored && correctedNet.signum() > 0
+
+/**
  * @author Andreas Schildbach
  * @author Eric Britten
  */
@@ -392,8 +412,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * sent), keyed by lowercase display-hex txid. Absent → dashj value, so pre-cutover / non-SDK
      * txs are byte-for-byte unchanged.
      *
-     * Runs synchronously on a bitcoinj wallet-listener thread (never the main thread) and fails
-     * soft to [fallback] on ANY error, keeping the notification path non-blocking and robust.
+     * Runs synchronously on a bitcoinj wallet-listener thread and fails soft to [fallback] on ANY
+     * error, keeping the notification path non-blocking and robust. MUST NOT be called from the
+     * main thread: Room has no `allowMainThreadQueries` (see
+     * [de.schildbach.wallet.di.DatabaseModule]), so a main-thread call throws and fails soft to
+     * dashj's misread — which is how a gift-card purchase got announced as a receive (MO-995).
+     * Resolve it ONCE per transaction on the listener thread and thread the value onward.
      */
     private fun correctedNetValue(tx: Transaction, fallback: Coin): Coin {
         return try {
@@ -402,6 +426,34 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         } catch (t: Throwable) {
             log.warn("tx_display_cache lookup failed for {}, using dashj value", tx.txId, t)
             fallback
+        }
+    }
+
+    /**
+     * Whether THIS wallet authored [tx] — a send, never a receive, whatever signed value dashj
+     * computes for it.
+     *
+     * Post-cutover the SDK builds, signs and broadcasts every send, and
+     * [de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory] then commits the tx
+     * into the dashj wallet-of-record, stamping `purpose = USER_PAYMENT` and
+     * `confidence.source = SELF` exactly as dashj's own `completeTx` does. dashj cannot attribute
+     * the SDK-owned inputs, so it values the tx by its `+change` output alone and delivers it to
+     * `onCoinsReceived` as if it were money arriving.
+     *
+     * Both stamps are set BEFORE the commit and travel with the tx in memory and on disk, so they
+     * are available the instant the listener fires and cannot go stale — unlike the
+     * tx_display_cache net ([correctedNetValue]), which does not exist yet during the window
+     * between the bridge commit and the SDK's display-row insert.
+     */
+    private fun isWalletAuthored(tx: Transaction): Boolean {
+        if (tx.purpose == Transaction.Purpose.USER_PAYMENT) {
+            return true
+        }
+        return try {
+            tx.confidence.source == TransactionConfidence.Source.SELF
+        } catch (t: Throwable) {
+            log.warn("confidence source unavailable for {}", tx.txId, t)
+            false
         }
     }
 
@@ -543,8 +595,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 transactionsReceived.incrementAndGet()
                 val address = getWalletAddressOfReceived(tx, wallet)
                 // Prefer the SDK-corrected net for the notification amount; falls back to dashj
-                // for pre-cutover / non-SDK txs (see correctedNetValue).
+                // for pre-cutover / non-SDK txs (see correctedNetValue). Resolved ONCE, here on
+                // the wallet-listener thread, and threaded into passFilters below: the second
+                // lookup that used to happen inside passFilters ran on the MAIN thread, where
+                // Room throws and correctedNetValue fails soft to dashj's positive misread — so
+                // the gate said "received" while this amount said "-0.0x", and a gift-card
+                // purchase was announced as "Received -0.0x" (MO-995).
                 val amount = correctedNetValue(tx, tx.getValue(wallet))
+                val walletAuthored = isWalletAuthored(tx)
                 val confidenceType = tx.confidence.confidenceType
                 val isRestoringBackup = application.configuration.isRestoringBackup
                 handler.post {
@@ -565,7 +623,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                             apiConfirmationHandler!!.matches(tx.toTxInfo(wallet, Constants.NETWORK_PARAMETERS))
                         ) {
                             apiConfirmationHandler!!.handle(tx.toTxInfo(wallet, Constants.NETWORK_PARAMETERS))
-                        } else if (passFilters(tx, wallet)) {
+                        } else if (passFilters(tx, wallet, amount, walletAuthored)) {
                             // resolveLabel is a ContentProvider query and
                             // nm.notify a binder IPC — notification lane, not
                             // main. All coins-received notification state is
@@ -601,12 +659,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 updateAppWidget()
             }
 
-            private fun passFilters(tx: Transaction, wallet: Wallet): Boolean {
-                // Prefer the SDK-corrected net so an SDK send mis-read by dashj as a positive
-                // "received" value does not trip the received-coins gate; dashj fallback otherwise.
-                val amount = correctedNetValue(tx, tx.getValue(wallet))
-                val isReceived = amount.signum() > 0
-                if (!isReceived) {
+            private fun passFilters(
+                tx: Transaction,
+                wallet: Wallet,
+                amount: Coin,
+                walletAuthored: Boolean
+            ): Boolean {
+                // Our own send is never a receive, whatever value dashj puts on it. This is the
+                // primary post-cutover gate: it holds even in the window where the SDK-corrected
+                // net is not yet on disk and [amount] is still dashj's positive misread of the
+                // +change output (see isWalletAuthored).
+                //
+                // [amount] is the SDK-corrected net resolved once on the wallet-listener thread
+                // (see onCoinsReceived) — the SAME number the notification announces, so the gate
+                // and the announced value can no longer disagree.
+                if (!shouldAnnounceCoinsReceived(walletAuthored, amount)) {
+                    if (walletAuthored) {
+                        log.info("tx {} was authored by this wallet — not a receive, no notification", tx.txId)
+                    }
                     return false
                 }
                 var passFilters = crowdnodeFilters.any { it.matches(tx) }
@@ -629,6 +699,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         address: Address?, amount: Coin,
         exchangeRate: ExchangeRate?
     ) {
+        // FINAL belt: never announce a receive for a non-positive amount. Callers already gate on
+        // the corrected net being positive; this keeps any future caller from rendering the
+        // "Received -0.0x" push QA saw for a gift-card purchase (MO-995).
+        if (amount.signum() <= 0) {
+            log.info("not announcing a receive for the non-positive amount {}", amount.toFriendlyString())
+            return
+        }
         if (notificationCount == 1) nm!!.cancel(Constants.NOTIFICATION_ID_COINS_RECEIVED)
         notificationCount++
         notificationAccumulatedAmount = notificationAccumulatedAmount.add(amount)
