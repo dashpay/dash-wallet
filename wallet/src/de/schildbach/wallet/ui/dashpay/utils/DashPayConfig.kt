@@ -420,11 +420,44 @@ open class DashPayConfig @Inject constructor(
          * [de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
          * .commitForUpgradedWalletAsync] at the moment the state actually
          * moves to CUT_OVER, and cleared when the user acknowledges the
-         * explainer — so the screen shows exactly once, ever, and only on the
-         * upgrade path (a fresh install or a restore commits through
-         * `setWallet` instead and already has its own sync expectation).
+         * explainer — and only on the upgrade path (a fresh install or a
+         * restore commits through `setWallet` instead and already has its own
+         * sync expectation).
+         *
+         * "Exactly once, ever" is NOT a property of this key: acknowledging
+         * clears it back to false, which is indistinguishable from never having
+         * been armed. [CUTOVER_UPGRADE_NOTICE_EVER_ARMED] is what makes the
+         * once-ever guarantee real.
          */
         val CUTOVER_UPGRADE_NOTICE_PENDING = booleanPreferencesKey("cutover_upgrade_notice_pending")
+
+        /**
+         * MO-995 (Andrei, comment 91138 #2): the once-EVER latch behind
+         * [CUTOVER_UPGRADE_NOTICE_PENDING]. Set the first time the upgrade
+         * explainer is armed on this install, and never cleared.
+         *
+         * WHY A SECOND KEY IS NEEDED: `..._PENDING` is a *pending* flag — the
+         * sheet sets it back to false on acknowledgment, which reads exactly
+         * like "never armed". So any later arming re-shows a sheet whose own
+         * copy promises "This happens only once, after this update".
+         *
+         * That is not hypothetical. Field log (2026-09-02, prod, 11.9.1 →
+         * 12.0.0-sync): the notice was pending at the 07:31:54 upgrade launch
+         * and the user acknowledged it, then the upgrade seam committed the
+         * cutover TEN HOURS LATER on the next process start (17:31:54
+         * `cutover state DUAL_RUNNING -> CUT_OVER (upgraded-wallet launch)`)
+         * and armed the very same explainer a second time.
+         *
+         * The ten-hour gap is structural, not a glitch: the seam's bind-evidence
+         * gate can never pass on the upgrade launch itself (the bind runs after
+         * the seam), so the commit — and with it the arming — always lands on
+         * some LATER process start, with no bound on when that is. Combined
+         * with the durable [CUTOVER_UPGRADE_BOUNDARY_CROSSED] latch, a
+         * [de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
+         * .rollbackForFailedBind] → re-commit cycle can arm it again and again.
+         * This latch makes all of those paths idempotent.
+         */
+        val CUTOVER_UPGRADE_NOTICE_EVER_ARMED = booleanPreferencesKey("cutover_upgrade_notice_ever_armed")
 
         /**
          * MO-995: set the first time the SDK wallet bind succeeds on this
