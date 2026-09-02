@@ -326,11 +326,13 @@ class CutoverCoordinatorTest {
         stored: String? = null,
         flag: Boolean? = true,
         bindEverSucceeded: Boolean? = true,
-        boundaryAlreadyLatched: Boolean = false
+        boundaryAlreadyLatched: Boolean = false,
+        noticeAlreadyArmedEver: Boolean = false
     ): Triple<CutoverCoordinator, () -> String?, () -> Boolean> {
         var current = stored
         var noticeArmed = false
         var boundaryLatched = boundaryAlreadyLatched
+        var noticeEverArmed = noticeAlreadyArmedEver
         val config = mockk<DashPayConfig>()
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns flag
@@ -346,6 +348,11 @@ class CutoverCoordinatorTest {
         }
         coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, any<Boolean>()) } answers {
             noticeArmed = secondArg()
+            Unit
+        }
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED) } answers { noticeEverArmed }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED, any<Boolean>()) } answers {
+            noticeEverArmed = secondArg()
             Unit
         }
         val collector = mockk<CutoverEvidenceCollector>()
@@ -379,6 +386,118 @@ class CutoverCoordinatorTest {
         coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
         assertEquals(CutoverState.CUT_OVER.name, stored())
         assertTrue("an upgrade from below 11.10 arriving pre-commit is exactly the case worth explaining", armed())
+    }
+
+    /**
+     * MO-995 (Andrei, comment 91138 #2) — THE REPORTED BUG.
+     *
+     * The explainer's own copy says "This happens only once, after this
+     * update", but CUTOVER_UPGRADE_NOTICE_PENDING is a *pending* flag that the
+     * sheet sets back to false on acknowledgment — indistinguishable from
+     * never-armed. Field log, 2026-09-02 prod, 11.9.1 -> 12.0.0-sync: the
+     * notice was pending and acknowledged on the 07:31:54 upgrade launch, then
+     * the seam committed at 17:31:54 (`cutover state DUAL_RUNNING -> CUT_OVER
+     * (upgraded-wallet launch)`) and armed the same explainer a second time,
+     * ten hours later.
+     *
+     * Two launches, both reaching the seam legitimately: the second one passes
+     * GATE 1 on the durable boundary latch. So the arming — not the commit —
+     * has to be the thing that is idempotent.
+     */
+    @Test
+    fun upgradeNotice_notArmedASecondTime_afterTheUserAlreadyAcknowledgedIt() = runBlocking {
+        // Launch 1: the genuine upgrade. Arms, and latches "ever armed".
+        val (first, _, armedFirst) = noticeCoordinator(stored = null)
+        first.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertTrue("the upgrade launch must arm the explainer", armedFirst())
+
+        // Launch 2: same install, state back at DUAL_RUNNING (a bind-failure
+        // rollback), boundary latched, notice already armed once and
+        // acknowledged (PENDING is back to false — which is why it cannot be
+        // the guard).
+        val (second, stored, armedSecond) = noticeCoordinator(
+            stored = CutoverState.DUAL_RUNNING.name,
+            boundaryAlreadyLatched = true,
+            noticeAlreadyArmedEver = true
+        )
+        second.commitForUpgradedWalletAsync(sameBuildVersionCode)
+
+        assertEquals(
+            "the commit itself must still happen — only the explainer is suppressed",
+            CutoverState.CUT_OVER.name,
+            stored()
+        )
+        assertFalse("a \"happens only once\" sheet must not be armed twice", armedSecond())
+    }
+
+    /**
+     * The latch is written BEFORE the pending flag, so a first arming leaves
+     * BOTH set. Pins that ordering: without the latch write, the guard above
+     * has nothing to read on the next launch.
+     */
+    @Test
+    fun upgradeNotice_firstArming_alsoLatchesTheOnceEverMarker() = runBlocking {
+        var everArmed: Boolean? = null
+        var pending: Boolean? = null
+        var current: String? = null
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns false
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } returns Unit
+        coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
+            current = secondArg(); Unit
+        }
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED) } answers { everArmed }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED, any<Boolean>()) } answers {
+            everArmed = secondArg(); Unit
+        }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, any<Boolean>()) } answers {
+            // Reading the latch here proves it was written FIRST.
+            assertEquals("the once-ever latch must be set before the pending flag", true, everArmed)
+            pending = secondArg(); Unit
+        }
+        val coordinator = CutoverCoordinator(
+            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined)
+        )
+
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+
+        assertEquals(true, pending)
+        assertEquals(true, everArmed)
+    }
+
+    /**
+     * An unreadable latch must SUPPRESS, not arm. Re-showing a "happens only
+     * once" sheet is the user-visible defect; a missed explainer is not.
+     */
+    @Test
+    fun upgradeNotice_notArmed_whenTheOnceEverLatchCannotBeRead() = runBlocking {
+        var pending: Boolean? = null
+        var current: String? = null
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns false
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } returns Unit
+        coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
+            current = secondArg(); Unit
+        }
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED) } throws
+            IllegalStateException("DataStore read failed")
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, any<Boolean>()) } answers {
+            pending = secondArg(); Unit
+        }
+        val coordinator = CutoverCoordinator(
+            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined)
+        )
+
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+
+        assertEquals("the commit must not be blocked by an unreadable latch", CutoverState.CUT_OVER.name, current)
+        assertNull("an unreadable latch must suppress the explainer", pending)
     }
 
     @Test

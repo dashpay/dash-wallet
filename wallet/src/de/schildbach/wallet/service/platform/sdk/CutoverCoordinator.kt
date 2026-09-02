@@ -327,17 +327,73 @@ class CutoverCoordinator @Inject constructor(
             }
             // The version-code condition that used to gate ONLY the explainer
             // here is now GATE 1 above and gates the commit itself, so reaching
-            // this line already means a genuine pre-cutover upgrade. Arming is
-            // unconditional from here.
-            runCatching { dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, true) }
-                .onSuccess { log.info("upgrade cutover: one-time sync explainer armed") }
-                .onFailure {
-                    if (it is CancellationException) throw it
-                    // Non-fatal: the cutover itself already committed; the
-                    // user simply does not get the explainer.
-                    log.warn("failed to arm the upgrade sync explainer", it)
-                }
+            // this line already means a genuine pre-cutover upgrade. The one
+            // remaining condition is the once-per-install latch inside
+            // armUpgradeNoticeOnce() — GATE 1's durable boundary latch makes
+            // this line reachable on more than one launch (rollback → commit),
+            // and the explainer promises it happens only once.
+            armUpgradeNoticeOnce()
         }
+    }
+
+    /**
+     * Arm the one-time upgrade sync explainer, at most ONCE per install.
+     *
+     * MO-995 (Andrei, comment 91138 #2). The explainer's own copy promises
+     * "This happens only once, after this update", but its marker
+     * ([DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING]) is a *pending* flag that
+     * the sheet clears on acknowledgment — after which an arming site cannot
+     * tell "already shown and dismissed" from "never armed". Field log
+     * (2026-09-02, prod, 11.9.1 -> 12.0.0-sync): acknowledged on the 07:31:54
+     * upgrade launch, then armed again by the deferred commit at 17:31:54, ten
+     * hours later. So the arming needs a marker that is never cleared, which is
+     * [DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED].
+     *
+     * WHY THE COMMIT IS THAT LATE, since it is what makes a second arming
+     * reachable at all: the bind-evidence gate
+     * ([refusesCutOverWithoutBindEvidence]) cannot pass on the upgrade launch
+     * — the bind runs after this seam — so the boundary is latched and the
+     * commit lands on a later process start, whenever that happens to be. The
+     * readiness-driven [CutoverAutoCommitObserver] is the in-launch path that
+     * would close the gap, and in that same log it ran for 8.5 hours without
+     * committing. Bounding the deferral means changing which engine owns L1
+     * mid-launch, which the "never two live SPV engines" invariant forbids
+     * (see [rollbackForFailedBind]) — so the deferral stays, and this makes it
+     * harmless to the user.
+     *
+     * Ordering note: the latch is written BEFORE the pending flag. A crash
+     * between the two costs the user the explainer; the reverse order would
+     * re-arm forever, which is the bug being fixed. Never throws.
+     */
+    private suspend fun armUpgradeNoticeOnce() {
+        val everArmed = runCatching {
+            dashPayConfig.get(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED) == true
+        }.getOrElse {
+            if (it is CancellationException) throw it
+            // Unreadable latch: assume it WAS armed. Suppressing an explainer
+            // the user may already have seen beats re-showing a "happens only
+            // once" sheet on every commit.
+            log.warn("failed to read the upgrade sync-explainer latch; suppressing the explainer", it)
+            true
+        }
+        if (everArmed) {
+            log.info(
+                "upgrade cutover committed, but the one-time sync explainer was already armed " +
+                    "once on this install — not arming it again"
+            )
+            return
+        }
+        runCatching {
+            dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED, true)
+            dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, true)
+        }
+            .onSuccess { log.info("upgrade cutover: one-time sync explainer armed") }
+            .onFailure {
+                if (it is CancellationException) throw it
+                // Non-fatal: the cutover itself already committed; the
+                // user simply does not get the explainer.
+                log.warn("failed to arm the upgrade sync explainer", it)
+            }
     }
 
     suspend fun commitForFreshWalletSetup(): CutoverStatus = mutex.withLock {
