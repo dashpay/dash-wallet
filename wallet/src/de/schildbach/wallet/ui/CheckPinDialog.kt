@@ -86,6 +86,10 @@ open class CheckPinDialog(
     protected open val viewModel by viewModels<CheckPinViewModel>()
     private lateinit var state: State
 
+    // the delayed checkPin() queued when the last PIN digit is entered; canceled
+    // when the user edits the PIN or dismisses the dialog before it fires
+    private var pendingCheckPinRunnable: Runnable? = null
+
     @Inject
     lateinit var restartService: RestartService
 
@@ -137,14 +141,25 @@ open class CheckPinDialog(
                     // only the tap that completes the PIN may submit it; extra taps
                     // on a full PIN must not post checkPin() again
                     if (viewModel.pin.length == viewModel.pinLength) {
-                        binding.pinPreview.postDelayed({
-                            checkPin(viewModel.pin.toString())
-                        }, 200)
+                        val pinSnapshot = viewModel.pin.toString()
+                        val runnable = object : Runnable {
+                            override fun run() {
+                                if (pendingCheckPinRunnable !== this) {
+                                    return // canceled after posting
+                                }
+                                pendingCheckPinRunnable = null
+                                checkPin(pinSnapshot)
+                            }
+                        }
+                        pendingCheckPinRunnable = runnable
+                        binding.pinPreview.postDelayed(runnable, 200)
                     }
                 }
             }
 
             override fun onBack(longClick: Boolean) {
+                // editing the PIN retracts a queued verification of it
+                cancelPendingCheckPin()
                 if (viewModel.pin.isNotEmpty()) {
                     viewModel.pin.deleteCharAt(viewModel.pin.length - 1)
                     binding.pinPreview.prev()
@@ -277,9 +292,18 @@ open class CheckPinDialog(
     }
 
     override fun onDismiss(dialog: DialogInterface) {
+        cancelPendingCheckPin()
         onSuccessOrDismiss?.invoke(null)
         onSuccessOrDismiss = null
         super.onDismiss(dialog)
+    }
+
+    private fun cancelPendingCheckPin() {
+        val pending = pendingCheckPinRunnable ?: return
+        // clearing the reference alone defuses the runnable; removeCallbacks just
+        // saves the dead callback from occupying the queue
+        pendingCheckPinRunnable = null
+        view?.removeCallbacks(pending)
     }
 
     protected open fun showLockedAlert(activity: FragmentActivity, lockedTimeMessage: String) {

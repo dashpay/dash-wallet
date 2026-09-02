@@ -35,7 +35,38 @@ class EncryptWalletLiveData(
     private val biometricHelper: BiometricHelper
 ) : MutableLiveData<Resource<Wallet>>() {
 
-    private val log = LoggerFactory.getLogger(EncryptWalletLiveData::class.java)
+    companion object {
+        private val log = LoggerFactory.getLogger(EncryptWalletLiveData::class.java)
+
+        /**
+         * Encrypts [wallet] with a key derived from [password], then persists the password
+         * via [savePassword]. If persisting fails, the wallet is left encrypted with a
+         * password that was never stored — it could not be spent and a retry with the same
+         * PIN could not re-encrypt — so the encryption is rolled back before rethrowing,
+         * returning the wallet to the state it had before the call.
+         */
+        @JvmStatic
+        internal fun encryptAndSavePassword(
+            wallet: Wallet,
+            keyCrypter: KeyCrypterScrypt,
+            password: String,
+            savePassword: (String) -> Unit
+        ) {
+            val newKey = keyCrypter.deriveKey(password)
+            wallet.encrypt(keyCrypter, newKey)
+            try {
+                savePassword(password)
+            } catch (x: Exception) {
+                try {
+                    wallet.decrypt(newKey)
+                    log.warn("rolled back wallet encryption after failing to save the spending password")
+                } catch (rollbackError: Exception) {
+                    log.error("could not roll back wallet encryption after savePassword failure", rollbackError)
+                }
+                throw x
+            }
+        }
+    }
 
     private var encryptWalletTask: EncryptWalletTask? = null
     private var decryptWalletTask: DecryptWalletTask? = null
@@ -59,7 +90,11 @@ class EncryptWalletLiveData(
             val alreadySavedSamePin = try {
                 securityGuard.checkPin(pin)
             } catch (x: Exception) {
-                false
+                // checkPin returns false only for a real PIN mismatch; a throw means the
+                // check itself failed (keystore/IO), so don't misreport it as a mismatch
+                throw IllegalStateException(
+                    "wallet is already encrypted and the saved PIN could not be verified", x
+                )
             }
             if (alreadySavedSamePin) {
                 log.warn("savePin called again after the wallet was encrypted with the same PIN, ignoring")
@@ -150,10 +185,7 @@ class EncryptWalletLiveData(
                 org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
                 // For the new key, we create a new key crypter according to the desired parameters.
                 val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
-                val newKey = keyCrypter.deriveKey(password)
-                wallet.encrypt(keyCrypter, newKey)
-
-                securityGuard.savePassword(password)
+                encryptAndSavePassword(wallet, keyCrypter, password) { securityGuard.savePassword(it) }
 
                 log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")
 

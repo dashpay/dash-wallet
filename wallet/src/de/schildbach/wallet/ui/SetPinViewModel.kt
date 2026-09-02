@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.EncryptWalletLiveData
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.PinRetryController
@@ -69,7 +70,15 @@ class SetPinViewModel @Inject constructor(
             log.warn("savePinAndEncrypt called while wallet encryption is already in progress, ignoring")
             return
         }
-        encryptWalletLiveData.savePin(pin)
+        try {
+            encryptWalletLiveData.savePin(pin)
+        } catch (x: Exception) {
+            // surface as an encryption error so the observer shows its error dialog
+            // instead of the exception crashing the app out of onboarding
+            log.error("failed to save the PIN before encrypting the wallet", x)
+            encryptWalletLiveData.value = Resource.error(x)
+            return
+        }
         encryptWallet(initialize)
     }
 
