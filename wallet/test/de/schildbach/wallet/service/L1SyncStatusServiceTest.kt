@@ -836,4 +836,77 @@ class L1SyncStatusServiceTest {
         assertEquals("the ceiling lands one deadline after the FIRST false", true, seen.last())
         job.cancel()
     }
+
+    // ── MO-995: the filters sawtooth guard ────────────────────────────
+
+    /**
+     * QA screenshot: "Synced / Block headers 2,532,259 / Block filters — /
+     * Masternode list 2,532,250 / ChainLock 2,532,258". Every row but filters
+     * held its value.
+     *
+     * `mergeL1SyncDetail` already backstopped percentage, headers, mnlist and
+     * chainlock through the IDLE/CONNECTING window (the engine reports all-zero
+     * heights there for minutes after a restart), but took filters raw — and
+     * `NetworkMonitorActivity.formatHeights` renders "-" exactly when height
+     * AND target are both <= 0.
+     */
+    @Test
+    fun detail_filtersDoNotCollapseToUnknown_whileTheEngineIsIdle() {
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            // The exact shape from the field log: IDLE 0.0% headers 0/0 filters 0/0.
+            progress = progress(
+                phase = ShadowSyncPhase.IDLE,
+                headerHeight = 0, headerTarget = 0,
+                filterHeight = 0, filterTarget = 0
+            ),
+            sessionChainLockHeight = 0,
+            state = dashjState(percentageSync = 100, bestChainHeight = 2_532_259),
+            lastKnownFilterHeight = 2_532_258,
+            lastKnownFilterTarget = 2_532_258
+        )
+        assertEquals("filters must hold their last known position", 2_532_258L, detail.filterHeight)
+        assertEquals(2_532_258L, detail.filterTarget)
+        // And the neighbouring rows must still behave as before.
+        assertEquals(2_532_259L, detail.headerHeight)
+    }
+
+    @Test
+    fun detail_filtersReadUnknown_onAColdStartWithNothingKnownYet() {
+        // No reading has been taken in this process, so "-" IS the honest answer.
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            progress = progress(
+                phase = ShadowSyncPhase.IDLE,
+                headerHeight = 0, headerTarget = 0, filterHeight = 0, filterTarget = 0
+            ),
+            sessionChainLockHeight = 0,
+            state = null
+        )
+        assertEquals(0L, detail.filterHeight)
+        assertEquals(0L, detail.filterTarget)
+    }
+
+    /**
+     * The guard is deliberately scoped to IDLE/CONNECTING. Outside that window
+     * a filter height that moves BACKWARDS is real — the DashPay coreHeight
+     * backfill legitimately rewinds the scan (observed dropping 1,543,144 ->
+     * 1,252,305 in the field) — and must be reported, not masked by a max()
+     * against a stale high-water mark.
+     */
+    @Test
+    fun detail_aGenuineFilterRewindIsNotMasked() {
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            progress = progress(
+                phase = ShadowSyncPhase.FILTERS,
+                filterHeight = 1_252_305, filterTarget = 1_543_144
+            ),
+            sessionChainLockHeight = 0,
+            state = null,
+            lastKnownFilterHeight = 1_543_144,
+            lastKnownFilterTarget = 1_543_144
+        )
+        assertEquals("a real rewind must show honestly", 1_252_305L, detail.filterHeight)
+    }
 }
