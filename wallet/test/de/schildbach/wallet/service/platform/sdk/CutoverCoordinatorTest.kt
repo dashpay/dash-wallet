@@ -360,10 +360,9 @@ class CutoverCoordinatorTest {
         return Triple(coordinator, { current }, { noticeArmed })
     }
 
-    /** A previous-launch versionCode from BELOW the 11.10 cutover line (v11.9.0). */
+    /** A previous-launch versionCode from BELOW the cutover line (v11.9.0). */
     private val pre1110VersionCode = 11090002
 
-    /** A previous-launch versionCode already ON the 11.10 line (11.10.1). */
     /**
      * A previous-launch versionCode AT/ABOVE the cutover line — i.e. the
      * previous launch already had the SDK cutover, so this launch did not cross
