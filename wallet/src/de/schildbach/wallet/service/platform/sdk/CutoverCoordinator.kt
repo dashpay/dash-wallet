@@ -247,17 +247,21 @@ class CutoverCoordinator @Inject constructor(
      *   already-expected post-restore sync wait rather than being told its
      *   wallet was "upgraded"; and
      * - [previousVersionCode] says the app REALLY upgraded across the cutover
-     *   boundary: the launch before this one ran a PRE-11.10 build
+     *   boundary: the launch before this one ran a PRE-CUTOVER build
      *   (`0 < previousVersionCode < ` [FIRST_CUTOVER_VERSION_CODE]). The
      *   product requirement is "explain the one-time resync only to users
-     *   coming from below 11.10". A previous code of 0 means the app was
-     *   never run before (fresh install — belt to the fresh-setup latch's
-     *   suspenders), and a previous code already at/above 11.10 means an
-     *   11.10.x → 11.10.y update, whose user has already lived through (or
-     *   never needed) the explainer.
+     *   coming from below the cutover release". A previous code of 0 means the
+     *   app was never run before (fresh install — belt to the fresh-setup
+     *   latch's suspenders), and a previous code already at/above the boundary
+     *   means a within-cutover-line update, whose user has already lived
+     *   through (or never needed) the explainer.
      *
-     * So: an app UPGRADE from a pre-11.10 build arriving in a pre-commit
-     * state flips here and arms; an 11.10.x → 11.10.y update never arms;
+     * Version numbers are deliberately NOT spelled out here — the boundary
+     * already moved once (11.10 → 12.0) and prose that names a release goes
+     * stale silently. [FIRST_CUTOVER_VERSION_CODE] is the only statement of it.
+     *
+     * So: an app UPGRADE from a pre-cutover build arriving in a pre-commit
+     * state flips here and arms; a within-line update never arms;
      * every later launch of the same install is already CUT_OVER and no-ops;
      * a fresh create/restore is positively suppressed twice over (version
      * code 0 AND the latch).
@@ -303,7 +307,7 @@ class CutoverCoordinator @Inject constructor(
             if (!crossedEver) {
                 log.info(
                     "upgrade seam declining to commit the cutover: previous version code {} is " +
-                        "not a pre-{} upgrade (0 = fresh install, >= {} = already on 11.10+) and " +
+                        "not a pre-{} upgrade (0 = fresh install, >= {} = already cut over) and " +
                         "no boundary crossing was ever latched — leaving the state alone for the " +
                         "readiness-gated auto-commit",
                     previousVersionCode, FIRST_CUTOVER_VERSION_CODE, FIRST_CUTOVER_VERSION_CODE
@@ -594,14 +598,23 @@ class CutoverCoordinator @Inject constructor(
         private val log = LoggerFactory.getLogger(CutoverCoordinator::class.java)
 
         /**
-         * The first versionCode of the 11.10 line — the release that ships the
-         * SDK cutover. The store versionCode scheme is MMmmppbb
-         * (`wallet/build.gradle`: 11.8.2 = 11080201), so EVERY pre-11.10 build
-         * (11.9.x = 1109xxxx, 11.8.x = 1108xxxx, …) is numerically below
-         * 11.10.0 = 11100000, and every 11.10+ build (including the
-         * monotonic-decoupled QA codes, all >= 11100001) is at/above it. The
-         * one-time upgrade sync explainer arms only for upgrades crossing
-         * this boundary.
+         * The first versionCode of the release line that ships the SDK
+         * cutover — currently 12.0.0. THE single statement of the boundary:
+         * the emulator harness reads it from here too
+         * (`scripts/cutover-emulator-test.sh`), and the tests derive their
+         * fixtures from it rather than hardcoding a value.
+         *
+         * The store versionCode scheme is MMmmppbb (`wallet/build.gradle`:
+         * 11.8.2 = 11080201), so every pre-12.0 build (11.9.x = 1109xxxx,
+         * 11.25.x = 1125xxxx, …) is numerically below 12.0.0 = 12000000, and
+         * every 12.0+ build (including the monotonic-decoupled QA codes, all
+         * >= 12000001) is at/above it. The one-time upgrade sync explainer
+         * arms only for upgrades crossing this boundary.
+         *
+         * THIS MOVED from 11100000 when the cutover slipped from 11.10 to
+         * 12.0, and moving it inverts the meaning of every hardcoded
+         * counterpart — one test asserted the opposite of its own name until
+         * it was rederived from here. Keep it the only literal.
          */
         const val FIRST_CUTOVER_VERSION_CODE = 12000000
 
@@ -618,11 +631,11 @@ class CutoverCoordinator @Inject constructor(
 /**
  * Whether [previousVersionCode] — the versionCode recorded by the launch
  * BEFORE this one — means this launch genuinely crossed the cutover boundary,
- * i.e. the app was last run on a pre-11.10 build.
+ * i.e. the app was last run on a pre-cutover build.
  *
  * `0` means the app was never run before (fresh install), and anything at or
  * above [CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE] means the previous
- * launch was already on 11.10+ — including a relaunch of the SAME build,
+ * launch was already cut over — including a relaunch of the SAME build,
  * which is what walletB hit (previous code 12000001 on a 12000001 build).
  * Neither is an upgrade across the boundary, so neither may drive the
  * UPGRADE seam's commit.

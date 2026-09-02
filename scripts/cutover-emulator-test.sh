@@ -41,11 +41,47 @@ AVD=Pixel_9_API_36_AOPS
 # NEVER hardcode it — supply it per run:  EMULATOR_PIN=... ./this-script s3
 # Only the scenarios that lock the screen need it (s2, and s3's unlock).
 PIN="${EMULATOR_PIN:-}"
-PREV_VERSION_PRE_CUTOVER=11090000   # any value < FIRST_CUTOVER_VERSION_CODE (11100000)
+# MUST match CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE. The cutover ships
+# in 12.0.0, so the boundary is 12000000 — it MOVED here from 11100000 when the
+# release slipped a line. Two copies of a boundary is one copy too many: this
+# used to be hardcoded again below, where a device last run on 11.10–11.25 (which
+# the APP counts as pre-cutover) was judged post-cutover by the script, so the
+# script overwrote a genuine last_version instead of leaving it alone.
+FIRST_CUTOVER_VERSION_CODE=12000000
+PREV_VERSION_PRE_CUTOVER=11090000   # any value < FIRST_CUTOVER_VERSION_CODE
 BT=~/Library/Android/sdk/build-tools/35.0.1
 APK_DIR=wallet/build/outputs/apk/_testNet3/release
 OUT=/tmp/mo995-emulator
 mkdir -p "$OUT"
+
+# Assertion ledger. Every FAIL bumps this; the EXIT trap turns a non-zero
+# count into a non-zero exit status.
+#
+# WHY NOT `exit 1` AT THE FAILING ASSERTION: each scenario is a SEQUENCE of
+# assertions and the diagnostic value is in seeing all of them. S3 asserting
+# "bind failed" then "dashj came back" then "state not committed" tells you
+# WHERE the chain broke; aborting at the first FAIL reports only that it broke.
+# So assertions still print and continue — but the script no longer exits 0
+# after printing FAIL, which would let an automated run call a failed cutover
+# scenario a success.
+FAILURES=0
+
+fail() {
+  FAILURES=$((FAILURES + 1))
+  printf '   \033[31mFAIL\033[0m %s\n' "$1"
+  [ $# -gt 1 ] && printf '        %s\n' "$2"
+  return 0
+}
+
+on_exit() {
+  local rc=$?
+  if [ "$FAILURES" -gt 0 ]; then
+    printf '\n\033[31m%s assertion(s) FAILED\033[0m\n' "$FAILURES"
+    exit 1
+  fi
+  exit "$rc"
+}
+trap on_exit EXIT
 
 say()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 note() { printf '   %s\n' "$*"; }
@@ -129,7 +165,7 @@ assert_log() {
     fi
     sleep 5; waited=$((waited + 5))
   done
-  printf '   \033[31mFAIL\033[0m %s\n        (no match in %ss for: %s)\n' "$label" "$budget" "$pat"
+  fail "$label" "(no match in ${budget}s for: $pat)"
 }
 
 # refute_log <label> <grep-pattern>   — PASS if absent from the new lines
@@ -137,7 +173,7 @@ refute_log() {
   local label="$1" pat="$2"
   local w; w=$(since_mark)
   if grep -qE "$pat" "$w"; then
-    printf '   \033[31mFAIL\033[0m %s\n        (unexpected: %s)\n' "$label" "$pat"
+    fail "$label" "(unexpected: $pat)"
     grep -E "$pat" "$w" | head -2 | sed 's/^/          /'
   else printf '   \033[32mPASS\033[0m %s\n' "$label"; fi
 }
@@ -152,7 +188,7 @@ assert_not_committed() {
   local label="$1" raw
   raw=$(adbs "strings /data/data/$PKG/files/datastore/dashpay.preferences_pb 2>/dev/null" | tr -d '\r')
   if echo "$raw" | grep -qE "CUT_OVER|SETTLED"; then
-    printf '   \033[31mFAIL\033[0m %s\n        (persisted state is committed)\n' "$label"
+    fail "$label" "(persisted state is committed)"
   else
     printf '   \033[32mPASS\033[0m %s\n' "$label"
   fi
@@ -161,7 +197,7 @@ assert_not_committed() {
 fake_pre_cutover_previous_launch() {
   # Configuration.lastVersionCode is read from the default SharedPreferences
   # ("last_version", Configuration.java:61) at construction. Writing it here is
-  # exactly equivalent to "the previous launch ran a pre-11.10 build", which is
+  # exactly equivalent to "the previous launch ran a pre-cutover build", which is
   # what CutoverCoordinator's GATE 1 tests — without needing a real v11.9.0 APK
   # signed with matching keys.
   #
@@ -175,13 +211,13 @@ fake_pre_cutover_previous_launch() {
     note "prefs file not present yet — launch the app once, complete onboarding, then re-run"
     return 1
   fi
-  # If a REAL upgrade was just installed over a pre-11.10 build, lastVersionCode
+  # If a REAL upgrade was just installed over a pre-cutover build, lastVersionCode
   # already holds the genuine value — leave it alone. Faking it would only
   # overwrite the truth with the same thing, and hide a mismatch if the real
   # upgrade did not record what we expect.
   local cur
   cur=$(adbs "grep -o 'last_version\" value=\"[0-9]*' $f" 2>/dev/null | grep -o '[0-9]*$' | tr -d '\r')
-  if [ -n "$cur" ] && [ "$cur" -gt 0 ] && [ "$cur" -lt 11100000 ]; then
+  if [ -n "$cur" ] && [ "$cur" -gt 0 ] && [ "$cur" -lt "$FIRST_CUTOVER_VERSION_CODE" ]; then
     note "REAL pre-cutover upgrade detected (last_version=$cur) — not faking it"
     return 0
   fi
@@ -461,7 +497,7 @@ s4)
   if [ "${COUNT:-0}" -ge 2 ]; then
     printf '   \033[32mPASS\033[0m engine restarted after the teardown (%s starts)\n' "$COUNT"
   else
-    printf '   \033[31mFAIL\033[0m engine did NOT restart — MO-995 latch still present (%s starts)\n' "$COUNT"
+    fail "engine did NOT restart — MO-995 latch still present (${COUNT:-0} starts)"
   fi
   ;;
 
