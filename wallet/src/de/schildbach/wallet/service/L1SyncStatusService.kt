@@ -362,7 +362,9 @@ internal fun mergeL1SyncDetail(
     progress: ShadowSyncProgress,
     sessionChainLockHeight: Int,
     state: BlockchainState?,
-    bindRetryPending: Boolean = false
+    bindRetryPending: Boolean = false,
+    lastKnownFilterHeight: Long = 0,
+    lastKnownFilterTarget: Long = 0
 ): L1SyncDetail = if (sdkOwnsL1) {
     val idleOrConnecting = progress.phase == ShadowSyncPhase.IDLE ||
         progress.phase == ShadowSyncPhase.CONNECTING
@@ -384,8 +386,33 @@ internal fun mergeL1SyncDetail(
         isSynced = sdkL1ScanCaughtUp(progress),
         headerHeight = maxOf(progress.headerHeight, (state?.bestChainHeight ?: 0).toLong()),
         headerTarget = progress.headerTarget,
-        filterHeight = progress.filterHeight,
-        filterTarget = progress.filterTarget,
+        // MO-995: filters need the same sawtooth guard as the rows above, and
+        // did not have it. BlockchainState carries no filter height (dashj has
+        // no filter pipeline, so the row never persists one), so the backstop
+        // is the last non-zero pair seen in THIS process instead of the row.
+        //
+        // Without it, "Block filters" alone collapsed to "-" during the
+        // IDLE/CONNECTING window while headers, masternode list, chainlock and
+        // percentage all held their last known values — so the screen read
+        // "Synced ... Block headers 2,532,259 ... Block filters —", which is
+        // what QA reported. formatHeights() renders "-" exactly when height
+        // AND target are both <= 0.
+        //
+        // Guarded on idleOrConnecting ONLY, deliberately: outside that window
+        // a filter height that moves BACKWARDS is real and must show honestly
+        // — the DashPay coreHeight backfill legitimately rewinds the scan (seen
+        // dropping 1,543,144 -> 1,252,305 in the field). A blanket max() would
+        // mask that and report a position the engine no longer holds.
+        filterHeight = if (idleOrConnecting) {
+            maxOf(progress.filterHeight, lastKnownFilterHeight)
+        } else {
+            progress.filterHeight
+        },
+        filterTarget = if (idleOrConnecting) {
+            maxOf(progress.filterTarget, lastKnownFilterTarget)
+        } else {
+            progress.filterTarget
+        },
         mnListHeight = maxOf(progress.mnListHeight, (state?.mnlistHeight ?: 0).toLong()),
         chainLockHeight = maxOf(sessionChainLockHeight, state?.chainlockHeight ?: 0)
     )
@@ -513,6 +540,15 @@ class L1SyncStatusService @Inject constructor(
      * failed wallet bind renders as [L1SyncStage.SETUP_RETRYING] instead of
      * the dead "Not started" (MO-995).
      */
+    /**
+     * Last non-zero filter position seen in this process — the in-memory
+     * backstop for the IDLE/CONNECTING window (see [mergeL1SyncDetail]).
+     * Process-scoped by necessity: nothing persists a filter height. On a cold
+     * start with no reading yet, "-" is the honest answer.
+     */
+    @Volatile private var lastFilterHeight = 0L
+    @Volatile private var lastFilterTarget = 0L
+
     val details: Flow<L1SyncDetail> =
         combine(
             cutoverCoordinator.sdkOwnsL1Flow(),
@@ -521,6 +557,14 @@ class L1SyncStatusService @Inject constructor(
             blockchainStateProvider.observeState(),
             sdkWalletBinder.bindRetryPending
         ) { sdkOwnsL1, progress, chainLockHeight, state, bindRetryPending ->
-            mergeL1SyncDetail(sdkOwnsL1, progress, chainLockHeight, state, bindRetryPending)
+            mergeL1SyncDetail(
+                sdkOwnsL1, progress, chainLockHeight, state, bindRetryPending,
+                lastFilterHeight, lastFilterTarget
+            ).also { detail ->
+                // Only ever advance on a real reading; a 0 from an idle engine
+                // must not erase what we are backstopping with.
+                if (detail.filterHeight > 0) lastFilterHeight = detail.filterHeight
+                if (detail.filterTarget > 0) lastFilterTarget = detail.filterTarget
+            }
         }.distinctUntilChanged()
 }
