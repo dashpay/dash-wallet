@@ -36,6 +36,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -779,16 +780,62 @@ class CutoverCoordinatorTest {
         assertEquals(CutoverState.CUT_OVER.name, stored())
     }
 
+    /**
+     * MO-995 REGRESSION PIN. This test previously asserted the OPPOSITE — that
+     * a fresh wallet must NOT commit without bind evidence — and that
+     * assertion was wrong, so the guard it protected shipped in 12000003 and
+     * broke every newly created or restored wallet.
+     *
+     * On a fresh install there is no bind evidence by construction: the commit
+     * is what routes the launch, the first bind pass runs after it. Field log
+     * (2026-09-03, prod, brand-new wallet) — the bind succeeded three seconds
+     * AFTER the refusal:
+     *
+     *     09:29:06  declining to commit the cutover: the SDK wallet bind has
+     *               never succeeded on this install
+     *     09:29:09  app wallet bound to new SDK wallet d992760a…
+     *
+     * QA reported it as "one time sync not started": dashj took L1 and the
+     * SDK's fast initial sync never ran. The unbindable-SDK exposure the old
+     * assertion was reaching for is real, but [rollbackForFailedBind] is what
+     * covers it — deferring cannot, because a deferred commit lands mid-launch
+     * with the dashj peergroup already up (two live SPV engines).
+     */
     @Test
-    fun freshWalletCommit_refusesWithoutBindEvidence() = runBlocking {
-        // The clean-install exposure: committing here would hold dashj while the
-        // SDK cannot bind, leaving a brand-new wallet with no L1 engine at all.
+    fun freshWalletCommit_commitsWithoutBindEvidence_becauseTheBindRunsAfterIt() = runBlocking {
         val (coordinator, stored) = coordinator(stored = null, bindEverSucceeded = false)
 
         val status = coordinator.commitForFreshWalletSetup()
 
-        assertNull("a fresh wallet must not be handed to an unbindable SDK", stored())
-        assertEquals(CutoverState.DUAL_RUNNING, status.state)
-        assertTrue(coordinator.dashjEngineMayStart())
+        assertEquals(
+            "a fresh wallet must commit immediately — the bind cannot have happened yet",
+            CutoverState.CUT_OVER,
+            status.state
+        )
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertFalse("the SDK owns L1 from the start on a fresh wallet", coordinator.dashjEngineMayStart())
+    }
+
+    /**
+     * The guard still holds where it CAN be satisfied. Same absent bind
+     * evidence as the test above, opposite outcome — this is the asymmetry the
+     * fix introduces, so pin both halves together.
+     */
+    @Test
+    fun upgradeSeamAndAutoCommit_stillRefuseWithoutBindEvidence() = runBlocking {
+        val (seam, seamStored, _) = noticeCoordinator(stored = null, bindEverSucceeded = false)
+        seam.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertNull("the upgrade seam must still refuse — walletB's engine-less state", seamStored())
+
+        // NB: the advisory leg legitimately reaches READY_OBSERVED — the guard
+        // only refuses transitions INTO CutOver — so assert on CUT_OVER, not
+        // on "unchanged".
+        val (auto, autoStored) = coordinator(stored = null, bindEverSucceeded = false)
+        auto.autoAdvanceToCutover()
+        assertNotEquals(
+            "the readiness auto-commit must still refuse to hand L1 over",
+            CutoverState.CUT_OVER.name,
+            autoStored()
+        )
     }
 }
