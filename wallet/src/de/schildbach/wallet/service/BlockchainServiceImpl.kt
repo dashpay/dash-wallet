@@ -269,6 +269,16 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private val POST_CUTOVER_IDENTITY_RETRY_INTERVAL_MS = TimeUnit.MINUTES.toMillis(2)
         private val log = LoggerFactory.getLogger(BlockchainServiceImpl::class.java)
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
+
+        /**
+         * True iff a start command's extras mark it as delivered by
+         * `startForegroundService()` — see [shouldPromoteToForeground]. Pure
+         * (Bundle is the only Android type, and it is a plain container), so
+         * host-JVM testable.
+         */
+        @JvmStatic
+        fun carriesForegroundStartPromise(extras: android.os.Bundle?): Boolean =
+            extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)
         var cleanupDeferred: CompletableDeferred<Unit>? = null
         private val isCleaningUp = AtomicBoolean(false)
 
@@ -2436,17 +2446,45 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         log.info(".onStartCommand($intent)")
         super.onStartCommand(intent, flags, startId)
+        // MO-995 CRASH FIX — this MUST stay synchronous, before the coroutine.
+        //
+        // A start delivered by `startForegroundService()` arms a system promise:
+        // call `startForeground()` within a few seconds or the process is killed
+        // with ForegroundServiceDidNotStartInTimeException. This call used to sit
+        // INSIDE the `serviceScope.launch` below, behind
+        // `onCreateCompleted.await()` — so the promise was satisfied only after
+        // the service's whole async init had finished, and not at all if the
+        // service was being torn down instead.
+        //
+        // Field crash (2026-09-02 18:48:44, prod 12.0.0-sync). An AlarmManager
+        // `PendingIntent.getForegroundService` (WalletApplication:1689,
+        // rescheduleService) fired while the idle detector was stopping the
+        // service, so the start command and onDestroy interleaved:
+        //
+        //     18:48:44  idling detected, stopping service
+        //     18:48:44  .onStartCommand(Intent { … (has extras) })
+        //     18:48:44  .onDestroy()
+        //     18:48:44  onStartCommand waiting for onCreate to complete...
+        //     18:48:44  CrashReporter - crashing because of uncaught exception
+        //     android.app.RemoteServiceException$ForegroundServiceDidNotStartInTimeException
+        //
+        // QA reported it as "crash on opening"; it actually fired while the app
+        // sat idle, 12 hours before the wallet was next opened.
+        //
+        // Safe here: Android guarantees `onCreate()` has RETURNED before
+        // `onStartCommand()` runs, and Hilt injects `notificationService` in
+        // `super.onCreate()` (line 1833), so the notification can be built. The
+        // `onCreateCompleted` latch is about this service's own async init
+        // coroutine, which the FGS deadline does not wait for.
+        if (shouldPromoteToForeground(intent)) {
+            startForegroundAndCatch(createNetworkSyncNotification())
+        }
         serviceScope.launch {
             log.info("onStartCommand waiting for onCreate to complete...")
             onCreateCompleted.await() // wait until onCreate is finished
             log.info("onCreate completed, processing onStartCommand")
             if (intent != null) {
                 propagateContext()
-                //Restart service as a Foreground Service if it's synchronizing the blockchain
-                val extras = intent.extras
-                if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
-                    startForegroundAndCatch(createNetworkSyncNotification())
-                }
                 log.info(
                     "service start command: $intent" + if (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)) " (alarm count: " + intent.getIntExtra(
                         Intent.EXTRA_ALARM_COUNT, 0
@@ -2536,6 +2574,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
         foregroundService = ForegroundService.BLOCKCHAIN_SYNC
     }
+
+    /**
+     * Does this start command carry the foreground-service promise?
+     *
+     * Extracted as a pure, static-side function so the MO-995 crash condition
+     * is unit-testable without the Android service lifecycle — the bug was a
+     * MISSED call, and a missed call is only testable if the decision to make
+     * it is separable from making it.
+     *
+     * A null intent (a restart delivery after the process was killed) carries
+     * no promise: the system re-delivers it without a fresh
+     * `startForegroundService()`, so promoting would be wrong.
+     */
+    private fun shouldPromoteToForeground(intent: Intent?): Boolean =
+        carriesForegroundStartPromise(intent?.extras)
 
     private fun startForegroundAndCatch(notification: Notification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
