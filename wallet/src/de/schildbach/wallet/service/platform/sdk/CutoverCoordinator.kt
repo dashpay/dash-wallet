@@ -319,7 +319,9 @@ class CutoverCoordinator @Inject constructor(
             // refusesCutOverWithoutBindEvidence, so EVERY commit path inherits
             // it — the seam, the fresh-wallet commit, and the readiness-driven
             // auto-commit that used to bypass it entirely.
-            val (_, justCutOver) = mutex.withLock { commitLocked("upgraded-wallet launch") }
+            val (_, justCutOver) = mutex.withLock {
+                commitLocked("upgraded-wallet launch", requireBindEvidence = true)
+            }
             if (!justCutOver) return@launch
             if (freshWalletSetupThisLaunch) {
                 log.info(
@@ -400,8 +402,40 @@ class CutoverCoordinator @Inject constructor(
             }
     }
 
+    /**
+     * MO-995 REGRESSION FIX. This path commits WITHOUT bind evidence, on
+     * purpose — and it is the one path that must.
+     *
+     * `36792ccd1` ("refuse EVERY path into CUT_OVER without SDK bind
+     * evidence") put that guard inside [commitLocked], which this shares with
+     * the upgrade seam. On a fresh install there is no bind evidence BY
+     * CONSTRUCTION: the commit is what routes the launch, and the first bind
+     * pass only runs once platform sync starts, after it. So the guard could
+     * never pass here, and every newly created or restored wallet silently
+     * fell back to dashj instead of the SDK's fast initial sync.
+     *
+     * Field log (2026-09-03, prod 12.0.0-sync/12000003, brand-new wallet):
+     *
+     *     07:10:02  successfully created new wallet
+     *     09:29:06  declining to commit the cutover: the SDK wallet bind has
+     *               never succeeded on this install
+     *     09:29:06  Phase 5d cutover gate: dashjEngineMayStart=true
+     *     09:29:09  app wallet bound to new SDK wallet d992760a…
+     *
+     * — the bind succeeding three seconds AFTER the refusal is the whole
+     * problem in one line. QA reported it as "one time sync not started".
+     *
+     * A failed bind is handled by [rollbackForFailedBind] instead (driven by
+     * [de.schildbach.wallet.service.platform.sdk.SdkBindRetryService]), which
+     * restores the dashj engine. That escape hatch is why this commit is safe
+     * to make eagerly, and it is what the guard here duplicated — badly,
+     * since deferring is exactly what [rollbackForFailedBind]'s own KDoc
+     * explains cannot work for a fresh wallet (a deferred commit lets the
+     * dashj peergroup start and then lands mid-launch, leaving BOTH SPV
+     * engines live — the "never two live SPV engines" invariant).
+     */
     suspend fun commitForFreshWalletSetup(): CutoverStatus = mutex.withLock {
-        commitLocked("fresh-wallet setup (restore/new)").first
+        commitLocked("fresh-wallet setup (restore/new)", requireBindEvidence = false).first
     }
 
     /**
@@ -485,31 +519,41 @@ class CutoverCoordinator @Inject constructor(
      * Only CUT_OVER is guarded. ROLLBACK and the wipe reset move AWAY from a
      * committed state and must never be blocked — that is the escape hatch.
      */
-    private suspend fun refusesCutOverWithoutBindEvidence(to: CutoverState): Boolean {
+    private suspend fun refusesCutOverWithoutBindEvidence(to: CutoverState, path: String): Boolean {
         if (to != CutoverState.CUT_OVER) return false
         if (sdkBindEverSucceeded()) return false
         log.warn(
-            "declining to commit the cutover: the SDK wallet bind has never succeeded on this " +
-                "install, so handing L1 to the SDK would hold dashj and leave no L1 engine — " +
-                "staying on dashj until a bind succeeds"
+            "declining to commit the cutover ({}): the SDK wallet bind has never succeeded on " +
+                "this install, so handing L1 to the SDK would hold dashj and leave no L1 engine " +
+                "— staying on dashj until a bind succeeds",
+            path
         )
         return true
     }
 
-    private suspend fun commitLocked(reason: String): Pair<CutoverStatus, Boolean> {
+    /**
+     * @param requireBindEvidence whether [refusesCutOverWithoutBindEvidence]
+     *   applies. TRUE for the upgrade seam, FALSE for fresh-wallet setup —
+     *   see [commitForFreshWalletSetup] for why that asymmetry is required
+     *   rather than merely convenient. No default: every call site states it.
+     */
+    private suspend fun commitLocked(
+        reason: String,
+        requireBindEvidence: Boolean
+    ): Pair<CutoverStatus, Boolean> {
         val current = currentState()
         if (current == CutoverState.CUT_OVER || current == CutoverState.SETTLED) {
             return CutoverStatus(current, READY_VERDICT) to false
         }
         if (!sdkL1EngineEnabled()) {
             log.info(
-                "fresh-wallet cutover skipped: USE_KOTLIN_SDK_L1_SHADOW is off — the SDK L1 " +
+                "cutover skipped ({}): USE_KOTLIN_SDK_L1_SHADOW is off — the SDK L1 " +
                     "engine is inactive, so dashj must keep owning L1 (staying {})",
-                current
+                reason, current
             )
             return CutoverStatus(current, READY_VERDICT) to false
         }
-        if (refusesCutOverWithoutBindEvidence(CutoverState.CUT_OVER)) {
+        if (requireBindEvidence && refusesCutOverWithoutBindEvidence(CutoverState.CUT_OVER, reason)) {
             return CutoverStatus(current, READY_VERDICT) to false
         }
         val status = writeState(current, CutoverState.CUT_OVER, reason)
@@ -577,7 +621,7 @@ class CutoverCoordinator @Inject constructor(
             return@withLock CutoverStatus(current, CutoverVerdict(setOf(CutoverBlocker.PARITY_EVIDENCE_STALE)))
         }
         val next = nextCutoverState(current, action, verdict.ready)
-        if (next != current && refusesCutOverWithoutBindEvidence(next)) {
+        if (next != current && refusesCutOverWithoutBindEvidence(next, "readiness auto-commit")) {
             // Readiness said yes, but the SDK cannot own L1. Report the state
             // unchanged so the observer keeps observing instead of standing down.
             return@withLock CutoverStatus(current, verdict)
