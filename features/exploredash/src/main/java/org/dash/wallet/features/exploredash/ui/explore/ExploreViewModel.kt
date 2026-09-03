@@ -562,12 +562,28 @@ class ExploreViewModel @Inject constructor(
         _screenState.postValue(ScreenState.MerchantLocations)
         this.allMerchantLocationsJob?.cancel()
         this.allMerchantLocationsJob = _searchBounds
+            // The Google Map camera callback is the only writer of searchBounds. On devices
+            // without Google Play Services the map never initializes, so the value stays null
+            // and this flow would never emit, leaving the locations screen permanently blank.
+            // Seed with noBounds in that case; the Nearby branch below must not treat the
+            // seeded noBounds as a map center.
+            .onStart { if (_searchBounds.value == null) emit(GeoBounds.noBounds) }
             .filterNotNull()
             .flatMapLatest { bounds ->
                 // Only apply radius bounds if we're in Nearby mode
                 // For All and Online tabs, show all locations globally
                 val radiusBounds = if (_isLocationEnabled.value == true && _filterMode.value == FilterMode.Nearby) {
-                    locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
+                    if (bounds != GeoBounds.noBounds) {
+                        locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
+                    } else {
+                        // No map bounds yet — center on the user's last known location
+                        // instead of the noBounds placeholder center, which would query
+                        // a radius around latitude/longitude (0, 0). With no location
+                        // either, fall back to an unbounded query.
+                        _currentUserLocation.value?.let {
+                            locationProvider.getRadiusBounds(it.latitude, it.longitude, radius)
+                        } ?: GeoBounds.noBounds
+                    }
                 } else {
                     GeoBounds.noBounds
                 }
