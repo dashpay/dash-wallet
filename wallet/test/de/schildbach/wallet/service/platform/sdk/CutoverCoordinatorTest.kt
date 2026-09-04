@@ -36,6 +36,8 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -78,12 +80,20 @@ class CutoverCoordinatorTest {
     private fun coordinator(
         stored: String? = null,
         flag: Boolean? = true,
-        evidence: CutoverEvidence = readyEvidence()
+        evidence: CutoverEvidence = readyEvidence(),
+        // MO-995 GATE 2: the UPGRADE seam refuses to commit until the SDK bind
+        // has succeeded at least once on this install. Defaults to true so the
+        // pre-existing cases keep exercising what they were written for; the
+        // gate itself has its own tests below.
+        bindEverSucceeded: Boolean? = true
     ): Pair<CutoverCoordinator, () -> String?> {
         var current = stored
         val config = mockk<DashPayConfig>()
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns flag
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns bindEverSucceeded
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns false
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } just Runs
         coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
             current = secondArg()
             Unit
@@ -287,6 +297,10 @@ class CutoverCoordinatorTest {
         val config = mockk<DashPayConfig>()
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        // This test is about WHICH SCOPE the commit runs on, not about gating —
+        // give it the bind evidence every commit path now requires.
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns true
         coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
             current = secondArg()
             Unit
@@ -311,13 +325,24 @@ class CutoverCoordinatorTest {
      */
     private fun noticeCoordinator(
         stored: String? = null,
-        flag: Boolean? = true
+        flag: Boolean? = true,
+        bindEverSucceeded: Boolean? = true,
+        boundaryAlreadyLatched: Boolean = false,
+        noticeAlreadyArmedEver: Boolean = false
     ): Triple<CutoverCoordinator, () -> String?, () -> Boolean> {
         var current = stored
         var noticeArmed = false
+        var boundaryLatched = boundaryAlreadyLatched
+        var noticeEverArmed = noticeAlreadyArmedEver
         val config = mockk<DashPayConfig>()
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns flag
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns bindEverSucceeded
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } answers { boundaryLatched }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } answers {
+            boundaryLatched = secondArg()
+            Unit
+        }
         coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
             current = secondArg()
             Unit
@@ -326,16 +351,38 @@ class CutoverCoordinatorTest {
             noticeArmed = secondArg()
             Unit
         }
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED) } answers { noticeEverArmed }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED, any<Boolean>()) } answers {
+            noticeEverArmed = secondArg()
+            Unit
+        }
         val collector = mockk<CutoverEvidenceCollector>()
+        // Ready evidence, so the READINESS auto-commit path can be driven
+        // through this helper too — that is the path that actually commits on
+        // a real upgrade (MO-1022), and it must be able to arm the explainer.
+        coEvery { collector.collect() } returns readyEvidence()
         val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined))
         return Triple(coordinator, { current }, { noticeArmed })
     }
 
-    /** A previous-launch versionCode from BELOW the 11.10 cutover line (v11.9.0). */
+    /** A previous-launch versionCode from BELOW the cutover line (v11.9.0). */
     private val pre1110VersionCode = 11090002
 
-    /** A previous-launch versionCode already ON the 11.10 line (11.10.1). */
-    private val on1110VersionCode = 11100100
+    /**
+     * A previous-launch versionCode AT/ABOVE the cutover line — i.e. the
+     * previous launch already had the SDK cutover, so this launch did not cross
+     * the boundary. DERIVED from the constant on purpose: this was hardcoded to
+     * 11100100 and silently became a *pre*-cutover value when the boundary moved
+     * from 11100000 to 12000000, inverting what the test asserted.
+     */
+    private val onOrAfterCutoverVersionCode = CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE + 100
+
+    /**
+     * The versionCode of THIS build — what `lastVersionCode` reads on every
+     * launch after the first one. walletB reached the seam with exactly this
+     * shape (previous code 12000001 on a 12000001 build).
+     */
+    private val sameBuildVersionCode = CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE + 1
 
     @Test
     fun upgradeNotice_armed_onAGenuineUpgradeFromPre1110ThatFlipsTheState() = runBlocking {
@@ -343,6 +390,183 @@ class CutoverCoordinatorTest {
         coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
         assertEquals(CutoverState.CUT_OVER.name, stored())
         assertTrue("an upgrade from below 11.10 arriving pre-commit is exactly the case worth explaining", armed())
+    }
+
+    /**
+     * MO-1022 — THE BUG QA ACTUALLY HIT: on a real upgrade the explainer was
+     * never armed AT ALL. Not late; never.
+     *
+     * Two facts combine. The upgrade seam cannot commit on the upgrade launch
+     * (GATE 2 wants bind evidence, and the bind lands seconds later), so it
+     * returns before any arming. The commit then happens on the READINESS
+     * auto-commit path — which had no arming logic whatsoever.
+     *
+     * Field log (2026-09-04, prod 12000004, SM-A536B), the whole story:
+     *
+     *     17:10:59  declining to commit (upgraded-wallet launch): bind has never succeeded
+     *     17:11:02  app wallet bound to new SDK wallet a60ed232…
+     *     18:06:02  cutover state DUAL_RUNNING -> READY_OBSERVED on OBSERVE_READINESS
+     *     18:06:02  cutover state READY_OBSERVED -> CUT_OVER on COMMIT_CUTOVER
+     *     18:06:02  cutover auto-commit: SDK is now L1-primary (dashj held)
+     *
+     * — committed, and no explainer. So the arming belongs to the COMMIT, not
+     * to one particular caller.
+     */
+    @Test
+    fun upgradeNotice_isArmed_whenTheReadinessAutoCommitIsWhatCommits() = runBlocking {
+        // The upgrade launch already latched the boundary; this is the later
+        // commit, and it does NOT come through the seam.
+        val (coordinator, stored, armed) = noticeCoordinator(
+            stored = null,
+            boundaryAlreadyLatched = true
+        )
+
+        coordinator.autoAdvanceToCutover()
+
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertTrue("the path that actually commits must arm the explainer", armed())
+    }
+
+    /**
+     * The counterpart: a FRESH install that never crossed the boundary must
+     * not be told its wallet was upgraded, no matter which path commits. The
+     * boundary latch is what separates the two, so pin it here.
+     */
+    @Test
+    fun upgradeNotice_isNotArmed_byAnAutoCommitOnAnInstallThatNeverUpgraded() = runBlocking {
+        val (coordinator, stored, armed) = noticeCoordinator(
+            stored = null,
+            boundaryAlreadyLatched = false
+        )
+
+        coordinator.autoAdvanceToCutover()
+
+        assertEquals("the commit itself still happens", CutoverState.CUT_OVER.name, stored())
+        assertFalse("a fresh install has no upgrade to explain", armed())
+    }
+
+    /**
+     * MO-995 (Andrei, comment 91138 #2) — THE REPORTED BUG.
+     *
+     * The explainer's own copy says "This happens only once, after this
+     * update", but CUTOVER_UPGRADE_NOTICE_PENDING is a *pending* flag that the
+     * sheet sets back to false on acknowledgment — indistinguishable from
+     * never-armed. Field log, 2026-09-02 prod, 11.9.1 -> 12.0.0-sync: the
+     * notice was pending and acknowledged on the 07:31:54 upgrade launch, then
+     * the seam committed at 17:31:54 (`cutover state DUAL_RUNNING -> CUT_OVER
+     * (upgraded-wallet launch)`) and armed the same explainer a second time,
+     * ten hours later.
+     *
+     * Two launches, both reaching the seam legitimately: the second one passes
+     * GATE 1 on the durable boundary latch. So the arming — not the commit —
+     * has to be the thing that is idempotent.
+     */
+    @Test
+    fun upgradeNotice_notArmedASecondTime_afterTheUserAlreadyAcknowledgedIt() = runBlocking {
+        // Launch 1: the genuine upgrade. Arms, and latches "ever armed".
+        val (first, _, armedFirst) = noticeCoordinator(stored = null)
+        first.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertTrue("the upgrade launch must arm the explainer", armedFirst())
+
+        // Launch 2: same install, state back at DUAL_RUNNING (a bind-failure
+        // rollback), boundary latched, notice already armed once and
+        // acknowledged (PENDING is back to false — which is why it cannot be
+        // the guard).
+        val (second, stored, armedSecond) = noticeCoordinator(
+            stored = CutoverState.DUAL_RUNNING.name,
+            boundaryAlreadyLatched = true,
+            noticeAlreadyArmedEver = true
+        )
+        second.commitForUpgradedWalletAsync(sameBuildVersionCode)
+
+        assertEquals(
+            "the commit itself must still happen — only the explainer is suppressed",
+            CutoverState.CUT_OVER.name,
+            stored()
+        )
+        assertFalse("a \"happens only once\" sheet must not be armed twice", armedSecond())
+    }
+
+    /**
+     * The latch is written BEFORE the pending flag, so a first arming leaves
+     * BOTH set. Pins that ordering: without the latch write, the guard above
+     * has nothing to read on the next launch.
+     */
+    @Test
+    fun upgradeNotice_firstArming_alsoLatchesTheOnceEverMarker() = runBlocking {
+        var everArmed: Boolean? = null
+        var pending: Boolean? = null
+        var current: String? = null
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
+        // Stateful: GATE 1 writes this latch BEFORE attempting the commit, and
+        // the arming re-reads it. A constant-false stub models neither.
+        var boundaryLatched = false
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } answers { boundaryLatched }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } answers {
+            boundaryLatched = secondArg()
+            Unit
+        }
+        coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
+            current = secondArg(); Unit
+        }
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED) } answers { everArmed }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED, any<Boolean>()) } answers {
+            everArmed = secondArg(); Unit
+        }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, any<Boolean>()) } answers {
+            // Reading the latch here proves it was written FIRST.
+            assertEquals("the once-ever latch must be set before the pending flag", true, everArmed)
+            pending = secondArg(); Unit
+        }
+        val coordinator = CutoverCoordinator(
+            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined)
+        )
+
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+
+        assertEquals(true, pending)
+        assertEquals(true, everArmed)
+    }
+
+    /**
+     * An unreadable latch must SUPPRESS, not arm. Re-showing a "happens only
+     * once" sheet is the user-visible defect; a missed explainer is not.
+     */
+    @Test
+    fun upgradeNotice_notArmed_whenTheOnceEverLatchCannotBeRead() = runBlocking {
+        var pending: Boolean? = null
+        var current: String? = null
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
+        // Stateful: GATE 1 writes this latch BEFORE attempting the commit, and
+        // the arming re-reads it. A constant-false stub models neither.
+        var boundaryLatched = false
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } answers { boundaryLatched }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } answers {
+            boundaryLatched = secondArg()
+            Unit
+        }
+        coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
+            current = secondArg(); Unit
+        }
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED) } throws
+            IllegalStateException("DataStore read failed")
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, any<Boolean>()) } answers {
+            pending = secondArg(); Unit
+        }
+        val coordinator = CutoverCoordinator(
+            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined)
+        )
+
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+
+        assertEquals("the commit must not be blocked by an unreadable latch", CutoverState.CUT_OVER.name, current)
+        assertNull("an unreadable latch must suppress the explainer", pending)
     }
 
     @Test
@@ -353,14 +577,19 @@ class CutoverCoordinatorTest {
     }
 
     @Test
-    fun upgradeNotice_notArmed_whenPreviousVersionIsAlready1110() = runBlocking {
-        // 11.10.x -> 11.10.y update: the state still flips here (e.g. the SDK
-        // L1 flag was off on the earlier 11.10.x launches), but the user is not
-        // crossing the pre-cutover boundary — no explainer.
+    fun upgradeNotice_notArmed_whenPreviousVersionIsAlreadyAtOrAfterCutover() = runBlocking {
+        // An update from a build that ALREADY had the cutover: the user is not
+        // crossing the pre-cutover boundary, so neither the commit nor the
+        // explainer may fire.
         val (coordinator, stored, armed) = noticeCoordinator(stored = null)
-        coordinator.commitForUpgradedWalletAsync(on1110VersionCode)
-        assertEquals("the commit itself must be unaffected by the notice gate", CutoverState.CUT_OVER.name, stored())
-        assertFalse("an 11.10.x -> 11.10.y update must not re-explain the resync", armed())
+        coordinator.commitForUpgradedWalletAsync(onOrAfterCutoverVersionCode)
+        // MO-995 GATE 1 (behaviour CHANGE): the version-code test now gates the
+        // COMMIT too, not just the explainer. An 11.10+ previous code means this
+        // launch did not cross the cutover boundary, so the upgrade seam must
+        // leave the state alone — walletB committed here on a same-version
+        // relaunch and was left with no L1 engine when its bind then failed.
+        assertNull("a non-boundary-crossing launch must not commit", stored())
+        assertFalse("an already-cut-over update must not re-explain the resync", armed())
     }
 
     @Test
@@ -371,14 +600,17 @@ class CutoverCoordinatorTest {
         // e.g. any future path reaching this seam without setWallet).
         val (coordinator, stored, armed) = noticeCoordinator(stored = null)
         coordinator.commitForUpgradedWalletAsync(0)
-        assertEquals(CutoverState.CUT_OVER.name, stored())
+        // GATE 1 again: a fresh install did not cross the boundary either, and
+        // the fresh-wallet seam owns that commit.
+        assertNull("a fresh install must not commit through the UPGRADE seam", stored())
         assertFalse("a fresh install has nothing to explain", armed())
     }
 
     @Test
-    fun upgradeNotice_armed_atTheLastPre1110Code_andNotAtTheBoundaryItself() = runBlocking {
-        // Boundary pin: FIRST_CUTOVER_VERSION_CODE (11.10.0 = 11100000) is the
-        // first code that does NOT arm; one below it still does.
+    fun upgradeNotice_armed_atTheLastPreCutoverCode_andNotAtTheBoundaryItself() = runBlocking {
+        // Boundary pin: FIRST_CUTOVER_VERSION_CODE is the first code that does
+        // NOT arm; one below it still does. Expressed relative to the constant
+        // so moving the cutover release cannot invert the assertion.
         val below = CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE - 1
         val (armedCoordinator, _, armedBelow) = noticeCoordinator(stored = null)
         armedCoordinator.commitForUpgradedWalletAsync(below)
@@ -386,7 +618,7 @@ class CutoverCoordinatorTest {
 
         val (boundaryCoordinator, _, armedAt) = noticeCoordinator(stored = null)
         boundaryCoordinator.commitForUpgradedWalletAsync(CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE)
-        assertFalse("previous code 11100000 is already 11.10 — must not arm", armedAt())
+        assertFalse("the boundary code itself is already cut over — must not arm", armedAt())
     }
 
     @Test
@@ -423,6 +655,9 @@ class CutoverCoordinatorTest {
         val config = mockk<DashPayConfig>()
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } answers { sdkL1Enabled }
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns true
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } just Runs
         coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
             current = secondArg()
             Unit
@@ -476,5 +711,200 @@ class CutoverCoordinatorTest {
         val status = coordinator.rollbackForFailedBind(consecutiveFailures = 5)
         assertEquals(CutoverState.SETTLED, status.state)
         assertEquals(CutoverState.SETTLED.name, stored())
+    }
+
+    // ── MO-995: the UPGRADE seam's commit gates ───────────────────────
+
+    @Test
+    fun upgradeSeam_doesNotCommit_whenTheSdkBindHasNeverSucceeded() = runBlocking {
+        // walletB, exactly: a genuine pre-11.10 upgrade, but this install's
+        // Keystore keeps denying the lock-bound master alias so the SDK has
+        // never bound. Committing would hold dashj and leave NO L1 engine —
+        // no sync, no incoming transactions, "setup is incomplete".
+        val (coordinator, stored, armed) = noticeCoordinator(stored = null, bindEverSucceeded = false)
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertNull("a never-bound SDK must not be handed L1", stored())
+        assertFalse("nothing committed, so nothing to explain", armed())
+        assertTrue("dashj must stay available as the only engine", coordinator.dashjEngineMayStart())
+    }
+
+    @Test
+    fun upgradeSeam_doesNotCommit_whenTheBindMarkerIsAbsent() = runBlocking {
+        // An absent key reads as "never bound" — fail safe, not fail open.
+        val (coordinator, stored, _) = noticeCoordinator(stored = null, bindEverSucceeded = null)
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertNull("an absent bind marker must be treated as never-bound", stored())
+    }
+
+    @Test
+    fun upgradeSeam_commits_onAGenuineUpgradeOnceTheBindHasSucceeded() = runBlocking {
+        // walletC/D: same seam, same version-code path, but the bind works.
+        val (coordinator, stored, armed) = noticeCoordinator(stored = null, bindEverSucceeded = true)
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertTrue("a genuine boundary-crossing upgrade still explains the resync", armed())
+    }
+
+    @Test
+    fun isPreCutoverUpgrade_pinsTheBoundary() {
+        assertFalse("0 = fresh install, never ran before", isPreCutoverUpgrade(0))
+        assertFalse("negative is nonsense — fail safe", isPreCutoverUpgrade(-1))
+        assertTrue("a pre-cutover release crossed the boundary", isPreCutoverUpgrade(11090000))
+        assertTrue(
+            "one below the line still crosses it",
+            isPreCutoverUpgrade(CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE - 1)
+        )
+        assertFalse(
+            "the line itself is already 11.10",
+            isPreCutoverUpgrade(CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE)
+        )
+        assertFalse(
+            "walletB: a relaunch of the SAME build is not an upgrade",
+            isPreCutoverUpgrade(CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE + 1)
+        )
+    }
+
+    @Test
+    fun upgradeSeam_latchesTheBoundary_thenCommitsOnALaterLaunchOnceTheBindWorks() = runBlocking {
+        // The two-launch sequence a healthy upgrade actually takes.
+        //
+        // LAUNCH 1: previous launch ran 11.9.0, so the boundary is crossed —
+        // but the bind has not run yet (this seam is in finalizeInitialization;
+        // the binder starts with platform sync). Latch, do not commit.
+        val (l1, storedL1, armedL1) = noticeCoordinator(stored = null, bindEverSucceeded = false)
+        l1.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertNull("launch 1 must not commit — no bind yet", storedL1())
+        assertFalse(armedL1())
+
+        // LAUNCH 2: lastVersionCode now reads THIS build, so the live version
+        // test fails; only the latch keeps the seam alive. The bind succeeded
+        // during launch 1, so it commits and explains.
+        val (l2, storedL2, armedL2) = noticeCoordinator(
+            stored = null,
+            bindEverSucceeded = true,
+            boundaryAlreadyLatched = true
+        )
+        l2.commitForUpgradedWalletAsync(sameBuildVersionCode)
+        assertEquals("the latch must carry the crossing past launch 1", CutoverState.CUT_OVER.name, storedL2())
+        assertTrue("the one-time explainer must survive the deferral", armedL2())
+    }
+
+    @Test
+    fun upgradeSeam_neverCommits_whenTheBindNeverWorks_evenWithTheBoundaryLatched() = runBlocking {
+        // walletB: latched on its upgrade launch, but 16 keystore denials later
+        // the bind has still never succeeded. It must stay on dashj forever
+        // rather than be handed an L1 it cannot serve.
+        val (coordinator, stored, _) = noticeCoordinator(
+            stored = null,
+            bindEverSucceeded = false,
+            boundaryAlreadyLatched = true
+        )
+        coordinator.commitForUpgradedWalletAsync(sameBuildVersionCode)
+        assertNull("a latched boundary must not override a broken bind", stored())
+        assertTrue(coordinator.dashjEngineMayStart())
+    }
+
+    @Test
+    fun upgradeSeam_doesNotLatch_whenNoBoundaryWasCrossed() = runBlocking {
+        // A same-build relaunch that never had a crossing must not invent one.
+        val (coordinator, stored, _) = noticeCoordinator(stored = null, bindEverSucceeded = true)
+        coordinator.commitForUpgradedWalletAsync(sameBuildVersionCode)
+        assertNull("no crossing ever seen — the seam stays out of it", stored())
+    }
+
+    /**
+     * MO-995: the readiness-driven path must ALSO refuse to commit onto an SDK
+     * that has never bound.
+     *
+     * REGRESSION THIS PINS: the bind-evidence gate first lived only in
+     * `commitForUpgradedWalletAsync`, leaving `autoAdvanceToCutover` wide open.
+     * On the emulator, with every bind failing on a real
+     * `KeystoreDeviceLockedException`, CutoverAutoCommitObserver still committed
+     * FOUR separate times — "READY_OBSERVED -> CUT_OVER on COMMIT_CUTOVER
+     * (ready=true)" then "SDK is now L1-primary (dashj held)" — reaching
+     * walletB's engine-less end state through a different door. The readiness
+     * evaluator has no notion of whether the wallet is bound.
+     */
+    @Test
+    fun autoAdvance_refusesToCommit_whenTheSdkBindHasNeverSucceeded() = runBlocking {
+        val (coordinator, stored) = coordinator(stored = null, bindEverSucceeded = false)
+
+        val status = coordinator.autoAdvanceToCutover()
+
+        assertFalse(
+            "readiness must not be able to hand L1 to an SDK that cannot bind",
+            stored() == CutoverState.CUT_OVER.name
+        )
+        assertFalse("and dashj must stay available as the only engine", !coordinator.dashjEngineMayStart())
+        assertFalse("the state must not report CUT_OVER", status.state == CutoverState.CUT_OVER)
+    }
+
+    @Test
+    fun autoAdvance_commits_onceTheBindHasSucceeded() = runBlocking {
+        // Same evidence, same readiness — only the bind marker differs.
+        val (coordinator, stored) = coordinator(stored = null, bindEverSucceeded = true)
+
+        coordinator.autoAdvanceToCutover()
+
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+    }
+
+    /**
+     * MO-995 REGRESSION PIN. This test previously asserted the OPPOSITE — that
+     * a fresh wallet must NOT commit without bind evidence — and that
+     * assertion was wrong, so the guard it protected shipped in 12000003 and
+     * broke every newly created or restored wallet.
+     *
+     * On a fresh install there is no bind evidence by construction: the commit
+     * is what routes the launch, the first bind pass runs after it. Field log
+     * (2026-09-03, prod, brand-new wallet) — the bind succeeded three seconds
+     * AFTER the refusal:
+     *
+     *     09:29:06  declining to commit the cutover: the SDK wallet bind has
+     *               never succeeded on this install
+     *     09:29:09  app wallet bound to new SDK wallet d992760a…
+     *
+     * QA reported it as "one time sync not started": dashj took L1 and the
+     * SDK's fast initial sync never ran. The unbindable-SDK exposure the old
+     * assertion was reaching for is real, but [rollbackForFailedBind] is what
+     * covers it — deferring cannot, because a deferred commit lands mid-launch
+     * with the dashj peergroup already up (two live SPV engines).
+     */
+    @Test
+    fun freshWalletCommit_commitsWithoutBindEvidence_becauseTheBindRunsAfterIt() = runBlocking {
+        val (coordinator, stored) = coordinator(stored = null, bindEverSucceeded = false)
+
+        val status = coordinator.commitForFreshWalletSetup()
+
+        assertEquals(
+            "a fresh wallet must commit immediately — the bind cannot have happened yet",
+            CutoverState.CUT_OVER,
+            status.state
+        )
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertFalse("the SDK owns L1 from the start on a fresh wallet", coordinator.dashjEngineMayStart())
+    }
+
+    /**
+     * The guard still holds where it CAN be satisfied. Same absent bind
+     * evidence as the test above, opposite outcome — this is the asymmetry the
+     * fix introduces, so pin both halves together.
+     */
+    @Test
+    fun upgradeSeamAndAutoCommit_stillRefuseWithoutBindEvidence() = runBlocking {
+        val (seam, seamStored, _) = noticeCoordinator(stored = null, bindEverSucceeded = false)
+        seam.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertNull("the upgrade seam must still refuse — walletB's engine-less state", seamStored())
+
+        // NB: the advisory leg legitimately reaches READY_OBSERVED — the guard
+        // only refuses transitions INTO CutOver — so assert on CUT_OVER, not
+        // on "unchanged".
+        val (auto, autoStored) = coordinator(stored = null, bindEverSucceeded = false)
+        auto.autoAdvanceToCutover()
+        assertNotEquals(
+            "the readiness auto-commit must still refuse to hand L1 over",
+            CutoverState.CUT_OVER.name,
+            autoStored()
+        )
     }
 }

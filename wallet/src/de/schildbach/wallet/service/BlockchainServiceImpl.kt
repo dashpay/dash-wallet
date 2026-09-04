@@ -48,10 +48,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.AppForegroundMonitor
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRescan
@@ -197,27 +197,62 @@ import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
 
 /**
+ * Whether a dashj `onCoinsReceived` delivery should raise the "Received x" push.
+ *
+ * The whole decision, in one pure place, over the two inputs that matter:
+ *
+ * - [walletAuthored] — this wallet built the transaction, so it is a SEND however dashj values it.
+ *   Post-cutover the SDK authors every send and
+ *   [de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory] commits it into the
+ *   dashj wallet-of-record; dashj cannot attribute the SDK-owned inputs, values the tx by its
+ *   `+change` output alone and delivers it here as if money had arrived.
+ * - [correctedNet] — the signed net effect on the wallet, SDK-corrected where a display row exists.
+ *   Must be the SAME value the notification goes on to announce: reading it twice is what let the
+ *   gate say "received" while the announced amount read "-0.0x" (MO-995).
+ *
+ * Pre-cutover this changes nothing: a dashj-authored send is valued negative and already failed the
+ * sign test, and a genuine receive is neither self-authored nor negative.
+ */
+internal fun shouldAnnounceCoinsReceived(walletAuthored: Boolean, correctedNet: Coin): Boolean =
+    !walletAuthored && correctedNet.signum() > 0
+
+/**
  * @author Andreas Schildbach
  * @author Eric Britten
  */
 @AndroidEntryPoint
 class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
-    private val appLifecycleObserver = object : DefaultLifecycleObserver {
-        override fun onStart(owner: LifecycleOwner) {
-            log.info("App moved to foreground")
-            isAppInBackground = false
-            // MO-995: a pending SDK bind retry escapes the hourly backoff
-            // tail the moment the user is actually looking at the app.
-            if (::sdkBindRetryService.isInitialized) {
-                sdkBindRetryService.noteAppForeground()
+    /**
+     * MO-995: observe the app's foreground state from [AppForegroundMonitor],
+     * NOT from `ProcessLifecycleOwner`.
+     *
+     * This was a `ProcessLifecycleOwner` observer, and it never fired once:
+     * AndroidManifest.xml removes `androidx.startup.InitializationProvider`
+     * (`tools:node="remove"`), so `lifecycle-process`'s initializer never runs
+     * and the process owner never leaves INITIALIZED. Across a 27,000-line
+     * field log with 36 service onCreate()s, "App moved to foreground" appears
+     * zero times — so `isAppInBackground` was frozen and
+     * [SdkBindRetryService.noteAppForeground] had never once been called.
+     * [AppForegroundMonitor] takes the same edges from
+     * [de.schildbach.wallet.WalletActivityTracker], which is registered the
+     * plain way and demonstrably works.
+     */
+    private fun observeAppForeground() {
+        // StateFlow is already conflated+distinct; no distinctUntilChanged needed.
+        AppForegroundMonitor.isForeground
+            .onEach { foreground ->
+                isAppInBackground = !foreground
+                if (foreground && ::sdkBindRetryService.isInitialized) {
+                    // A pending SDK bind retry runs the moment the user is
+                    // actually looking at the app — the device is then provably
+                    // unlocked, which is the heal condition for a device-locked
+                    // keystore denial, and no broadcast has to survive an OEM's
+                    // background restrictions.
+                    sdkBindRetryService.noteAppForeground()
+                }
             }
-        }
-
-        override fun onStop(owner: LifecycleOwner) {
-            log.info("App moved to background")
-            isAppInBackground = true
-        }
+            .launchIn(serviceScope)
     }
 
     companion object {
@@ -234,6 +269,16 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private val POST_CUTOVER_IDENTITY_RETRY_INTERVAL_MS = TimeUnit.MINUTES.toMillis(2)
         private val log = LoggerFactory.getLogger(BlockchainServiceImpl::class.java)
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
+
+        /**
+         * True iff a start command's extras mark it as delivered by
+         * `startForegroundService()` — see [shouldPromoteToForeground]. Pure
+         * (Bundle is the only Android type, and it is a plain container), so
+         * host-JVM testable.
+         */
+        @JvmStatic
+        fun carriesForegroundStartPromise(extras: android.os.Bundle?): Boolean =
+            extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)
         var cleanupDeferred: CompletableDeferred<Unit>? = null
         private val isCleaningUp = AtomicBoolean(false)
 
@@ -377,8 +422,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * sent), keyed by lowercase display-hex txid. Absent → dashj value, so pre-cutover / non-SDK
      * txs are byte-for-byte unchanged.
      *
-     * Runs synchronously on a bitcoinj wallet-listener thread (never the main thread) and fails
-     * soft to [fallback] on ANY error, keeping the notification path non-blocking and robust.
+     * Runs synchronously on a bitcoinj wallet-listener thread and fails soft to [fallback] on ANY
+     * error, keeping the notification path non-blocking and robust. MUST NOT be called from the
+     * main thread: Room has no `allowMainThreadQueries` (see
+     * [de.schildbach.wallet.di.DatabaseModule]), so a main-thread call throws and fails soft to
+     * dashj's misread — which is how a gift-card purchase got announced as a receive (MO-995).
+     * Resolve it ONCE per transaction on the listener thread and thread the value onward.
      */
     private fun correctedNetValue(tx: Transaction, fallback: Coin): Coin {
         return try {
@@ -387,6 +436,34 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         } catch (t: Throwable) {
             log.warn("tx_display_cache lookup failed for {}, using dashj value", tx.txId, t)
             fallback
+        }
+    }
+
+    /**
+     * Whether THIS wallet authored [tx] — a send, never a receive, whatever signed value dashj
+     * computes for it.
+     *
+     * Post-cutover the SDK builds, signs and broadcasts every send, and
+     * [de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory] then commits the tx
+     * into the dashj wallet-of-record, stamping `purpose = USER_PAYMENT` and
+     * `confidence.source = SELF` exactly as dashj's own `completeTx` does. dashj cannot attribute
+     * the SDK-owned inputs, so it values the tx by its `+change` output alone and delivers it to
+     * `onCoinsReceived` as if it were money arriving.
+     *
+     * Both stamps are set BEFORE the commit and travel with the tx in memory and on disk, so they
+     * are available the instant the listener fires and cannot go stale — unlike the
+     * tx_display_cache net ([correctedNetValue]), which does not exist yet during the window
+     * between the bridge commit and the SDK's display-row insert.
+     */
+    private fun isWalletAuthored(tx: Transaction): Boolean {
+        if (tx.purpose == Transaction.Purpose.USER_PAYMENT) {
+            return true
+        }
+        return try {
+            tx.confidence.source == TransactionConfidence.Source.SELF
+        } catch (t: Throwable) {
+            log.warn("confidence source unavailable for {}", tx.txId, t)
+            false
         }
     }
 
@@ -528,8 +605,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 transactionsReceived.incrementAndGet()
                 val address = getWalletAddressOfReceived(tx, wallet)
                 // Prefer the SDK-corrected net for the notification amount; falls back to dashj
-                // for pre-cutover / non-SDK txs (see correctedNetValue).
+                // for pre-cutover / non-SDK txs (see correctedNetValue). Resolved ONCE, here on
+                // the wallet-listener thread, and threaded into passFilters below: the second
+                // lookup that used to happen inside passFilters ran on the MAIN thread, where
+                // Room throws and correctedNetValue fails soft to dashj's positive misread — so
+                // the gate said "received" while this amount said "-0.0x", and a gift-card
+                // purchase was announced as "Received -0.0x" (MO-995).
                 val amount = correctedNetValue(tx, tx.getValue(wallet))
+                val walletAuthored = isWalletAuthored(tx)
                 val confidenceType = tx.confidence.confidenceType
                 val isRestoringBackup = application.configuration.isRestoringBackup
                 handler.post {
@@ -550,7 +633,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                             apiConfirmationHandler!!.matches(tx.toTxInfo(wallet, Constants.NETWORK_PARAMETERS))
                         ) {
                             apiConfirmationHandler!!.handle(tx.toTxInfo(wallet, Constants.NETWORK_PARAMETERS))
-                        } else if (passFilters(tx, wallet)) {
+                        } else if (passFilters(tx, wallet, amount, walletAuthored)) {
                             // resolveLabel is a ContentProvider query and
                             // nm.notify a binder IPC — notification lane, not
                             // main. All coins-received notification state is
@@ -586,12 +669,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 updateAppWidget()
             }
 
-            private fun passFilters(tx: Transaction, wallet: Wallet): Boolean {
-                // Prefer the SDK-corrected net so an SDK send mis-read by dashj as a positive
-                // "received" value does not trip the received-coins gate; dashj fallback otherwise.
-                val amount = correctedNetValue(tx, tx.getValue(wallet))
-                val isReceived = amount.signum() > 0
-                if (!isReceived) {
+            private fun passFilters(
+                tx: Transaction,
+                wallet: Wallet,
+                amount: Coin,
+                walletAuthored: Boolean
+            ): Boolean {
+                // Our own send is never a receive, whatever value dashj puts on it. This is the
+                // primary post-cutover gate: it holds even in the window where the SDK-corrected
+                // net is not yet on disk and [amount] is still dashj's positive misread of the
+                // +change output (see isWalletAuthored).
+                //
+                // [amount] is the SDK-corrected net resolved once on the wallet-listener thread
+                // (see onCoinsReceived) — the SAME number the notification announces, so the gate
+                // and the announced value can no longer disagree.
+                if (!shouldAnnounceCoinsReceived(walletAuthored, amount)) {
+                    if (walletAuthored) {
+                        log.info("tx {} was authored by this wallet — not a receive, no notification", tx.txId)
+                    }
                     return false
                 }
                 var passFilters = crowdnodeFilters.any { it.matches(tx) }
@@ -614,6 +709,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         address: Address?, amount: Coin,
         exchangeRate: ExchangeRate?
     ) {
+        // FINAL belt: never announce a receive for a non-positive amount. Callers already gate on
+        // the corrected net being positive; this keeps any future caller from rendering the
+        // "Received -0.0x" push QA saw for a gift-card purchase (MO-995).
+        if (amount.signum() <= 0) {
+            log.info("not announcing a receive for the non-positive amount {}", amount.toFriendlyString())
+            return
+        }
         if (notificationCount == 1) nm!!.cancel(Constants.NOTIFICATION_ID_COINS_RECEIVED)
         notificationCount++
         notificationAccumulatedAmount = notificationAccumulatedAmount.add(amount)
@@ -1745,7 +1847,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName)
 
         // Register for app lifecycle events to detect background/foreground transitions
-        ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
+        observeAppForeground()
 
         // DIAGNOSTIC (Tools toggle): while the readout is holding at 99%
         // waiting for a fresh post-catchup parity report (see
@@ -2148,6 +2250,32 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }.onFailure {
                         log.warn("failed to wire SDK-sourced quorums for Platform", it)
                     }
+
+                    // MO-995 / MO-998: restart the SDK's L1 (SPV) engine on EVERY
+                    // service (re)start, not just the first one of the process.
+                    //
+                    // platformSyncService.resume() — the only in-process path that
+                    // re-kicks the SDK engines — used to live solely in
+                    // checkService()'s peergroup-start block, BELOW the
+                    // `!dashjEngineMayStart` early return. Post-cutover that return
+                    // always fires, so resume() was unreachable and the engines only
+                    // ever came up from PlatformSyncService.init() (once per process,
+                    // from WalletApplication). Any service teardown that stops them
+                    // (release-build shutdown() -> stopSdkEngines(), reached from
+                    // onTrimMemory's low-memory stopSelf(), the idle detector, or the
+                    // Android 15 FGS timeout) therefore killed L1 sync for the rest
+                    // of the process: no incoming transactions, the sync UI stuck at
+                    // "syncing", and sends/top-ups failing with "SPV client not
+                    // started". Worse, the idle detector samples this same engine's
+                    // progress post-cutover, so a dead engine reads as idle and keeps
+                    // tearing the service down — a latch, not a transient.
+                    //
+                    // resume() is idempotent (single-flight bind + idempotent
+                    // startIfEnabled), so the first service start of a process
+                    // harmlessly re-kicks what init() already started. Scoped to the
+                    // post-cutover branch: the pre-cutover path keeps its original
+                    // resume()-at-peergroup-start behavior, unchanged.
+                    platformSyncService.resume()
                 }
 
                 // FIX 2: keep the DASHJ_SYNC_DIAGNOSTIC toggle effective on a LIVE
@@ -2318,17 +2446,45 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         log.info(".onStartCommand($intent)")
         super.onStartCommand(intent, flags, startId)
+        // MO-995 CRASH FIX — this MUST stay synchronous, before the coroutine.
+        //
+        // A start delivered by `startForegroundService()` arms a system promise:
+        // call `startForeground()` within a few seconds or the process is killed
+        // with ForegroundServiceDidNotStartInTimeException. This call used to sit
+        // INSIDE the `serviceScope.launch` below, behind
+        // `onCreateCompleted.await()` — so the promise was satisfied only after
+        // the service's whole async init had finished, and not at all if the
+        // service was being torn down instead.
+        //
+        // Field crash (2026-09-02 18:48:44, prod 12.0.0-sync). An AlarmManager
+        // `PendingIntent.getForegroundService` (WalletApplication:1689,
+        // rescheduleService) fired while the idle detector was stopping the
+        // service, so the start command and onDestroy interleaved:
+        //
+        //     18:48:44  idling detected, stopping service
+        //     18:48:44  .onStartCommand(Intent { … (has extras) })
+        //     18:48:44  .onDestroy()
+        //     18:48:44  onStartCommand waiting for onCreate to complete...
+        //     18:48:44  CrashReporter - crashing because of uncaught exception
+        //     android.app.RemoteServiceException$ForegroundServiceDidNotStartInTimeException
+        //
+        // QA reported it as "crash on opening"; it actually fired while the app
+        // sat idle, 12 hours before the wallet was next opened.
+        //
+        // Safe here: Android guarantees `onCreate()` has RETURNED before
+        // `onStartCommand()` runs, and Hilt injects `notificationService` in
+        // `super.onCreate()` (line 1833), so the notification can be built. The
+        // `onCreateCompleted` latch is about this service's own async init
+        // coroutine, which the FGS deadline does not wait for.
+        if (shouldPromoteToForeground(intent)) {
+            startForegroundAndCatch(createNetworkSyncNotification())
+        }
         serviceScope.launch {
             log.info("onStartCommand waiting for onCreate to complete...")
             onCreateCompleted.await() // wait until onCreate is finished
             log.info("onCreate completed, processing onStartCommand")
             if (intent != null) {
                 propagateContext()
-                //Restart service as a Foreground Service if it's synchronizing the blockchain
-                val extras = intent.extras
-                if (extras != null && extras.containsKey(START_AS_FOREGROUND_EXTRA)) {
-                    startForegroundAndCatch(createNetworkSyncNotification())
-                }
                 log.info(
                     "service start command: $intent" + if (intent.hasExtra(Intent.EXTRA_ALARM_COUNT)) " (alarm count: " + intent.getIntExtra(
                         Intent.EXTRA_ALARM_COUNT, 0
@@ -2419,6 +2575,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         foregroundService = ForegroundService.BLOCKCHAIN_SYNC
     }
 
+    /**
+     * Does this start command carry the foreground-service promise?
+     *
+     * Extracted as a pure, static-side function so the MO-995 crash condition
+     * is unit-testable without the Android service lifecycle — the bug was a
+     * MISSED call, and a missed call is only testable if the decision to make
+     * it is separable from making it.
+     *
+     * A null intent (a restart delivery after the process was killed) carries
+     * no promise: the system re-delivers it without a fresh
+     * `startForegroundService()`, so promoting would be wrong.
+     */
+    private fun shouldPromoteToForeground(intent: Intent?): Boolean =
+        carriesForegroundStartPromise(intent?.extras)
+
     private fun startForegroundAndCatch(notification: Notification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
@@ -2452,7 +2623,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             networkCallbackRegistered = false
             availableNetworks.clear()
         }
-        ProcessLifecycleOwner.get().lifecycle.removeObserver(appLifecycleObserver)
 
         log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
 

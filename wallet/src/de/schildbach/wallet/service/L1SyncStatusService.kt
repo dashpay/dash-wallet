@@ -362,7 +362,9 @@ internal fun mergeL1SyncDetail(
     progress: ShadowSyncProgress,
     sessionChainLockHeight: Int,
     state: BlockchainState?,
-    bindRetryPending: Boolean = false
+    bindRetryPending: Boolean = false,
+    lastKnownFilterHeight: Long = 0,
+    lastKnownFilterTarget: Long = 0
 ): L1SyncDetail = if (sdkOwnsL1) {
     val idleOrConnecting = progress.phase == ShadowSyncPhase.IDLE ||
         progress.phase == ShadowSyncPhase.CONNECTING
@@ -384,8 +386,61 @@ internal fun mergeL1SyncDetail(
         isSynced = sdkL1ScanCaughtUp(progress),
         headerHeight = maxOf(progress.headerHeight, (state?.bestChainHeight ?: 0).toLong()),
         headerTarget = progress.headerTarget,
-        filterHeight = progress.filterHeight,
-        filterTarget = progress.filterTarget,
+        // MO-995: filters need the same sawtooth guard as the rows above, and
+        // did not have it. BlockchainState carries no filter height (dashj has
+        // no filter pipeline, so the row never persists one), so the backstop
+        // is the last non-zero pair seen in THIS process instead of the row.
+        //
+        // Without it, "Block filters" alone collapsed to "-" during the
+        // IDLE/CONNECTING window while headers, masternode list, chainlock and
+        // percentage all held their last known values — so the screen read
+        // "Synced ... Block headers 2,532,259 ... Block filters —", which is
+        // what QA reported. formatHeights() renders "-" exactly when height
+        // AND target are both <= 0.
+        //
+        // Guarded on idleOrConnecting ONLY, deliberately: outside that window
+        // a filter height that moves BACKWARDS is real and must show honestly
+        // — the DashPay coreHeight backfill legitimately rewinds the scan (seen
+        // dropping 1,543,144 -> 1,252,305 in the field). A blanket max() would
+        // mask that and report a position the engine no longer holds.
+        // MO-1022 FOLLOW-UP: the in-process backstop above is EMPTY on a cold
+        // start, which is exactly when QA looks. Field log (2026-09-04, prod
+        // 12000004, SM-A536B) — app opened 19:13:07, Network Monitor checked
+        // immediately:
+        //
+        //     19:13:14  L1Shadow phase=IDLE 0.0% headers 0/0 filters 0/0 wallet 2533349
+        //     19:14:14  L1Shadow phase=SYNCED 100.0% headers 2533366/2533366 filters 2533366/2533366
+        //
+        // A full minute of "-" before the engine reconnects. So ALSO floor on
+        // the engine's committed wallet cursor, which that same line shows is
+        // populated (`wallet 2533349`) while filters read 0/0: it is seeded at
+        // shadow start from the SDK's DURABLE watermark
+        // (`L1ShadowSyncService.startIfEnabled` → `sdkWalletSyncedHeight`), so
+        // unlike lastKnownFilter* it survives a process restart. It is not a
+        // proxy either — the committed wallet cursor IS the filter-scan
+        // position, which is why `blockPipelineLagging` measures the scan with
+        // it. (My earlier note here claimed "nothing persists a filter height";
+        // that was wrong.)
+        //
+        // The target takes the SAME floors as the height, so the pair can never
+        // render as height > target. Deliberately NOT the persisted header tip:
+        // that would report a target the filter pipeline never received, and it
+        // is not needed for the invariant.
+        filterHeight = if (idleOrConnecting) {
+            maxOf(progress.filterHeight, lastKnownFilterHeight, progress.walletSyncedHeight)
+        } else {
+            progress.filterHeight
+        },
+        filterTarget = if (idleOrConnecting) {
+            maxOf(
+                progress.filterTarget,
+                lastKnownFilterTarget,
+                progress.walletSyncedHeight,
+                lastKnownFilterHeight
+            )
+        } else {
+            progress.filterTarget
+        },
         mnListHeight = maxOf(progress.mnListHeight, (state?.mnlistHeight ?: 0).toLong()),
         chainLockHeight = maxOf(sessionChainLockHeight, state?.chainlockHeight ?: 0)
     )
@@ -513,6 +568,17 @@ class L1SyncStatusService @Inject constructor(
      * failed wallet bind renders as [L1SyncStage.SETUP_RETRYING] instead of
      * the dead "Not started" (MO-995).
      */
+    /**
+     * Last non-zero filter position seen in this process — the in-memory
+     * backstop for the IDLE/CONNECTING window (see [mergeL1SyncDetail]).
+     *
+     * Process-scoped, and therefore EMPTY on a cold start — which is exactly
+     * when the Network Monitor gets opened. The durable half of the backstop
+     * is [ShadowSyncProgress.walletSyncedHeight]; see [mergeL1SyncDetail].
+     */
+    @Volatile private var lastFilterHeight = 0L
+    @Volatile private var lastFilterTarget = 0L
+
     val details: Flow<L1SyncDetail> =
         combine(
             cutoverCoordinator.sdkOwnsL1Flow(),
@@ -521,6 +587,14 @@ class L1SyncStatusService @Inject constructor(
             blockchainStateProvider.observeState(),
             sdkWalletBinder.bindRetryPending
         ) { sdkOwnsL1, progress, chainLockHeight, state, bindRetryPending ->
-            mergeL1SyncDetail(sdkOwnsL1, progress, chainLockHeight, state, bindRetryPending)
+            mergeL1SyncDetail(
+                sdkOwnsL1, progress, chainLockHeight, state, bindRetryPending,
+                lastFilterHeight, lastFilterTarget
+            ).also { detail ->
+                // Only ever advance on a real reading; a 0 from an idle engine
+                // must not erase what we are backstopping with.
+                if (detail.filterHeight > 0) lastFilterHeight = detail.filterHeight
+                if (detail.filterTarget > 0) lastFilterTarget = detail.filterTarget
+            }
         }.distinctUntilChanged()
 }
