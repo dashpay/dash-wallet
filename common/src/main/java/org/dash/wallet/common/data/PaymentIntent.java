@@ -24,6 +24,7 @@ import android.text.TextUtils;
 import com.google.common.io.BaseEncoding;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Locale;
 
 import javax.annotation.Nullable;
 
@@ -192,6 +193,14 @@ public final class PaymentIntent implements Parcelable {
 
     public String source = "";
 
+    /**
+     * BIP21 {@code callback=<https-url>} parameter. When set, the wallet UI opens this URL after
+     * a successful send so the merchant / payee-side service can continue its checkout flow.
+     * Validated as {@code https} at parse time; arbitrary schemes are rejected.
+     */
+    @Nullable
+    public String callback = null;
+
     private static final Logger log = LoggerFactory.getLogger(PaymentIntent.class);
 
     public PaymentIntent(@Nullable final Standard standard, @Nullable final String payeeName,
@@ -265,15 +274,75 @@ public final class PaymentIntent implements Parcelable {
 
     public static PaymentIntent fromBitcoinUri(final BitcoinURI bitcoinUri) {
         final Address address = bitcoinUri.getAddress();
-        final Output[] outputs = address != null ? buildSimplePayTo(bitcoinUri.getAmount(), address) : null;
+        final Output[] baseOutputs = address != null ? buildSimplePayTo(bitcoinUri.getAmount(), address) : null;
         final String bluetoothMac = (String) bitcoinUri.getParameterByName(Bluetooth.MAC_URI_PARAM);
         final String paymentRequestHashStr = (String) bitcoinUri.getParameterByName("h");
         final byte[] paymentRequestHash = paymentRequestHashStr != null ? base64UrlDecode(paymentRequestHashStr) : null;
         final String dashPayUsername = bitcoinUri.getUser();
 
-        return new PaymentIntent(PaymentIntent.Standard.BIP21, null, null, outputs, bitcoinUri.getLabel(),
-                bluetoothMac != null ? "bt:" + bluetoothMac : null, null, bitcoinUri.getPaymentRequestUrl(),
-                paymentRequestHash, null, dashPayUsername);
+        // BIP21 op_return=<hex>: attach the payload as a 0-value OP_RETURN output so
+        // payee-side services (e.g. THORChain swap memos) can correlate the on-chain tx
+        // with their off-chain order. Invalid payloads are silently dropped per BIP21
+        // unknown-param convention.
+        final Output opReturnOutput = parseOpReturnParam(
+                (String) bitcoinUri.getParameterByName("op_return"));
+
+        // BIP21 callback=<https-url>: URL the wallet opens after a successful send so
+        // the merchant can continue its checkout flow.
+        final String callbackUrl = parseCallbackParam(
+                (String) bitcoinUri.getParameterByName("callback"));
+
+        final Output[] outputs;
+        if (baseOutputs == null) {
+            outputs = (opReturnOutput != null) ? new Output[]{opReturnOutput} : null;
+        } else if (opReturnOutput != null) {
+            outputs = new Output[baseOutputs.length + 1];
+            System.arraycopy(baseOutputs, 0, outputs, 0, baseOutputs.length);
+            outputs[baseOutputs.length] = opReturnOutput;
+        } else {
+            outputs = baseOutputs;
+        }
+
+        final PaymentIntent intent = new PaymentIntent(PaymentIntent.Standard.BIP21, null, null,
+                outputs, bitcoinUri.getLabel(),
+                bluetoothMac != null ? "bt:" + bluetoothMac : null, null,
+                bitcoinUri.getPaymentRequestUrl(), paymentRequestHash, null, dashPayUsername);
+        intent.callback = callbackUrl;
+        return intent;
+    }
+
+    @Nullable
+    private static Output parseOpReturnParam(@Nullable final String hex) {
+        if (hex == null || hex.isEmpty()) return null;
+        // 80-byte cap = Dash standard relay policy. Even-length + hex-only required
+        // before decode; use req-op_return= to make an invalid value invalidate the
+        // whole request (handled by BitcoinURI).
+        if (hex.length() % 2 != 0 || !hex.matches("[0-9a-fA-F]+")) {
+            log.info("dropping op_return param: not valid hex");
+            return null;
+        }
+        try {
+            final byte[] payload = Constants.HEX.decode(hex.toLowerCase(Locale.ROOT));
+            if (payload.length < 1 || payload.length > 80) {
+                log.info("dropping op_return param: payload size {} out of range (1..80)", payload.length);
+                return null;
+            }
+            return new Output(Coin.ZERO, ScriptBuilder.createOpReturnScript(payload));
+        } catch (final IllegalArgumentException x) {
+            log.info("dropping op_return param: decode failed");
+            return null;
+        }
+    }
+
+    @Nullable
+    private static String parseCallbackParam(@Nullable final String raw) {
+        if (raw == null || raw.isEmpty()) return null;
+        // https only: arbitrary schemes would let a URI invoke other app handlers.
+        if (!raw.toLowerCase(Locale.ROOT).startsWith("https://")) {
+            log.info("dropping callback param: not a valid https URL");
+            return null;
+        }
+        return raw;
     }
 
     private static final BaseEncoding BASE64URL = BaseEncoding.base64Url().omitPadding();
@@ -295,8 +364,13 @@ public final class PaymentIntent implements Parcelable {
             if (mayEditAmount()) {
                 checkArgument(editedAmount != null);
 
-                // put all coins on first output, skip the others
-                outputs = new Output[]{new Output(editedAmount, this.outputs[0].script)};
+                // first output amount is editable; preserve every other output verbatim
+                // (e.g. a BIP21 op_return data output that shouldn't be dropped on amount edit)
+                outputs = new Output[this.outputs.length];
+                outputs[0] = new Output(editedAmount, this.outputs[0].script);
+                for (int i = 1; i < this.outputs.length; i++) {
+                    outputs[i] = this.outputs[i];
+                }
             } else {
                 // exact copy of outputs
                 outputs = this.outputs;
@@ -309,7 +383,9 @@ public final class PaymentIntent implements Parcelable {
             outputs = buildSimplePayTo(editedAmount, editedAddress);
         }
 
-        return new PaymentIntent(standard, payeeName, payeeVerifiedBy, outputs, memo, null, payeeData, null, null, null, null);
+        final PaymentIntent merged = new PaymentIntent(standard, payeeName, payeeVerifiedBy, outputs, memo, null, payeeData, null, null, null, null);
+        merged.callback = this.callback;
+        return merged;
     }
 
     public SendRequest toSendRequest(NetworkParameters params) {
@@ -543,6 +619,7 @@ public final class PaymentIntent implements Parcelable {
         dest.writeString(payeeUsername);
         dest.writeInt(shouldConfirmAddress ? 1 : 0);
         dest.writeString(source);
+        dest.writeString(callback);
     }
 
     public static final Parcelable.Creator<PaymentIntent> CREATOR = new Parcelable.Creator<PaymentIntent>() {
@@ -599,6 +676,7 @@ public final class PaymentIntent implements Parcelable {
         payeeUsername = in.readString();
         shouldConfirmAddress = in.readInt() == 1;
         source = in.readString();
+        callback = in.readString();
     }
 
     public boolean getExpired() {
