@@ -331,14 +331,10 @@ class CutoverCoordinator @Inject constructor(
                 )
                 return@launch
             }
-            // The version-code condition that used to gate ONLY the explainer
-            // here is now GATE 1 above and gates the commit itself, so reaching
-            // this line already means a genuine pre-cutover upgrade. The one
-            // remaining condition is the once-per-install latch inside
-            // armUpgradeNoticeOnce() — GATE 1's durable boundary latch makes
-            // this line reachable on more than one launch (rollback → commit),
-            // and the explainer promises it happens only once.
-            armUpgradeNoticeOnce()
+            // NB: the explainer is NOT armed here any more. It is armed from
+            // [armUpgradeNoticeIfUpgraded], which every commit path calls —
+            // because on a REAL upgrade this seam is not the path that
+            // commits. See that function for the field evidence.
         }
     }
 
@@ -371,7 +367,28 @@ class CutoverCoordinator @Inject constructor(
      * between the two costs the user the explainer; the reverse order would
      * re-arm forever, which is the bug being fixed. Never throws.
      */
-    private suspend fun armUpgradeNoticeOnce() {
+    private suspend fun armUpgradeNoticeIfUpgraded(committedBy: String) {
+        // Only an install that genuinely crossed the cutover boundary is owed
+        // the explainer. GATE 1 in commitForUpgradedWalletAsync latches this
+        // BEFORE it attempts its commit, so it is already persisted by the time
+        // a later auto-commit reads it on the same launch.
+        val upgraded = runCatching {
+            dashPayConfig.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) == true
+        }.getOrDefault(false)
+        if (!upgraded) return
+        if (freshWalletSetupThisLaunch) {
+            log.info(
+                "cutover committed ({}), but a fresh wallet setup ran on this launch — " +
+                    "suppressing the one-time UPGRADE sync explainer (a restore's sync wait " +
+                    "is already expected)",
+                committedBy
+            )
+            return
+        }
+        armUpgradeNoticeOnce(committedBy)
+    }
+
+    private suspend fun armUpgradeNoticeOnce(committedBy: String) {
         val everArmed = runCatching {
             dashPayConfig.get(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED) == true
         }.getOrElse {
@@ -384,8 +401,9 @@ class CutoverCoordinator @Inject constructor(
         }
         if (everArmed) {
             log.info(
-                "upgrade cutover committed, but the one-time sync explainer was already armed " +
-                    "once on this install — not arming it again"
+                "cutover committed ({}), but the one-time sync explainer was already armed " +
+                    "once on this install — not arming it again",
+                committedBy
             )
             return
         }
@@ -393,7 +411,7 @@ class CutoverCoordinator @Inject constructor(
             dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED, true)
             dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, true)
         }
-            .onSuccess { log.info("upgrade cutover: one-time sync explainer armed") }
+            .onSuccess { log.info("upgrade cutover: one-time sync explainer armed ({})", committedBy) }
             .onFailure {
                 if (it is CancellationException) throw it
                 // Non-fatal: the cutover itself already committed; the
@@ -559,7 +577,9 @@ class CutoverCoordinator @Inject constructor(
         val status = writeState(current, CutoverState.CUT_OVER, reason)
         // A failed persist reports the OLD state (writeState's contract), so
         // this is false — never a phantom "just cut over".
-        return status to (status.state == CutoverState.CUT_OVER)
+        val justCutOver = status.state == CutoverState.CUT_OVER
+        if (justCutOver) armUpgradeNoticeIfUpgraded(reason)
+        return status to justCutOver
     }
 
     /**
@@ -634,6 +654,7 @@ class CutoverCoordinator @Inject constructor(
                     return@withLock CutoverStatus(current, verdict)
                 }
             log.info("cutover state {} -> {} on {} (ready={})", current, next, action, verdict.ready)
+            if (next == CutoverState.CUT_OVER) armUpgradeNoticeIfUpgraded("readiness auto-commit")
         }
         CutoverStatus(next, verdict)
     }
