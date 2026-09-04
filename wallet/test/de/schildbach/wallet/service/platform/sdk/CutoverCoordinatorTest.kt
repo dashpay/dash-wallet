@@ -357,6 +357,10 @@ class CutoverCoordinatorTest {
             Unit
         }
         val collector = mockk<CutoverEvidenceCollector>()
+        // Ready evidence, so the READINESS auto-commit path can be driven
+        // through this helper too — that is the path that actually commits on
+        // a real upgrade (MO-1022), and it must be able to arm the explainer.
+        coEvery { collector.collect() } returns readyEvidence()
         val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined))
         return Triple(coordinator, { current }, { noticeArmed })
     }
@@ -386,6 +390,59 @@ class CutoverCoordinatorTest {
         coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
         assertEquals(CutoverState.CUT_OVER.name, stored())
         assertTrue("an upgrade from below 11.10 arriving pre-commit is exactly the case worth explaining", armed())
+    }
+
+    /**
+     * MO-1022 — THE BUG QA ACTUALLY HIT: on a real upgrade the explainer was
+     * never armed AT ALL. Not late; never.
+     *
+     * Two facts combine. The upgrade seam cannot commit on the upgrade launch
+     * (GATE 2 wants bind evidence, and the bind lands seconds later), so it
+     * returns before any arming. The commit then happens on the READINESS
+     * auto-commit path — which had no arming logic whatsoever.
+     *
+     * Field log (2026-09-04, prod 12000004, SM-A536B), the whole story:
+     *
+     *     17:10:59  declining to commit (upgraded-wallet launch): bind has never succeeded
+     *     17:11:02  app wallet bound to new SDK wallet a60ed232…
+     *     18:06:02  cutover state DUAL_RUNNING -> READY_OBSERVED on OBSERVE_READINESS
+     *     18:06:02  cutover state READY_OBSERVED -> CUT_OVER on COMMIT_CUTOVER
+     *     18:06:02  cutover auto-commit: SDK is now L1-primary (dashj held)
+     *
+     * — committed, and no explainer. So the arming belongs to the COMMIT, not
+     * to one particular caller.
+     */
+    @Test
+    fun upgradeNotice_isArmed_whenTheReadinessAutoCommitIsWhatCommits() = runBlocking {
+        // The upgrade launch already latched the boundary; this is the later
+        // commit, and it does NOT come through the seam.
+        val (coordinator, stored, armed) = noticeCoordinator(
+            stored = null,
+            boundaryAlreadyLatched = true
+        )
+
+        coordinator.autoAdvanceToCutover()
+
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertTrue("the path that actually commits must arm the explainer", armed())
+    }
+
+    /**
+     * The counterpart: a FRESH install that never crossed the boundary must
+     * not be told its wallet was upgraded, no matter which path commits. The
+     * boundary latch is what separates the two, so pin it here.
+     */
+    @Test
+    fun upgradeNotice_isNotArmed_byAnAutoCommitOnAnInstallThatNeverUpgraded() = runBlocking {
+        val (coordinator, stored, armed) = noticeCoordinator(
+            stored = null,
+            boundaryAlreadyLatched = false
+        )
+
+        coordinator.autoAdvanceToCutover()
+
+        assertEquals("the commit itself still happens", CutoverState.CUT_OVER.name, stored())
+        assertFalse("a fresh install has no upgrade to explain", armed())
     }
 
     /**
@@ -444,8 +501,14 @@ class CutoverCoordinatorTest {
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
         coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
-        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns false
-        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } returns Unit
+        // Stateful: GATE 1 writes this latch BEFORE attempting the commit, and
+        // the arming re-reads it. A constant-false stub models neither.
+        var boundaryLatched = false
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } answers { boundaryLatched }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } answers {
+            boundaryLatched = secondArg()
+            Unit
+        }
         coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
             current = secondArg(); Unit
         }
@@ -480,8 +543,14 @@ class CutoverCoordinatorTest {
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
         coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
-        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns false
-        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } returns Unit
+        // Stateful: GATE 1 writes this latch BEFORE attempting the commit, and
+        // the arming re-reads it. A constant-false stub models neither.
+        var boundaryLatched = false
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } answers { boundaryLatched }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } answers {
+            boundaryLatched = secondArg()
+            Unit
+        }
         coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
             current = secondArg(); Unit
         }
