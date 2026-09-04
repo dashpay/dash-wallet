@@ -871,6 +871,49 @@ class L1SyncStatusServiceTest {
         assertEquals(2_532_259L, detail.headerHeight)
     }
 
+    /**
+     * MO-1022 FOLLOW-UP — the hole in the fix above. The in-process backstop is
+     * empty on a COLD start, which is exactly when QA opens the Network
+     * Monitor. Field log (2026-09-04, prod 12000004, SM-A536B): app opened
+     * 19:13:07, checked immediately —
+     *
+     *     19:13:14  L1Shadow phase=IDLE 0.0% headers 0/0 filters 0/0 wallet 2533349
+     *     19:14:14  L1Shadow phase=SYNCED 100.0% headers 2533366/2533366 filters …
+     *
+     * a full minute of "-". Note `wallet 2533349` on the same line the filters
+     * read 0/0: the committed wallet cursor is seeded from the SDK's durable
+     * watermark at shadow start, so it survives the restart and IS the
+     * filter-scan position. That is the floor a cold start needs.
+     */
+    @Test
+    fun detail_filtersHoldTheDurableWalletCursor_onAColdStart() {
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            // The exact field shape, including the populated wallet cursor.
+            progress = progress(
+                phase = ShadowSyncPhase.IDLE,
+                headerHeight = 0, headerTarget = 0,
+                filterHeight = 0, filterTarget = 0,
+                walletSyncedHeight = 2_533_349
+            ),
+            sessionChainLockHeight = 0,
+            state = dashjState(percentageSync = 100, bestChainHeight = 2_533_348),
+            // Cold start: NOTHING seen in this process yet.
+            lastKnownFilterHeight = 0,
+            lastKnownFilterTarget = 0
+        )
+        assertEquals(
+            "a cold start must fall back to the durable wallet cursor, not \"-\"",
+            2_533_349L,
+            detail.filterHeight
+        )
+        // The pair must never render as height > target.
+        assertTrue(
+            "target ${detail.filterTarget} must not trail height ${detail.filterHeight}",
+            detail.filterTarget >= detail.filterHeight
+        )
+    }
+
     @Test
     fun detail_filtersReadUnknown_onAColdStartWithNothingKnownYet() {
         // No reading has been taken in this process, so "-" IS the honest answer.

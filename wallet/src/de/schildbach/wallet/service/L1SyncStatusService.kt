@@ -403,13 +403,41 @@ internal fun mergeL1SyncDetail(
         // — the DashPay coreHeight backfill legitimately rewinds the scan (seen
         // dropping 1,543,144 -> 1,252,305 in the field). A blanket max() would
         // mask that and report a position the engine no longer holds.
+        // MO-1022 FOLLOW-UP: the in-process backstop above is EMPTY on a cold
+        // start, which is exactly when QA looks. Field log (2026-09-04, prod
+        // 12000004, SM-A536B) — app opened 19:13:07, Network Monitor checked
+        // immediately:
+        //
+        //     19:13:14  L1Shadow phase=IDLE 0.0% headers 0/0 filters 0/0 wallet 2533349
+        //     19:14:14  L1Shadow phase=SYNCED 100.0% headers 2533366/2533366 filters 2533366/2533366
+        //
+        // A full minute of "-" before the engine reconnects. So ALSO floor on
+        // the engine's committed wallet cursor, which that same line shows is
+        // populated (`wallet 2533349`) while filters read 0/0: it is seeded at
+        // shadow start from the SDK's DURABLE watermark
+        // (`L1ShadowSyncService.startIfEnabled` → `sdkWalletSyncedHeight`), so
+        // unlike lastKnownFilter* it survives a process restart. It is not a
+        // proxy either — the committed wallet cursor IS the filter-scan
+        // position, which is why `blockPipelineLagging` measures the scan with
+        // it. (My earlier note here claimed "nothing persists a filter height";
+        // that was wrong.)
+        //
+        // The target takes the SAME floors as the height, so the pair can never
+        // render as height > target. Deliberately NOT the persisted header tip:
+        // that would report a target the filter pipeline never received, and it
+        // is not needed for the invariant.
         filterHeight = if (idleOrConnecting) {
-            maxOf(progress.filterHeight, lastKnownFilterHeight)
+            maxOf(progress.filterHeight, lastKnownFilterHeight, progress.walletSyncedHeight)
         } else {
             progress.filterHeight
         },
         filterTarget = if (idleOrConnecting) {
-            maxOf(progress.filterTarget, lastKnownFilterTarget)
+            maxOf(
+                progress.filterTarget,
+                lastKnownFilterTarget,
+                progress.walletSyncedHeight,
+                lastKnownFilterHeight
+            )
         } else {
             progress.filterTarget
         },
@@ -543,8 +571,10 @@ class L1SyncStatusService @Inject constructor(
     /**
      * Last non-zero filter position seen in this process — the in-memory
      * backstop for the IDLE/CONNECTING window (see [mergeL1SyncDetail]).
-     * Process-scoped by necessity: nothing persists a filter height. On a cold
-     * start with no reading yet, "-" is the honest answer.
+     *
+     * Process-scoped, and therefore EMPTY on a cold start — which is exactly
+     * when the Network Monitor gets opened. The durable half of the backstop
+     * is [ShadowSyncProgress.walletSyncedHeight]; see [mergeL1SyncDetail].
      */
     @Volatile private var lastFilterHeight = 0L
     @Volatile private var lastFilterTarget = 0L
