@@ -271,6 +271,48 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
 
         /**
+         * Does this `onTrimMemory` level mean the process is genuinely under
+         * memory pressure, i.e. worth tearing the service down for?
+         *
+         * MO-995: this used to be `level >= TRIM_MEMORY_BACKGROUND`, which is
+         * wrong in BOTH directions.
+         *
+         * `TRIM_MEMORY_BACKGROUND` (40) does not mean low memory — it means
+         * "your process has gone onto the LRU background list", i.e. THE USER
+         * LEFT THE APP. So the engine was torn down on every backgrounding and
+         * the log called it "low memory detected". Meanwhile the signals that
+         * DO mean running-low — `TRIM_MEMORY_RUNNING_LOW` (10) and
+         * `TRIM_MEMORY_RUNNING_CRITICAL` (15) — are numerically BELOW 40 and
+         * so were ignored entirely.
+         *
+         * Field log (2026-09-06, testnet 12000004, HONOR PTP-N49, 384/512MB
+         * heap) — the ordinary backgrounding sequence, two seconds apart:
+         *
+         *     10:47:24  onTrimMemory(20) called          <- UI hidden
+         *     10:47:26  onTrimMemory(40) called          <- on the LRU list
+         *     10:47:26  low memory detected, stopping service
+         *     10:47:26  .onDestroy()
+         *
+         * That wallet was doing a from-genesis scan (birthHeight resolved to 0,
+         * 1,548,486 testnet blocks, ~4h at the observed rate) and got three
+         * engine restarts in five minutes, so `scanCaughtUpToTip` never held,
+         * the cutover never committed, and Buy Credits failed for want of an
+         * SDK-owned L1.
+         *
+         * Kept to the two levels that actually mean "you are about to be
+         * killed": `TRIM_MEMORY_COMPLETE` (80, top of the LRU kill list) and
+         * `TRIM_MEMORY_RUNNING_CRITICAL` (15, the system is already killing
+         * background processes). `TRIM_MEMORY_MODERATE` (60) is deliberately
+         * NOT included — mid-LRU is not imminent danger, and a long L1 scan is
+         * exactly the workload that must survive it.
+         *
+         * Pure Int predicate, so every documented level can be pinned by test.
+         */
+        @JvmStatic
+        fun shouldStopForMemoryPressure(level: Int): Boolean =
+            level >= TRIM_MEMORY_COMPLETE || level == TRIM_MEMORY_RUNNING_CRITICAL
+
+        /**
          * True iff a start command's extras mark it as delivered by
          * `startForegroundService()` — see [shouldPromoteToForeground]. Pure
          * (Bundle is the only Android type, and it is a plain container), so
@@ -2815,8 +2857,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onTrimMemory(level: Int) {
         log.info("onTrimMemory({}) called", level)
-        if (level >= TRIM_MEMORY_BACKGROUND) {
-            log.warn("low memory detected, stopping service")
+        if (shouldStopForMemoryPressure(level)) {
+            log.warn("memory pressure (onTrimMemory level {}), stopping service", level)
             stopSelf()
         }
     }
