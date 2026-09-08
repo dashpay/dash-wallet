@@ -52,6 +52,8 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Dismiss</string>
+    <string name="button_not_now">Not now</string>
+    <string name="button_settings">Settings</string>
     <string name="network_unavailable_return">Return to Wallet</string>
     <string name="button_continue">Continue</string>
     <string name="get_quote">Get Quote</string>
@@ -131,6 +133,8 @@
     <string name="scan_camera_problem_dialog_message">The camera has a problem. You probably need to restart the device.</string>
     <string name="scan_camera_permission_dialog_title">Camera permission</string>
     <string name="scan_camera_permission_dialog_message">In order to scan QR codes, you need to grant permission to use the camera.</string>
+    <!-- Shown instead of the message above once the system will no longer prompt for the camera, so the only way back is system settings -->
+    <string name="scan_camera_permission_denied_dialog_message">In order to scan QR codes, camera access has to be turned on for this app in Settings.</string>
 
     <!-- address input -->
     <string name="address_input_title">Send Dash</string>

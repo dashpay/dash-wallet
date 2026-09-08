@@ -25,6 +25,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.RectF
 import android.graphics.SurfaceTexture
 import android.graphics.drawable.ColorDrawable
@@ -62,6 +63,7 @@ import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.databinding.ScanActivityBinding
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.OnFirstPreDraw
+import org.dash.wallet.common.util.openAppSettings
 import org.slf4j.LoggerFactory
 import java.util.EnumMap
 
@@ -78,6 +80,7 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
     @Volatile
     private var surfaceCreated = false
     private var sceneTransition: Animator? = null
+    private var cameraUnavailable = false
     private lateinit var vibrator: Vibrator
     private lateinit var cameraThread: HandlerThread
 
@@ -103,12 +106,6 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
-        viewModel.showPermissionWarnDialog.observe(this) {
-            showPermissionWarnDialog()
-        }
-        viewModel.showProblemWarnDialog.observe(this) {
-            showProblemWarnDialog()
-        }
 
         // Stick to the orientation the activity was started with. We cannot declare this in the
         // AndroidManifest.xml, because it's not allowed in combination with the windowIsTranslucent=true
@@ -130,6 +127,16 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
         cameraThread = HandlerThread("cameraThread", Process.THREAD_PRIORITY_BACKGROUND)
         cameraThread.start()
         cameraHandler = Handler(cameraThread.looper)
+
+        // Registered after the views are inflated: both dialogs also reveal the content view.
+        viewModel.showPermissionWarnDialog.observe(this) {
+            showCameraUnavailableUi()
+            showPermissionWarnDialog()
+        }
+        viewModel.showProblemWarnDialog.observe(this) {
+            showCameraUnavailableUi()
+            showProblemWarnDialog()
+        }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestCameraPermission()
@@ -153,13 +160,17 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
                 window
                     .setBackgroundDrawable(ColorDrawable(resources.getColor(android.R.color.transparent)))
                 OnFirstPreDraw.listen(contentView) {
-                    val finalRadius =
-                        (contentView.width.coerceAtLeast(contentView.height)).toFloat()
-                    val duration = resources.getInteger(android.R.integer.config_mediumAnimTime)
-                    sceneTransition =
-                        ViewAnimationUtils.createCircularReveal(contentView, x, y, 0f, finalRadius)
-                    sceneTransition!!.duration = duration.toLong()
-                    sceneTransition!!.interpolator = AccelerateInterpolator()
+                    // The camera may already have been refused before the first draw; in that case
+                    // the content is showing without a transition and must not be hidden again.
+                    if (!cameraUnavailable) {
+                        val finalRadius =
+                            (contentView.width.coerceAtLeast(contentView.height)).toFloat()
+                        val duration = resources.getInteger(android.R.integer.config_mediumAnimTime)
+                        sceneTransition =
+                            ViewAnimationUtils.createCircularReveal(contentView, x, y, 0f, finalRadius)
+                        sceneTransition!!.duration = duration.toLong()
+                        sceneTransition!!.interpolator = AccelerateInterpolator()
+                    }
                     // TODO Here, the transition should start in a paused state, showing the first frame
                     // of the animation. Sadly, RevealAnimator doesn't seem to support this, unlike
                     // (subclasses of) ValueAnimator.
@@ -169,22 +180,79 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
         }
     }
 
+    /**
+     * Called when the camera cannot be used at all: the permission was refused, or the device
+     * failed to hand the camera over. When the scanner is opened with a circular-reveal
+     * transition, the content view starts fully transparent over a transparent window and is
+     * only made visible by [maybeTriggerSceneTransition], which runs off the successful
+     * camera-open path. Without the camera that never happens, leaving an all-black screen with
+     * no visible close button and no way back out of the scanner (MO-1016). Show the controls
+     * over an opaque background instead.
+     */
+    private fun showCameraUnavailableUi() {
+        cameraUnavailable = true
+        sceneTransition?.cancel()
+        sceneTransition = null
+        contentView.alpha = 1f
+        window.setBackgroundDrawable(ColorDrawable(ContextCompat.getColor(this, R.color.dash_black)))
+        // The close icon is nearly black, which is legible over the camera preview but not over
+        // the empty background that replaces it.
+        binding.scanCloseButton.imageTintList =
+            ColorStateList.valueOf(ContextCompat.getColor(this, R.color.dash_white))
+    }
+
     private fun showProblemWarnDialog() {
         AdaptiveDialog.create(
             null,
-            getString(R.string.scan_camera_permission_dialog_title),
+            getString(R.string.scan_camera_problem_dialog_title),
             getString(R.string.scan_camera_problem_dialog_message),
             getString(R.string.button_dismiss)
-        ).show(this)
+        ).show(this) { leaveScanner() }
     }
 
     private fun showPermissionWarnDialog() {
+        // Asked after a refusal, a false rationale flag means the system will not prompt again
+        // (the user chose "don't allow" twice, or picked "don't ask again"), so re-requesting
+        // is a no-op and App info is the only way back. A true flag means we may still ask
+        // in-app, which is a far smaller detour than sending the user to system settings.
+        val canAskAgain = shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)
+
         AdaptiveDialog.create(
             null,
             getString(R.string.scan_camera_permission_dialog_title),
-            getString(R.string.scan_camera_permission_dialog_message),
-            getString(R.string.button_dismiss)
-        ).show(this)
+            getString(
+                if (canAskAgain) {
+                    R.string.scan_camera_permission_dialog_message
+                } else {
+                    R.string.scan_camera_permission_denied_dialog_message
+                }
+            ),
+            getString(R.string.button_not_now),
+            getString(if (canAskAgain) R.string.permission_allow else R.string.button_settings)
+        ).show(this) { accepted ->
+            if (accepted == true) {
+                if (canAskAgain) {
+                    requestCameraPermission()
+                } else {
+                    // onResume() opens the camera on the way back, so granting it in system
+                    // settings drops the user straight into a working scanner.
+                    openAppSettings()
+                }
+            } else {
+                leaveScanner()
+            }
+        }
+    }
+
+    /**
+     * Leaves a scanner that has nothing left to offer. The screen has one job and cannot do it,
+     * so rather than parking the user on a dead camera preview behind a dismissed dialog, hand
+     * them back to where they came from — every caller has another way in, whether that is
+     * typing an address, pasting one, or picking a contact.
+     */
+    private fun leaveScanner() {
+        setResult(RESULT_CANCELED)
+        finish()
     }
 
     private fun requestCameraPermission() {
