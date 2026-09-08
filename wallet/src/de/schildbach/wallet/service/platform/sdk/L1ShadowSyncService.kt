@@ -1272,6 +1272,21 @@ interface L1ShadowSource {
 
     suspend fun stopSpv()
 
+    /**
+     * Ordered DashPay bring-up (identity → contacts → contact-account
+     * drain) for one wallet, run immediately before [startSpv] so a
+     * contact's DIP-15 receiving addresses are watched from the first
+     * filter set — the restored-wallet receival gap (topple: 0.0836 of
+     * genuinely-ours coins missed at scan time because the accounts
+     * register only after the scan; see FIXES-restored-wallets.md #1).
+     * Wraps the SDK's `PlatformWalletManager.startWalletSubsystems`.
+     *
+     * Returns a short status summary for logging, or null when the source
+     * does not support it (test fakes). Best-effort by contract: the caller
+     * must not let a failure here block or fail SPV start.
+     */
+    suspend fun startWalletSubsystems(walletIdHex: String): String? = null
+
     /** The manager's 1 Hz SPV progress feed (live while SPV runs). */
     fun spvProgress(): Flow<SpvSyncProgressData>
 
@@ -1405,6 +1420,14 @@ internal class DashSdkL1ShadowSource(
         manager().startSpv(dataDir = dataDir)
 
     override suspend fun stopSpv() = manager().stopSpv()
+
+    override suspend fun startWalletSubsystems(walletIdHex: String): String? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        val o = manager().startWalletSubsystems(walletId)
+        return "status=${o.status} discovery=${o.discoveryAttempts} " +
+            "dashPaySyncRan=${o.dashPaySyncRan} drained=${o.contactAccountsDrained} " +
+            "pending=${o.contactAccountsPending} elapsedMs=${o.elapsedMs}"
+    }
 
     override fun spvProgress(): Flow<SpvSyncProgressData> =
         flow { emitAll(manager().spvProgress) }
@@ -2091,6 +2114,24 @@ class L1ShadowSyncService internal constructor(
 
                 val dataDir = File(spvDataDirPath()).apply { mkdirs() }
                 if (!source.isSpvRunning()) {
+                    // Ordered DashPay bring-up BEFORE SPV: register the
+                    // contact receival/external accounts so their DIP-15
+                    // addresses are in the very first filter set, instead of
+                    // registering them in a post-sync drain that the scan has
+                    // already run past (FIXES-restored-wallets.md #1). Runs
+                    // once per process here (guarded by runningWalletIdHex
+                    // above). Best-effort: it returns a status rather than
+                    // throwing, and any failure must not hold back SPV — Core
+                    // sync is the wallet's primary function.
+                    try {
+                        val summary = source.startWalletSubsystems(walletIdHex)
+                        if (summary != null) {
+                            log.info("DashPay bring-up before SPV: $summary")
+                        }
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) throw t
+                        log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
+                    }
                     source.startSpv(dataDir.absolutePath)
                 }
                 runningWalletIdHex.value = walletIdHex
