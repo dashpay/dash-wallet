@@ -577,8 +577,14 @@ class ExploreViewModelTest {
 
             assertEquals(physicalLocations, viewModel.allMerchantLocations.value)
             verify(dataSource).observeMerchantLocations(
-                eq("merchant1"), eq("DashSpend"), eq(""), eq(""), eq(DenomOption.Both), eq(""),
-                eq(GeoBounds.noBounds), eq(100)
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(GeoBounds.noBounds),
+                eq(100)
             )
             verify(locationMock, never()).getRadiusBounds(any(), any(), any())
         }
@@ -641,8 +647,14 @@ class ExploreViewModelTest {
             verify(locationMock).getRadiusBounds(userLat, userLng, viewModel.radius)
             verify(locationMock, never()).getRadiusBounds(eq(0.0), eq(0.0), any())
             verify(dataSource).observeMerchantLocations(
-                eq("merchant1"), eq("DashSpend"), eq(""), eq(""), eq(DenomOption.Both), eq(""),
-                eq(userBounds), any()
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(userBounds),
+                any()
             )
         }
     }
