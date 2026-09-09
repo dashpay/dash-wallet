@@ -564,7 +564,10 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openAllMerchantLocations(merchantId: String?, source: String) {
-        _screenState.postValue(ScreenState.MerchantLocations)
+        // The screen state is resolved on the first emission instead of here: a merchant whose
+        // locations carry no address at all has nothing to pick from, and is sent to its details
+        // screen rather than to a picker full of blank rows.
+        var screenStateResolved = false
         this.allMerchantLocationsJob?.cancel()
         this.allMerchantLocationsJob = _searchBounds
             // The Google Map camera callback is the only writer of searchBounds. On devices
@@ -617,6 +620,20 @@ class ExploreViewModel @Inject constructor(
                     locations.sortedBy { it.getDisplayAddress(", ") }
                 }
                 _allMerchantLocations.postValue(sorted)
+
+                if (!screenStateResolved) {
+                    screenStateResolved = true
+                    // A location is only worth picking if it can be told apart from the others.
+                    // Some explore records carry coordinates but no street, city or territory.
+                    val hasSelectableLocation = sorted.any { it.getDisplayAddress(", ").isNotBlank() }
+
+                    if (hasSelectableLocation) {
+                        _screenState.postValue(ScreenState.MerchantLocations)
+                    } else {
+                        (_selectedItem.value as? Merchant)?.let { nearestLocation = it }
+                        _screenState.postValue(ScreenState.DetailsGrouped)
+                    }
+                }
             }
             .launchIn(viewModelWorkerScope)
     }

@@ -697,6 +697,73 @@ class ExploreViewModelTest {
         ).also { it.init(ExploreTopic.Merchants) }
     }
 
+    private fun addressLessLocation(locationId: Int): Merchant =
+        Merchant(
+            plusCode = "merged",
+            addDate = "2021-09-08 11:22",
+            updateDate = "2021-09-08 12:22",
+            deeplink = "",
+            paymentMethod = "gift card"
+        ).apply {
+            id = locationId
+            merchantId = "merchant1"
+            source = "CTX"
+            name = "Starbucks"
+            active = true
+            type = MerchantType.PHYSICAL
+            // Coordinates survive, everything a person could read does not
+            address1 = ""
+            city = ""
+            territory = ""
+            latitude = 33.21492
+            longitude = -86.82601
+        }
+
+    @Test
+    fun openAllMerchantLocations_locationsWithoutAddresses_opensDetailsInsteadOfPicker() {
+        // Regression test: explore records can carry coordinates but no street, city or
+        // territory. A picker listing them shows nothing but blank rows, so the merchant
+        // details screen is opened instead.
+        runBlocking {
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(listOf(addressLessLocation(1), addressLessLocation(2))) }
+                }
+            val viewModel = viewModelWithLocationDisabled(dataSource)
+
+            viewModel.openAllMerchantLocations("merchant1", "DashSpend")
+            kotlinx.coroutines.delay(200)
+
+            assertEquals(ScreenState.DetailsGrouped, viewModel.screenState.value)
+        }
+    }
+
+    @Test
+    fun openAllMerchantLocations_someLocationsHaveAddresses_opensThePicker() {
+        // The picker is still the right destination as soon as one location can be told apart.
+        runBlocking {
+            val readable = addressLessLocation(1).apply {
+                address1 = "2171 Kent Dairy Rd"
+                city = "Alabaster"
+                territory = "Alabama"
+            }
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(listOf(addressLessLocation(2), readable)) }
+                }
+            val viewModel = viewModelWithLocationDisabled(dataSource)
+
+            viewModel.openAllMerchantLocations("merchant1", "DashSpend")
+            kotlinx.coroutines.delay(200)
+
+            assertEquals(ScreenState.MerchantLocations, viewModel.screenState.value)
+        }
+    }
+
     @Test
     fun openMerchantDetails_onlineTabGroupedChain_opensDetailsNotAllLocations() {
         // Regression test: in the Online tab, tapping a chain whose grouped row counts many
