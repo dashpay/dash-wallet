@@ -519,7 +519,12 @@ class ExploreViewModel @Inject constructor(
         _selectedItem.value = merchant
 
         if (isGrouped) {
-            if (canShowNearestLocation(merchant)) {
+            // The Online tab lists a merchant's online listing, so there is no nearest physical
+            // location to resolve and the details screen never offers the all-locations list for
+            // it. Open details directly, even for chains whose grouped row counts many physical
+            // locations; otherwise, with location disabled or a territory selected, the tap would
+            // land on the all-locations screen instead.
+            if (_filterMode.value == FilterMode.Online || canShowNearestLocation(merchant)) {
                 // Opening details screen
                 nearestLocation = merchant
                 _screenState.postValue(ScreenState.DetailsGrouped)

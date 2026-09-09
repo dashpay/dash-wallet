@@ -46,6 +46,7 @@ import org.dash.wallet.features.exploredash.ui.explore.DenomOption
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.explore.FilterMode
+import org.dash.wallet.features.exploredash.ui.explore.ScreenState
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -656,6 +657,97 @@ class ExploreViewModelTest {
                 eq(userBounds),
                 any()
             )
+        }
+    }
+
+    private fun multiLocationChain(): Merchant =
+        Merchant(
+            plusCode = "",
+            addDate = "2021-09-08 11:22",
+            updateDate = "2021-09-08 12:22",
+            deeplink = "",
+            paymentMethod = "gift card"
+        ).apply {
+            id = 100
+            merchantId = "merchant1"
+            source = "DashSpend"
+            name = "Chipotle"
+            active = true
+            type = MerchantType.ONLINE
+            // The grouped Online query counts the chain's online and "both" rows
+            physicalAmount = 25
+        }
+
+    private fun viewModelWithLocationDisabled(dataSource: ExploreDataSource): ExploreViewModel {
+        dataSource.stub { onBlocking { getGiftCardProvidersFor(any()) } doReturn emptyList() }
+        val locationMock = mock<UserLocationStateInt> {
+            onBlocking { getCountryCodeFromLocation() } doReturn "US"
+        }
+        val dataSyncStatus = mock<DataSyncStatusService> {
+            on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+            on { hasObservedLastError() } doReturn flow { emit(false) }
+        }
+        return ExploreViewModel(
+            dataSource,
+            locationMock,
+            dataSyncStatus,
+            networkState,
+            mockPreferences,
+            mock<AnalyticsService>()
+        ).also { it.init(ExploreTopic.Merchants) }
+    }
+
+    @Test
+    fun openMerchantDetails_onlineTabGroupedChain_opensDetailsNotAllLocations() {
+        // Regression test: in the Online tab, tapping a chain whose grouped row counts many
+        // physical locations, with location services disabled, must open the merchant details.
+        // It used to fall through to the all-locations screen (which the seeded noBounds query
+        // then filled with every location of the chain).
+        runBlocking {
+            val dataSource = mock<ExploreDataSource>()
+            val viewModel = viewModelWithLocationDisabled(dataSource)
+            viewModel.setFilterMode(FilterMode.Online)
+            val chain = multiLocationChain()
+
+            viewModel.openMerchantDetails(chain, isGrouped = true)
+            kotlinx.coroutines.delay(100)
+
+            assertEquals(ScreenState.DetailsGrouped, viewModel.screenState.value)
+            assertEquals(chain, viewModel.selectedItem.value)
+            verify(dataSource, never()).observeMerchantLocations(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+            )
+        }
+    }
+
+    @Test
+    fun openMerchantDetails_allTabGroupedChainWithoutLocation_opensAllLocations() {
+        // Counterpart of the Online-tab test: on the physical tabs the all-locations screen is
+        // still the right destination when the nearest location cannot be resolved.
+        runBlocking {
+            val physicalLocations = merchants.filter { it.type == MerchantType.PHYSICAL }
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(physicalLocations) }
+                }
+            val viewModel = viewModelWithLocationDisabled(dataSource)
+            viewModel.setFilterMode(FilterMode.All)
+            val chain = multiLocationChain()
+
+            viewModel.openMerchantDetails(chain, isGrouped = true)
+            kotlinx.coroutines.delay(200)
+
+            assertEquals(ScreenState.MerchantLocations, viewModel.screenState.value)
+            assertEquals(physicalLocations, viewModel.allMerchantLocations.value)
         }
     }
 
