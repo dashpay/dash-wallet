@@ -63,6 +63,12 @@ interface TransactionMetadataProvider {
     suspend fun updateGiftCardMetadata(giftCard: GiftCard)
     suspend fun updateGiftCardBarcode(txId: Sha256Hash, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat)
 
+    /**
+     * Removes the gift cards recorded for a transaction. Used when a payment that was saved
+     * optimistically turns out never to have reached the merchant, so the cards never existed.
+     */
+    suspend fun removeGiftCards(txId: Sha256Hash)
+
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 
     fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>

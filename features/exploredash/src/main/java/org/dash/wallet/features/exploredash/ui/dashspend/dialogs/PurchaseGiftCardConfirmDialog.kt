@@ -69,6 +69,7 @@ import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.LocalDashColors
@@ -82,6 +83,7 @@ import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
@@ -474,7 +476,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 }
                 return@launch
             }
-            val transactionId = createSendingRequestFromDashUri(dashPaymentUrl)
+            val transactionId = createSendingRequestFromDashUri(dashPaymentUrl, data)
             transactionId?.let {
                 enterAmountViewModel.clearSavedState()
                 viewModel.saveGiftCardDummy(transactionId, data)
@@ -483,7 +485,10 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
-    private suspend fun createSendingRequestFromDashUri(url: String): Sha256Hash? {
+    private suspend fun createSendingRequestFromDashUri(
+        url: String,
+        giftCards: List<GiftCardInfo>
+    ): Sha256Hash? {
         return try {
             viewModel.createSendingRequestFromDashUri(url)
         } catch (x: InsufficientMoneyException) {
@@ -494,6 +499,31 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                     R.drawable.ic_error,
                     getString(R.string.insufficient_money_title),
                     getString(R.string.insufficient_money_msg),
+                    getString(R.string.button_close)
+                ).show(requireActivity())
+            }
+            null
+        } catch (ex: PaymentSubmissionPendingException) {
+            // The payment left the device but the merchant's answer was lost. The wallet keeps
+            // checking the network in the background; the transaction shows up as sent once it is
+            // found, and its inputs are released if it never appears. Don't let the user retry now.
+            log.warn("purchaseGiftCard submission result unknown for {}", ex.txId, ex)
+            // The transaction is fully built and its id is final, so record the order now. The
+            // merchant may well have received the payment, and this screen is about to go away
+            // with the only copy of the order details. If the wallet later proves the payment
+            // never arrived, PendingDirectPaymentVerifier removes these rows again.
+            try {
+                enterAmountViewModel.clearSavedState()
+                viewModel.saveGiftCardDummy(ex.txId, giftCards)
+            } catch (e: Exception) {
+                log.error("could not save gift cards for pending payment {}", ex.txId, e)
+            }
+            hideLoading()
+            if (isAdded) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_warning,
+                    getString(R.string.payment_submission_pending_title),
+                    getString(R.string.payment_submission_pending_message),
                     getString(R.string.button_close)
                 ).show(requireActivity())
             }

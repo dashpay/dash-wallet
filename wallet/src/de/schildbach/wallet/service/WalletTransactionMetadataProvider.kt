@@ -345,6 +345,14 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
+    override suspend fun removeGiftCards(txId: Sha256Hash) {
+        val removed = giftCardDao.getCardCountForTransaction(txId)
+        if (removed > 0) {
+            log.info("removing {} gift card(s) recorded for abandoned payment {}", removed, txId)
+            giftCardDao.removeCardsForTransaction(txId)
+        }
+    }
+
     override suspend fun updateGiftCardMetadata(giftCard: GiftCard) {
         // Room's @Update rewrites every column, so a caller passing a partially-populated
         // GiftCard would otherwise null out fields it didn't set (number/pin/note/...).

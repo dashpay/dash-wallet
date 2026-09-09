@@ -38,6 +38,10 @@ interface GiftCardDao {
     @Update(entity = GiftCard::class)
     suspend fun updateGiftCard(giftCard: GiftCard): Int
 
+    /** Removes every card of an order, used when its payment turns out never to have been sent. */
+    @Query("DELETE FROM gift_cards WHERE txId = :txId")
+    suspend fun removeCardsForTransaction(txId: Sha256Hash)
+
     @Query("SELECT COUNT(*) FROM gift_cards WHERE txId = :txId")
     suspend fun getCardCountForTransaction(txId: Sha256Hash): Int
 

@@ -33,7 +33,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
@@ -549,7 +548,12 @@ class DashSpendViewModel @Inject constructor(
         providers[provider]?.logout()
     }
 
-    fun saveGiftCardDummy(txId: Sha256Hash, giftCards: List<GiftCardInfo>) {
+    /**
+     * Records the ordered cards against [txId]. Suspends until the rows are written: the caller
+     * may be about to dismiss this screen, and on the payment-pending path nothing else holds the
+     * order details, so losing the write would strand the purchase with no way back to the order.
+     */
+    suspend fun saveGiftCardDummy(txId: Sha256Hash, giftCards: List<GiftCardInfo>) {
         log.info("saving {} dummy gift cards: {}", giftCards.size, txId)
         var index = 0
         val giftCard = giftCards.map {
@@ -563,9 +567,7 @@ class DashSpendViewModel @Inject constructor(
                 index = index++
             )
         }
-        viewModelScope.launch {
-            giftCardDao.insertGiftCards(giftCard)
-        }
+        giftCardDao.insertGiftCards(giftCard)
     }
 
     fun needsCrowdNodeWarning(dashAmount: Coin): Boolean {
