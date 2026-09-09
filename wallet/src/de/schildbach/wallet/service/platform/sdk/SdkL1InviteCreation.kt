@@ -28,8 +28,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
+import kotlinx.coroutines.flow.first
 import org.dashfoundation.dashsdk.identity.IdentityKeyPreview
-import org.dashfoundation.dashsdk.tokens.Dashpay.CreatedInvitation
 import org.dashfoundation.dashsdk.identity.RegistrationKeySet
 import org.dashfoundation.dashsdk.identity.RegistrationKeys
 import org.dashj.platform.dpp.identifier.Identifier
@@ -83,7 +83,7 @@ interface L1InviteSource {
         inviterIdentityId: ByteArray?,
         inviterUsername: String?,
         nowUnix: Long
-    ): CreatedInvitation
+    ): CreatedL1Invitation
 
     /**
      * Number of identities the bound SDK wallet already manages — the next
@@ -130,6 +130,19 @@ interface L1InviteSource {
     ): ByteArray
 }
 
+/**
+ * App-side carrier of a freshly created L1 invite.
+ *
+ * Since AAR v42int5 the SDK's `Dashpay.createInvitation` returns only the
+ * bearer `dashpay://invite` link (matching iOS); the funding outpoint the app
+ * keys its invite-history tracking row and funding-tx "Invitation" label on is
+ * recovered from the SDK's persisted invitation row (guaranteed written to the
+ * SDK Room BEFORE `createInvitation` returns), matched by the link's
+ * `assetlocktx` funding txid. [outPoint] keeps the pre-v42int5
+ * `CreatedInvitation` shape: raw 36 bytes, `txid_wire[32] ‖ vout_le[4]`.
+ */
+data class CreatedL1Invitation(val outPoint: ByteArray, val uri: String)
+
 /** Production [L1InviteSource]: boots the SDK on demand (mirrors [DashSdkTransparentUsernameSource]). */
 internal class DashSdkL1InviteSource(
     private val service: DashSdkService
@@ -158,13 +171,14 @@ internal class DashSdkL1InviteSource(
         inviterIdentityId: ByteArray?,
         inviterUsername: String?,
         nowUnix: Long
-    ): CreatedInvitation {
+    ): CreatedL1Invitation {
         val manager = manager()
         // Invitation creation moved from `identityRegistration` to the
-        // `dashpay` token surface (dashpay/platform#4284 line); the funding
-        // outpoint the app keys its invite-history row + funding-tx
-        // "Invitation" label on is preserved by the JNI's outpoint||uri blob.
-        return wallet(walletIdHex).dashpay.createInvitation(
+        // `dashpay` token surface (dashpay/platform#4284 line). v42int5 returns
+        // the bearer uri only; the funding outpoint the app keys its
+        // invite-history row + funding-tx "Invitation" label on comes from the
+        // SDK's invitation row, persisted before createInvitation returns.
+        val uri = wallet(walletIdHex).dashpay.createInvitation(
             amountDuffs = amountDuffs,
             fundingAccountIndex = fundingAccountIndex,
             inviterIdentityId = inviterIdentityId,
@@ -174,7 +188,43 @@ internal class DashSdkL1InviteSource(
             coreSignerHandle = manager.mnemonicResolverHandle,
             nowUnix = nowUnix
         )
+        return CreatedL1Invitation(recoverFundingOutPoint(walletIdHex, uri), uri)
     }
+
+    /**
+     * Recover the created invite's raw 36-byte funding outpoint from the SDK's
+     * persisted invitation row, matched by the link's `assetlocktx` funding
+     * txid (big-endian display hex; the row stores the wire/LE txid). The SDK
+     * guarantees the row is in Room before `createInvitation` returns, so a
+     * single read suffices; a miss means the SDK broke that contract.
+     */
+    private suspend fun recoverFundingOutPoint(walletIdHex: String, uri: String): ByteArray {
+        val fundingTxidHex = invitationLinkParam(uri, "assetlocktx")
+            ?: error("created invite link carries no assetlocktx param")
+        val walletId = walletId(walletIdHex)
+        val row = checkNotNull(service.databaseOrNull())
+            .invitationDao()
+            .observeAll()
+            .first()
+            .firstOrNull { entity ->
+                entity.walletId.contentEquals(walletId) &&
+                    entity.rawOutPoint.size == 36 &&
+                    displayHexOf(entity.rawOutPoint.copyOfRange(0, 32))
+                        .equals(fundingTxidHex, ignoreCase = true)
+            }
+        return checkNotNull(row) {
+            "created invitation's SDK row missing for its funding tx — persist-before-return contract broken"
+        }.rawOutPoint
+    }
+
+    /** Value of ONE query param of a `dashpay://invite?…` link, URL-decoded; null when absent. */
+    private fun invitationLinkParam(uri: String, key: String): String? =
+        uri.substringAfter('?', "")
+            .split('&')
+            .firstOrNull { it.substringBefore('=') == key }
+            ?.substringAfter('=', "")
+            ?.let { java.net.URLDecoder.decode(it, "UTF-8") }
+            ?.takeIf { it.isNotEmpty() }
 
     override suspend fun managedIdentityCount(walletIdHex: String): Int =
         wallet(walletIdHex).inMemoryIdentityIds().size
