@@ -80,6 +80,7 @@ import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import de.schildbach.wallet.data.WalletData;
+import org.dash.wallet.common.data.OnboardingState;
 import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
@@ -378,6 +379,10 @@ public class WalletApplication extends MultiDexApplication
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("STARTUP WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
+        // After process death Android restores the top activity directly, skipping the
+        // normal onboarding entry points that call init() — do it here so OnboardingState
+        // is usable on every startup path
+        OnboardingState.INSTANCE.init(config);
         new Thread(this::initializeAppsFlyer).start();
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);

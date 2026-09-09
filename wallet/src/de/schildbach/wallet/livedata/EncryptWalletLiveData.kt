@@ -35,7 +35,38 @@ class EncryptWalletLiveData(
     private val biometricHelper: BiometricHelper
 ) : MutableLiveData<Resource<Wallet>>() {
 
-    private val log = LoggerFactory.getLogger(EncryptWalletLiveData::class.java)
+    companion object {
+        private val log = LoggerFactory.getLogger(EncryptWalletLiveData::class.java)
+
+        /**
+         * Encrypts [wallet] with a key derived from [password], then persists the password
+         * via [savePassword]. If persisting fails, the wallet is left encrypted with a
+         * password that was never stored — it could not be spent and a retry with the same
+         * PIN could not re-encrypt — so the encryption is rolled back before rethrowing,
+         * returning the wallet to the state it had before the call.
+         */
+        @JvmStatic
+        internal fun encryptAndSavePassword(
+            wallet: Wallet,
+            keyCrypter: KeyCrypterScrypt,
+            password: String,
+            savePassword: (String) -> Unit
+        ) {
+            val newKey = keyCrypter.deriveKey(password)
+            wallet.encrypt(keyCrypter, newKey)
+            try {
+                savePassword(password)
+            } catch (x: Exception) {
+                try {
+                    wallet.decrypt(newKey)
+                    log.warn("rolled back wallet encryption after failing to save the spending password")
+                } catch (rollbackError: Exception) {
+                    log.error("could not roll back wallet encryption after savePassword failure", rollbackError)
+                }
+                throw x
+            }
+        }
+    }
 
     private var encryptWalletTask: EncryptWalletTask? = null
     private var decryptWalletTask: DecryptWalletTask? = null
@@ -43,18 +74,37 @@ class EncryptWalletLiveData(
     private var scryptIterationsTarget: Int = Constants.SCRYPT_ITERATIONS_TARGET
     private val securityGuard = SecurityGuard.getInstance()
 
+    val isEncrypting: Boolean
+        get() = encryptWalletTask != null
+
     /**
      * will save the PIN and also will save the fallbacks
      * assumes the wallet is not encrypted.
      */
     fun savePin(pin: String) {
+        val wallet = walletApplication.wallet!!
+        if (wallet.isEncrypted) {
+            // a repeated invocation can race the encrypt task (UI re-entry); if the
+            // wallet was already encrypted using this same PIN, the first invocation
+            // did all the work and this one is a harmless no-op
+            val alreadySavedSamePin = try {
+                securityGuard.checkPin(pin)
+            } catch (x: Exception) {
+                // checkPin returns false only for a real PIN mismatch; a throw means the
+                // check itself failed (keystore/IO), so don't misreport it as a mismatch
+                throw IllegalStateException(
+                    "wallet is already encrypted and the saved PIN could not be verified", x
+                )
+            }
+            if (alreadySavedSamePin) {
+                log.warn("savePin called again after the wallet was encrypted with the same PIN, ignoring")
+                return
+            }
+            error("the wallet should not be encrypted")
+        }
         securityGuard.removeKeys()
         securityGuard.savePin(pin)
         securityGuard.ensurePinFallback(pin)
-        val wallet = walletApplication.wallet!!
-        if (wallet.isEncrypted) {
-            error("the wallet should not be encrypted")
-        }
         val words = wallet.keyChainSeed.mnemonicCode
         securityGuard.ensureMnemonicFallbacks(words)
     }
@@ -135,10 +185,7 @@ class EncryptWalletLiveData(
                 org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
                 // For the new key, we create a new key crypter according to the desired parameters.
                 val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
-                val newKey = keyCrypter.deriveKey(password)
-                wallet.encrypt(keyCrypter, newKey)
-
-                securityGuard.savePassword(password)
+                encryptAndSavePassword(wallet, keyCrypter, password) { securityGuard.savePassword(it) }
 
                 log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")
 

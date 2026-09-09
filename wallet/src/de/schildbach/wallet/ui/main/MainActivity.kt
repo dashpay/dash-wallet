@@ -154,6 +154,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         requestDisableBatteryOptimisation()
     }
 
+    private var timeChangeReceiverRegistered = false
+
     private val timeChangeReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_TIME_CHANGED) {
@@ -168,6 +170,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // LockScreenActivity finishes the activity when there is no wallet
+        // (e.g. a direct launch on a fresh install); its setContentView
+        // override is a no-op while finishing, so nothing below can run.
+        if (isFinishing) {
+            log.warn("started without a wallet - closing (launch onboarding instead)")
+            return
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -239,6 +248,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             addAction(Intent.ACTION_TIME_CHANGED)
         }
         registerReceiver(timeChangeReceiver, timeChangedFilter)
+        timeChangeReceiverRegistered = true
 
         viewModel.rateStale.observe(this) { state ->
             log.info("updateTrigger => rateStale: {}", state)
@@ -639,7 +649,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(timeChangeReceiver)
+        if (timeChangeReceiverRegistered) {
+            unregisterReceiver(timeChangeReceiver)
+        }
     }
 
     override fun onLockScreenDeactivated() {
