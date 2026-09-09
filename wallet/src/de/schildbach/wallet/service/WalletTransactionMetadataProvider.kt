@@ -345,12 +345,22 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun removeGiftCards(txId: Sha256Hash) {
-        val removed = giftCardDao.getCardCountForTransaction(txId)
-        if (removed > 0) {
-            log.info("removing {} gift card(s) recorded for abandoned payment {}", removed, txId)
+    override suspend fun forgetTransaction(txId: Sha256Hash) {
+        // Guard against ever discarding real user data: if the wallet holds the transaction, it
+        // was broadcast after all and its memo, tax category and cards must be kept.
+        if (walletData.wallet?.getTransaction(txId) != null) {
+            log.warn("refusing to forget {}: the wallet holds this transaction", txId)
+            return
+        }
+
+        val cards = giftCardDao.getCardCountForTransaction(txId)
+        if (cards > 0) {
             giftCardDao.removeCardsForTransaction(txId)
         }
+        // drop queued platform changes first, so a concurrent publish cannot re-add the metadata
+        transactionMetadataChangeCacheDao.removeByTxId(txId)
+        transactionMetadataDao.remove(txId)
+        log.info("forgot transaction {} that was never broadcast ({} gift card(s) removed)", txId, cards)
     }
 
     override suspend fun updateGiftCardMetadata(giftCard: GiftCard) {

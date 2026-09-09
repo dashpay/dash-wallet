@@ -38,6 +38,10 @@ interface TransactionMetadataDao {
     @Query("SELECT * FROM transaction_metadata")
     suspend fun load(): List<TransactionMetadata>
 
+    /** Drops the metadata of a transaction that turned out never to have existed. */
+    @Query("DELETE FROM transaction_metadata WHERE txid = :txId")
+    suspend fun remove(txId: Sha256Hash)
+
     @Query("SELECT COUNT(1) FROM transaction_metadata WHERE txid = :txId;")
     suspend fun exists(txId: Sha256Hash): Boolean
 

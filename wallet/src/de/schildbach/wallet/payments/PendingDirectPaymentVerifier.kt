@@ -241,11 +241,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
             tx.txId
         )
         walletData.wallet?.let { unlockInputs(it, tx) }
-        // Anything saved optimistically against this tx describes an order that was never placed.
+        // Anything saved optimistically against this tx describes an order that was never placed,
+        // and its metadata must not reach Dash Platform either.
         try {
-            metadataProvider.removeGiftCards(tx.txId)
+            metadataProvider.forgetTransaction(tx.txId)
         } catch (e: Exception) {
-            log.error("could not remove gift cards recorded for abandoned payment {}", tx.txId, e)
+            log.error("could not discard the records of abandoned payment {}", tx.txId, e)
         }
         finish(payment)
     }

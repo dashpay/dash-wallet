@@ -64,10 +64,14 @@ interface TransactionMetadataProvider {
     suspend fun updateGiftCardBarcode(txId: Sha256Hash, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat)
 
     /**
-     * Removes the gift cards recorded for a transaction. Used when a payment that was saved
-     * optimistically turns out never to have reached the merchant, so the cards never existed.
+     * Discards everything recorded locally about a transaction: its metadata, any gift cards
+     * saved against it, and any changes still queued for Dash Platform.
+     *
+     * For payments recorded optimistically that turn out never to have reached the merchant, so
+     * the transaction will never exist. Implementations must ignore a transaction that is present
+     * in the wallet, since that would be real user data.
      */
-    suspend fun removeGiftCards(txId: Sha256Hash)
+    suspend fun forgetTransaction(txId: Sha256Hash)
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 

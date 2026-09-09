@@ -514,7 +514,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             // never arrived, PendingDirectPaymentVerifier removes these rows again.
             try {
                 enterAmountViewModel.clearSavedState()
-                viewModel.saveGiftCardDummy(ex.txId, giftCards)
+                viewModel.saveGiftCardsForPendingPayment(ex.txId, giftCards)
             } catch (e: Exception) {
                 log.error("could not save gift cards for pending payment {}", ex.txId, e)
             }

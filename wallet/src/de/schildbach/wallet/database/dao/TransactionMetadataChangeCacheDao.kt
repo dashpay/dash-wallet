@@ -34,6 +34,13 @@ interface TransactionMetadataChangeCacheDao {
     @Query("delete from transaction_metadata_cache where id in (:idList)")
     suspend fun removeByIds(idList: List<Long>)
 
+    /**
+     * Drops every queued platform change for a transaction, so metadata about a transaction that
+     * was never broadcast is not published.
+     */
+    @Query("DELETE FROM transaction_metadata_cache WHERE txId = :txId")
+    suspend fun removeByTxId(txId: Sha256Hash)
+
     @Query("SELECT * FROM transaction_metadata_cache ORDER BY id")
     suspend fun load(): List<TransactionMetadataCacheItem>
 

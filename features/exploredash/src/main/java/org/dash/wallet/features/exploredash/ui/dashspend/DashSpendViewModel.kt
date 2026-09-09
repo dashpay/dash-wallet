@@ -549,6 +549,22 @@ class DashSpendViewModel @Inject constructor(
     }
 
     /**
+     * Records a purchase whose payment result is unknown, so it looks like any other gift card
+     * purchase if the payment did reach the merchant. The success path marks the transaction from
+     * [createSendingRequestFromDashUri]; that never runs when submission ends in
+     * PaymentSubmissionPendingException, so do both here. If the wallet later proves the payment
+     * was never sent, PendingDirectPaymentVerifier discards all of it again.
+     */
+    suspend fun saveGiftCardsForPendingPayment(txId: Sha256Hash, giftCards: List<GiftCardInfo>) {
+        transactionMetadata.markGiftCardTransaction(
+            txId,
+            selectedProvider?.serviceName ?: ServiceName.CTXSpend,
+            _giftCardMerchant.value?.logoLocation
+        )
+        saveGiftCardDummy(txId, giftCards)
+    }
+
+    /**
      * Records the ordered cards against [txId]. Suspends until the rows are written: the caller
      * may be about to dismiss this screen, and on the payment-pending path nothing else holds the
      * order details, so losing the write would strand the purchase with no way back to the order.

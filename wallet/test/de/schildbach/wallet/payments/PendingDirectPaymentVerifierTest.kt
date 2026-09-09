@@ -177,8 +177,9 @@ class PendingDirectPaymentVerifierTest {
         val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
         withTimeout(5_000) { result.await() }
 
-        // the order was never placed, so the cards recorded for it must go
-        coVerify { metadataProvider.removeGiftCards(tx.txId) }
+        // the order was never placed, so everything recorded for it must go: cards, metadata,
+        // and anything queued for Dash Platform
+        coVerify { metadataProvider.forgetTransaction(tx.txId) }
     }
 
     @Test
@@ -189,7 +190,7 @@ class PendingDirectPaymentVerifierTest {
         tx.confidence.markBroadcastBy(PeerAddress(params, InetAddress.getLoopbackAddress(), 9999))
         withTimeout(5_000) { result.await() }
 
-        coVerify(exactly = 0) { metadataProvider.removeGiftCards(any()) }
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
     }
 
     @Test
