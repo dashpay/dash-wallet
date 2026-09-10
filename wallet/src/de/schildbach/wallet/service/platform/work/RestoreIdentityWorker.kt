@@ -177,6 +177,9 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 )
             }
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 1)
+            // Identity-cache CBOR tolerance for this read now lives in
+            // IdentityRepositoryImpl.getIdentityFromPublicKeyId, which every caller
+            // shares — see its KDoc.
             val existingIdentity = identityRepository.getIdentityFromPublicKeyId()
                 ?: throw IllegalArgumentException("identity $identity doesn't exist on the network")
 
@@ -255,7 +258,57 @@ class RestoreIdentityWorker @AssistedInject constructor(
                     log.warn("cutover-state read failed while completing DPNS registration; skipping", e)
                     false
                 }
-                if (cutoverCommitted && !requestedLabel.isNullOrEmpty()) {
+                // A CONTESTED name that HAS already been requested is invisible
+                // here: `recoverUsernames` resolves a name through the DPNS unique
+                // index, and for a contested label that index is not awarded until
+                // the vote concludes — so `currentUsername` stays null even though
+                // the identity's own contender document is on chain. Re-registering
+                // on that basis pays the 0.2 DASH prefunded specialized balance a
+                // SECOND time.
+                //
+                // Field evidence (testnet 12000000, emulator, 2026-09-10): identity
+                // 7oct2Gqw… funded 0.25, registered `test-contested-1000` (explorer
+                // shows the name and exactly 20,000,000,000 credits gone to the vote
+                // poll beyond gas), then this block re-registered it and the FFI
+                // rejected the duplicate — "Insufficient identity balance
+                // 4680452100 required 20000100000". Each later trigger burned another
+                // preorder document's gas (blocks 570460, 570461) for a name the
+                // identity already owns.
+                //
+                // So ASK FIRST, with the single targeted query the candidate set
+                // already implies (see [ownContestedCandidates], which reads this
+                // same USERNAME pref). Fails CLOSED: `getVoteContenders` collapses a
+                // failed read into "no contenders", which is indistinguishable from
+                // "never requested", so use the throwing variant and treat an
+                // unreadable vote state as already-requested. Deferring costs one
+                // more worker trigger; a duplicate costs 0.2 DASH irrecoverably.
+                val alreadyContending = if (contestedReregistrationCheckApplies(requestedLabel)) {
+                    try {
+                        isOwnIdentityAContender(
+                            platformRepo.getVoteContendersOrThrow(requestedLabel!!).map.keys,
+                            blockchainIdentity.uniqueIdentifier
+                        )
+                    } catch (e: Exception) {
+                        log.warn(
+                            "contested re-registration guard: could not read the vote state for '{}' — " +
+                                "treating it as ALREADY requested and skipping re-registration (fail closed; " +
+                                "a later trigger re-drives this)",
+                            requestedLabel,
+                            e
+                        )
+                        true
+                    }
+                } else {
+                    false
+                }
+
+                if (cutoverCommitted && !requestedLabel.isNullOrEmpty() && alreadyContending) {
+                    log.info(
+                        "'{}' is a contested name this identity already contends for — skipping DPNS " +
+                            "re-registration; the contested-name walk below recovers the voting state",
+                        requestedLabel
+                    )
+                } else if (cutoverCommitted && !requestedLabel.isNullOrEmpty()) {
                     log.info("identity has no on-chain name yet — registering DPNS name '{}' via the SDK", requestedLabel)
                     identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.PREORDER_REGISTERING)
                     identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
@@ -889,3 +942,33 @@ internal fun contestedNameListsCanMatch(
     targetedScan: Boolean,
     ownCandidateNames: Set<String>
 ): Boolean = !targetedScan || ownCandidateNames.any { Names.isUsernameContestable(it) }
+
+/**
+ * Is the re-registration guard in [RestoreIdentityWorker] worth a vote-state query
+ * for [requestedLabel]?
+ *
+ * Only a CONTESTABLE label can be sitting in a vote poll invisible to
+ * `recoverUsernames`. A non-contestable name resolves through the ordinary DPNS
+ * unique index the moment it lands, so for those `currentUsername == null` really
+ * does mean "never registered" and the historic behaviour is exactly right — no
+ * query, no behaviour change.
+ *
+ * Blank/absent label means there is nothing to re-register at all.
+ */
+internal fun contestedReregistrationCheckApplies(requestedLabel: String?): Boolean =
+    !requestedLabel.isNullOrBlank() && Names.isUsernameContestable(requestedLabel)
+
+/**
+ * Is [ownIdentityId] one of the [contenderIds] for a contested name?
+ *
+ * True means this identity's own contender document is already on chain for that
+ * name — the vote is under way, the 0.2 DASH prefunded specialized balance has
+ * already been paid, and re-registering would pay it again. Mirrors the identity
+ * match the contested-name walk itself uses (`uniqueIdentifier == identifier`).
+ *
+ * Pure — host-testable.
+ */
+internal fun isOwnIdentityAContender(
+    contenderIds: Collection<Identifier>,
+    ownIdentityId: Identifier
+): Boolean = contenderIds.any { it == ownIdentityId }
