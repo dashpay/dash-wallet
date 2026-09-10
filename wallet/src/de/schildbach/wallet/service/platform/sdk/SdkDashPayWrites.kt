@@ -137,7 +137,15 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // path derives DIP-15 encryption keys from the wallet seed, not from
     // identity keys. Message-matched until the SDK exposes a typed error.
     t.message?.contains("Invalid identity data") == true ->
-        SdkWriteResult.NotBroadcast("pre-broadcast identity-key validation failure", t)
+        // MO-973: the label used to stop at "identity-key validation failure",
+        // which is the CONTACT-REQUEST reading of this message (see above) —
+        // and it was then reported verbatim for a DPNS name registration,
+        // which needs no encryption key. The engine's own text is the only
+        // thing that says WHICH invalid-identity-data this is, so carry it.
+        SdkWriteResult.NotBroadcast(
+            "pre-broadcast identity data rejected by the FFI — ${t.message}",
+            t
+        )
     // Android Keystore auth-window expiry: the SDK keeps identity keys
     // AUTH_GATED (decryptable only within ~30 s of a biometric/device-credential
     // unlock), and an expired window surfaces as UserNotAuthenticatedException —
@@ -154,7 +162,21 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // Message-matched until platform PR #4060 (DEVICE_BOUND key policy)
     // replaces the auth window and gives this a typed error.
     t.message?.contains("User not authenticated") == true ->
-        SdkWriteResult.NotBroadcast("signing failure (pre-broadcast): Keystore auth window expired", t)
+        // MO-972: this used to read "Keystore auth window expired", which
+        // ASSERTS a timeout nobody measured. Field log (2026-09-10, testnet
+        // 12000007, HONOR PTP-N49) — biometric at 11:49:16, this at 11:49:17.
+        // One second. The window had not expired; the Keystore simply refused
+        // to treat the auth as satisfying the identity key's gate, which on
+        // that OEM is the same defect family as the false-locked master alias
+        // (dashpay/platform#4643 fixes that one and explicitly does NOT cover
+        // the auth-gated identity alias; #4060's DEVICE_BOUND policy is the
+        // remedy). Report what Keystore said, not a cause we inferred.
+        SdkWriteResult.NotBroadcast(
+            "signing failure (pre-broadcast): Keystore refused the identity key as " +
+                "unauthenticated (auth window may have expired, or the device's " +
+                "auth-bound Keystore gate is defective) — ${t.message}",
+            t
+        )
     // TYPED funding shortfalls — checked BEFORE the message arms because
     // engine message text drifts across AAR lines while the type cannot.
     // CoreInsufficientFunds (FFI 22) is the atomic Core selection;

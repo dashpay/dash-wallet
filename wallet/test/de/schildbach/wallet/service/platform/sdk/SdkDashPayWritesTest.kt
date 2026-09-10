@@ -164,6 +164,84 @@ class SdkDashPayWritesTest {
         assertSame(liveShape, (result as SdkWriteResult.NotBroadcast).cause)
     }
 
+    /**
+     * MO-973: the reason string must carry the ENGINE's message, because
+     * "Invalid identity data" is overloaded and the classifier cannot tell
+     * which one it has.
+     *
+     * The old reason stopped at "pre-broadcast identity-key validation
+     * failure" — the contact-request reading — and that label was then
+     * reported verbatim for a DPNS name registration, which needs no
+     * encryption key at all. The field report (2026-09-10, testnet 12000007,
+     * SM-A536B) therefore showed only our gloss, and because
+     * `RestoreIdentityWorker` also threw via `error(...)` (no cause), the real
+     * reason was unrecoverable from the log.
+     *
+     * That the message is overloaded is not a guess: the invitation
+     * amount-cap rejection arrives with the same "Invalid identity data"
+     * prefix (see InviteCreationFailureTest). Two different failures must not
+     * produce the same reason.
+     */
+    @Test
+    fun classify_invalidIdentityData_reasonCarriesTheEngineMessage() {
+        val missingEncryptionKey = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "Invalid identity data: Identity has no enabled ECDSA_SECP256K1 encryption key"
+        )
+        val amountCap = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "Invalid identity data: invitation amount 25000000 exceeds the cap 5000000 duffs"
+        )
+
+        val a = classifyBroadcastFailure(missingEncryptionKey) as SdkWriteResult.NotBroadcast
+        val b = classifyBroadcastFailure(amountCap) as SdkWriteResult.NotBroadcast
+
+        assertTrue(
+            "the reason must name the actual engine failure, got: ${a.reason}",
+            a.reason.contains("no enabled ECDSA_SECP256K1 encryption key")
+        )
+        assertTrue(
+            "the reason must name the actual engine failure, got: ${b.reason}",
+            b.reason.contains("exceeds the cap")
+        )
+        assertFalse(
+            "two different invalid-identity-data failures must not read alike",
+            a.reason == b.reason
+        )
+    }
+
+    /**
+     * MO-972: the reason must not ASSERT an expiry nobody measured. Field log
+     * (2026-09-10, testnet 12000007, HONOR PTP-N49): biometric authentication
+     * at 11:49:16, this failure at 11:49:17 — one second — reported as
+     * "Keystore auth window expired". On that OEM the auth-bound Keystore gate
+     * is defective, the same defect family as the false-locked master alias;
+     * the window was not the problem and the label sent diagnosis the wrong
+     * way.
+     */
+    @Test
+    fun classify_userNotAuthenticated_doesNotClaimTheWindowExpired() {
+        val liveShape = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "SDK error: Protocol error: Generic Error: User not authenticated"
+        )
+
+        val result = classifyBroadcastFailure(liveShape) as SdkWriteResult.NotBroadcast
+
+        assertFalse(
+            "must not state an expiry as fact, got: ${result.reason}",
+            result.reason.contains("auth window expired")
+        )
+        assertTrue(
+            "must still be recognisable as the auth-gate refusal, got: ${result.reason}",
+            result.reason.contains("unauthenticated")
+        )
+        assertTrue(
+            "must carry the engine message, got: ${result.reason}",
+            result.reason.contains("User not authenticated")
+        )
+    }
+
     @Test
     fun classify_keystoreAuthWindowExpiry_isNotBroadcast() {
         // The live S22 failure: the SDK's AUTH_GATED Keystore threw
