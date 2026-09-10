@@ -1075,11 +1075,43 @@ class IdentityRepositoryImpl @Inject constructor(
         return dashPayProfileDao.loadByUserId(userId)
     }
 
+    /**
+     * Discover this wallet's identity from its first identity key.
+     *
+     * Tolerates the legacy dashj identity cache the same way the contact-request path
+     * does. `fetchIdentityFromPubKeyHash` FETCHES the identity and only then CBOR-encodes
+     * it into the in-memory cache via `PlatformStateRepository.storeIdentity`; our own
+     * 6-key identities bind keys 4/5 to `SingleContractDocumentType(dashpay,
+     * "contactRequest")`, which that encoder cannot serialize — it throws
+     * `IllegalArgumentException("No converter for ...")` AFTER a successful fetch, so the
+     * caller loses a perfectly good identity.
+     *
+     * Observed live (emulator, testnet 12000000, 2026-09-10): this escaped to EVERY caller
+     * — RestoreIdentityWorker aborted restoration outright, and
+     * `PlatformSyncService.discoverAndRecoverIdentity` (via BlockchainServiceImpl) failed
+     * identity discovery. The tolerance belongs here, at the single shared read, rather
+     * than at each of the five call sites.
+     *
+     * The cache is a pure optimization: on that specific failure refetch through the
+     * cache-bypassing DAPI path, which never calls `storeIdentity`. Every other failure
+     * propagates unchanged, so real fetch errors are never masked.
+     */
     override fun getIdentityFromPublicKeyId(): Identity? {
         return try {
             platformRepo.getWalletEncryptionKey()?.let {
                 val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, it) ?: return null
-                platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
+                fetchIdentityToleratingCacheError(
+                    cachedGet = {
+                        platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
+                    },
+                    cacheBypassingFetch = {
+                        log.warn(
+                            "identity lookup by public key hash was fetched but the legacy CBOR " +
+                                "cache rejected its contract-bound-key shape; bypassing the cache"
+                        )
+                        platform.client.getIdentityByFirstPublicKey(firstIdentityKey.pubKeyHash)
+                    }
+                )
             }
         } catch (e: MaxRetriesReachedException) {
             null
