@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
@@ -25,6 +26,7 @@ import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.text.HtmlCompat
@@ -43,9 +45,12 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import org.dash.wallet.common.data.entity.BlockchainState
+import de.schildbach.wallet.data.DashPayUserLink
 import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
+import de.schildbach.wallet.ui.dashpay.user.MyQrCodeBottomSheet
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
@@ -53,6 +58,7 @@ import de.schildbach.wallet_test.databinding.ActivitySearchDashpayProfileRootBin
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.onUserInteraction
@@ -67,6 +73,16 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
     private lateinit var searchUserRunnable: Runnable
     private val adapter: UsernameSearchResultsAdapter = UsernameSearchResultsAdapter(this)
     private var query = ""
+    // The last scanned user link, kept so the not-verified dialog can retry it.
+    private var lastUserLink: DashPayUserLink? = null
+    private var verifyProgressDialog: AdaptiveDialog? = null
+    private val scanQrLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)?.let { handleScannedPayload(it) }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -111,6 +127,9 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
 
             search.setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus && !setChanged) {
+                    // applyTo() re-applies the XML visibility of the row container,
+                    // so mirror the identity-gated runtime state into the set first.
+                    constraintSet2.setVisibility(R.id.qr_buttons_row, qrButtonsRow.visibility)
                     val transition: Transition = ChangeBounds()
                     transition.addListener(object : Transition.TransitionListener {
                         override fun onTransitionEnd(transition: Transition) {
@@ -142,12 +161,21 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
 
             val initQuery = args.query
             if (!TextUtils.isEmpty(initQuery)) {
+                constraintSet2.setVisibility(R.id.qr_buttons_row, qrButtonsRow.visibility)
                 constraintSet2.applyTo(root)
                 setChanged = true
                 layoutTitle.visibility = View.GONE
                 findAUserLabel.visibility = View.GONE
                 finalizeViewsTransition()
                 search.setText(initQuery)
+            }
+
+            myQrButton.setOnClickListener {
+                showMyQrCode()
+            }
+            scanQrButton.setOnClickListener {
+                dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SCAN_USER_QR)
+                scanQrLauncher.launch(ScanActivity.getIntent(requireActivity()))
             }
 
             inviteFriendHintViewDashpayProfile1.root.setOnClickListener {
@@ -217,6 +245,100 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
             it?.apply {
                 val networkError = impediments.contains(BlockchainState.Impediment.NETWORK)
                 updateNetworkErrorVisibility(networkError)
+            }
+        }
+        dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+            updateQrButtons()
+        }
+        dashPayViewModel.verifyUserLink.observe(viewLifecycleOwner) {
+            onVerifyUserLinkState(it)
+        }
+    }
+
+    // "My QR" needs a registered identity with a username (the QR encodes both);
+    // "Scan QR" only needs an identity, since sending a contact request does.
+    private fun updateQrButtons() {
+        val identity = dashPayViewModel.blockchainIdentity.value
+        binding.profile1.qrButtonsRow.isVisible = identity?.userId != null
+        binding.profile1.myQrButton.isVisible =
+            identity != null && identity.hasUsername && identity.activeUsername != null
+    }
+
+    private fun showMyQrCode() {
+        val identity = dashPayViewModel.blockchainIdentity.value
+        val userId = identity?.userId ?: return
+        val username = identity.activeUsername ?: return
+        val link = DashPayUserLink(userId, DashPayUserLink.stripDashSuffix(username))
+        dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SHOW_MY_QR)
+        MyQrCodeBottomSheet.newInstance(
+            displayName = dashPayViewModel.dashPayProfile.value?.displayName.orEmpty(),
+            username = link.username,
+            qrContent = link.uriString
+        ).show(requireActivity())
+    }
+
+    private fun handleScannedPayload(payload: String) {
+        val link = DashPayUserLink.parse(payload)
+        if (link == null) {
+            // Deliberately not falling through to InputParser: payment URIs and
+            // invitation links scanned here get a targeted error instead.
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.scan_user_qr_invalid_title),
+                getString(R.string.scan_user_qr_invalid_message),
+                getString(R.string.button_close)
+            ).show(requireActivity())
+            return
+        }
+        if (link.userId == dashPayViewModel.blockchainIdentity.value?.userId) {
+            AdaptiveDialog.create(
+                null,
+                getString(R.string.scan_user_qr_own_title),
+                getString(R.string.scan_user_qr_own_message),
+                getString(R.string.button_close)
+            ).show(requireActivity())
+            return
+        }
+        lastUserLink = link
+        dashPayViewModel.verifyUserLink(link)
+    }
+
+    private fun onVerifyUserLinkState(state: Resource<UsernameSearchResult>?) {
+        if (state?.status != Status.LOADING) {
+            verifyProgressDialog?.dismissAllowingStateLoss()
+            verifyProgressDialog = null
+        }
+        when (state?.status) {
+            Status.LOADING -> {
+                if (verifyProgressDialog == null) {
+                    verifyProgressDialog = AdaptiveDialog.progress(getString(R.string.scan_user_qr_verifying)).also {
+                        it.show(requireActivity())
+                    }
+                }
+            }
+            Status.SUCCESS -> {
+                dashPayViewModel.clearVerifyUserLink()
+                state.data?.let { DashPayUserBottomSheet.newInstance(it).show(requireActivity()) }
+            }
+            Status.ERROR -> {
+                dashPayViewModel.clearVerifyUserLink()
+                showVerifyErrorDialog()
+            }
+            else -> {}
+        }
+    }
+
+    private fun showVerifyErrorDialog() {
+        val link = lastUserLink ?: return
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.scan_user_qr_not_verified_title),
+            getString(R.string.scan_user_qr_not_verified, link.username),
+            getString(R.string.button_close),
+            getString(R.string.try_again)
+        ).show(requireActivity()) { retry ->
+            if (retry == true) {
+                dashPayViewModel.verifyUserLink(link)
             }
         }
     }
