@@ -55,6 +55,7 @@ import org.dash.wallet.integrations.coinbase.R
 import org.dash.wallet.integrations.coinbase.databinding.FragmentConvertCurrencyBinding
 import org.dash.wallet.integrations.coinbase.model.CoinBaseUserAccountDataUIModel
 import org.dash.wallet.integrations.coinbase.viewmodels.ConvertViewViewModel
+import org.dash.wallet.integrations.coinbase.viewmodels.amountCurrencySpan
 import org.dash.wallet.integrations.coinbase.viewmodels.coinbaseViewModels
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -383,10 +384,12 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 "$faitBalance $localCurrencySymbol"
             }
             SpannableString(text).apply {
-                if (fiatAmount.isCurrencyFirst() && text.length - faitBalance.length > 0) {
-                    setAmountFormat(this, 0, text.length - faitBalance.length)
-                } else {
-                    setAmountFormat(this, balance.length, text.length)
+                // Bounds come from faitBalance -- the figure actually rendered -- not from
+                // the raw `balance`. A converted value carries 8 decimals while faitBalance
+                // is rounded to 2, so `balance.length` overshot the text and setSpan threw
+                // (the same defect as MO-995 A on the transfer screen).
+                amountCurrencySpan(text, faitBalance, fiatAmount.isCurrencyFirst())?.let {
+                    setAmountFormat(this, it.from, it.to)
                 }
             }
         } else {
@@ -399,7 +402,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             val text = "$formattedValue $currencyCode"
 
             SpannableString(text).apply {
-                setAmountFormat(this, formattedValue.length, text.length)
+                amountCurrencySpan(text, formattedValue, isCurrencyFirst = false)?.let {
+                    setAmountFormat(this, it.from, it.to)
+                }
             }
         }
 
