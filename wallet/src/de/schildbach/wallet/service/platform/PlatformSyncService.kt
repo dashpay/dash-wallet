@@ -866,8 +866,27 @@ class PlatformSynchronizationService @Inject constructor(
                         if (resource.status == Status.SUCCESS && resource.data != null) {
                             val domainDocument = DomainDocument(resource.data)
                             if (domainDocument.dashUniqueIdentityId == blockchainIdentityData.identity?.id) {
+                                // DONE, not DONE_AND_DISMISS: winning the vote is the
+                                // completion the user has been waiting for, so the home
+                                // card must render and THEY dismiss it. Same rule
+                                // RestoreIdentityWorker's "Fix A" states — only a genuine
+                                // device restore auto-advances past the tile.
+                                //
+                                // There is no creation-vs-restore ambiguity to resolve
+                                // here: this branch is reachable only from VOTING (see the
+                                // guard above), i.e. a wallet that watched a live vote. A
+                                // restore of an ESTABLISHED name never enters VOTING — it
+                                // resolves through the DPNS unique index and the worker
+                                // takes it to DONE/DONE_AND_DISMISS directly.
+                                //
+                                // Observed live (emulator, testnet): contested
+                                // `test-contested-1000` and `test-contested-1001` both
+                                // went VOTING -> DONE_AND_DISMISS, so a contested-ONLY
+                                // creation showed no card at any point — none during
+                                // voting (deliberate: nothing is usable yet) and none on
+                                // winning.
                                 blockchainIdentityData.creationState =
-                                    IdentityCreationState.DONE_AND_DISMISS
+                                    IdentityCreationState.DONE
                                 identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                             }
                         }
@@ -2745,7 +2764,10 @@ class PlatformSynchronizationService @Inject constructor(
                 if (resource.status == Status.SUCCESS && resource.data != null) {
                     val domainDocument = DomainDocument(resource.data)
                     if (domainDocument.dashUniqueIdentityId == identityData.identity?.id) {
-                        identityData.creationState = IdentityCreationState.DONE_AND_DISMISS
+                        // DONE so the completion card renders — see the twin in
+                        // checkUsernameVotingStatus. This branch is likewise reachable
+                        // only from VOTING (guarded at the top of checkVotingStatus).
+                        identityData.creationState = IdentityCreationState.DONE
                         identityRepository.updateBlockchainIdentityData(identityData)
                     }
                 } else {
