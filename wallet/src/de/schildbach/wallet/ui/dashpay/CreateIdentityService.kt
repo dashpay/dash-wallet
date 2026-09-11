@@ -1538,10 +1538,20 @@ class CreateIdentityService : LifecycleService() {
                     identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                     identityRepository.updateIdentityCreationState(blockchainIdentityData, domainRegistered)
                 }
+                // MO-973: same cause-dropping as RestoreIdentityWorker — `error(...)`
+                // throws without a cause, so the engine's message never reached the
+                // log. The invite path is rarer, so it would have been even harder to
+                // diagnose from a single report.
                 is SdkWriteResult.NotBroadcast ->
-                    error("invite username registration did not complete (retryable): ${result.reason}")
+                    throw IllegalStateException(
+                        "invite username registration did not complete (retryable): ${result.reason}",
+                        result.cause
+                    )
                 is SdkWriteResult.Ambiguous ->
-                    error("invite username registration outcome unconfirmed (retryable): ${result.cause?.message}")
+                    throw IllegalStateException(
+                        "invite username registration outcome unconfirmed (retryable): ${result.cause?.message}",
+                        result.cause
+                    )
             }
             return
         }

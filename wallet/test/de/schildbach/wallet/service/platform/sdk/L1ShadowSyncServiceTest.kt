@@ -1467,6 +1467,41 @@ class L1ShadowSyncServiceTest {
         service.stop()
     }
 
+    // ── Engine loop-lifecycle reporting ───────────────────────────────
+
+    /**
+     * MO-995: the outage this instruments was 5h28m, reconstructed by hand
+     * from two timestamps 12,000 log lines apart. These are the shapes that
+     * have to read correctly at a glance in a field log.
+     */
+    @Test
+    fun humanDuration_readsAtAGlance() {
+        assertEquals("0s", L1ShadowSyncService.humanDuration(0))
+        assertEquals("47s", L1ShadowSyncService.humanDuration(47_000))
+        assertEquals("3m12s", L1ShadowSyncService.humanDuration(192_000))
+        // The field outage: 10:38:00 -> 16:06:27.
+        assertEquals("5h28m", L1ShadowSyncService.humanDuration(19_707_000))
+        // Sub-second rounds down rather than printing an empty string.
+        assertEquals("0s", L1ShadowSyncService.humanDuration(999))
+    }
+
+    /**
+     * The WARN threshold has to separate a ROUTINE idle-detector bounce from
+     * an OUTAGE, because a WARN on every bounce is a WARN nobody reads. Pinned
+     * against the three real teardowns in the MO-995 log: two bounces (~30s
+     * and ~3min, both recovered) and one outage (5h28m, never recovered until
+     * the process died).
+     */
+    @Test
+    fun longEngineDowntimeThreshold_separatesARoutineBounceFromAnOutage() {
+        val threshold = L1ShadowSyncService.LONG_ENGINE_DOWNTIME_MS
+        // 07:35:00 -> 07:35:26 and 07:38:00 -> 07:38:03: routine, must stay INFO.
+        assertTrue("a ~26s bounce must not warn", 26_000 < threshold)
+        assertTrue("a ~3min bounce must not warn", 180_000 < threshold)
+        // 10:38:00 -> 16:06:27: the outage, must warn.
+        assertTrue("a 5h28m outage must warn", 19_707_000 >= threshold)
+    }
+
     // ── Probe watchdog ────────────────────────────────────────────────
 
     @Test

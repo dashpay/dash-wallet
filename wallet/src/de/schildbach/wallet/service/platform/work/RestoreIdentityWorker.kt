@@ -278,10 +278,20 @@ class RestoreIdentityWorker @AssistedInject constructor(
                         // catch below stamps a generic error — NOT "missing domain
                         // document", so the tile shows the retry card, and restoring
                         // stays true so a retry re-runs THIS worker, never a re-fund).
+                        // MO-973: `error(...)` throws WITHOUT a cause, so the
+                        // engine's own message never reached the log — the
+                        // field report showed only our classifier's label and
+                        // the real reason was unrecoverable. Carry the cause.
                         is SdkWriteResult.NotBroadcast ->
-                            error("username registration did not complete (retryable): ${result.reason}")
+                            throw IllegalStateException(
+                                "username registration did not complete (retryable): ${result.reason}",
+                                result.cause
+                            )
                         is SdkWriteResult.Ambiguous ->
-                            error("username registration outcome unconfirmed (retryable): ${result.cause.message}")
+                            throw IllegalStateException(
+                                "username registration outcome unconfirmed (retryable): ${result.cause.message}",
+                                result.cause
+                            )
                     }
                 }
             }

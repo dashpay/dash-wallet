@@ -43,8 +43,14 @@ class InviteCreationFailureTest {
     fun amountCapRejection_isRejected_andBlocksRetryImmediately() {
         // The exact live shape: classifyBroadcastFailure matched the FFI's
         // "Invalid identity data" message and produced this NotBroadcast.
+        // The reason text mirrors what classifyBroadcastFailure now produces
+        // (MO-973: it carries the engine message instead of glossing every
+        // "Invalid identity data" as an identity-key check). This classifier
+        // reads the reason AND the cause chain, so it still lands on REJECTED
+        // either way — pinned here because that coupling is easy to break.
         val result = SdkWriteResult.NotBroadcast(
-            "pre-broadcast identity-key validation failure",
+            "pre-broadcast identity data rejected by the FFI — " +
+                "Invalid identity data: invitation amount 25000000 exceeds the cap 5000000 duffs",
             RuntimeException(
                 "Invalid identity data: invitation amount 25000000 exceeds the cap 5000000 duffs"
             )
@@ -123,7 +129,10 @@ class InviteCreationFailureTest {
             "SDK bootstrap/bind lookup failed",
             "app wallet not bound to the SDK",
             "cutover state read failed",
-            "signing failure (pre-broadcast): Keystore auth window expired"
+            // MO-972: no longer claims an expiry as fact.
+            "signing failure (pre-broadcast): Keystore refused the identity key as " +
+                "unauthenticated (auth window may have expired, or the device's " +
+                "auth-bound Keystore gate is defective) — User not authenticated"
         )) {
             val kind = classifyInviteCreationFailure(SdkWriteResult.NotBroadcast(reason))
             assertEquals(reason, InviteCreationFailureKind.UNREACHABLE, kind)

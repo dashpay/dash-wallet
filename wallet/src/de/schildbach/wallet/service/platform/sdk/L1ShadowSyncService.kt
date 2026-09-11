@@ -1948,6 +1948,23 @@ class L1ShadowSyncService internal constructor(
     /** The auto-reset decision state (see [ShadowResetDecider] for the table). */
     private val resetDecider = ShadowResetDecider()
 
+    /**
+     * SDK engine loop-lifecycle ledger — see [logEngineDowntimeIfResuming].
+     *
+     * MO-995: `startIfEnabled`/`stop` tear down and relaunch FOUR long-lived
+     * loops (progress monitor, parity probe, watchdog, wallet-event tap), and
+     * nothing recorded how long the engine was actually down. Reconstructing a
+     * 5h28m outage meant diffing timestamps by hand across a 60k-line log.
+     */
+    @Volatile
+    private var startedAtMs = 0L
+
+    @Volatile
+    private var lastStopAtMs = 0L
+
+    @Volatile
+    private var stopCount = 0
+
     /** Once-per-process latch for the startup `WalletHistoryFacts` line. */
     @Volatile
     private var historyFactsLogged = false
@@ -2088,6 +2105,8 @@ class L1ShadowSyncService internal constructor(
                     0L
                 }
                 lastProbeHeartbeatMs = nowMs()
+                logEngineDowntimeIfResuming()
+                startedAtMs = nowMs()
                 monitorJob = scope.launch { monitorProgress() }.logCompletion("progress monitor")
                 parityJob = scope.launch { parityLoop(walletIdHex) }.logCompletion("parity probe loop")
                 watchdogJob = scope.launch { watchdogLoop() }.logCompletion("probe watchdog")
@@ -2129,7 +2148,15 @@ class L1ShadowSyncService internal constructor(
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             _progress.value = ShadowSyncProgress.IDLE
             _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
-            log.info("L1 shadow sync stopped")
+            lastStopAtMs = nowMs()
+            stopCount++
+            log.info(
+                "L1ShadowLifecycle STOPPED after {} up; all four loops torn down " +
+                    "(progress monitor, parity probe, watchdog, wallet-event tap); " +
+                    "teardown #{} this process. Nothing runs until the next startIfEnabled().",
+                if (startedAtMs == 0L) "unknown" else humanDuration(lastStopAtMs - startedAtMs),
+                stopCount
+            )
         }
     }
 
@@ -2519,6 +2546,47 @@ class L1ShadowSyncService internal constructor(
      * logs the cause at WARN (loop bodies catch-and-continue, so a WARN
      * here means the loop machinery itself broke).
      */
+    /**
+     * Report the downtime that is ending, on the start that ends it.
+     *
+     * WHY A CONSUMER-SIDE GAP LINE AND NOT JUST THE STOP LINE: the stop is
+     * already logged, but a stop is only a problem if nothing restarts — and
+     * "nothing restarted" has no log line by construction, because the thing
+     * that would log it is the thing that did not run. Measuring the gap on
+     * the NEXT start needs no timer and no watchdog, and names the outage in
+     * one greppable line.
+     *
+     * MO-995 field evidence (2026-09-02, launch 07:31:56 → 16:09):
+     * `BlockchainServiceImpl - idling detected, stopping service` at 10:38:00
+     * stopped this service, cancelling the progress monitor, the parity probe
+     * loop, the watchdog and the event tap. [progress] is a StateFlow fed by
+     * the cancelled monitor, so it froze at its last value and its consumers
+     * simply stopped being called — for 5h28m, with no line from any of them.
+     * `CutoverAutoCommitObserver` was armed and waiting that whole time and
+     * emitted nothing, which is why the cutover fell through to the next
+     * process start ten hours after the upgrade.
+     *
+     * SURVIVES THE DASHJ RETIREMENT (MO-992): post-retirement these loops are
+     * not a debug shadow's, they are THE engine's, so an unnoticed teardown
+     * stops being a lost readiness signal and becomes a wallet with no L1 at
+     * all. This line is the instrument for that class of bug either way.
+     *
+     * Caller holds [mutex]; called before the loops relaunch. WARN past
+     * [LONG_ENGINE_DOWNTIME_MS] because a routine idle-detector bounce is
+     * seconds-to-minutes — hours means nothing brought the engine back.
+     */
+    private fun logEngineDowntimeIfResuming() {
+        if (lastStopAtMs == 0L) return // first start of this process — no gap to report
+        val downMs = nowMs() - lastStopAtMs
+        val message = "L1ShadowLifecycle RESUMING after {} down (teardown #{} this process); " +
+            "the progress feed and every consumer of it were silent for that whole span"
+        if (downMs >= LONG_ENGINE_DOWNTIME_MS) {
+            log.warn(message, humanDuration(downMs), stopCount)
+        } else {
+            log.info(message, humanDuration(downMs), stopCount)
+        }
+    }
+
     private fun Job.logCompletion(name: String): Job = apply {
         invokeOnCompletion { cause ->
             when (cause) {
@@ -3082,6 +3150,28 @@ class L1ShadowSyncService internal constructor(
          * guarded, sustained divergence; it never resets a healthy view sooner.
          */
         internal const val PARITY_INTERVAL_MS = 10_000L
+
+        /**
+         * Downtime past which [logEngineDowntimeIfResuming] escalates to WARN.
+         * A routine `BlockchainServiceImpl` idle bounce is seconds to minutes
+         * (three in the MO-995 log were ~30s, ~3min and 5h28m); ten minutes
+         * cleanly separates the bounce from the outage.
+         */
+        internal const val LONG_ENGINE_DOWNTIME_MS = 10 * 60 * 1000L
+
+        /** `5h28m` / `3m12s` / `47s` — durations a human reads at a glance. */
+        internal fun humanDuration(ms: Long): String {
+            if (ms < 0) return "${ms}ms"
+            val totalSeconds = ms / 1000
+            val h = totalSeconds / 3600
+            val m = (totalSeconds % 3600) / 60
+            val sec = totalSeconds % 60
+            return when {
+                h > 0 -> "${h}h${m}m"
+                m > 0 -> "${m}m${sec}s"
+                else -> "${sec}s"
+            }
+        }
 
         /**
          * Relaxed probe cadence once the fast cadence's job is done — the
