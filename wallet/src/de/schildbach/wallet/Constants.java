@@ -321,8 +321,9 @@ public final class Constants {
     public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.20");
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
 
-    // 150,000,000
-    public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);
+    // 300,000,000 credits; enough to create an identity, register a non-contested
+    // username and usually send a contact request
+    public static final Coin DASH_PAY_INVITE_MIN = Coin.parseCoin("0.003");
 
     public static boolean IS_TESTNET_BUILD = Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_TESTNET);
 
