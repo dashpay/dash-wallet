@@ -40,6 +40,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 
 /**
  * Host-JVM tests for the [CutoverCoordinator] transitions added for the
@@ -328,18 +329,27 @@ class CutoverCoordinatorTest {
         flag: Boolean? = true,
         bindEverSucceeded: Boolean? = true,
         boundaryAlreadyLatched: Boolean = false,
-        noticeAlreadyArmedEver: Boolean = false
+        noticeAlreadyArmedEver: Boolean = false,
+        // The first N attempts to persist the boundary latch throw, the way a
+        // DataStore write does on a full or corrupt store. Int.MAX_VALUE makes
+        // the key permanently unwritable.
+        boundaryWriteFailures: Int = 0
     ): Triple<CutoverCoordinator, () -> String?, () -> Boolean> {
         var current = stored
         var noticeArmed = false
         var boundaryLatched = boundaryAlreadyLatched
         var noticeEverArmed = noticeAlreadyArmedEver
+        var boundaryWritesLeftToFail = boundaryWriteFailures
         val config = mockk<DashPayConfig>()
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns flag
         coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns bindEverSucceeded
         coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } answers { boundaryLatched }
         coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } answers {
+            if (boundaryWritesLeftToFail > 0) {
+                boundaryWritesLeftToFail--
+                throw IOException("datastore write failed")
+            }
             boundaryLatched = secondArg()
             Unit
         }
@@ -383,6 +393,53 @@ class CutoverCoordinatorTest {
      * shape (previous code 12000001 on a 12000001 build).
      */
     private val sameBuildVersionCode = CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE + 1
+
+    /**
+     * A DROPPED boundary-latch write must not cost the user the explainer.
+     *
+     * The crossing is computable on exactly one launch —
+     * `Configuration.lastVersionCode` is overwritten at every startup — so if
+     * GATE 1's `set(CUTOVER_UPGRADE_BOUNDARY_CROSSED, true)` throws and nothing
+     * else remembers it, the explainer is lost for good: this launch's
+     * `armUpgradeNoticeIfUpgraded` reads the store and sees `false`, and every
+     * later launch computes `crossedNow == false` with nothing on disk to
+     * recover from. Before the fix that is exactly what happened.
+     *
+     * Here the write fails once and the retry at arm time succeeds, so both the
+     * explainer AND the durable latch come out right.
+     */
+    @Test
+    fun upgradeNotice_survivesADroppedBoundaryLatchWrite_andRepersistsIt() = runBlocking {
+        val (coordinator, stored, armed) = noticeCoordinator(
+            stored = null,
+            boundaryWriteFailures = 1
+        )
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertTrue(
+            "a dropped latch write must not cost the user the one-time explainer",
+            armed()
+        )
+    }
+
+    /**
+     * The same dropped write, but the store NEVER accepts the key. The
+     * in-memory record still carries this launch, which is all that can be
+     * salvaged: if the store is permanently unwritable then the explainer's own
+     * flags cannot be written either, so there is no durable outcome to assert.
+     * What must NOT happen is silently skipping the explainer while the cutover
+     * commits anyway.
+     */
+    @Test
+    fun upgradeNotice_armedFromMemory_whenTheBoundaryLatchNeverPersists() = runBlocking {
+        val (coordinator, stored, armed) = noticeCoordinator(
+            stored = null,
+            boundaryWriteFailures = Int.MAX_VALUE
+        )
+        coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertTrue("the launch that observed the crossing must still arm", armed())
+    }
 
     @Test
     fun upgradeNotice_armed_onAGenuineUpgradeFromPre1110ThatFlipsTheState() = runBlocking {

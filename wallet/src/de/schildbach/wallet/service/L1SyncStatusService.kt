@@ -422,10 +422,14 @@ internal fun mergeL1SyncDetail(
         // it. (My earlier note here claimed "nothing persists a filter height";
         // that was wrong.)
         //
-        // The target takes the SAME floors as the height, so the pair can never
-        // render as height > target. Deliberately NOT the persisted header tip:
-        // that would report a target the filter pipeline never received, and it
-        // is not needed for the invariant.
+        // The target takes every floor the height takes AND the height's own
+        // raw value, so the pair can never render as height > target. (The
+        // shared floors alone are not enough: both branches read the same
+        // `data.filters` snapshot, so they cannot drift apart, but an engine
+        // that reported currentHeight > targetHeight in one snapshot would
+        // still invert the pair here.) Deliberately NOT the persisted header
+        // tip: that would report a target the filter pipeline never received,
+        // and it is not needed for the invariant.
         filterHeight = if (idleOrConnecting) {
             maxOf(progress.filterHeight, lastKnownFilterHeight, progress.walletSyncedHeight)
         } else {
@@ -436,7 +440,12 @@ internal fun mergeL1SyncDetail(
                 progress.filterTarget,
                 lastKnownFilterTarget,
                 progress.walletSyncedHeight,
-                lastKnownFilterHeight
+                lastKnownFilterHeight,
+                // ...including the raw height itself, which the floors above
+                // do NOT subsume: if the engine ever reports currentHeight >
+                // targetHeight in one snapshot, every other term here can sit
+                // below it and the pair would render inverted.
+                progress.filterHeight
             )
         } else {
             progress.filterTarget

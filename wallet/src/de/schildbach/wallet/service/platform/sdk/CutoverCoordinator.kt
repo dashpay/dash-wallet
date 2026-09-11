@@ -230,6 +230,26 @@ class CutoverCoordinator @Inject constructor(
     private var freshWalletSetupThisLaunch = false
 
     /**
+     * Set when this launch observed the cutover boundary crossing but could
+     * NOT persist [DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED].
+     *
+     * The crossing is visible for exactly one launch — `Configuration
+     * .lastVersionCode` is overwritten on every startup — so a dropped write
+     * would otherwise lose the upgrade explainer permanently: this launch's
+     * [armUpgradeNoticeIfUpgraded] reads the store and sees `false`, and every
+     * later launch computes `crossedNow == false` with nothing on disk to
+     * recover it from.
+     *
+     * This keeps the fact in memory so the current launch can still arm, and
+     * so the persist can be retried at arm time. It is NOT a substitute for
+     * the latch: if the store is permanently unwritable the explainer's own
+     * flags cannot be written either, so there is nothing left to salvage.
+     * The case it does cover is the transient one.
+     */
+    @Volatile
+    private var boundaryCrossingUnpersisted = false
+
+    /**
      * The UPGRADE seam's counterpart to [commitForFreshWalletSetupAsync]:
      * same commit, but it additionally arms the one-time sync explainer
      * ([DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING]) when — and only when —
@@ -298,7 +318,15 @@ class CutoverCoordinator @Inject constructor(
                     dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, true)
                 }.onFailure {
                     if (it is CancellationException) throw it
-                    log.warn("failed to latch the cutover boundary crossing", it)
+                    // Remember it in memory: the crossing is observable on this
+                    // launch only, so dropping it here costs the explainer for
+                    // good. Retried in armUpgradeNoticeIfUpgraded.
+                    boundaryCrossingUnpersisted = true
+                    log.warn(
+                        "failed to latch the cutover boundary crossing — holding it in memory " +
+                            "for this launch and retrying when the cutover commits",
+                        it
+                    )
                 }
             }
             val crossedEver = crossedNow || runCatching {
@@ -370,11 +398,36 @@ class CutoverCoordinator @Inject constructor(
     private suspend fun armUpgradeNoticeIfUpgraded(committedBy: String) {
         // Only an install that genuinely crossed the cutover boundary is owed
         // the explainer. GATE 1 in commitForUpgradedWalletAsync latches this
-        // BEFORE it attempts its commit, so it is already persisted by the time
-        // a later auto-commit reads it on the same launch.
-        val upgraded = runCatching {
+        // BEFORE it attempts its commit, so it is normally already persisted by
+        // the time a later auto-commit reads it on the same launch.
+        val persisted = runCatching {
             dashPayConfig.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) == true
         }.getOrDefault(false)
+
+        // ...normally. If GATE 1's write failed, the store says `false` even
+        // though this launch genuinely crossed the boundary. Fall back to the
+        // in-memory record and retry the persist, so a transient DataStore
+        // failure costs the user nothing: without this, the explainer is lost
+        // permanently, because no later launch can recompute the crossing.
+        val upgraded = if (persisted) {
+            true
+        } else if (boundaryCrossingUnpersisted) {
+            runCatching {
+                dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, true)
+            }.onSuccess {
+                boundaryCrossingUnpersisted = false
+                log.info("re-latched the cutover boundary crossing that failed to persist earlier")
+            }.onFailure {
+                if (it is CancellationException) throw it
+                // Arming still proceeds on the in-memory record below. If the
+                // store is this broken the explainer's own flags will not
+                // write either, and armUpgradeNoticeOnce logs that failure.
+                log.warn("failed to re-latch the cutover boundary crossing; arming from memory", it)
+            }
+            true
+        } else {
+            false
+        }
         if (!upgraded) return
         if (freshWalletSetupThisLaunch) {
             log.info(

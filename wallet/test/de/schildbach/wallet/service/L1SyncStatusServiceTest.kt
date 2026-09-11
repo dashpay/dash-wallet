@@ -952,4 +952,38 @@ class L1SyncStatusServiceTest {
         )
         assertEquals("a real rewind must show honestly", 1_252_305L, detail.filterHeight)
     }
+
+    /**
+     * The height/target pair must hold even when the ENGINE hands us an
+     * inverted one. Both fields are read off the same `data.filters` snapshot
+     * in `L1ShadowSyncService.toShadowSyncProgress`, so they cannot drift
+     * apart — but nothing clamps them either, so a snapshot reporting
+     * currentHeight > targetHeight would arrive here intact.
+     *
+     * Before the fix the target's `maxOf` took every floor the height took
+     * EXCEPT the height's own raw value, so exactly this input rendered as
+     * 2_533_400/2_533_349 — a progress row reading past 100%.
+     */
+    @Test
+    fun detail_filterTargetNeverTrailsTheHeight_onAnInvertedEngineSnapshot() {
+        val detail = mergeL1SyncDetail(
+            sdkOwnsL1 = true,
+            progress = progress(
+                phase = ShadowSyncPhase.IDLE,
+                headerHeight = 0, headerTarget = 0,
+                // The engine reports a scan position AHEAD of its own target.
+                filterHeight = 2_533_400, filterTarget = 2_533_349,
+                walletSyncedHeight = 2_533_349
+            ),
+            sessionChainLockHeight = 0,
+            state = null,
+            lastKnownFilterHeight = 0,
+            lastKnownFilterTarget = 0
+        )
+        assertEquals(2_533_400L, detail.filterHeight)
+        assertTrue(
+            "target ${detail.filterTarget} must not trail height ${detail.filterHeight}",
+            detail.filterTarget >= detail.filterHeight
+        )
+    }
 }
