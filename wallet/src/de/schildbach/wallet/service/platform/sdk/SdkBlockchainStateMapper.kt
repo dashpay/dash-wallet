@@ -80,8 +80,13 @@ internal data class SdkBlockchainStateUpdate(
     val percentageSync: Int?,
     /** Masternode-list sync height, or null (unknown — preserve). */
     val mnListHeight: Int?,
-    /** Neutral sync stage for [org.dash.wallet.common.services.BlockchainStateProvider.observeSyncStage]. */
-    val syncStage: SyncStage,
+    /**
+     * Neutral sync stage for
+     * [org.dash.wallet.common.services.BlockchainStateProvider.observeSyncStage],
+     * or null (preserve the current stage) on a snapshot that must not move it —
+     * see [sdkSyncStageOrPreserve].
+     */
+    val syncStage: SyncStage?,
     /**
      * Whether a NETWORK impediment should be derived: the SDK has no
      * dashj-style impediment events, so a stalled/errored scan is the
@@ -178,6 +183,42 @@ internal fun sdkSyncStage(phase: ShadowSyncPhase): SyncStage = when (phase) {
 }
 
 /**
+ * [sdkSyncStage], but returning null to mean "leave the stage where it is" when
+ * the snapshot says the scan has nothing left to do.
+ *
+ * The defect this fixes is the stage and the percent disagreeing.
+ * `percentageSync` is written from [shadowSyncPercent], which claims 100 as soon
+ * as the filter scan has caught up to the header tip — but the engine does not
+ * latch SYNCED (every new block bumps the targets and drops it back to a scan
+ * phase). So a fully-synced wallet keeps flipping SYNCED → FILTERS → SYNCED, and
+ * because the stage was written unconditionally it regressed to BLOCKS while the
+ * percent stayed 100. The home screen rendered that pair as "syncing 100%" while
+ * Tools, reading the row, still said synced.
+ *
+ * Field evidence (MO-973 report 3, Samsung, 2026-09-11): 59 such blips on a
+ * wallet synced for hours, e.g. `FILTERS 100.0%` at 13:45:13 → `SYNCED` at
+ * 13:45:14.
+ *
+ * Deliberately narrow — [scanPercent] is [shadowSyncPercent], which already reads
+ * 0 for IDLE / CONNECTING / ERROR, so those can never take the preserve branch:
+ * - ERROR keeps reporting OFFLINE. That is how the fault is surfaced, alongside
+ *   the stall impediment (pinned by `derive_errorPreservesPercentage`).
+ * - IDLE / CONNECTING keep reporting OFFLINE. A cold reconnect knows no heights
+ *   at all and must read offline, not "still synced" (pinned by
+ *   `derive_noHeightKnowledgePreservesHeightAndDate`).
+ * - a genuine re-scan caps at 99 and still moves the stage normally.
+ * - SYNCED always reports COMPLETE outright; reaching the terminal state is never
+ *   suppressed.
+ *
+ * Pure — host-testable.
+ */
+internal fun sdkSyncStageOrPreserve(phase: ShadowSyncPhase, scanPercent: Int): SyncStage? = when {
+    phase == ShadowSyncPhase.SYNCED -> SyncStage.COMPLETE
+    scanPercent >= 100 -> null
+    else -> sdkSyncStage(phase)
+}
+
+/**
  * The full field derivation — one snapshot to one row update. Field notes:
  * - bestChainHeight: the SDK header tip ([ShadowSyncProgress.headerHeight]),
  *   dashj's `chainHead.height` analogue; preserved while 0 (no knowledge).
@@ -236,6 +277,17 @@ internal fun deriveBlockchainStateUpdate(
                 .coerceAtMost(tipTimeMs)
         else -> null
     }
+    // The raw scan percent drives the stage; percentageSync is that same value
+    // with the "no trustworthy position" phases nulled out (preserve). Sharing
+    // one source is what stops the two fields disagreeing about whether the scan
+    // still has work to do.
+    val scanPercent = shadowSyncPercent(p)
+    val percent = when (p.phase) {
+        ShadowSyncPhase.ERROR,
+        ShadowSyncPhase.IDLE,
+        ShadowSyncPhase.CONNECTING -> null
+        else -> scanPercent
+    }
     return SdkBlockchainStateUpdate(
         bestChainHeight = bestChainHeight,
         bestChainDateMs = bestChainDateMs,
@@ -245,14 +297,9 @@ internal fun deriveBlockchainStateUpdate(
         // previously-synced bar 99→0 (the restart sawtooth). Same
         // "don't regress on unknown" treatment bestChainHeight already gets;
         // only real scan phases (and a genuine ERROR → null) move it.
-        percentageSync = when (p.phase) {
-            ShadowSyncPhase.ERROR,
-            ShadowSyncPhase.IDLE,
-            ShadowSyncPhase.CONNECTING -> null
-            else -> shadowSyncPercent(p)
-        },
+        percentageSync = percent,
         mnListHeight = p.mnListHeight.takeIf { it > 0 }?.toInt(),
-        syncStage = sdkSyncStage(p.phase),
+        syncStage = sdkSyncStageOrPreserve(p.phase, scanPercent),
         networkStalled = snapshot.stalled,
         // 0 = "no chainlock observed this session" — preserve, exactly like
         // the other unknown-is-null fields; never claim height 0.

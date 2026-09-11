@@ -346,6 +346,7 @@
     <string name="request_username_unavailable">Username is unavailable or blocked</string>
     <string name="request_username_taken">Username is taken</string>
     <string name="username_check_failed">Couldn\'t verify username availability. Check your connection and try again.</string>
+    <string name="request_username_same_as_contested">Your instant username must be different from the contested one</string>
     <!-- Advisory network-health warning on the username entry screen (never blocks submission) -->
     <string name="username_network_slow_warning">The network is running slower than usual right now. Your request may take longer than normal.</string>
     <string name="request_username_taken_results">Username was taken by another user</string>
