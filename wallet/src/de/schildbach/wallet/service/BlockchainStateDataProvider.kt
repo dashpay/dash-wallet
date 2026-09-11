@@ -186,7 +186,10 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainState.replaying = false
             blockchainState.impediments = composeImpediments()
             blockchainStateDao.saveState(blockchainState)
-            syncStageFlow.value = update.syncStage
+            // Null stage preserves the current one — the same discipline the
+            // percent above has, so a momentary phase blip on an already-synced
+            // wallet cannot render as "syncing 100%". See sdkSyncStageOrPreserve.
+            update.syncStage?.let { syncStageFlow.value = it }
         }
     }
 
