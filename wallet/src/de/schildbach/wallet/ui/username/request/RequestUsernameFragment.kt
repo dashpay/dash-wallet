@@ -395,8 +395,17 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // (usernameCheckSuccess is false), but a lookup failure has
                 // to SAY so — silence here read as "available" before the
                 // check was made fail-closed.
-                binding.usernameAvailableContainer.isVisible = it.usernameCheckFailed
-                if (it.usernameCheckFailed) {
+                // Same fail-closed surface for the instant name that is really
+                // the contested one again (MO-973 report 3): the button is already
+                // disabled, but silence would read as "still typing" when the
+                // screen pre-filled the primary and the user pressed on.
+                binding.usernameAvailableContainer.isVisible =
+                    it.usernameCheckFailed || it.secondaryNameSameAsPrimary
+                if (it.secondaryNameSameAsPrimary) {
+                    binding.usernameAvailableMessage.text =
+                        getString(R.string.request_username_same_as_contested)
+                    binding.checkAvailable.setImageResource(getCheckMarkImage(false, false))
+                } else if (it.usernameCheckFailed) {
                     binding.usernameAvailableMessage.text = getString(R.string.username_check_failed)
                     binding.checkAvailable.setImageResource(getCheckMarkImage(false, false))
                 }

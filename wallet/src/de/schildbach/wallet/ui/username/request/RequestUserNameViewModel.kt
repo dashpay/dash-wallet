@@ -127,6 +127,11 @@ data class RequestUserNameUIState(
     val usernameSubmittedAmbiguous: Boolean = false,
     val usernameLengthValid: Boolean = false,
     val usernameCharactersValid: Boolean = false,
+    /**
+     * The INSTANT (secondary) name is the same DPNS name as the contested
+     * primary — see [secondaryNameCollidesWithPrimary]. Blocks submission.
+     */
+    val secondaryNameSameAsPrimary: Boolean = false,
     val usernameTooShort: Boolean = true,  // default zero length username
     val usernameContestable: Boolean = false,
     val usernameContested: Boolean = false,
@@ -1599,12 +1604,24 @@ class RequestUserNameViewModel @Inject constructor(
         val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
         val contestable = Names.isUsernameContestable(username)
 
+        // MO-973 report 3: the instant (secondary) screen PRE-FILLS the input with
+        // the contested primary and only enforces `startsWith(primary)` — nothing
+        // requires a suffix, the suffix-character rule is commented out, and the
+        // clear button puts the bare primary back. So the field can sit at exactly
+        // the primary name, which is not a second name at all: DPNS would reject
+        // the duplicate, and the usual availability query cannot catch it because a
+        // contested name is absent from the unique index until its vote resolves.
+        // Compare NORMALIZED labels so homoglyph collisions (o/0, i/l/1) count too.
+        val sameAsPrimary = usernameType == UsernameType.Secondary &&
+            secondaryNameCollidesWithPrimary(username, requestedUserName)
+
         lastGateUsername = username
         val gate = computeBalanceGate(username, contestable)
         _uiState.update {
             it.copy(
                 usernameLengthValid = validLength,
                 usernameCharactersValid = validCharacters && !startOrEndWithHyphen,
+                secondaryNameSameAsPrimary = sameAsPrimary,
                 usernameContestable = contestable,
                 enoughBalance = gate.enoughBalance,
                 requiredAmount = gate.requiredAmount,
@@ -1618,7 +1635,7 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameNonContestedChars = validateNonContestedUsernameCharacters(username)
             )
         }
-        return validCharacters && validLength
+        return validCharacters && validLength && !sameAsPrimary
     }
 
     @Throws(NullPointerException::class)
@@ -1703,3 +1720,25 @@ class RequestUserNameViewModel @Inject constructor(
                 } == true
     }
 }
+
+/**
+ * Is [secondary] — the INSTANT username — the same DPNS name as the contested
+ * [primary]?
+ *
+ * The instant name exists to be usable immediately while the contested one is in
+ * voting, so it must be a DIFFERENT name. The request screen pre-fills it with the
+ * primary and expects a suffix (contested `gffh` + instant `gffh-2`), but nothing
+ * required the suffix to be there.
+ *
+ * Compared on the DPNS-NORMALIZED label (`Names.normalizeString`: lowercase,
+ * o→0, i/l→1) because that, not the typed text, is what the contract's unique
+ * index keys on — `asdo` and `asd0` are the same name to DPNS and must collide
+ * here too.
+ *
+ * A null/blank primary means there is nothing to collide with (single-name flow).
+ *
+ * Pure — host-testable.
+ */
+internal fun secondaryNameCollidesWithPrimary(secondary: String, primary: String?): Boolean =
+    !primary.isNullOrBlank() && secondary.isNotBlank() &&
+        Names.normalizeString(secondary) == Names.normalizeString(primary)

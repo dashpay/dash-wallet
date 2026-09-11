@@ -581,7 +581,7 @@ private fun TransferHintOrError(uiState: ShieldedTransferUIState) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         when {
-            uiState.insufficientFunds -> {
+            uiState.showInsufficientFunds -> {
                 Text(
                     text = stringResource(R.string.shielded_error_insufficient_funds),
                     style = MyTheme.Typography.BodyMedium,
