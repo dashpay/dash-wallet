@@ -21,6 +21,7 @@ import de.schildbach.wallet.database.dao.IconBitmapDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
+import de.schildbach.wallet.database.dao.TransactionRecordsDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -52,6 +53,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
     private lateinit var giftCardDao: GiftCardDao
     private lateinit var cacheDao: TransactionMetadataChangeCacheDao
     private lateinit var metadataDao: TransactionMetadataDao
+    private lateinit var recordsDao: TransactionRecordsDao
     private lateinit var walletData: WalletDataProvider
     private lateinit var wallet: Wallet
     private lateinit var provider: WalletTransactionMetadataProvider
@@ -64,6 +66,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
         giftCardDao = mockk(relaxed = true)
         cacheDao = mockk(relaxed = true)
         metadataDao = mockk(relaxed = true)
+        recordsDao = mockk(relaxed = true)
         wallet = mockk(relaxed = true)
         walletData = mockk(relaxed = true)
         every { walletData.wallet } returns wallet
@@ -74,6 +77,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             iconBitmapDao = mockk<IconBitmapDao>(relaxed = true),
             walletData = walletData,
             giftCardDao = giftCardDao,
+            transactionRecordsDao = recordsDao,
             swapOrderDao = mockk<SwapOrderDao>(relaxed = true),
             transactionMetadataChangeCacheDao = cacheDao,
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),
@@ -299,37 +303,32 @@ class WalletTransactionMetadataProviderGiftCardTest {
     // ==================== forgetTransaction ====================
 
     @Test
-    fun `forgetTransaction discards cards, queued platform changes and metadata`() = runTest {
-        coEvery { giftCardDao.getCardCountForTransaction(txId) } returns 2
+    fun `forgetTransaction discards every record in one database transaction`() = runTest {
+        coEvery { recordsDao.forgetTransaction(txId) } returns 2
 
         provider.forgetTransaction(txId)
 
-        coVerify { giftCardDao.removeCardsForTransaction(txId) }
-        coVerify { cacheDao.removeByTxId(txId) }
-        coVerify { metadataDao.remove(txId) }
-    }
-
-    @Test
-    fun `forgetTransaction still clears metadata when there were no gift cards`() = runTest {
-        coEvery { giftCardDao.getCardCountForTransaction(txId) } returns 0
-
-        provider.forgetTransaction(txId)
-
-        coVerify(exactly = 0) { giftCardDao.removeCardsForTransaction(any()) }
-        coVerify { cacheDao.removeByTxId(txId) }
-        coVerify { metadataDao.remove(txId) }
+        // one atomic call covers the cards, the queued platform changes and the metadata
+        coVerify(exactly = 1) { recordsDao.forgetTransaction(txId) }
     }
 
     @Test
     fun `forgetTransaction refuses to touch a transaction the wallet holds`() = runTest {
         // the payment did reach the network after all: this is real user data
         every { wallet.getTransaction(txId) } returns mockk<Transaction>(relaxed = true)
-        coEvery { giftCardDao.getCardCountForTransaction(txId) } returns 1
 
         provider.forgetTransaction(txId)
 
-        coVerify(exactly = 0) { giftCardDao.removeCardsForTransaction(any()) }
-        coVerify(exactly = 0) { cacheDao.removeByTxId(any()) }
-        coVerify(exactly = 0) { metadataDao.remove(any()) }
+        coVerify(exactly = 0) { recordsDao.forgetTransaction(any()) }
+    }
+
+    @Test
+    fun `forgetTransaction does nothing when no wallet is available to confirm absence`() = runTest {
+        // cannot tell "never broadcast" from "cannot check right now", so fail closed
+        every { walletData.wallet } returns null
+
+        provider.forgetTransaction(txId)
+
+        coVerify(exactly = 0) { recordsDao.forgetTransaction(any()) }
     }
 }

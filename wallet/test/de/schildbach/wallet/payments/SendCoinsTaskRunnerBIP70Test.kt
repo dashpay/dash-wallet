@@ -893,11 +893,13 @@ class SendCoinsTaskRunnerBIP70Test {
 
     @Test
     fun `sendDirectPayment does not quarantine when the host cannot be resolved`() = runTest {
-        // Given: a payment URL whose host does not exist - the request never leaves the device
+        // Given: a payment URL whose host cannot resolve, so the request never leaves the device.
+        // RFC 2606 reserves the .invalid TLD; a made-up TLD can be answered by a wildcard
+        // resolver, which would turn this into a connect/TLS failure and be classified ambiguous.
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
         val testAmount = Coin.parseCoin("0.01")
         val paymentIntent = createBip70PaymentIntent(
-            testAddress, testAmount, "https://payment.invalid.dash-wallet-test/payment"
+            testAddress, testAmount, "https://payment.dash-wallet-test.invalid/payment"
         )
         val sendRequest = createTestSendRequest(testAddress, testAmount)
 

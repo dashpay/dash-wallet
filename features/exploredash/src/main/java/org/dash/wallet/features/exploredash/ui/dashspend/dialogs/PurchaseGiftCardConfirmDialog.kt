@@ -478,8 +478,15 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             }
             val transactionId = createSendingRequestFromDashUri(dashPaymentUrl, data)
             transactionId?.let {
-                enterAmountViewModel.clearSavedState()
-                viewModel.saveGiftCardDummy(transactionId, data)
+                // saveGiftCardDummy awaits the insert, so a database failure would otherwise
+                // abort this coroutine and leave the user on the purchase screen with no
+                // feedback, even though the payment succeeded.
+                try {
+                    viewModel.saveGiftCardDummy(transactionId, data)
+                    enterAmountViewModel.clearSavedState()
+                } catch (e: Exception) {
+                    log.error("could not save gift cards for {}", transactionId, e)
+                }
                 showGiftCardDetailsDialog(transactionId)
             }
         }
@@ -513,9 +520,13 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             // with the only copy of the order details. If the wallet later proves the payment
             // never arrived, PendingDirectPaymentVerifier removes these rows again.
             try {
-                enterAmountViewModel.clearSavedState()
+                // Persist first: clearing the entered amount discards the last copy of this
+                // order held anywhere, so it must not happen until the rows are written.
                 viewModel.saveGiftCardsForPendingPayment(ex.txId, giftCards)
+                enterAmountViewModel.clearSavedState()
             } catch (e: Exception) {
+                // Keep the saved state so the order details are not lost as well, and still tell
+                // the user the payment status is unknown - that matters more than this failure.
                 log.error("could not save gift cards for pending payment {}", ex.txId, e)
             }
             hideLoading()

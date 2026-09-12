@@ -106,7 +106,15 @@ class PendingDirectPaymentVerifier @Inject constructor(
             createdAt = System.currentTimeMillis()
         )
         lockInputs(wallet, tx)
-        config.add(payment)
+        try {
+            config.add(payment)
+        } catch (e: Exception) {
+            // The locks live in memory only, and without a persisted record resume() could never
+            // find them again: they would strand these outputs until the process restarts.
+            log.error("could not persist pending direct payment {}, releasing its inputs", tx.txId, e)
+            unlockInputs(wallet, tx)
+            throw e
+        }
         log.info("quarantined possibly-sent tx {} ({} inputs locked)", tx.txId, tx.inputs.size)
         return track(tx, payment)
     }
