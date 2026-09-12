@@ -214,10 +214,12 @@ class SdkDashPayWritesTest {
      * MO-972: the reason must not ASSERT an expiry nobody measured. Field log
      * (2026-09-10, testnet 12000007, HONOR PTP-N49): biometric authentication
      * at 11:49:16, this failure at 11:49:17 — one second — reported as
-     * "Keystore auth window expired". On that OEM the auth-bound Keystore gate
-     * is defective, the same defect family as the false-locked master alias;
-     * the window was not the problem and the label sent diagnosis the wrong
-     * way.
+     * "Keystore auth window expired". There was no window to expire: this app
+     * runs KeySecurityPolicy.DEVICE_BOUND, which has no auth gate. What that
+     * OEM actually denies is the UNLOCKED_DEVICE_REQUIRED gate, which Android
+     * reports with the identical exception — the same defect family as the
+     * false-locked master alias. The label sent diagnosis the wrong way for
+     * weeks.
      */
     @Test
     fun classify_userNotAuthenticated_doesNotClaimTheWindowExpired() {
@@ -242,14 +244,54 @@ class SdkDashPayWritesTest {
         )
     }
 
+    /**
+     * MO-972, the other half: dashpay/platform#4643 classifies the
+     * unlocked-device denial SDK-side, so the message that reaches us names
+     * the alias and the KeyguardManager state instead of saying "User not
+     * authenticated". Without an arm of its own this shape falls through to
+     * the generic handling and the failure gets LESS legible than before the
+     * SDK fix.
+     */
+    @Test
+    fun classify_keystoreDeviceLockedDenial_isNotBroadcastAndNamesTheGate() {
+        // Verbatim shape of KeystoreDeviceLockedException's message, as it
+        // arrives wrapped by the FFI.
+        val liveShape = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "SDK error: Protocol error: Generic Error: Keystore denied 'decrypt' on " +
+                "lock-bound alias 'org.dashfoundation.wallet.keys.devicebound' as " +
+                "device-locked; KeyguardManager at throw time: isDeviceLocked=false " +
+                "isKeyguardLocked=false (FALSE-LOCKED: device reports unlocked but " +
+                "Keystore denied — Keystore2 lock-state misreporting; retryable " +
+                "immediately)"
+        )
+
+        val result = classifyBroadcastFailure(liveShape)
+
+        assertTrue("must be NotBroadcast, got $result", result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(
+            "must say the device was considered locked, got: $reason",
+            reason.contains("considers the device locked")
+        )
+        assertFalse(
+            "must not blame an auth window this policy does not have, got: $reason",
+            reason.contains("auth window expired")
+        )
+        assertTrue(
+            "must carry the alias so the log says WHICH key, got: $reason",
+            reason.contains("keys.devicebound")
+        )
+        assertSame(liveShape, result.cause)
+    }
+
     @Test
     fun classify_keystoreAuthWindowExpiry_isNotBroadcast() {
-        // The live S22 failure: the SDK's AUTH_GATED Keystore threw
-        // UserNotAuthenticatedException while decrypting the identity key to
-        // SIGN the state transition — signing runs during transition
-        // construction, strictly before broadcast, so nothing was submitted
-        // and the dashj fallback is safe. Message-matched until platform
-        // PR #4060 (DEVICE_BOUND keys) gives this a typed error.
+        // Pre-#4643 AAR lines (denial still unclassified), plus the genuinely
+        // auth-gated paths that survive on an install predating the
+        // DEVICE_BOUND switch. Signing runs during transition construction,
+        // strictly before broadcast, so nothing was submitted and the dashj
+        // fallback is safe.
         val liveShapes = listOf<Throwable>(
             DashSdkError.PlatformWallet.Generic(
                 5000,
