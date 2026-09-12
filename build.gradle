@@ -9,7 +9,12 @@ buildscript {
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
         // cutover hands L1 ownership to the SDK.
         dashSdkVersion = '0.1.0-v42int5'
-        dppVersion = "4.0.0"
+        // 4.0.1 fixes the CBOR crash that aborted every identity read:
+        // IdentityPublicKey.toObject() put the raw ContractBounds object
+        // (SingleContractDocumentType) into the map handed to Cbor, which has
+        // no converter for it -> IllegalArgumentException("No converter for ...").
+        // 4.0.1 calls this.toObject() first. Cbor.kt itself is unchanged.
+        dppVersion = "4.0.1-SNAPSHOT"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'

@@ -118,4 +118,45 @@ class HelloCardEligibleTest {
             )
         )
     }
+
+    // ── MO-973: winning a contested vote must surface the completion card ──
+
+    /**
+     * A contested-ONLY creation showed no card at ANY point: none during voting
+     * (deliberate — nothing is usable yet, its status lives on the More screen),
+     * and none on winning, because both contested-win paths in PlatformSyncService
+     * wrote DONE_AND_DISMISS and skipped DONE entirely. Observed live on
+     * `test-contested-1000` and `test-contested-1001`, each going straight
+     * VOTING -> DONE_AND_DISMISS. So the user waits out the vote (90 min on
+     * testnet, two weeks on mainnet), wins, and is never told.
+     *
+     * Those paths now land on DONE — the state this test pins as card-visible.
+     */
+    @Test
+    fun `a won contested name lands on DONE and shows the completion card`() {
+        // No secondary: the contested-only case that previously saw nothing.
+        assertTrue(helloCardEligible(data(IdentityCreationState.DONE), false))
+    }
+
+    /** The regression itself: the old terminal state renders nothing. */
+    @Test
+    fun `the old DONE_AND_DISMISS terminal state would have shown no card`() {
+        assertFalse(helloCardEligible(data(IdentityCreationState.DONE_AND_DISMISS), false))
+    }
+
+    /**
+     * A DUAL creation already showed the voting card via the instant-username
+     * branch; on winning it must still show the completion card, even if that
+     * earlier voting card had been dismissed — the win is a new event.
+     */
+    @Test
+    fun `a won dual creation still shows the card after the voting card was dismissed`() {
+        assertTrue(
+            helloCardEligible(
+                data(IdentityCreationState.DONE, usernameSecondary = "alice-2"),
+                true
+            )
+        )
+    }
+
 }
