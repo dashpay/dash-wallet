@@ -92,7 +92,6 @@ import javax.inject.Inject
 import kotlin.math.max
 
 data class RequestUserNameUIState(
-    val usernameVerified: Boolean = false,
     val usernameRequestSubmitting: Boolean = false,
     val usernameRequestSubmitted: Boolean = false,
     val checkingUsername: Boolean = false,
@@ -1215,29 +1214,6 @@ class RequestUserNameViewModel @Inject constructor(
         viewModelScope.launch { refreshFundingNoteAnchor() }
     }
 
-    /**
-     * Consume the one-shot [RequestUserNameUIState.usernameVerified] signal.
-     *
-     * `verify()` sets that flag from a DIFFERENT fragment
-     * ([de.schildbach.wallet.ui.username.request.VerifyIdentityFragment]), and the
-     * request screen reacts by raising the confirm dialog — so it is an EVENT, but
-     * it was stored as sticky state and nothing ever cleared it. This view model is
-     * activity-scoped, so the flag then outlived the screen that handled it, and
-     * `Flow.observe` re-subscribes on every STARTED transition
-     * (`repeatOnLifecycle`), which replays the StateFlow's current value. The
-     * result was the dialog re-firing on a LATER screen in the flow — reported on
-     * the instant-username step, where it appeared immediately and left the input
-     * unusable — and again every time the dialog was closed.
-     *
-     * Clearing it as soon as it has been acted on makes a replay inert while
-     * leaving the legitimate verify → confirm hand-off intact.
-     */
-    fun onUsernameVerifiedHandled() {
-        if (_uiState.value.usernameVerified) {
-            _uiState.update { it.copy(usernameVerified = false) }
-        }
-    }
-
     private fun resetUiForRetrySubmit() {
         _uiState.update {
             it.copy(
@@ -1353,11 +1329,6 @@ class RequestUserNameViewModel @Inject constructor(
                         usernameRequestDao.update(usernameRequest)
                     }
                 }
-            }
-            _uiState.update {
-                it.copy(
-                    usernameVerified = true
-                )
             }
         }
     }

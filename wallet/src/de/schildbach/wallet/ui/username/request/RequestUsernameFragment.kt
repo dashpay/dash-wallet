@@ -388,31 +388,29 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 binding.shieldedWaitContainer.isVisible =
                     buttonState == UsernameSubmitButtonState.PreparingShielded
 
-                // The input is locked only while a submit is in flight or while the
-                // confirm dialog is being raised. Both branches used to set
-                // isFocusable = false and NOTHING ever set it back, so once either
-                // fired the screen was inert — closing the dialog left a field that
-                // could not be typed in and a button that could not be reached, with
-                // back as the only way out. Drive it from the state each emission
-                // instead, so it is restored as soon as the condition clears.
-                val inputLocked = it.usernameRequestSubmitting || it.usernameVerified
-                binding.usernameInput.isFocusable = !inputLocked
-                binding.usernameInput.isFocusableInTouchMode = !inputLocked
-                if (inputLocked) {
+                // The confirm dialog is raised by USER ACTION only — the Continue
+                // button (onContinue), skipping the verify prompt, and
+                // VerifyIdentityFragment's own call right after verify(). There
+                // used to be a fourth trigger here, firing off observed state
+                // whenever `usernameVerified` was seen true, and it was the odd one
+                // out: the flag is sticky on an ACTIVITY-scoped view model and
+                // `Flow.observe` replays the StateFlow on every STARTED transition
+                // (repeatOnLifecycle), so a later screen in the flow received a
+                // stale true and raised the dialog by itself — on the
+                // instant-username step, unbidden. It was also redundant: the verify
+                // path it existed to resume already opens the dialog from
+                // VerifyIdentityFragment before navigating back.
+                //
+                // The input is locked only while a submit is actually in flight.
+                // This used to latch isFocusable = false with nothing anywhere
+                // setting it back, so once it fired the screen was inert — the field
+                // could not be typed in and back was the only way out. Derive it from
+                // the state each emission so it is restored the moment the submit
+                // ends.
+                binding.usernameInput.isFocusable = !it.usernameRequestSubmitting
+                binding.usernameInput.isFocusableInTouchMode = !it.usernameRequestSubmitting
+                if (it.usernameRequestSubmitting) {
                     hideKeyboard()
-                }
-
-                if (it.usernameVerified) {
-                    // One-shot. `verify()` sets this from VerifyIdentityFragment and
-                    // this screen is what acts on it, but the flag was sticky on an
-                    // ACTIVITY-scoped view model and `Flow.observe` replays the
-                    // StateFlow on every STARTED transition (repeatOnLifecycle). So
-                    // it re-raised the dialog on the next screen in the flow — the
-                    // instant-username step, immediately, before a name could be
-                    // typed — and again each time the dialog was dismissed. Consume
-                    // it BEFORE navigating so neither replay can re-trigger.
-                    requestUserNameViewModel.onUsernameVerifiedHandled()
-                    checkViewConfirmDialog()
                 }
             } else {
                 binding.votingPeriodContainer.isVisible = false
