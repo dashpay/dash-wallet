@@ -79,4 +79,30 @@ class SecondaryNameCollisionTest {
         // Emptiness is the "too short" rule's business, not this one's.
         assertFalse(secondaryNameCollidesWithPrimary("", "asdaug11sh"))
     }
+
+    // ── CodeRabbit: the stale in-flight lookup must not enable submit ──────
+
+    /**
+     * checkUsernameValid stops NEW lookups once the secondary collides with the
+     * primary, but a lookup already in flight for the SUFFIXED name can land
+     * afterwards and set usernameCheckSuccess. The fragment's success branch then
+     * asks [usernameSubmitButtonState] — which takes no collision input, and for a
+     * Secondary enables on `!usernameExists && !usernameContestable` — about the
+     * STALE name, while the field holds the bare primary.
+     *
+     * This pins the shape of that hazard: the stale suffixed name genuinely WOULD
+     * enable the button, which is why the fragment now gates its success branch on
+     * `!secondaryNameSameAsPrimary` rather than relying on the button state alone.
+     */
+    @Test
+    fun `a stale lookup for the suffixed name would otherwise enable submit`() {
+        // The stale result: "gffh-2" — 6 chars but carrying a 2, so NOT contestable,
+        // and not taken. Exactly the inputs that enable a Secondary submit.
+        assertFalse(secondaryNameCollidesWithPrimary("gffh-2", "gffh"))
+
+        // Meanwhile the field has been reverted to the bare primary, which DOES
+        // collide — so the collision flag, not the stale lookup, must decide.
+        assertTrue(secondaryNameCollidesWithPrimary("gffh", "gffh"))
+    }
+
 }
