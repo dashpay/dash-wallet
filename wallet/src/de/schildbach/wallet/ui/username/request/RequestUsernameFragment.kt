@@ -388,14 +388,30 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 binding.shieldedWaitContainer.isVisible =
                     buttonState == UsernameSubmitButtonState.PreparingShielded
 
-                if (it.usernameRequestSubmitting) {
-                    binding.usernameInput.isFocusable = false
+                // The input is locked only while a submit is in flight or while the
+                // confirm dialog is being raised. Both branches used to set
+                // isFocusable = false and NOTHING ever set it back, so once either
+                // fired the screen was inert — closing the dialog left a field that
+                // could not be typed in and a button that could not be reached, with
+                // back as the only way out. Drive it from the state each emission
+                // instead, so it is restored as soon as the condition clears.
+                val inputLocked = it.usernameRequestSubmitting || it.usernameVerified
+                binding.usernameInput.isFocusable = !inputLocked
+                binding.usernameInput.isFocusableInTouchMode = !inputLocked
+                if (inputLocked) {
                     hideKeyboard()
                 }
 
                 if (it.usernameVerified) {
-                    binding.usernameInput.isFocusable = false
-                    hideKeyboard()
+                    // One-shot. `verify()` sets this from VerifyIdentityFragment and
+                    // this screen is what acts on it, but the flag was sticky on an
+                    // ACTIVITY-scoped view model and `Flow.observe` replays the
+                    // StateFlow on every STARTED transition (repeatOnLifecycle). So
+                    // it re-raised the dialog on the next screen in the flow — the
+                    // instant-username step, immediately, before a name could be
+                    // typed — and again each time the dialog was dismissed. Consume
+                    // it BEFORE navigating so neither replay can re-trigger.
+                    requestUserNameViewModel.onUsernameVerifiedHandled()
                     checkViewConfirmDialog()
                 }
             } else {
