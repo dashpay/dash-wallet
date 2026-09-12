@@ -76,7 +76,8 @@ class BlockchainStateDataProviderTest {
         mnListHeight: Int? = null,
         syncStage: SyncStage = SyncStage.BLOCKS,
         networkStalled: Boolean = false,
-        chainlockHeight: Int? = null
+        chainlockHeight: Int? = null,
+        preserveEstablishedSyncStage: Boolean = false
     ) = SdkBlockchainStateUpdate(
         bestChainHeight = bestChainHeight,
         bestChainDateMs = bestChainDateMs,
@@ -84,7 +85,8 @@ class BlockchainStateDataProviderTest {
         mnListHeight = mnListHeight,
         syncStage = syncStage,
         networkStalled = networkStalled,
-        chainlockHeight = chainlockHeight
+        chainlockHeight = chainlockHeight,
+        preserveEstablishedSyncStage = preserveEstablishedSyncStage
     )
 
     private fun awaitUntil(what: String, timeoutMs: Long = 5_000, condition: () -> Boolean) {
@@ -232,4 +234,42 @@ class BlockchainStateDataProviderTest {
             provider.getSyncStage()
         )
     }
+
+    // ── MO-973 / CodeRabbit: the caught-up blip must not regress an ESTABLISHED
+    //    stage, but must still SEED one when none exists ────────────────────
+
+    /**
+     * The blip case: a stage is already established, then a caught-up snapshot
+     * arrives carrying a scan phase. Holding it is the whole point — otherwise the
+     * home screen renders "syncing 100%" on a wallet that is synced.
+     */
+    @Test
+    fun sdkUpdate_caughtUpBlipDoesNotRegressAnEstablishedStage() {
+        provider.updateSdkBlockchainState(sdkUpdate(syncStage = SyncStage.COMPLETE))
+        awaitUntil("stage established") { provider.getSyncStage() == SyncStage.COMPLETE }
+
+        // The blip: phase says BLOCKS, but the scan has caught up.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(syncStage = SyncStage.BLOCKS, preserveEstablishedSyncStage = true)
+        )
+        Thread.sleep(100)
+        assertEquals(SyncStage.COMPLETE, provider.getSyncStage())
+    }
+
+    /**
+     * The process-start case CodeRabbit flagged: nothing established yet. Holding
+     * the write would leave the flow null, which getSyncStage() reports as
+     * OFFLINE — so a cold start on an already-caught-up wallet would read offline.
+     * The seed must be applied instead.
+     */
+    @Test
+    fun sdkUpdate_caughtUpFirstUpdateSeedsTheStageInsteadOfReportingOffline() {
+        // No prior update at all — the flow is still null.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(syncStage = SyncStage.BLOCKS, preserveEstablishedSyncStage = true)
+        )
+        awaitUntil("stage seeded") { provider.getSyncStage() == SyncStage.BLOCKS }
+        assertEquals(SyncStage.BLOCKS, provider.getSyncStage())
+    }
+
 }
