@@ -57,6 +57,7 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.AddressBookProvider
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import de.schildbach.wallet.service.extensions.registerCrowdNodeConfirmedAddressFilter
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
@@ -222,6 +223,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // Set to 0 to disable test timeout (use Android's default 6-hour limit)
         // Set to 1-2 minutes for testing the timeout behavior
         private val TEST_TIMEOUT_MINUTES = 0L // Change to 0 to disable
+        /** How long a new instance waits for the previous instance's cleanup before complaining. */
+        private const val CLEANUP_WAIT_MS = 15_000L
+        /** Additional wait before giving up, stopping and rescheduling the service. */
+        private const val CLEANUP_EXTRA_WAIT_MS = 60_000L
     }
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
@@ -263,6 +268,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     @Inject lateinit var coinJoinService: CoinJoinService
     @Inject lateinit var serviceConfig: BlockchainServiceConfig
+    @Inject lateinit var pendingDirectPaymentVerifier: PendingDirectPaymentVerifier
     @Inject lateinit var analyticsService: AnalyticsService
     @Inject lateinit var securityFunctions: AuthenticationManager
 
@@ -1374,20 +1380,39 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             try {
                 log.info("onCreate() serviceScope waiting for cleanup {}", cleanupDeferred?.isActive)
 
-                val cleanupCompleted = withTimeoutOrNull(15_000) {
+                var cleanupCompleted = withTimeoutOrNull(CLEANUP_WAIT_MS) {
                     cleanupDeferred?.await()
                     true
                 } != null
 
                 if (!cleanupCompleted) {
-                    log.error("CRITICAL: Cleanup did not complete within 15 seconds")
+                    // The previous instance is still shutting down (forced peergroup stop, long wallet
+                    // saves on big wallets). This is common when the user leaves and re-enters the app
+                    // within a minute, so keep waiting instead of giving up right away.
+                    log.error(
+                        "Cleanup of the previous service instance did not complete within {} seconds, " +
+                            "waiting up to {} more seconds",
+                        CLEANUP_WAIT_MS / 1000, CLEANUP_EXTRA_WAIT_MS / 1000
+                    )
+                    cleanupCompleted = withTimeoutOrNull(CLEANUP_EXTRA_WAIT_MS) {
+                        cleanupDeferred?.await()
+                        true
+                    } != null
+                }
+
+                if (!cleanupCompleted) {
+                    log.error("CRITICAL: Cleanup did not complete within {} seconds", (CLEANUP_WAIT_MS + CLEANUP_EXTRA_WAIT_MS) / 1000)
                     log.error("This indicates a deadlock in onDestroy - cannot proceed with onCreate")
-                    log.error("Stopping service to prevent resource conflicts and file lock exceptions")
+                    log.error("Stopping service to prevent resource conflicts and file lock exceptions; restart scheduled")
 
                     // Complete onCreate to unblock any waiting onStartCommand calls
                     if (onCreateCompleted.isActive) {
                         onCreateCompleted.complete(Unit)
                     }
+
+                    // Don't leave the wallet without a service (and without peers for any payment in
+                    // progress): come back once the old instance has had time to release its locks.
+                    rescheduleService()
 
                     // Stop the service - we cannot safely initialize with cleanup still running
                     withContext(Dispatchers.Main) {
@@ -1402,6 +1427,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.error("onCreate: wallet is null after cleanup, service cannot continue")
                     return@launch
                 }
+                // re-lock inputs of BIP70 payments with an unknown result and keep watching for them
+                pendingDirectPaymentVerifier.resume()
                 peerConnectivityListener = PeerConnectivityListener()
                 broadcastPeerState(0)
                 blockChainFile =
@@ -2020,8 +2047,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onTrimMemory(level: Int) {
         log.info("onTrimMemory({}) called", level)
-        if (level >= TRIM_MEMORY_BACKGROUND) {
-            log.warn("low memory detected, stopping service")
+        // TRIM_MEMORY_BACKGROUND (40) and TRIM_MEMORY_MODERATE (60) only mean the process is on the
+        // cached/LRU list, which Android reports routinely after the user leaves the app. Stopping
+        // on those levels killed the service (and any payment in flight) shortly after every
+        // backgrounding. Only TRIM_MEMORY_COMPLETE means the process is next in line to be killed;
+        // stop gracefully then so the wallet is saved cleanly, and come back once memory frees up.
+        if (level >= TRIM_MEMORY_COMPLETE) {
+            log.warn("process is about to be killed for memory (level {}), stopping service and scheduling restart", level)
+            rescheduleService()
             stopSelf()
         }
     }
@@ -2174,8 +2207,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             val syncing =
                 blockchainState.bestChainDate!!.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
             try {
-                if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver && mixingStatus != MixingStatus.MIXING && mixingStatus != MixingStatus.FINISHING) {
+                if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver && !isMixingOrPaused(mixingStatus)) {
                     //Remove ongoing notification if blockchain sync finished
+                    if (foregroundService != ForegroundService.NONE) {
+                        log.info("sync finished and not mixing ({}), demoting from foreground service", mixingStatus)
+                    }
                     stopForeground(true)
                     foregroundService = ForegroundService.NONE
                     nm!!.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC)
@@ -2183,7 +2219,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     //Shows ongoing notification when synchronizing the blockchain
                     val notification = createNetworkSyncNotification(blockchainState)
                     nm!!.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
-                } else if (mixingStatus == MixingStatus.MIXING || mixingStatus == MixingStatus.PAUSED || mixingStatus == MixingStatus.FINISHING) {
+                } else if (isMixingOrPaused(mixingStatus)) {
                     log.info("foreground service: {}", foregroundService)
                     if (foregroundService == ForegroundService.NONE) {
                         log.info("foreground service not active, create notification")
@@ -2201,6 +2237,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
         this.blockchainState = blockchainState
         this.mixingStatus = mixingStatus
+    }
+
+    /**
+     * Mixing states that need the service kept in the foreground. PAUSED is included on purpose:
+     * demoting a paused-mixing wallet and re-promoting it on the next state change made the
+     * service flap between foreground and background, exposing it to the background service kill.
+     */
+    private fun isMixingOrPaused(mixingStatus: MixingStatus): Boolean {
+        return mixingStatus == MixingStatus.MIXING ||
+            mixingStatus == MixingStatus.PAUSED ||
+            mixingStatus == MixingStatus.FINISHING
     }
 
     private fun percentageSync(): Int {
