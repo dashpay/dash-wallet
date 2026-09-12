@@ -67,54 +67,62 @@ class SdkBlockchainStateMapperTest {
         assertEquals(SyncStage.COMPLETE, sdkSyncStage(ShadowSyncPhase.SYNCED))
     }
 
-    // ── sdkSyncStageOrPreserve (MO-973 report 3: "syncing 100%") ──────
+    // ── mayPreserveEstablishedSyncStage (MO-973 report 3: "syncing 100%") ──
 
     /**
-     * The defect: a synced wallet keeps flipping SYNCED → FILTERS → SYNCED
-     * (the engine never latches SYNCED — each new block bumps the targets), and
-     * the stage regressed to BLOCKS while the percent stayed 100, rendering as
-     * "syncing 100%". 59 such blips in the field log, e.g. `FILTERS 100.0%` at
-     * 13:45:13 → `SYNCED` at 13:45:14.
+     * A synced wallet keeps flipping SYNCED → FILTERS → SYNCED (the engine never
+     * latches SYNCED — each new block bumps the targets), and the stage regressed
+     * to BLOCKS while the percent stayed 100, rendering as "syncing 100%".
+     * 59 such blips in the field log, e.g. `FILTERS 100.0%` at 13:45:13 → `SYNCED`
+     * at 13:45:14.
      */
     @Test
-    fun stage_isPreservedWhenTheScanHasCaughtUp() {
-        assertNull(sdkSyncStageOrPreserve(ShadowSyncPhase.FILTERS, 100))
-        assertNull(sdkSyncStageOrPreserve(ShadowSyncPhase.HEADERS, 100))
-        assertNull(sdkSyncStageOrPreserve(ShadowSyncPhase.FILTER_HEADERS, 100))
-        assertNull(sdkSyncStageOrPreserve(ShadowSyncPhase.MASTERNODES, 100))
+    fun stage_mayBeHeldWhenTheScanHasCaughtUp() {
+        assertTrue(mayPreserveEstablishedSyncStage(ShadowSyncPhase.FILTERS, 100))
+        assertTrue(mayPreserveEstablishedSyncStage(ShadowSyncPhase.HEADERS, 100))
+        assertTrue(mayPreserveEstablishedSyncStage(ShadowSyncPhase.FILTER_HEADERS, 100))
+        assertTrue(mayPreserveEstablishedSyncStage(ShadowSyncPhase.MASTERNODES, 100))
     }
 
     /**
-     * The other half of the bar. shadowSyncPercent reads 0 for these, so they can
-     * never take the preserve branch — a genuine fault and a cold reconnect must
-     * still read OFFLINE rather than "still synced".
+     * shadowSyncPercent reads 0 for these, so they can never be held — a genuine
+     * fault and a cold reconnect must still read OFFLINE, not "still synced".
      */
     @Test
-    fun stage_stillReportsOfflineForFaultAndReconnect() {
-        assertEquals(SyncStage.OFFLINE, sdkSyncStageOrPreserve(ShadowSyncPhase.ERROR, 0))
-        assertEquals(SyncStage.OFFLINE, sdkSyncStageOrPreserve(ShadowSyncPhase.IDLE, 0))
-        assertEquals(SyncStage.OFFLINE, sdkSyncStageOrPreserve(ShadowSyncPhase.CONNECTING, 0))
+    fun stage_isNeverHeldForFaultOrReconnect() {
+        assertFalse(mayPreserveEstablishedSyncStage(ShadowSyncPhase.ERROR, 0))
+        assertFalse(mayPreserveEstablishedSyncStage(ShadowSyncPhase.IDLE, 0))
+        assertFalse(mayPreserveEstablishedSyncStage(ShadowSyncPhase.CONNECTING, 0))
     }
 
-    /** A genuine re-scan caps at 99 and still moves the stage. */
+    /** A genuine re-scan caps at 99 and must move the stage. */
     @Test
-    fun stage_stillReportsProgressBelow100() {
-        assertEquals(SyncStage.BLOCKS, sdkSyncStageOrPreserve(ShadowSyncPhase.FILTERS, 99))
-        assertEquals(SyncStage.BLOCKS, sdkSyncStageOrPreserve(ShadowSyncPhase.FILTERS, 42))
-        assertEquals(SyncStage.HEADERS, sdkSyncStageOrPreserve(ShadowSyncPhase.HEADERS, 0))
-        assertEquals(SyncStage.MNLIST, sdkSyncStageOrPreserve(ShadowSyncPhase.MASTERNODES, 98))
+    fun stage_isNeverHeldBelow100() {
+        assertFalse(mayPreserveEstablishedSyncStage(ShadowSyncPhase.FILTERS, 99))
+        assertFalse(mayPreserveEstablishedSyncStage(ShadowSyncPhase.FILTERS, 42))
     }
 
-    /** Reaching the terminal state is never suppressed, at any percent. */
+    /** Reaching the terminal state is always written, at any percent. */
     @Test
-    fun stage_syncedAlwaysReportsComplete() {
-        assertEquals(SyncStage.COMPLETE, sdkSyncStageOrPreserve(ShadowSyncPhase.SYNCED, 100))
-        assertEquals(SyncStage.COMPLETE, sdkSyncStageOrPreserve(ShadowSyncPhase.SYNCED, 3))
+    fun stage_syncedIsNeverHeld() {
+        assertFalse(mayPreserveEstablishedSyncStage(ShadowSyncPhase.SYNCED, 100))
+        assertFalse(mayPreserveEstablishedSyncStage(ShadowSyncPhase.SYNCED, 3))
     }
 
-    /** End to end through the derivation: the blip yields a null stage. */
+    /**
+     * The seed value must still be the phase's own stage, so a writer with nothing
+     * established has something correct to apply (CodeRabbit: an all-null first
+     * update left getSyncStage() reporting OFFLINE for a caught-up wallet).
+     */
     @Test
-    fun derive_blipOnASyncedWalletDoesNotRegressTheStage() {
+    fun stage_stillCarriesThePhaseStageAsTheSeed() {
+        assertEquals(SyncStage.BLOCKS, sdkSyncStage(ShadowSyncPhase.FILTERS))
+        assertEquals(SyncStage.COMPLETE, sdkSyncStage(ShadowSyncPhase.SYNCED))
+    }
+
+    /** End to end: the blip is marked holdable but still carries a seed stage. */
+    @Test
+    fun derive_blipOnASyncedWalletMayHoldTheStage() {
         val synced = progress(
             phase = ShadowSyncPhase.FILTERS,
             headerHeight = 1_514_660,
@@ -124,7 +132,8 @@ class SdkBlockchainStateMapperTest {
         )
         val update = deriveBlockchainStateUpdate(snapshot(synced), now)
         assertEquals(100, update.percentageSync)
-        assertNull(update.syncStage)
+        assertTrue(update.preserveEstablishedSyncStage)
+        assertEquals(SyncStage.BLOCKS, update.syncStage)
     }
 
     // ── isSpvProgressStalled ──────────────────────────────────────────

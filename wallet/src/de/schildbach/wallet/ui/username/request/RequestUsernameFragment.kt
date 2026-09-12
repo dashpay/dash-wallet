@@ -273,7 +273,17 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             // (neutral, not red) until the pool is READY; legitimate red
             // errors resume the instant the button leaves PreparingShielded.
             val shieldedPreparing = buttonState == UsernameSubmitButtonState.PreparingShielded
-            if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess) {
+            // secondaryNameSameAsPrimary is part of the ENTRY condition, not just
+            // the disabled branch below: checkUsernameValid stops NEW lookups for a
+            // colliding name, but one already in flight for the suffixed name can
+            // land afterwards and set usernameCheckSuccess. This branch would then
+            // ask usernameSubmitButtonState — which takes no collision input, and
+            // for a Secondary enables on `!usernameExists && !usernameContestable`
+            // — about the STALE name while the field holds the bare primary, and
+            // enable submit for the duplicate.
+            if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess &&
+                !it.secondaryNameSameAsPrimary
+            ) {
                 binding.checkAvailable.setImageResource(getCheckMarkImage(!it.usernameExists))
                 binding.checkBalance.setImageResource(
                     getCheckMarkImage(it.enoughBalance, empty = shieldedPreparing)
