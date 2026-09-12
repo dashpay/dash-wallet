@@ -245,14 +245,34 @@ class BlockchainStateDataProviderTest {
      */
     @Test
     fun sdkUpdate_caughtUpBlipDoesNotRegressAnEstablishedStage() {
-        provider.updateSdkBlockchainState(sdkUpdate(syncStage = SyncStage.COMPLETE))
+        provider.updateSdkBlockchainState(
+            sdkUpdate(syncStage = SyncStage.COMPLETE, percentageSync = 40)
+        )
         awaitUntil("stage established") { provider.getSyncStage() == SyncStage.COMPLETE }
 
         // The blip: phase says BLOCKS, but the scan has caught up.
         provider.updateSdkBlockchainState(
-            sdkUpdate(syncStage = SyncStage.BLOCKS, preserveEstablishedSyncStage = true)
+            sdkUpdate(
+                syncStage = SyncStage.BLOCKS,
+                percentageSync = 100,
+                preserveEstablishedSyncStage = true
+            )
         )
-        Thread.sleep(100)
+        // Asserting that the stage did NOT move needs proof the blip actually ran
+        // — sleeping and reading COMPLETE back would pass even if it never did.
+        // saveState happens BEFORE the stage decision in the same body, so awaiting
+        // the blip's OWN row value would still leave that decision possibly
+        // pending. The scope is a single-thread executor running jobs in order
+        // (see BlockchainStateDataProvider.coroutineScope), so awaiting a TRAILING
+        // update's row value proves the blip's body completed, stage line included.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(
+                syncStage = SyncStage.BLOCKS,
+                percentageSync = 101,
+                preserveEstablishedSyncStage = true
+            )
+        )
+        awaitUntil("blip body completed") { dao.state?.percentageSync == 101 }
         assertEquals(SyncStage.COMPLETE, provider.getSyncStage())
     }
 
