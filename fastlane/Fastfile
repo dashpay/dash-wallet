@@ -15,6 +15,83 @@
 
 default_platform(:android)
 
+# Firebase App Distribution app ids, keyed by product flavor.
+# Keep in sync with .github/workflows/manual_distribution.yml
+FIREBASE_APP_IDS = {
+  "prod"      => "1:1039839682638:android:989eecd6db36de6a",
+  "_testNet3" => "1:1039839682638:android:3202b16d460a1a88",
+  "staging"   => "1:1039839682638:android:bbcfa8c9939ee993ea631f",
+  "devnet"    => "1:1039839682638:android:12d2ad31cc39093cea631f"
+}.freeze
+
+def repo_root
+  ENV['PWD']
+end
+
+def ci_keystore_path
+  File.join(repo_root, ".deploy", "keystore.jks")
+end
+
+# Menu labels -> keystore + alias. Ruby preserves insertion order, so the
+# first entry is what UI.select offers first.
+SIGNING_PROFILES = {
+  "ci — .deploy/keystore.jks (same key GitHub Actions signs QA builds with)" =>
+    { keystore: ".deploy/keystore.jks", keyalias: "dash_wallet" },
+  "release — .deploy/dash-wallet.keystore (the Play Store key)" =>
+    { keystore: ".deploy/dash-wallet.keystore", keyalias: "android-apps" }
+}.freeze
+
+# Picking `qa` off the `fastlane` menu passes no arguments, so ask for the
+# handful of things that have no safe default. Only used when the caller gave
+# no flavor at all; passing options on the command line stays non-interactive.
+def prompt_for_qa_options(options)
+  options[:flavor] = UI.select("Which flavor?", ["_testNet3", "prod", "all", "staging", "devnet"])
+  options[:type] ||= UI.select("Which build type?", ["release", "debug"])
+
+  profile = SIGNING_PROFILES[UI.select("Sign with which key?", SIGNING_PROFILES.keys)]
+  options[:keystore] ||= File.join(repo_root, profile[:keystore])
+  options[:keyalias] ||= profile[:keyalias]
+
+  notes = UI.input("Release notes (blank = branch and last commit):")
+  options[:comment] = notes unless notes.to_s.strip.empty?
+
+  options
+end
+
+# Gradle keeps the flavor name verbatim apart from capitalizing the first
+# character; "_testNet3" has none to capitalize, so String#capitalize (which
+# also downcases the tail) is wrong here.
+def gradle_flavor(flavor)
+  flavor.sub(/\A[a-z]/) { |c| c.upcase }
+end
+
+def gradle_type(type)
+  type.sub(/\A[a-z]/) { |c| c.upcase }
+end
+
+# Returns the path to a usable keystore, decrypting keystore.jks.gpg on demand
+# so local builds are signed with the same key CI uses for QA builds.
+def resolve_keystore(options)
+  explicit = options[:keystore]
+  return File.expand_path(explicit) if explicit
+
+  keystore = File.join(repo_root, ".deploy", "keystore.jks")
+  return keystore if File.exist?(keystore) && !File.zero?(keystore)
+
+  encrypted = "#{keystore}.gpg"
+  unless File.exist?(encrypted)
+    UI.user_error!("No keystore at #{keystore} and no #{encrypted} to decrypt. Pass keystore:<path>.")
+  end
+
+  passphrase = options[:keystorekey] || ENV['KEYSTORE_KEY']
+  passphrase = UI.password("Passphrase for keystore.jks.gpg (KEYSTORE_KEY)") if passphrase.to_s.empty?
+
+  UI.message("Decrypting #{encrypted}")
+  sh(["gpg", "-d", "--passphrase", passphrase, "--batch", "-o", keystore, encrypted], log: false)
+  UI.user_error!("Failed to decrypt keystore") unless File.exist?(keystore) && !File.zero?(keystore)
+  keystore
+end
+
 platform :android do
 
   # For Google Play
@@ -114,6 +191,136 @@ platform :android do
 		release_notes: comment,
 		groups: group
 	)
+  end
+
+  # Local (non-CI) QA distribution
+
+  # Run with no arguments (or pick it off the `fastlane` menu) to be prompted
+  # for flavor, build type, signing key and release notes. Or pass them:
+  #
+  #   fastlane qa flavor:prod comment:"MO-123 fix crash"
+  #   fastlane qa flavor:_testNet3 keystore:.deploy/dash-wallet.keystore keyalias:android-apps
+  #
+  # Options: flavor (prod|_testNet3|staging|devnet|all), type, comment,
+  #          testgroup, versioncode, storepass, keypass, keyalias, keystore,
+  #          appid, clean, refresh_explore
+  desc "Build locally and distribute to Firebase, skipping CI"
+  lane :qa do |options|
+    options = prompt_for_qa_options(options) if options[:flavor].nil? && UI.interactive?
+
+    flavors = if options[:flavor].to_s == "all"
+      ["prod", "_testNet3"]
+    else
+      [(options[:flavor] || "_testNet3").to_s]
+    end
+
+    flavors.each { |f| UI.user_error!("Unknown flavor '#{f}'. Known: #{FIREBASE_APP_IDS.keys.join(', ')}") unless FIREBASE_APP_IDS.key?(f) }
+
+    type = (options[:type] || "release").to_s
+    group = (options[:testgroup] || "qa").to_s
+
+    if options[:appid] && flavors.size > 1
+      UI.user_error!("appid: cannot be combined with flavor:all — every flavor has its own Firebase app")
+    end
+
+    notes = options[:comment]
+    if notes.to_s.empty?
+      commit = last_git_commit
+      notes = "#{git_branch} @ #{commit[:abbreviated_commit_hash]} — #{commit[:message].to_s.lines.first.to_s.strip}"
+      UI.important("No comment: given, using release notes \"#{notes}\"")
+    end
+
+    keystore = resolve_keystore(options)
+    storepass = options[:storepass] || ENV['SIGNING_STORE_PASS']
+    storepass = UI.password("Keystore password") if storepass.to_s.empty?
+    keyalias = options[:keyalias] || "dash_wallet"
+    keypass = options[:keypass] || ENV['SIGNING_KEY_PASS']
+    if keypass.to_s.empty?
+      if File.expand_path(keystore) == File.expand_path(ci_keystore_path)
+        # CI signs with one password for both the store and the key.
+        keypass = storepass
+      elsif UI.interactive?
+        keypass = UI.password("Key password for alias '#{keyalias}'")
+      else
+        UI.important("No keypass: or SIGNING_KEY_PASS given, reusing the store password")
+        keypass = storepass
+      end
+    end
+
+    [
+      "#{repo_root}/service.properties",
+      "#{repo_root}/local.properties",
+      "#{repo_root}/wallet/google-services.json",
+      "#{repo_root}/.deploy/app-distribution-key.json"
+    ].each do |filename|
+      UI.user_error!("Missing #{filename}") unless File.exist?(filename)
+      UI.user_error!("File is empty #{filename}") if File.zero?(filename)
+    end
+
+    flavors.each do |flavor|
+      # Unset means the versionCode declared in wallet/build.gradle is used.
+      version_code = options[:versioncode]
+
+      # Explore data is flavor specific, so only re-download when the cached
+      # copy belongs to another flavor (or the caller forces a refresh).
+      cached_explore_db(flavor: flavor, force: options[:refresh_explore].to_s == "true")
+
+      # PiggyCards test merchants are stripped from production builds only.
+      # Passed as a project property because a running Gradle daemon would not
+      # see an env var exported here.
+      build_prod = (flavor == "prod" ? '1' : '0')
+
+      apk_dir = "#{repo_root}/wallet/build/outputs/apk/#{flavor}/#{type}"
+      Dir.glob("#{apk_dir}/*.apk").each { |f| File.delete(f) }
+
+      task = "#{options[:clean].to_s == 'true' ? 'clean ' : ''}:wallet:assemble#{gradle_flavor(flavor)}#{gradle_type(type)}"
+      properties = {
+        "android.injected.signing.store.file" => keystore,
+        "android.injected.signing.store.password" => storepass,
+        "android.injected.signing.key.alias" => keyalias,
+        "android.injected.signing.key.password" => keypass,
+        "BUILD_PROD" => build_prod
+      }
+      properties["versionCode"] = version_code.to_i if version_code
+
+      UI.header("Building #{flavor} #{type}#{version_code ? " (versionCode #{version_code})" : ''}")
+      gradle(task: task, properties: properties, print_command: false)
+
+      apk = lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
+      if apk.nil? || !File.exist?(apk)
+        apk = Dir.glob("#{apk_dir}/*.apk").max_by { |f| File.mtime(f) }
+      end
+      UI.user_error!("No apk produced in #{apk_dir}") if apk.nil?
+      UI.user_error!("Refusing to distribute unsigned apk #{apk}") if apk.include?("unsigned")
+
+      UI.header("Uploading #{File.basename(apk)} to Firebase App Distribution")
+      firebase_app_distribution(
+        app: options[:appid] || FIREBASE_APP_IDS[flavor],
+        service_credentials_file: "#{repo_root}/.deploy/app-distribution-key.json",
+        android_artifact_path: apk,
+        release_notes: notes,
+        groups: group
+      )
+      UI.success("Distributed #{flavor} #{type} to group '#{group}'")
+    end
+  end
+
+  desc "Download explore.db only when the cached copy is for another flavor"
+  private_lane :cached_explore_db do |options|
+    flavor = (options[:flavor] || "prod").to_s
+    force = options[:force].to_s == "true"
+    db = "#{repo_root}/wallet/assets/explore/explore.db"
+    marker = "#{repo_root}/.deploy/.explore_db_flavor"
+    # prod is its own database; every other flavor shares the testnet one.
+    wanted = flavor == "prod" ? "prod" : "testnet"
+    cached = File.exist?(marker) ? File.read(marker).strip : nil
+
+    if !force && File.exist?(db) && !File.zero?(db) && cached == wanted
+      UI.message("Reusing cached #{wanted} explore.db")
+    else
+      explore_db(flavor: flavor)
+      File.write(marker, wanted)
+    end
   end
 
   # Common lanes
