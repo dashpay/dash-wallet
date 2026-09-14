@@ -146,35 +146,55 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
             "pre-broadcast identity data rejected by the FFI — ${t.message}",
             t
         )
-    // Android Keystore auth-window expiry: the SDK keeps identity keys
-    // AUTH_GATED (decryptable only within ~30 s of a biometric/device-credential
-    // unlock), and an expired window surfaces as UserNotAuthenticatedException —
-    // message "User not authenticated" — thrown while DECRYPTING the identity
-    // key to sign the state transition (KeystoreSigner.retrieveKeyWithAuth →
-    // WalletStorage.retrievePrivateKey; only the identity-key alias is
-    // auth-gated, so no other SDK path produces this message). Signing happens
-    // during transition CONSTRUCTION (dpp `sign_external_with_options`, called
-    // from `BatchTransition::new_document_*_transition_from_document` inside
-    // rs-sdk `put_to_platform`), strictly BEFORE `transition.broadcast` — the
-    // signer error propagates out before the broadcast line is reached, and no
+    // Android Keystore refused the key that signs the state transition.
+    // Signing happens during transition CONSTRUCTION (dpp
+    // `sign_external_with_options`, called from
+    // `BatchTransition::new_document_*_transition_from_document` inside rs-sdk
+    // `put_to_platform`), strictly BEFORE `transition.broadcast` — the signer
+    // error propagates out before the broadcast line is reached, and no
     // post-broadcast step invokes the identity-key signer. Nothing was
     // submitted → safe dashj fallback (app-side keys, no Keystore gate).
-    // Message-matched until platform PR #4060 (DEVICE_BOUND key policy)
-    // replaces the auth window and gives this a typed error.
-    t.message?.contains("User not authenticated") == true ->
-        // MO-972: this used to read "Keystore auth window expired", which
-        // ASSERTS a timeout nobody measured. Field log (2026-09-10, testnet
-        // 12000007, HONOR PTP-N49) — biometric at 11:49:16, this at 11:49:17.
-        // One second. The window had not expired; the Keystore simply refused
-        // to treat the auth as satisfying the identity key's gate, which on
-        // that OEM is the same defect family as the false-locked master alias
-        // (dashpay/platform#4643 fixes that one and explicitly does NOT cover
-        // the auth-gated identity alias; #4060's DEVICE_BOUND policy is the
-        // remedy). Report what Keystore said, not a cause we inferred.
+    //
+    // MO-972 taught us there are TWO gates behind this, and Android reports
+    // both with the same `UserNotAuthenticatedException("User not
+    // authenticated")`:
+    //
+    //  - `setUserAuthenticationRequired` — the ~30 s auth window. This app
+    //    does NOT use it: it runs KeySecurityPolicy.DEVICE_BOUND (see
+    //    DashSdkServiceImpl), whose alias has no auth gate at all.
+    //  - `setUnlockedDeviceRequired` — "the device must be unlocked right
+    //    now", which the SDK stamps on every alias including the DEVICE_BOUND
+    //    one. Some OEM builds deny it while KeyguardManager reports the device
+    //    unlocked (HONOR PTP-N49; Google confirmed the same on Fairphone 5/6,
+    //    Issue Tracker 506989112).
+    //
+    // The first arm is the one that fires today. dashpay/platform#4643
+    // classifies the lock-gate denial SDK-side into KeystoreDeviceLockedException,
+    // whose message names the alias and the KeyguardManager state at throw
+    // time — so it no longer contains "User not authenticated" and would fall
+    // through to the generic arms without this.
+    t.message?.contains("as device-locked") == true ->
         SdkWriteResult.NotBroadcast(
-            "signing failure (pre-broadcast): Keystore refused the identity key as " +
-                "unauthenticated (auth window may have expired, or the device's " +
-                "auth-bound Keystore gate is defective) — ${t.message}",
+            "signing failure (pre-broadcast): Keystore refused the signing key because " +
+                "it considers the device locked — ${t.message}",
+            t
+        )
+    // The second arm covers AAR lines older than #4643 (denial still
+    // unclassified), and the genuinely auth-gated paths that survive on an
+    // install predating the DEVICE_BOUND switch: identity-key blobs still
+    // wrapped under the legacy auth-gated alias, reached through
+    // WalletStorage.retrievePrivateKey's migration fallback.
+    //
+    // The wording deliberately does not ASSERT a timeout. It used to read
+    // "Keystore auth window expired"; the field log (2026-09-10, testnet
+    // 12000007, HONOR PTP-N49) shows the biometric at 11:49:16 and this at
+    // 11:49:17 — one second, on a policy with no window to expire. Report
+    // what Keystore said, not a cause we inferred.
+    t.message?.contains("User not authenticated") == true ->
+        SdkWriteResult.NotBroadcast(
+            "signing failure (pre-broadcast): Keystore refused the signing key as " +
+                "unauthenticated (the device's Keystore gate rejected it; on this app's " +
+                "DEVICE_BOUND policy there is no auth window to expire) — ${t.message}",
             t
         )
     // TYPED funding shortfalls — checked BEFORE the message arms because

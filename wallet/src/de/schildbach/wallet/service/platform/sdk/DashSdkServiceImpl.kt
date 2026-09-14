@@ -1100,16 +1100,28 @@ class DashSdkServiceImpl @Inject constructor(
 
         // 2. Storage layer — ← AppContainer construction (database,
         //    walletStorage, walletManagerStore fields). DEVICE_BOUND key
-        //    policy (#4060): this app gates wallet access with its own PIN
-        //    (SecurityGuard), so the SDK's default AUTH_GATED alias only
-        //    added a second, unwired auth layer — identity-key signing died
-        //    with "User not authenticated" outside the ~30 s post-unlock
-        //    window (observed live: contact-accept dead ends, mid-operation
-        //    signing failures). DEVICE_BOUND keys stay hardware-backed and
-        //    non-exportable but never throw UserNotAuthenticatedException.
-        //    Keys previously wrapped under the AUTH_GATED alias surface as
-        //    unhealthy and are re-derived + re-wrapped by the binder's
-        //    key-heal pass (repairIdentityKey) — no user action needed.
+        //    policy (landed upstream as dashpay/platform#4183; the #4060 PR
+        //    that proposed it was closed unmerged): this app gates wallet
+        //    access with its own PIN (SecurityGuard), so the SDK's default
+        //    AUTH_GATED alias only added a second, unwired auth layer —
+        //    identity-key signing died with "User not authenticated" outside
+        //    the ~30 s post-unlock window (observed live: contact-accept dead
+        //    ends, mid-operation signing failures). DEVICE_BOUND keys stay
+        //    hardware-backed and non-exportable, and carry no authentication
+        //    gate.
+        //
+        //    They can still throw UserNotAuthenticatedException, though — an
+        //    earlier version of this comment claimed otherwise and cost us
+        //    MO-972. The DEVICE_BOUND alias is not auth-gated but IS
+        //    lock-bound (`setUnlockedDeviceRequired`), and Android reports a
+        //    denial of THAT gate with the identical exception. On OEM builds
+        //    whose lock-state tracking is defective (HONOR PTP-N49; Google
+        //    confirmed the same on Fairphone 5/6) signing failed with "User
+        //    not authenticated" on a policy that has no auth window, and the
+        //    error was read as a timeout for weeks. dashpay/platform#4643
+        //    classifies that denial SDK-side and degrades the affected device
+        //    onto a never-lock-bound alias; SdkDashPayWrites classifies the
+        //    resulting typed message.
         var database: DashDatabase? = null
         var sdk: Sdk? = null
         try {
