@@ -76,7 +76,8 @@ class BlockchainStateDataProviderTest {
         mnListHeight: Int? = null,
         syncStage: SyncStage = SyncStage.BLOCKS,
         networkStalled: Boolean = false,
-        chainlockHeight: Int? = null
+        chainlockHeight: Int? = null,
+        preserveEstablishedSyncStage: Boolean = false
     ) = SdkBlockchainStateUpdate(
         bestChainHeight = bestChainHeight,
         bestChainDateMs = bestChainDateMs,
@@ -84,7 +85,8 @@ class BlockchainStateDataProviderTest {
         mnListHeight = mnListHeight,
         syncStage = syncStage,
         networkStalled = networkStalled,
-        chainlockHeight = chainlockHeight
+        chainlockHeight = chainlockHeight,
+        preserveEstablishedSyncStage = preserveEstablishedSyncStage
     )
 
     private fun awaitUntil(what: String, timeoutMs: Long = 5_000, condition: () -> Boolean) {
@@ -232,4 +234,62 @@ class BlockchainStateDataProviderTest {
             provider.getSyncStage()
         )
     }
+
+    // ── MO-973 / CodeRabbit: the caught-up blip must not regress an ESTABLISHED
+    //    stage, but must still SEED one when none exists ────────────────────
+
+    /**
+     * The blip case: a stage is already established, then a caught-up snapshot
+     * arrives carrying a scan phase. Holding it is the whole point — otherwise the
+     * home screen renders "syncing 100%" on a wallet that is synced.
+     */
+    @Test
+    fun sdkUpdate_caughtUpBlipDoesNotRegressAnEstablishedStage() {
+        provider.updateSdkBlockchainState(
+            sdkUpdate(syncStage = SyncStage.COMPLETE, percentageSync = 40)
+        )
+        awaitUntil("stage established") { provider.getSyncStage() == SyncStage.COMPLETE }
+
+        // The blip: phase says BLOCKS, but the scan has caught up.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(
+                syncStage = SyncStage.BLOCKS,
+                percentageSync = 100,
+                preserveEstablishedSyncStage = true
+            )
+        )
+        // Asserting that the stage did NOT move needs proof the blip actually ran
+        // — sleeping and reading COMPLETE back would pass even if it never did.
+        // saveState happens BEFORE the stage decision in the same body, so awaiting
+        // the blip's OWN row value would still leave that decision possibly
+        // pending. The scope is a single-thread executor running jobs in order
+        // (see BlockchainStateDataProvider.coroutineScope), so awaiting a TRAILING
+        // update's row value proves the blip's body completed, stage line included.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(
+                syncStage = SyncStage.BLOCKS,
+                percentageSync = 101,
+                preserveEstablishedSyncStage = true
+            )
+        )
+        awaitUntil("blip body completed") { dao.state?.percentageSync == 101 }
+        assertEquals(SyncStage.COMPLETE, provider.getSyncStage())
+    }
+
+    /**
+     * The process-start case CodeRabbit flagged: nothing established yet. Holding
+     * the write would leave the flow null, which getSyncStage() reports as
+     * OFFLINE — so a cold start on an already-caught-up wallet would read offline.
+     * The seed must be applied instead.
+     */
+    @Test
+    fun sdkUpdate_caughtUpFirstUpdateSeedsTheStageInsteadOfReportingOffline() {
+        // No prior update at all — the flow is still null.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(syncStage = SyncStage.BLOCKS, preserveEstablishedSyncStage = true)
+        )
+        awaitUntil("stage seeded") { provider.getSyncStage() == SyncStage.BLOCKS }
+        assertEquals(SyncStage.BLOCKS, provider.getSyncStage())
+    }
+
 }

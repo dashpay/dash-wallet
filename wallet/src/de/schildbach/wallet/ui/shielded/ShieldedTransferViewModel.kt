@@ -294,6 +294,31 @@ data class ShieldedTransferUIState(
         get() = amount.isGreaterThan(availableBalance)
 
     /**
+     * Whether the "Insufficient funds" validation message may be SHOWN.
+     *
+     * [insufficientFunds] is a live amount-vs-balance comparison, so it stays
+     * meaningful only while the user is still composing. Once a submit has left
+     * Idle the entered amount is no longer an editable proposal, and the balance
+     * it is compared against moves on its own: the moment a transfer broadcasts,
+     * the spent output leaves the CONFIRMED balance while the change is still
+     * unconfirmed, so the comparison flips true for a transfer that already
+     * succeeded.
+     *
+     * Field evidence (MO-973 report 3, Samsung, 2026-09-11): 0.5 DASH moved to
+     * the shielded pool from a 1 DASH wallet, the transfer succeeded, and
+     * "Insufficient funds" appeared afterwards. [canContinue] already greys the
+     * button out with exactly this submit-state condition; the message had no
+     * equivalent guard and was the first branch of the hint/error `when`, so it
+     * rendered in every submit state.
+     *
+     * NotSent is provably pre-broadcast — the user is composing again and a real
+     * shortfall must still be shown.
+     */
+    val showInsufficientFunds: Boolean
+        get() = insufficientFunds &&
+            (submitState == ShieldedSubmitState.Idle || submitState is ShieldedSubmitState.NotSent)
+
+    /**
      * "You will transfer ~" hint. Always denominated in DASH, both
      * directions — user decision (2026-07-14) superseding the original
      * Figma credits denomination: every balance and transfer amount in the

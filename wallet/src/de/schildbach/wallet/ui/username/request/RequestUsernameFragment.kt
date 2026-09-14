@@ -273,7 +273,17 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             // (neutral, not red) until the pool is READY; legitimate red
             // errors resume the instant the button leaves PreparingShielded.
             val shieldedPreparing = buttonState == UsernameSubmitButtonState.PreparingShielded
-            if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess) {
+            // secondaryNameSameAsPrimary is part of the ENTRY condition, not just
+            // the disabled branch below: checkUsernameValid stops NEW lookups for a
+            // colliding name, but one already in flight for the suffixed name can
+            // land afterwards and set usernameCheckSuccess. This branch would then
+            // ask usernameSubmitButtonState — which takes no collision input, and
+            // for a Secondary enables on `!usernameExists && !usernameContestable`
+            // — about the STALE name while the field holds the bare primary, and
+            // enable submit for the duplicate.
+            if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess &&
+                !it.secondaryNameSameAsPrimary
+            ) {
                 binding.checkAvailable.setImageResource(getCheckMarkImage(!it.usernameExists))
                 binding.checkBalance.setImageResource(
                     getCheckMarkImage(it.enoughBalance, empty = shieldedPreparing)
@@ -378,15 +388,29 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 binding.shieldedWaitContainer.isVisible =
                     buttonState == UsernameSubmitButtonState.PreparingShielded
 
+                // The confirm dialog is raised by USER ACTION only — the Continue
+                // button (onContinue), skipping the verify prompt, and
+                // VerifyIdentityFragment's own call right after verify(). There
+                // used to be a fourth trigger here, firing off observed state
+                // whenever `usernameVerified` was seen true, and it was the odd one
+                // out: the flag is sticky on an ACTIVITY-scoped view model and
+                // `Flow.observe` replays the StateFlow on every STARTED transition
+                // (repeatOnLifecycle), so a later screen in the flow received a
+                // stale true and raised the dialog by itself — on the
+                // instant-username step, unbidden. It was also redundant: the verify
+                // path it existed to resume already opens the dialog from
+                // VerifyIdentityFragment before navigating back.
+                //
+                // The input is locked only while a submit is actually in flight.
+                // This used to latch isFocusable = false with nothing anywhere
+                // setting it back, so once it fired the screen was inert — the field
+                // could not be typed in and back was the only way out. Derive it from
+                // the state each emission so it is restored the moment the submit
+                // ends.
+                binding.usernameInput.isFocusable = !it.usernameRequestSubmitting
+                binding.usernameInput.isFocusableInTouchMode = !it.usernameRequestSubmitting
                 if (it.usernameRequestSubmitting) {
-                    binding.usernameInput.isFocusable = false
                     hideKeyboard()
-                }
-
-                if (it.usernameVerified) {
-                    binding.usernameInput.isFocusable = false
-                    hideKeyboard()
-                    checkViewConfirmDialog()
                 }
             } else {
                 binding.votingPeriodContainer.isVisible = false
@@ -395,8 +419,17 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // (usernameCheckSuccess is false), but a lookup failure has
                 // to SAY so — silence here read as "available" before the
                 // check was made fail-closed.
-                binding.usernameAvailableContainer.isVisible = it.usernameCheckFailed
-                if (it.usernameCheckFailed) {
+                // Same fail-closed surface for the instant name that is really
+                // the contested one again (MO-973 report 3): the button is already
+                // disabled, but silence would read as "still typing" when the
+                // screen pre-filled the primary and the user pressed on.
+                binding.usernameAvailableContainer.isVisible =
+                    it.usernameCheckFailed || it.secondaryNameSameAsPrimary
+                if (it.secondaryNameSameAsPrimary) {
+                    binding.usernameAvailableMessage.text =
+                        getString(R.string.request_username_same_as_contested)
+                    binding.checkAvailable.setImageResource(getCheckMarkImage(false, false))
+                } else if (it.usernameCheckFailed) {
                     binding.usernameAvailableMessage.text = getString(R.string.username_check_failed)
                     binding.checkAvailable.setImageResource(getCheckMarkImage(false, false))
                 }
