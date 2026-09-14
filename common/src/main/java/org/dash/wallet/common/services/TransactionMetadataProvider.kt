@@ -70,8 +70,12 @@ interface TransactionMetadataProvider {
      * For payments recorded optimistically that turn out never to have reached the merchant, so
      * the transaction will never exist. Implementations must ignore a transaction that is present
      * in the wallet, since that would be real user data.
+     *
+     * @return true when nothing further is needed, either because the records were discarded or
+     *   because the transaction turned out to be real; false when the cleanup could not be
+     *   attempted and the caller should keep the payment and retry later.
      */
-    suspend fun forgetTransaction(txId: Sha256Hash)
+    suspend fun forgetTransaction(txId: Sha256Hash): Boolean
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 

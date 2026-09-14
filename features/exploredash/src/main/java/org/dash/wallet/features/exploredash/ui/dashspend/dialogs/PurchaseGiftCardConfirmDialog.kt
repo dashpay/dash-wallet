@@ -478,16 +478,21 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             }
             val transactionId = createSendingRequestFromDashUri(dashPaymentUrl, data)
             transactionId?.let {
-                // saveGiftCardDummy awaits the insert, so a database failure would otherwise
-                // abort this coroutine and leave the user on the purchase screen with no
-                // feedback, even though the payment succeeded.
                 try {
                     viewModel.saveGiftCardDummy(transactionId, data)
                     enterAmountViewModel.clearSavedState()
+                    showGiftCardDetailsDialog(transactionId)
                 } catch (e: Exception) {
+                    // saveGiftCardDummy awaits the insert, so a database failure lands here. The
+                    // details screen reads the cards from the database and takes the order id
+                    // from them, so opening it now would show an empty card that can never be
+                    // fetched. Say what happened instead. The payment itself succeeded, so the
+                    // entered amount is still cleared: sending the user back to a pre-filled
+                    // purchase screen would invite them to pay a second time.
                     log.error("could not save gift cards for {}", transactionId, e)
+                    enterAmountViewModel.clearSavedState()
+                    showGiftCardSaveFailed()
                 }
-                showGiftCardDetailsDialog(transactionId)
             }
         }
     }
@@ -602,6 +607,26 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 }
             }
             null
+        }
+    }
+
+    /**
+     * The payment went through but nothing could be stored about the gift card. Explain that,
+     * then leave the purchase flow the same way a successful purchase does.
+     */
+    private fun showGiftCardSaveFailed() {
+        hideLoading()
+        if (isAdded) {
+            AdaptiveDialog.create(
+                R.drawable.ic_warning,
+                getString(R.string.gift_card_save_failed_title),
+                getString(R.string.gift_card_save_failed_message),
+                getString(R.string.button_close)
+            ).show(requireActivity()).also {
+                val navController = findNavController()
+                navController.popBackStack(navController.graph.startDestinationId, false)
+                this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
+            }
         }
     }
 

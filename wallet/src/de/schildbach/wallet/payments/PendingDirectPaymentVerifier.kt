@@ -134,6 +134,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 log.info("resuming verification of {} pending direct payment(s)", pending.size)
                 for (payment in pending) {
                     try {
+                        if (payment.abandoned) {
+                            // already released; its inputs are spendable and only the records
+                            // saved against it still need removing
+                            discardRecords(payment)
+                            continue
+                        }
                         val tx = Transaction(wallet.params, payment.txBytes)
                         if (!isTracked(tx.txId)) {
                             lockInputs(wallet, tx)
@@ -249,14 +255,41 @@ class PendingDirectPaymentVerifier @Inject constructor(
             tx.txId
         )
         walletData.wallet?.let { unlockInputs(it, tx) }
-        // Anything saved optimistically against this tx describes an order that was never placed,
-        // and its metadata must not reach Dash Platform either.
+
+        // Mark the release before cleaning up. If the cleanup fails, or the process dies here,
+        // the payment stays on disk so the cleanup can be retried, and the flag stops the next
+        // resume() locking these inputs or verifying the payment all over again.
+        val abandoned = payment.copy(abandoned = true)
         try {
-            metadataProvider.forgetTransaction(tx.txId)
+            config.add(abandoned)
         } catch (e: Exception) {
-            log.error("could not discard the records of abandoned payment {}", tx.txId, e)
+            log.error("could not record the release of {}", tx.txId, e)
         }
-        finish(payment)
+        discardRecords(abandoned)
+    }
+
+    /**
+     * Removes everything saved against a payment that was never sent. The payment is only dropped
+     * once that succeeds: discarding it earlier would leave gift cards, metadata or queued
+     * platform changes behind with nothing left to retry them.
+     */
+    private suspend fun discardRecords(payment: PendingDirectPayment) {
+        val settled = try {
+            metadataProvider.forgetTransaction(payment.txId)
+        } catch (e: Exception) {
+            log.error("could not discard the records of abandoned payment {}", payment.txId, e)
+            false
+        }
+
+        if (settled) {
+            finish(payment)
+        } else {
+            log.warn(
+                "records of abandoned payment {} are still present, keeping it to retry the cleanup",
+                payment.txId
+            )
+            jobs.remove(payment.txId)
+        }
     }
 
     private suspend fun finish(payment: PendingDirectPayment) {

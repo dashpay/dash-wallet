@@ -347,24 +347,28 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun forgetTransaction(txId: Sha256Hash) {
+    override suspend fun forgetTransaction(txId: Sha256Hash): Boolean {
         // Fail closed: only proceed when a wallet is available AND says it does not hold the
         // transaction. Without a wallet we cannot tell "never broadcast" from "cannot check
         // right now", and deleting on a guess would discard the memo, tax category and cards of
         // a real payment.
         val wallet = walletData.wallet
         if (wallet == null) {
+            // Deferred, not settled: the caller must keep the payment and try again later.
             log.warn("not forgetting {}: no wallet available to confirm the transaction is absent", txId)
-            return
+            return false
         }
         if (wallet.getTransaction(txId) != null) {
+            // Settled: the records describe a real transaction, so there is nothing to discard
+            // now or later.
             log.warn("refusing to forget {}: the wallet holds this transaction", txId)
-            return
+            return true
         }
 
         // one Room transaction: a partial cleanup would strand rows with nothing left to retry it
         val cards = transactionRecordsDao.forgetTransaction(txId)
         log.info("forgot transaction {} that was never broadcast ({} gift card(s) removed)", txId, cards)
+        return true
     }
 
     override suspend fun updateGiftCardMetadata(giftCard: GiftCard) {

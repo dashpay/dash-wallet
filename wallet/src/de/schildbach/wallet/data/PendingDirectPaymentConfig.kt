@@ -44,7 +44,13 @@ data class PendingDirectPayment(
     val txBytes: ByteArray,
     val paymentUrl: String,
     val serviceName: String?,
-    val createdAt: Long
+    val createdAt: Long,
+    /**
+     * True once the payment has been judged never sent and its inputs released, leaving only the
+     * removal of the records saved against it. Such a payment must never be locked or verified
+     * again; it is kept solely so a failed cleanup can be retried.
+     */
+    val abandoned: Boolean = false
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put(KEY_TX_ID, txId.toString())
@@ -52,6 +58,7 @@ data class PendingDirectPayment(
         .put(KEY_PAYMENT_URL, paymentUrl)
         .put(KEY_SERVICE_NAME, serviceName ?: JSONObject.NULL)
         .put(KEY_CREATED_AT, createdAt)
+        .put(KEY_ABANDONED, abandoned)
 
     companion object {
         private const val KEY_TX_ID = "txId"
@@ -59,13 +66,15 @@ data class PendingDirectPayment(
         private const val KEY_PAYMENT_URL = "paymentUrl"
         private const val KEY_SERVICE_NAME = "serviceName"
         private const val KEY_CREATED_AT = "createdAt"
+        private const val KEY_ABANDONED = "abandoned"
 
         fun fromJson(json: JSONObject): PendingDirectPayment = PendingDirectPayment(
             txId = Sha256Hash.wrap(json.getString(KEY_TX_ID)),
             txBytes = Utils.HEX.decode(json.getString(KEY_TX)),
             paymentUrl = json.getString(KEY_PAYMENT_URL),
             serviceName = if (json.isNull(KEY_SERVICE_NAME)) null else json.getString(KEY_SERVICE_NAME),
-            createdAt = json.getLong(KEY_CREATED_AT)
+            createdAt = json.getLong(KEY_CREATED_AT),
+            abandoned = json.optBoolean(KEY_ABANDONED, false)
         )
     }
 }

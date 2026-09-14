@@ -84,6 +84,7 @@ class PendingDirectPaymentVerifierTest {
         every { blockchainStateProvider.getNetworkStatus() } returns NetworkStatus.DISCONNECTED
         coEvery { blockchainStateProvider.getState() } returns null
         metadataProvider = mockk(relaxed = true)
+        coEvery { metadataProvider.forgetTransaction(any()) } returns true
         config = mockk(relaxed = true)
         coEvery { config.getAll() } returns emptyList()
 
@@ -191,6 +192,59 @@ class PendingDirectPaymentVerifierTest {
         withTimeout(5_000) { result.await() }
 
         coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+    }
+
+    @Test
+    fun `keeps the payment when its records could not be discarded`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        goOnlineAndSynced()
+        // cleanup deferred, e.g. no wallet available to confirm the transaction is absent
+        coEvery { metadataProvider.forgetTransaction(any()) } returns false
+        val tx = createTransaction()
+
+        val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        withTimeout(5_000) { result.await() }
+
+        // inputs are freed, but the record survives so the cleanup can be retried
+        tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
+        coVerify(exactly = 0) { config.remove(tx.txId) }
+        coVerify { config.add(match { it.txId == tx.txId && it.abandoned }) }
+    }
+
+    @Test
+    fun `keeps the payment when discarding its records throws`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        goOnlineAndSynced()
+        coEvery { metadataProvider.forgetTransaction(any()) } throws RuntimeException("database is gone")
+        val tx = createTransaction()
+
+        val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        withTimeout(5_000) { result.await() }
+
+        coVerify(exactly = 0) { config.remove(tx.txId) }
+    }
+
+    @Test
+    fun `resume retries the cleanup of an abandoned payment without locking its inputs`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAll() } returns listOf(
+            PendingDirectPayment(
+                tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend",
+                System.currentTimeMillis(), abandoned = true
+            )
+        )
+
+        verifier.resume()
+        withTimeout(5_000) {
+            coVerify(timeout = 5_000) { metadataProvider.forgetTransaction(tx.txId) }
+        }
+
+        // an abandoned payment is never re-locked or re-verified, only cleaned up
+        tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
+        assertFalse(verifier.isTracked(tx.txId))
+        coVerify { config.remove(tx.txId) }
     }
 
     @Test
