@@ -22,6 +22,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.data.PendingDirectPaymentConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.CoinJoinMode
@@ -32,6 +33,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.IdentityRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -41,6 +43,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 import org.bitcoin.protocols.payments.Protos
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -51,11 +54,15 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletProtobufSerializer
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.services.BlockchainStateProvider
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -65,6 +72,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.FileInputStream
+import java.net.Inet6Address
+import java.net.InetAddress
 import java.net.HttpURLConnection
 
 /**
@@ -93,15 +102,20 @@ class SendCoinsTaskRunnerBIP70Test {
     private lateinit var identityRepo: IdentityRepository
     private lateinit var platformRepo: PlatformRepo
     private lateinit var metadataProvider: TransactionMetadataProvider
+    private lateinit var blockchainStateProvider: BlockchainStateProvider
+    private lateinit var pendingPaymentConfig: PendingDirectPaymentConfig
+    private lateinit var pendingPaymentVerifier: PendingDirectPaymentVerifier
     private lateinit var wallet: Wallet
 
     private val networkParams: NetworkParameters = TestNet3Params.get()
+    /** Fixed loopback IP so tests that need a single route can address the server by IP. */
+    private val loopback: InetAddress = InetAddress.getLoopbackAddress()
 
     @Before
     fun setUp() {
         // Initialize MockWebServer
         mockWebServer = MockWebServer()
-        mockWebServer.start()
+        mockWebServer.start(loopback, 0)
 
         // Create mocks
         walletDataProvider = mockk(relaxed = true)
@@ -115,6 +129,8 @@ class SendCoinsTaskRunnerBIP70Test {
         identityRepo = mockk(relaxed = true)
         platformRepo = mockk(relaxed = true)
         metadataProvider = mockk(relaxed = true)
+        blockchainStateProvider = mockk(relaxed = true)
+        pendingPaymentConfig = mockk(relaxed = true)
         // wallet = mockk(relaxed = true)
 
         // dashj requires a Context to be constructed before reading a wallet
@@ -140,6 +156,20 @@ class SendCoinsTaskRunnerBIP70Test {
         every { mockSecurityGuard.retrievePassword() } returns "testPassword"
         every { securityFunctions.deriveKey(any(), any()) } returns mockk(relaxed = true)
 
+        // No peers, no sync: the verifier never resolves a quarantined payment on its own
+        every { blockchainStateProvider.getNetworkStatus() } returns NetworkStatus.DISCONNECTED
+        coEvery { blockchainStateProvider.getState() } returns null
+        coEvery { pendingPaymentConfig.getAll() } returns emptyList()
+        pendingPaymentVerifier = spyk(
+            PendingDirectPaymentVerifier(
+                walletDataProvider,
+                walletApplication,
+                blockchainStateProvider,
+                metadataProvider,
+                pendingPaymentConfig
+            )
+        )
+
         // Create SendCoinsTaskRunner
         sendCoinsTaskRunner = spyk(
             SendCoinsTaskRunner(
@@ -153,9 +183,12 @@ class SendCoinsTaskRunnerBIP70Test {
                 coinJoinService,
                 identityRepo,
                 platformRepo,
-                metadataProvider
+                metadataProvider,
+                pendingPaymentVerifier
             )
         )
+        // don't wait the production 30 seconds for network evidence in tests
+        sendCoinsTaskRunner.ambiguousSubmissionWaitMs = 500L
 
         coEvery { sendCoinsTaskRunner.logSendTxEvent(any(), any()) } returns Unit
 
@@ -799,6 +832,91 @@ class SendCoinsTaskRunnerBIP70Test {
         } catch (e: Exception) {
             // Expected - null payment URL should throw
             assertNotNull(e)
+        }
+    }
+
+    // ==================== ambiguous submission failures ====================
+
+    private fun createBip70PaymentIntent(address: Address, amount: Coin, paymentUrl: String): PaymentIntent {
+        val outputs = arrayOf(
+            PaymentIntent.Output(amount, org.bitcoinj.script.ScriptBuilder.createOutputScript(address))
+        )
+        return PaymentIntent(
+            PaymentIntent.Standard.BIP70,
+            null, null,
+            outputs,
+            null,
+            paymentUrl,
+            null, null, null, null, null
+        )
+    }
+
+    @Test
+    fun `sendDirectPayment quarantines the tx when the connection drops after the request`() = runTest {
+        // Given: the server receives the payment but the connection dies before the ACK arrives
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        // address the server by IP so there is a single route and the failure is the socket drop,
+        // not a connect failure on an alternate (IPv6/IPv4) route
+        val host = if (loopback is Inet6Address) "[${loopback.hostAddress}]" else loopback.hostAddress
+        val paymentIntent = createBip70PaymentIntent(testAddress, testAmount, "http://$host:${mockWebServer.port}/payment")
+        mockWebServer.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST))
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+
+        // When
+        val thrown = try {
+            sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent, "TestService")
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // Then: the result is reported as pending, not as a plain failure
+        assertNotNull("expected an exception", thrown)
+        assertTrue("expected PaymentSubmissionPendingException, got $thrown", thrown is PaymentSubmissionPendingException)
+        val tx = sendRequest.tx
+        assertEquals(tx.txId, (thrown as PaymentSubmissionPendingException).txId)
+
+        // the tx was handed to the verifier and persisted
+        coVerify { pendingPaymentVerifier.quarantine(tx, paymentIntent.paymentUrl!!, "TestService") }
+        coVerify { pendingPaymentConfig.add(match { it.txId == tx.txId }) }
+
+        // its inputs are locked so a retry can't double-spend them ...
+        assertTrue(tx.inputs.isNotEmpty())
+        tx.inputs.forEach { input ->
+            assertTrue("input ${input.outpoint} should be locked", wallet.isLockedOutput(input.outpoint))
+        }
+        // ... but it is not committed: nothing has proven the merchant broadcast it
+        assertTrue(wallet.getTransaction(tx.txId) == null)
+        assertTrue(pendingPaymentVerifier.isTracked(tx.txId))
+    }
+
+    @Test
+    fun `sendDirectPayment does not quarantine when the host cannot be resolved`() = runTest {
+        // Given: a payment URL whose host cannot resolve, so the request never leaves the device.
+        // RFC 2606 reserves the .invalid TLD; a made-up TLD can be answered by a wildcard
+        // resolver, which would turn this into a connect/TLS failure and be classified ambiguous.
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        val paymentIntent = createBip70PaymentIntent(
+            testAddress, testAmount, "https://payment.dash-wallet-test.invalid/payment"
+        )
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+
+        // When
+        val thrown = try {
+            sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent)
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // Then: a definitive failure, inputs stay spendable
+        assertNotNull(thrown)
+        assertFalse("DNS failure must not be reported as pending", thrown is PaymentSubmissionPendingException)
+        coVerify(exactly = 0) { pendingPaymentVerifier.quarantine(any(), any(), any()) }
+        sendRequest.tx.inputs.forEach { input ->
+            assertFalse(wallet.isLockedOutput(input.outpoint))
         }
     }
 }
