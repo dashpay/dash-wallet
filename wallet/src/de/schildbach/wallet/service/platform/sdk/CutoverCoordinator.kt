@@ -441,6 +441,25 @@ class CutoverCoordinator @Inject constructor(
         armUpgradeNoticeOnce(committedBy)
     }
 
+    /**
+     * Arms the one-time sync explainer, at most once per install.
+     *
+     * Split out of [armUpgradeNoticeIfUpgraded] because the eligibility tests
+     * (did this install cross the boundary, did a fresh wallet setup run) and
+     * the once-only guard answer different questions: eligibility is per
+     * INSTALL and re-evaluated on every commit, while this latch is the thing
+     * that stops a second commit — the seam and the readiness auto-commit can
+     * both land on the same install — re-showing a sheet that says it happens
+     * only once.
+     *
+     * Write order matters: [DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED]
+     * lands BEFORE [DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING], so a crash
+     * between the two costs the user the explainer rather than re-arming it
+     * forever. An UNREADABLE latch is treated as "already armed" for the same
+     * reason: suppressing a sheet the user may have seen beats repeating it.
+     *
+     * Never throws.
+     */
     private suspend fun armUpgradeNoticeOnce(committedBy: String) {
         val everArmed = runCatching {
             dashPayConfig.get(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED) == true
