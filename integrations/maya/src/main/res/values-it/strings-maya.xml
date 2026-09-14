@@ -20,8 +20,17 @@
     <string name="maya_portal_convert_to_title">Converti Dash in</string>
     <string name="maya_portal_convert_subtitle">Dal Dash Wallet a qualsiasi criptovaluta</string>
     <string name="maya_portal_subtitle">Converti Dash dal portafoglio Dash in qualsiasi criptovaluta supportata da Maya e inviala a qualsiasi portafoglio.</string>
+    <string name="dash_dex_buy_title">Compra Dash</string>
+    <string name="dash_dex_sell_title">Vendi Dash</string>
+    <string name="dash_dex_sell_subtitle">Dal Dash Wallet a qualsiasi criptovaluta</string>
     <string name="maya_address_input_hint">%s Indirizzo</string>
     <string name="maya_address_input_title">Converti DASH in %s</string>
+    <!-- Nav bar title of the convert-crypto enter-amount screen (Figma 24034:44864) -->
+    <string name="maya_convert_enter_amount_title">Converti</string>
+    <!-- Header of the address-sources card on the address input screen (Figma 24007:13081) -->
+    <string name="maya_paste_address_from">Incolla indirizzo da</string>
+    <!-- Title of the clipboard row in the address-sources card -->
+    <string name="maya_clipboard">Appunti</string>
     <string name="maya_crypto_convert_title">Converti Dash</string>
     <string name="maya_crypto_convert_order_preview_title">Anteprima dell\'ordine</string>
 
@@ -29,13 +38,11 @@
     <string name="cryptocurrency_bitcoin_network">Bitcoin</string>
     <string name="cryptocurrency_dash_network">Dash</string>
     <string name="cryptocurrency_rune_network">Thorchain</string>
-    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
     <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
     <string name="cryptocurrency_kuji_network">Kujira</string>
     <string name="cryptocurrency_usk_network">USK</string>
-    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
     <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
     <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
     <string name="cryptocurrency_ethereum_arbitrum_network">Ethereum (Arbitrum)</string>
@@ -56,7 +63,7 @@
     <string name="cryptocurrency_zec_network">Zcash</string>
     <string name="cryptocurrency_xrd_network">Radix</string>
     <string name="cryptocurrency_maya_network">Maya (Maya)</string>
-
+    <string name="cryptocurrency_ltc_network">Litecoin</string>
     <string name="maya_error">Errore Maya</string>
     <string name="maya_error_not_available">Il servizio Maya non è disponibile. Riprova più tardi.</string>
     <string name="maya_error_report_issue">Si prega di segnalare questo problema al team di supporto del Dash Wallet utilizzando la funzione \"Contatta il Supporto\" presente nel menu principale.</string>
@@ -65,6 +72,8 @@
     <!-- taken from Coinbase -->
     <string name="entered_amount_is_too_low">L\'importo minimo della transazione è</string>
     <string name="entered_amount_is_too_high">L\'importo massimo della transazione è</string>
+    <!-- Short form of the max-amount error on the convert-crypto enter-amount screen, e.g. "Max $205.32" (Figma 24034:44864) -->
+    <string name="maya_max_amount_error">Max</string>
     <string name="we_didnt_find_any_assets">Non abbiamo trovato alcuna risorsa sul tuo account Coinbase.</string>
     <string name="something_wrong_title">Qualcosa è andato storto!</string>
     <string name="dont_have_any_dash">Non hai Dash nel tuo Portafoglio Dash.</string>
@@ -103,10 +112,16 @@
     <string name="you_receive">Tu Ricevi</string>
     <string name="to_dash_wallet_on_this_device">dal Portafoglio Dash su questo dispositivo</string>
     <string name="purchase">Acquisto</string>
-    <string name="maya_fee">Commissione Maya</string>
+    <string name="maya_fee">Commissione</string>
+    <string name="network_label">Network</string>
     <string name="total">Totale</string>
     <string name="to_external_address">a %s</string>
 
+    <!-- DashDEX sell: order preview quote expiry countdown & network explorer link -->
+    <string name="button_refresh">Aggiorna</string>
+    <string name="maya_explorer_view_maya">Visualizza l\'explorer di MayaChain</string>
+    <!-- NEAR explorer description copy is placeholder until QA provides the final wording (was TBC) -->
+    <string name="maya_explorer_view_near">Visualizza l\'esploratore di NEAR Intents</string>
     <string name="maya_error_information">%s%nCriptovaluta: %s</string>
     <string name="maya_error_invalid_destination_address">Indirizzo di destinazione non valido</string>
     <string name="maya_error_below_recommended_minimum">L\'importo inserito è inferiore al minimo consigliato.</string>
@@ -115,6 +130,33 @@
     <string name="maya_error_quote">Non è stato possibile ottenere una quotazione da Maya per questa conversione.</string>
     <string name="maya_halted_label">Fermato</string>
     <string name="maya_halted_coins_toast">Alcune criptovalute sono temporaneamente sospese e non disponibili per il trading.</string>
+    <string name="maya_select_coin_title">Seleziona una coin</string>
+    <string name="dex_enter_amount_checking">Verifica dell\'importo…</string>
+    <string name="dex_enter_amount_invalid">Questo importo non può essere scambiato in questo momento. Prova con un importo diverso oppure riprova tra poco.</string>
+    <string name="maya_route_label_multiple">Reti multiple</string>
+    <string name="dex_refund_address_heading">Inserisci l\'indirizzo per il rimborso</string>
+    <string name="dex_refund_address_field_label">Indirizzo per il rimborso</string>
+    <string name="dex_refund_address_placeholder">Tieni premuto per incollare</string>
 
+    <string name="dex_receive_description">Una volta che la rete avrà confermato il tuo trasferimento, lo convertiremo in Dash e lo depositeremo nel tuo portafoglio DashPay</string>
+    <string name="dex_receive_uri_label">URI</string>
+    <string name="dex_receive_memo_label">Memo / Tag</string>
+    <string name="dex_receive_memo_warning">La tua transazione deve includere questa nota. I fondi inviati senza di essa non potranno essere abbinati al tuo swap e andranno persi.</string>
+    <string name="dex_receive_expiry_title">Questo indirizzo scade tra 10 minuti</string>
+    <string name="dex_receive_back_home">Ritorno alla home</string>
+
+    <!-- DashDEX buy: user-facing swap error messages (mapped from SwapKit error codes by SwapKitErrors).
+         %1$s is the coin code (e.g. "BTC"); messages that don't need it simply ignore the argument. -->
+    <string name="dex_error_generic">Si è verificato un errore durante la configurazione dello scambio. Riprova.</string>
+    <string name="dex_error_no_route">Questo importo non può essere modificato al momento. I percorsi potrebbero non essere disponibili per un breve periodo — riprova tra poco o prova con un importo diverso.</string>
+    <string name="dex_error_validation">Non è stato possibile completare lo scambio. Si prega di verificare l\'importo e l\'indirizzo, quindi riprovare.</string>
+    <string name="dex_error_unavailable">Gli scambi non sono temporaneamente disponibili. Riprova più tardi.</string>
+    <string name="dex_error_quote_expired">Questo preventivo è scaduto. Torna indietro e riprova.</string>
+    <string name="dex_error_sanctioned">Questo indirizzo non può essere utilizzato per gli scambi.</string>
+    <string name="dex_error_insufficient_balance">L\'importo è superiore a quello che stai inviando.</string>
+    <string name="dex_error_allowance">Questo token necessita di approvazione prima di poter essere scambiato.</string>
+    <string name="dex_error_build_failed">Non siamo riusciti a preparare questo scambio. Riprova.</string>
+    <string name="dex_error_invalid_destination">Non siamo riusciti ad impostare il deposito. Riprova.</string>
+    <string name="dex_error_price_moved">Il prezzo ha oscillato troppo. Si prega di tornare indietro e riprovare.</string>
 
 </resources>

@@ -105,8 +105,10 @@ Username</b></string>
     <string name="search_user_no_results">Non ci sono utenti corrispondenti</string>
     <string name="search_user_loading">Ricerca del nome utente <b> "%"</b> nella rete Dash</string>
     <string name="contact_request_pending">Richiesta di contatto in sospeso</string>
+    <string name="send_button_label">Invia</string>
     <string name="pay">Paga</string>
     <string name="contact_request_received_title">%s ha chiesto di diventare amico</string>
+    <string name="contact_request_received_card_title">%s ti ha inviato una richiesta di contatto</string>
     <string name="contact_request_accept">Accetta</string>
     <string name="contact_request_ignore">Ignora</string>
 
@@ -544,4 +546,12 @@ Username</b></string>
     <string name="create_instant_username_button">Crea un nome utente istantaneo</string>
     <string name="create_instant_username_cancel">Annulla</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">Scansiona QR</string>
+    <string name="dash_connect_status_disconnected">Disconnesso</string>
+    <string name="dash_connect_approve_verify_identity">Verifica la tua identità</string>
+    <string name="dash_connect_username">Nome Utente</string>
+    <string name="dash_connect_identity">Identità</string>
+    <string name="dash_connect_approve_no_withdraw_funds">Prelevare fondi</string>
+    <string name="dash_connect_deny">Nega</string>
+    <string name="dash_connect_confirm">Confermare</string>
+    </resources>

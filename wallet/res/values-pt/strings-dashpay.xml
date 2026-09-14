@@ -105,8 +105,10 @@ Dash</b></string>
     <string name="search_user_no_results">Não há usuários que correspondam</string>
     <string name="search_user_loading">Buscando o nome de usuário <b>\"%\"</b> na Rede Dash</string>
     <string name="contact_request_pending">Solicitação de Contato Pendente</string>
+    <string name="send_button_label">Enviar</string>
     <string name="pay">Pagar</string>
     <string name="contact_request_received_title">%s pediu para ser seu amigo</string>
+    <string name="contact_request_received_card_title">%s lhe enviou uma solicitação de contato</string>
     <string name="contact_request_accept">Aceitar</string>
     <string name="contact_request_ignore">Ignorar</string>
 
@@ -544,4 +546,12 @@ Dash</b></string>
     <string name="create_instant_username_button">Criar nome de usuário instantâneo</string>
     <string name="create_instant_username_cancel">Cancelar</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">Digitalizar QR</string>
+    <string name="dash_connect_status_disconnected">Desconectado</string>
+    <string name="dash_connect_approve_verify_identity">Verifique sua identidade</string>
+    <string name="dash_connect_username">Nome de usuário</string>
+    <string name="dash_connect_identity">Identidade</string>
+    <string name="dash_connect_approve_no_withdraw_funds">Retirar fundos</string>
+    <string name="dash_connect_deny">Negar</string>
+    <string name="dash_connect_confirm">Confirmar</string>
+    </resources>

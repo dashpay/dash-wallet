@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Rechazar</string>
+    <string name="button_settings">Ajustes</string>
     <string name="network_unavailable_return">Regresar a la billetera</string>
     <string name="button_continue">Continuar</string>
     <string name="get_quote">Obtener cotización</string>
     <string name="button_close">Cerrar</string>
     <string name="button_cancel">Cancelar</string>
+    <string name="button_clear">Limpia</string>
+    <string name="button_paste">Pegar</string>
     <string name="button_confirm">Confirmar</string>
     <string name="button_retry">Reintentar</string>
     <string name="button_send_report">Enviar reporte</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">La cámara ha sufrido un problema. Probablemente necesites reiniciar el dispositivo.</string>
     <string name="scan_camera_permission_dialog_title">Permisos de la camara</string>
     <string name="scan_camera_permission_dialog_message">Para poder escanear códigos QR, necesitas dar permisos al uso de la camara.</string>
-
     <!-- address input -->
     <string name="address_input_title">Enviar Dash</string>
     <string name="show_clipboard">Mostrar contenido en el portapapeles</string>
@@ -137,7 +139,8 @@
     <string name="input_parser_invalid_paymentrequest">Solicitud de pago inválida:\n%s</string>
     <string name="input_parser_invalid_transaction">Transacción inválida:\n%s</string>
     <string name="address_input_paste_from">Pegar desde %s</string>
-    <string name="input_connect">Conectar</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">Iniciar sesión</string>
 
     <!-- others -->
     <string name="confirm_sec">Confirmar (%ss)</string>

@@ -105,8 +105,10 @@ Dash</b></string>
     <string name="search_user_no_results">Совпадений по имени пользователя не найдено</string>
     <string name="search_user_loading">Поиск по Имени пользователя <b>"%"</b> в Dash Network</string>
     <string name="contact_request_pending">Неподтверждённые запросы</string>
+    <string name="send_button_label">Отправить</string>
     <string name="pay">Оплатить</string>
     <string name="contact_request_received_title">%s отправил запрос на добавление в контакты</string>
+    <string name="contact_request_received_card_title">%s отправил вам запрос на добавление в контакты</string>
     <string name="contact_request_accept">Подтвердить</string>
     <string name="contact_request_ignore">Игнорировать</string>
 
@@ -544,4 +546,12 @@ Dash</b></string>
     <string name="create_instant_username_button">Создать быстрое имя пользователя</string>
     <string name="create_instant_username_cancel">Отмена</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">Сканировать QR</string>
+    <string name="dash_connect_status_disconnected">Подключение отсутствует</string>
+    <string name="dash_connect_approve_verify_identity">Подтвердите свою личность</string>
+    <string name="dash_connect_username">Имя пользователя</string>
+    <string name="dash_connect_identity">ID</string>
+    <string name="dash_connect_approve_no_withdraw_funds">Вывести средства</string>
+    <string name="dash_connect_deny">Отказаться</string>
+    <string name="dash_connect_confirm">Подтвердить</string>
+    </resources>

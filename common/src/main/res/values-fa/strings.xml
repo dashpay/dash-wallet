@@ -48,11 +48,13 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">متوجه شدم!</string>
+    <string name="button_settings">تنظیمات</string>
     <string name="network_unavailable_return">بازگشت به کیف‌ پول</string>
     <string name="button_continue">ادامه</string>
     <string name="get_quote">دریافت قیمت تخمینی</string>
     <string name="button_close">بستن</string>
     <string name="button_cancel">لغو</string>
+    <string name="button_paste">چسباندن</string>
     <string name="button_confirm">تائید</string>
     <string name="button_retry">تلاش دوباره</string>
     <string name="button_send_report">ارسال گزارش</string>
@@ -120,7 +122,6 @@
     <string name="scan_camera_problem_dialog_message">دوربین مشکل دارد. احتمالا باید دستگاه‌تان را خاموش و دوباره روشن کنید.</string>
     <string name="scan_camera_permission_dialog_title">مجوز استفاده از دوربین</string>
     <string name="scan_camera_permission_dialog_message">برای اسکن کیوآر کد، باید مجوز استفاده از دوربین را داشته باشید.</string>
-
     <!-- address input -->
     <string name="address_input_title">ارسال دش</string>
     <string name="show_clipboard">نشان دادن اطلاعات در کلیپ‌برد</string>
@@ -137,7 +138,8 @@
     <string name="input_parser_invalid_paymentrequest">درخواست نامعتبر پرداخت:n\%s</string>
     <string name="input_parser_invalid_transaction">تراکنش نامعتبر:n\%s</string>
     <string name="address_input_paste_from">چسباندن از %s</string>
-    <string name="input_connect">اتصال</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">ورود به حساب</string>
 
     <!-- others -->
     <string name="confirm_sec">تائید (%sثانیه) </string>

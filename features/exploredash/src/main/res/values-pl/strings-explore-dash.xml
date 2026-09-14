@@ -35,7 +35,7 @@
     <string name="explore_option_all">Całość</string>
     <string name="explore_option_buy">Kup</string>
     <string name="explore_option_sell">Sprzedawaj</string>
-    <string name="explore_option_buy_sell">Kupuj &amp; Sprzedawaj</string>
+    <string name="explore_option_buy_sell">Kup &amp; Sprzedaj</string>
     <string name="explore_where_to_spend">Gdzie kupować</string>
     <string name="explore_atms">Bankomaty</string>
     <string name="explore_all_states">Wszystkie stany</string>
@@ -109,7 +109,7 @@
         <item>Całość</item>
         <item>Kup</item>
         <item>Sprzedawaj</item>
-        <item>Kupuj/Sprzedawaj</item>
+        <item>Kup/Sprzedaj</item>
     </string-array>
 
     <string-array name="radius_filter_options_miles">

@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">取消</string>
+    <string name="button_settings">設定</string>
     <string name="network_unavailable_return">返回錢包</string>
     <string name="button_continue">繼續</string>
     <string name="get_quote">獲得報價</string>
     <string name="button_close">關閉</string>
     <string name="button_cancel">取消</string>
+    <string name="button_clear">清除</string>
+    <string name="button_paste">貼上</string>
     <string name="button_confirm">確認:</string>
     <string name="button_retry">重試</string>
     <string name="button_send_report">發送報告</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">照相機有問題，你可能需要重新啟動裝置</string>
     <string name="scan_camera_permission_dialog_title">相機權限</string>
     <string name="scan_camera_permission_dialog_message">為了掃描QR碼，您需要授予使用相機的權限。</string>
-
     <!-- address input -->
     <string name="address_input_title">達世幣付款</string>
     <string name="show_clipboard">顯示剪貼板中的內容</string>
@@ -137,7 +139,8 @@
     <string name="input_parser_invalid_paymentrequest">無效付款請求:\n%s</string>
     <string name="input_parser_invalid_transaction">無效交易:\n%s</string>
     <string name="address_input_paste_from">貼自 %s</string>
-    <string name="input_connect">連接</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">登入</string>
 
     <!-- others -->
     <string name="confirm_sec">確認 (%ss)</string>
@@ -149,4 +152,5 @@
     <string name="send_coins_error_msg">付款出現問題!</string>
     <string name="from_dash_wallet_on_this_device">從此設備上的達世幣錢包</string>
     <string name="preposition_at">在</string>
-    </resources>
+    <string name="info">資訊</string>
+</resources>

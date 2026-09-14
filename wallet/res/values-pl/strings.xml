@@ -101,7 +101,7 @@
     <string name="maintenance_dialog_title">Zalecana konserwacja</string>
     <string name="maintenance_dialog_message">Otrzymałeś %1$s na niezabezpieczony adres. Czy chcesz przenieść środki na bezpieczny adres? Zostanie pobrana niewielka opłata za transakcję w wysokości %2$s.</string>
     <string name="maintenance_dialog_state_decrypting">Odszyfrowywanie...</string>
-    <string name="maintenance_dialog_state_done">Zrobione.</string>
+    <string name="maintenance_dialog_state_done">OK</string>
     <string name="maintenance_dialog_button_move">Przenieś</string>
     <string name="request_coins_activity_title">Poproś o Dashe</string>
     <string name="request_coins_fragment_amount_label">Żądana kwota (opcjonalnie)</string>
@@ -238,7 +238,7 @@
     <string name="encrypt_keys_dialog_show">Pokaż PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Szyfruje...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Odszyfrowywuje...</string>
-    <string name="encrypt_keys_dialog_state_done">Zrobione</string>
+    <string name="encrypt_keys_dialog_state_done">OK</string>
     <string name="preferences_activity_title">Ustawienia</string>
     <string name="preferences_category_diagnostics">Diagnostyka</string>
     <string name="preferences_category_labs">Eksperymentalne</string>

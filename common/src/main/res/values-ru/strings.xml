@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Отклонить</string>
+    <string name="button_settings">Настройки</string>
     <string name="network_unavailable_return">Вернуться в кошелёк</string>
     <string name="button_continue">Продолжить</string>
     <string name="get_quote">Получить Quote</string>
     <string name="button_close">Закрыть</string>
     <string name="button_cancel">Отмена</string>
+    <string name="button_clear">Удалить</string>
+    <string name="button_paste">Вставить</string>
     <string name="button_confirm">Подтвердить</string>
     <string name="button_retry">Повторить</string>
     <string name="button_send_report">Отправить отчёт</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">Проблема с камерой. Возможно, Вам нужно перезагрузить устройство.</string>
     <string name="scan_camera_permission_dialog_title">Права на доступ к камере</string>
     <string name="scan_camera_permission_dialog_message">Для сканирования QR-кодов, Вам нужно разрешить использовать камеру.</string>
-
     <!-- address input -->
     <string name="address_input_title">Отправить Dash</string>
     <string name="show_clipboard">Показать содержимое буфера обмена</string>
@@ -137,7 +139,8 @@
     <string name="input_parser_invalid_paymentrequest">Неверный платёжный запрос:\n%s</string>
     <string name="input_parser_invalid_transaction">Некорректная транзакция:\n%s</string>
     <string name="address_input_paste_from">Вставить из %s</string>
-    <string name="input_connect">Подключиться</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">Войти</string>
 
     <!-- others -->
     <string name="confirm_sec">Подтвердить (%s)</string>

@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Schließen</string>
+    <string name="button_settings">Einstellungen</string>
     <string name="network_unavailable_return">Zur Wallet zurückkehren</string>
     <string name="button_continue">Fortfahren</string>
     <string name="get_quote">Angebot einholen</string>
     <string name="button_close">Schließen</string>
     <string name="button_cancel">Abbrechen</string>
+    <string name="button_clear">Löschen</string>
+    <string name="button_paste">Einfügen</string>
     <string name="button_confirm">Bestätigen</string>
     <string name="button_retry">Wiederholen</string>
     <string name="button_send_report">Bericht senden</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">Die Kamera scheint ein Problem zu haben. Bitte starte Dein Gerät neu.</string>
     <string name="scan_camera_permission_dialog_title">Kamera genehmigen</string>
     <string name="scan_camera_permission_dialog_message">Damit QR-Codes gescannt werden können, musst Du das Verwenden der Kamera erlauben.</string>
-
     <!-- address input -->
     <string name="address_input_title">Dash senden</string>
     <string name="show_clipboard">Inhalt der Zwischenablage anzeigen</string>
@@ -137,7 +139,8 @@
     <string name="input_parser_invalid_paymentrequest">Ungültige Zahlungsanforderung:\n%s</string>
     <string name="input_parser_invalid_transaction">Ungültige Transaktion:\n%s</string>
     <string name="address_input_paste_from">Einfügen von %s</string>
-    <string name="input_connect">Verbinde</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">Einloggen</string>
 
     <!-- others -->
     <string name="confirm_sec">Bestätigen (%ss)</string>

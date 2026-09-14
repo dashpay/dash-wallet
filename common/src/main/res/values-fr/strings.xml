@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Ignorer</string>
+    <string name="button_settings">Réglages</string>
     <string name="network_unavailable_return">Retourner au portefeuille</string>
     <string name="button_continue">Continuer</string>
     <string name="get_quote">Obtenir un devis</string>
     <string name="button_close">Fermer</string>
     <string name="button_cancel">Annuler</string>
+    <string name="button_clear">Effacer</string>
+    <string name="button_paste">Coller</string>
     <string name="button_confirm">Confirmer</string>
     <string name="button_retry">Réessayer</string>
     <string name="button_send_report">Envoyer un rapport</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">L\'appareil photo-vidéo a un problème. Vous devez probablement redémarrer votre appareil.</string>
     <string name="scan_camera_permission_dialog_title">Autorisation de l\'appareil photo-vidéo</string>
     <string name="scan_camera_permission_dialog_message">Pour scanner des QR-codes, vous devez autoriser l\'utilisation de l\'appareil photo-vidéo.</string>
-
     <!-- address input -->
     <string name="address_input_title">Envoyer dashs</string>
     <string name="show_clipboard">Voir le contenu du presse-papiers</string>
@@ -137,7 +139,8 @@
     <string name="input_parser_invalid_paymentrequest">Demande de paiement invalide :\n%s</string>
     <string name="input_parser_invalid_transaction">Transaction invalide :\n%s</string>
     <string name="address_input_paste_from">Coller depuis %s</string>
-    <string name="input_connect">Se connecter</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">Se connecter</string>
 
     <!-- others -->
     <string name="confirm_sec">Confirmer (%ss)</string>
