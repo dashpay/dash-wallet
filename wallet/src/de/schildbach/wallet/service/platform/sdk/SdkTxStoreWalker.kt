@@ -734,9 +734,19 @@ internal class SdkTxStoreWalker(
         val knownWalletAddresses = HashSet<String>()
         for (chunk in knownAddressCandidates.chunked(TXID_IN_CHUNK)) {
             val placeholders = chunk.joinToString(",") { "?" }
+            // Scoped to THIS wallet: core_addresses is shared across every wallet
+            // in the store and carries no walletId of its own, only accountId.
+            // Another wallet's address is a foreign payee here, not a hole in
+            // our mirror — counting it as "known" would defer the correction
+            // forever, since our mirror will never gain a row for it.
+            val args = ArrayList<Any?>(1 + chunk.size)
+            args.add(walletId)
+            args.addAll(chunk)
             rawQuery(
-                "SELECT address FROM core_addresses WHERE address IN ($placeholders)",
-                chunk.toTypedArray<Any?>()
+                "SELECT ca.address FROM core_addresses ca " +
+                    "JOIN accounts a ON a.id = ca.accountId " +
+                    "WHERE a.walletId = ? AND ca.address IN ($placeholders)",
+                args.toTypedArray()
             ) { c -> while (c.moveToNext()) knownWalletAddresses += c.getString(0) }
         }
         val mirroredVouts = HashMap<String, MutableSet<Int>>()
