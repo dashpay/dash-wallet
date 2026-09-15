@@ -501,9 +501,17 @@ s4)
   # (15) is the other stop level, but `am send-trim-memory` delivers it while the
   # app is foreground-visible, where the framework may re-raise it; COMPLETE is
   # the deterministic one.
+  #
+  # The level is pinned to 80 rather than [0-9]+ on purpose. refute_log does not
+  # advance LOG_MARK, so both legs share one window: a level-40 teardown that
+  # arrived just after the refute sampled would otherwise satisfy this assertion
+  # and turn the regression it is meant to catch into a PASS. Re-marking here
+  # would fix that too, but it would also drop the cold-launch start line out of
+  # the window and break the >= 2 restart count below. Matching the exact level
+  # keeps both assertions honest without touching the window.
   note "firing TRIM_MEMORY_COMPLETE — genuine pressure, the service must stop"
   adbs am send-trim-memory "$PKG" COMPLETE; sleep 6
-  assert_log "service tore down"                 "memory pressure \(onTrimMemory level [0-9]+\), stopping service"
+  assert_log "service tore down (level 80)"      "memory pressure \(onTrimMemory level 80\), stopping service"
   assert_log "engine stopped (release build)"    "L1ShadowLifecycle STOPPED"
   note "bringing the app back — the engine MUST restart"
   launch_app
