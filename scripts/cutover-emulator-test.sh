@@ -438,7 +438,7 @@ s3)
   wake_unlock
   launch_app
 
-  # The recovery chain, in order. Each of these was broken until b49ef25b0:
+  # The recovery chain, in order. Each of these was broken until 5d89950bc:
   #   - ProcessLifecycleOwner never fired, so the foreground signal never existed
   #   - noteAppForeground was state-only, so nothing drove a retry
   #   - nothing else calls maybeRetry once the cutover correctly declines to commit
@@ -476,7 +476,7 @@ s3b)
   ;;
 
 s4)
-  say "S4 — memory trim -> SPV engine restart (the ea506f978 fix)"
+  say "S4 — memory trim -> SPV engine restart (the b994bb6a1 fix)"
   require_device; require_root
   show_state
   require_state CUT_OVER
@@ -487,10 +487,24 @@ s4)
   mark_log
   launch_app
   assert_log "engine started on a cold launch"   "L1 shadow SPV started"
-  note "firing TRIM_MEMORY_BACKGROUND deterministically"
+  # BACKGROUND (40) does NOT mean memory pressure — it means the process moved
+  # onto the LRU background list, i.e. the user left the app. 0b31e7980 stopped
+  # treating it as pressure, so the service must now IGNORE it. That is the
+  # MO-995 bug itself, so pin it: without this refute, a regression restoring
+  # `level >= TRIM_MEMORY_BACKGROUND` would tear L1 down on every backgrounding
+  # and S4 would still pass, because the COMPLETE leg below would cover for it.
+  note "firing TRIM_MEMORY_BACKGROUND — the service must IGNORE it"
   adbs am send-trim-memory "$PKG" BACKGROUND; sleep 6
-  assert_log "service tore down"                 "low memory detected, stopping service"
-  assert_log "engine stopped (release build)"    "L1 shadow sync stopped"
+  refute_log "background trim ignored (no teardown)" \
+      "memory pressure \(onTrimMemory level 40\), stopping service"
+  # COMPLETE (80) is genuine pressure and MUST stop the service. RUNNING_CRITICAL
+  # (15) is the other stop level, but `am send-trim-memory` delivers it while the
+  # app is foreground-visible, where the framework may re-raise it; COMPLETE is
+  # the deterministic one.
+  note "firing TRIM_MEMORY_COMPLETE — genuine pressure, the service must stop"
+  adbs am send-trim-memory "$PKG" COMPLETE; sleep 6
+  assert_log "service tore down"                 "memory pressure \(onTrimMemory level [0-9]+\), stopping service"
+  assert_log "engine stopped (release build)"    "L1ShadowLifecycle STOPPED"
   note "bringing the app back — the engine MUST restart"
   launch_app
   COUNT=$(grep -c "L1 shadow SPV started" "$(since_mark)")
