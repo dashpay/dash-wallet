@@ -395,6 +395,89 @@ class CutoverCoordinatorTest {
     private val sameBuildVersionCode = CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE + 1
 
     /**
+     * THE CASE THAT MAKES THE RETRY WORTH HAVING: the seam DECLINES.
+     *
+     * On a real upgrade the seam cannot commit — the bind runs after it — so
+     * `commitForUpgradedWalletAsync` returns at `if (!justCutOver)`. My first
+     * version of this fix put the only retry inside
+     * `armUpgradeNoticeIfUpgraded`, which is reached solely via a SUCCESSFUL
+     * commit. So on the one launch that can observe the crossing, the retry
+     * never ran: the flag died with the process, `Configuration.lastVersionCode`
+     * had already advanced, and the explainer was lost for good.
+     *
+     * Two coordinator instances over ONE store, because that is the only way to
+     * show it: the in-memory flag cannot cross the boundary, so the second
+     * instance can only succeed if the latch genuinely reached the store.
+     */
+    @Test
+    fun upgradeNotice_boundaryLatchIsRepersisted_evenWhenTheSeamDeclinesToCommit() = runBlocking {
+        var storedState: String? = null
+        var boundaryLatched = false
+        var noticeArmed = false
+        var noticeEverArmed = false
+        var bindEverSucceeded = false
+        var boundaryWritesLeftToFail = 1
+
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { storedState }
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } answers { bindEverSucceeded }
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } answers { boundaryLatched }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } answers {
+            if (boundaryWritesLeftToFail > 0) {
+                boundaryWritesLeftToFail--
+                throw IOException("datastore write failed")
+            }
+            boundaryLatched = secondArg()
+            Unit
+        }
+        coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
+            storedState = secondArg()
+            Unit
+        }
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED) } answers { noticeEverArmed }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED, any<Boolean>()) } answers {
+            noticeEverArmed = secondArg()
+            Unit
+        }
+        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, any<Boolean>()) } answers {
+            noticeArmed = secondArg()
+            Unit
+        }
+        val collector = mockk<CutoverEvidenceCollector>()
+        coEvery { collector.collect() } returns readyEvidence()
+
+        // LAUNCH 1 — the upgrade launch. The latch write fails, and the bind has
+        // not run yet, so the commit is refused.
+        val first = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined))
+        first.commitForUpgradedWalletAsync(pre1110VersionCode)
+
+        assertNotEquals(
+            "the seam must NOT commit without bind evidence — that is the walletB bug",
+            CutoverState.CUT_OVER.name,
+            storedState
+        )
+        assertTrue(
+            "the declining launch must still get the boundary crossing onto disk, " +
+                "because no later launch can recompute it",
+            boundaryLatched
+        )
+
+        // LAUNCH 2 — a new process. The in-memory flag is gone; only the store
+        // carries the crossing. The bind has since succeeded.
+        bindEverSucceeded = true
+        val second = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined))
+        second.commitForUpgradedWalletAsync(sameBuildVersionCode)
+
+        assertEquals(
+            "the later launch must commit off the persisted latch",
+            CutoverState.CUT_OVER.name,
+            storedState
+        )
+        assertTrue("and the user must still get the one-time explainer", noticeArmed)
+    }
+
+    /**
      * A DROPPED boundary-latch write must not cost the user the explainer.
      *
      * The crossing is computable on exactly one launch —

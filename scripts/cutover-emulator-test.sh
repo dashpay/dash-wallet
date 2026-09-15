@@ -526,7 +526,7 @@ s4)
 log)
   require_device
   f=$(pull_log); echo "$f"
-  grep -nE "cutover state|declining to commit|Keystore denied|L1 shadow SPV started|L1 shadow sync stopped|low memory detected|idling detected|starting peergroup|holding the dashj L1 engine|bind has never succeeded|explainer armed" "$f" | tail -40
+  grep -nE "cutover state|declining to commit|Keystore denied|L1 shadow SPV started|L1ShadowLifecycle STOPPED|memory pressure \(onTrimMemory|idling detected|starting peergroup|holding the dashj L1 engine|bind has never succeeded|explainer armed" "$f" | tail -40
   ;;
 
 *)

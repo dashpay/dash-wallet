@@ -320,11 +320,13 @@ class CutoverCoordinator @Inject constructor(
                     if (it is CancellationException) throw it
                     // Remember it in memory: the crossing is observable on this
                     // launch only, so dropping it here costs the explainer for
-                    // good. Retried in armUpgradeNoticeIfUpgraded.
+                    // good. Retried by persistBoundaryCrossingIfPending, which
+                    // runs on every readiness evaluation and on the decline
+                    // path below — NOT only when a commit succeeds.
                     boundaryCrossingUnpersisted = true
                     log.warn(
                         "failed to latch the cutover boundary crossing — holding it in memory " +
-                            "for this launch and retrying when the cutover commits",
+                            "for this launch and retrying on every later opportunity",
                         it
                     )
                 }
@@ -350,7 +352,16 @@ class CutoverCoordinator @Inject constructor(
             val (_, justCutOver) = mutex.withLock {
                 commitLocked("upgraded-wallet launch", requireBindEvidence = true)
             }
-            if (!justCutOver) return@launch
+            if (!justCutOver) {
+                // The seam DECLINING is the normal case on a real upgrade — the
+                // bind runs after it, so GATE 2 cannot pass yet. That makes this
+                // the last code to run on the one launch that can observe the
+                // crossing, so a pending latch must be retried HERE; leaving it
+                // to a commit that will not happen loses it when the process
+                // ends.
+                persistBoundaryCrossingIfPending()
+                return@launch
+            }
             if (freshWalletSetupThisLaunch) {
                 log.info(
                     "upgrade seam committed the cutover, but a fresh wallet setup ran on this " +
@@ -395,6 +406,31 @@ class CutoverCoordinator @Inject constructor(
      * between the two costs the user the explainer; the reverse order would
      * re-arm forever, which is the bug being fixed. Never throws.
      */
+    /**
+     * Retry a boundary latch that failed to persist, if one is pending.
+     *
+     * The crossing is computable on exactly one launch, so a dropped write has
+     * to be re-attempted from somewhere that actually runs on THAT launch. The
+     * commit path is not such a place: on a real upgrade the seam declines
+     * (the bind lands after it), so the arming site is never reached. This is
+     * called from the decline path and from every readiness evaluation, so the
+     * retry gets as many chances as the process has left.
+     *
+     * Never throws; safe to call when nothing is pending.
+     */
+    private suspend fun persistBoundaryCrossingIfPending() {
+        if (!boundaryCrossingUnpersisted) return
+        runCatching {
+            dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, true)
+        }.onSuccess {
+            boundaryCrossingUnpersisted = false
+            log.info("re-latched the cutover boundary crossing that failed to persist earlier")
+        }.onFailure {
+            if (it is CancellationException) throw it
+            log.warn("failed to re-latch the cutover boundary crossing; will retry again", it)
+        }
+    }
+
     private suspend fun armUpgradeNoticeIfUpgraded(committedBy: String) {
         // Only an install that genuinely crossed the cutover boundary is owed
         // the explainer. GATE 1 in commitForUpgradedWalletAsync latches this
@@ -412,18 +448,10 @@ class CutoverCoordinator @Inject constructor(
         val upgraded = if (persisted) {
             true
         } else if (boundaryCrossingUnpersisted) {
-            runCatching {
-                dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, true)
-            }.onSuccess {
-                boundaryCrossingUnpersisted = false
-                log.info("re-latched the cutover boundary crossing that failed to persist earlier")
-            }.onFailure {
-                if (it is CancellationException) throw it
-                // Arming still proceeds on the in-memory record below. If the
-                // store is this broken the explainer's own flags will not
-                // write either, and armUpgradeNoticeOnce logs that failure.
-                log.warn("failed to re-latch the cutover boundary crossing; arming from memory", it)
-            }
+            // One more attempt, then arm from memory regardless: if the store
+            // is this broken the explainer's own flags will not write either,
+            // and armUpgradeNoticeOnce logs that failure.
+            persistBoundaryCrossingIfPending()
             true
         } else {
             false
@@ -702,6 +730,10 @@ class CutoverCoordinator @Inject constructor(
     }
 
     private suspend fun transition(action: CutoverAction): CutoverStatus = mutex.withLock {
+        // The readiness observer drives this repeatedly for as long as the
+        // process lives, which makes it the best available retry clock for a
+        // boundary latch whose first write failed.
+        persistBoundaryCrossingIfPending()
         val current = currentState()
         val verdict = try {
             evaluateCutoverReadiness(evidenceCollector.collect())
