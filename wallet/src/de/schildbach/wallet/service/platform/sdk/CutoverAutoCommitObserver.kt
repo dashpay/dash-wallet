@@ -114,6 +114,10 @@ class CutoverAutoCommitObserver internal constructor(
     @Volatile
     private var lastAttemptMs = Long.MIN_VALUE
 
+    /** Throttle for [reportStillWaiting]. */
+    @Volatile
+    private var lastStatusLogMs = Long.MIN_VALUE
+
     /** Latched once the flip lands: no further attempts until [rearmForNewWallet]. */
     @Volatile
     private var committed = false
@@ -160,6 +164,7 @@ class CutoverAutoCommitObserver internal constructor(
         committed = false
         gate.reset()
         lastAttemptMs = Long.MIN_VALUE
+        lastStatusLogMs = Long.MIN_VALUE
     }
 
     /** Launch the progress collector. Caller holds [lifecycleMutex]. */
@@ -184,7 +189,10 @@ class CutoverAutoCommitObserver internal constructor(
      */
     internal suspend fun onReading(caughtUp: Boolean): CutoverState? {
         val armed = gate.onReading(caughtUp)
-        if (!armed || committed) return null
+        if (!armed || committed) {
+            reportStillWaiting(if (committed) null else "streak ${gate.streak}/$requiredReadings")
+            return null
+        }
         val now = nowMs()
         // Throttle attempts to the parity cadence: the gate arms on the ~1 Hz
         // progress feed, but readiness only changes when a new parity probe
@@ -193,6 +201,12 @@ class CutoverAutoCommitObserver internal constructor(
         lastAttemptMs = now
         return try {
             val status = coordinator.autoAdvanceToCutover()
+            if (status.state != CutoverState.CUT_OVER) {
+                // MO-995: `autoAdvanceToCutover` returns the readiness advisory
+                // unchanged when a blocker holds and logs nothing, so a
+                // non-committing observer used to be completely invisible.
+                reportStillWaiting("readiness says ${status.state}")
+            }
             if (status.state == CutoverState.CUT_OVER) {
                 committed = true
                 collectJob?.cancel()
@@ -205,6 +219,31 @@ class CutoverAutoCommitObserver internal constructor(
             log.warn("cutover auto-commit attempt failed; will retry on a later reading", t)
             null
         }
+    }
+
+    /**
+     * Throttled "why am I not committing yet" line.
+     *
+     * MO-995 (Andrei, comment 91138 #2): in the 2026-09-02 field log this
+     * observer logged `cutover auto-commit observer started` at 07:32:10 and
+     * then NOTHING for the remaining 8.5 hours of the process, while the L1
+     * shadow sat at `phase=SYNCED 100.0%` and parity reported `first sustained
+     * MATCH streak complete`. Both of its non-committing paths returned early
+     * in silence, so the log cannot say whether the stability gate never armed
+     * or the readiness policy kept refusing — and the cutover (with it the
+     * one-time upgrade explainer) fell through to the next process start ten
+     * hours later. One line every [STATUS_LOG_INTERVAL_MS] closes that gap
+     * without flooding the ~1 Hz feed.
+     *
+     * @param reason what is holding, or null when nothing is (already
+     *   committed — there is nothing to report).
+     */
+    private fun reportStillWaiting(reason: String?) {
+        if (reason == null) return
+        val now = nowMs()
+        if (lastStatusLogMs != Long.MIN_VALUE && now - lastStatusLogMs < STATUS_LOG_INTERVAL_MS) return
+        lastStatusLogMs = now
+        log.info("cutover auto-commit still waiting: {}", reason)
     }
 
     companion object {
@@ -227,5 +266,12 @@ class CutoverAutoCommitObserver internal constructor(
          * just re-reads the evaluator's evidence for nothing.
          */
         const val AUTO_COMMIT_ATTEMPT_THROTTLE_MS = L1ShadowSyncService.PARITY_INTERVAL_MS
+
+        /**
+         * Spacing between [reportStillWaiting] lines. Five minutes: rare
+         * enough to be free on a ~1 Hz feed, frequent enough that a
+         * multi-hour non-commit is unmistakable in a field log.
+         */
+        const val STATUS_LOG_INTERVAL_MS = 5 * 60 * 1000L
     }
 }

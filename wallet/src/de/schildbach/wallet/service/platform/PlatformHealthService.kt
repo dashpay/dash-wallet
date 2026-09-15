@@ -17,6 +17,7 @@
 package de.schildbach.wallet.service.platform
 
 import de.schildbach.wallet.Constants
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.NetworkParameters
@@ -89,8 +90,9 @@ internal fun assessPlatformHealth(
  * local dashj chain tip from [BlockchainStateProvider].
  *
  * Every failure — platform unsupported, no masternode list yet, gRPC
- * error, timeout — degrades to [PlatformHealth.UNKNOWN]; the probe never
- * throws.
+ * error, timeout, or a static-initializer Error from the legacy gRPC
+ * transport — degrades to [PlatformHealth.UNKNOWN]. The probe never throws
+ * except for [CancellationException], which must propagate.
  */
 @Singleton
 class PlatformHealthProbe @Inject constructor(
@@ -115,9 +117,33 @@ class PlatformHealthProbe @Inject constructor(
                 platformCoreHeight, localHeight, health
             )
             health
-        } catch (e: Exception) {
-            // Advisory only: a failed probe says nothing about the network.
-            log.warn("platform health probe failed: {}", e.toString())
+        } catch (t: Throwable) {
+            // Cancellation is control flow, not a probe failure — it MUST
+            // propagate or structured concurrency breaks.
+            if (t is CancellationException) throw t
+            if (t is Exception) {
+                // Advisory only: a failed probe says nothing about the network.
+                log.warn("platform health probe failed: {}", t.toString())
+            } else {
+                // MO-973: this used to catch only Exception, and the legacy
+                // gRPC stack fails with an ERROR, not an exception —
+                // ExceptionInInitializerError out of
+                // NettyChannelBuilder.<clinit> when R8 strips a member its
+                // static init reaches by reflection. That sailed past this
+                // catch, past the caller's bare try/finally
+                // (RequestUserNameViewModel.checkNetworkHealth), out of the
+                // coroutine, and killed the process — 11 times on one HONOR
+                // PTP-N49, which QA saw as a username-creation crash, a
+                // username-creation failure, and "the lock screen appears
+                // after clicking Continue" (the relaunch).
+                //
+                // An ADVISORY row must never be able to do that, whatever
+                // breaks underneath it. Logged at ERROR with the full stack
+                // rather than swallowed quietly: degrading silently would
+                // trade a loud crash for an invisible one, and the stack is
+                // what made this diagnosable from a QA report.
+                log.error("platform health probe hit a non-Exception failure; degrading to UNKNOWN", t)
+            }
             PlatformHealth.UNKNOWN
         }
     }
