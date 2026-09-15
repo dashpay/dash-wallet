@@ -105,8 +105,10 @@ gebruikersnaam</b></string>
     <string name="search_user_no_results">Er zijn geen gebruikers die overeenkomen</string>
     <string name="search_user_loading">Zoeken naar gebruikersnaam <b>"%"</b> op het Dash Network</string>
     <string name="contact_request_pending">Contactaanvraag in behandeling</string>
+    <string name="send_button_label">Verzenden</string>
     <string name="pay">Betaal</string>
     <string name="contact_request_received_title">%s heeft gevraagd om je vriend te worden</string>
+    <string name="contact_request_received_card_title">%s heeft je een contactverzoek gestuurd</string>
     <string name="contact_request_accept">Accepteren</string>
     <string name="contact_request_ignore">Negeer</string>
 
@@ -545,4 +547,12 @@ gebruikersnaam</b></string>
     <string name="create_instant_username_button">Directe gebruikersnaam aanmaken</string>
     <string name="create_instant_username_cancel">Annuleer</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">Scan QR</string>
+    <string name="dash_connect_status_disconnected">Verbinding verbroken</string>
+    <string name="dash_connect_approve_verify_identity">Verifieer je identiteit</string>
+    <string name="dash_connect_username">Gebruikersnaam</string>
+    <string name="dash_connect_identity">Identiteit</string>
+    <string name="dash_connect_approve_no_withdraw_funds">Neem saldo op</string>
+    <string name="dash_connect_deny">Weiger</string>
+    <string name="dash_connect_confirm">Bevestig</string>
+    </resources>

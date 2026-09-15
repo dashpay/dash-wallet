@@ -105,8 +105,18 @@ Benutzernamen</b></string>
     <string name="search_user_no_results">Es gibt keine Benutzer, die dazu passen</string>
     <string name="search_user_loading">Suche nach dem Benutzernamen <b>"%"</b> im Dash-Network</string>
     <string name="contact_request_pending">Kontaktanfrage ausstehend</string>
+    <string name="send_contact_request_short">Anfrage senden</string>
+    <string name="contact_request_sent_short">Anfrage gesendet</string>
+    <string name="send_button_label">Senden</string>
+    <string name="contact_history_disclaimer_pending_plain">Sobald %1$s deine Anfrage akzeptiert, kannst du direkt an den Benutzernamen zahlen</string>
     <string name="pay">Zahlen</string>
     <string name="contact_request_received_title">%s hat eine Freundschaftsanfrage gesendet</string>
+    <string name="contact_request_received_card_title">%s hat dir eine Kontaktanfrage gesendet.</string>
+    <string name="contact_request_received_card_message">Wenn du %s nicht in deiner Kontaktliste haben möchtest, kannst du auf \"Ignorieren\" tippen. Die Person wird über deine Entscheidung nicht benachrichtigt.</string>
+    <string name="contact_request_row_received">%s hat dir eine Kontaktanfrage gesendet</string>
+    <string name="contact_request_row_sent">Kontaktanfrage gesendet</string>
+    <string name="contact_request_row_established_incoming">Du hast die Anfrage von %s akzeptiert</string>
+    <string name="contact_request_row_established_outgoing">%s hat deine Kontaktanfrage akzeptiert</string>
     <string name="contact_request_accept">Akzeptieren</string>
     <string name="contact_request_ignore">Ignorieren</string>
 
@@ -543,5 +553,39 @@ Benutzernamen</b></string>
     <string name="create_instant_username_description">Der Abstimmungszeitraum für deinen gewünschten Nutzernamen beträgt 2 Wochen. Um sofort Kontakte und Zahlungen nutzen zu können, kannst du einen ähnlichen Nutzernamen sofort erstellen\n\nWenn deine ursprüngliche Auswahl vom Netzwerk bestätigt wurde, tritt der neue Nutzername anstelle des sofort erstellten Nutzernamens. Die Kontakte sowie die Zahlungshistorie bleibt erhalten. Ist dies nicht der Fall, kannst du den \"Instant-Namen\" weiter nutzen.</string>
     <string name="create_instant_username_button">Nutzername sofort erstellen</string>
     <string name="create_instant_username_cancel">Abbrechen</string>
+    <string name="dash_connect_connections_title">Verbindungen</string>
+    <string name="dash_connect_empty_heading">Noch keine Apps verbunden</string>
+    <string name="dash_connect_empty_message">Verbinde deinen DashPay-Benutzernamen mit Apps im Dash-Netzwerk, um dich ohne Passwörter oder Konten anzumelden</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">QR Code scannen</string>
+    <string name="dash_connect_status_approved">Genehmigt</string>
+    <string name="dash_connect_status_active">Aktiv</string>
+    <string name="dash_connect_status_disconnected">Verbindung getrennt</string>
+    <string name="dash_connect_hint_complete_login">Scanne den QR-Code von %1$s, um deine Anmeldung abzuschließen</string>
+    <string name="dash_connect_scan_to_complete_banner">Scanne den QR-Code, um den Anmeldevorgang abzuschließen</string>
+    <string name="dash_connect_hint_active">Tippe, um die Verbindung jederzeit zu trennen</string>
+    <string name="dash_connect_hint_log_back_in">Scanne den QR-Code von %1$s, um dich erneut anzumelden</string>
+    <string name="dash_connect_approve_title">Verbindung zu %1$s genehmigen?</string>
+    <string name="dash_connect_approve_will_be_able">Diese App kann:</string>
+    <string name="dash_connect_approve_see_username">Deinen Benutzernamen sehen</string>
+    <string name="dash_connect_approve_verify_identity">Überprüfe deine Identität</string>
+    <string name="dash_connect_username">Nutzername</string>
+    <string name="dash_connect_identity">Identität</string>
+    <string name="dash_connect_approve_no_access">Diese App hat KEINEN Zugriff auf:</string>
+    <string name="dash_connect_approve_no_private_keys">Deine privaten Schlüssel</string>
+    <string name="dash_connect_approve_no_withdraw_funds">Guthaben auszahlen</string>
+    <string name="dash_connect_approve">Genehmigen</string>
+    <string name="dash_connect_deny">Ablehnen</string>
+    <string name="dash_connect_unknown_app">Unbekannte App</string>
+    <string name="dash_connect_login_completed">Anmeldung abgeschlossen</string>
+    <string name="dash_connect_error">Die DashConnect-Anfrage konnte nicht abgeschlossen werden: %1$s</string>
+    <string name="dash_connect_cancel_login_title">Anmeldung bei %1$s abbrechen?</string>
+    <string name="dash_connect_cancel_login_message">Die ausstehende Anmeldung wird verworfen. Du kannst jederzeit neu beginnen, indem du einen neuen QR-Code scannst.</string>
+    <string name="dash_connect_disconnect_title">Verbindung zu %1$s trennen?</string>
+    <string name="dash_connect_disconnect_message">Die App kann deine Anmeldung nicht mehr verwenden. Du kannst dich erneut anmelden, indem du einen neuen QR-Code scannst.</string>
+    <string name="dash_connect_remove_title">%1$s entfernen?</string>
+    <string name="dash_connect_remove_message">Die Verbindung wird aus dieser Liste entfernt. Du kannst dich jederzeit erneut verbinden, indem du einen neuen QR-Code scannst.</string>
+    <string name="dash_connect_confirm">Bestätigen</string>
+    <string name="dash_connect_testnet_only_heading">Nur im Testnet verfügbar</string>
+    <string name="dash_connect_testnet_only_message">Die Anmeldung mit DashConnect ist im Mainnet noch nicht verfügbar</string>
+    </resources>

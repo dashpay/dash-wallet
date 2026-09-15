@@ -447,4 +447,8 @@
     <string name="upgrade_pin_description">Ορίστε ένα νέο PIN</string>
     <string name="upgrade_pin_continue">Συνέχεια</string>
 
-    </resources>
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">Έχετε υπόλοιπο στο CrowdNode</string>
+    <string name="crowdnode_withdrawal_reminder_message">Αυτά τα χρήματα πρέπει να αποσυρθούν από το CrowdNode. Μπορείτε να τα μεταφέρετε σε αυτό το πορτοφόλι ή μέσω του διαδικτυακού σας λογαριασμού από κάποια άλλη συσκευή.</string>
+    <string name="crowdnode_withdraw_funds">Ανάληψη χρημάτων</string>
+</resources>

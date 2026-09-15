@@ -250,6 +250,8 @@
     <string name="something_wrong_title">Qualcosa è andato storto!</string>
     <string name="retry">Riprova</string>
     <string name="gift_card_purchase_failed">Acquisto della carta regalo non riuscito</string>
+    <string name="gift_card_save_failed_title">Dettagli della carta regalo non salvati</string>
+    <string name="gift_card_save_failed_message">Il pagamento è stato inviato correttamente, ma non è stato possibile salvare la carta regalo su questo dispositivo. Non acquistare di nuovo questa carta regalo. Puoi trovare il pagamento nella cronologia delle transazioni e l\'assistenza potrà recuperare la carta a partire da esso.</string>
     <string name="try_again">Prova Ancora</string>
     <string name="cancel">Annulla</string>
     <string name="gift_card_error">Per qualche motivo non siamo riusciti ad acquistare una carta regalo. Per favore riprova.</string>

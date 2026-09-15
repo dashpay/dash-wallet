@@ -45,11 +45,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Son Ver</string>
+    <string name="button_settings">Ayarlar</string>
     <string name="network_unavailable_return">Cüzdan\'a Dön</string>
     <string name="button_continue">Devam</string>
     <string name="get_quote">Teklif Al</string>
     <string name="button_close">Kapat</string>
     <string name="button_cancel">İptal et</string>
+    <string name="button_clear">Temizle</string>
+    <string name="button_paste">Yapıştır</string>
     <string name="button_confirm">Onayla</string>
     <string name="button_retry">Tekrar dene</string>
     <string name="button_send_report">Rapor Gönder</string>
@@ -115,7 +118,6 @@
     <string name="scan_camera_problem_dialog_message">Kamerada bir problem var. Cihazınızı yeniden başlatmanız gerekiyor olabilir.</string>
     <string name="scan_camera_permission_dialog_title">Kamera izni</string>
     <string name="scan_camera_permission_dialog_message">QR kodunu taranabilmesi için, kamera kullanım izin vermeniz gerekiyor.</string>
-
     <!-- address input -->
     <string name="address_input_title">Dash Gönder</string>
     <string name="show_clipboard">İçeriği panoda göster</string>
@@ -130,8 +132,6 @@
     <string name="input_parser_unverifyable_paymentrequest">Ödeme talebi doğrulanamadı:\n%s</string>
     <string name="input_parser_invalid_paymentrequest">Geçersiz ödeme talebi:\n%s</string>
     <string name="input_parser_invalid_transaction">Geçersiz işlem:\n%s</string>
-    <string name="input_connect">Bağlan</string>
-
     <!-- others -->
     <string name="confirm_sec">Onaylayın (%ss)</string>
     <string name="cancel_transaction">İşlemi iptal et?</string>

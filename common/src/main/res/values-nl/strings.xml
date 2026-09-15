@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Annuleren</string>
+    <string name="button_settings">Instellingen</string>
     <string name="network_unavailable_return">Keer terug naar portemonnee</string>
     <string name="button_continue">Doorgaan</string>
     <string name="get_quote">Offerte aanvragen</string>
     <string name="button_close">Sluit</string>
     <string name="button_cancel">Annuleer</string>
+    <string name="button_clear">Wis</string>
+    <string name="button_paste">Plakken</string>
     <string name="button_confirm">Bevestig</string>
     <string name="button_retry">Probeer opnieuw</string>
     <string name="button_send_report">Verstuur rapport</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">Er is een probleem met de camera. Waarschijnlijk moet je het apparaat herstarten.</string>
     <string name="scan_camera_permission_dialog_title">Toegang tot de camera</string>
     <string name="scan_camera_permission_dialog_message">Om QR-codes te scannen moet u toestemming geven om de camera te gebruiken.</string>
-
     <!-- address input -->
     <string name="address_input_title">Dash versturen</string>
     <string name="show_clipboard">Toon inhoud op het klembord</string>
@@ -137,7 +139,8 @@
     <string name="input_parser_invalid_paymentrequest">Ongeldig betalingsverzoek:\n%s</string>
     <string name="input_parser_invalid_transaction">Ongeldige transactie:\n%s</string>
     <string name="address_input_paste_from">Plakken van %s</string>
-    <string name="input_connect">Verbind</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">Log in</string>
 
     <!-- others -->
     <string name="confirm_sec">Bevestig (%ss)</string>
@@ -149,4 +152,5 @@
     <string name="send_coins_error_msg">Er is een probleem opgetreden bij het versturen van munten!</string>
     <string name="from_dash_wallet_on_this_device">Van Dash portemonnee op dit apparaat</string>
     <string name="preposition_at">ter hoogte van</string>
-    </resources>
+    <string name="info">Info</string>
+</resources>

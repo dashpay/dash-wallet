@@ -40,6 +40,8 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">購入・売却</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_dash_dex">Dash DEX</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">入金</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">秘密鍵をインポート</string>
@@ -296,11 +298,15 @@
     <string name="about_review_and_rate">アプリのレビューを書いて評価する</string>
     <string name="about_contact_support">サポートへ連絡する</string>
     <string name="about_fork_disclaimer">これはビットコインウォレットからフォークしたオープンソースのアプリです</string>
+    <string name="about_copyright">Copyright © %1$d Dashコアグループ</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPayウォレット%s</string>
     <string name="about_last_explore_device_sync">前回のExploreのデバイスの同期</string>
     <string name="about_last_explore_server_update">前回のExploreのサーバーのアップデート</string>
+    <string name="about_app_version_label">アプリのバージョン</string>
+    <string name="about_platform_label">プラットフォーム</string>
     <string name="about_explore_section">Dashを探求する</string>
+    <string name="about_explore_update">アップデート</string>
     <string name="about_last_device_sync">前回のデバイス同期</string>
     <string name="about_last_server_update">前回のサーバーアップデート</string>
     <string name="about_value_not_available">ご利用できません</string>
