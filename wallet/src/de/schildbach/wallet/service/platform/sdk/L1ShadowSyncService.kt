@@ -2541,12 +2541,6 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
-     * Attach a completion logger so no shadow loop ever dies silently:
-     * normal completion and cancellation log at INFO, an escaped failure
-     * logs the cause at WARN (loop bodies catch-and-continue, so a WARN
-     * here means the loop machinery itself broke).
-     */
-    /**
      * Report the downtime that is ending, on the start that ends it.
      *
      * WHY A CONSUMER-SIDE GAP LINE AND NOT JUST THE STOP LINE: the stop is
@@ -2587,6 +2581,12 @@ class L1ShadowSyncService internal constructor(
         }
     }
 
+    /**
+     * Attach a completion logger so no shadow loop ever dies silently:
+     * normal completion and cancellation log at INFO, an escaped failure
+     * logs the cause at WARN (loop bodies catch-and-continue, so a WARN
+     * here means the loop machinery itself broke).
+     */
     private fun Job.logCompletion(name: String): Job = apply {
         invokeOnCompletion { cause ->
             when (cause) {

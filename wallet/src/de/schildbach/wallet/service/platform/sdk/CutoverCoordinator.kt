@@ -378,6 +378,31 @@ class CutoverCoordinator @Inject constructor(
     }
 
     /**
+     * Retry a boundary latch that failed to persist, if one is pending.
+     *
+     * The crossing is computable on exactly one launch, so a dropped write has
+     * to be re-attempted from somewhere that actually runs on THAT launch. The
+     * commit path is not such a place: on a real upgrade the seam declines
+     * (the bind lands after it), so the arming site is never reached. This is
+     * called from the decline path and from every readiness evaluation, so the
+     * retry gets as many chances as the process has left.
+     *
+     * Never throws; safe to call when nothing is pending.
+     */
+    private suspend fun persistBoundaryCrossingIfPending() {
+        if (!boundaryCrossingUnpersisted) return
+        runCatching {
+            dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, true)
+        }.onSuccess {
+            boundaryCrossingUnpersisted = false
+            log.info("re-latched the cutover boundary crossing that failed to persist earlier")
+        }.onFailure {
+            if (it is CancellationException) throw it
+            log.warn("failed to re-latch the cutover boundary crossing; will retry again", it)
+        }
+    }
+
+    /**
      * Arm the one-time upgrade sync explainer, at most ONCE per install.
      *
      * MO-995 (Andrei, comment 91138 #2). The explainer's own copy promises
@@ -406,31 +431,6 @@ class CutoverCoordinator @Inject constructor(
      * between the two costs the user the explainer; the reverse order would
      * re-arm forever, which is the bug being fixed. Never throws.
      */
-    /**
-     * Retry a boundary latch that failed to persist, if one is pending.
-     *
-     * The crossing is computable on exactly one launch, so a dropped write has
-     * to be re-attempted from somewhere that actually runs on THAT launch. The
-     * commit path is not such a place: on a real upgrade the seam declines
-     * (the bind lands after it), so the arming site is never reached. This is
-     * called from the decline path and from every readiness evaluation, so the
-     * retry gets as many chances as the process has left.
-     *
-     * Never throws; safe to call when nothing is pending.
-     */
-    private suspend fun persistBoundaryCrossingIfPending() {
-        if (!boundaryCrossingUnpersisted) return
-        runCatching {
-            dashPayConfig.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, true)
-        }.onSuccess {
-            boundaryCrossingUnpersisted = false
-            log.info("re-latched the cutover boundary crossing that failed to persist earlier")
-        }.onFailure {
-            if (it is CancellationException) throw it
-            log.warn("failed to re-latch the cutover boundary crossing; will retry again", it)
-        }
-    }
-
     private suspend fun armUpgradeNoticeIfUpgraded(committedBy: String) {
         // Only an install that genuinely crossed the cutover boundary is owed
         // the explainer. GATE 1 in commitForUpgradedWalletAsync latches this
@@ -599,13 +599,6 @@ class CutoverCoordinator @Inject constructor(
     }
 
     /**
-     * The immediate (non-readiness) commit, plus whether THIS call is the
-     * one that moved the state to CUT_OVER. Both halves are computed under
-     * [mutex] from a single state read, so the transition verdict cannot be
-     * corrupted by a racing commit — the property the one-time upgrade
-     * explainer depends on. Must be called under [mutex].
-     */
-    /**
      * Whether the SDK has ever proved, on THIS install, that it can bind the
      * app wallet — i.e. that its Keystore-backed master alias is usable. Set by
      * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] on the first
@@ -650,6 +643,12 @@ class CutoverCoordinator @Inject constructor(
     }
 
     /**
+     * The immediate (non-readiness) commit, plus whether THIS call is the
+     * one that moved the state to CUT_OVER. Both halves are computed under
+     * [mutex] from a single state read, so the transition verdict cannot be
+     * corrupted by a racing commit — the property the one-time upgrade
+     * explainer depends on. Must be called under [mutex].
+     *
      * @param requireBindEvidence whether [refusesCutOverWithoutBindEvidence]
      *   applies. TRUE for the upgrade seam, FALSE for fresh-wallet setup —
      *   see [commitForFreshWalletSetup] for why that asymmetry is required
