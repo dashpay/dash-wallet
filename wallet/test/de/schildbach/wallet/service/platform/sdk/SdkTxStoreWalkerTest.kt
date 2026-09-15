@@ -373,14 +373,14 @@ class SdkTxStoreWalkerTest {
     private val recvAccount = 114L // type 12: contact pays US — our money
     private val extAccount = 115L // type 13: we pay the CONTACT — their money
 
-    private fun insertAccount(id: Long, type: Int) {
+    private fun insertAccount(id: Long, type: Int, ownerWalletId: ByteArray = walletId) {
         exec(
             "INSERT INTO accounts (id, walletId, accountType, accountIndex, accountTypeName, " +
                 "balanceConfirmed, balanceUnconfirmed, externalHighestUsed, internalHighestUsed, " +
                 "standardTag, registrationIndex, keyClass, userIdentityId, friendIdentityId, " +
                 "createdAt, lastUpdated) VALUES (?, ?, ?, 0, '', 0, 0, 0, 0, 0, 0, 0, ?, ?, 0, 0)",
             id,
-            walletId,
+            ownerWalletId,
             type,
             ByteArray(32).also { it[0] = id.toByte() },
             ByteArray(32).also { it[0] = id.toByte(); it[1] = 1 }
@@ -914,6 +914,63 @@ class SdkTxStoreWalkerTest {
         assertEquals(-20_000_226L, corrected.netAmountDuffs)
         assertEquals(226L, corrected.feeDuffs)
         assertEquals(Triple(1, -20_000_226L, 226L), storedShape(send))
+    }
+
+    @Test
+    fun reattribution_externalSend_toAnotherWalletsAddress_isForeignNotAMirrorHole() = runBlocking {
+        // core_addresses is shared by every wallet in the store. A second
+        // wallet's tracked address must read as a foreign payee for THIS
+        // wallet, not as a dropped mirror row: our txos will never gain a row
+        // for a coin that is not ours, so misreading it as "known" would defer
+        // the correction forever (the unscoped query did exactly that).
+        val otherWalletId = requireNotNull(walletIdFromHex("22".repeat(32)))
+        exec(
+            "INSERT INTO wallets (walletId, walletGroupId, birthHeight, syncedHeight, lastSynced, " +
+                "isImported, createdAt, lastUpdated) VALUES (?, ?, 0, 0, 0, 0, 0, 0)",
+            otherWalletId,
+            otherWalletId
+        )
+        val otherAccount = 99L
+        insertAccount(otherAccount, 0, ownerWalletId = otherWalletId)
+        insertCoreAddress("yOtherWalletsAddress", otherAccount)
+
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_j0", bip44Account)
+        insertCoreAddress("chg_j", bip44Account)
+
+        val receive = txid(65)
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTxo(receive, 0, 50_000_000, "bip44_j0")
+
+        // Same shape as the external-send case above, except the payee is the
+        // OTHER wallet's tracked address.
+        val send = txid(66)
+        insertTx(send, direction = 0, netAmount = 29_999_774, payload = byteArrayOf(8), firstSeen = 1_700_000_002)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", send, receive)
+        insertTxo(send, 1, 29_999_774, "chg_j")
+
+        val sendFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 8) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 49_999_774,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf("yOtherWalletsAddress", "chg_j")
+                )
+            } else {
+                null
+            }
+        }
+
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = sendFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        val corrected = requireNotNull(byHex[displayHexOf(send)])
+        assertEquals(L1TxUiDirection.OUTGOING, corrected.direction)
+        assertEquals(-20_000_226L, corrected.netAmountDuffs)
+        assertEquals(226L, corrected.feeDuffs)
+        assertEquals(Triple(1, -20_000_226L, 226L), storedShape(send))
+        assertTrue(queryLog.any { it.startsWith("UPDATE transactions") })
     }
 
     // ── pending_inputs reservations: the "lingering receive" fix ──────
