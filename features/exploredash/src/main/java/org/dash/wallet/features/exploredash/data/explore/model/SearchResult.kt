@@ -46,33 +46,31 @@ open class SearchResult(
     @Ignore var distance: Double = Double.NaN
 ) {
     fun getDisplayAddress(separator: String = "\n"): String {
-        val addressBuilder = StringBuilder()
-        addressBuilder.append(address1)
+        // Only non-blank parts contribute, so a record with missing fields yields a shorter
+        // address (or an empty string) rather than a string of stray separators such as ", , ".
+        // Some explore records arrive with no street, city or territory at all.
+        val parts = mutableListOf<String>()
 
-        if (!address2.isNullOrBlank()) {
-            addressBuilder.append("${separator}$address2")
-        }
-
-        if (!address3.isNullOrBlank()) {
-            addressBuilder.append("${separator}$address3")
-        }
-
-        if (!address4.isNullOrBlank()) {
-            addressBuilder.append("${separator}$address4")
+        listOf(address1, address2, address3, address4).forEach { line ->
+            if (!line.isNullOrBlank()) {
+                parts.add(line)
+            }
         }
 
         // CTX records do not use address2, address3, address4
         if (source?.lowercase() == GiftCardProviderType.CTX.name.lowercase() ||
             source?.lowercase() == GiftCardProviderType.PiggyCards.name.lowercase()
         ) {
-            addressBuilder.append("${separator}$city")
-            territory?.let {
-                addressBuilder.append(", ")
-                addressBuilder.append(territory)
+            val cityAndTerritory = listOf(city, territory)
+                .filter { !it.isNullOrBlank() }
+                .joinToString(", ")
+
+            if (cityAndTerritory.isNotEmpty()) {
+                parts.add(cityAndTerritory)
             }
         }
 
-        return addressBuilder.toString()
+        return parts.joinToString(separator)
     }
 
     fun getDistanceStr(isMetric: Boolean): String {

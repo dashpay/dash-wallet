@@ -519,7 +519,12 @@ class ExploreViewModel @Inject constructor(
         _selectedItem.value = merchant
 
         if (isGrouped) {
-            if (canShowNearestLocation(merchant)) {
+            // The Online tab lists a merchant's online listing, so there is no nearest physical
+            // location to resolve and the details screen never offers the all-locations list for
+            // it. Open details directly, even for chains whose grouped row counts many physical
+            // locations; otherwise, with location disabled or a territory selected, the tap would
+            // land on the all-locations screen instead.
+            if (_filterMode.value == FilterMode.Online || canShowNearestLocation(merchant)) {
                 // Opening details screen
                 nearestLocation = merchant
                 _screenState.postValue(ScreenState.DetailsGrouped)
@@ -559,7 +564,10 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openAllMerchantLocations(merchantId: String?, source: String) {
-        _screenState.postValue(ScreenState.MerchantLocations)
+        // The screen state is resolved on the first emission instead of here: a merchant whose
+        // locations carry no address at all has nothing to pick from, and is sent to its details
+        // screen rather than to a picker full of blank rows.
+        var screenStateResolved = false
         this.allMerchantLocationsJob?.cancel()
         this.allMerchantLocationsJob = _searchBounds
             // The Google Map camera callback is the only writer of searchBounds. On devices
@@ -612,6 +620,20 @@ class ExploreViewModel @Inject constructor(
                     locations.sortedBy { it.getDisplayAddress(", ") }
                 }
                 _allMerchantLocations.postValue(sorted)
+
+                if (!screenStateResolved) {
+                    screenStateResolved = true
+                    // A location is only worth picking if it can be told apart from the others.
+                    // Some explore records carry coordinates but no street, city or territory.
+                    val hasSelectableLocation = sorted.any { it.getDisplayAddress(", ").isNotBlank() }
+
+                    if (hasSelectableLocation) {
+                        _screenState.postValue(ScreenState.MerchantLocations)
+                    } else {
+                        (_selectedItem.value as? Merchant)?.let { nearestLocation = it }
+                        _screenState.postValue(ScreenState.DetailsGrouped)
+                    }
+                }
             }
             .launchIn(viewModelWorkerScope)
     }
