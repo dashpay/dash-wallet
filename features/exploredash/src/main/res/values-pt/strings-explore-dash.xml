@@ -250,6 +250,8 @@
     <string name="something_wrong_title">Algo deu errado!</string>
     <string name="retry">Repetir</string>
     <string name="gift_card_purchase_failed">Compra do cartão-presente falhou</string>
+    <string name="gift_card_save_failed_title">Detalhes do cartão-presente não salvos</string>
+    <string name="gift_card_save_failed_message">Seu pagamento foi enviado com sucesso, mas não foi possível salvar o cartão-presente neste dispositivo. Não compre este cartão-presente novamente. Você pode encontrar o pagamento no seu histórico de transações, e o suporte pode recuperar o cartão a partir dele.</string>
     <string name="try_again">Tentar Novamente</string>
     <string name="cancel">Cancelar</string>
     <string name="gift_card_error">Por alguma razão, não foi possível comprar um cartão-presente. Por favor, tente novamente. </string>

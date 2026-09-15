@@ -25,6 +25,8 @@
     <string name="dash_address">Indirizzo Dash</string>
     <string name="username">Nome Utente</string>
     <string name="balance">Saldo:</string>
+    <string name="hide_balance">Nascondi saldo</string>
+    <string name="show_balance">Mostra saldo</string>
     <string name="nothing_here">Niente qui</string>
 
     <!-- Local Currency List: GGP -->
@@ -48,6 +50,7 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Chiudi</string>
+    <string name="button_not_now">Non ora</string>
     <string name="button_settings">Impostazioni</string>
     <string name="network_unavailable_return">Torna al Portafoglio</string>
     <string name="button_continue">Continua</string>
@@ -103,6 +106,8 @@
     <string name="payment_request_problem_title">Il pagamento non è stato riconosciuto</string>
     <string name="payment_protocol_default_error_title">Errore di pagamento</string>
     <string name="payment_request_problem_message">Non è stato possibile processare il tuo pagamento dal server, per favore informati col commerciante</string>
+    <string name="payment_submission_pending_title">Stato del pagamento sconosciuto</string>
+    <string name="payment_submission_pending_message">Il pagamento è stato inviato, ma non abbiamo ricevuto una conferma dal commerciante. Il tuo portafoglio continuerà a controllare la rete e mostrerà la transazione come inviata appena verrà trovata. Attendi prima di inviare di nuovo questo pagamento.</string>
     <string name="exchange_rate_not_found">Impossibile trovare il tasso di cambio.</string>
     <string name="send_coins_fragment_hint_replaying">Attualmente i pagamenti non sono possibili perché il portafoglio non è completamente sincronizzato con la rete</string>
 
@@ -123,6 +128,7 @@
     <string name="scan_camera_problem_dialog_message">La videocamera ha un problema. Probabilmente è necessario riavviare il dispositivo.</string>
     <string name="scan_camera_permission_dialog_title">Permesso Camera</string>
     <string name="scan_camera_permission_dialog_message">Per poter esequire lo scan dei codice QR devi dare il permesso d\'uso alla camera.</string>
+    <string name="scan_camera_permission_denied_dialog_message">Per scansionare i codici QR, è necessario attivare l\'accesso alla fotocamera per questa app nelle Impostazioni.</string>
     <!-- address input -->
     <string name="address_input_title">Invia Dash</string>
     <string name="show_clipboard">Mostra il contenuto negli appunti</string>

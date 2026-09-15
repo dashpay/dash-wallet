@@ -255,6 +255,8 @@
     <string name="something_wrong_title">Coś poszło nie tak!</string>
     <string name="retry">Ponów</string>
     <string name="gift_card_purchase_failed">Zakup karty podarunkowej nie powiódł się</string>
+    <string name="gift_card_save_failed_title">Dane karty podarunkowej nie zostały zapisane</string>
+    <string name="gift_card_save_failed_message">Twoja płatność została wysłana pomyślnie, ale nie udało się zapisać karty podarunkowej na tym urządzeniu. Nie kupuj tej karty podarunkowej ponownie. Płatność znajdziesz w historii transakcji, a pomoc techniczna może na jej podstawie odzyskać kartę.</string>
     <string name="try_again">Spróbuj ponownie</string>
     <string name="cancel">Anuluj</string>
     <string name="gift_card_error">Nie mogliśmy kupić karty podarunkowej z niewiadomej dla nas przyczyny. Proszę spróbuj ponownie.</string>

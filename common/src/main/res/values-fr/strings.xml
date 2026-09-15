@@ -25,6 +25,8 @@
     <string name="dash_address">Adresse Dash</string>
     <string name="username">Nom d\'utilisateur</string>
     <string name="balance">Solde :</string>
+    <string name="hide_balance">Masquer le solde</string>
+    <string name="show_balance">Afficher le solde</string>
     <string name="nothing_here">Rien ici</string>
 
     <!-- Local Currency List: GGP -->
@@ -48,6 +50,7 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Ignorer</string>
+    <string name="button_not_now">Pas maintenant</string>
     <string name="button_settings">Réglages</string>
     <string name="network_unavailable_return">Retourner au portefeuille</string>
     <string name="button_continue">Continuer</string>
@@ -103,6 +106,8 @@
     <string name="payment_request_problem_title">Le paiement n\'a pas été reconnu</string>
     <string name="payment_protocol_default_error_title">Erreur de paiement</string>
     <string name="payment_request_problem_message">Votre paiement n\'a pas pu être traité par le serveur, veuillez vous adresser au vendeur</string>
+    <string name="payment_submission_pending_title">Statut du paiement inconnu</string>
+    <string name="payment_submission_pending_message">Le paiement a été envoyé, mais nous n\'avons pas reçu de confirmation du commerçant. Votre portefeuille continuera à vérifier le réseau et affichera la transaction comme envoyée dès qu\'elle sera trouvée. Veuillez patienter avant de renvoyer ce paiement.</string>
     <string name="exchange_rate_not_found">Taux de change introuvables.</string>
     <string name="send_coins_fragment_hint_replaying">Les paiements ne sont pas encore possibles car le portefeuille n\'est pas entièrement synchronisé avec le réseau</string>
 
@@ -123,6 +128,7 @@
     <string name="scan_camera_problem_dialog_message">L\'appareil photo-vidéo a un problème. Vous devez probablement redémarrer votre appareil.</string>
     <string name="scan_camera_permission_dialog_title">Autorisation de l\'appareil photo-vidéo</string>
     <string name="scan_camera_permission_dialog_message">Pour scanner des QR-codes, vous devez autoriser l\'utilisation de l\'appareil photo-vidéo.</string>
+    <string name="scan_camera_permission_denied_dialog_message">Pour scanner des QR-codes, l\'accès à la caméra doit être activé pour cette application dans les Réglages.</string>
     <!-- address input -->
     <string name="address_input_title">Envoyer dashs</string>
     <string name="show_clipboard">Voir le contenu du presse-papiers</string>

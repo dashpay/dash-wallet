@@ -25,6 +25,8 @@
     <string name="dash_address">Адрес Dash</string>
     <string name="username">Имя пользователя</string>
     <string name="balance">Баланс:</string>
+    <string name="hide_balance">Скрыть баланс</string>
+    <string name="show_balance">Показать баланс</string>
     <string name="nothing_here">Тут ничего нет</string>
 
     <!-- Local Currency List: GGP -->
@@ -48,6 +50,7 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Отклонить</string>
+    <string name="button_not_now">Не сейчас</string>
     <string name="button_settings">Настройки</string>
     <string name="network_unavailable_return">Вернуться в кошелёк</string>
     <string name="button_continue">Продолжить</string>
@@ -103,6 +106,8 @@
     <string name="payment_request_problem_title">Платёж не был подтверждён</string>
     <string name="payment_protocol_default_error_title">Ошибка оплаты</string>
     <string name="payment_request_problem_message">Ваш платёж не может быть обработан сервером. Пожалуйста, свяжитесь с продавцом</string>
+    <string name="payment_submission_pending_title">Статус платежа неизвестен</string>
+    <string name="payment_submission_pending_message">Платёж был отправлен, но мы не получили подтверждения от продавца. Ваш кошелёк продолжит проверять сеть и покажет транзакцию как отправленную, как только она будет найдена. Пожалуйста, подождите, прежде чем отправлять этот платёж повторно.</string>
     <string name="exchange_rate_not_found">Не удалось найти обменный курс.</string>
     <string name="send_coins_fragment_hint_replaying">В данный момент платежи невозможны, так как кошелёк не полностью синхронизирован с сетью.</string>
 
@@ -123,6 +128,7 @@
     <string name="scan_camera_problem_dialog_message">Проблема с камерой. Возможно, Вам нужно перезагрузить устройство.</string>
     <string name="scan_camera_permission_dialog_title">Права на доступ к камере</string>
     <string name="scan_camera_permission_dialog_message">Для сканирования QR-кодов, Вам нужно разрешить использовать камеру.</string>
+    <string name="scan_camera_permission_denied_dialog_message">Чтобы сканировать QR-коды, необходимо разрешить этому приложению доступ к камере в настройках.</string>
     <!-- address input -->
     <string name="address_input_title">Отправить Dash</string>
     <string name="show_clipboard">Показать содержимое буфера обмена</string>
