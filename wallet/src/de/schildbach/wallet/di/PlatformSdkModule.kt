@@ -18,6 +18,7 @@
 package de.schildbach.wallet.di
 
 import dagger.Binds
+import dagger.Provides
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -50,15 +51,6 @@ abstract class PlatformSdkModule {
     @Singleton
     @Binds
     abstract fun bindDashSdkService(dashSdkService: DashSdkServiceImpl): DashSdkService
-
-    /**
-     * The DIP-15 coreHeight-backfill gate — the app-side interim mitigation
-     * for the SDK's in-memory-only `rescan_triggered` guard. Read-only and
-     * lazy like the rest of this module: it never starts the SDK.
-     */
-    @Singleton
-    @Binds
-    abstract fun bindDashPayBackfillGate(gate: DashPayBackfillGateImpl): DashPayBackfillGate
 
     /**
      * The Phase 3b dashj seed bridge. Never prompts: callers pass an
@@ -96,4 +88,28 @@ abstract class PlatformSdkModule {
     abstract fun bindSdkMessageSigner(
         signer: DashSdkMessageSigner
     ): SdkMessageSigner
+
+    companion object {
+        /**
+         * The DIP-15 coreHeight-backfill gate is DISABLED (bound to the
+         * no-op [DashPayBackfillGate.ALWAYS_RUN]) now that the ordered
+         * wallet bring-up (`startWalletSubsystems`, called before `startSpv`
+         * in [de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService])
+         * registers contact receival accounts BEFORE the compact-filter
+         * scan — so there is no post-scan gap for the gate to detect or
+         * rewind for. This matches iOS, which has no such host gate. The
+         * gate's watch channel could not complete anyway (the SDK's
+         * persisted sync cursor is monotonic-max guarded, so the durable
+         * watermark drop it waited for never lands).
+         *
+         * [DashPayBackfillGateImpl] is left in the tree, unused, pending a
+         * later deliberate removal; flip this back to a
+         * `@Binds DashPayBackfillGateImpl` to re-enable it. See
+         * FIXES-restored-wallets.md #1/#5.
+         */
+        @Singleton
+        @Provides
+        fun provideDashPayBackfillGate(): DashPayBackfillGate =
+            DashPayBackfillGate.ALWAYS_RUN
+    }
 }
