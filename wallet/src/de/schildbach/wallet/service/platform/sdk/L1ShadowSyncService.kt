@@ -2218,7 +2218,17 @@ class L1ShadowSyncService internal constructor(
      */
     suspend fun stop() {
         mutex.withLock {
-            if (runningWalletIdHex.value == null) return
+            val walletIdHex = runningWalletIdHex.value ?: return
+            // Phase 1b item 13 (docs/upgrade-memory-and-sync-plan.md): the
+            // watermark the SDK will resume from vs. what the engine had
+            // actually committed. The app CANNOT flush it — the SDK's WalletDao
+            // exposes no synced-height setter and the value is owned by the
+            // native engine — so every stop logs the gap as the evidence for
+            // Phase 1c item 15 (persist on a fixed cadence and on stop). On the
+            // reference install the durable value trailed the committed cursor
+            // by up to 155,000 blocks at teardown.
+            val committedAtStop = _engineWalletSyncedHeight.value
+            val filterAtStop = _progress.value.filterHeight
             runningWalletIdHex.value = null
             monitorJob?.cancel()
             monitorJob = null
@@ -2230,6 +2240,7 @@ class L1ShadowSyncService internal constructor(
             eventTapJob = null
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
+            logWatermarkAtStop(walletIdHex, committedAtStop, filterAtStop)
             _progress.value = ShadowSyncProgress.IDLE
             _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
             lastStopAtMs = nowMs()
@@ -2240,6 +2251,33 @@ class L1ShadowSyncService internal constructor(
                     "teardown #{} this process. Nothing runs until the next startIfEnabled().",
                 if (startedAtMs == 0L) "unknown" else humanDuration(lastStopAtMs - startedAtMs),
                 stopCount
+            )
+        }
+    }
+
+    /**
+     * Item 13 diagnostic: after the SPV client stopped, compare the SDK's
+     * durable `syncedHeight` (what the next start resumes from) with the
+     * cursor the engine had committed in this session. WARN when progress
+     * will be re-walked. Never throws.
+     */
+    private suspend fun logWatermarkAtStop(walletIdHex: String, committed: Long, filter: Long) {
+        val durable = runCatching { source.sdkWalletSyncedHeight(walletIdHex) }.getOrNull()
+        when {
+            durable == null || committed <= 0L -> log.info(
+                "L1ShadowLifecycle watermark at stop: durable syncedHeight={} committed cursor={} filter={}",
+                durable ?: "unknown", committed, filter
+            )
+            durable < committed -> log.warn(
+                "L1ShadowLifecycle watermark at stop: durable syncedHeight {} is {} blocks BEHIND the " +
+                    "committed cursor {} (filter {}). The SDK persists its synced height at 5,000-block " +
+                    "steps and the app has no setter for it, so the next start re-walks those blocks " +
+                    "(Phase 1c item 15)",
+                durable, committed - durable, committed, filter
+            )
+            else -> log.info(
+                "L1ShadowLifecycle watermark at stop: durable syncedHeight {} covers the committed cursor {} (filter {})",
+                durable, committed, filter
             )
         }
     }
