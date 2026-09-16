@@ -329,6 +329,28 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         var cleanupDeferred: CompletableDeferred<Unit>? = null
         private val isCleaningUp = AtomicBoolean(false)
 
+        /**
+         * Phase 1b item 11: destroys that onDestroy() has SCHEDULED but whose
+         * cleanup coroutine has not finished. Incremented synchronously on the
+         * main thread in onDestroy, decremented when the cleanup ends. A new
+         * instance's onCreate waits while this is non-zero, closing the race
+         * where it only awaited [cleanupDeferred] — which the previous
+         * instance's coroutine had not yet CREATED — and opened the dashj
+         * blockstore while that instance still held its file lock
+         * (OverlappingFileLockException, five failed starts on the reference
+         * install on 2026-09-16).
+         */
+        private val pendingDestroys = java.util.concurrent.atomic.AtomicInteger(0)
+
+        /** Whether a previous instance of this service is still tearing down. */
+        val isCleaningUpNow: Boolean get() = isCleaningUp.get() || pendingDestroys.get() > 0
+
+        /** Retries of a lock-blocked blockstore open before giving up. */
+        private const val BLOCKSTORE_LOCK_RETRIES = 3
+
+        /** How long each retry waits for the previous instance's cleanup. */
+        private const val BLOCKSTORE_LOCK_WAIT_MS = 5_000L
+
         // TEST ONLY: Reduce timeout for testing onTimeout callback
         // Set to 0 to disable test timeout (use Android's default 6-hour limit)
         // Set to 1-2 minutes for testing the timeout behavior
@@ -1037,6 +1059,59 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     @SuppressLint("WrongConstant")
+    /**
+     * Phase 1b item 11: wait for the PREVIOUS service instance to finish its
+     * cleanup. Awaits an active [cleanupDeferred] and also any destroy that
+     * onDestroy has scheduled but whose coroutine has not created the
+     * deferred yet ([pendingDestroys]). Returns false on timeout.
+     */
+    private suspend fun awaitPreviousInstanceCleanup(timeoutMs: Long): Boolean =
+        withTimeoutOrNull(timeoutMs) {
+            while (true) {
+                val active = cleanupDeferred?.takeIf { it.isActive }
+                if (active != null) {
+                    active.await()
+                    continue
+                }
+                if (pendingDestroys.get() <= 0 && !isCleaningUp.get()) break
+                delay(100)
+            }
+            true
+        } != null
+
+    private fun isFileLockException(x: Throwable): Boolean =
+        x.cause?.javaClass?.simpleName?.contains("OverlappingFileLockException") == true ||
+            x.message?.contains("OverlappingFileLockException") == true ||
+            x.message?.contains("FileLock") == true
+
+    /**
+     * Phase 1b item 11: open a dashj SPV blockstore, and if the previous
+     * service instance still holds its file lock (its shutdown serializes the
+     * whole wallet before closing — 62 MB on the reference install), wait for
+     * that cleanup and retry instead of failing the start. Five starts died
+     * this way on 2026-09-16, each costing a replay restart. A non-lock
+     * failure (corruption) propagates unchanged to the caller's handling.
+     */
+    private suspend fun openBlockStoreWaitingForLock(file: File, what: String): SPVBlockStore {
+        var attempt = 0
+        while (true) {
+            try {
+                return SPVBlockStore(Constants.NETWORK_PARAMETERS, file)
+            } catch (x: BlockStoreException) {
+                if (!isFileLockException(x) || attempt >= BLOCKSTORE_LOCK_RETRIES) throw x
+                attempt++
+                log.warn(
+                    "{} blockstore is still file-locked by the previous service instance " +
+                        "(attempt {}/{}) — waiting up to {} ms for its cleanup before retrying",
+                    what, attempt, BLOCKSTORE_LOCK_RETRIES, BLOCKSTORE_LOCK_WAIT_MS
+                )
+                if (!awaitPreviousInstanceCleanup(BLOCKSTORE_LOCK_WAIT_MS)) {
+                    delay(500)
+                }
+            }
+        }
+    }
+
     /**
      * Phase 1b item 9 (docs/upgrade-memory-and-sync-plan.md): the one-minute
      * restart alarm is the FALLBACK for a replay the service did not choose
@@ -1985,10 +2060,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             try {
                 log.info("onCreate() serviceScope waiting for cleanup {}", cleanupDeferred?.isActive)
 
-                val cleanupCompleted = withTimeoutOrNull(15_000) {
-                    cleanupDeferred?.await()
-                    true
-                } != null
+                val cleanupCompleted = awaitPreviousInstanceCleanup(15_000)
 
                 if (!cleanupCompleted) {
                     log.error("CRITICAL: Cleanup did not complete within 15 seconds")
@@ -2082,9 +2154,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     resetMNListsOnPeerGroupStart = true
                 }
                 try {
-                    blockStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile)
+                    blockStore = openBlockStoreWaitingForLock(blockChainFile!!, "blockchain")
                     blockStore?.chainHead // detect corruptions as early as possible
-                    headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
+                    headerStore = openBlockStoreWaitingForLock(headerChainFile!!, "header")
                     headerStore?.chainHead // detect corruptions as early as possible
                     wallet.isNotifyTxOnNextBlock = false
                     val blockchainStoreMemoryError = serviceConfig.get(BLOCKCHAIN_STORE_MEMORY_FAILURE) ?: false
@@ -2242,10 +2314,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                 } catch (x: BlockStoreException) {
                     // Check if this is a file lock exception - don't delete files if another service is using them
-                    val isFileLockException = x.cause?.javaClass?.simpleName?.contains("OverlappingFileLockException") == true ||
-                                            x.message?.contains("OverlappingFileLockException") == true ||
-                                            x.message?.contains("FileLock") == true
-                    
+                    val isFileLockException = isFileLockException(x)
+
                     if (isFileLockException) {
                         log.warn("BlockStore creation failed due to file lock conflict - NOT deleting blockchain files as another service may be using them: {}", x.message)
                         val msg = "blockstore cannot be created due to file lock conflict - files preserved"
@@ -2703,6 +2773,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onDestroy() {
         log.info(".onDestroy()")
+        pendingDestroys.incrementAndGet()
         super.onDestroy()
         // unregister receivers on the main thread, if they were registered
         // in some cases, onDestroy is called soon after onCreate and before its coroutine finishes
@@ -2748,6 +2819,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // Prevent multiple cleanup operations using atomic flag
                 if (!isCleaningUp.compareAndSet(false, true)) {
                     log.info("Another onDestroy() is already running cleanup, skipping duplicate cleanup")
+                    pendingDestroys.decrementAndGet()
                     return@launch
                 }
 
@@ -2895,6 +2967,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     checkMutex.unlock()
                 }
                 isCleaningUp.set(false)
+                pendingDestroys.decrementAndGet()
                 cleanupDeferred?.complete(Unit)
                 // Cancel the cleanup monitor since cleanup is done
                 cleanupMonitorJob.cancel()
