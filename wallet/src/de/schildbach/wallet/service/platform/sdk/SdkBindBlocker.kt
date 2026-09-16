@@ -57,6 +57,20 @@ enum class SdkBindBlocker(val needsUser: Boolean) {
     SETUP_FAILED(true)
 }
 
+/**
+ * Thrown by [SdkWalletBinder] INSTEAD of attempting the bind when the device
+ * is provably locked (`KeyguardManager.isDeviceLocked`). The SDK's master
+ * alias is lock-bound, so the attempt could only end in a keystore denial —
+ * after paying the scrypt key derivation and a keystore round trip, on a
+ * background start that is already under the 10 s bind-application ANR
+ * budget. Classified exactly like the denial it pre-empts
+ * ([SdkBindBlocker.DEVICE_LOCKED]); the unlock receiver and the foreground
+ * edge retry the pass.
+ */
+class SdkBindDeferredWhileLockedException : IllegalStateException(
+    "SDK bind deferred: the device is locked, so the lock-bound master alias would be denied"
+)
+
 /** One failed bind pass, as published by [SdkWalletBinder.lastBindFailure]. */
 data class SdkBindFailure(
     val cause: Throwable,
@@ -100,7 +114,7 @@ private inline fun <T> Throwable.walkCauses(block: (Throwable) -> T?): T? {
  */
 fun isKeystoreDenial(t: Throwable): Boolean =
     t.walkCauses { c ->
-        if (c is KeystoreDeviceLockedException) true
+        if (c is KeystoreDeviceLockedException || c is SdkBindDeferredWhileLockedException) true
         else if (c.message?.let(keystoreDenialMessage::containsMatchIn) == true) true
         else null
     } ?: false
@@ -110,7 +124,13 @@ fun isKeystoreDenial(t: Throwable): Boolean =
  * exception is present; null otherwise.
  */
 fun keystoreDenialReportsDeviceLocked(t: Throwable): Boolean? =
-    t.walkCauses { c -> (c as? KeystoreDeviceLockedException)?.deviceReportsLocked }
+    t.walkCauses { c ->
+        when (c) {
+            is SdkBindDeferredWhileLockedException -> true
+            is KeystoreDeviceLockedException -> c.deviceReportsLocked
+            else -> null
+        }
+    }
 
 /**
  * Classify one failed bind pass. Pure.

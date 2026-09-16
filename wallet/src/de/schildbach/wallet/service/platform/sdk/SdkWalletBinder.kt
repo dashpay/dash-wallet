@@ -38,6 +38,9 @@ import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
+import android.app.KeyguardManager
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -296,10 +299,21 @@ class SdkWalletBinder internal constructor(
     private val backfillGate: DashPayBackfillGate = DashPayBackfillGate.ALWAYS_RUN,
     // Injectable so the post-arm rewind watch is testable on the host JVM
     // without a minute of real time per poll. Production uses the constant.
-    private val backfillWatchIntervalMs: Long = BACKFILL_WATCH_INTERVAL_MS
+    private val backfillWatchIntervalMs: Long = BACKFILL_WATCH_INTERVAL_MS,
+    /**
+     * `KeyguardManager.isDeviceLocked`. A FIRST bind (no SDK wallet yet)
+     * needs the lock-bound master alias, which Keystore2 refuses while this
+     * is true — so the pass is deferred up front as
+     * [SdkBindDeferredWhileLockedException] instead of paying scrypt and a
+     * keystore round trip to be denied (docs/upgrade-memory-and-sync-plan.md,
+     * Phase 1a item 4). Unknowable reads as unlocked: attempt, and let the
+     * keystore answer.
+     */
+    private val deviceProvablyLocked: () -> Boolean = { false }
 ) {
     @Inject
     constructor(
+        @ApplicationContext context: Context,
         sdkService: DashSdkService,
         mnemonicProvider: PlatformMnemonicProvider,
         identityConfig: BlockchainIdentityConfig,
@@ -317,7 +331,14 @@ class SdkWalletBinder internal constructor(
         blockchainServiceConfig = blockchainServiceConfig,
         scope = scope,
         supportsPlatform = { Constants.SUPPORTS_PLATFORM },
-        backfillGate = backfillGate
+        backfillGate = backfillGate,
+        deviceProvablyLocked = {
+            try {
+                context.getSystemService(KeyguardManager::class.java)?.isDeviceLocked == true
+            } catch (t: Throwable) {
+                false
+            }
+        }
     )
 
     /** Serializes passes — the single-flight guarantee. */
@@ -1047,6 +1068,18 @@ class SdkWalletBinder internal constructor(
 
         // 4. Bind the seed (skipped when a previous pass already bound it).
         val walletId = boundWalletIdHex ?: run {
+            // First bind on this process: the SDK will createWallet under the
+            // lock-bound master alias. Do not spend scrypt and a keystore call
+            // to be told the device is locked — defer, and let the unlock
+            // receiver / foreground edge run the pass (Phase 1a item 4). An
+            // ALREADY bound wallet skips this: opening it needs no keystore.
+            if (deviceProvablyLocked()) {
+                log.info(
+                    "SDK bind deferred: the device is locked and the SDK master alias is lock-bound; " +
+                        "retrying on unlock / app foreground"
+                )
+                throw SdkBindDeferredWhileLockedException()
+            }
             val unlock = unlockProvider()
             if (unlock == null) {
                 log.info("SDK binding skipped: no wallet unlock available at this call site")
