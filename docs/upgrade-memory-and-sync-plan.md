@@ -1,6 +1,6 @@
 # Dash Wallet v12: Memory and Sync Recovery Plan
 
-**Status:** draft for review, 2026-09-15; revised 2026-09-16 for the no-fallback cutover policy (section 12)
+**Status:** draft for review, 2026-09-15; revised 2026-09-16 for the no-fallback cutover policy (section 12); Phase 1a and 1b implemented 2026-09-16 on `fix/upgrade-memory-and-sync` (section 13)
 **Source:** field logs from one mainnet install (Pixel 8a, Android 17, build 12000010 `12.0.0-sync`), sessions 2026-09-12 through 2026-09-15 UTC, plus the `fix/kotlin-sdk-balance-issues` branch at `50a42be8b`.
 
 ---
@@ -111,10 +111,10 @@ Result on the reference upgrade: launch 1 (background, locked) parses the wallet
    - `updateSdkBlockchainState` stops writing `replaying = false` unconditionally and writes `replaying = percentageSync < 100`. `BlockchainStateDao.saveState` already clears the flag at 100%.
 8. **Set the replay flag when an upgrade's SDK sync starts.** Only restore and rescan call `resetBlockchainState` (which writes `BlockchainState(replaying = true)`) today. Call it from the cutover commit path when the SDK engine is about to start from a watermark below the tip. Covers the upgraded-wallet launch, including the bind that completes after a pending wait (Phase 1a item 3), and makes the "sync paused" notification and home-screen sync state read correctly during the scan.
 9. **One-minute reschedule becomes the fallback.** With item 7 the service should not stop mid-replay. If the OS or a failed start stops it anyway, the existing `rescheduleService` alarm now fires because the flag is true.
-10. **SPV before DashPay bring-up.** The scan does not need the keystore; the bring-up does (section 12). Start the SDK engine as soon as the wallet is open and let the DashPay drain run behind it, resuming whenever the keystore becomes available. Today the bring-up runs first with no effective budget: 5 to 42 minutes on 09-15, 766 s to 10,139 s on 09-16, 0 of 154 to 177 builds drained, filter position frozen throughout, and the idle detector tore the service down before SPV ever began.
+10. **Budget the DashPay bring-up before SPV.** The bring-up runs first for a reason (commit 1266edc1c: restored wallets missed contact-payment coins when DIP-15 receival accounts registered after the scan had passed their funding heights), so it keeps its place but gets a 20 s budget, the figure from the one unlocked foreground launch. Past the budget SPV starts and the bring-up finishes in the background; the SDK marks late accounts covered at synced height 0. The bring-up needs the keystore (section 12); on the reference install's locked overnight starts it ran 5 to 42 minutes on 09-15 and 766 s to 10,139 s on 09-16 with 0 of 154 to 177 builds drained and the filter position frozen, and the idle detector tore the service down before SPV ever began.
 11. **Do not open or lock the dashj blockstore when dashj is held.** If a start does find a live lock, wait for the previous cleanup instead of stopping the service.
 12. **Do not restart the engine into a dying service.** Gate `startIfEnabled` on the service not being in cleanup.
-13. **Flush the SDK watermark on every engine stop** from the app side, so a clean stop never loses progress even before Phase 1c item 15 lands.
+13. **Log the SDK watermark gap on every engine stop.** The app cannot flush the watermark: the SDK's `WalletDao` has no synced-height setter and the value is owned by the native engine. Every stop now logs the durable synced height against the cursor the engine committed and the filter position, at WARN when blocks will be re-walked. That line is the evidence for Phase 1c item 15, which is the real fix.
 
 ### Phase 1c: SDK (file now; needed before Phase 2 is meaningful on large wallets)
 
@@ -324,3 +324,30 @@ Consequences for the new mechanism:
 ### 12.3 What the user sees
 
 On the upgrade launch the home screen switches to the SDK immediately. The header holds the last-known dashj total under a syncing label until the SDK replay reaches the tip (section 10.1 and 11.3 show the hold engaging). For the reference install that replay is about 680,000 mainnet blocks, and with the current engine and idle detector it has not finished in two days. The one-time sync explainer already says this happens once; under the no-fallback policy that statement has to be true before the policy ships, which is why section 6 ties Phase 1a to 1b and 1c.
+
+## 13. Implementation status, 2026-09-16
+
+Branch `fix/upgrade-memory-and-sync` in the `dash-wallet-upgrade` worktree, forked from `fix/contested-username-restore-identity`. One commit per item; the full `test_testNet3DebugUnitTest` suite passes at the end. Nothing is pushed and nothing has run on a device yet.
+
+| Item | Commit | What landed, and where it differs from the plan text |
+|---|---|---|
+| build | d4d8dd6e7 | Cherry-pick of the main checkout's SDK bump to `0.1.0-v42int19-SNAPSHOT`. The branch pinned int5, which predates `startWalletSubsystems`, so it did not compile. |
+| 1a.1 | aeb97698f | Upgrade seam commits CUT_OVER without bind evidence; `dashjEngineMayStart()` is false in every state; the service gate reduces to the Tools toggle; a failed coordinator read defaults to false. Emulator harness scenarios rewritten. |
+| 1a.2 | 96811aee6 | Rollback, auto-commit observer, the rollback un-hold in the service, the debug ROLLBACK action removed. `REBUILD_WALLET` is advisory: logged with both balances and tx counts, never executed. The readiness table and parity probe remain as diagnostics. |
+| 1a.3 | 1ba7f8189 | `SdkBindBlocker` classification (DEVICE_LOCKED, KEYSTORE_DENIED_UNLOCKED, KEYSTORE_PROBLEM after three, OTHER, SETUP_FAILED after five). Receiver armed on the first failure, blocker persisted for the support report, background notification, foreground sheet with a retry button for the blockers that need the user. The header label from the plan text was not done; the sheet carries the explanation. |
+| 1a.4 | b7c588b66 | First bind skipped while `KeyguardManager.isDeviceLocked`, classified as DEVICE_LOCKED without scrypt or a keystore call. The bind was already the first thing after the wallet parse. |
+| 1a.5 | 790ae1616 | Three dashj loggers capped at WARN from the app's logback setup; the two per-transaction metadata lines at DEBUG. No dashj change. |
+| 1a.6 | bb02700a1 | Autosave debounce 5 s below half the size-guard soft limit, 30 s from half, 60 s at and above it. |
+| 1b.7 | 20975314f | `shouldStopForIdle(history, replaying)`; the SDK state writer derives `replaying` from the percentage instead of forcing false; the wake lock is held for the replay on the SDK path. A blocked bind lets the service idle out. |
+| 1b.8 | 20dc062ef | The upgrade commit marks the replay started (replaying true, percentage 0, heights preserved) before the SDK's first progress update. |
+| 1b.9 | b42f8f84e | The one-minute alarm is armed from `onDestroy` for any non-deliberate stop during a replay, not from the idle path. |
+| 1b.10 | 10ba754bd | Bring-up budget of 20 s, then SPV; the bring-up finishes in the background. Order kept, not flipped (see the item text). |
+| 1b.11 | 8ef28d16f | `pendingDestroys` closes the onCreate/onDestroy race behind the file-lock failures; a lock-blocked blockstore open retries three times after waiting for the cleanup. Opening the store is still unconditional; skipping it when dashj is held touches too many `blockChain` readers for this pass. |
+| 1b.12 | 4b8f50ef2 | Engine start skipped while the service is tearing down. |
+| 1b.13 | d25c784fc | Diagnostic only (see the item text). |
+| 10.4 FGS gate | 839f0d6ce | `init()` binds and starts the UI data services; the L1 engine starts from `resume()`, called after `startForeground`. |
+| 10.4 ticker | 40513a6c6 | Contact cycle every 15 s in the foreground, every 20 ticks in the background. |
+| 10.4 readiness log | moot | The observer is gone; the parity probe already logs one line per mismatch and the `REBUILD_WALLET` verdict now logs both sides. |
+| 10.4 wipe policy | in 1a.2 | Automatic wipe removed. |
+
+Still open after this pass: the header label during the pending state; skipping the dashj blockstore open entirely on a held install; the Android 15 dataSync six-hour foreground limit, which a multi-hour replay will hit and which item 9 can only answer with a restart; and everything in Phase 1c, which the SDK team owns. The reference install still needs Phase 1c items 14 and 15 before its replay can finish, and Phase 2 before its idle heap changes.
