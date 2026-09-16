@@ -110,6 +110,42 @@ Most-used bitcoinj types repo-wide: `Coin` (105 files), `Transaction` (86), `Sha
 - **Blast radius**: `wallet/.../ui/dashpay/**`, `wallet/.../service/platform/**` — ~50 files,
   plus the per-flavor `dash-sdk-{java,kotlin,android}` Gradle lines.
 
+#### 5a. App-side DIP-15 friend-chain provisioning — now redundant (added 2026-09-16)
+
+- **What it is**: `SdkWalletBinder.provisionContactAccountsIfEnabled` /
+  `provisionContactAccountsInBackground`, plus `DashPayBackfillGate`. It derives the
+  `m/9'/coin'/15'` per-contact keychains and registers them with the SDK so contact/username
+  payments land in the filter set.
+- **Why it exists**: its own comment says it — "the app keeps DashPay contacts on dashj and
+  never drives the SDK's contact-sync path, so the bound SDK L1 wallet derives NONE of the
+  `m/9'/coin'/15'` friend chains and misses contact/username payments". It was the patch for
+  the SDK not being told the contacts existed. The exposure was real: 0.0836 DASH of
+  genuinely-ours coins missed at scan time on the topple wallet.
+- **Why it is now redundant**: `1266edc1c` started calling the SDK's own ordered bring-up,
+  `PlatformWalletManager.startWalletSubsystems`, which does identity → contacts →
+  contact-account drain and reports `dashPaySyncRan` / `contactAccountsDrained` /
+  `contactAccountsPending`. Measured on emulator-5556, 2026-09-16: the bring-up reported
+  `status=READY dashPaySyncRan=true drained=14 pending=0`, and every app-side sweep afterwards
+  reported `pendingBuilds=0, drainScheduled=false`. The app sweep runs once a minute and finds
+  nothing. `DashPayBackfillGate` is already `ALWAYS_RUN`, i.e. a no-op shell: `evaluate` always
+  returns `shouldRun = true, reason = "backfill gate disabled"`, and every bookkeeping method
+  returns a constant.
+- **The one job left**: `startWalletSubsystems` runs only at engine start
+  (`L1ShadowSyncService.startIfEnabled`, guarded by `if (!source.isSpvRunning())`), so a contact
+  established while the engine is already running is not picked up by it. `updateContactRequests`
+  calls the app sweep with `force = addedContact` for exactly that case. **Deleting the sweep
+  requires the SDK to re-run its contact sync on a contact change, or the app to restart the
+  engine on one.** Confirm with the SDK team before removing.
+- **Kill**: delete `provisionContactAccountsIfEnabled`,
+  `provisionContactAccountsInBackground`, `DashPayBackfillGate` and its `ALWAYS_RUN` shell, the
+  `watchArmedBackfillRewind` poller, and the two call sites in `PlatformSyncService`
+  (`kickSdkEngines`, `updateContactRequests`). The rewind that catches payments missed before a
+  chain was derived is already the SDK's: it marks newly registered contacts at
+  `synced_height = 0` and its filter manager rescans via the account-generation guard
+  (`dash-spv/src/sync/filters/manager.rs`). That is also the single mechanism the whole
+  contact-payment recovery now depends on — see section 16 of
+  `docs/upgrade-memory-and-sync-plan.md`, which tests it.
+
 ### 6. Checkpoints / birth height / chain bootstrap
 - **What it does**: `CheckpointManager` (3 files) + `wallet/assets/checkpoints{,-testnet}.txt`
   fast-forward dashj's chain; `Constants.java` (11 bitcoinj imports) holds `NetworkParameters`.
