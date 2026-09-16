@@ -406,7 +406,16 @@ class PlatformSynchronizationService @Inject constructor(
         // wallet-crypter key non-interactively ([NonInteractiveWalletUnlock]
         // — the SecurityGuard-stored password, no user prompt; extracted so
         // the L1 shadow recovery path reuses the identical recipe).
-        kickSdkEngines()
+        //
+        // The L1 ENGINE is deliberately NOT started from here (emulator
+        // finding 12, docs/upgrade-memory-and-sync-plan.md §10.4): init()
+        // runs from WalletApplication.onCreate, which a WorkManager job or a
+        // package-replaced broadcast can trigger in a plain background
+        // process with no foreground service — and the cached-app freezer
+        // suspended exactly such a scan nine seconds in. The engine starts
+        // from resume(), which BlockchainServiceImpl calls after
+        // startForeground().
+        kickSdkEngines(startL1Engine = false)
         log.info("Starting the platform sync job")
     }
 
@@ -417,7 +426,7 @@ class PlatformSynchronizationService @Inject constructor(
     // instrumentation — it runs a second SPV engine), and failures are
     // logged+swallowed inside startIfEnabled(). Bind is single-flight and
     // startIfEnabled() is idempotent, so re-running the recipe is safe.
-    private fun kickSdkEngines() {
+    private fun kickSdkEngines(startL1Engine: Boolean) {
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_BIND_KICKED, "SDK_BIND_KICKED")
         val bindJob = sdkWalletBinder.bindInBackground(nonInteractiveWalletUnlock::unlockOrNull)
         syncScope.launch {
@@ -427,7 +436,12 @@ class PlatformSynchronizationService @Inject constructor(
             // crash-looped install whose previous-launch trail repeatedly ends
             // at SDK_L1_ENGINE_STARTING is the fingerprint that convicts the
             // native engine (see StartupBreadcrumbs).
-            if (de.schildbach.wallet.service.BlockchainServiceImpl.isCleaningUpNow) {
+            if (!startL1Engine) {
+                log.info(
+                    "SDK L1 engine not started from Application init — it starts from the foreground " +
+                        "blockchain service (resume())"
+                )
+            } else if (de.schildbach.wallet.service.BlockchainServiceImpl.isCleaningUpNow) {
                 // Phase 1b item 12 (docs/upgrade-memory-and-sync-plan.md): the
                 // blockchain service is tearing down — its shutdown() is about
                 // to stopSdkEngines(). Starting the engine now only hands it a
@@ -505,7 +519,10 @@ class PlatformSynchronizationService @Inject constructor(
         // (re)start must kick them again, or the shadow parity harness
         // stays down for the rest of the process lifetime and the shielded
         // transfer gate never reopens ("Verifying your balance" forever).
-        kickSdkEngines()
+        //
+        // Called by BlockchainServiceImpl after startForeground(): the only
+        // path that starts the SDK L1 engine (see init()).
+        kickSdkEngines(startL1Engine = true)
     }
 
     override suspend fun initSync(runFirstUpdateBlocking: Boolean) {
