@@ -1101,6 +1101,22 @@ public class WalletApplication extends MultiDexApplication
         log.addAppender(logcatAppender);
         log.setLevel(Level.INFO);
 
+        // Log diet (docs/upgrade-memory-and-sync-plan.md, Phase 1a item 5).
+        // dashj's InstantSend/quorum machinery logs at INFO per islock and per
+        // quorum lookup: in the reference install's crash minute (2026-09-15
+        // 12:17 UTC) about 27,000 of the 28,000 lines were these three loggers
+        // and the per-transaction metadata lines below, and one of the three
+        // OutOfMemoryErrors fired inside logback itself. WARN keeps every
+        // real problem ("signature has already", CRITICAL, timeouts) and drops
+        // the chatter. dashj runs only for the Tools > dashj sync diagnostic
+        // now, but the diagnostic must not be able to fill the log either.
+        for (final String noisyDashjLogger : new String[] {
+                "org.bitcoinj.quorums.InstantSendManager",
+                "org.bitcoinj.quorums.SPVQuorumManager",
+                "org.bitcoinj.quorums.SigningManager" }) {
+            context.getLogger(noisyDashjLogger).setLevel(Level.WARN);
+        }
+
         // dashj's peer-timeout diagnostic WARN-logs a full thread dump on
         // EVERY peer timeout (96 dumps = 118k log lines in one flapping
         // session, starving I/O). Keep at most one dump per interval; all
