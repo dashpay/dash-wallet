@@ -818,4 +818,21 @@
     <string name="cutover_sync_notice_complete">Sync complete. You can send funds again.</string>
     <string name="cutover_sync_notice_action">Got it</string>
 
+    <!-- "SDK setup pending" (docs/upgrade-memory-and-sync-plan.md, Phase 1a
+         item 3). After the update the wallet has to register its seed with a
+         key that Android only releases while the phone is unlocked. Until that
+         one step succeeds nothing syncs, and there is no fallback engine — so
+         the user is told exactly what the wallet is waiting for. Shown as a
+         notification while the app is in the background and as a sheet while
+         it is open. -->
+    <string name="sdk_bind_pending_locked_title">Unlock your phone to finish the wallet update</string>
+    <string name="sdk_bind_pending_locked_message">The update needs your phone unlocked once to finish setting up. Your funds are safe, and your balance stays at its last known amount until then.</string>
+    <string name="sdk_bind_pending_finishing_title">Finishing the wallet update…</string>
+    <string name="sdk_bind_pending_finishing_message">Setting up the new sync engine. This usually takes a few seconds.</string>
+    <string name="sdk_bind_problem_title">Your phone is blocking the wallet update</string>
+    <string name="sdk_bind_problem_message">The secure key store on this phone refuses the wallet\'s key even though the phone is unlocked. Restarting the phone usually fixes this. Until then the wallet cannot sync; as a workaround you can turn on dashj sync under Tools.</string>
+    <string name="sdk_bind_failed_title">The wallet update could not finish</string>
+    <string name="sdk_bind_failed_message">Setup keeps failing. Please restart the app. If this continues, contact support and include a report from Settings › Support.</string>
+    <string name="sdk_bind_pending_retry">Try again</string>
+
 </resources>

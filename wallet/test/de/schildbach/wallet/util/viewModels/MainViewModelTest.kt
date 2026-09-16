@@ -251,6 +251,9 @@ class MainViewModelTest {
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
     private val swapProvider = mockk<DispatchingSwapProvider>()
+    private val sdkBindRetryService = mockk<de.schildbach.wallet.service.platform.sdk.SdkBindRetryService> {
+        every { blocker } returns kotlinx.coroutines.flow.MutableStateFlow(null)
+    }
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
 
@@ -343,7 +346,8 @@ class MainViewModelTest {
                 coinJoinFundsMigrationService,
                 l1SyncStatusService,
                 contactRequestNotificationService,
-                swapProvider
+                swapProvider,
+                sdkBindRetryService
             )
         )
 
@@ -386,7 +390,8 @@ class MainViewModelTest {
                 coinJoinFundsMigrationService,
                 l1SyncStatusService,
                 contactRequestNotificationService,
-                swapProvider
+                swapProvider,
+                sdkBindRetryService
             )
         )
 
@@ -469,7 +474,8 @@ class MainViewModelTest {
             coinJoinFundsMigrationService,
             l1SyncStatusService,
             contactRequestNotificationService,
-            swapProvider
+            swapProvider,
+            sdkBindRetryService
         )
 
         // The collector is expected to reach the wallet on a background dispatcher.

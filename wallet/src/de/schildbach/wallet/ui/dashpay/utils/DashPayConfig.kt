@@ -472,6 +472,15 @@ open class DashPayConfig @Inject constructor(
         val SDK_BIND_EVER_SUCCEEDED = booleanPreferencesKey("sdk_bind_ever_succeeded")
 
         /**
+         * The current [de.schildbach.wallet.service.platform.sdk.SdkBindBlocker]
+         * name while the SDK bind is pending, "NONE" once bound. Written by
+         * [de.schildbach.wallet.service.platform.sdk.SdkBindRetryService] so the
+         * support report can say WHY an install never finished its SDK setup
+         * (device locked vs. a keystore that denies while unlocked).
+         */
+        val SDK_BIND_BLOCKER = stringPreferencesKey("sdk_bind_blocker")
+
+        /**
          * MO-995: set the first time a launch is seen to have crossed the
          * cutover boundary (the previous launch ran a pre-11.10 build), and
          * never cleared except by a wallet wipe.

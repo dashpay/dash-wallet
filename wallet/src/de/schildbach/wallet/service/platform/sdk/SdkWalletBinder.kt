@@ -378,6 +378,16 @@ class SdkWalletBinder internal constructor(
     val bindRetryPending: StateFlow<Boolean> = _bindRetryPending.asStateFlow()
 
     /**
+     * The most recent failed pass while a retry is pending, null once the
+     * wallet is bound. [SdkBindRetryService] classifies it into an
+     * [SdkBindBlocker] (device locked / keystore problem / other) and
+     * surfaces that to the user, since a failed bind no longer falls back
+     * to dashj.
+     */
+    private val _lastBindFailure = MutableStateFlow<SdkBindFailure?>(null)
+    val lastBindFailure: StateFlow<SdkBindFailure?> = _lastBindFailure.asStateFlow()
+
+    /**
      * CONSECUTIVE bind passes that attempted and failed without leaving a
      * bound wallet — reported by [SdkBindRetryService] on every failed retry
      * (there is no engine fallback to drive any more). Reset to 0 by any
@@ -396,10 +406,15 @@ class SdkWalletBinder internal constructor(
      * LATER stage (discovery/key heal) failed — those have their own
      * retries and do not strand the L1 engine.
      */
-    private fun noteBindOutcome(failed: Boolean) {
+    private fun noteBindOutcome(failed: Boolean, cause: Throwable? = null) {
         if (failed) {
             consecutiveBindFailuresCount++
             _bindRetryPending.value = true
+            _lastBindFailure.value = SdkBindFailure(
+                cause = cause ?: IllegalStateException("bind pass left no bound SDK wallet"),
+                consecutiveFailures = consecutiveBindFailuresCount,
+                atMs = now()
+            )
             log.warn(
                 "SDK wallet bind still not established ({} consecutive failed pass(es)); " +
                     "a bind retry is pending",
@@ -414,6 +429,7 @@ class SdkWalletBinder internal constructor(
             }
             consecutiveBindFailuresCount = 0
             _bindRetryPending.value = false
+            _lastBindFailure.value = null
             markBindEverSucceeded()
         }
     }
@@ -951,9 +967,9 @@ class SdkWalletBinder internal constructor(
             // arm the retry machinery. A throw AFTER the bind established
             // the wallet (discovery/heal) is not — those retry on their own
             // triggers and the L1 engine is not blocked on them.
-            noteBindOutcome(failed = boundWalletIdHex == null)
+            noteBindOutcome(failed = boundWalletIdHex == null, cause = t)
             // Opportunistic by contract: never break the calling flow.
-            log.warn("SDK wallet binding pass failed; dashj behavior unchanged", t)
+            log.warn("SDK wallet binding pass failed; retry pending", t)
         }
     }
 

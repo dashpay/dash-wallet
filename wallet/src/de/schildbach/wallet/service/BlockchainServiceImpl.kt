@@ -243,13 +243,18 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         AppForegroundMonitor.isForeground
             .onEach { foreground ->
                 isAppInBackground = !foreground
-                if (foreground && ::sdkBindRetryService.isInitialized) {
+                if (!::sdkBindRetryService.isInitialized) return@onEach
+                if (foreground) {
                     // A pending SDK bind retry runs the moment the user is
                     // actually looking at the app — the device is then provably
                     // unlocked, which is the heal condition for a device-locked
                     // keystore denial, and no broadcast has to survive an OEM's
                     // background restrictions.
                     sdkBindRetryService.noteAppForeground()
+                } else {
+                    // Leaving with the bind still pending: the notification is
+                    // the only surface left to say what the wallet waits for.
+                    sdkBindRetryService.noteAppBackground()
                 }
             }
             .launchIn(serviceScope)

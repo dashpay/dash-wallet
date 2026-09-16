@@ -92,6 +92,13 @@ class SdkBindRetryServiceTest {
         var registrations = 0
         var unlockCallback: (() -> Unit)? = null
 
+        // The "SDK setup pending" surface.
+        val failures = kotlinx.coroutines.flow.MutableStateFlow<SdkBindFailure?>(null)
+        var appInBackground = false
+        val notices = mutableListOf<SdkBindBlocker>()
+        var noticeClears = 0
+        val persisted = mutableListOf<SdkBindBlocker?>()
+
         fun service(scope: kotlinx.coroutines.CoroutineScope) = SdkBindRetryService(
             scope = scope,
             bindRetryPending = { signal.pending },
@@ -105,9 +112,36 @@ class SdkBindRetryServiceTest {
                 registerSucceeds
             },
             deviceProvablyLocked = { deviceLocked },
-            now = { nowMs }
+            now = { nowMs },
+            bindFailures = failures,
+            persistBlocker = { persisted += it },
+            showPendingNotice = { notices += it },
+            clearPendingNotice = { noticeClears++ },
+            appInBackground = { appInBackground }
         )
+
+        /** Publish one failed pass the way the binder does. */
+        fun fail(cause: Throwable) {
+            signal.primeFailed(signal.failures + 1)
+            failures.value = SdkBindFailure(cause, signal.failures, atMs = ++nowMs)
+        }
+
+        fun succeed() {
+            signal.pending = false
+            signal.failures = 0
+            failures.value = null
+        }
     }
+
+    private fun lockedDenial() = org.dashfoundation.dashsdk.security.KeystoreDeviceLockedException(
+        "org.dashfoundation.wallet.master", "createWallet",
+        org.dashfoundation.dashsdk.security.DeviceLockState(true, true), RuntimeException("denied")
+    )
+
+    private fun unlockedDenial() = org.dashfoundation.dashsdk.security.KeystoreDeviceLockedException(
+        "org.dashfoundation.wallet.master", "createWallet",
+        org.dashfoundation.dashsdk.security.DeviceLockState(false, false), RuntimeException("denied")
+    )
 
     // ── maybeRetry: gating + ladder ───────────────────────────────────
 
@@ -392,6 +426,114 @@ class SdkBindRetryServiceTest {
         nowMs += 15_001
         service.maybeRetry("poll") // heals on the third retry
         assertFalse(h.signal.pending)
+    }
+
+    // ── "SDK setup pending": classification, arming, notification ─────
+
+    @Test
+    fun lockedDenial_publishesDeviceLocked_armsTheReceiverImmediately_andNotifiesInBackground() = runTest {
+        // The reference install, 2026-09-14 14:49: background start, phone
+        // locked, createWallet denied. Nothing polled maybeRetry for 22 hours
+        // and the receiver was never armed. Now the first failure does both.
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        val service = h.service(backgroundScope)
+        runCurrent()
+        assertEquals(0, h.registrations)
+
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+        assertEquals("armed on the failure itself, no poll needed", 1, h.registrations)
+        assertEquals(listOf(SdkBindBlocker.DEVICE_LOCKED), h.notices)
+        assertEquals(listOf<SdkBindBlocker?>(SdkBindBlocker.DEVICE_LOCKED), h.persisted)
+    }
+
+    @Test
+    fun lockedDenial_inTheForeground_doesNotNotify() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = false
+        val service = h.service(backgroundScope)
+        h.fail(lockedDenial())
+        runCurrent()
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+        assertTrue(h.notices.isEmpty())
+
+        // Leaving the app with the bind still pending posts it then.
+        service.noteAppBackground()
+        assertEquals(listOf(SdkBindBlocker.DEVICE_LOCKED), h.notices)
+    }
+
+    @Test
+    fun threeUnlockedDenials_escalateToKeystoreProblem() = runTest {
+        // walletB: the keyguard says unlocked, Keystore2 still denies.
+        val h = Harness(deviceLocked = false)
+        val service = h.service(backgroundScope)
+
+        h.fail(unlockedDenial()); runCurrent()
+        assertEquals(SdkBindBlocker.KEYSTORE_DENIED_UNLOCKED, service.blocker.value)
+        h.fail(unlockedDenial()); runCurrent()
+        assertEquals(SdkBindBlocker.KEYSTORE_DENIED_UNLOCKED, service.blocker.value)
+        h.fail(unlockedDenial()); runCurrent()
+        assertEquals(SdkBindBlocker.KEYSTORE_PROBLEM, service.blocker.value)
+        assertEquals(
+            "persisted on every change, not every failure",
+            listOf<SdkBindBlocker?>(SdkBindBlocker.KEYSTORE_DENIED_UNLOCKED, SdkBindBlocker.KEYSTORE_PROBLEM),
+            h.persisted
+        )
+    }
+
+    @Test
+    fun aLockedDenial_resetsTheUnlockedStreak() = runTest {
+        val h = Harness(deviceLocked = false)
+        val service = h.service(backgroundScope)
+        h.fail(unlockedDenial()); runCurrent()
+        h.fail(unlockedDenial()); runCurrent()
+        h.deviceLocked = true
+        h.fail(lockedDenial()); runCurrent()
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+        h.deviceLocked = false
+        h.fail(unlockedDenial()); runCurrent()
+        assertEquals("streak restarted after the locked denial", SdkBindBlocker.KEYSTORE_DENIED_UNLOCKED, service.blocker.value)
+    }
+
+    @Test
+    fun otherFailures_becomeSetupFailed_afterFive() = runTest {
+        val h = Harness()
+        val service = h.service(backgroundScope)
+        repeat(4) { h.fail(IllegalStateException("Room: database is locked")); runCurrent() }
+        assertEquals(SdkBindBlocker.OTHER, service.blocker.value)
+        h.fail(IllegalStateException("Room: database is locked")); runCurrent()
+        assertEquals(SdkBindBlocker.SETUP_FAILED, service.blocker.value)
+    }
+
+    @Test
+    fun bindSuccess_clearsTheBlocker_theNotification_andThePersistedRecord() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        val service = h.service(backgroundScope)
+        h.fail(lockedDenial()); runCurrent()
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+
+        h.succeed(); runCurrent()
+
+        assertEquals(null, service.blocker.value)
+        assertEquals(1, h.noticeClears)
+        assertEquals(listOf<SdkBindBlocker?>(SdkBindBlocker.DEVICE_LOCKED, null), h.persisted)
+    }
+
+    @Test
+    fun foregroundWithAPendingBind_clearsTheNotification() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        val service = h.service(backgroundScope)
+        h.fail(lockedDenial()); runCurrent()
+        assertEquals(1, h.notices.size)
+
+        service.noteAppForeground()
+        runCurrent()
+        assertEquals(1, h.noticeClears)
     }
 
     // ── The binder's own outcome bookkeeping (real binder) ────────────

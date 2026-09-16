@@ -35,7 +35,9 @@ import androidx.annotation.NavigationRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.findNavController
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.AndroidEntryPoint
@@ -54,6 +56,7 @@ import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.ui.staking.createCrowdNodeWithdrawalReminderDialog
 import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
 import de.schildbach.wallet.ui.cutover.CutoverSyncNoticeDialogFragment
+import de.schildbach.wallet.ui.cutover.SdkBindPendingDialogFragment
 import de.schildbach.wallet.ui.migration.MixedFundsMigrationDialogFragment
 import de.schildbach.wallet.ui.main.MainActivityExt.checkTimeSkew
 import de.schildbach.wallet.ui.main.MainActivityExt.handleFirebaseAction
@@ -334,6 +337,21 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 pendingCutoverUpgradeNotice = true
             } else {
                 CutoverSyncNoticeDialogFragment.showOnce(this)
+            }
+        }
+        // "SDK setup pending": while the SDK wallet bind is blocked, say so
+        // every time the user returns to the app (the collector restarts on
+        // STARTED, and the StateFlow replays the current blocker), and take
+        // the sheet down the moment the bind succeeds.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.sdkBindBlocker.collect { blocker ->
+                    if (blocker == null) {
+                        SdkBindPendingDialogFragment.dismissIfShown(this@MainActivity)
+                    } else if (!lockScreenDisplayed) {
+                        SdkBindPendingDialogFragment.showOnce(this@MainActivity)
+                    }
+                }
             }
         }
 

@@ -24,8 +24,15 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.schildbach.wallet.AppForegroundMonitor
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
@@ -80,8 +87,19 @@ internal fun bindRetryDelayMs(retriesAttempted: Int): Long = when (retriesAttemp
  * process on the reference install (docs/upgrade-memory-and-sync-plan.md
  * §12), and under the no-fallback policy the dashj peergroup starts only
  * for the Tools › dashj sync diagnostic. A bind that keeps failing keeps
- * retrying — on the ladder, on unlock, on foreground — and the pending
- * state is surfaced to the user instead (Phase 1a item 3).
+ * retrying — on the ladder, on unlock, on foreground.
+ *
+ * 3. **"SDK setup pending" state** (Phase 1a item 3) — instead of a
+ *    fallback, every failed pass ([SdkWalletBinder.lastBindFailure]) is
+ *    CLASSIFIED ([classifyBindFailure]) into an [SdkBindBlocker] and
+ *    published on [blocker]. The unlock receiver is armed the moment the
+ *    first failure lands (not on a later poll), the classification is
+ *    persisted for the support report ([DashPayConfig.SDK_BIND_BLOCKER]),
+ *    a notification asks the user to unlock the phone when the app is in
+ *    the background, and the home screen shows a sheet while the app is
+ *    open. The reference install (2026-09-14) sat in this state for 22
+ *    hours with nothing telling the user; walletB's HONOR never healed at
+ *    all because its keystore denied while unlocked.
  *
  * Never throws into a caller; every entry point contains its own failures.
  * The SDK-side hardening (a typed keystore error + internal retry in
@@ -110,7 +128,15 @@ class SdkBindRetryService internal constructor(
      */
     private val deviceProvablyLocked: () -> Boolean = { false },
     private val now: () -> Long = System::currentTimeMillis,
-    private val retryDelayMs: (Int) -> Long = ::bindRetryDelayMs
+    private val retryDelayMs: (Int) -> Long = ::bindRetryDelayMs,
+    /** [SdkWalletBinder.lastBindFailure]: null once bound, else the latest failed pass. */
+    private val bindFailures: Flow<SdkBindFailure?> = emptyFlow(),
+    /** Durable record of the current blocker for the support report. */
+    private val persistBlocker: suspend (SdkBindBlocker?) -> Unit = {},
+    /** Post / clear the "unlock your phone" notification (background only). */
+    private val showPendingNotice: (SdkBindBlocker) -> Unit = {},
+    private val clearPendingNotice: () -> Unit = {},
+    private val appInBackground: () -> Boolean = { false }
 ) {
     @Inject
     constructor(
@@ -118,6 +144,7 @@ class SdkBindRetryService internal constructor(
         binder: SdkWalletBinder,
         nonInteractiveWalletUnlock: NonInteractiveWalletUnlock,
         cutoverCoordinator: CutoverCoordinator,
+        dashPayConfig: DashPayConfig,
         scope: CoroutineScope
     ) : this(
         scope = scope,
@@ -135,8 +162,102 @@ class SdkBindRetryService internal constructor(
             } catch (t: Throwable) {
                 false // unknowable reads as unlocked
             }
-        }
+        },
+        bindFailures = binder.lastBindFailure,
+        persistBlocker = { blocker ->
+            dashPayConfig.set(DashPayConfig.SDK_BIND_BLOCKER, blocker?.name ?: "NONE")
+        },
+        showPendingNotice = { blocker -> SdkBindPendingNotification.show(context, blocker) },
+        clearPendingNotice = { SdkBindPendingNotification.clear(context) },
+        appInBackground = { AppForegroundMonitor.isInBackground }
     )
+
+    /**
+     * Why the bind is pending right now; null while the wallet is bound (or
+     * before the first pass). The home screen renders a sheet from this and
+     * the support report records it.
+     */
+    private val _blocker = MutableStateFlow<SdkBindBlocker?>(null)
+    val blocker: StateFlow<SdkBindBlocker?> = _blocker.asStateFlow()
+
+    /** Consecutive keystore denials seen with the device reporting UNLOCKED. */
+    @Volatile
+    private var unlockedDenialStreak = 0
+
+    /** Consecutive non-keystore failures. */
+    @Volatile
+    private var otherFailureStreak = 0
+
+    @Volatile
+    private var lastClassifiedFailureAtMs = Long.MIN_VALUE
+
+    init {
+        scope.launch {
+            try {
+                bindFailures.collect { onBindFailureChanged(it) }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("SDK bind failure feed died; blocker classification stops", t)
+            }
+        }
+    }
+
+    private suspend fun onBindFailureChanged(failure: SdkBindFailure?) {
+        if (failure == null) {
+            val previous = _blocker.value ?: return
+            unlockedDenialStreak = 0
+            otherFailureStreak = 0
+            _blocker.value = null
+            log.info("SDK bind established — clearing the pending state ({})", previous)
+            clearPendingNotice()
+            runCatching { persistBlocker(null) }
+                .onFailure { if (it is CancellationException) throw it; log.warn("failed to persist the cleared bind blocker", it) }
+            return
+        }
+        // StateFlow conflates; a re-emission of the same failure is not a new one.
+        if (failure.atMs == lastClassifiedFailureAtMs) return
+        lastClassifiedFailureAtMs = failure.atMs
+
+        val locked = deviceProvablyLocked()
+        if (isKeystoreDenial(failure.cause)) {
+            otherFailureStreak = 0
+            val lockedByEvidence = locked || keystoreDenialReportsDeviceLocked(failure.cause) == true
+            if (lockedByEvidence) unlockedDenialStreak = 0 else unlockedDenialStreak++
+        } else {
+            unlockedDenialStreak = 0
+            otherFailureStreak++
+        }
+        val blocker = classifyBindFailure(
+            failure.cause,
+            deviceProvablyLocked = locked,
+            unlockedDenialStreak = unlockedDenialStreak,
+            otherFailureStreak = otherFailureStreak
+        )
+        val changed = _blocker.value != blocker
+        _blocker.value = blocker
+        log.warn(
+            "SDK bind pending: {} ({} consecutive failure(s); device provably locked={}; " +
+                "unlocked keystore denials in a row={}; other failures in a row={}; cause={})",
+            blocker, failure.consecutiveFailures, locked, unlockedDenialStreak, otherFailureStreak,
+            failure.cause.toString().take(200)
+        )
+        // Arm the unlock heal NOW — not on some later poll that may never come.
+        armUnlockReceiver()
+        if (changed) {
+            runCatching { persistBlocker(blocker) }
+                .onFailure { if (it is CancellationException) throw it; log.warn("failed to persist the bind blocker", it) }
+        }
+        if (appInBackground()) showPendingNotice(blocker)
+    }
+
+    /**
+     * The app left the foreground with the bind still pending: tell the user
+     * what it is waiting for, since nothing on screen can.
+     */
+    fun noteAppBackground() {
+        val blocker = _blocker.value ?: return
+        showPendingNotice(blocker)
+    }
 
     /** Retries THIS service has attempted since the last success/foreground reset — the ladder index. */
     @Volatile
@@ -216,6 +337,9 @@ class SdkBindRetryService internal constructor(
      * [retryNowInBackground] resets the ladder and runs one pass.
      */
     fun noteAppForeground() {
+        // The user is looking at the app: the notification is redundant and
+        // the sheet takes over.
+        if (_blocker.value != null) clearPendingNotice()
         if (!bindRetryPending()) return
         log.info("app foregrounded with an SDK bind retry pending — retrying the bind now")
         armUnlockReceiver()

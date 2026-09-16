@@ -136,7 +136,8 @@ class MainViewModel @Inject constructor(
     private val coinJoinFundsMigrationService: CoinJoinFundsMigrationService,
     l1SyncStatusService: L1SyncStatusService,
     private val contactRequestNotificationService: ContactRequestNotificationService,
-    private val swapProvider: DispatchingSwapProvider
+    private val swapProvider: DispatchingSwapProvider,
+    sdkBindRetryService: de.schildbach.wallet.service.platform.sdk.SdkBindRetryService
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false
 
@@ -310,6 +311,15 @@ class MainViewModel @Inject constructor(
      * acknowledges it, which is what makes it once-ever.
      */
     val showCutoverUpgradeNotice = SingleLiveEvent<Unit>()
+
+    /**
+     * "SDK setup pending": why the SDK wallet bind is blocked, null while
+     * bound. MainActivity shows
+     * [de.schildbach.wallet.ui.cutover.SdkBindPendingDialogFragment] while
+     * this is non-null (docs/upgrade-memory-and-sync-plan.md, Phase 1a item 3).
+     */
+    val sdkBindBlocker: StateFlow<de.schildbach.wallet.service.platform.sdk.SdkBindBlocker?> =
+        sdkBindRetryService.blocker
 
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
