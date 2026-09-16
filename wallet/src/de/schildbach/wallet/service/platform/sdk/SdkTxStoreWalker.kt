@@ -667,24 +667,37 @@ internal class SdkTxStoreWalker(
         }
         if (flagged.isEmpty()) return rows.map { it.record }
 
+        // Funded sums AND mirror-completeness evidence come from ONE read per
+        // chunk: the same rows, the same snapshot. As two statements they
+        // left a window — a change row landing between the SUM and the
+        // completeness probe made the probe approve a mirror the sum never
+        // saw, and the guard below then passed exactly the born-wrong net it
+        // exists to stop (review on #1559). Foreign rows count as mirrored:
+        // the store mirrors contact-chain outputs into txos too, so their
+        // presence is part of the completeness evidence.
         val fundedOwned = HashMap<String, Long>()
         val fundedForeign = HashMap<String, Long>()
+        val mirroredVouts = HashMap<String, MutableSet<Int>>()
         for (chunk in flagged.chunked(TXID_IN_CHUNK)) {
             val placeholders = chunk.joinToString(",") { "?" }
             val args = ArrayList<Any?>(1 + chunk.size)
             args.add(walletId)
             chunk.forEach { args.add(it.wireTxid) }
             rawQuery(
-                "SELECT t.txid, " +
-                    "SUM(CASE WHEN ${txoIsForeignSql("t")} THEN 0 ELSE t.amount END), " +
-                    "SUM(CASE WHEN ${txoIsForeignSql("t")} THEN t.amount ELSE 0 END) " +
-                    "FROM txos t WHERE t.walletId = ? AND t.txid IN ($placeholders) GROUP BY t.txid",
+                "SELECT t.txid, t.vout, t.amount, " +
+                    "CASE WHEN ${txoIsForeignSql("t")} THEN 1 ELSE 0 END " +
+                    "FROM txos t WHERE t.walletId = ? AND t.txid IN ($placeholders)",
                 args.toTypedArray()
             ) { c ->
                 while (c.moveToNext()) {
                     val hex = displayHexOf(c.getBlob(0))
-                    fundedOwned[hex] = c.getLong(1)
-                    fundedForeign[hex] = c.getLong(2)
+                    val amount = c.getLong(2)
+                    if (c.getInt(3) == 1) {
+                        fundedForeign[hex] = (fundedForeign[hex] ?: 0L) + amount
+                    } else {
+                        fundedOwned[hex] = (fundedOwned[hex] ?: 0L) + amount
+                    }
+                    mirroredVouts.getOrPut(hex) { HashSet() } += c.getInt(1)
                 }
             }
         }
@@ -749,26 +762,7 @@ internal class SdkTxStoreWalker(
                 args.toTypedArray()
             ) { c -> while (c.moveToNext()) knownWalletAddresses += c.getString(0) }
         }
-        val mirroredVouts = HashMap<String, MutableSet<Int>>()
-        if (knownWalletAddresses.isNotEmpty()) {
-            for (chunk in needsFacts.chunked(TXID_IN_CHUNK)) {
-                val placeholders = chunk.joinToString(",") { "?" }
-                val args = ArrayList<Any?>(1 + chunk.size)
-                args.add(walletId)
-                chunk.forEach { args.add(it.wireTxid) }
-                // Foreign rows count as mirrored here: the store mirrors
-                // contact-chain outputs into txos too, so their presence is
-                // part of the completeness evidence.
-                rawQuery(
-                    "SELECT t.txid, t.vout FROM txos t WHERE t.walletId = ? AND t.txid IN ($placeholders)",
-                    args.toTypedArray()
-                ) { c ->
-                    while (c.moveToNext()) {
-                        mirroredVouts.getOrPut(displayHexOf(c.getBlob(0))) { HashSet() } += c.getInt(1)
-                    }
-                }
-            }
-        }
+        // mirroredVouts was filled above, from the SAME read as the funded sums.
 
         val correctedByHex = HashMap<String, L1TxUiRecord>(flagged.size)
         val toPersist = ArrayList<Pair<RecordRow, L1TxUiRecord>>()
