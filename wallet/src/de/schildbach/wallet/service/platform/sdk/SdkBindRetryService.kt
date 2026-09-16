@@ -74,12 +74,25 @@ internal fun bindRetryDelayMs(retriesAttempted: Int): Long = when (retriesAttemp
  *    ladder ([bindRetryDelayMs]) decides which polls actually re-run the
  *    bind pass. [noteAppForeground] resets the ladder so a user returning
  *    to the app is never stuck behind the hourly tail.
- * 2. **Device-unlock heal** — a runtime-registered
- *    [Intent.ACTION_USER_PRESENT] receiver (RECEIVER_NOT_EXPORTED) fires
- *    an immediate retry on the next unlock: the exact heal condition for
- *    the keystore false-locked class. Armed once, on the first retry
- *    consultation after a failure; retries once the wallet is bound are
- *    cheap no-ops.
+ * 2. **Device-unlock heal, BEST EFFORT ONLY** — a runtime-registered
+ *    [Intent.ACTION_USER_PRESENT] receiver (RECEIVER_NOT_EXPORTED) fires an
+ *    immediate retry on the next unlock. Armed on the FIRST failure, not on
+ *    a later poll.
+ *
+ *    Do not rely on it. A context-registered receiver lives in the process,
+ *    and a background process with no foreground service is frozen within
+ *    seconds: the 2026-09-16 emulator upgrade test logged
+ *    `ActivityManager: freezing <pid>` 30 s after the package-replaced
+ *    broadcast, then "Sending oneway calls to frozen process" while two
+ *    `USER_PRESENT` broadcasts went out, and the receiver never ran. Joel's
+ *    HONOR PTP-N49 delivered zero of these broadcasts in ten hours because
+ *    MagicOS suppresses them. The receiver helps only when the process
+ *    happens to be warm.
+ *
+ *    What actually heals a locked-keystore deferral is the user opening the
+ *    app — [noteAppForeground], driven by the ongoing notification this
+ *    service posts. On that test the bind completed 1.6 s after the app was
+ *    opened, having sat blocked for five minutes across a real device unlock.
  *
  * There is deliberately NO engine fallback. A third mechanism used to roll
  * the committed cutover back to dashj after five consecutive failures with

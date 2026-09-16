@@ -1600,6 +1600,47 @@ public class WalletApplication extends MultiDexApplication
         }
     }
 
+    /**
+     * Start the blockchain service after an app UPGRADE, bypassing the
+     * process-importance guard in {@link #startBlockchainService(boolean)}.
+     *
+     * WHY THIS EXISTS. That guard only calls {@code startService} when the
+     * process importance is at or better than {@code IMPORTANCE_FOREGROUND};
+     * it is an old workaround for an Android P bug
+     * (issuetracker.google.com/issues/113122354). A process started for the
+     * {@code MY_PACKAGE_REPLACED} broadcast sits at receiver importance, well
+     * below that, so the call is a silent no-op. Measured on the 2026-09-16
+     * emulator upgrade test: the receiver fired, {@code startBlockchainService}
+     * did nothing, no foreground service ever started, and the SDK L1 engine
+     * — which since the §10.4 change only starts from the foreground service —
+     * never scanned a single block. Nothing would have started it for up to
+     * 18 hours, when the daily fallback alarm was due.
+     *
+     * {@code MY_PACKAGE_REPLACED} is one of the documented exemptions to the
+     * Android 12+ background foreground-service-start restrictions, so a
+     * {@code startForegroundService} from here is allowed; the service
+     * promotes itself immediately via the {@code START_AS_FOREGROUND_EXTRA}
+     * promise it already honors. If the platform refuses anyway, fall back to
+     * the same delayed AlarmManager start that the boot path uses on
+     * Android 15+, where an alarm-driven start is exempt.
+     *
+     * @return true when the start was issued directly, false when it was
+     *         deferred to the alarm.
+     */
+    public boolean startBlockchainServiceAfterUpgrade() {
+        final Intent serviceIntent = new Intent(this, BlockchainServiceImpl.class);
+        serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
+        try {
+            androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent);
+            log.info("blockchain service started as a foreground service after the package replacement");
+            return true;
+        } catch (final Throwable t) {
+            log.warn("could not start the blockchain service directly after the package replacement; "
+                    + "deferring to the alarm-driven start", t);
+            return false;
+        }
+    }
+
     @Deprecated(message = "not used")
     public void stopBlockchainService() {
         stopService(blockchainServiceIntent);

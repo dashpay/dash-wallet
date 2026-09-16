@@ -106,8 +106,19 @@ public class BootstrapReceiver extends BroadcastReceiver {
                     // Android 15+ restricts BOOT_COMPLETED from launching dataSync foreground services
                     // Schedule service start with a short delay using AlarmManager
                     scheduleDelayedBlockchainServiceStart(context);
+                } else if (packageReplaced) {
+                    // An UPGRADE must actually start syncing. startBlockchainService()
+                    // silently no-ops here — this process runs at receiver importance,
+                    // below the IMPORTANCE_FOREGROUND its guard demands — so the
+                    // 2026-09-16 emulator upgrade test committed the cutover, bound the
+                    // wallet and then scanned nothing at all, with no foreground service
+                    // to start the SDK L1 engine from. MY_PACKAGE_REPLACED is exempt from
+                    // the background FGS-start restrictions, so start one directly, and
+                    // fall back to the alarm if the platform still refuses.
+                    if (!application.startBlockchainServiceAfterUpgrade()) {
+                        scheduleDelayedBlockchainServiceStart(context);
+                    }
                 } else {
-                    // For package replacement or older Android versions, start normally
                     application.startBlockchainService(false);
                 }
             }

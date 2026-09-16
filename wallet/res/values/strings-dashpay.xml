@@ -826,7 +826,7 @@
          notification while the app is in the background and as a sheet while
          it is open. -->
     <string name="sdk_bind_pending_locked_title">Unlock your phone to finish the wallet update</string>
-    <string name="sdk_bind_pending_locked_message">The update needs your phone unlocked once to finish setting up. Your funds are safe, and your balance stays at its last known amount until then.</string>
+    <string name="sdk_bind_pending_locked_message">Tap here once your phone is unlocked and the update will finish setting up. Your funds are safe, and your balance stays at its last known amount until then.</string>
     <string name="sdk_bind_pending_finishing_title">Finishing the wallet update…</string>
     <string name="sdk_bind_pending_finishing_message">Setting up the new sync engine. This usually takes a few seconds.</string>
     <string name="sdk_bind_problem_title">Your phone is blocking the wallet update</string>

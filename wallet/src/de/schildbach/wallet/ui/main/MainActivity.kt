@@ -336,7 +336,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             if (lockScreenDisplayed) {
                 pendingCutoverUpgradeNotice = true
             } else {
-                CutoverSyncNoticeDialogFragment.showOnce(this)
+                // Same contract as the lock-screen path: a refused showing stays
+                // pending rather than being dropped.
+                pendingCutoverUpgradeNotice = !CutoverSyncNoticeDialogFragment.showOnce(this)
             }
         }
         // "SDK setup pending": while the SDK wallet bind is blocked, say so
@@ -413,6 +415,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         checkWalletEncryptionDialog()
         viewModel.detectUserCountry()
         viewModel.startBlockchainService()
+        // A showing refused earlier (saved fragment state, or the lock screen)
+        // is retried here, where the activity is provably resumed.
+        if (pendingCutoverUpgradeNotice && !lockScreenDisplayed) {
+            pendingCutoverUpgradeNotice = !CutoverSyncNoticeDialogFragment.showOnce(this)
+        }
         // The periodic contact-request poll is scoped to the blockchain service
         // and can stall across service teardown/restart; force a throttled
         // refresh here so returning to the home screen promptly surfaces new
@@ -685,8 +692,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
 
         if (pendingCutoverUpgradeNotice) {
-            pendingCutoverUpgradeNotice = false
-            CutoverSyncNoticeDialogFragment.showOnce(this)
+            // Clear ONLY on a real showing: showOnce refuses while the fragment
+            // manager has saved state, and clearing first lost the one-time
+            // explainer outright (2026-09-16 emulator upgrade test).
+            pendingCutoverUpgradeNotice = !CutoverSyncNoticeDialogFragment.showOnce(this)
         }
 
         if (pendingMixedFundsMigration) {
