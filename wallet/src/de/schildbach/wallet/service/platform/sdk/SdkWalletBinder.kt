@@ -799,6 +799,13 @@ class SdkWalletBinder internal constructor(
                 if (armedRewind && identityId != null) {
                     watchArmedBackfillRewind(walletId, identityId, userId)
                 }
+                // DIAGNOSTIC ONLY (docs/upgrade-memory-and-sync-plan.md §17):
+                // did this pass leave contact chains registered BELOW the
+                // height the filter scan has already reached? That is the
+                // "uncovered contact chain" condition — payments to those
+                // addresses were passed over and nothing is known to rewind
+                // for them. Reported, never acted on.
+                if (identityId != null) logContactCoverageDebt(walletId, identityId)
             } finally {
                 provisioning.set(false)
             }
@@ -826,6 +833,75 @@ class SdkWalletBinder internal constructor(
      *   follow-up sweep is owed. Always false without an identity, and with
      *   a gate that records nothing ([DashPayBackfillGate.ALWAYS_RUN]).
      */
+    /**
+     * Report whether DIP-15 contact chains are registered at core heights the
+     * filter scan has ALREADY passed — the "uncovered contact chain" condition
+     * of docs/upgrade-memory-and-sync-plan.md §17.
+     *
+     * WHY THIS IS ONLY A LOG. The protection added in `1266edc1c` is ORDERING:
+     * the SDK bring-up registers contact receival accounts before `startSpv`,
+     * so a scan that starts afterwards covers them from its first block. Three
+     * situations break that ordering — a restore whose contact discovery has
+     * not finished, a locked device whose bring-up returns
+     * `SEED_BINDING_UNVERIFIED` and derives nothing (§15.3), and a bring-up
+     * that returns with accounts still pending, which the 20 s budget in item
+     * 1b.10 makes reachable (Joel's logs: `PARTIAL_ACCOUNTS_PENDING drained=50
+     * pending=94`). In those cases a payment to a contact address lands in a
+     * block the scan walks straight past.
+     *
+     * Whether anything recovers it afterwards is UNRESOLVED, which is exactly
+     * why this reports rather than acts. `wallets_behind` compares a
+     * wallet-level `synced_height` that is false at the tip, `create_account`
+     * only bumps a structural revision, and the app-side backfill rewind is
+     * bound to the no-op `DashPayBackfillGate.ALWAYS_RUN`. Against that, the
+     * sweep in `provisionDashPayContactAccounts` is documented to lower the
+     * SPV synced height by itself — the very behavior the retired gate existed
+     * to throttle. So a rewind may already happen here, may be suppressed, or
+     * may not happen at all, and arming another one blind risks either leaving
+     * funds invisible or restoring the every-launch re-scan that stopped
+     * initial syncs from finishing.
+     *
+     * This line is what settles it, on a device, in one reading: a WARN means
+     * the condition occurred, and the section 16 test can then check whether
+     * the payment ever becomes visible.
+     *
+     * Never throws; a diagnostic must not affect a provisioning pass.
+     */
+    private suspend fun logContactCoverageDebt(walletId: String, identityId: ByteArray) {
+        try {
+            val signals = sdkService.readDashPayBackfillSignals(walletId, identityId)
+            val synced = signals.syncedHeight
+            val floor = signals.receivedContactCoreHeightFloor ?: signals.contactCoreHeightFloor
+            if (synced == null || floor == null) {
+                log.info(
+                    "DashPay contact coverage: not determinable on {}… (syncedHeight={}, " +
+                        "receivedContactFloor={}, contacts={})",
+                    walletId.take(8), synced, floor, signals.contactRequestCount
+                )
+                return
+            }
+            if (synced > floor) {
+                log.warn(
+                    "DashPay contact coverage DEBT on {}…: the filter scan is at {} but the " +
+                        "earliest received contact request sits at core height {} ({} blocks " +
+                        "below, {} contact request(s)). Payments to those chains were scanned " +
+                        "past. This is reported, not repaired — see §17 of the upgrade memory " +
+                        "and sync plan",
+                    walletId.take(8), synced, floor, synced - floor, signals.contactRequestCount
+                )
+            } else {
+                log.info(
+                    "DashPay contact coverage OK on {}…: scan at {} is at or below the earliest " +
+                        "received contact height {} ({} contact request(s))",
+                    walletId.take(8), synced, floor, signals.contactRequestCount
+                )
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.debug("DashPay contact coverage diagnostic failed: {}", t.toString())
+        }
+    }
+
     private suspend fun runProvisioningSweep(walletId: String, identityId: ByteArray?): Boolean {
         val report = sdkService.provisionDashPayContactAccounts(walletId)
         identityId?.let { backfillGate.recordPassOutcome(walletId, it, report) }
