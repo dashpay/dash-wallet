@@ -427,9 +427,22 @@ class PlatformSynchronizationService @Inject constructor(
             // crash-looped install whose previous-launch trail repeatedly ends
             // at SDK_L1_ENGINE_STARTING is the fingerprint that convicts the
             // native engine (see StartupBreadcrumbs).
-            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTING, "SDK_L1_ENGINE_STARTING")
-            l1ShadowSyncService.startIfEnabled()
-            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTED, "SDK_L1_ENGINE_STARTED")
+            if (de.schildbach.wallet.service.BlockchainServiceImpl.isCleaningUpNow) {
+                // Phase 1b item 12 (docs/upgrade-memory-and-sync-plan.md): the
+                // blockchain service is tearing down — its shutdown() is about
+                // to stopSdkEngines(). Starting the engine now only hands it a
+                // teardown seconds later (three "started then torn down within
+                // 15 s" cycles on the reference install on 2026-09-16, each a
+                // watermark rewind). The next service start re-kicks it.
+                log.info(
+                    "SDK L1 engine start skipped: the blockchain service is tearing down; the next " +
+                        "service start re-kicks the engine"
+                )
+            } else {
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTING, "SDK_L1_ENGINE_STARTING")
+                l1ShadowSyncService.startIfEnabled()
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTED, "SDK_L1_ENGINE_STARTED")
+            }
             // Phase 5d follow-up: the post-cutover UI data source (balance
             // header / tx list / coins-received detection served from the
             // SDK once the cutover is committed). Idempotent once-per-process
