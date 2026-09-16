@@ -468,6 +468,8 @@ Because the process is frozen roughly ten seconds after the service stops, **the
 
 ## 16. Test to run: a contact payment that arrives while the device is locked
 
+> Scope note added 2026-09-16: the locked device is one of **three** ways into the same defect. Section 17 has the general form; this test is the cheapest instance of it.
+
 The one thing section 15 could not settle. We know the derivation stalls while locked, and we know the SDK has machinery to rewind once new accounts register. What nobody has watched is a real contact payment being missed and then recovered. Until that is observed, "the money is not lost" is an inference from code, not a result.
 
 This test also isolates the failure, because a BIP44 payment sent in the same window is the control: it should be caught live while locked, since those keys already exist.
@@ -508,3 +510,53 @@ Continuous logcat for the whole run, the persisted `sdk_bind_blocker` at each st
 ### 16.5 Why it is worth the setup cost
 
 Commit `1266edc1c` exists because restored wallets lost contact-payment coins when DIP-15 accounts registered after the scan had passed their funding heights, measured at 0.0836 DASH on the topple wallet. That fix ordered the bring-up before SPV. A locked device defeats that ordering, since the bring-up cannot derive anything without the seed, so the same exposure returns by a different route. This test measures whether the SDK's account-generation rewind closes it, and if it does not, it is the strongest argument for the section 15.6 item 1 work, and possibly for asking whether contact receival addresses can be derived from public material alone.
+
+## 17. Uncovered contact chains: the general defect
+
+Section 16 started as a locked-device question. Tracing the recovery path showed the lock is only one entry point. The defect is general:
+
+> **A DIP-15 contact chain registered after the filter scan has passed a payment's height is never re-scanned, so that payment stays invisible to the wallet.**
+
+The coins are on chain and the keys are derivable. The wallet simply stops looking.
+
+### 17.1 Why nothing recovers it
+
+| Mechanism | Fires? | Reason |
+|---|---|---|
+| Ordering — bring-up before SPV (`1266edc1c`) | Only if the bring-up completes | needs the seed and a finished contact sync |
+| `wallets_behind` rescan | No | filters on wallet-level `synced_height() < height`; at the tip that is false |
+| `account_generation` guard | No | only stops an **in-flight** batch from certifying coverage; rolls nothing back |
+| `create_account` | No | calls `bump_structural_revision()` only; never touches `synced_height` |
+| DashPay backfill rewind | No | now `ALWAYS_RUN`: `isRewindAccountedFor() = true`, `noteAccountBuildsRegistered() = false`, "nothing is ever recorded, so nothing is ever owed" |
+| `armSpvRescan` | No | two callers only: the user's Settings rescan, and the one-shot gap-widen heal in `maybeWidenAddressWindows` |
+
+The protection added in `1266edc1c` is **ordering, not rewinding**. It holds exactly while the bring-up can register every contact before `startSpv`, and there are three ways it cannot.
+
+### 17.2 The three entry points
+
+| Flow | Exposed | Why |
+|---|---|---|
+| **Restore from seed** | Yes | contacts are rediscovered from Platform; incomplete discovery at SPV start leaves chains unregistered. The original case: 0.0836 DASH missed on the topple wallet |
+| **Upgrade, device locked** | Yes | bring-up returns `SEED_BINDING_UNVERIFIED`, derives nothing, scan runs to the tip uncovered (section 15.3) |
+| **Upgrade or start, bring-up incomplete** | Yes | the bring-up returns with work outstanding: Joel's logs show `PARTIAL_ACCOUNTS_PENDING drained=50 pending=94` |
+| Settings → Rescan | No | accounts persist in the SDK and only the watermark rewinds, so the re-scan carries the full current contact set. This is the manual recovery for every row above |
+| New contact in normal use | Narrow race | the chain registers within about a minute; only a payment landing between the contact request and registration is at risk |
+
+### 17.3 Item 1b.10 widened the third entry point
+
+Honest accounting: capping the bring-up at 20 s and starting SPV regardless removed the stall, and it also lets SPV start with accounts still pending, which **is** the uncovered-chain condition. `PARTIAL_ACCOUNTS_PENDING drained=50 pending=94 elapsedMs=20114` is 94 chains unregistered at the moment that scan began.
+
+This does not argue for reverting it. Before the cap, Joel's bring-up ran 2 h 49 m and the idle detector killed the service before SPV ever started, so the result was no sync at all rather than partial coverage. Both are defects; the cap traded one for the other. The fix below closes both.
+
+### 17.4 The fix
+
+Arm a rescan whenever a provisioning pass registers accounts **after** the scan has started — from the contact's `coreHeightCreatedAt`, or from the wallet birth height as a blunt version. That is what the retired `DashPayBackfillGate` rewind did, and retiring it was safe only under the ordering assumption that all three rows above break.
+
+One fix covers every entry point, which is why it is worth doing once rather than patching the locked case alone.
+
+### 17.5 Verify before building
+
+Two things are unproven and both are cheap to settle:
+
+1. The SDK's own contact-registration path may already call `rescanSpvFilters` where only bytecode is visible. Ask the SDK team, or observe a registration and watch the filter height.
+2. Neither the locked path nor the pending-accounts path has been reproduced. Section 16 covers the first. The second is the same test with the bring-up budget set artificially low, so SPV starts with `pending > 0`, and then checking whether a payment to one of those pending contacts is ever seen.
