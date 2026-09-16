@@ -76,6 +76,11 @@ class L1ShadowSyncServiceTest {
         var stopCalls = 0
         var lastDataDir: String? = null
         var onStart: () -> Unit = {}
+        /** The DashPay bring-up: how long it takes, and how many times it ran. */
+        var bringUpDelayMs: Long = 0L
+        var bringUpCalls = 0
+        var bringUpFinished = 0
+        val order = mutableListOf<String>()
         var onClearRows: () -> Unit = {}
         var onProbe: suspend () -> Unit = {}
 
@@ -110,7 +115,16 @@ class L1ShadowSyncServiceTest {
         override suspend fun startSpv(dataDir: String) {
             startCalls++
             lastDataDir = dataDir
+            order += "startSpv"
             onStart()
+        }
+
+        override suspend fun startWalletSubsystems(walletIdHex: String): String? {
+            bringUpCalls++
+            order += "bringUp"
+            if (bringUpDelayMs > 0) kotlinx.coroutines.delay(bringUpDelayMs)
+            bringUpFinished++
+            return "status=ok"
         }
 
         override suspend fun stopSpv() {
@@ -226,7 +240,8 @@ class L1ShadowSyncServiceTest {
         probeStallThresholdMs: Long = L1ShadowSyncService.PROBE_STALL_THRESHOLD_MS,
         recreator: ShadowWalletRecreator? = null,
         cutoverState: String? = null,
-        dashjDiagnostic: Boolean = false
+        dashjDiagnostic: Boolean = false,
+        bringUpBudgetMs: Long = L1ShadowSyncService.BRING_UP_BUDGET_MS
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic),
@@ -236,8 +251,41 @@ class L1ShadowSyncServiceTest {
         parityIntervalMs = parityIntervalMs,
         watchdogIntervalMs = watchdogIntervalMs,
         probeStallThresholdMs = probeStallThresholdMs,
-        recreator = recreator
+        recreator = recreator,
+        bringUpBudgetMs = bringUpBudgetMs
     )
+
+    // ── Phase 1b item 10: SPV waits for the DashPay bring-up, but not forever ──
+
+    @Test
+    fun start_runsTheBringUpBeforeSpv_whenItFinishesInsideTheBudget() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        assertEquals(listOf("bringUp", "startSpv"), source.order)
+        assertEquals(1, source.bringUpFinished)
+    }
+
+    @Test
+    fun start_startsSpvAfterTheBudget_andLetsTheBringUpFinishInTheBackground() = runBlocking {
+        // The reference install's locked overnight starts: the bring-up needs
+        // the seed, the seed needs the unlocked keystore, and the filter
+        // position sat frozen for 12 minutes to 2.8 hours before SPV began.
+        val source = FakeSource(boundWalletId = walletIdHex).apply { bringUpDelayMs = 400L }
+        val service = service(source, bringUpBudgetMs = 50L)
+
+        val startedAt = System.currentTimeMillis()
+        assertTrue(service.startIfEnabled())
+        val elapsed = System.currentTimeMillis() - startedAt
+
+        assertEquals("SPV must start once the budget is spent", 1, source.startCalls)
+        assertTrue("the start must not wait out the whole bring-up (took ${elapsed}ms)", elapsed < 350)
+        assertEquals(1, source.bringUpCalls)
+        assertEquals("the bring-up was started, not finished, when SPV began", 0, source.bringUpFinished)
+
+        kotlinx.coroutines.delay(600L)
+        assertEquals("…and it completes on its own afterwards", 1, source.bringUpFinished)
+    }
 
     // ── Lifecycle / inertness ─────────────────────────────────────────
 

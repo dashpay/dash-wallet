@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -1731,7 +1732,9 @@ class L1ShadowSyncService internal constructor(
      * probe counters (the parity tests count that exact call); the @Inject
      * constructor turns it on.
      */
-    private val balanceFactsEnabled: Boolean = false
+    private val balanceFactsEnabled: Boolean = false,
+    /** How long [startIfEnabled] waits for the DashPay bring-up before starting SPV anyway. */
+    private val bringUpBudgetMs: Long = BRING_UP_BUDGET_MS
 ) {
     @Inject
     constructor(
@@ -2137,14 +2140,40 @@ class L1ShadowSyncService internal constructor(
                     // above). Best-effort: it returns a status rather than
                     // throwing, and any failure must not hold back SPV — Core
                     // sync is the wallet's primary function.
-                    try {
-                        val summary = source.startWalletSubsystems(walletIdHex)
-                        if (summary != null) {
-                            log.info("DashPay bring-up before SPV: $summary")
+                    //
+                    // Phase 1b item 10 (docs/upgrade-memory-and-sync-plan.md):
+                    // …and with a BUDGET. The bring-up needs the seed, and the
+                    // seed needs the lock-bound keystore (§12): on the reference
+                    // install's locked overnight starts it ran 766 s, 1,438 s
+                    // and 10,139 s with the filter position frozen, 0 of 177
+                    // accounts drained, and the idle rule tore the service down
+                    // before SPV ever began. Past the budget SPV starts; the
+                    // bring-up finishes in the background and logs when it
+                    // does, and the SDK marks late accounts covered at
+                    // synced_height=0 so the next scan picks them up.
+                    val bringUp = scope.async {
+                        runCatching { source.startWalletSubsystems(walletIdHex) }
+                    }
+                    val outcome = withTimeoutOrNull(bringUpBudgetMs) { bringUp.await() }
+                    when {
+                        outcome == null -> {
+                            log.warn(
+                                "DashPay bring-up before SPV exceeded its {} s budget — starting SPV now; " +
+                                    "the bring-up continues in the background",
+                                bringUpBudgetMs / 1000
+                            )
+                            scope.launch {
+                                bringUp.await()
+                                    .onSuccess { if (it != null) log.info("DashPay bring-up (finished after SPV start): $it") }
+                                    .onFailure { if (it !is CancellationException) log.warn("DashPay bring-up (after SPV start) failed", it) }
+                            }
                         }
-                    } catch (t: Throwable) {
-                        if (t is CancellationException) throw t
-                        log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
+                        outcome.isSuccess -> outcome.getOrNull()?.let { log.info("DashPay bring-up before SPV: $it") }
+                        else -> {
+                            val t = outcome.exceptionOrNull()
+                            if (t is CancellationException) throw t
+                            log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
+                        }
                     }
                     source.startSpv(dataDir.absolutePath)
                 }
@@ -3204,6 +3233,14 @@ class L1ShadowSyncService internal constructor(
          * guarded, sustained divergence; it never resets a healthy view sooner.
          */
         internal const val PARITY_INTERVAL_MS = 10_000L
+
+        /**
+         * Phase 1b item 10: the most [startIfEnabled] waits for the DashPay
+         * bring-up before starting SPV. 20 s is what the bring-up took on the
+         * reference install's one unlocked foreground launch; every locked
+         * background start ran into the minutes-to-hours range.
+         */
+        internal const val BRING_UP_BUDGET_MS = 20_000L
 
         /**
          * Downtime past which [logEngineDowntimeIfResuming] escalates to WARN.
