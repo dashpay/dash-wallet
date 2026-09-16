@@ -150,29 +150,11 @@ class CutoverCoordinator @Inject constructor(
     suspend fun commitCutover(): CutoverStatus =
         transition(CutoverAction.COMMIT_CUTOVER)
 
-    /** Undo a flip while still legal (CUT_OVER → DUAL_RUNNING). */
-    suspend fun rollback(): CutoverStatus =
-        transition(CutoverAction.ROLLBACK)
-
-    /**
-     * Drive the full advisory→commit path in one call — the AUTOMATIC
-     * cutover trigger ([CutoverAutoCommitObserver]) does exactly what a
-     * manual CHECK_CUTOVER + COMMIT_CUTOVER would: recompute the advisory
-     * readiness edge (DUAL_RUNNING → READY_OBSERVED if Ready), then commit
-     * (READY_OBSERVED → CUT_OVER if STILL Ready under the lock). Both legs
-     * re-check readiness, so this is fail-safe by construction: if any
-     * blocker holds, the state never leaves DUAL_RUNNING/READY_OBSERVED and
-     * [dashjEngineMayStart] stays true — no timeout, no forced commit.
-     * Idempotent: a no-op once already CUT_OVER/SETTLED.
-     */
-    suspend fun autoAdvanceToCutover(): CutoverStatus {
-        val advisory = observeReadiness()
-        // Only READY_OBSERVED can legally commit; anything else (still
-        // DUAL_RUNNING because a blocker holds, or already past the flip)
-        // is returned unchanged without attempting the commit leg.
-        if (advisory.state != CutoverState.READY_OBSERVED) return advisory
-        return commitCutover()
-    }
+    // No rollback and no readiness-driven auto-commit any more. The
+    // ROLLBACK edge of the pure state machine is unused; the debug readout's
+    // ROLLBACK_CUTOVER action and CutoverAutoCommitObserver were removed with
+    // the dashj fallback (docs/upgrade-memory-and-sync-plan.md, Phase 1a
+    // item 2). commitCutover()/observeReadiness() remain for the debug readout.
 
     /**
      * Restore/new-wallet path: make the SDK the L1 source of truth
@@ -191,13 +173,10 @@ class CutoverCoordinator @Inject constructor(
      * on dashj. Only advances a pre-commit state; never clobbers
      * CUT_OVER/SETTLED. Never throws.
      *
-     * MO-995 escape hatch: this commit lands BEFORE the first SDK wallet
-     * bind runs (it has to — see [rollbackForFailedBind] for why deferring
-     * it is not possible), so a bind that then fails persistently
-     * (keystore denial) would hold dashj with nothing to replace it. The
-     * bind-failure rollback ([rollbackForFailedBind], driven by
-     * [SdkBindRetryService]) undoes this commit in that case, restoring
-     * the dashj fallback engine.
+     * This commit lands BEFORE the first SDK wallet bind runs (the bind
+     * starts with platform sync). A bind that then fails is retried in
+     * place by [SdkBindRetryService] until the device keystore is usable;
+     * it never rolls the cutover back.
      */
     /**
      * Fire-and-forget [commitForFreshWalletSetup] for the Java `setWallet`
@@ -475,48 +454,6 @@ class CutoverCoordinator @Inject constructor(
      */
     suspend fun commitForFreshWalletSetup(): CutoverStatus = mutex.withLock {
         commitLocked("fresh-wallet setup (restore/new)").first
-    }
-
-    /**
-     * MO-995 bind-failure fallback: roll a committed cutover back to
-     * DUAL_RUNNING because the SDK wallet bind keeps failing — after this,
-     * [dashjEngineMayStart] is true again and the user syncs on the dashj
-     * fallback engine instead of being stranded with NO engine at all.
-     *
-     * WHY a rollback and not a deferred commit: the fresh-wallet commit
-     * ([commitForFreshWalletSetupAsync]) cannot wait for the first
-     * successful bind, because the commit IS what routes the fresh-wallet
-     * launch — [de.schildbach.wallet.service.BlockchainServiceImpl]
-     * resolves the engine gate once at service onCreate (right after
-     * `setWallet`), while the first bind pass only runs when platform sync
-     * starts. A deferred commit would let the dashj peergroup start on
-     * EVERY fresh wallet and then land mid-launch, leaving both SPV
-     * engines live for the rest of the session (the "never two live SPV
-     * engines" invariant). So the commit stays immediate and THIS is the
-     * escape hatch: [SdkBindRetryService] calls it once
-     * [SdkWalletBinder.consecutiveBindFailures] passes its threshold
-     * (skipping it while the device is provably locked — a locked-device
-     * keystore denial heals on unlock and must not flip engines).
-     *
-     * Legal only from CUT_OVER (mirrors the state machine's ROLLBACK edge —
-     * SETTLED is past the migration horizon and never regresses); a no-op
-     * from any other state. The live engine un-hold is
-     * BlockchainServiceImpl's job: it observes CUTOVER_STATE and starts the
-     * dashj peergroup when a rollback lands mid-launch. Recovery is
-     * symmetric — once a later bind pass succeeds, the auto-commit observer
-     * re-earns CUT_OVER through the normal readiness policy. Never throws.
-     */
-    suspend fun rollbackForFailedBind(consecutiveFailures: Int): CutoverStatus = mutex.withLock {
-        val current = currentState()
-        if (current != CutoverState.CUT_OVER) {
-            return@withLock CutoverStatus(current, READY_VERDICT)
-        }
-        writeState(
-            current,
-            CutoverState.DUAL_RUNNING,
-            "SDK wallet bind failed $consecutiveFailures consecutive passes — " +
-                "falling back to the dashj engine so the wallet is never left with no L1 engine"
-        )
     }
 
     /**

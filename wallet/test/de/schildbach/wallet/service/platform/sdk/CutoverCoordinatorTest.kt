@@ -172,31 +172,32 @@ class CutoverCoordinatorTest {
         coVerify(exactly = 0) { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) }
     }
 
-    // ── Automatic advisory→commit path ────────────────────────────────
+    // ── Readiness-gated path (debug readout CHECK + COMMIT) ────────────
 
     @Test
-    fun autoAdvanceToCutover_commits_whenFullyReady() = runBlocking {
+    fun readinessPath_commits_whenFullyReady() = runBlocking {
         val (coordinator, stored) = coordinator(stored = null, evidence = readyEvidence())
-        val status = coordinator.autoAdvanceToCutover()
+        assertEquals(CutoverState.READY_OBSERVED, coordinator.observeReadiness().state)
+        val status = coordinator.commitCutover()
         assertEquals(CutoverState.CUT_OVER, status.state)
         assertEquals(CutoverState.CUT_OVER.name, stored())
     }
 
     @Test
-    fun autoAdvanceToCutover_staysDualRunning_whenBlocked() = runBlocking {
+    fun readinessPath_staysDualRunning_whenBlocked() = runBlocking {
         // A single blocker (pending shielded lock) → never leaves DUAL_RUNNING.
         val blocked = readyEvidence().copy(pendingShieldedLocks = 1)
         val (coordinator, stored) = coordinator(stored = null, evidence = blocked)
-        val status = coordinator.autoAdvanceToCutover()
-        assertEquals(CutoverState.DUAL_RUNNING, status.state)
+        assertEquals(CutoverState.DUAL_RUNNING, coordinator.observeReadiness().state)
+        assertEquals(CutoverState.DUAL_RUNNING, coordinator.commitCutover().state)
         assertEquals(null, stored())
         assertFalse(coordinator.dashjEngineMayStart())
     }
 
     @Test
-    fun autoAdvanceToCutover_isIdempotentOnceCommitted() = runBlocking {
+    fun readinessPath_isIdempotentOnceCommitted() = runBlocking {
         val (coordinator, stored) = coordinator(stored = CutoverState.CUT_OVER.name)
-        val status = coordinator.autoAdvanceToCutover()
+        val status = coordinator.commitCutover()
         assertEquals(CutoverState.CUT_OVER, status.state)
         assertEquals(CutoverState.CUT_OVER.name, stored())
     }
@@ -459,35 +460,21 @@ class CutoverCoordinatorTest {
     }
 
     /**
-     * MO-1022 — THE BUG QA ACTUALLY HIT: on a real upgrade the explainer was
-     * never armed AT ALL. Not late; never.
-     *
-     * Two facts combine. The upgrade seam cannot commit on the upgrade launch
-     * (GATE 2 wants bind evidence, and the bind lands seconds later), so it
-     * returns before any arming. The commit then happens on the READINESS
-     * auto-commit path — which had no arming logic whatsoever.
-     *
-     * Field log (2026-09-04, prod 12000004, SM-A536B), the whole story:
-     *
-     *     17:10:59  declining to commit (upgraded-wallet launch): bind has never succeeded
-     *     17:11:02  app wallet bound to new SDK wallet a60ed232…
-     *     18:06:02  cutover state DUAL_RUNNING -> READY_OBSERVED on OBSERVE_READINESS
-     *     18:06:02  cutover state READY_OBSERVED -> CUT_OVER on COMMIT_CUTOVER
-     *     18:06:02  cutover auto-commit: SDK is now L1-primary (dashj held)
-     *
-     * — committed, and no explainer. So the arming belongs to the COMMIT, not
-     * to one particular caller.
+     * MO-1022: the arming belongs to the COMMIT, not to one particular
+     * caller. Field log (2026-09-04, prod 12000004): the seam declined, the
+     * readiness path committed an hour later, and no explainer was armed. The
+     * readiness path is debug-only now, but it still commits, so it must still
+     * arm when the boundary was crossed.
      */
     @Test
-    fun upgradeNotice_isArmed_whenTheReadinessAutoCommitIsWhatCommits() = runBlocking {
-        // The upgrade launch already latched the boundary; this is the later
-        // commit, and it does NOT come through the seam.
+    fun upgradeNotice_isArmed_whenTheReadinessPathIsWhatCommits() = runBlocking {
         val (coordinator, stored, armed) = noticeCoordinator(
             stored = null,
             boundaryAlreadyLatched = true
         )
 
-        coordinator.autoAdvanceToCutover()
+        coordinator.observeReadiness()
+        coordinator.commitCutover()
 
         assertEquals(CutoverState.CUT_OVER.name, stored())
         assertTrue("the path that actually commits must arm the explainer", armed())
@@ -495,17 +482,17 @@ class CutoverCoordinatorTest {
 
     /**
      * The counterpart: a FRESH install that never crossed the boundary must
-     * not be told its wallet was upgraded, no matter which path commits. The
-     * boundary latch is what separates the two, so pin it here.
+     * not be told its wallet was upgraded, no matter which path commits.
      */
     @Test
-    fun upgradeNotice_isNotArmed_byAnAutoCommitOnAnInstallThatNeverUpgraded() = runBlocking {
+    fun upgradeNotice_isNotArmed_byAReadinessCommitOnAnInstallThatNeverUpgraded() = runBlocking {
         val (coordinator, stored, armed) = noticeCoordinator(
             stored = null,
             boundaryAlreadyLatched = false
         )
 
-        coordinator.autoAdvanceToCutover()
+        coordinator.observeReadiness()
+        coordinator.commitCutover()
 
         assertEquals("the commit itself still happens", CutoverState.CUT_OVER.name, stored())
         assertFalse("a fresh install has no upgrade to explain", armed())
@@ -534,10 +521,10 @@ class CutoverCoordinatorTest {
         first.commitForUpgradedWalletAsync(pre1110VersionCode)
         assertTrue("the upgrade launch must arm the explainer", armedFirst())
 
-        // Launch 2: same install, state back at DUAL_RUNNING (a bind-failure
-        // rollback), boundary latched, notice already armed once and
-        // acknowledged (PENDING is back to false — which is why it cannot be
-        // the guard).
+        // Launch 2: same install, state back at DUAL_RUNNING (a wipe reset,
+        // or a state persist that never landed), boundary latched, notice
+        // already armed once and acknowledged (PENDING is back to false —
+        // which is why it cannot be the guard).
         val (second, stored, armedSecond) = noticeCoordinator(
             stored = CutoverState.DUAL_RUNNING.name,
             boundaryAlreadyLatched = true,
@@ -740,42 +727,6 @@ class CutoverCoordinatorTest {
         assertFalse("…but a fresh setup ran this launch, so no upgrade explainer", noticeArmed)
     }
 
-    // ── MO-995: the bind-failure rollback ─────────────────────────────
-
-    @Test
-    fun rollbackForFailedBind_rollsACommittedCutoverBackToDualRunning() = runBlocking {
-        // The Andrei outage end-state guard: the fresh-wallet commit held
-        // dashj, the SDK bind kept failing — the rollback must restore
-        // dashjEngineMayStart so the wallet is never left with NO engine.
-        val (coordinator, stored) = coordinator(stored = CutoverState.CUT_OVER.name)
-        assertFalse(coordinator.dashjEngineMayStart())
-        val status = coordinator.rollbackForFailedBind(consecutiveFailures = 5)
-        assertEquals(CutoverState.DUAL_RUNNING, status.state)
-        assertEquals(CutoverState.DUAL_RUNNING.name, stored())
-        // The state moved, but the engine gate no longer follows it.
-        assertFalse(coordinator.dashjEngineMayStart())
-    }
-
-    @Test
-    fun rollbackForFailedBind_isANoOpFromDualRunning() = runBlocking {
-        val (coordinator, stored) = coordinator(stored = CutoverState.DUAL_RUNNING.name)
-        val status = coordinator.rollbackForFailedBind(consecutiveFailures = 5)
-        assertEquals(CutoverState.DUAL_RUNNING, status.state)
-        assertEquals(CutoverState.DUAL_RUNNING.name, stored())
-        assertFalse(coordinator.dashjEngineMayStart())
-    }
-
-    @Test
-    fun rollbackForFailedBind_neverRegressesSettled() = runBlocking {
-        // SETTLED is past the migration horizon (mirrors the state
-        // machine's ROLLBACK edge): the direct rollback must not regress
-        // it either.
-        val (coordinator, stored) = coordinator(stored = CutoverState.SETTLED.name)
-        val status = coordinator.rollbackForFailedBind(consecutiveFailures = 5)
-        assertEquals(CutoverState.SETTLED, status.state)
-        assertEquals(CutoverState.SETTLED.name, stored())
-    }
-
     // ── The UPGRADE seam commits unconditionally ──────────────────────
     //
     // No-fallback policy (docs/upgrade-memory-and-sync-plan.md §12). Two gates
@@ -870,12 +821,12 @@ class CutoverCoordinatorTest {
     }
 
     @Test
-    fun autoAdvance_commits_evenWhenTheSdkBindHasNeverSucceeded() = runBlocking {
-        // The readiness path no longer consults the bind marker either. (The
-        // observer that drives this path is retired separately; the debug
-        // readout still reaches it.)
+    fun readinessPath_commits_evenWhenTheSdkBindHasNeverSucceeded() = runBlocking {
+        // The readiness path (debug readout only) no longer consults the bind
+        // marker either.
         val (coordinator, stored) = coordinator(stored = null, bindEverSucceeded = false)
-        coordinator.autoAdvanceToCutover()
+        coordinator.observeReadiness()
+        coordinator.commitCutover()
         assertEquals(CutoverState.CUT_OVER.name, stored())
     }
 

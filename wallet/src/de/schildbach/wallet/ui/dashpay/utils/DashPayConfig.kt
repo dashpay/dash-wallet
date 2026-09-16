@@ -448,14 +448,13 @@ open class DashPayConfig @Inject constructor(
          * `cutover state DUAL_RUNNING -> CUT_OVER (upgraded-wallet launch)`)
          * and armed the very same explainer a second time.
          *
-         * The ten-hour gap is structural, not a glitch: the seam's bind-evidence
-         * gate can never pass on the upgrade launch itself (the bind runs after
-         * the seam), so the commit — and with it the arming — always lands on
-         * some LATER process start, with no bound on when that is. Combined
-         * with the durable [CUTOVER_UPGRADE_BOUNDARY_CROSSED] latch, a
-         * [de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
-         * .rollbackForFailedBind] → re-commit cycle can arm it again and again.
-         * This latch makes all of those paths idempotent.
+         * The ten-hour gap came from the (since removed) bind-evidence gate,
+         * which could never pass on the upgrade launch itself, so the commit
+         * and the arming landed on a later process start. The seam commits
+         * on the upgrade launch now, but a wipe reset followed by a
+         * re-commit, or a failed state persist retried on the next launch,
+         * would still reach an arming site twice. This latch makes every
+         * such path idempotent.
          */
         val CUTOVER_UPGRADE_NOTICE_EVER_ARMED = booleanPreferencesKey("cutover_upgrade_notice_ever_armed")
 

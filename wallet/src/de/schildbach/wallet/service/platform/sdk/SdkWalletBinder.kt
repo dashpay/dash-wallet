@@ -379,10 +379,9 @@ class SdkWalletBinder internal constructor(
 
     /**
      * CONSECUTIVE bind passes that attempted and failed without leaving a
-     * bound wallet — the rollback counter [SdkBindRetryService] consults
-     * before rolling a committed cutover back to dashj
-     * ([CutoverCoordinator.rollbackForFailedBind]). Reset to 0 by any pass
-     * that leaves the wallet bound. Passes SKIPPED by the eligibility gate
+     * bound wallet — reported by [SdkBindRetryService] on every failed retry
+     * (there is no engine fallback to drive any more). Reset to 0 by any
+     * pass that leaves the wallet bound. Passes SKIPPED by the eligibility gate
      * (flags off, no unlock available) count neither way — they carry no
      * evidence about the keystore.
      */

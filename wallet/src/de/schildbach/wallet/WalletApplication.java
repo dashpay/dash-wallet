@@ -282,8 +282,6 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     CutoverCoordinator cutoverCoordinator;
     @Inject
-    de.schildbach.wallet.service.platform.sdk.CutoverAutoCommitObserver cutoverAutoCommitObserver;
-    @Inject
     CutoverEvidenceCollector cutoverEvidenceCollector;
     @Inject
     de.schildbach.wallet.service.platform.sdk.CutoverUiDataService cutoverUiDataService;
@@ -1003,8 +1001,7 @@ public class WalletApplication extends MultiDexApplication
         // (which commit in setWallet). Each Phase-1 function is tested AFTER cutover, so
         // dashj should never have to dual-run and parity-match before the SDK takes over.
         // Idempotent (no-op once CUT_OVER) and self-gated on USE_KOTLIN_SDK_L1_SHADOW, so
-        // it stays inert when the SDK L1 engine is off; once committed the
-        // CutoverAutoCommitObserver parity path never runs (it stands down when CUT_OVER).
+        // it stays inert when the SDK L1 engine is off.
         //
         // The UPGRADE variant: identical commit, but it also arms the one-time
         // sync explainer when this launch is the one that actually flips the

@@ -32,10 +32,9 @@ import org.junit.Test
  * Host-JVM tests for the MO-995 bind retry machinery: the capped backoff
  * ladder, the re-arming semantics ([SdkBindRetryService.maybeRetry] /
  * [SdkBindRetryService.retryNowInBackground]), the device-unlock heal
- * receiver arming, and the engine-fallback rollback — including the
- * end-to-end invariant over a REAL binder + REAL coordinator: after
- * persistent bind failures the gate ends with dashj allowed OR the SDK
- * wallet bound, never both held.
+ * receiver arming — and the no-fallback invariant over a REAL binder +
+ * REAL coordinator: persistent bind failures keep retrying and never hand
+ * L1 back to dashj (docs/upgrade-memory-and-sync-plan.md §12).
  */
 class SdkBindRetryServiceTest {
 
@@ -90,8 +89,6 @@ class SdkBindRetryServiceTest {
         var registerSucceeds: Boolean = true
     ) {
         var nowMs = 0L
-        var rollbacks = 0
-        var lastRollbackFailures = -1
         var registrations = 0
         var unlockCallback: (() -> Unit)? = null
 
@@ -100,10 +97,6 @@ class SdkBindRetryServiceTest {
             bindRetryPending = { signal.pending },
             consecutiveBindFailures = { signal.failures },
             runBindPass = { signal.bindPass() },
-            rollbackCutover = { failures ->
-                rollbacks++
-                lastRollbackFailures = failures
-            },
             registerUnlockReceiver = { onUserPresent ->
                 if (registerSucceeds) {
                     registrations++
@@ -173,7 +166,6 @@ class SdkBindRetryServiceTest {
         h.nowMs += 100_000
         service.maybeRetry("poll")
         assertEquals(2, h.signal.passes)
-        assertEquals(0, h.rollbacks)
     }
 
     @Test
@@ -230,7 +222,6 @@ class SdkBindRetryServiceTest {
         runCurrent()
         assertEquals(3, h.signal.passes)
         assertFalse(h.signal.pending)
-        assertEquals(0, h.rollbacks)
     }
 
     @Test
@@ -248,32 +239,28 @@ class SdkBindRetryServiceTest {
         assertEquals(1, h.registrations)
     }
 
-    // ── The engine-fallback rollback ──────────────────────────────────
+    // ── No engine fallback ────────────────────────────────────────────
 
     @Test
-    fun rollback_firesAfterTheFailureThreshold_withTheDeviceUnlocked() = runTest {
+    fun persistentFailures_keepRetryingOnTheHourlyTail_withTheDeviceUnlocked() = runTest {
+        // Five consecutive failures used to roll the cutover back to dashj.
+        // Now they are just five failures: the ladder keeps going.
         val h = Harness()
         h.signal.primeFailed()
         val service = h.service(backgroundScope)
 
-        // Failures 2..4 (initial + three retries): below the threshold.
-        repeat(3) {
+        repeat(8) {
             h.nowMs += 3_600_000
             service.maybeRetry("poll")
         }
-        assertEquals(0, h.rollbacks)
-
-        // The 5th consecutive failure crosses it.
-        h.nowMs += 3_600_000
-        service.maybeRetry("poll")
-        assertEquals(1, h.rollbacks)
-        assertEquals(5, h.lastRollbackFailures)
+        assertEquals(8, h.signal.passes)
+        assertTrue(h.signal.pending)
     }
 
     @Test
-    fun rollback_isHeldWhileTheDeviceIsProvablyLocked() = runTest {
-        // A genuinely locked device EXPECTS keystore denials; flipping
-        // engines for it would punish every locked-screen background start.
+    fun persistentFailures_whileProvablyLocked_healOnTheUnlockReceiver() = runTest {
+        // A genuinely locked device EXPECTS keystore denials; the unlock is
+        // the heal.
         val h = Harness(deviceLocked = true)
         h.signal.primeFailed()
         val service = h.service(backgroundScope)
@@ -282,43 +269,35 @@ class SdkBindRetryServiceTest {
             h.nowMs += 3_600_000
             service.maybeRetry("poll")
         }
-        assertTrue(h.signal.failures >= SdkBindRetryService.ROLLBACK_AFTER_CONSECUTIVE_FAILURES)
-        assertEquals(0, h.rollbacks)
+        assertTrue(h.signal.pending)
 
-        // Unlock: the receiver retry heals instead — no rollback needed.
         h.deviceLocked = false
         h.signal.passSucceeds = true
         checkNotNull(h.unlockCallback).invoke()
         runCurrent()
         assertFalse(h.signal.pending)
-        assertEquals(0, h.rollbacks)
     }
 
-    // ── End-to-end invariant: dashj allowed OR sdk bound, never both held ──
+    // ── End-to-end invariant: a failing bind never hands L1 back to dashj ──
 
     /**
-     * The full MO-995 outage replayed over a REAL [SdkWalletBinder] and a
-     * REAL [CutoverCoordinator]: fresh-wallet commit holds dashj, the SDK
-     * bind (createWallet in the keystore) fails on every pass, the retry
-     * service drives the ladder — and the gate MUST end with
-     * `dashjEngineMayStart() == true`. Before this fix the end state was
-     * dashj held forever with nothing bound: no sync engine at all.
+     * The MO-995 outage replayed over a REAL [SdkWalletBinder] and a REAL
+     * [CutoverCoordinator], under the no-fallback policy: fresh-wallet commit
+     * holds dashj, the SDK bind (createWallet in the keystore) fails on every
+     * pass, the retry service drives the ladder past the old five-failure
+     * threshold — and the cutover stays CUT_OVER with `dashjEngineMayStart()`
+     * false throughout. The old end state (rolled back to DUAL_RUNNING, dashj
+     * syncing) is exactly what produced two SPV engines on the reference
+     * install once the bind later succeeded.
      */
     @Test
-    fun endToEnd_persistentBindFailure_endsWithDashjAllowed_neverBothHeld() = runTest {
-        // Real coordinator over a stateful in-memory CUTOVER_STATE.
+    fun endToEnd_persistentBindFailure_staysCutOver_andNeverStartsDashj() = runTest {
         var storedState: String? = null
         val config = mockk<DashPayConfig>()
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { storedState }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
-        // "Has EVER bound" is true here on purpose: this models a wallet that
-        // bound successfully at some point and whose Keystore then started
-        // denying (e.g. the device locked). The commit is therefore legal, and
-        // the rollback is exactly the safety net under test. A never-bound
-        // wallet is refused up front instead — see
-        // CutoverCoordinatorTest.autoAdvance_refusesToCommit_*.
-        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
-        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns true
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns false
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns false
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) } returns false
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) } returns false
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns false
@@ -364,49 +343,44 @@ class SdkBindRetryServiceTest {
             backfillGate = DashPayBackfillGate.ALWAYS_RUN
         )
 
-        // The Andrei launch: fresh-wallet setup commits the cutover…
         assertEquals(CutoverState.CUT_OVER, coordinator.commitForFreshWalletSetup().state)
-        assertFalse(coordinator.dashjEngineMayStart()) // dashj held
+        assertFalse(coordinator.dashjEngineMayStart())
 
-        // …then the first bind pass fails (the keystore denial).
         binder.bindIfEnabled { WalletUnlock.Unencrypted }
         assertTrue(binder.bindRetryPending.value)
 
-        // The retry service drives the ladder to the rollback threshold.
         var nowMs = 0L
         val retryService = SdkBindRetryService(
             scope = backgroundScope,
             bindRetryPending = { binder.bindRetryPending.value },
             consecutiveBindFailures = { binder.consecutiveBindFailures },
             runBindPass = { binder.bindIfEnabled { WalletUnlock.Unencrypted } },
-            rollbackCutover = { failures -> coordinator.rollbackForFailedBind(failures) },
             registerUnlockReceiver = { true },
             deviceProvablyLocked = { false },
             now = { nowMs }
         )
-        repeat(SdkBindRetryService.ROLLBACK_AFTER_CONSECUTIVE_FAILURES - 1) {
+        repeat(10) {
             nowMs += 3_600_000
             retryService.maybeRetry("poll")
         }
 
-        // THE INVARIANT: the gate rolled back — dashj may sync again.
-        assertEquals(CutoverState.DUAL_RUNNING.name, storedState)
-        assertTrue(coordinator.dashjEngineMayStart())
+        assertTrue("still failing", binder.consecutiveBindFailures >= 10)
+        assertTrue("still pending — retries continue", binder.bindRetryPending.value)
+        assertEquals("the cutover never rolled back", CutoverState.CUT_OVER.name, storedState)
+        assertFalse("dashj never starts on its own", coordinator.dashjEngineMayStart())
     }
 
-    /** The complementary end state: the bind HEALS — the cutover stays committed (SDK owns L1). */
+    /** The bind HEALS on the ladder — the cutover was committed all along. */
     @Test
-    fun endToEnd_bindHealsBeforeTheThreshold_cutoverStaysCommitted() = runTest {
+    fun endToEnd_bindHealsOnTheLadder() = runTest {
         val h = Harness()
         h.signal.primeFailed()
-        var rolledBack = false
         var nowMs = 0L
         val service = SdkBindRetryService(
             scope = backgroundScope,
             bindRetryPending = { h.signal.pending },
             consecutiveBindFailures = { h.signal.failures },
             runBindPass = { h.signal.bindPass() },
-            rollbackCutover = { rolledBack = true },
             registerUnlockReceiver = { true },
             deviceProvablyLocked = { false },
             now = { nowMs }
@@ -418,7 +392,6 @@ class SdkBindRetryServiceTest {
         nowMs += 15_001
         service.maybeRetry("poll") // heals on the third retry
         assertFalse(h.signal.pending)
-        assertFalse(rolledBack)
     }
 
     // ── The binder's own outcome bookkeeping (real binder) ────────────

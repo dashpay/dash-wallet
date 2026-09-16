@@ -873,10 +873,24 @@ internal fun parityProbePolicy(
  * start"). The corrective action therefore has to rebuild the WALLET, not
  * just the scan:
  *
- * ## The self-heal: one full SDK-wallet rebuild, then stand down
+ * ## RETIRED AS AN ACTION (2026-09-16): the verdict is advisory
+ *
+ * [Decision.REBUILD_WALLET] is now LOGGED, never executed. On the emulator
+ * upgrade test (docs/upgrade-memory-and-sync-plan.md §10, finding 8) it
+ * fired on an inflated SDK balance three probes after the SDK first
+ * reached tip, removed the SDK wallet, deleted the SPV data dir and
+ * rescanned from genesis with no user involvement. Under the no-fallback
+ * cutover policy (§12) the SDK wallet is the ledger of record on every
+ * install from its first launch; wiping it on the word of a dashj engine
+ * that is itself catching up is not a self-heal. The decider and its table
+ * are kept so the evidence still lands in the log and the support report;
+ * [L1ShadowDebugReset] remains the manual path. The text below describes
+ * what the verdict USED to do.
+ *
+ * ## The self-heal (retired): one full SDK-wallet rebuild, then stand down
  *
  * On a persistent mismatch (either direction) the decider fires
- * [Decision.REBUILD_WALLET] exactly ONCE per process. The service runs
+ * [Decision.REBUILD_WALLET] exactly ONCE per process. The service ran
  * [L1ShadowSyncService.recoverByRecreatingWallet]: unbind the SDK wallet
  * and clear ALL SDK-side persistence for it (the full `removeAppWallet`
  * cascade — Room wallet/identity/TXO/address/shielded rows INCLUDING the
@@ -2739,25 +2753,24 @@ class L1ShadowSyncService internal constructor(
         )
         when (decision) {
             ShadowResetDecider.Decision.REBUILD_WALLET -> {
-                // The SPV-only hard reset this used to run left the +0.01
-                // inflation intact on device (it lives in the SDK WALLET
-                // ledger, not the SPV scan data). Self-heal with a ONE-TIME
-                // full SDK-wallet REBUILD instead — unbind + clear ALL
-                // SDK-side persistence, then re-bind from the RETAINED seed
-                // and re-scan. Fire-and-forget: recovery stops this probe
-                // loop. SDK-side ONLY — dashj/seed/keys are untouched.
+                // ADVISORY ONLY. This used to run recreateWalletInBackground():
+                // unbind the SDK wallet, clear all SDK persistence, delete the
+                // SPV data dir, re-bind and rescan from birth. Retired with the
+                // dashj fallback (Phase 1a item 2): the SDK wallet is the ledger
+                // of record, and on the emulator upgrade test this wiped a
+                // just-synced wallet on a transient inflation. Log the evidence
+                // for the SDK bug report; L1ShadowDebugReset is the manual path.
                 val direction = if (report.sdkDuffs > report.dashjDuffs) "INFLATED" else "DEFICIT"
                 log.warn(
                     "L1Parity {} MISMATCH persisted for {} consecutive synced probes " +
-                        "(sdk={} vs dashj={} duffs, delta={}) — the SDK L1 WALLET LEDGER " +
-                        "disagrees with dashj (an SPV-only reset already proved it does NOT " +
-                        "live in the scan data); self-healing with ONE full SDK-wallet rebuild " +
-                        "(unbind + clear SDK persistence, re-bind from the retained seed, " +
-                        "re-scan). SDK-side only — dashj, seed and keys are untouched",
+                        "(sdk={} vs dashj={} duffs, delta={}, sdkTx={} dashjTx={}) — the SDK " +
+                        "L1 wallet ledger disagrees with dashj. Automatic SDK-wallet rebuild is " +
+                        "DISABLED (no-fallback cutover policy); not acting. Use the debug reset " +
+                        "or a seed restore if the mismatch is real",
                     direction, ShadowResetDecider.RESET_CONSECUTIVE_PROBES,
-                    report.sdkDuffs, report.dashjDuffs, report.sdkDuffs - report.dashjDuffs
+                    report.sdkDuffs, report.dashjDuffs, report.sdkDuffs - report.dashjDuffs,
+                    report.sdkTxCount, report.dashjTxCount
                 )
-                recreateWalletInBackground()
             }
             ShadowResetDecider.Decision.STAND_DOWN -> {
                 _verificationStatus.value = L1VerificationStatus.FAILED

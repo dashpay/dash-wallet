@@ -891,12 +891,14 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun probeParity_inflatedMismatch_selfHealsWithOneFullWalletRebuild() = runBlocking {
-        // Self-heal: a persistent inflated mismatch triggers a ONE-TIME full
-        // SDK-wallet REBUILD (the SPV-only reset is gone — device evidence
-        // showed the +0.01 inflation survives it, so it lives in the wallet
-        // ledger, not the scan data). The rebuild runs the removeWallet
-        // cascade + rebind — NOT the legacy L1-row purge or SDK clear.
+    fun probeParity_inflatedMismatch_logsTheRebuildVerdict_butNeverRebuilds() = runBlocking {
+        // The automatic SDK-wallet rebuild is retired (no-fallback cutover
+        // policy, docs/upgrade-memory-and-sync-plan.md Phase 1a item 2): on
+        // the 2026-09-16 emulator upgrade test it wiped a just-synced SDK
+        // wallet on a transient inflation and rescanned from genesis. The
+        // decider still reaches REBUILD_WALLET on the third consecutive probe,
+        // but the verdict is logged, not acted on: no removeWallet cascade, no
+        // rebind, no restart, no recovery marker.
         val source = inflatedSource()
         val recreator = FakeRecreator()
         val markerWrites = mutableListOf<Long>()
@@ -904,21 +906,13 @@ class L1ShadowSyncServiceTest {
         assertTrue(service.startIfEnabled())
         source.emitWithoutEdgeProbe(syncedComplete) // count the streak manually
 
-        repeat(2) { service.probeParity(walletIdHex) }
-        assertTrue(recreator.events.isEmpty()) // below the threshold
-
-        service.probeParity(walletIdHex) // third consecutive → ONE full rebuild
-        assertEquals(
-            listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
-            recreator.events
-        )
-        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
-        // The rebuild uses the removeWallet cascade — NOT the legacy SPV-only
-        // row purge or the broken SDK clearSpvStorage call.
+        repeat(3) { service.probeParity(walletIdHex) } // third consecutive → REBUILD_WALLET verdict
+        assertTrue("the verdict must not run the recreator", recreator.events.isEmpty())
+        assertTrue(recreator.removedWalletIds.isEmpty())
         assertEquals(0, source.clearL1RowsCalls)
         assertEquals(0, source.clearSpvStorageCalls)
-        assertEquals(2, source.startCalls) // initial + fresh post-rebind restart
-        assertEquals(listOf(1_000_000L), markerWrites) // recovery stamped the marker
+        assertEquals(1, source.startCalls) // no post-rebind restart
+        assertTrue("no recovery marker without a recovery", markerWrites.isEmpty())
     }
 
     @Test
@@ -958,30 +952,29 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun probeParity_inflationSurvivingTheRebuild_standsDownAsFailed_neverRebuildsTwice() = runBlocking {
+    fun probeParity_persistentInflation_standsDownAsFailed_withoutEverRebuilding() = runBlocking {
         val source = inflatedSource()
         val recreator = FakeRecreator()
         val service = service(source, recreator = recreator)
         assertTrue(service.startIfEnabled())
         source.progressFlow.value = syncedComplete
-        repeat(3) { service.probeParity(walletIdHex) } // → the one rebuild
-        assertEquals(1, recreator.removedWalletIds.size)
+        repeat(3) { service.probeParity(walletIdHex) } // → the (advisory) rebuild verdict
+        assertTrue(recreator.removedWalletIds.isEmpty())
 
-        // The rebuilt wallet's rescan completes but the inflation SURVIVES:
-        // a deterministic SDK ledger bug → stand down FAILED, no 2nd rebuild.
-        source.progressFlow.value = SpvSyncProgressData.EMPTY
-        source.progressFlow.value = syncedComplete
+        // The inflation persists: the decider's second acting verdict is
+        // STAND_DOWN → FAILED. Still no wallet touched.
         repeat(6) { service.probeParity(walletIdHex) }
-        assertEquals(1, recreator.removedWalletIds.size) // never rebuilds twice — no churn
+        assertTrue(recreator.removedWalletIds.isEmpty())
         assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
     }
 
     @Test
-    fun probeParity_recentSelfSpendBroadcast_deferstheRebuildUntilPastTheGraceWindow() = runBlocking {
+    fun probeParity_recentSelfSpendBroadcast_neverRebuilds_insideOrPastTheGraceWindow() = runBlocking {
         // Phase 5b wiring: SdkL1SendService calls noteSelfSpendBroadcast()
-        // after a successful SDK L1 send. The legitimate inflation window
-        // (mempool → mined → filter-scanned) must NOT trigger the rebuild;
-        // only a genuine post-grace inflation self-heals.
+        // after a successful SDK L1 send. Inside the grace window the decider
+        // suppresses the inflated streak (pinned by the decider unit tests);
+        // past it the verdict fires — and is logged only, so the wallet is
+        // never touched in either case.
         var now = 1_000_000L
         val source = inflatedSource()
         val recreator = FakeRecreator()
@@ -994,12 +987,12 @@ class L1ShadowSyncServiceTest {
             now += 60_000 // probe cadence, still inside the grace window
             service.probeParity(walletIdHex)
         }
-        assertTrue(recreator.events.isEmpty()) // suppressed — no rebuild during the grace window
+        assertTrue(recreator.events.isEmpty())
 
-        // Past the grace window the inflation is real → one full rebuild.
         now += L1ShadowSyncService.SELF_SPEND_GRACE_MS + 1
         repeat(3) { service.probeParity(walletIdHex) }
-        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertTrue(recreator.events.isEmpty())
+        assertTrue(recreator.removedWalletIds.isEmpty())
     }
 
     @Test
@@ -1122,41 +1115,31 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun probeParity_emptyDeficit_selfHealsWithOneFullWalletRebuild_thenStandsDown() = runBlocking {
+    fun probeParity_emptyDeficit_neverRebuilds_thenStandsDown() = runBlocking {
         val source = emptyDeficitSource()
         val recreator = FakeRecreator()
         val markerWrites = mutableListOf<Long>()
-        // The stranded-scan state (empty deficit + complete scan) self-heals
-        // with the SAME one-time full SDK-wallet rebuild as the inflated path.
+        // The stranded-scan state (empty deficit + complete scan) reaches the
+        // same advisory REBUILD_WALLET verdict as the inflated path — logged,
+        // never executed.
         val service = service(
             source, markerWrites = markerWrites, recreator = recreator
         )
         assertTrue(service.startIfEnabled())
         source.emitWithoutEdgeProbe(syncedComplete) // this test counts the streak manually
 
-        repeat(2) { service.probeParity(walletIdHex) }
-        assertTrue(recreator.events.isEmpty()) // below the threshold
-
-        service.probeParity(walletIdHex) // third consecutive → ONE full rebuild
-        assertEquals(
-            listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
-            recreator.events
-        )
-        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
-        // removeWallet's cascade replaces row deletion — no legacy row purge,
-        // no broken SDK clearSpvStorage call.
+        repeat(3) { service.probeParity(walletIdHex) } // third consecutive → REBUILD_WALLET verdict
+        assertTrue(recreator.events.isEmpty())
+        assertTrue(recreator.removedWalletIds.isEmpty())
         assertEquals(0, source.clearL1RowsCalls)
         assertEquals(0, source.clearSpvStorageCalls)
-        assertEquals(2, source.startCalls) // initial + fresh post-rebind restart
-        assertEquals(listOf(1_000_000L), markerWrites) // recovery stamped the marker
+        assertEquals(1, source.startCalls)
+        assertTrue(markerWrites.isEmpty())
 
-        // The rebuilt wallet's rescan STILL comes back empty: stand down
-        // FAILED — no second rebuild this process.
-        source.progressFlow.value = SpvSyncProgressData.EMPTY
-        source.progressFlow.value = syncedComplete
+        // The deficit persists: STAND_DOWN → FAILED, still nothing touched.
         repeat(6) { service.probeParity(walletIdHex) }
-        assertEquals(1, recreator.removedWalletIds.size)
-        assertEquals(2, source.startCalls)
+        assertTrue(recreator.removedWalletIds.isEmpty())
+        assertEquals(1, source.startCalls)
         assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
     }
 

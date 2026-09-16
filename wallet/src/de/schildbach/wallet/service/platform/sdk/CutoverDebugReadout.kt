@@ -39,29 +39,25 @@ import org.slf4j.LoggerFactory
  * # COMMIT — the atomic flip (READY_OBSERVED → CUT_OVER, only if still Ready).
  * # Takes effect for the dashj engine gate on the NEXT launch; force-stop + relaunch.
  * adb shell am broadcast -a hashengineering.darkcoin.wallet_test.action.COMMIT_CUTOVER
- * # ROLLBACK — undo the flip while still legal (CUT_OVER → DUAL_RUNNING).
- * adb shell am broadcast -a hashengineering.darkcoin.wallet_test.action.ROLLBACK_CUTOVER
  * ```
  *
  * CHECK runs [CutoverCoordinator.observeReadiness] (the ADVISORY edge; it can
- * never commit) and logs the state, verdict, and raw evidence. COMMIT and
- * ROLLBACK drive the real transitions ([CutoverCoordinator.commitCutover] /
- * [CutoverCoordinator.rollback]) — both re-check readiness under the
- * coordinator lock and are no-ops when illegal. Same registration contract
- * as [L1ShadowDebugReset]: dynamic, [BuildConfig.DEBUG]-gated, exported only
- * so `adb shell` can deliver it; nothing ships in release builds.
+ * never commit) and logs the state, verdict, and raw evidence. COMMIT drives
+ * the readiness-gated transition ([CutoverCoordinator.commitCutover]) — it
+ * re-checks readiness under the coordinator lock and is a no-op when illegal.
+ * Same registration contract as [L1ShadowDebugReset]: dynamic,
+ * [BuildConfig.DEBUG]-gated, exported only so `adb shell` can deliver it;
+ * nothing ships in release builds.
  *
- * The COMMIT/ROLLBACK triggers exist so a rehearsal can exercise the real
- * cutover: COMMIT flips the persisted state, the next launch reads
- * [CutoverCoordinator.dashjEngineMayStart] and holds the dashj L1 engine,
- * and ROLLBACK restores dual-running. They are the ONLY way to reach
- * CUT_OVER — there is no in-app UI and no automatic commit.
+ * There is no ROLLBACK action any more: under the no-fallback policy
+ * (docs/upgrade-memory-and-sync-plan.md §12) dashj never owns L1 again, and
+ * the engine gate ignores the persisted state anyway. Every install commits
+ * on its first launch, so COMMIT is a rehearsal aid, not the only way in.
  */
 object CutoverDebugReadout {
     /** Deliberately flavor-independent (a fixed string, not `applicationId`-derived). */
     const val ACTION_CHECK_CUTOVER = "hashengineering.darkcoin.wallet_test.action.CHECK_CUTOVER"
     const val ACTION_COMMIT_CUTOVER = "hashengineering.darkcoin.wallet_test.action.COMMIT_CUTOVER"
-    const val ACTION_ROLLBACK_CUTOVER = "hashengineering.darkcoin.wallet_test.action.ROLLBACK_CUTOVER"
 
     private val log = LoggerFactory.getLogger(CutoverDebugReadout::class.java)
 
@@ -99,8 +95,8 @@ object CutoverDebugReadout {
                                     logStatus("COMMIT", it)
                                     if (it.state == CutoverState.CUT_OVER) {
                                         log.info(
-                                            "cutover COMMIT applied — force-stop and relaunch: the dashj L1 " +
-                                                "engine will be held (SDK owns L1). ROLLBACK_CUTOVER undoes this."
+                                            "cutover COMMIT applied — the persisted state is CUT_OVER (the " +
+                                                "engine gate holds dashj regardless of state)."
                                         )
                                     } else {
                                         log.warn(
@@ -111,18 +107,6 @@ object CutoverDebugReadout {
                                     }
                                 }
                                 .onFailure { log.warn("cutover commit failed", it) }
-                        }
-                        ACTION_ROLLBACK_CUTOVER -> {
-                            runCatching { coordinator.rollback() }
-                                .onSuccess {
-                                    logStatus("ROLLBACK", it)
-                                    log.info(
-                                        "cutover ROLLBACK result state={} — force-stop and relaunch to " +
-                                            "restore the dashj L1 engine.",
-                                        it.state
-                                    )
-                                }
-                                .onFailure { log.warn("cutover rollback failed", it) }
                         }
                         else -> log.warn("unknown cutover debug action {}", action)
                     }
@@ -171,14 +155,12 @@ object CutoverDebugReadout {
         val filter = IntentFilter().apply {
             addAction(ACTION_CHECK_CUTOVER)
             addAction(ACTION_COMMIT_CUTOVER)
-            addAction(ACTION_ROLLBACK_CUTOVER)
         }
         ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
         log.info(
-            "cutover debug readout receiver registered (debug build only; actions={}, {}, {})",
+            "cutover debug readout receiver registered (debug build only; actions={}, {})",
             ACTION_CHECK_CUTOVER,
-            ACTION_COMMIT_CUTOVER,
-            ACTION_ROLLBACK_CUTOVER
+            ACTION_COMMIT_CUTOVER
         )
     }
 }

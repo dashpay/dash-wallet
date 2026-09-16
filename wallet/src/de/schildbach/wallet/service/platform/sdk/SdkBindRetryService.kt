@@ -58,7 +58,7 @@ internal fun bindRetryDelayMs(retriesAttempted: Int): Long = when (retriesAttemp
  * bind — leaving the wallet with no sync engine at all and the Network
  * Monitor showing a dead "Not started".
  *
- * Three cooperating mechanisms:
+ * Two cooperating mechanisms:
  *
  * 1. **Backoff-capped re-invocation** ([maybeRetry]) — driven by
  *    [CutoverUiDataService]'s existing 5 s bound-wallet wait loop, which
@@ -73,17 +73,15 @@ internal fun bindRetryDelayMs(retriesAttempted: Int): Long = when (retriesAttemp
  *    the keystore false-locked class. Armed once, on the first retry
  *    consultation after a failure; retries once the wallet is bound are
  *    cheap no-ops.
- * 3. **Engine fallback** — after [rollbackAfterFailures] consecutive
- *    failed passes ([SdkWalletBinder.consecutiveBindFailures]) the
- *    committed cutover is rolled back
- *    ([CutoverCoordinator.rollbackForFailedBind]) so
- *    `dashjEngineMayStart` is true again and the user syncs on the dashj
- *    fallback engine. Skipped while the device is PROVABLY locked
- *    ([KeyguardManager.isDeviceLocked]) — a genuinely-locked keystore
- *    denial is expected, heals on unlock, and must not flip engines.
  *
- * The invariant all three protect: the gate always ends with dashj
- * allowed OR the SDK wallet bound — never both held.
+ * There is deliberately NO engine fallback. A third mechanism used to roll
+ * the committed cutover back to dashj after five consecutive failures with
+ * the device unlocked. That fallback is what put two SPV engines in one
+ * process on the reference install (docs/upgrade-memory-and-sync-plan.md
+ * §12), and under the no-fallback policy the dashj peergroup starts only
+ * for the Tools › dashj sync diagnostic. A bind that keeps failing keeps
+ * retrying — on the ladder, on unlock, on foreground — and the pending
+ * state is surfaced to the user instead (Phase 1a item 3).
  *
  * Never throws into a caller; every entry point contains its own failures.
  * The SDK-side hardening (a typed keystore error + internal retry in
@@ -98,8 +96,6 @@ class SdkBindRetryService internal constructor(
     private val consecutiveBindFailures: () -> Int,
     /** One full bind pass — [SdkWalletBinder.bindIfEnabled], which never throws. */
     private val runBindPass: suspend () -> Unit,
-    /** [CutoverCoordinator.rollbackForFailedBind]. */
-    private val rollbackCutover: suspend (Int) -> Unit,
     /**
      * Register the unlock receiver; the callback fires on every
      * ACTION_USER_PRESENT. Returns whether registration succeeded (a
@@ -107,14 +103,14 @@ class SdkBindRetryService internal constructor(
      */
     private val registerUnlockReceiver: (onUserPresent: () -> Unit) -> Boolean,
     /**
-     * Whether the device is PROVABLY locked right now. True suppresses the
-     * engine rollback (see class KDoc); the false-locked keystore class
-     * reads false here, which is exactly when the rollback must fire.
+     * Whether the device is PROVABLY locked right now ([KeyguardManager
+     * .isDeviceLocked]). Used to classify a failed pass: a denial while
+     * locked is expected and heals on unlock; a denial while unlocked is the
+     * false-locked keystore class.
      */
     private val deviceProvablyLocked: () -> Boolean = { false },
     private val now: () -> Long = System::currentTimeMillis,
-    private val retryDelayMs: (Int) -> Long = ::bindRetryDelayMs,
-    private val rollbackAfterFailures: Int = ROLLBACK_AFTER_CONSECUTIVE_FAILURES
+    private val retryDelayMs: (Int) -> Long = ::bindRetryDelayMs
 ) {
     @Inject
     constructor(
@@ -130,7 +126,6 @@ class SdkBindRetryService internal constructor(
         // The same non-interactive unlock recipe every background binding
         // trigger uses (PlatformSyncService.kickSdkEngines) — never a prompt.
         runBindPass = { binder.bindIfEnabled(nonInteractiveWalletUnlock::unlockOrNull) },
-        rollbackCutover = { failures -> cutoverCoordinator.rollbackForFailedBind(failures) },
         registerUnlockReceiver = { onUserPresent ->
             registerUserPresentReceiver(context, onUserPresent)
         }, // (top-level helper — a companion reference is not legal in constructor delegation)
@@ -138,7 +133,7 @@ class SdkBindRetryService internal constructor(
             try {
                 context.getSystemService(KeyguardManager::class.java)?.isDeviceLocked == true
             } catch (t: Throwable) {
-                false // unknowable reads as unlocked — the rollback stays available
+                false // unknowable reads as unlocked
             }
         }
     )
@@ -218,9 +213,7 @@ class SdkBindRetryService internal constructor(
      * `ACTION_USER_PRESENT` zero times in ten hours; MagicOS suppresses
      * exactly that kind of broadcast.
      *
-     * [retryNowInBackground] resets the ladder and runs one pass, which also
-     * consults the rollback — so a foreground visit both heals a recoverable
-     * denial and, when the bind is truly dead, lets the engine fall back.
+     * [retryNowInBackground] resets the ladder and runs one pass.
      */
     fun noteAppForeground() {
         if (!bindRetryPending()) return
@@ -234,7 +227,7 @@ class SdkBindRetryService internal constructor(
         nextRetryAtMs = 0L
     }
 
-    /** One retry attempt + the post-attempt rollback consultation. */
+    /** One retry attempt. */
     private suspend fun retryOnce(trigger: String) {
         if (!retryInFlight.compareAndSet(false, true)) return
         try {
@@ -253,37 +246,15 @@ class SdkBindRetryService internal constructor(
                 resetBackoff()
                 return
             }
-            maybeRollBackCutover()
+            log.warn(
+                "SDK bind retry {} ({}) failed — {} consecutive failure(s); device provably " +
+                    "locked={}. No dashj fallback: retrying on the ladder, on unlock and on " +
+                    "app foreground",
+                retriesAttempted, trigger, consecutiveBindFailures(), deviceProvablyLocked()
+            )
         } finally {
             retryInFlight.set(false)
         }
-    }
-
-    /**
-     * After [rollbackAfterFailures] consecutive failed passes, roll the
-     * committed cutover back so dashj may run — unless the device is
-     * provably locked (the denial is then EXPECTED and heals on unlock;
-     * flipping engines for it would punish every locked-screen background
-     * start). The coordinator no-ops from any non-CUT_OVER state, so
-     * repeated consultations are harmless.
-     */
-    private suspend fun maybeRollBackCutover() {
-        val failures = consecutiveBindFailures()
-        if (failures < rollbackAfterFailures) return
-        if (deviceProvablyLocked()) {
-            log.info(
-                "SDK bind has failed {} consecutive passes but the device is provably locked — " +
-                    "holding the cutover rollback; the unlock receiver retries the bind first",
-                failures
-            )
-            return
-        }
-        log.warn(
-            "SDK bind failed {} consecutive passes with the device unlocked — rolling the " +
-                "cutover back so the dashj fallback engine can sync",
-            failures
-        )
-        rollbackCutover(failures)
     }
 
     /** Arm the ACTION_USER_PRESENT heal receiver (once per process). */
@@ -303,16 +274,6 @@ class SdkBindRetryService internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkBindRetryService::class.java)
-
-        /**
-         * Consecutive failed bind passes before the cutover rolls back to
-         * dashj. With the 5/15/30/60 s ladder this is roughly two minutes
-         * of retrying — long enough for a transient keystore hiccup to
-         * clear, short enough that the user is never staring at a dead
-         * "Not started" for a whole session.
-         */
-        internal const val ROLLBACK_AFTER_CONSECUTIVE_FAILURES = 5
-
     }
 }
 
