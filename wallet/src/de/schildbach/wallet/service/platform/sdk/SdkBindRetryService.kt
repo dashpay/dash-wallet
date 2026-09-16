@@ -74,25 +74,25 @@ internal fun bindRetryDelayMs(retriesAttempted: Int): Long = when (retriesAttemp
  *    ladder ([bindRetryDelayMs]) decides which polls actually re-run the
  *    bind pass. [noteAppForeground] resets the ladder so a user returning
  *    to the app is never stuck behind the hourly tail.
- * 2. **Device-unlock heal, BEST EFFORT ONLY** — a runtime-registered
- *    [Intent.ACTION_USER_PRESENT] receiver (RECEIVER_NOT_EXPORTED) fires an
+ * 2. **Device-unlock heal** — a runtime-registered
+ *    [Intent.ACTION_USER_PRESENT] receiver (RECEIVER_EXPORTED; see
+ *    `registerUserPresentReceiver` for why the flag matters) fires an
  *    immediate retry on the next unlock. Armed on the FIRST failure, not on
  *    a later poll.
  *
- *    Do not rely on it. A context-registered receiver lives in the process,
- *    and a background process with no foreground service is frozen within
- *    seconds: the 2026-09-16 emulator upgrade test logged
- *    `ActivityManager: freezing <pid>` 30 s after the package-replaced
- *    broadcast, then "Sending oneway calls to frozen process" while two
- *    `USER_PRESENT` broadcasts went out, and the receiver never ran. Joel's
- *    HONOR PTP-N49 delivered zero of these broadcasts in ten hours because
- *    MagicOS suppresses them. The receiver helps only when the process
- *    happens to be warm.
+ *    It has two known limits, both observed. The receiver lives in the
+ *    process, so a background process with no foreground service cannot run
+ *    it: the 2026-09-16 upgrade test logged `ActivityManager: freezing <pid>`
+ *    30 s after the package-replaced broadcast, then "Sending oneway calls to
+ *    frozen process" while `USER_PRESENT` went out. Starting the blockchain
+ *    service on that path (see `WalletApplication
+ *    .startBlockchainServiceAfterUpgrade`) keeps the process unfrozen and
+ *    closes that hole. And some OEMs simply do not deliver the broadcast:
+ *    walletB's HONOR PTP-N49 delivered zero in ten hours.
  *
- *    What actually heals a locked-keystore deferral is the user opening the
- *    app — [noteAppForeground], driven by the ongoing notification this
- *    service posts. On that test the bind completed 1.6 s after the app was
- *    opened, having sat blocked for five minutes across a real device unlock.
+ * Because of those limits the ongoing notification is the guaranteed path:
+ * the user opens the app, [noteAppForeground] runs, and the bind completes —
+ * 1.6 s after the app was opened on that same test.
  *
  * There is deliberately NO engine fallback. A third mechanism used to roll
  * the committed cutover back to dashj after five consecutive failures with
@@ -415,12 +415,44 @@ class SdkBindRetryService internal constructor(
 }
 
 /**
- * The real ACTION_USER_PRESENT registration. NOT_EXPORTED: the unlock
- * broadcast is a protected system broadcast — no app-facing surface is
- * exposed. The receiver stays registered for the process lifetime; once
- * the wallet is bound its retries are cheap no-ops. Top-level (not a
- * companion member) so the @Inject constructor's delegation expression may
- * reference it.
+ * The real ACTION_USER_PRESENT registration.
+ *
+ * RECEIVER_EXPORTED, and that is load-bearing. This was RECEIVER_NOT_EXPORTED,
+ * reasoning that a protected system broadcast needs no app-facing surface. The
+ * reasoning inverted the consequence: `NOT_EXPORTED` matches only broadcasts
+ * whose sender shares our uid (or is the platform), and `ACTION_USER_PRESENT`
+ * is broadcast by **SystemUI**, a normal app uid — so the filter was never
+ * matched and the receiver never ran.
+ *
+ * Measured on the 2026-09-16 locked-upgrade test (emulator-5554, Android 16).
+ * The wallet's filter was registered and visible in `dumpsys activity
+ * broadcasts`:
+ *
+ *     ReceiverList{… hashengineering.darkcoin.wallet_test/10169/u0}
+ *       Filter #0: BroadcastFilter{59c4fef}
+ *         Action: "android.intent.action.USER_PRESENT"
+ *
+ * …and the broadcast that followed a real device unlock reached four
+ * receivers, none of them ours:
+ *
+ *     caller=com.android.systemui 1547:com.android.systemui/u0a124 uid=10124
+ *     DELIVERED #0 system/1000/u0   DELIVERED #1 system/1000/u-1
+ *     DELIVERED #2 com.android.launcher3/10116/u0   SKIPPED #3 (manifest)
+ *
+ * The launcher receives it because it registers exported. The same dump shows
+ * the wallet receiving TIME_TICK, which the system server sends from uid 1000,
+ * the one sender `NOT_EXPORTED` does admit — which is why the registration
+ * looked healthy while being inert for the broadcast it exists for.
+ *
+ * Exporting is safe precisely because the action is protected: it is declared
+ * `<protected-broadcast>` by the platform, so a third-party app that tries to
+ * send it gets a SecurityException. Exported here means "accept it from the
+ * privileged component that legitimately sends it", not "accept it from
+ * anyone". The receiver re-checks the action anyway.
+ *
+ * The receiver stays registered for the process lifetime; once the wallet is
+ * bound its retries are cheap no-ops. Top-level (not a companion member) so
+ * the @Inject constructor's delegation expression may reference it.
  */
 private fun registerUserPresentReceiver(context: Context, onUserPresent: () -> Unit): Boolean =
     try {
@@ -433,10 +465,10 @@ private fun registerUserPresentReceiver(context: Context, onUserPresent: () -> U
             context,
             receiver,
             IntentFilter(Intent.ACTION_USER_PRESENT),
-            ContextCompat.RECEIVER_NOT_EXPORTED
+            ContextCompat.RECEIVER_EXPORTED
         )
         LoggerFactory.getLogger(SdkBindRetryService::class.java)
-            .info("unlock-heal receiver registered (ACTION_USER_PRESENT, not exported)")
+            .info("unlock-heal receiver registered (ACTION_USER_PRESENT, exported — SystemUI is the sender)")
         true
     } catch (t: Throwable) {
         LoggerFactory.getLogger(SdkBindRetryService::class.java)
