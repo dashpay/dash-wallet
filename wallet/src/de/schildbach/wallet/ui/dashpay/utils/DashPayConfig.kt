@@ -460,22 +460,15 @@ open class DashPayConfig @Inject constructor(
         val CUTOVER_UPGRADE_NOTICE_EVER_ARMED = booleanPreferencesKey("cutover_upgrade_notice_ever_armed")
 
         /**
-         * MO-995: set the first time the SDK wallet bind succeeds on this
-         * install, and never cleared except by a wallet wipe. It is the
-         * evidence the UPGRADE cutover seam requires before it will hand L1
-         * to the SDK — see
-         * [de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
-         * .commitForUpgradedWalletAsync].
-         *
-         * WHY PERSISTED and not the binder's in-memory state: the upgrade seam
-         * runs from `finalizeInitialization`, BEFORE the first bind pass of the
-         * process (platform sync starts the binder). An in-process signal is
-         * therefore always false at the seam and would defer every upgrade to
-         * the readiness-gated auto-commit. Persisting it means a device that
-         * has ever bound successfully still commits promptly, while a device
-         * whose keystore denies the bind never commits at all — the difference
-         * between walletC/D (bind fine, cut over) and walletB (16 keystore
-         * denials, cut over anyway, left with NO L1 engine).
+         * Set the first time the SDK wallet bind succeeds on this install, and
+         * never cleared except by a wallet wipe. DIAGNOSTIC ONLY since the
+         * no-fallback cutover policy (docs/upgrade-memory-and-sync-plan.md §12):
+         * it used to be the evidence the UPGRADE seam required before handing
+         * L1 to the SDK (MO-995 GATE 2), which could not be satisfied on the
+         * upgrade launch itself and so committed every upgrade one launch late
+         * with dashj running in between. The cutover now commits
+         * unconditionally; this key tells the support report whether the
+         * install has ever bound.
          */
         val SDK_BIND_EVER_SUCCEEDED = booleanPreferencesKey("sdk_bind_ever_succeeded")
 

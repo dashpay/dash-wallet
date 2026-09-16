@@ -1329,9 +1329,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             val wallet = application.wallet
             if (impediments.isEmpty() && peerGroup == null) {
                 if (!dashjEngineMayStart) {
-                    // Phase 5d cutover committed: the SDK owns L1 this launch,
-                    // so the dashj peergroup must never start (never two live
-                    // SPV engines for one user). Reversible via ROLLBACK.
+                    // The SDK owns L1 on every install; the dashj peergroup
+                    // starts only for the Tools › dashj sync diagnostic (never
+                    // two live SPV engines for one user, unless the user asks).
                     log.info("cutover committed — holding the dashj L1 engine; SDK owns L1 this launch")
                     return
                 }
@@ -1631,8 +1631,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     try {
                         // Mirror onCreate's gate resolution (coordinatorAllowsDashj
                         // is fixed for the launch; only the diagnostic flag changes).
+                        // Fail CLOSED: a read failure must not start dashj.
                         val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
-                            .getOrDefault(true)
+                            .getOrDefault(false)
                         val newEngineMayStart = coordinatorAllowsDashj || enabled
                         val changed = enabled != dashjSyncDiagnostic ||
                             newEngineMayStart != dashjEngineMayStart
@@ -1704,7 +1705,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 checkMutex.withLock {
                     try {
                         val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
-                            .getOrDefault(true)
+                            .getOrDefault(false)
                         val newEngineMayStart = coordinatorAllowsDashj || dashjSyncDiagnostic
                         if (!coordinatorAllowsDashj || newEngineMayStart == dashjEngineMayStart) {
                             return@withLock
@@ -1959,7 +1960,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // Phase 5d: resolve the cutover engine gate ONCE, before we
                 // release onCreateCompleted — checkService() awaits that latch,
                 // so the gate is always settled by the time it decides whether
-                // to start the peergroup. Failure defaults to true (start dashj).
+                // to start the peergroup. The coordinator answers false on every
+                // install (the SDK owns L1; dashj never starts on its own), and a
+                // read failure defaults to false too — never start dashj by
+                // accident. Only the Tools › dashj sync diagnostic below can
+                // turn the local gate back on.
                 //
                 // Resolved HERE, at the very top of the init, rather than after
                 // the block-store setup below: the missing-blockstore
@@ -1968,7 +1973,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // idle detector's tick receiver — registered further down — picks
                 // its sample source from the same flags.
                 val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
-                    .getOrDefault(true)
+                    .getOrDefault(false)
                 // DIAGNOSTIC un-hold (Tools toggle): when the cutover has committed
                 // (SDK owns L1) but the tester turned on DASHJ_SYNC_DIAGNOSTIC, let the
                 // dashj peergroup start anyway so it syncs as a backup / parity check.

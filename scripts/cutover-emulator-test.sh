@@ -399,14 +399,12 @@ s1)
   require_state PRECOMMIT
   fake_pre_cutover_previous_launch || exit 1
   mark_log
-  note "launch 1: boundary should latch, commit should DECLINE (bind has not run yet)"
+  note "launch 1: the upgrade launch itself must commit, arm the explainer, and never start dashj"
   wake_unlock; launch_app
-  assert_log "launch 1 declined the commit"      "declining to commit .*bind has never succeeded"
-  refute_log "launch 1 did NOT cut over"         "DUAL_RUNNING -> CUT_OVER"
-  note "launch 2: bind marker now set, latch carries the crossing -> should commit"
-  adbs am force-stop "$PKG"; sleep 2; launch_app
-  assert_log "launch 2 committed"                "cutover state DUAL_RUNNING -> CUT_OVER \(upgraded-wallet launch\)"
+  assert_log "launch 1 committed"                "cutover state DUAL_RUNNING -> CUT_OVER \(upgraded-wallet launch\)"
   assert_log "explainer armed"                   "one-time sync explainer armed"
+  assert_log "dashj held"                        "holding the dashj L1 engine"
+  refute_log "dashj did NOT start"               "starting peergroup"
   assert_log "SDK L1 engine started"             "L1 shadow SPV started"
   ;;
 
@@ -422,11 +420,10 @@ s2)
   lock_screen
   start_service
   assert_log "keystore denied the master alias"  "Keystore denied '(encrypt|createWallet)' on lock-bound alias"
-  assert_log "commit declined on a broken bind"  "declining to commit .*bind has never succeeded"
-  refute_log "did NOT cut over"                  "DUAL_RUNNING -> CUT_OVER"
-  assert_log "dashj is the live engine"          "starting peergroup"
-  refute_log "wallet is NOT engine-less"         "holding the dashj L1 engine"
-  note "the old bug looked like: 'holding the dashj L1 engine' with no 'L1 shadow SPV started'"
+  assert_log "committed despite the broken bind" "DUAL_RUNNING -> CUT_OVER"
+  refute_log "dashj did NOT start as a fallback" "starting peergroup"
+  assert_log "dashj held"                        "holding the dashj L1 engine"
+  note "no-fallback policy: the bind is retried at unlock (s3); nothing syncs until then"
   ;;
 
 s3)
@@ -452,26 +449,22 @@ s3)
   # nothing. walletB restarted repeatedly and never recovered.
   refute_log "healed WITHOUT a process restart"  "WalletApplication.onCreate\(\)"
 
-  # dashj must still own L1 for this launch. The commit is NOT expected here and
-  # asserting it was my error: the upgrade seam only runs at process start, so
-  # in-session the only route is the readiness-gated auto-commit, which needs
-  # MIN_PARITY_STREAK readings at a 10s throttle AND the SDK scan caught up to
-  # tip. 45s cannot satisfy that, so a missing commit here is correct deferral,
-  # not a defect. The commit is checked on the NEXT launch instead — see s3b.
-  assert_not_committed "dashj still owns L1 (state not committed)"
-  note "commit is deliberately NOT asserted here — run s3b to check the next launch"
+  # The state was already committed in s2 (unconditional commit); the heal
+  # only has to start the SDK engine.
+  assert_log "SDK L1 engine started after the heal" "L1 shadow SPV started"
+  refute_log "dashj did NOT start"               "starting peergroup"
   ;;
 
 s3b)
   say "S3b — the launch AFTER an in-session heal should commit"
   require_device; require_root
   show_state
-  note "the bind marker must be set by now (s3 healed it); the seam can act at process start"
+  note "already committed in s2; this launch must simply come up SDK-only"
   adbs am force-stop "$PKG"; sleep 3
   mark_log
   wake_unlock
   launch_app
-  assert_log "committed on the next launch"      "cutover state DUAL_RUNNING -> CUT_OVER|READY_OBSERVED -> CUT_OVER"
+  assert_log "dashj held"                        "holding the dashj L1 engine"
   assert_log "SDK L1 engine started"             "L1 shadow SPV started"
   ;;
 
