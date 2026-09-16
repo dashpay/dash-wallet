@@ -1,6 +1,6 @@
 # Dash Wallet v12: Memory and Sync Recovery Plan
 
-**Status:** draft for review, 2026-09-15
+**Status:** draft for review, 2026-09-15; revised 2026-09-16 for the no-fallback cutover policy (section 12)
 **Source:** field logs from one mainnet install (Pixel 8a, Android 17, build 12000010 `12.0.0-sync`), sessions 2026-09-12 through 2026-09-15 UTC, plus the `fix/kotlin-sdk-balance-issues` branch at `50a42be8b`.
 
 ---
@@ -10,7 +10,7 @@
 An upgraded wallet the size of the reference install must:
 
 1. survive the upgrade launch without running two SPV engines;
-2. cut over to the SDK in a single launch, without requiring the user to open the app;
+2. cut over to the SDK on the upgrade launch itself, with no fallback to dashj; when the bind cannot run because the device is locked, hold everything until it can, and tell the user;
 3. complete the SDK replay on a 512 MB-heap device without the process being killed and without the replay losing ground on restart;
 4. idle well under the heap ceiling once cut over.
 
@@ -22,7 +22,8 @@ Reference install: 33,297 transactions, 67,770 CoinJoin keys, 229 DashPay friend
 |---|---|---|
 | JVM heap idle after cutover, dashj held | 482 MB of 512 MB | under 150 MB |
 | SPV engines running on an upgrade launch | 2 | 1 |
-| Launches from upgrade to CUT_OVER | 3 (22 hours) | 1, any kind, first unlocked bind |
+| Launches from upgrade to CUT_OVER | 3 (22 hours) | 1; the bind runs at the first unlocked moment |
+| dashj peergroup starts on a v12 install | every pre-commit launch | only with Tools › dashj sync on |
 | Native heap peak during SDK replay | 1.75 GB (foreground LMK kill) | bounded, under 600 MB |
 | Blocks lost per engine teardown | up to 155,000 | 0 on clean stop, at most 5,000 on kill |
 | Service stops during an SDK replay | 9 in one day | 0 |
@@ -71,8 +72,8 @@ Already failing on this wallet: 889 MB RSS when swiped away, one `EXCESSIVE_RESO
 ## 3. Root causes, one line each
 
 1. Full dashj wallet loaded on every launch, including post-cutover where it is held and unused. 482 MB idle.
-2. Upgrade seam cannot commit on the launch that records bind evidence, so a successful bind mid-launch leaves dashj running and the SDK engine starts beside it.
-3. Bind attempted while the device is locked counts as a failure and nothing retries in the pre-commit state.
+2. Upgrade seam cannot commit on the launch that records bind evidence, so a successful bind mid-launch leaves dashj running and the SDK engine starts beside it. (Removed by Phase 1a item 1: the commit no longer waits for bind evidence.)
+3. Bind attempted while the device is locked counts as a failure and nothing retries in the pre-commit state. (Phase 1a item 3: classified as pending, retried on unlock and foreground.)
 4. Idle detector treats a paused SDK replay as an idle service.
 5. `replaying` is never true on the SDK path, and never set at all for an upgraded wallet, so nothing protects the replay or restarts it quickly.
 6. DashPay bring-up before SPV has no effective time budget on a wallet with 200 pending account builds.
@@ -87,25 +88,30 @@ Already failing on this wallet: 889 MB RSS when swiped away, one `EXCESSIVE_RESO
 
 ## 4. Plan
 
-### Phase 1a: stop the crash (app, about one week)
+### Phase 1a: cut over on the upgrade launch, no dashj fallback (app, about one week)
 
-1. **Never two engines.** `L1ShadowSyncService.startIfEnabled` refuses to start while the dashj peergroup is running and not held.
-2. **Commit on bind success.** On a boundary-crossed install, when the bind pass records success, commit the cutover immediately and hold dashj, stopping the peergroup if it already started. The state machine already permits the direct DUAL_RUNNING to CUT_OVER write; the seam does it one launch late today.
-3. **Locked-phone bind handling.** Check `KeyguardManager.isDeviceLocked` before the bind pass. If locked, log a deferral rather than a failure, and arm the existing `ACTION_USER_PRESENT` receiver on any boundary-crossed install so the bind runs at the next unlock. Today the receiver arms only after a commit.
-4. **Optionally await the bind before the engine gate.** When the boundary is crossed and no bind evidence exists, the blockchain service waits a bounded time (about 10 s) for the bind pass before deciding whether dashj may start. On an unlocked device this yields one-launch cutover with dashj never started.
+Policy (2026-09-16): an upgraded wallet cuts over to the SDK immediately. If the SDK bind fails, the app does not fall back to dashj. dashj syncs only when the user turns on Tools › dashj sync. If the bind fails because the keystore is lock-bound and the device is locked, the app waits for the unlock, retrying on the unlock broadcast and on app foreground, and shows the user what it is waiting for. Section 12 has the reasoning and the keystore analysis.
+
+1. **Cutover is unconditional and dashj never starts on its own.** The upgrade seam commits CUT_OVER on the upgrade launch without bind evidence, the way `commitForFreshWalletSetup` already does for new wallets. Gate 2 (`SDK_BIND_EVER_SUCCEEDED`) and `refusesCutOverWithoutBindEvidence` go away for the upgrade path; `CutoverCoordinator.dashjEngineMayStart()` returns false on every install. The service gate becomes `dashjEngineMayStart = dashjSyncDiagnostic`, so the Tools toggle is the only thing that starts the dashj peergroup. "Never two engines" follows: the SDK engine is the only engine unless the user opts into the diagnostic, and the diagnostic already runs beside the SDK by design.
+2. **Delete the fallback and the automatic wipe.** Remove `rollbackForFailedBind` and the rollback consult in `SdkBindRetryService`; remove `CutoverAutoCommitObserver` and the readiness table as an ownership gate; retire `L1ShadowSyncService` shadow mode and its `ShadowResetDecider.REBUILD_WALLET` path (emulator finding 8: it wiped the SDK wallet and rescanned from genesis without the user knowing). The parity probe survives as one log line per synced probe with both balances, and as a support-report field.
+3. **"SDK setup pending" state.** A bind failure is classified, not counted:
+   - `KeystoreDeviceLockedException`, or `KeyguardManager.isDeviceLocked` true at attempt time: **pending**. Persist the state, arm the `ACTION_USER_PRESENT` receiver immediately (today it arms only after a commit), retry on app foreground (`noteAppForeground` already exists; walletB's HONOR never delivered the broadcast), and keep the existing 5/15/30/60 s then hourly ladder. While pending nothing runs: no dashj, no SPV, no DashPay bring-up, and the service stops rather than idling. UI: a persistent notification "Unlock your phone to finish the wallet update" for the background case, a blocking sheet on app open while still pending, and the header holds the last-known dashj total with an "update pending" label.
+   - Denial while `KeyguardManager` reports unlocked, on three consecutive foreground attempts: **keystore problem**. Show an error surface naming the device keystore, offer Tools › dashj sync as the manual escape, and log the classification. Nothing automatic; PR #1555's walletB had 7 such denials out of 16 and they never heal on unlock.
+   - Any other failure: log with the exception class, retry on the ladder, and reach the same error surface after the ladder is exhausted.
+4. **Bind first on an unlocked launch, then everything else.** The bind needs the mnemonic out of the dashj wallet under the SecurityGuard password, so it cannot precede the wallet parse, but it runs before any other heavy work: before the tx-metadata merge, before "DashPay bring-up", before the SDK engine start. It is `createWallet` plus `storeMnemonic`, about a second on the emulator. If the screen locks between the parse and the bind, the attempt lands in pending; the half-bound recovery that already exists ("re-stored the missing mnemonic for SDK wallet") covers a lock that lands between the two writes.
 5. **Log diet.** `InstantSendManager`, `SPVQuorumManager`, `SigningManager` to WARN in the logback config. Per-transaction "exists, only do update" and "metadata merged" lines to debug.
 6. **Size-aware autosave.** Replace the flat 5 s `WALLET_AUTOSAVE_DELAY_MS` with a delay scaled by the size-guard verdict (for example 60 s above RISKY) and suppress saves during active chain download. The code already carries a TODO for this.
 
-Result: the reference crash session would have committed at 12:17:11, never started the SDK engine beside dashj, and not crashed. Idle heap is still 482 MB.
+Result on the reference upgrade: launch 1 (background, locked) parses the wallet, commits, attempts the bind, records pending, and stops; the notification appears. The next unlock or foreground open binds in about a second and starts the SDK engine alone. dashj never starts, so the 12:17 crash session never runs two engines. The 22-hour gap becomes "until the user next unlocks the phone". Idle heap is still 482 MB until Phase 2, and the replay still has to finish, which is Phase 1b and 1c.
 
 ### Phase 1b: let the replay finish (app, same week, ships with 1a)
 
 7. **The blockchain service stays alive until the replay is complete.**
    - The idle detector does not stop the service while `blockchainState.replaying` is true. Today the flag only reschedules a one-minute alarm after the stop; make it a guard that skips the stop. Hold the wake lock for the same span. Genuinely stuck engines are covered by the SDK stall impediment and the watchdog, not the idle rule.
    - `updateSdkBlockchainState` stops writing `replaying = false` unconditionally and writes `replaying = percentageSync < 100`. `BlockchainStateDao.saveState` already clears the flag at 100%.
-8. **Set the replay flag when an upgrade's SDK sync starts.** Only restore and rescan call `resetBlockchainState` (which writes `BlockchainState(replaying = true)`) today. Call it from the cutover commit path when the SDK engine is about to start from a watermark below the tip. Covers the upgraded-wallet launch and the in-session commit from item 2, and makes the "sync paused" notification and home-screen sync state read correctly during the scan.
+8. **Set the replay flag when an upgrade's SDK sync starts.** Only restore and rescan call `resetBlockchainState` (which writes `BlockchainState(replaying = true)`) today. Call it from the cutover commit path when the SDK engine is about to start from a watermark below the tip. Covers the upgraded-wallet launch, including the bind that completes after a pending wait (Phase 1a item 3), and makes the "sync paused" notification and home-screen sync state read correctly during the scan.
 9. **One-minute reschedule becomes the fallback.** With item 7 the service should not stop mid-replay. If the OS or a failed start stops it anyway, the existing `rescheduleService` alarm now fires because the flag is true.
-10. **Hard budget on "DashPay bring-up before SPV."** Cap at the 20 s it took on the first launch; let the account drain continue after SPV starts. Today it ran 5 to 42 minutes with 0 of 154 builds drained.
+10. **SPV before DashPay bring-up.** The scan does not need the keystore; the bring-up does (section 12). Start the SDK engine as soon as the wallet is open and let the DashPay drain run behind it, resuming whenever the keystore becomes available. Today the bring-up runs first with no effective budget: 5 to 42 minutes on 09-15, 766 s to 10,139 s on 09-16, 0 of 154 to 177 builds drained, filter position frozen throughout, and the idle detector tore the service down before SPV ever began.
 11. **Do not open or lock the dashj blockstore when dashj is held.** If a start does find a live lock, wait for the previous cleanup instead of stopping the service.
 12. **Do not restart the engine into a dying service.** Gate `startIfEnabled` on the service not being in cleanup.
 13. **Flush the SDK watermark on every engine stop** from the app side, so a clean stop never loses progress even before Phase 1c item 15 lands.
@@ -128,7 +134,7 @@ The only item that changes the 482 MB idle baseline.
     - Become post-cutover no-ops: L1 shadow parity probes, `L1SendProbeService`, dashj branches in `BlockchainServiceImpl`.
     - Diagnostics, null-guard: `CrashReporter`, `WalletUtils`, `BlockListFragment`.
     - **Scope question:** the migration plan says the main Send UI stays dashj-typed until Phase 5c.4 and `SdkBridgedTransactionFactory` reads dashj transactions. Confirm what the main send does on a held-dashj install before item 17 clears the pool. If it still builds from dashj UTXOs, the send path moves first or item 17 keeps the unspent subset.
-20. **Rollback safety.** `rollbackForFailedBind` un-holds dashj, which then needs the full wallet. Make rollback force a process restart that loads the full file.
+20. **The only un-hold is the Tools toggle.** With `rollbackForFailedBind` gone (Phase 1a item 2), nothing un-holds dashj automatically. Turning on Tools › dashj sync after item 17 or 18 has run needs the full wallet file, so that path forces a process restart that loads the full file; the restart is acceptable for a diagnostic.
 
 ### Phase 3: installs still on dashj (only if Phase 2 measurements say so)
 
@@ -142,20 +148,23 @@ The only item that changes the 482 MB idle baseline.
 - The existing per-minute `MEM pss/nativeHeap/jvm` line is emitted at every startup breadcrumb and at every engine start and stop, with the `ReplayMemTelemetry` native figures folded in.
 - A synthetic large-wallet fixture: 30k transactions, 200 friend chains, CoinJoin history, run on an emulator pinned to a 512 MB heap.
 - A replay test that stops the engine mid-scan and asserts the persisted watermark equals the in-memory height.
-- **Phase 1a acceptance:** an upgrade launch on the fixture never logs "two SPV engines are now running"; cutover commits on the first launch where the device is unlocked.
+- **Phase 1a acceptance:** an upgrade launch on the fixture with the device unlocked logs the commit, the bind, and the SDK engine start, and never logs a dashj peergroup start. The same launch with the device locked logs the pending state, starts no engine, shows the notification, and binds within 5 s of `ACTION_USER_PRESENT` or of the app coming to the foreground. A forced keystore denial while unlocked reaches the keystore-problem surface after three foreground attempts and never starts dashj. Turning on Tools › dashj sync is the only way to produce a dashj peergroup start in the log.
 - **Phase 1b acceptance:** on the reference wallet, one service instance runs from the first SDK start to `percentageSync == 100` with no "idling detected" line; the `replaying` column is true throughout and false at the end; an induced stop is followed by a service start within 90 seconds; no `OverlappingFileLockException` on any launch.
 - **Phase 2 acceptance:** the reference install idles under 150 MB JVM heap after cutover and launches in under 2 s.
 
 ## 6. Rollout
 
-1. Ship Phase 1a and 1b together as a hotfix. Measure on the reference install.
-2. File Phase 1c with the SDK team now; items 14 and 15 gate whether large wallets can finish a replay at all.
+1. Ship Phase 1a and 1b together. Under the no-fallback policy they are one change: 1a removes the only other sync, so 1b's "the replay finishes" is what makes 1a safe.
+2. File Phase 1c with the SDK team now. Items 14 and 15 are prerequisites for shipping 1a to installs the size of the reference one, not follow-ups: a wallet whose replay cannot finish has no sync at all once dashj is out of the picture. If the SDK items slip, the fleet gate (section 6 item 5) holds 1a for large wallets.
 3. Phase 2 in the following build.
 4. Phase 3 only if Phase 2 numbers leave pre-cutover installs exposed.
+5. Fleet gate: the no-fallback cutover can be held behind the size-guard verdict (RISKY wallets stay on the current gating until 1c lands) if the SDK items are not in the build the app consumes. Decide per build.
 
 ## 7. Decisions needed
 
-- **Shadow flag seeding.** `USE_KOTLIN_SDK_L1_SHADOW` is seeded on for every variant including prodRelease (2026-07-30 decision), while the engine's own documentation says it must never ship enabled. Phase 1a item 1 makes it safe either way; the policy call remains.
+- **Shadow flag.** `USE_KOTLIN_SDK_L1_SHADOW` is seeded on for every variant including prodRelease (2026-07-30 decision). Phase 1a item 2 retires shadow mode, so the seed should go with it.
+- **Keystore-problem devices.** With no automatic fallback, a device whose keystore denies while unlocked (the HONOR case) syncs nothing until the user turns on Tools › dashj sync. Decide whether that manual escape is acceptable for non-technical users, or whether to ask the SDK for a key policy that is not lock-bound. The SDK offers `DEVICE_BOUND` and `AUTH_GATED` only, and `AUTH_GATED` is stricter.
+- **Pending-state UX.** Notification and sheet wording, and whether the wallet UI is usable read-only (last-known balances, history from the display cache) while the bind is pending, or blocked.
 - **Rollback build.** A v12-numbered build carrying 11.9.1 code (plus a 22 to 21 Room migration dropping `instant_send_locks` and the friend-lookahead deferral backported) is cheap insurance as a fleet kill switch. It does not fix memory and returns large wallets to the 11.9.1 failure profile.
 - **Balance display during replay.** Confirm on a device that the home header holds the last known total while `l1Synced=false`. If it shows the raw SDK figure, it is a support-ticket generator on its own.
 
@@ -166,6 +175,8 @@ Nothing in the current build lets its replay finish: every start dies before SPV
 ## 9. Related review
 
 PR #1555 (`fix/sdk-spv-restart-on-service-restart`) carries the cutover gating work. Its blocking review finding, retrying the boundary-latch write independently of a successful commit, is correct and cheap, but it concerns the one-time sync explainer only. Phase 1a item 2 makes the arming path run in the same launch and largely dissolves the finding. The PR's own verification note applies: real upgrade mechanics on a large wallet are untested; the scenario that took the reference install down sits between its S2 and S3b cases.
+
+Under the 2026-09-16 policy the seam commits and arms the explainer in the same write on the upgrade launch, so the finding dissolves entirely; the retry it asks for has nothing left to retry.
 
 ## 10. Emulator upgrade test, 2026-09-16
 
@@ -278,3 +289,38 @@ The header hold is present on this build and engaged: `lastKnown=3738332075`, so
 No new items. This set confirms, on the reference device, four things the plan already carries: the idle detector's teardown-and-lose-progress cycle (Phase 1b item 7), the SDK persistence ceiling (Phase 1c item 15), the file-lock collision on restart (Phase 1b item 11), and the bring-up budget (Phase 1b item 10). It adds one detail to Phase 2 item 17: the shutdown-time wallet serialization is a heap peak that can coincide with a start, so the in-memory release must also skip the save-on-stop when the pool has been cleared. The network-capabilities callback firing `check()` 200 times an hour is worth a debounce but is not on the critical path.
 
 The user's second crash and the 70,000-block deficit are the cost of the rescan. Section 8's recommendation stands: nothing on this install finishes a replay until Phase 1b ships.
+
+## 12. Policy change, 2026-09-16: immediate cutover, no dashj fallback
+
+### 12.1 The policy
+
+- An upgraded wallet cuts over to the SDK on the upgrade launch. No bind evidence is required to commit.
+- If the SDK bind fails, the app does not fall back to dashj. dashj syncs only when the user turns on Tools › dashj sync.
+- If the bind fails because the device is locked, the app waits for the unlock and retries on the unlock broadcast, on app foreground, and on a slow ladder. It tells the user what it is waiting for. Waiting until the user next opens the app is acceptable.
+- Open issue, addressed in Phase 1b rather than here: the user opens the app, the launch takes long, and the app is backgrounded or the screen locks before the launch finishes.
+
+What it removes from the previous plan: the two-launch commit dance, the dual-run, the bind-evidence gate, the readiness table as an ownership gate, the rollback, and the automatic SDK wallet wipe. What it makes mandatory: the replay must finish on its own (Phase 1b, Phase 1c items 14 and 15), because nothing else syncs.
+
+### 12.2 How the lock screen and the keystore interfere
+
+The app constructs the SDK's `WalletStorage` with `KeySecurityPolicy.DEVICE_BOUND` (`DashSdkServiceImpl.kt:1117`). The SDK offers two policies, `DEVICE_BOUND` and `AUTH_GATED`; the second adds a biometric requirement, so `DEVICE_BOUND` is already the most permissive available. It creates the master alias `org.dashfoundation.wallet.master` with `setUnlockedDeviceRequired`, and Keystore2 refuses every encrypt and decrypt on that key while the lock screen is engaged. Which SDK operations go through the key decides what breaks while locked:
+
+| Operation | Needs the unlocked keystore | Evidence |
+|---|---|---|
+| Bind: `createWallet` + `storeMnemonic` | Yes, once | 09-14 14:49 `Keystore denied 'createWallet' on lock-bound alias ... isDeviceLocked=true` |
+| Opening an existing SDK wallet at process start | No | "restored 1 wallet(s)" on every overnight background start |
+| SPV scan: headers, filters, matched blocks | No | 09-16 01:25 to 01:55: filter watermark 2,170,480 → 2,315,480 while the bring-up reported `SEED_BINDING_UNVERIFIED`, 0 drained |
+| DashPay contact crypto, account builds, identity key heal | Yes | `unlockWalletFromKeystore` → `drainPendingContactCrypto` in every thread dump; every overnight bring-up `SEED_BINDING_UNVERIFIED`, 177 pending, 0 drained |
+| Signing: sends, asset locks, shielded operations | Yes | by construction: `retrieveMnemonic` and the private-key exclusion path |
+
+Consequences for the new mechanism:
+
+- **Locked at upgrade time.** Only the bind is blocked. It runs after the wallet parse (the mnemonic comes out of the dashj wallet) and takes about a second. Pending state, retry at unlock. Nothing else is lost, and nothing else should run in the meantime.
+- **Locked after the bind, during the replay.** Scanning continues. DashPay verification, account builds, and sends wait. Today the code puts a keystore-dependent step, "DashPay bring-up before SPV", in front of the scan with no effective budget, which is why the reference install's overnight starts spent 12 minutes to 2.8 hours frozen before SPV began. Phase 1b item 10 flips that order.
+- **Screen locks or app is backgrounded mid-launch.** If the lock lands before `createWallet` completes, the bind throws `KeystoreDeviceLockedException` and lands in pending; a lock between `createWallet` and `storeMnemonic` is covered by the existing half-bound recovery. If it lands after the bind, the scan keeps going and only the DashPay tail waits. The larger risk in that window is the process, not the keystore: backgrounding hands the service to the idle detector and, without a foreground service, to the cached-app freezer. Those are Phase 1b items 7 and the foreground-service gate from section 10.4.
+- **Devices whose keystore denies while unlocked.** PR #1555's walletB (HONOR PTP-N49) produced 7 such denials out of 16, and its OEM suppressed `ACTION_USER_PRESENT` for ten hours. These never heal on unlock. With no fallback, the device syncs nothing until the user turns on Tools › dashj sync. Phase 1a item 3 gives this its own classification and error surface; section 7 carries the policy question.
+- **Process-level effects of a locked phone** are unchanged by the policy: the app is in the background, so Doze, the freezer, and the idle detector apply. A background job that starts the process while locked will open the SDK wallet, start SPV, and fail or wait on anything that touches the seed. The failure has to be classified as "locked, retry later", not counted toward an error state.
+
+### 12.3 What the user sees
+
+On the upgrade launch the home screen switches to the SDK immediately. The header holds the last-known dashj total under a syncing label until the SDK replay reaches the tip (section 10.1 and 11.3 show the hold engaging). For the reference install that replay is about 680,000 mainnet blocks, and with the current engine and idle detector it has not finished in two days. The one-time sync explainer already says this happens once; under the no-fallback policy that statement has to be true before the policy ships, which is why section 6 ties Phase 1a to 1b and 1c.
