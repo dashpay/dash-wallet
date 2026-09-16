@@ -182,8 +182,15 @@ class BlockchainStateDataProvider @Inject constructor(
             // Null percent (transient SDK ERROR) preserves the row's value —
             // a peer hiccup must not flap isSynced() consumers 100 → 0 → 100.
             update.percentageSync?.let { blockchainState.percentageSync = it }
-            // The SDK has no replay concept — its re-scan reads as percent < 100.
-            blockchainState.replaying = false
+            // Phase 1b item 7: on the SDK path `replaying` means "the scan has
+            // not reached the tip", and it keeps the blockchain service alive
+            // (idle rule guard + wake lock) until it has. This used to be
+            // hard-coded false, so nothing protected the post-upgrade replay
+            // and the one-minute restart alarm never fired after an idle stop.
+            // Set from the percentage the SDK reports; a null percent (transient
+            // ERROR) leaves the flag as it was. BlockchainStateDao.saveState
+            // clears it at 100% as well.
+            update.percentageSync?.let { blockchainState.replaying = it < 100 }
             blockchainState.impediments = composeImpediments()
             blockchainStateDao.saveState(blockchainState)
             // A caught-up snapshot must not REGRESS an established stage — that is

@@ -1807,13 +1807,60 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 activityHistory.joinToString(", ")
             )
 
-            // if idling, shutdown service
-            if (isSyncIdle(activityHistory)) {
+            // Phase 1b item 7: idle counters do NOT stop the service while a
+            // replay (restore / rescan / the post-upgrade SDK scan) is in
+            // progress. The flag used to only reschedule a one-minute restart
+            // after the stop; the reference install lost up to 155,000 blocks
+            // per teardown that way. One exception: while the SDK bind is
+            // BLOCKED ("SDK setup pending", Phase 1a item 3) nothing can
+            // replay, so the service is allowed to idle out — the unlock
+            // receiver / foreground edge bring it back.
+            val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
+            val replaying = blockchainState?.replaying == true && !bindBlocked
+            holdWakeLockWhileReplaying(replaying)
+
+            if (isSyncIdle(activityHistory) && replaying) {
+                log.info(
+                    "idle counters, but a replay is in progress ({}%) — keeping the service alive " +
+                        "until it completes",
+                    blockchainState?.percentageSync
+                )
+                return
+            }
+            if (isSyncIdle(activityHistory) && bindBlocked) {
+                log.info(
+                    "idling detected with the SDK bind blocked ({}) — stopping the service; the " +
+                        "unlock receiver / app foreground restart it",
+                    sdkBindRetryService.blocker.value
+                )
+            }
+            if (shouldStopForIdle(activityHistory, replaying)) {
                 log.info("idling detected, stopping service")
-                if (blockchainState?.replaying == true) {
-                    rescheduleService()
-                }
                 stopSelf()
+            }
+        }
+
+        /**
+         * On the SDK path no peergroup start acquires the partial wake lock,
+         * so a replay that the idle rule now keeps alive could still be
+         * dozed. Hold the lock for exactly the span the service is kept
+         * alive for: acquired while `replaying`, released when the replay
+         * completes. The dashj path's own acquire/release (checkService /
+         * stopPeerGroup) is untouched; onDestroy releases either way.
+         */
+        private fun holdWakeLockWhileReplaying(replaying: Boolean) {
+            if (!dashjHeldByCutover) return
+            val lock = wakeLock ?: return
+            try {
+                if (replaying && !lock.isHeld) {
+                    log.info("replay in progress on the SDK path — acquiring the wake lock")
+                    lock.acquire()
+                } else if (!replaying && lock.isHeld && peerGroup == null) {
+                    log.info("replay complete — releasing the wake lock")
+                    lock.release()
+                }
+            } catch (t: Throwable) {
+                log.warn("wake lock hold/release for the replay failed", t)
             }
         }
     }
