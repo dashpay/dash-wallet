@@ -1,6 +1,6 @@
 # Dash Wallet v12: Memory and Sync Recovery Plan
 
-**Status:** draft for review, 2026-09-15; revised 2026-09-16 for the no-fallback cutover policy (section 12); Phase 1a and 1b implemented 2026-09-16 on `fix/upgrade-memory-and-sync` (section 13)
+**Status:** draft for review, 2026-09-15; revised 2026-09-16 for the no-fallback cutover policy (section 12); Phase 1a and 1b implemented 2026-09-16 on `fix/upgrade-memory-and-sync` (section 13); verified on two emulators the same day, with corrections (sections 14 and 15)
 **Source:** field logs from one mainnet install (Pixel 8a, Android 17, build 12000010 `12.0.0-sync`), sessions 2026-09-12 through 2026-09-15 UTC, plus the `fix/kotlin-sdk-balance-issues` branch at `50a42be8b`.
 
 ---
@@ -296,7 +296,7 @@ The user's second crash and the 70,000-block deficit are the cost of the rescan.
 
 - An upgraded wallet cuts over to the SDK on the upgrade launch. No bind evidence is required to commit.
 - If the SDK bind fails, the app does not fall back to dashj. dashj syncs only when the user turns on Tools › dashj sync.
-- If the bind fails because the device is locked, the app waits for the unlock and retries on the unlock broadcast, on app foreground, and on a slow ladder. It tells the user what it is waiting for. Waiting until the user next opens the app is acceptable.
+- If the bind fails because the device is locked, the app waits for the unlock and retries on the unlock broadcast, on app foreground, and on a slow ladder. It tells the user what it is waiting for. Waiting until the user next opens the app is acceptable. **Corrected 2026-09-16 (section 15.4):** the unlock broadcast is not a dependable trigger, so the ongoing notification driving the user into the app is the guaranteed path, not a convenience.
 - Open issue, addressed in Phase 1b rather than here: the user opens the app, the launch takes long, and the app is backgrounded or the screen locks before the launch finishes.
 
 What it removes from the previous plan: the two-launch commit dance, the dual-run, the bind-evidence gate, the readiness table as an ownership gate, the rollback, and the automatic SDK wallet wipe. What it makes mandatory: the replay must finish on its own (Phase 1b, Phase 1c items 14 and 15), because nothing else syncs.
@@ -379,8 +379,82 @@ Build 12000011 `12.0.0-upgrade` from `fix/upgrade-memory-and-sync`, installed ov
 
 - **An upgrade never started syncing.** `BootstrapReceiver` fired and called `startBlockchainService`, which silently no-ops below `IMPORTANCE_FOREGROUND`; a broadcast-started process is below it. The cutover committed and the wallet bound, then nothing scanned, because §10.4 means the engine only starts from the foreground service. The only fallback was a daily alarm up to 18 hours out. Fixed by starting a foreground service directly on the package-replaced path, which is exempt from the Android 12+ background FGS restrictions, with the boot path's delayed alarm as a fallback.
 - **The one-time explainer never displayed.** Armed correctly, then lost: `onLockScreenDeactivated` cleared the pending marker before `showOnce`, which refuses while fragment state is saved. `showOnce` now reports whether it showed and callers keep the marker pending, with a retry on resume.
-- **The unlock receiver cannot be relied on.** `ActivityManager: freezing <pid>` landed 30 s after the package-replaced broadcast on 5554, the platform logged "Sending oneway calls to frozen process" while two `USER_PRESENT` broadcasts went out, and the receiver never ran across a real device unlock. A context-registered receiver does not run in a frozen process, and Joel's HONOR suppressed these broadcasts entirely for ten hours. The notification is the real recovery path, so it is now ongoing and its copy directs the tap. Section 12's claim that the bind heals at the next unlock without the user opening the app is withdrawn; what holds is that it heals at the next unlock **or** when the user opens the app, and the notification is what prompts that.
+- **The unlock receiver cannot be relied on.** `ActivityManager: freezing <pid>` landed 30 s after the package-replaced broadcast on 5554, the platform logged "Sending oneway calls to frozen process" while two `USER_PRESENT` broadcasts went out, and the receiver never ran across a real device unlock. The notification is the real recovery path, so it is now ongoing and its copy directs the tap. **Superseded in part by section 15.2:** the freezer was real but was not the root cause. The receiver was registered `RECEIVER_NOT_EXPORTED`, which cannot match a broadcast sent by SystemUI, so it would not have fired even in a live process. Both are fixed; the conclusion that the notification is the guaranteed path survives, for the reasons in section 15.4.
 
 ### 14.3 Open, not fixed
 
 The SDK settled at 16,905,513,269 duffs on 5556. The 09-15 test settled the same wallet at 16,782,052,936 after the parity probe judged the SDK inflated and rebuilt it, and that figure matched dashj exactly. The 1.2346 DASH gap is entirely in the BIP44 account; CoinJoin agrees to the duff. The discrepancy is now silent, because the probe suspends itself post-cutover against a frozen dashj balance and item 1a.2 retired the automatic rebuild. Turning on Tools › dashj sync un-holds dashj and resumes the probe in log-only mode, which is how to establish which side is right. Parked at the user's direction.
+
+## 15. Second two-emulator round, 2026-09-16, and what it corrected
+
+Same two devices, both reset to a synced 11.9.1 at chain 1555101, upgraded to build 12000011 carrying the three fixes in `326fc31b9`. 5556 unlocked with no device credential, 5554 with a PIN and the screen locked at install time.
+
+### 15.1 The three fixes hold
+
+- **Foreground service on the package-replaced path.** 5556: install 15:14:05, `Background started FGS: Allowed … uidState: RCVR` at 15:14:08.386, service `onCreate` finished 15:14:08.678, wallet bound 15:14:08.920, SPV started 15:14:18.524. The replay then ran to `SYNCED 100.0%` at 15:19:33 — 5 min 15 s, **with the app never opened** (zero foreground events, launcher on top throughout). On the previous build this device scanned nothing at all. 5554 started its service the same way while locked.
+- **The one-time explainer appears.** Confirmed by observation on 5554 after the app PIN was entered. My own check reported it missing, which was wrong: it looked at the fragment list after the sheet had been dismissed.
+- **The pending notification is ongoing.** `flags=ONGOING_EVENT|ONLY_ALERT_ONCE` on 5554, title `Unlock your phone to finish the wallet update`, cleared automatically on bind success.
+
+Phase 1b behaved as designed on both devices. 5556 ran one service instance for 14 m 42 s with **no idle stop during the replay**, and stopped only after reaching the tip with three genuinely quiet minutes; the item 1b.13 diagnostic then logged `durable syncedHeight 1555113 covers the committed cursor 1555113`, no re-walk. The wake lock was acquired at 15:16:00 and released at 15:20:00. On 5554 both bind-blocked exceptions fired verbatim: `idling detected with the SDK bind blocked (DEVICE_LOCKED)` and `replay flagged but the SDK bind is blocked (DEVICE_LOCKED) — not rescheduling`.
+
+### 15.2 A fourth defect: the unlock receiver was never registered for delivery
+
+Fixed in `3b697a3af`. The receiver was created with `RECEIVER_NOT_EXPORTED`, reasoning that a protected system broadcast needs no app-facing surface. That inverts the consequence: `NOT_EXPORTED` matches only senders sharing our uid or the platform, and `ACTION_USER_PRESENT` is broadcast by **SystemUI at a normal app uid**. The filter was registered and visible:
+
+    ReceiverList{… hashengineering.darkcoin.wallet_test/10169/u0}
+      Filter #0: BroadcastFilter{59c4fef}  Action: "android.intent.action.USER_PRESENT"
+
+and the broadcast after a real unlock reached four receivers, none of them ours:
+
+    caller=com.android.systemui 1547:com.android.systemui/u0a124 uid=10124
+    DELIVERED #0 system/1000/u0   #1 system/1000/u-1   #2 com.android.launcher3/10116/u0   SKIPPED #3 (manifest)
+
+The launcher receives it because it registers exported. The same dump shows the wallet receiving `TIME_TICK`, sent by the system server at uid 1000 — the one sender `NOT_EXPORTED` admits, which is why the registration looked healthy while being inert. Exporting is safe because the action is a declared `<protected-broadcast>`. Not yet verified on device: the flag lives in the APK and needs another locked install.
+
+### 15.3 A locked device does **not** stall the scan after the first bind
+
+Measured directly at 16:12 on 5554: screen locked, app force-stopped, blockchain service started cold.
+
+| Time | Event |
+|---|---|
+| 16:12:19.801 | Cold process start, device locked |
+| 16:12:21.307 | `SDK bind deferred: the device is locked` |
+| 16:12:22.413 | `Dash Platform SDK started … restored 1 wallet(s)` |
+| 16:12:23.544 | `DashPay bring-up: status=SEED_BINDING_UNVERIFIED … drained=0` |
+| 16:12:23.817 | `L1 shadow SPV started` |
+| 16:12:32.847 | `phase=SYNCED 100.0%` |
+
+SPV started 273 ms after the bring-up returned and reached the tip 9 s later, with the app-side bind deferred the whole time. The reason is that `L1ShadowSource.boundWalletIdOrNull` reads the SDK's loaded wallets (`manager().wallets`), not the app's bind state, and `restored 1 wallet(s)` needs no keystore. **So the lock blocks sync only before the first successful bind.** Afterwards a locked phone scans to the tip normally, and what it loses is the DashPay side.
+
+This also re-explains Joel's overnight stalls. They were not the lock blocking his scan; they were the unbounded bring-up blocking `startSpv`, with the idle detector then killing the service before SPV ran. Every long bring-up in his logs carries a large pending-account count:
+
+| Status | `dashPaySyncRan` | Durations observed |
+|---|---|---|
+| `SEED_BINDING_UNVERIFIED` | false | 20 s, 20 s, 8.7 min, 10.4 min, 21 min, 24 min, **2 h 49 min** |
+| `SEED_BINDING_UNVERIFIED` | true | 7.4 to 10.7 s |
+| `PARTIAL_ACCOUNTS_PENDING` | true | mostly ~20 s, one 12.8 min |
+
+The 20 s budget was therefore **not exercised** on either emulator: this wallet has 19 friend chains with nothing pending and the bring-up returned in 2.2 s. The budget remains the right protection for a wallet of Joel's shape and is still unproven at its boundary against the real SDK.
+
+### 15.4 What recovery actually exists, measured
+
+`config.touchLastUsed()` is called from exactly one place, `MainActivity`, so a user who never opens the app never advances it. The restart alarm keys off it: every 15 minutes while last use is under an hour, every 12 hours under two days, every 24 hours beyond. Each locked cycle costs a wallet parse and a full serialization for about five minutes of service uptime and makes no progress.
+
+Because the process is frozen roughly ten seconds after the service stops, **the unlock receiver can only ever fire inside that five-minute window** — five minutes in fifteen for the first hour, then five minutes in twelve hours. Even with the export fix it cannot be the primary mechanism. Of the five paths, only the app-foreground one has been demonstrated, twice, healing in 1.6 s each time. The autonomous heal via the scheduled restart has still never been observed, because the app was opened before the alarm was due both times.
+
+### 15.5 The unbound keystore aliases are not an escape hatch
+
+`MASTER_ALIAS_UNBOUND` (`org.dashfoundation.wallet.master.unbound`) and `KEYS_ALIAS_DEVICE_BOUND_UNBOUND` are an **automatic degradation for devices with no secure lock screen**, not a selectable policy. Android refuses `setUnlockedDeviceRequired(true)` without a PIN, and the SDK catches that and regenerates unbound. 5556, which has no credential, logged it on every install:
+
+    W KeystoreManager: No secure lock screen (KeyguardManager.isDeviceSecure=false);
+    generating 'org.dashfoundation.wallet.master' WITHOUT lock-screen binding
+
+5554, with a PIN, never logged it once. That makes the two devices an unintended controlled comparison, and explains why every fast bind was on 5556 and every deferral on 5554. There is no supported opt-out on a device that has a lock screen. The question for the SDK team is therefore the harder one: whether an unbound master key should be permitted on a secured device, which is a security trade rather than a technical gap. Separately, `hasUnboundMasterKey()`, `effectiveKeySecurityPolicy()` and `sampleDeviceLockState()` are public and should be recorded in the support report.
+
+### 15.6 Still open
+
+1. **The mid-sync DashPay gap.** Once the wallet is bound, `maybeRetry`, `noteAppForeground` and `retryNowInBackground` all return early on `bindRetryPending()`, and `noteBindOutcome` is called only from `bindIfEnabled`. So a lock during sync leaves the bring-up at `SEED_BINDING_UNVERIFIED`, contact accounts undrained, identity keys unhealed, and shielded and top-up recovery unrun — with no blocker, no notification and no support-report trace. Proposed: a second blocker kind fed from the bring-up status and drain outcome; dispatch the unlock and foreground edges to whichever work is outstanding; surface it only when it persists, since the user's only action is to unlock, which they do anyway.
+2. **The 20 s bring-up budget** is unproven at its boundary on a device.
+3. **Autonomous recovery** via the scheduled restart is unobserved.
+4. **The receiver export fix** needs a locked install to verify.
+5. **The balance gap** of 1.2346 DASH against the September post-rebuild figure reproduced exactly on 5556 and remains parked at the user's direction.
