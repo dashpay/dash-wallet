@@ -453,8 +453,51 @@ Because the process is frozen roughly ten seconds after the service stops, **the
 
 ### 15.6 Still open
 
-1. **The mid-sync DashPay gap.** Once the wallet is bound, `maybeRetry`, `noteAppForeground` and `retryNowInBackground` all return early on `bindRetryPending()`, and `noteBindOutcome` is called only from `bindIfEnabled`. So a lock during sync leaves the bring-up at `SEED_BINDING_UNVERIFIED`, contact accounts undrained, identity keys unhealed, and shielded and top-up recovery unrun — with no blocker, no notification and no support-report trace. Proposed: a second blocker kind fed from the bring-up status and drain outcome; dispatch the unlock and foreground edges to whichever work is outstanding; surface it only when it persists, since the user's only action is to unlock, which they do anyway.
+1. **The mid-sync DashPay gap.** Once the wallet is bound, `maybeRetry`, `noteAppForeground` and `retryNowInBackground` all return early on `bindRetryPending()`, and `noteBindOutcome` is called only from `bindIfEnabled`. So a lock during sync leaves the bring-up at `SEED_BINDING_UNVERIFIED`, contact accounts undrained, identity keys unhealed, and shielded and top-up recovery unrun — with no blocker, no notification and no support-report trace. Proposed: a second blocker kind fed from the bring-up status and drain outcome; dispatch the unlock and foreground edges to whichever work is outstanding; surface it only when it persists, since the user's only action is to unlock, which they do anyway. Section 16 is the test that decides how much this matters.
 2. **The 20 s bring-up budget** is unproven at its boundary on a device.
 3. **Autonomous recovery** via the scheduled restart is unobserved.
 4. **The receiver export fix** needs a locked install to verify.
 5. **The balance gap** of 1.2346 DASH against the September post-rebuild figure reproduced exactly on 5556 and remains parked at the user's direction.
+
+## 16. Test to run: a contact payment that arrives while the device is locked
+
+The one thing section 15 could not settle. We know the derivation stalls while locked, and we know the SDK has machinery to rewind once new accounts register. What nobody has watched is a real contact payment being missed and then recovered. Until that is observed, "the money is not lost" is an inference from code, not a result.
+
+This test also isolates the failure, because a BIP44 payment sent in the same window is the control: it should be caught live while locked, since those keys already exist.
+
+### 16.1 What it proves
+
+| Payment | Expected while locked | Expected after unlock |
+|---|---|---|
+| To a plain BIP44 receive address | **Seen immediately**, already inside the gap-1000 window | unchanged |
+| To a DIP-15 address for a contact whose account is not yet derived | **Missed**, address not in the filter set | found after derivation forces a rescan |
+
+If the contact payment never appears after unlock, the rewind machinery does not work in this path and that is a fund-visibility defect, not a latency one.
+
+### 16.2 Setup
+
+Two testnet wallets, A the sender and B the device under test. B on a build with the Phase 1a/1b fixes, on a device **with a PIN**, since a device without one takes the unbound-keystore path (section 15.5) and cannot reproduce this at all. B starts bound and fully synced; note its balance and the current chain height.
+
+The precondition that matters is a contact relationship whose receival account B has **not** derived. Create it with B unable to act:
+
+1. On B: force-stop the app, then lock the screen. Nothing of B's is running.
+2. On A: send B a contact request, and wait for it to land on Platform.
+3. On A: send **two payments to the DIP-15 contact address** for that new relationship, and **one payment to B's plain BIP44 receive address**, captured before step 1.
+4. Wait for all three to confirm.
+
+### 16.3 Run
+
+5. With B still locked, start the blockchain service the way the alarm would. On a rooted emulator: `adb shell su 0 am start-foreground-service -n <pkg>/de.schildbach.wallet.service.BlockchainServiceImpl`.
+6. Let it reach the tip. Record from the log: the bring-up status and `drained`/`pending` counts, the phase line at `SYNCED`, and the published balance.
+
+   Expected: `status=SEED_BINDING_UNVERIFIED … drained=0`, the scan reaching 100%, the BIP44 payment present in the balance, and the two contact payments absent.
+7. Unlock B. Do not open the app yet. Wait through at least one scheduled service start and record whether anything changes. This doubles as the still-unobserved autonomous-recovery case from section 15.6 item 3.
+8. Open the app. Record the drain (`drained=N`), any rewind (`armSpvRescan`, `backfill coverage invalidated`, a filter height going backwards), the rescan completing, and the final balance and history.
+
+### 16.4 What to capture
+
+Continuous logcat for the whole run, the persisted `sdk_bind_blocker` at each stage, and screenshots of the balance and history before and after. The decisive numbers are the `drained`/`pending` pair at step 6 versus step 8, the filter height before and after the rewind, and whether the final balance includes all three payments.
+
+### 16.5 Why it is worth the setup cost
+
+Commit `1266edc1c` exists because restored wallets lost contact-payment coins when DIP-15 accounts registered after the scan had passed their funding heights, measured at 0.0836 DASH on the topple wallet. That fix ordered the bring-up before SPV. A locked device defeats that ordering, since the bring-up cannot derive anything without the seed, so the same exposure returns by a different route. This test measures whether the SDK's account-generation rewind closes it, and if it does not, it is the strongest argument for the section 15.6 item 1 work, and possibly for asking whether contact receival addresses can be derived from public material alone.
