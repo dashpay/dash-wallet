@@ -23,6 +23,7 @@ import android.text.format.DateUtils
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
 import com.google.zxing.BarcodeFormat
+import de.schildbach.wallet.AppForegroundMonitor
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
@@ -319,6 +320,10 @@ class PlatformSynchronizationService @Inject constructor(
     private var contactUpdateRetryJob: Job? = null
     private val updatingContacts = AtomicBoolean(false)
 
+    /** Ticks of the 15 s platform ticker since the last contact pass; seeded so the first tick runs. */
+    @Volatile
+    private var ticksSinceContactUpdate = BACKGROUND_CONTACT_TICKS
+
     /**
      * Owner ([Job]) and claim time of the in-flight [updateContactRequests]
      * pass. Together they make the [updatingContacts] guard recoverable and
@@ -537,7 +542,20 @@ class PlatformSynchronizationService @Inject constructor(
         platformSyncJob?.cancel(CancellationException("re-arming the platform sync ticker"))
         txMetadataJob?.cancel(CancellationException("re-arming the tx metadata ticker"))
         platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY)
-            .onEach { updateContactRequests() }
+            .onEach {
+                // Background-aware cadence (docs/upgrade-memory-and-sync-plan.md
+                // §10.4, emulator finding 11): the full contact/profile/invite/
+                // metadata cycle every 15 s is for a user looking at the app.
+                // In a cached process it ran 54 cycles in 24 minutes and earned
+                // an EXCESSIVE_RESOURCE_USAGE kill. Every [BACKGROUND_CONTACT_TICKS]
+                // ticks (5 min) is plenty when nobody is watching;
+                // requestContactUpdate() still forces a pass on demand.
+                ticksSinceContactUpdate++
+                if (contactTickDue(AppForegroundMonitor.isInBackground, ticksSinceContactUpdate)) {
+                    ticksSinceContactUpdate = 0
+                    updateContactRequests()
+                }
+            }
             .launchIn(syncScope)
 
         txMetadataJob = TickerFlow(PUSH_PERIOD)
@@ -2943,3 +2961,19 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 }
+
+/**
+ * How many 15 s ticks of the platform ticker pass between contact passes
+ * while the app is in the background: 20 = five minutes.
+ */
+internal const val BACKGROUND_CONTACT_TICKS = 20
+
+/**
+ * Whether this tick of the platform ticker runs the contact/profile/invite/
+ * metadata cycle. Every tick in the foreground; every
+ * [BACKGROUND_CONTACT_TICKS] ticks in the background (emulator finding 11:
+ * 54 full cycles in a cached process, then an EXCESSIVE_RESOURCE_USAGE
+ * kill). Pure — host-testable.
+ */
+internal fun contactTickDue(inBackground: Boolean, ticksSinceLastRun: Int): Boolean =
+    !inBackground || ticksSinceLastRun >= BACKGROUND_CONTACT_TICKS
