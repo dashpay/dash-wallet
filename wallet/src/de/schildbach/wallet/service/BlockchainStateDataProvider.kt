@@ -270,6 +270,36 @@ class BlockchainStateDataProvider @Inject constructor(
         }
     }
 
+    /**
+     * Phase 1b item 8 (docs/upgrade-memory-and-sync-plan.md): the cutover
+     * just handed L1 to the SDK on an EXISTING (upgraded) wallet, so the SDK
+     * is about to scan from the wallet's birth height while the row still
+     * carries dashj's "synced, 100%". Mark the replay as started NOW — before
+     * the SDK's first progress update, which can trail the commit by minutes
+     * — so `isSynced()` reads false (the home screen shows syncing rather than
+     * dashj's stale 100%, emulator finding 3), the idle rule keeps the
+     * service alive (item 7), and the one-minute restart alarm applies
+     * (item 9). Only restore and rescan used to set the flag.
+     *
+     * Heights, dates and impediments are preserved; the percentage is zeroed
+     * because the SDK has scanned nothing yet — its first update replaces it
+     * with the real figure. Idempotent: a row already mid-replay is left
+     * alone. Never throws.
+     */
+    fun markReplayStartedForSdkTakeover() {
+        coroutineScope.launch {
+            val state = try {
+                blockchainStateDao.getState()
+            } catch (ex: SQLiteException) {
+                null
+            } ?: BlockchainState()
+            if (state.replaying && state.percentageSync < 100) return@launch
+            state.replaying = true
+            state.percentageSync = 0
+            blockchainStateDao.saveState(state)
+        }
+    }
+
     fun resetBlockchainSyncProgress() {
         coroutineScope.launch {
             val blockchainState: BlockchainState? = try {

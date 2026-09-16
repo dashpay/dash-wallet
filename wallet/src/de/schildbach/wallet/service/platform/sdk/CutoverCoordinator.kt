@@ -284,11 +284,22 @@ class CutoverCoordinator @Inject constructor(
      *   construction, so still the pre-upgrade value even after this launch
      *   persists its own code), or 0 if the app never ran before.
      *
+     * @param onCutOverForExistingWallet runs when THIS call moved an existing
+     *   (not freshly created/restored) wallet to CUT_OVER — the moment the SDK
+     *   takes over a wallet that dashj had synced. `WalletApplication` uses
+     *   it to mark the replay as started (Phase 1b item 8) so the service
+     *   stays alive and the home screen reads "syncing" before the SDK's
+     *   first progress update lands. Invoked at most once per install (the
+     *   state only flips once); failures are logged, never propagated.
+     *
      * Fire-and-forget on the injected scope for the same reason as
      * [commitForFreshWalletSetupAsync] — the caller is on the main thread and
      * must not block on DataStore I/O. Never throws.
      */
-    fun commitForUpgradedWalletAsync(previousVersionCode: Int) {
+    fun commitForUpgradedWalletAsync(
+        previousVersionCode: Int,
+        onCutOverForExistingWallet: () -> Unit = {}
+    ) {
         scope.launch {
             // The boundary test decides ONLY whether this install is owed the
             // one-time sync explainer. It used to gate the commit as well
@@ -335,6 +346,14 @@ class CutoverCoordinator @Inject constructor(
                 )
                 return@launch
             }
+            // An existing wallet just changed engines: the SDK scan from birth
+            // is a replay, and the row must say so before the SDK does.
+            runCatching { onCutOverForExistingWallet() }
+                .onSuccess { log.info("upgrade cutover: replay marked as started for the SDK takeover") }
+                .onFailure {
+                    if (it is CancellationException) throw it
+                    log.warn("upgrade cutover: the post-commit hook failed", it)
+                }
             // NB: the explainer is NOT armed here any more. It is armed from
             // [armUpgradeNoticeIfUpgraded], which every commit path calls —
             // because on a REAL upgrade this seam is not the path that

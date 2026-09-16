@@ -167,6 +167,40 @@ class BlockchainStateDataProviderTest {
     }
 
     @Test
+    fun markReplayStartedForSdkTakeover_flagsTheReplay_zeroesThePercent_keepsHeights() {
+        // Phase 1b item 8: dashj's "synced, 100%" row at the moment of the
+        // upgrade cutover. Emulator finding 3: the home screen kept showing
+        // this while the SDK scanned from genesis.
+        dao.state = BlockchainState(Date(1_000_000_000L), 1_500_000, false, EnumSet.noneOf(Impediment::class.java), 1_499_990, 1_499_000, 100)
+
+        provider.markReplayStartedForSdkTakeover()
+        awaitUntil("takeover marker applied") { dao.state?.replaying == true }
+
+        val row = dao.state!!
+        assertEquals("nothing scanned yet", 0, row.percentageSync)
+        assertFalse(row.isSynced())
+        assertEquals("heights are preserved", 1_500_000, row.bestChainHeight)
+        assertEquals(1_499_990, row.chainlockHeight)
+        assertEquals(1_499_000, row.mnlistHeight)
+        assertEquals(Date(1_000_000_000L), row.bestChainDate)
+
+        // The SDK's first real update then takes over the percentage.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 7, syncStage = SyncStage.BLOCKS))
+        awaitUntil("first SDK update applied") { dao.state?.percentageSync == 7 }
+        assertTrue(dao.state!!.replaying)
+    }
+
+    @Test
+    fun markReplayStartedForSdkTakeover_leavesAReplayAlreadyInProgressAlone() {
+        dao.state = BlockchainState(Date(0L), 10, true, EnumSet.noneOf(Impediment::class.java), 0, 0, 55)
+        provider.markReplayStartedForSdkTakeover()
+        // Nothing to await: the writer must not touch the row. Give it a moment anyway.
+        Thread.sleep(100)
+        assertEquals(55, dao.state!!.percentageSync)
+        assertTrue(dao.state!!.replaying)
+    }
+
+    @Test
     fun updateSdkBlockchainState_advancesBestChainHeightEver() {
         // FIX-pin: the ongoing-sync notification dismisses only when the
         // row's height reaches config.bestChainHeightEver, and only dashj

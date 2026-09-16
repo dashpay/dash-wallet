@@ -1033,7 +1033,14 @@ public class WalletApplication extends MultiDexApplication
         // value here even though finalizeInitialization already persisted this
         // launch's code via config.updateLastVersionCode() — and it is stable
         // no matter which of the two afterLoadWallet() call paths runs first.
-        cutoverCoordinator.commitForUpgradedWalletAsync(config.lastVersionCode);
+        // Phase 1b item 8: when this launch moves an EXISTING wallet to
+        // CUT_OVER, the SDK is about to replay from birth while the row still
+        // says dashj is synced. Mark the replay as started so the service
+        // stays alive (item 7) and the home screen reads syncing, not 100%.
+        cutoverCoordinator.commitForUpgradedWalletAsync(config.lastVersionCode, () -> {
+            blockchainStateDataProvider.markReplayStartedForSdkTakeover();
+            return kotlin.Unit.INSTANCE;
+        });
     }
 
     private void deleteBlockchainFiles() {

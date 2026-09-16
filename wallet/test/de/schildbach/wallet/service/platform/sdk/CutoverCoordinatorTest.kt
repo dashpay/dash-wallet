@@ -810,6 +810,29 @@ class CutoverCoordinatorTest {
     }
 
     @Test
+    fun upgradeSeam_marksTheReplayStarted_onlyWhenItFlipsAnExistingWallet() = runBlocking {
+        // Phase 1b item 8. The hook is the SDK-takeover replay marker.
+        var marked = 0
+        val (upgrade, stored, _) = noticeCoordinator(stored = null)
+        upgrade.commitForUpgradedWalletAsync(pre1110VersionCode) { marked++ }
+        assertEquals(CutoverState.CUT_OVER.name, stored())
+        assertEquals("an existing wallet handed to the SDK starts a replay", 1, marked)
+
+        // Already committed on a later launch: no flip, no marker.
+        val (later, _, _) = noticeCoordinator(stored = CutoverState.CUT_OVER.name)
+        later.commitForUpgradedWalletAsync(sameBuildVersionCode) { marked++ }
+        assertEquals(1, marked)
+
+        // A fresh create/restore reaches this seam too, but its own restore
+        // path already reset the blockchain state — the hook must not fire.
+        val (fresh, freshStored, _) = noticeCoordinator(stored = null)
+        fresh.commitForFreshWalletSetupAsync()
+        fresh.commitForUpgradedWalletAsync(pre1110VersionCode) { marked++ }
+        assertEquals(CutoverState.CUT_OVER.name, freshStored())
+        assertEquals("a fresh wallet is not an SDK takeover", 1, marked)
+    }
+
+    @Test
     fun upgradeSeam_commitsASameBuildRelaunchThatArrivedPreCommit_withoutInventingACrossing() = runBlocking {
         // A same-build relaunch that finds DUAL_RUNNING (a failed persist, a
         // wipe reset) is corrected here — but it never crossed the boundary,
