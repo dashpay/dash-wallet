@@ -453,7 +453,14 @@ Because the process is frozen roughly ten seconds after the service stops, **the
 
 ### 15.6 Still open
 
-1. **The mid-sync DashPay gap.** Once the wallet is bound, `maybeRetry`, `noteAppForeground` and `retryNowInBackground` all return early on `bindRetryPending()`, and `noteBindOutcome` is called only from `bindIfEnabled`. So a lock during sync leaves the bring-up at `SEED_BINDING_UNVERIFIED`, contact accounts undrained, identity keys unhealed, and shielded and top-up recovery unrun — with no blocker, no notification and no support-report trace. Proposed: a second blocker kind fed from the bring-up status and drain outcome; dispatch the unlock and foreground edges to whichever work is outstanding; surface it only when it persists, since the user's only action is to unlock, which they do anyway. Section 16 is the test that decides how much this matters.
+1. **The mid-sync DashPay gap — mostly self-healing; only the diagnostic is worth building.** A lock during sync leaves the bring-up at `SEED_BINDING_UNVERIFIED` with contact accounts undrained. An earlier draft of this item proposed dispatching the unlock and foreground edges to that outstanding work. **That is withdrawn**: two independent paths already re-attempt it.
+
+   - `startWalletSubsystems` runs on every engine start (`L1ShadowSyncService.startIfEnabled`, guarded by `if (!source.isSpvRunning())`), so any service restart re-runs the ordered bring-up.
+   - `updateContactRequests` — the contact ticker — calls `provisionContactAccountsInBackground` on each pass, throttled to once a minute and forced when a contact was just established. While the service is alive, the first pass after the device unlocks derives the friend chains and queues the builds.
+
+   What remains is a **latency bound, not a correctness gap**, and only in a narrow case: the wallet reaches the tip while locked, the service idles out, the process freezes, and the phone is then unlocked with nothing running. Recovery waits for the next alarm — 15 minutes if the app was opened within the hour, otherwise 12 or 24 (section 15.4). Opening the app collapses it to seconds.
+
+   The piece still worth building is the **diagnostic**: persist the seed-blocked state the way the bind blocker is persisted, so a device in this condition reports one field instead of requiring a day of log reading, which is what Joel's case cost. No behavior change. Section 16 measures whether the latency has any fund-visibility consequence.
 2. **The 20 s bring-up budget** is unproven at its boundary on a device.
 3. **Autonomous recovery** via the scheduled restart is unobserved.
 4. **The receiver export fix** needs a locked install to verify.
