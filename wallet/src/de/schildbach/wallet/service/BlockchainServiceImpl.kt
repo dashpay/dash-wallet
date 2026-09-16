@@ -1037,6 +1037,52 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     @SuppressLint("WrongConstant")
+    /**
+     * Phase 1b item 9 (docs/upgrade-memory-and-sync-plan.md): the one-minute
+     * restart alarm is the FALLBACK for a replay the service did not choose
+     * to abandon. Item 7 keeps the service alive through idle stretches, so
+     * a teardown while `replaying` is still true means the OS or a failure
+     * stopped it: onTrimMemory, the Android 15 dataSync 6-hour timeout, a
+     * "cleanup did not complete" bail-out in onCreate, an uncaught init
+     * error. Before, the alarm was armed only on the idle path, and on the
+     * SDK path `replaying` was hard-coded false, so restarts waited for the
+     * 15-minute job or the user (5 to 18 minutes on the reference install,
+     * each costing up to 155,000 blocks of watermark).
+     *
+     * Not armed for deliberate stops: a wallet wipe, a rescan (the reset flow
+     * restarts the service itself), or the "SDK setup pending" state, where
+     * nothing can replay until the device is unlocked (the unlock receiver
+     * and the foreground edge restart it). Runs on the main thread at the
+     * top of onDestroy so a hung cleanup cannot prevent it. Never throws.
+     */
+    private fun rescheduleIfReplayInterrupted() {
+        try {
+            val replaying = blockchainState?.replaying == true
+            if (!replaying) return
+            if (deleteWalletFileOnShutdown || resetBlockchainOnShutdown) {
+                log.info("replay interrupted by a deliberate wipe/reset — not rescheduling")
+                return
+            }
+            val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
+            if (bindBlocked) {
+                log.info(
+                    "replay flagged but the SDK bind is blocked ({}) — not rescheduling; the unlock " +
+                        "receiver / app foreground restart the service",
+                    sdkBindRetryService.blocker.value
+                )
+                return
+            }
+            log.warn(
+                "service stopping with a replay in progress ({}%) — arming the one-minute restart " +
+                    "so the scan resumes without waiting for the periodic job",
+                blockchainState?.percentageSync
+            )
+            rescheduleService()
+        } catch (t: Throwable) {
+            log.warn("could not arm the replay restart alarm", t)
+        }
+    }
+
     private fun rescheduleService() {
         // Schedule restart in 1 minute
         val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
@@ -2671,6 +2717,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
 
         log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
+
+        rescheduleIfReplayInterrupted()
 
         // Monitor the entire cleanup process with timeout reporting
         val cleanupThread = Thread.currentThread()
