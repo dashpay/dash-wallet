@@ -20,6 +20,7 @@ package de.schildbach.wallet.service.platform.sdk
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -289,6 +290,54 @@ class L1ShadowSyncServiceTest {
         assertTrue(service.startIfEnabled())
         assertTrue(service.startIfEnabled())
         assertEquals(1, source.subsystemsCalls)
+        assertEquals(1, source.startCalls)
+    }
+
+    @Test
+    fun startIfEnabled_spvWaitsForASuspendedBringUp() = runBlocking {
+        // An instantly-returning fake cannot tell "awaited" from "launched and
+        // forgotten". Block the bring-up on a barrier: SPV must not start
+        // while it is held, and must start once it is released.
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val gate = CompletableDeferred<Unit>()
+        source.onStartWalletSubsystems = { gate.await(); "status=READY drained=1" }
+        val service = service(source)
+        val result = CompletableDeferred<Boolean>()
+        val job = scope.launch { result.complete(service.startIfEnabled()) }
+        withTimeout(5_000) { while (source.subsystemsCalls == 0) delay(5) }
+        delay(50)
+        assertEquals(0, source.startCalls)
+        assertFalse(result.isCompleted)
+        gate.complete(Unit)
+        assertTrue(withTimeout(5_000) { result.await() })
+        assertEquals(1, source.startCalls)
+        assertEquals(listOf("startWalletSubsystems", "startSpv"), source.callOrder)
+        job.join()
+    }
+
+    @Test
+    fun startIfEnabled_cancelledDuringBringUp_propagatesAndNeverStartsSpv() = runBlocking {
+        // Cancellation must propagate out of startIfEnabled (never be
+        // swallowed into a `false`), SPV must not start, and nothing may be
+        // latched — the next start attempt runs the bring-up again.
+        val source = FakeSource(boundWalletId = walletIdHex)
+        source.onStartWalletSubsystems = { awaitCancellation() }
+        val service = service(source)
+        var completedNormally = false
+        val job = scope.launch {
+            service.startIfEnabled()
+            completedNormally = true
+        }
+        withTimeout(5_000) { while (source.subsystemsCalls == 0) delay(5) }
+        job.cancel()
+        withTimeout(5_000) { job.join() }
+        assertTrue(job.isCancelled)
+        assertFalse(completedNormally)
+        assertEquals(0, source.startCalls)
+
+        source.onStartWalletSubsystems = { "status=READY" }
+        assertTrue(service.startIfEnabled())
+        assertEquals(2, source.subsystemsCalls)
         assertEquals(1, source.startCalls)
     }
 
