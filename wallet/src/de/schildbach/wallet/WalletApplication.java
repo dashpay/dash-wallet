@@ -945,7 +945,17 @@ public class WalletApplication extends MultiDexApplication
 
     private void afterLoadWallet() {
         wallet.setSaveOnNextBlock(false);
-        wallet.autosaveToFile(walletFile, Constants.Files.WALLET_AUTOSAVE_DELAY_MS, TimeUnit.MILLISECONDS, null);
+        // Size-aware autosave debounce (Phase 1a item 6): a 62 MB wallet
+        // must not be re-serialized every 5 s during a sync burst. The delay
+        // follows the same heap-derived soft limit as the parse guard; see
+        // WalletFileSizeGuard.autosaveDelayMs. A fresh wallet has no file yet
+        // (length 0) and keeps the historical 5 s.
+        final long walletFileSize = walletFile.length();
+        final long autosaveDelayMs = WalletFileSizeGuard.autosaveDelayMs(walletFileSize, largeMemoryClassMb());
+        if (autosaveDelayMs != Constants.Files.WALLET_AUTOSAVE_DELAY_MS) {
+            log.info("wallet autosave debounce raised to {} ms for a {} byte wallet file", autosaveDelayMs, walletFileSize);
+        }
+        wallet.autosaveToFile(walletFile, autosaveDelayMs, TimeUnit.MILLISECONDS, null);
         final Wallet walletForMaintenance = wallet;
 
         // did blockchain rescan fail
