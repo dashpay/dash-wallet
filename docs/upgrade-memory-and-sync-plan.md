@@ -351,3 +351,36 @@ Branch `fix/upgrade-memory-and-sync` in the `dash-wallet-upgrade` worktree, fork
 | 10.4 wipe policy | in 1a.2 | Automatic wipe removed. |
 
 Still open after this pass: the header label during the pending state; skipping the dashj blockstore open entirely on a held install; the Android 15 dataSync six-hour foreground limit, which a multi-hour replay will hit and which item 9 can only answer with a restart; and everything in Phase 1c, which the SDK team owns. The reference install still needs Phase 1c items 14 and 15 before its replay can finish, and Phase 2 before its idle heap changes.
+
+## 14. Two-emulator upgrade test, 2026-09-16
+
+Build 12000011 `12.0.0-upgrade` from `fix/upgrade-memory-and-sync`, installed over a synced 11.9.1 (11090106) on two Android 16 emulators holding the same 11.9 MB testnet wallet: **5556** unlocked, no device credential; **5554** locked, six-digit PIN, screen off at install time. Captures in `~/Downloads/upgrade-test-09-16-2026/`.
+
+### 14.1 Confirmed on hardware
+
+| Item | Evidence |
+|---|---|
+| 1a.1 commit on the upgrade launch, no bind evidence | 5556 13:58:33.415 and 5554 14:24:26.189, both about 3 s after process start |
+| explainer armed in the same launch | both devices, same second as the commit |
+| 1b.8 replay marked before the SDK's first progress | both devices |
+| 1a.1/1a.2 dashj never starts | zero peergroup starts on either device after the install |
+| 1a.4 bind deferred while locked | 5554 14:24:26.172, 2 ms after platform init, no scrypt and no keystore call |
+| 1a.3 classification, persistence, notification | 5554: `DEVICE_LOCKED`, `sdk_bind_blocker=DEVICE_LOCKED` on disk, notification on the lock screen |
+| 1a.3 retry ladder | 5554 retries at +5 s and +15 s, matching `bindRetryDelayMs` |
+| 1a.2 no fallback | 5554 `retry N failed … No dashj fallback`, state stayed CUT_OVER |
+| §10.4 engine starts only from the foreground service | both devices refused it from Application init |
+| 1b.10 bring-up budget | 5556 `status=READY … elapsedMs=1477`, fast path not timeout |
+| 1b.7 wake lock spans the replay | 5556 acquired 14:07:00, released 14:11:00 at the tip |
+| recovery from a blocked bind | 5554: app opened 14:29:27.550, bound 14:29:28.042, pending state cleared 14:29:32.268, engine started 14:29:33.984 |
+
+5556 replayed 503,000 blocks in 5 min 6 s, peaking at 728 MB PSS with native at 487 of 595 MB and settling to about 500 MB PSS. JVM stayed between 75 and 97 MB of 576, which says nothing about the reference install's 482 MB baseline: that comes from a 62 MB wallet, this one is 11.9 MB.
+
+### 14.2 Defects found, and fixed in 326fc31b9
+
+- **An upgrade never started syncing.** `BootstrapReceiver` fired and called `startBlockchainService`, which silently no-ops below `IMPORTANCE_FOREGROUND`; a broadcast-started process is below it. The cutover committed and the wallet bound, then nothing scanned, because §10.4 means the engine only starts from the foreground service. The only fallback was a daily alarm up to 18 hours out. Fixed by starting a foreground service directly on the package-replaced path, which is exempt from the Android 12+ background FGS restrictions, with the boot path's delayed alarm as a fallback.
+- **The one-time explainer never displayed.** Armed correctly, then lost: `onLockScreenDeactivated` cleared the pending marker before `showOnce`, which refuses while fragment state is saved. `showOnce` now reports whether it showed and callers keep the marker pending, with a retry on resume.
+- **The unlock receiver cannot be relied on.** `ActivityManager: freezing <pid>` landed 30 s after the package-replaced broadcast on 5554, the platform logged "Sending oneway calls to frozen process" while two `USER_PRESENT` broadcasts went out, and the receiver never ran across a real device unlock. A context-registered receiver does not run in a frozen process, and Joel's HONOR suppressed these broadcasts entirely for ten hours. The notification is the real recovery path, so it is now ongoing and its copy directs the tap. Section 12's claim that the bind heals at the next unlock without the user opening the app is withdrawn; what holds is that it heals at the next unlock **or** when the user opens the app, and the notification is what prompts that.
+
+### 14.3 Open, not fixed
+
+The SDK settled at 16,905,513,269 duffs on 5556. The 09-15 test settled the same wallet at 16,782,052,936 after the parity probe judged the SDK inflated and rebuilt it, and that figure matched dashj exactly. The 1.2346 DASH gap is entirely in the BIP44 account; CoinJoin agrees to the duff. The discrepancy is now silent, because the probe suspends itself post-cutover against a frozen dashj balance and item 1a.2 retired the automatic rebuild. Turning on Tools › dashj sync un-holds dashj and resumes the probe in log-only mode, which is how to establish which side is right. Parked at the user's direction.
