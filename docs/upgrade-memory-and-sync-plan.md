@@ -235,3 +235,46 @@ Phase 1c gains:
 - **Cold-start rewind.** File with the SDK: on a fresh process the engine rewinds the filter watermark far below the persisted synced height and re-walks; the same wallet resumes at tip on an in-process restart (finding 10). Include the three observed resume heights.
 
 Verification gains a scenario: a WorkManager-started process with no foreground service must not start the engine, and a frozen-then-thawed process must resume at the persisted height.
+
+## 11. Reference install follow-up, 2026-09-15 23:01 to 2026-09-16 13:50 UTC
+
+New logs from the reference install after the 09-15 report. The user ran **Settings → Rescan blockchain** at 23:07:43 with a start date of 2023-05-04. Section 4's prediction for that action held in every particular.
+
+### 11.1 What the rescan did
+
+- Armed `armSpvRescan` to height 1,860,480, rewinding the SDK watermark from 2,335,479. The dashj wallet was untouched, so idle heap stayed at 440 to 485 MB.
+- Progress since, per engine run (filter watermark at run end, loss on the next restart):
+
+| Run | Ended at | Loss on next restart |
+|---|---|---|
+| 23:09 to 23:56 | 2,140,480 | 25,000 (OOM crash) |
+| 00:01 to 01:02 | 2,275,480 | 105,000 (idle stop) |
+| 01:25 to 01:55 | 2,315,480 | 100,000 (idle stop) |
+| 02:21 to 03:13 | 2,242,092 | 2,000 (idle stop, then phone idle overnight) |
+| 12:37 to 12:41 | 2,242,092 | none |
+| 13:50 | 2,265,480 at start | report filed |
+
+After 15 hours the watermark is 2,265,480, still 70,000 blocks below where it stood before the rescan. The native log shows only 50 `synced_height_persisted` values, none above 2,155,480, the same ceiling as on 09-15.
+
+### 11.2 Second OOM crash, 00:00:32 to 00:00:37
+
+Idle stop at 23:58:00 began the shutdown serialization of the 62 MB dashj wallet. The user reopened at 00:00:20, so `onCreate` waited on that cleanup while `CutoverUiDataService` ran a full reconcile walk over Room flows. Three `OutOfMemoryError`s inside 4 seconds on the 512 MB heap, the service logged "CRITICAL: Cleanup did not complete within 15 seconds ... deadlock in onDestroy", and the process died as `CRASH`, foreground, RSS 1,222 MB. Same root cause as 09-15: a dashj wallet that fills the heap, plus a heavy transient, this time the shutdown serialization overlapping a start.
+
+### 11.3 Everything else, counted
+
+| Event | Count | Notes |
+|---|---|---|
+| Idle-detector stops | 10 | 23:07, 23:58, 01:05, 01:58, 02:07, 02:28, 03:15, 03:23, 12:45, 13:00 |
+| Service starts failed on `OverlappingFileLockException` | 5 | 02:19, 03:40, 12:15 twice, 13:46 |
+| Engine started then torn down within 15 s | 3 | 02:20, 12:21, 13:47 |
+| "DashPay bring-up before SPV" over 10 minutes | 3 | 766 s, 1,438 s, and 10,139 s across the overnight freeze; 177 account builds pending, `SEED_BINDING_UNVERIFIED`, 0 drained |
+| Native heap peak | 1,861 MB | 12:xx, PSS 2,325 MB; the LMK threshold from 09-15 was 1,729 MB RSS |
+| `check()` invocations | 347 | 311 triggered by `network capabilities changed`; 223 in the 23:xx hour alone |
+
+The header hold is present on this build and engaged: `lastKnown=3738332075`, so the home screen held 37.38 DASH while the SDK published figures between 223 and 746 DASH, none with `l1Synced=true`.
+
+### 11.4 Plan impact
+
+No new items. This set confirms, on the reference device, four things the plan already carries: the idle detector's teardown-and-lose-progress cycle (Phase 1b item 7), the SDK persistence ceiling (Phase 1c item 15), the file-lock collision on restart (Phase 1b item 11), and the bring-up budget (Phase 1b item 10). It adds one detail to Phase 2 item 17: the shutdown-time wallet serialization is a heap peak that can coincide with a start, so the in-memory release must also skip the save-on-stop when the pool has been cleared. The network-capabilities callback firing `check()` 200 times an hour is worth a debounce but is not on the critical path.
+
+The user's second crash and the 70,000-block deficit are the cost of the rescan. Section 8's recommendation stands: nothing on this install finishes a replay until Phase 1b ships.
