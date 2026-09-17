@@ -746,3 +746,74 @@ instead of argued, and it is reported rather than repaired by design. Two conseq
 - The recovery-trigger gap: up to 24h before anything retries when the user never opens the app.
 - Phase 1c with the SDK team, plus the 15.5 question about an unbound master key on a secured device.
 - Parked: the 1.2346 DASH balance gap on 5556; `scripts/cutover-emulator-test.sh` never run.
+
+---
+
+## 19. The defect is already present on B — found in the SDK database, 2026-09-16
+
+While assembling the section 16 pair, a read of `dash-sdk.db` on emulator-5554
+(`test-coinjoin-wallet-2`, identity `85KDhz…`) settled several things at once.
+
+### 19.1 Two incoming contacts have no receiving chain at all
+
+B holds 19 contact requests. Nine are INCOMING. Only seven have a
+`dashpayReceivingFunds` account row:
+
+| Incoming contact | core height | receiving account on B |
+|---|---:|---|
+| test-eleven-two | 1226329 | derived |
+| test-qr-code-2 | 1229605 | derived |
+| test-23 | 1252305 | derived |
+| test-progress-screen-2 | 1252305 | derived |
+| splawik21hornyTester | 1510979 | derived |
+| test-profile-file-2 | 1510998 | derived |
+| **5AJ174w3RzKhDKhUncbAddRswLWMSny9YNAiqqiHGKzU** | **1514538** | **NOT DERIVED** |
+| **asdash13jul** (`DaLWz…`) | **1514673** | **NOT DERIVED** |
+| test-dash-username-2 | 1528705 | derived |
+
+Absence is real, not an artifact of having no funds: six derived rows carry
+`externalHighestUsed = -1`, so an unused chain still gets a row.
+
+**Any DIP-15 payment those two contacts have already sent B is invisible to B right
+now.** That is the section 16 defect, already in the field on this wallet, needing no
+setup. Sending from `asdash13jul` reproduces it with no Platform write, no new contact
+request and no credits.
+
+The three OUTGOING-only rows (Bartek123, test-android-35-2, test-android-15-2) have no
+receiving account because the friendship is not mutual yet. That is correct behaviour,
+not debt.
+
+### 19.2 The coverage-debt diagnostic overstates the problem
+
+`logContactCoverageDebt` compares the scan height against the earliest **received**
+contact request, derived or not. On this wallet that is `test-eleven-two` at 1226329,
+giving the 328,835-block figure from section 18.5. But that chain **is** derived and its
+addresses are in the filter set, so nothing about it is at risk.
+
+The real exposure is the earliest **underived incoming** contact, 1514538 — roughly
+40,600 blocks, not 328,835. The diagnostic overstates the debt by about 288,000 blocks
+and would send someone chasing the wrong wallets. It should join `dashpay_contact_requests`
+against `accounts` on `friendIdentityId` and report only incoming contacts with no
+`dashpayReceivingFunds` row.
+
+### 19.3 Why an already-derived contact cannot reproduce the defect
+
+Every derived receiving account stores `accountExtendedPubKeyBytes` (104 bytes). Extending
+an existing friend chain's address window therefore needs only that stored xpub, **not the
+seed**, so a locked device does not block it. The lock blocks *creating* a contact account,
+because that derivation starts from the seed at `m/9'/coin'/15'`.
+
+This is the answer to the 17.4 question about new addresses on existing accounts:
+
+- **New contact, device locked** — the account cannot be created at all, and the payment is
+  missed. This is the real exposure.
+- **Existing contact, device locked** — the xpub is stored, the window extends, and the
+  payment is seen.
+
+It also bounds the proposed "keep paying from an established contact" experiment. On B,
+`test-dash-username-2` (emulator-5558) sits at `externalHighestUsed = 0` with the SDK gap
+limit at 1000, and the window **slides forward** with each address used. Sequential
+payments never outrun it. The predicted result is that B catches every one of them, locked
+or unlocked. That makes it a clean falsifiable control rather than a reproduction: if a
+payment IS missed while locked, the exposure is far wider than section 16 claims, because
+it would then reach every contact rather than only new ones.
