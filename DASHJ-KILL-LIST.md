@@ -54,6 +54,36 @@ Most-used bitcoinj types repo-wide: `Coin` (105 files), `Transaction` (86), `Sha
   with the engine); dashj's `BlockchainState` (sync %, replaying, impediments) must be fully
   derived from `SpvSyncProgressData` (partially wired for the home header already).
 
+#### 1a. BLOCKER on the balance replacement: partial rescan state is published as fact
+
+`CutoverUiDataService` is the SDK-side replacement for the home-screen balance, so dashj cannot be
+deleted until this is right — after step B there is no second engine to sanity-check it against.
+
+Measured on a restored wallet, 2026-09-17 (see §26.4 of the upgrade memory and sync plan). Opening
+the Contacts screen triggered a DashPay-provisioning rewind of ~214,000 blocks, and during the
+re-scan the service published, in sequence:
+
+| Published balance | In DASH |
+|---:|---:|
+| 28,214,058,609 | 282.1 |
+| 24,233,701,645 | 242.3 |
+| 21,351,026,841 | 213.5 |
+| 16,902,773,043 | **169.0 — correct, matches pre-wipe exactly** |
+
+For ~30 seconds the wallet displayed up to **113 DASH more than the user actually has**, stepping
+down as the rescan re-derived the UTXO set. The end state is correct; the intermediate states are
+not, and they are indistinguishable from real money on screen.
+
+The signal to fix it with is already present: **every wrong value was published with
+`l1Synced=false`.** Options are to suppress publication while that flag is false, hold the last
+known-good figure, or mark the value as provisional in the UI. Today it emits partial rescan state
+as though it were settled.
+
+Why this is a kill-list item and not just a bug: the rewind that exposes it is itself triggered by
+ordinary DashPay provisioning (§17.6, §26.3), so it is not a rare path, and the pre-cutover
+comparison against dashj's own balance (`L1Parity` probing) is the only thing that would currently
+catch a regression here. That probe is suspended post-cutover and disappears entirely at step B.
+
 ### 2. Key derivation / signing / seed handling
 - **What it does**: `DeterministicSeed` (10 files), `KeyChainGroup`, `DeterministicKeyChain`,
   `ECKey` (15), `KeyCrypterScrypt`/`KeyCrypterException` (17), `MnemonicCode`, `BIP38PrivateKey`,
