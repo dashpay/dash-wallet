@@ -566,8 +566,16 @@ class ExploreViewModel @Inject constructor(
      * which [monitorUserLocation] marks as enabled before the first fix has landed: the query
      * starts unbounded so the screen is never stuck empty, then narrows once a location is known.
      */
-    private fun observeRadiusBounds(bounds: GeoBounds): Flow<GeoBounds> {
-        if (_isLocationEnabled.value != true || _filterMode.value != FilterMode.Nearby) {
+    private fun observeRadiusBounds(bounds: GeoBounds): Flow<GeoBounds> =
+        // Location can be granted while this screen is already open: onResume calls
+        // monitorUserLocation(), which writes _isLocationEnabled but not _searchBounds, so
+        // keying on the bounds alone would leave a Nearby query unbounded for good.
+        _isLocationEnabled.asFlow()
+            .distinctUntilChanged()
+            .flatMapLatest { locationEnabled -> radiusBoundsFor(bounds, locationEnabled) }
+
+    private fun radiusBoundsFor(bounds: GeoBounds, locationEnabled: Boolean): Flow<GeoBounds> {
+        if (!locationEnabled || _filterMode.value != FilterMode.Nearby) {
             return flowOf(GeoBounds.noBounds)
         }
 
