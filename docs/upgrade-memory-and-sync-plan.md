@@ -607,3 +607,42 @@ proves the mechanism and not the money; it does not show a real payment becoming
 diagnostic added in `e0df0eddb` remains useful for spotting the debt window in the field. The
 receiver export fix matters more than it did, since it is one of the two triggers that could close
 the gap without the user, though only when the process is still alive.
+
+### 17.7 When a contact payment becomes visible, if the device was locked
+
+The practical form of the question, answered from the 17.6 measurements. A contact payment that
+arrives while the chain for that contact is not yet derived is invisible until **three** things
+have happened, in order:
+
+| Step | Requirement | Duration |
+|---|---|---|
+| 1 | The device is unlocked | whenever the user unlocks |
+| 2 | Something derives the contact chain | the variable one — see below |
+| 3 | The rewind's rescan reaches the payment's height | minutes on testnet; on mainnet proportional to how far back the rewind goes |
+
+**Step 2 does not follow from step 1.** Unlocking alone changes nothing. On 5554, three minutes
+after a real unlock with the app untouched, the account was still unregistered, `syncedHeight` was
+unchanged and the retry ladder had logged nothing — the service had idled out under the
+bind-blocked exception (item 1b.7) so no poller was alive to notice the unlock.
+
+What actually drives step 2:
+
+| Trigger | Latency | Caveat |
+|---|---|---|
+| User opens the app | under a minute, measured | the only path demonstrated end to end |
+| Alarm-driven service start landing while unlocked | 15 min / 12 h / 24 h | keyed on `touchLastUsed`, which only `MainActivity` advances (section 15.4) |
+| `ACTION_USER_PRESENT` receiver | immediate | needs the export fix (`3b697a3af`), and only works while the process is alive — roughly the five minutes a service runs |
+
+Measured on the app-open path: bind established, 2 accounts drained, `syncedHeight` 1555148 →
+1466329, rescan underway, all within one minute.
+
+**So:** a user who opens their wallet sees the payment about a minute later plus the rescan. A user
+who does not may wait up to 24 hours on a wallet not recently used. The coins are never lost — the
+rewind is automatic once the chain is derived (17.6).
+
+**Two limits on this answer.** 17.6 proved the mechanism by deleting an account and watching
+`syncedHeight` drop; no real contact payment has been observed appearing, which is what section 16
+remains for. And step 3 was cheap in that test because the rewind was ~104,000 testnet blocks; a
+mainnet wallet with an older contact could rewind much further and take proportionally longer
+before the payment is visible, which also re-raises Phase 1c item 14 (native memory during a long
+replay) for wallets of the reference install's size.
