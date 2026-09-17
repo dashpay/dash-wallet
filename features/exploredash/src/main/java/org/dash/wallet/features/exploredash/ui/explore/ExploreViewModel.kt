@@ -558,6 +558,38 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The radius to query the merchant's locations with, as a flow because it can arrive late.
+     *
+     * Outside Nearby mode every location is shown, so the query is unbounded. In Nearby mode the
+     * radius normally follows the map. Without map bounds it follows the user's own location,
+     * which [monitorUserLocation] marks as enabled before the first fix has landed: the query
+     * starts unbounded so the screen is never stuck empty, then narrows once a location is known.
+     */
+    private fun observeRadiusBounds(bounds: GeoBounds): Flow<GeoBounds> {
+        if (_isLocationEnabled.value != true || _filterMode.value != FilterMode.Nearby) {
+            return flowOf(GeoBounds.noBounds)
+        }
+
+        if (bounds != GeoBounds.noBounds) {
+            return flowOf(locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius))
+        }
+
+        // The seeded noBounds is a placeholder, not a map center: centering a radius on it would
+        // query a radius around latitude/longitude (0, 0).
+        val knownLocation = _currentUserLocation.value
+
+        return if (knownLocation != null) {
+            flowOf(locationProvider.getRadiusBounds(knownLocation.latitude, knownLocation.longitude, radius))
+        } else {
+            flow {
+                emit(GeoBounds.noBounds)
+                val firstFix = _currentUserLocation.filterNotNull().first()
+                emit(locationProvider.getRadiusBounds(firstFix.latitude, firstFix.longitude, radius))
+            }
+        }
+    }
+
     fun openAllMerchantLocations(merchantId: String?, source: String) {
         _screenState.postValue(ScreenState.MerchantLocations)
         this.allMerchantLocationsJob?.cancel()
@@ -569,24 +601,9 @@ class ExploreViewModel @Inject constructor(
             // seeded noBounds as a map center.
             .onStart { if (_searchBounds.value == null) emit(GeoBounds.noBounds) }
             .filterNotNull()
-            .flatMapLatest { bounds ->
-                // Only apply radius bounds if we're in Nearby mode
-                // For All and Online tabs, show all locations globally
-                val radiusBounds = if (_isLocationEnabled.value == true && _filterMode.value == FilterMode.Nearby) {
-                    if (bounds != GeoBounds.noBounds) {
-                        locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
-                    } else {
-                        // No map bounds yet — center on the user's last known location
-                        // instead of the noBounds placeholder center, which would query
-                        // a radius around latitude/longitude (0, 0). With no location
-                        // either, fall back to an unbounded query.
-                        _currentUserLocation.value?.let {
-                            locationProvider.getRadiusBounds(it.latitude, it.longitude, radius)
-                        } ?: GeoBounds.noBounds
-                    }
-                } else {
-                    GeoBounds.noBounds
-                }
+            .flatMapLatest { bounds -> observeRadiusBounds(bounds) }
+            .distinctUntilChanged()
+            .flatMapLatest { radiusBounds ->
                 val limitResults = _isLocationEnabled.value != true ||
                     _appliedFilters.value.territory.isNotEmpty() == true
                 val limit = if (limitResults) 100 else -1
