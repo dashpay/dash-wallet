@@ -254,17 +254,22 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 "the merchant did not receive the payment, releasing its inputs",
             tx.txId
         )
-        walletData.wallet?.let { unlockInputs(it, tx) }
-
-        // Mark the release before cleaning up. If the cleanup fails, or the process dies here,
-        // the payment stays on disk so the cleanup can be retried, and the flag stops the next
-        // resume() locking these inputs or verifying the payment all over again.
+        // Record the release durably before anything else. Until this lands, the payment must
+        // stay exactly as it is: inputs locked and the record still active, so verify() retries
+        // and resume() picks it up unchanged. Unlocking first and then failing to persist would
+        // leave a stored payment claiming to be live while its inputs are already free and may
+        // have been respent, and the next resume() would lock them again and re-verify it.
         val abandoned = payment.copy(abandoned = true)
         try {
             config.add(abandoned)
         } catch (e: Exception) {
-            log.error("could not record the release of {}", tx.txId, e)
+            log.error("could not record the release of {}, keeping it locked and pending", tx.txId, e)
+            throw e
         }
+
+        // Past this point the stored payment says abandoned, so resume() will only ever retry the
+        // cleanup: it is safe to free the inputs and start discarding the records.
+        walletData.wallet?.let { unlockInputs(it, tx) }
         discardRecords(abandoned)
     }
 

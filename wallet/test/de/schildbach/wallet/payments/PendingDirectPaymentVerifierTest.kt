@@ -213,6 +213,26 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
+    fun `keeps inputs locked and the payment active when the release cannot be persisted`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        goOnlineAndSynced()
+        // the quarantine write succeeds; only the abandoned transition fails
+        coEvery { config.add(match { it.abandoned }) } throws RuntimeException("datastore is gone")
+        val tx = createTransaction()
+
+        val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        delay(500)
+
+        // nothing may move until the release is durable: a stored payment still marked active
+        // with freed inputs would be re-locked and re-verified by the next resume()
+        tx.inputs.forEach { assertTrue(wallet.isLockedOutput(it.outpoint)) }
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+        coVerify(exactly = 0) { config.remove(any()) }
+        assertFalse("the payment must stay pending and keep retrying", result.isCompleted)
+    }
+
+    @Test
     fun `keeps the payment when discarding its records throws`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 100L
