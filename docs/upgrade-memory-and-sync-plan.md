@@ -854,3 +854,106 @@ because it would reach every contact rather than only new ones.
 The seed argument in 19.3 still stands and is what makes the locked half meaningful: the
 stored `accountExtendedPubKeyBytes` means extending a window needs no seed, so if a locked
 device still misses payments an unlocked one catches, the cause is not key material.
+
+---
+
+## 20. ROOT CAUSE: DIP-15 contact chains are permanently capped at 20 addresses
+
+Found 2026-09-16 while running the emulator-5558 payment experiment. This is a defect in
+the pinned `rust-dashcore` revision `af88edf`, not in the app, and **the device lock is
+irrelevant to it**.
+
+### 20.1 The chain
+
+`key-wallet/src/wallet/helper.rs:612`
+
+```rust
+AccountTypeToCheck::DashpayReceivingFunds |
+AccountTypeToCheck::DashpayExternalAccount => {
+    // Currently not retrieved via this helper
+    None
+}
+```
+
+`extended_public_key_for_account_type` returns `None` for both DashPay account types, so
+`key_source_for_account_type` returns `KeySource::NoKeySource`. In
+`transaction_checking/wallet_checker.rs:357`:
+
+```rust
+if matches!(key_source, KeySource::NoKeySource) {
+    continue;   // skips maintain_gap_limit for the whole account
+}
+```
+
+`mark_address_used` runs *before* that guard, so used flags advance normally. But
+`maintain_gap_limit` is never reached, so the pool never grows past the size it was built
+with. And `managed_account_type.rs:726/745` builds both DashPay pools with a **hardcoded
+literal 20**:
+
+```rust
+let pool = Self::single_pool(account_type, AddressPoolType::Absent, 20, network, key_source)?;
+```
+
+`maintain_gap_limit` with `highest_used = None` targets `gap_limit - 1` = 19. That is
+exactly the window observed.
+
+### 20.2 Consequence
+
+**Every DIP-15 contact chain is permanently limited to 20 addresses, indices 0 to 19. The
+21st payment from any contact is invisible, forever, on every device, locked or not.**
+
+Not a latency problem and not recoverable by rescanning, because the addresses are never
+derived at all. It applies to `dashpayExternalAccount` too, so the wallet also stops
+tracking its own outgoing contact payments past index 19.
+
+The comment says "currently not retrieved via this helper", which reads as an unfinished
+wiring task rather than a cryptographic limit. The material is present: every contact
+account in B's `dash-sdk.db` stores `accountExtendedPubKeyBytes` (104 bytes), and public
+derivation of a friend receiving chain needs only that xpub. The fix is to return it from
+`extended_public_key_for_account_type`.
+
+### 20.3 The measurement that produced it
+
+emulator-5558 (`test-dash-username-2`) paying B (`test-coinjoin-wallet-2`), B's screen
+**locked** throughout, service restarted by hand after each batch.
+
+| Address index | Amount (duffs) | Confirmed | Caught by B |
+|---:|---:|---|---|
+| 0 | 2,008,427 + 1,799,434 | yes (older, h1528706/1528755) | yes |
+| 1 | 10,000 | h1555179 | yes |
+| 2 | 11,000 | h1555211 | yes |
+| 3 | 12,000 | mempool | yes |
+| 4 | 13,000 | mempool | yes |
+| 5 | 14,000 | mempool | yes |
+
+Unspent total rose by exactly the sum of the new payments. Five for five while locked, so
+the locked-device hypothesis for *derived* contacts is disproven, as section 19.3 predicted.
+
+Across all six uses the window never moved:
+
+| Highest used | Window if it slid (`highest_used + 20`) | Window actually observed |
+|---:|---|---|
+| 2 | 0 to 22 | 0 to 19 |
+| 5 | 0 to 25 | 0 to 19 |
+
+All fourteen of B's contact accounts sit at top index 19 regardless of use.
+
+### 20.4 Corrections to earlier sections
+
+- **18.5 / 19.2**: the installed build already carries the improved diagnostic
+  (`receival-account coverage … establishedContacts=9, receivalAccounts=7, dark=2
+  [5AJ174w3…, DaLWziYB…]`). It independently confirms the two dark contacts. The older
+  `coverage DEBT` line is the one that overstates.
+- **My claim that B had no recorded contact receipt from 5558 was wrong.** Index 0 holds
+  two older payments. I read `transaction_account_involvements`, which is simply unpopulated
+  in this schema version; every one of the 7,359 outputs has a null `accountId`.
+- **The gap limit is 20, hardcoded**, not `DEFAULT_CONTACT_GAP_LIMIT` (10, dead code), not
+  `DEFAULT_EXTERNAL_GAP_LIMIT` (30), not `MIGRATION_GAP_LIMIT` (1000, BIP44/BIP32/CoinJoin
+  only).
+
+### 20.5 To confirm end to end
+
+B sits at index 5, so 14 more payments reach index 19 and the 15th lands on index 20. The
+prediction is that B sees payments through index 19 and misses index 20 permanently. The
+static reading above is strong enough to file the SDK issue now; the walk to 20 is
+confirmation, not discovery.
