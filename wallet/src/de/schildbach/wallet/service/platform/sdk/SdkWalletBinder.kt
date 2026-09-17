@@ -970,7 +970,7 @@ class SdkWalletBinder internal constructor(
                 ) { "${it.take(8)}…" }
             }
             log.info(
-                "DashPay receival-account coverage on {}…: establishedContacts={}, " +
+                "DashPay receival-account coverage on {}…: channelsWePublished={}, " +
                     "receivalAccounts={}, dark={}{} — a dark contact's receiving addresses " +
                     "are in no watched script set (permanently-dark candidate under the SDK's " +
                     "re-enqueue asymmetry)",

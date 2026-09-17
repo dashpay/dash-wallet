@@ -1062,3 +1062,54 @@ created when requests are mutual (`contacts.rs:150`). B is the cut-over wallet, 
 the one that hits this. Either retry until the bans lapse, or use the shortcut: B already holds
 three outgoing-only contacts with no receiving account — `Bartek123`, `test-android-15-2`,
 `test-android-35-2` — which is precisely the state step 1 is meant to produce.
+
+---
+
+## 22. The three missing receiving accounts are a RESTORE bug — already fixed upstream
+
+User hypothesis 2026-09-16, confirmed.
+
+### 22.1 Direction, settled empirically
+
+Receiving accounts correspond to B's **outgoing** contact requests, not incoming ones. On the
+reference wallet: 11 outgoing requests, 8 `dashpayReceivingFunds` rows, every row matching an
+outgoing request and none matching an incoming-only one. Sending a contact request publishes our
+DIP-15 receiving xpub, which is what lets that contact pay us.
+
+Confirmed live: B sent a request to `test-contacts-33` at height 1555232 and the receiving
+account appeared immediately (7 -> 8), with no external account and no reciprocal request.
+
+### 22.2 What is actually missing
+
+| Group | State | Consequence |
+|---|---|---|
+| 7 mutual contacts | receiving + external | fine |
+| `test-contacts-33` (sent live, post-restore) | receiving only | fine |
+| `Bartek123`, `test-android-15-2`, `test-android-35-2` (sent, never accepted) | **neither** | **they can pay B; B cannot see it** |
+| `5AJ174w3…`, `asdash13jul` (received only) | neither | B cannot pay them; no receive-side exposure |
+
+The pattern is that restore rebuilt only the **mutual** contacts. One-way relationships were
+dropped in both directions. That matches `contacts.rs:150` — "Call this when a contact is
+established (mutual requests exist)" — and explains why the sweep never repairs them: it does not
+consider them established, so it reports `success=1 errors=0 pendingBuilds=0` while they stay dark.
+
+### 22.3 Already fixed upstream, not in our build
+
+`dashpay/platform` PR #4740 (open, targets `v4.2-dev`) carries
+`rescan_covers_restored_sent_only_account_and_reestablishment`, documented as "A one-way outgoing
+request already publishes our receiving xpub", plus "register sent-only receival account". Its PR
+body lists "Reconcile restored receiving accounts even for sent-only requests" under
+**Cover restoration and retries**.
+
+So this is a known restore defect with a fix in flight. Our SDK (4.2.0-dev.8) predates it, which
+is why the reference wallet still shows it. **Action: pick up #4740 and re-check the three.**
+
+Note this is a different defect from rust-dashcore#1032. That one is the 20-address cap on an
+account that exists; this one is the account never being rebuilt at all.
+
+### 22.4 My coverage diagnostic was wrong — fixed
+
+`readDashPayReceivalCoverage` filtered on RECEIVED requests (`filterNot { it.isOutgoing }`), so it
+flagged the two incoming-only contacts — which need an *external* account and carry no receive-side
+exposure — while missing the three outgoing-only ones that are the real money risk. Corrected to
+`filter { it.isOutgoing }`; the log field is now `channelsWePublished`.
