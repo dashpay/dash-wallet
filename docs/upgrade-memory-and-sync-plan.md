@@ -511,7 +511,12 @@ Continuous logcat for the whole run, the persisted `sdk_bind_blocker` at each st
 
 Commit `1266edc1c` exists because restored wallets lost contact-payment coins when DIP-15 accounts registered after the scan had passed their funding heights, measured at 0.0836 DASH on the topple wallet. That fix ordered the bring-up before SPV. A locked device defeats that ordering, since the bring-up cannot derive anything without the seed, so the same exposure returns by a different route. This test measures whether the SDK's account-generation rewind closes it, and if it does not, it is the strongest argument for the section 15.6 item 1 work, and possibly for asking whether contact receival addresses can be derived from public material alone.
 
-## 17. Uncovered contact chains: the general defect
+## 17. Uncovered contact chains — PREMISE DISPROVEN 2026-09-16, see 17.6
+
+> **Read 17.6 first.** A direct experiment on emulator-5554 showed the automatic rewind this
+> section claims is missing does in fact happen. The sections below are kept as the reasoning
+> that led to the test, with the conclusion corrected at the end. The fix proposed in 17.4 is
+> **withdrawn**.
 
 Section 16 started as a locked-device question. Tracing the recovery path showed the lock is only one entry point. The defect is general:
 
@@ -560,3 +565,45 @@ Two things are unproven and both are cheap to settle:
 
 1. The SDK's own contact-registration path may already call `rescanSpvFilters` where only bytecode is visible. Ask the SDK team, or observe a registration and watch the filter height.
 2. Neither the locked path nor the pending-accounts path has been reproduced. Section 16 covers the first. The second is the same test with the bring-up budget set artificially low, so SPV starts with `pending > 0`, and then checking whether a payment to one of those pending contacts is ever seen.
+
+### 17.6 The experiment, and the correction
+
+The blocker for everything above was a question the code could not answer: when a DIP-15 contact
+receival account is registered against a wallet whose scan has *already* reached the tip, does
+anything rewind? The SDK database on a rooted emulator answers it directly, with no second wallet
+and no payment — delete one `dashpayReceivingFunds` row from `dash-sdk.db`, restart, and watch
+`wallets.syncedHeight`.
+
+| Phase | Receival accounts | `wallets.syncedHeight` | Result |
+|---|---|---|---|
+| A — deleted, restarted **unlocked** | 6 → **7** | 1555145 → **1451329** | re-registered **and rewound 103,816 blocks**, rescan ran to completion |
+| B — deleted, cold start **locked** | 6, unchanged | 1555148, unchanged | `SEED_BINDING_UNVERIFIED drained=0 pending=14` |
+| B — **3 min after unlocking**, app untouched | 6, unchanged | unchanged | nothing at all |
+| B — **app opened** | 6 → **7** | → **1466329** | bind established, drain 2, rewound, rescan |
+
+**Correction.** The rewind exists and works. Registering a contact account after the scan reached
+the tip lowers `syncedHeight` and re-scans, exactly as `provisionContactAccountsIfEnabled`'s own
+comment describes ("the sweep … unconditionally lowers the SPV synced_height"). The 17.1 table was
+looking in the wrong place: `wallets_behind`, `create_account` and `account_generation` are indeed
+not the mechanism, but the sweep is, and I did not verify it before writing the section.
+**Contact payments are not permanently lost, and 17.4's rewind-arming fix is not needed.**
+
+**What is actually wrong** is narrower and is a recovery-trigger problem, not a fund-visibility one:
+
+1. A locked device derives nothing, so nothing registers and nothing rewinds. Expected.
+2. On unlocking, nothing happened for three minutes. The service had already idled out under the
+   bind-blocked exception (item 1b.7), so no poller was alive; the retry ladder logged **zero**
+   retries in that window; and the unlock receiver is inert in this build (the export fix of
+   `3b697a3af` is committed but not installed).
+3. Opening the app recovered it completely in under a minute.
+
+So the exposure is a **delay bounded by the next app open or service restart** — 15 minutes, 12
+hours or 24 depending on `touchLastUsed` (section 15.4). During that window a contact payment is
+on chain and invisible. That is worth fixing, but with a recovery trigger, not with new rewind
+logic.
+
+**What this makes of the other open items.** Section 16 is still worth running, because this test
+proves the mechanism and not the money; it does not show a real payment becoming visible. The
+diagnostic added in `e0df0eddb` remains useful for spotting the debt window in the field. The
+receiver export fix matters more than it did, since it is one of the two triggers that could close
+the gap without the user, though only when the process is still alive.
