@@ -126,6 +126,13 @@ classify + display it without message-matching (relates to #14).
 
 ## 16. DIP-15 contact address pools never grow — the 21st payment from any contact is invisible
 
+> **FILED** as dashpay/rust-dashcore#1032 (2026-09-16). The defect is in the `key-wallet` crate
+> in rust-dashcore, not in platform, so it went there rather than on dashpay/platform. Note the
+> root cause is narrower than first written: `AccountTypeToCheck` is a fieldless enum, so
+> `extended_public_key_for_account_type` structurally cannot identify which contact account is
+> meant. The fix belongs in `wallet_checker.rs`, which already holds the fully-keyed
+> `AccountType`.
+
 Live (testnet, two emulators, `rust-dashcore` rev `af88edf`): a DashPay contact chain watches
 exactly 20 addresses, indices 0-19, and **never extends**. The 21st payment a contact sends
 lands on index 20, which is never derived, so it is never matched by the filter scan and never

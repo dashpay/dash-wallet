@@ -859,6 +859,8 @@ device still misses payments an unlocked one catches, the cause is not key mater
 
 ## 20. ROOT CAUSE: DIP-15 contact chains are permanently capped at 20 addresses
 
+> **FILED** as dashpay/rust-dashcore#1032.
+
 Found 2026-09-16 while running the emulator-5558 payment experiment. This is a defect in
 the pinned `rust-dashcore` revision `af88edf`, not in the app, and **the device lock is
 irrelevant to it**.
