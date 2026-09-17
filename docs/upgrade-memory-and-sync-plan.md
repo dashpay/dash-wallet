@@ -1685,3 +1685,89 @@ teardowns, zero idle stops, balances identical to pre-wipe.
 3. **Re-run §27's payment after PR #4740's AAR is built.** The test passes when B sees it.
 4. Parked: the 1.2346 DASH balance gap on 5556; `scripts/cutover-emulator-test.sh` scenarios were
    rewritten but never run.
+
+---
+
+## 31. Does build 12000012 help the reference install (Joel's device)?
+
+Asked 2026-09-17. Answered against his actual logs
+(`~/Downloads/joel-oom-aftermath-09-16-2026`), not from memory.
+
+### 31.1 What actually failed on his device
+
+The OOM is a **JVM heap** exhaustion at the 512 MB growth limit, not native:
+
+```
+java.lang.OutOfMemoryError: Failed to allocate a 80 byte allocation with 1557424 free bytes
+  and 1520KB until OOM, target footprint 536870912, growth limit 536870912; giving up
+    at de.schildbach.wallet.service.platform.sdk.AssetLockKindResolverKt.displayHexOf(AssetLockKindResolver.kt:120)
+    at ….CutoverUiDataServiceKt.l1TxUiRecord(CutoverUiDataService.kt:152)
+    at ….SdkTxStoreWalker.recordRowFrom(SdkTxStoreWalker.kt:428)
+    at ….SdkTxStoreWalker.walkAll(SdkTxStoreWalker.kt:1075)
+```
+
+The walker is the allocation SITE, not the cause — it was already paged (`walkAll` →
+`queryTxoPage`/`onPage`, added 2026-08-03 in `0f01e38a0`, so his build had it). The cause is the
+standing memory profile underneath it:
+
+```
+23:54:00  MEM pss=1424MB nativeHeap=974/1009MB jvm=356/512MB
+23:58:00  MEM pss=1592MB nativeHeap=986/1021MB jvm=382/512MB
+          ReplayMemTelemetry phase=FILTERS nativeHeapAllocated=1023554912 jvmUsed=374001344 jvmMax=536870912
+```
+
+JVM sat at **314-382 MB of 512 MB** for the whole replay — roughly 130 MB of headroom — while
+native heap ran near **1 GB**. For comparison, the §24 restore on our emulator peaked at 536 MB
+native and **40 MB** JVM. His wallet is in a different weight class and nothing in this document
+was measured against it.
+
+### 31.2 The service-stopping failures — these WE DO fix
+
+**The idle stop that killed his replay at 94.8 %.** Five minutes before the OOM:
+
+```
+23:56:06  L1Shadow phase=FILTERS 94.8%
+23:58:00  idling detected, stopping service
+23:58:00  .onDestroy()
+23:58:10  L1ShadowLifecycle STOPPED after 49m33s up
+```
+
+`shouldStopForIdle(history, replaying) = !replaying && isSyncIdle(history)` skips the stop outright
+while a replay is running. **This teardown does not happen on 12000012.** It is the single most
+consequential difference for him.
+
+**No wake lock.** Zero `acquiring the wake lock` lines in any of his logs — his build has none.
+His replay ran 15:31 → 23:56, over eight hours; with the screen off the CPU suspends and that
+stretches further. 12000012 brackets the replay with a wake lock.
+
+**Nothing re-armed after an interrupted replay.** Zero `Scheduled service restart` lines.
+`rescheduleIfReplayInterrupted` now arms a restart instead of leaving the engine dead.
+
+**Severe create/destroy churn**, worse than the idle stops alone account for:
+
+| Log | onCreate | onDestroy | idle stops |
+|---|---:|---:|---:|
+| `wallet.log-25` | 32 | 20 | 8 |
+| `wallet.1.2026-09-15` | 23 | 11 | 7 |
+
+with engine lifetimes of `STOPPED after 0s up` and `after 11s up` — the startup cost paid over and
+over for nothing. The engine-restart-on-every-service-start change and the cleanup serialisation
+(`pendingDestroys` / `isCleaningUpNow`) help, but the churn's own driver on his device has **not**
+been established, so this is not claimed as fixed.
+
+### 31.3 Honest verdict
+
+12000012 makes his replay **far more likely to survive to completion**: the mid-replay idle stop is
+gone, the CPU stays awake, and an interrupted replay re-arms itself.
+
+It does **not** lower the ~1 GB native heap or the ~370 MB JVM baseline. If the replay still
+allocates into ~130 MB of headroom at 94.8 %, it can still die in the same place. The memory
+ceiling is Phase 1c work (native memory bound, SDK-side) and remains untouched.
+
+The log diet shipped in this branch buys nothing for him specifically: his logs contain **zero**
+`InstantSendManager` / `SPVQuorumManager` / `SigningManager` lines, so those loggers were not what
+was filling his heap.
+
+**Recommended next step for his case:** get a heap dump, or at minimum the same `MEM`/
+`ReplayMemTelemetry` trace from 12000012, to find what holds ~370 MB of JVM during FILTERS. Until
+that is known, any further memory work is guesswork.
