@@ -1165,3 +1165,79 @@ and it runs against the same current-validators-only `SdkSourcedQuorums` source.
 fragile on a clean restore as on an upgraded install. That widens §21 from an upgrade-seam issue
 to something every v12 wallet carries, which strengthens the case for moving the contact-request
 path off the legacy client onto the SDK.
+
+---
+
+## 24. Test 1 RUN: clean install + restore from seed, 2026-09-17
+
+Build 12000011 (predates `9ebcbfc05` and `406aeaae8`), emulator-5554 wiped and reinstalled at
+08:07:39, restored from seed onto a device **with a PIN**. Reference wallet: 7,344 transactions,
+birth height 1,051,776, ~504,000 blocks of filter replay.
+
+### 24.1 The sync side passed on every measure
+
+| Measure | Result |
+|---|---|
+| SDK start -> tip | **7m 06s** (08:08:53 -> 08:15:59, tip 1555530) |
+| Peak native heap | **536 MB** |
+| Peak JVM used | 40 MB |
+| Service teardowns mid-replay | **0** |
+| Idle stops | **0** |
+| `onTrimMemory` / low-memory events | **0** |
+| Transactions restored | 7,344 — identical to pre-wipe |
+| Unspent balance | 16,902,773,043 duffs — identical to pre-wipe |
+| Contact requests | 20 — identical to pre-wipe |
+
+Bring-up ran before SPV and completed cleanly: `status=READY discovery=1 dashPaySyncRan=true
+drained=14 pending=0`.
+
+### 24.2 Two §23.1 claims moved from reasoning to observation
+
+Section 23.1 asserted the replay guard and the wake lock matter *more* on a restore than on the
+upgrade. Both are now measured on a real restore:
+
+```
+08:10:00 replay in progress on the SDK path — acquiring the wake lock
+08:15:59 L1Shadow phase=SYNCED 100.0% headers 1555530/1555530
+08:16:00 replay complete — releasing the wake lock
+```
+
+The wake lock bracketed the replay exactly, and `idling detected, stopping service` fired **zero**
+times across the seven minutes. That is the failure that used to tear the service down mid-replay
+and latch it, and it did not occur.
+
+Peak native heap of 536 MB on a 7,344-transaction wallet is the first real number for Phase 1c
+item 14 (native memory during a long replay) measured on a restore rather than an upgrade.
+
+### 24.3 The §22 restore bug reproduced exactly
+
+| | pre-wipe | after restore |
+|---|---:|---:|
+| Outgoing contact requests | 11 | 11 |
+| `dashpayReceivingFunds` accounts | 8 | **7** |
+
+Outgoing requests with no receiving account after the restore:
+
+- `Bartek123`
+- `test-android-15-2`
+- `test-android-35-2`
+- **`test-contacts-33`**
+
+All four can pay B and B has no watched addresses for any of them.
+
+`test-contacts-33` is the decisive one. It was created **yesterday** by this same build: B sent the
+contact request at height 1555232 and its receiving account appeared within seconds (§22.1). The
+restore dropped it. So this is current-build behaviour on a one-day-old contact, not legacy residue
+from an older app — which is what the three historical entries could always have been dismissed as.
+
+Only the 7 mutual contacts survived, exactly as §22.2 predicted from
+`contacts.rs:150` ("Call this when a contact is established (mutual requests exist)").
+
+This is a live reproduction to re-check against `dashpay/platform` PR #4740
+(`rescan_covers_restored_sent_only_account_and_reestablishment`) once that AAR is built.
+
+### 24.4 Still to check on this restored wallet
+
+- Whether DashPay contact requests hit the `no available addresses` failure on a fresh restore, as
+  §23.4 predicts. B is in the right state to test it now.
+- Cold boot with no unlock (the §23 test 2), which no run has covered yet.
