@@ -646,3 +646,103 @@ remains for. And step 3 was cheap in that test because the rewind was ~104,000 t
 mainnet wallet with an older contact could rewind much further and take proportionally longer
 before the payment is visible, which also re-raises Phase 1c item 14 (native memory during a long
 replay) for wallets of the reference install's size.
+---
+
+## 18. Third round, 2026-09-16 — the unlock receiver fix verified on 5554
+
+Build: commit `3b697a3af` (`RECEIVER_EXPORTED`), clean wipe and reinstall of v12 onto a locked
+emulator-5554. The reinstall moved the app uid from `u0_a169` to `u0_a170`, which matters below.
+
+### 18.1 The receiver fires — the fix works
+
+This is what the round was for, and it passed. Registration logged the new form:
+
+```
+unlock-heal receiver registered (ACTION_USER_PRESENT, exported — SystemUI is the sender)
+```
+
+and on unlock, for the first time across three rounds:
+
+```
+device unlocked (ACTION_USER_PRESENT) — running an immediate SDK bind retry
+SDK bind retry 1 (device unlock): re-running the wallet bind pass (5 consecutive failure(s) so far)
+```
+
+Rounds 1 and 2 never got this line. The cause was `RECEIVER_NOT_EXPORTED`: `ACTION_USER_PRESENT` is
+a protected broadcast sent by SystemUI, a different uid, so a not-exported registration can never
+receive it. The round-2 hypothesis that the cached-app freezer was suppressing it was wrong and is
+withdrawn — round 2 already showed the process alive and unfrozen with no delivery.
+
+### 18.2 One failure in the middle was mine, not the product's
+
+The retry the receiver kicked off failed with
+`SQLiteCantOpenDatabaseException … Permission denied`. Cause: an earlier diagnostic `su 0 sqlite3`
+query of mine had created a **root-owned zero-byte `dash-sdk.db`** in the app's data directory. The
+clean reinstall then changed the app uid, so the app could not open its own database. Repaired by
+force-stopping and removing the root-owned stubs; the database owner is now correctly `u0_a170`.
+
+Lesson for the test scripts: never run `sqlite3` as root against a live app database. Pull a copy
+with `run-as` instead, or query through `su` with `--readonly` after confirming the file exists.
+
+### 18.3 After the repair, the whole chain ran clean
+
+```
+Dash Platform SDK started: version=4.2.0-dev.8, restored 0 wallet(s)
+app wallet bound to new SDK wallet 7dc06ad3… (birthHeight=1070784 via checkpoint mapping)
+DashPay bring-up before SPV: status=READY discovery=0 dashPaySyncRan=true drained=13 pending=0 elapsedMs=4117
+L1 shadow SPV started for SDK wallet 7dc06ad3…
+```
+
+and the scan reached tip: `phase=SYNCED 100.0% headers 1555166/1555166 filters 1555166/1555166`.
+The pending-bind notification cleared.
+
+### 18.4 A real defect found by the round — stale `sdk_bind_blocker`
+
+After the bind succeeded, `sdk_bind_blocker` in the DataStore still read `OTHER`, and no
+"SDK bind established — clearing the pending state" line appeared.
+
+Not a test artifact. The clear path hung off `SdkWalletBinder.lastBindFailure` going null, gated on
+the in-memory `_blocker` being non-null. Two problems compose:
+
+- `lastBindFailure` is null in **two** different situations — the wallet is bound, and no pass has
+  run yet. The feed cannot tell them apart, so it could not safely write NONE.
+- `_blocker` starts null in every new process and is **never seeded** from the persisted value.
+
+So a process that bound the wallet without first failing in that same process hit the `?: return`
+and left the previous process's record standing. The force-stop during the repair produced exactly
+that sequence. Any restart-then-succeed does, which is the common case: the blocker gets written,
+the user reboots or the process is killed, the next launch binds fine, and the support report still
+accuses a device lock or keystore that is no longer a problem.
+
+No user-visible harm — the in-memory blocker was null, so the sheet and the notification were both
+correctly absent. The damage is to the diagnostic, which is the one thing it exists for.
+
+**Fixed** in `9ebcbfc05`: new `SdkWalletBinder.bindEstablished`, raised only by a pass that actually
+leaves the wallet bound, with sole ownership of the success path (reset streaks, drop the in-memory
+blocker, clear the notification, persist NONE). The failure feed no longer interprets null.
+Regression test `bindSuccess_inAProcessThatNeverSawAFailure_stillClearsThePersistedRecord`.
+
+### 18.5 The coverage-debt diagnostic fired for real
+
+The diagnostic added for section 17 produced its first real reading on this wallet:
+
+```
+DashPay contact coverage DEBT on 7dc06ad3…: the filter scan is at 1555164 but the earliest
+received contact request sits at core height 1226329 (328835 blocks below, 19 contact request(s)).
+Payments to those chains were scanned past.
+```
+
+19 contact requests, 328,835 blocks of debt. This is the shape section 17 was about, now measured
+instead of argued, and it is reported rather than repaired by design. Two consequences:
+
+- It strengthens the case for section 16 (the two-wallet contact-payment test), which is the only
+  thing that proves whether money is actually missed or merely scanned past and later recovered.
+- A rewind of that size on a mainnet wallet re-raises Phase 1c item 14 (native memory during a long
+  replay), since the provisioning sweep is what rewinds `syncedHeight`.
+
+### 18.6 Still open after this round
+
+- Section 16, the two-wallet contact-payment test. Unchanged and now better motivated by 18.5.
+- The recovery-trigger gap: up to 24h before anything retries when the user never opens the app.
+- Phase 1c with the SDK team, plus the 15.5 question about an unbound master key on a secured device.
+- Parked: the 1.2346 DASH balance gap on 5556; `scripts/cutover-emulator-test.sh` never run.
