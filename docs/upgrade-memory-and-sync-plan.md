@@ -810,10 +810,47 @@ This is the answer to the 17.4 question about new addresses on existing accounts
 - **Existing contact, device locked** — the xpub is stored, the window extends, and the
   payment is seen.
 
-It also bounds the proposed "keep paying from an established contact" experiment. On B,
-`test-dash-username-2` (emulator-5558) sits at `externalHighestUsed = 0` with the SDK gap
-limit at 1000, and the window **slides forward** with each address used. Sequential
-payments never outrun it. The predicted result is that B catches every one of them, locked
-or unlocked. That makes it a clean falsifiable control rather than a reproduction: if a
-payment IS missed while locked, the exposure is far wider than section 16 claims, because
-it would then reach every contact rather than only new ones.
+### 19.4 Correction: the gap limit for contact chains is 10, not 1000 — and dashj is irrelevant
+
+Two errors in the first version of 19.3, both caught by the user.
+
+**dashj does not apply.** After cutover the dashj engine is held, so
+`FriendKeyChainLookahead`'s 100-key window (and its 131-keys-per-chain derivation) plays no
+part on A or B. Only the Rust SDK's watch set matters.
+
+**1000 was the wrong constant.** `DashSdkServiceImpl.MIGRATION_GAP_LIMIT = 1000` is applied
+by `widenAddressWindows` to exactly three families — BIP44, BIP32 and COIN_JOIN. It is the
+only `setGapLimit` call in the app and it never touches a contact account.
+
+The DIP-15 figure is `DEFAULT_CONTACT_GAP_LIMIT = 10`
+(`rs-platform-wallet/src/wallet/identity/crypto/dip14.rs:254`), quoting the DIP directly:
+load 10 addresses past the last used one.
+
+**And it appears to have no consumer.** In the local `platform` checkout that constant
+occurs only as its definition, three re-exports and one test asserting it equals 10.
+`derive_contact_payment_address` likewise has no caller outside its own module. Caveat: this
+checkout is not verified to be the revision the app pins, and a grep finding nothing is not
+proof of nothing. But if the contact gap limit really is unwired, the watched window for a
+contact chain is only what has already been derived.
+
+### 19.5 What that does to the proposed experiment
+
+Sending repeated payments from an established contact (emulator-5558,
+`test-dash-username-2`) now looks materially more promising than it did under the 1000
+figure. B's receiving chain for that contact sits at `externalHighestUsed = 0`.
+
+| If the window is | A miss should appear at |
+|---|---|
+| 1000 and sliding (the wrong first answer) | never, by hand |
+| 10 past the last used address | payment 11 or so |
+| only what is already derived (no lookahead wired) | payment 2 |
+
+So the run is cheap either way and it discriminates between the three. Send a dozen
+payments, half with B unlocked and half locked, and record which ones B sees. It is no
+longer merely a control: under the latter two readings it can reproduce a miss on an
+**already-derived** contact, which would be a wider exposure than section 16 describes,
+because it would reach every contact rather than only new ones.
+
+The seed argument in 19.3 still stands and is what makes the locked half meaningful: the
+stored `accountExtendedPubKeyBytes` means extending a window needs no seed, so if a locked
+device still misses payments an unlocked one catches, the cause is not key material.
