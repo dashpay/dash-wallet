@@ -84,6 +84,35 @@ ordinary DashPay provisioning (§17.6, §26.3), so it is not a rare path, and th
 comparison against dashj's own balance (`L1Parity` probing) is the only thing that would currently
 catch a regression here. That probe is suspended post-cutover and disappears entirely at step B.
 
+#### 1b. DEAD PATH still shouting: the dashj broadcast handler warns that it did not send
+
+`BlockchainServiceImpl.kt:2700`, inside the `ACTION_BROADCAST_TRANSACTION` handler:
+
+```kotlin
+if (peerGroup != null) {
+    peerGroup!!.broadcastTransaction(tx, minimum, true)
+} else {
+    log.warn("peergroup not available, not broadcasting transaction {}", tx.txId)
+}
+```
+
+Post-cutover `peerGroup` is always null, so **every send from a cut-over wallet logs that it is not
+broadcasting** — while `SdkL1SendService` broadcasts it perfectly well through the SDK. The message
+states the opposite of what happened.
+
+The codebase already knows this: `SweepTxBroadcaster`'s KDoc says "Post-cutover that peergroup
+broadcast no-ops ('peergroup not available, not broadcasting')" and routes around it. The warning
+was simply never adjusted.
+
+Measured 2026-09-17 (§27.5 of the upgrade memory and sync plan): a contact payment logged this
+warning on the sender and was nonetheless confirmed on chain in block 1555561. It cost real time in
+that test — the run was nearly written off as a failed send — and it will mislead anyone reading a
+field log, which is exactly when this line gets read.
+
+The whole handler is dead weight that dies with the engine at step B. Until then, either demote the
+message and say the SDK owns broadcast now, or drop it when the cutover is committed. Cheap, and it
+removes a false signal from every send log we collect between now and step B.
+
 ### 2. Key derivation / signing / seed handling
 - **What it does**: `DeterministicSeed` (10 files), `KeyChainGroup`, `DeterministicKeyChain`,
   `ECKey` (15), `KeyCrypterScrypt`/`KeyCrypterException` (17), `MnemonicCode`, `BIP38PrivateKey`,
