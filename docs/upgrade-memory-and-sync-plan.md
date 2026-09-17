@@ -1633,3 +1633,55 @@ That confirms the rule exactly as `contacts.rs:150` states it, and it gives a fi
 the §27 loss: **a restore-dropped sent-only channel is rebuilt as soon as the counterparty
 accepts.** Users stuck in that state can be told to get the other party to accept, rather than
 waiting for PR #4740. The three still-dark contacts are the ones that never accepted.
+
+---
+
+## 30. Register of findings, 16-17 September 2026
+
+A single place to look. Sections 18-29 are the detail.
+
+### 30.1 Defects that lose money
+
+| # | Defect | Evidence | State |
+|---|---|---|---|
+| §20 | DIP-15 contact chains capped at 20 addresses; the 21st payment from any contact is invisible and unrecoverable | txid `b837bcb2…`, 29,000 duffs, block 1555216, receiver synced through 1555217 with no record of the address | **FILED** `dashpay/rust-dashcore#1032` |
+| §27 | A restore drops receiving accounts for sent-only contacts, so their next payment is invisible | txid `491fc9f1…`, 10,000 duffs, block 1555561, receiver synced through that block with no record | Fix in flight: `dashpay/platform` PR #4740. **Workaround** in §29.4 |
+
+Both are SDK-side. Neither is fixed by anything on this branch.
+
+### 30.2 Defects that degrade without losing money
+
+| # | Defect | State |
+|---|---|---|
+| §29 | A locked device defers DIP-15 account creation (`SEED_BINDING_UNVERIFIED`, `built=0 stillQueued=2`). Heals on unlock | Understood; exposure is a window, not a loss |
+| §21, §26 | Post-cutover DashPay goes intermittently dark (`no available addresses`) because the SDK quorum source carries only current validators. Affects **restored wallets too**, not just upgrades | Open. Argues for moving contacts onto the SDK |
+| §25 | No sync after a reboot until the app is opened | **Decided acceptable.** Code made honest |
+| §28 | The periodic alarm path may depend on a battery-optimisation exemption users are never prompted for | Awaiting the `ALARM-DIAG` result from a non-whitelisted phone |
+| kill-list 1a | The balance publisher emits partial rescan state as fact — over-reported by up to 113 DASH for ~30s | Open; blocks deleting dashj |
+| kill-list 1b | The dead dashj broadcast handler warns it is not broadcasting while the SDK broadcasts anyway | Open; cheap |
+
+### 30.3 Fixes made on this branch, and whether they are verified on hardware
+
+| Commit | Fix | Verified |
+|---|---|---|
+| `326fc31b9` | Start syncing after a package replacement; stop losing the explainer | yes, emulator |
+| `3b697a3af` | Export the unlock-heal receiver (`ACTION_USER_PRESENT` never matched before) | yes — receiver fired for the first time |
+| `9ebcbfc05` | Clear the durable bind blocker when a fresh process binds | unit tests |
+| `e0df0eddb` | Report contact chains registered below the scan height | yes |
+| `406aeaae8` | Coverage diagnostic must count SENT requests | yes — named the right 4, then 3 after §29 |
+| `17cf9150d` | Delayed service start bypasses the process-importance guard | compile + reasoning |
+| `fd2a31781` | Stop scheduling a post-boot start that cannot succeed | compile + reasoning |
+| `72c9cbfed` | `ALARM-DIAG` logging | pending the phone test |
+
+§24 additionally measured the restore path end to end: 7m06s to tip, 536 MB peak native heap, zero
+teardowns, zero idle stops, balances identical to pre-wipe.
+
+### 30.4 Tests still to run
+
+1. **`ALARM-DIAG` on a phone that is not battery-optimisation whitelisted** (§28). Decides whether
+   the wallet has any background sync path at all by default. Build 12000012 carries the logging.
+2. **Separate "device unlocked" from "app foregrounded"** (§29.3). Repeat §29 with the app swiped
+   out of recents before unlocking. The current run cannot tell the two apart.
+3. **Re-run §27's payment after PR #4740's AAR is built.** The test passes when B sees it.
+4. Parked: the 1.2346 DASH balance gap on 5556; `scripts/cutover-emulator-test.sh` scenarios were
+   rewritten but never run.
