@@ -21,6 +21,7 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -815,6 +816,89 @@ class ExploreViewModelTest {
 
             assertEquals(ScreenState.MerchantLocations, viewModel.screenState.value)
             assertEquals(physicalLocations, viewModel.allMerchantLocations.value)
+        }
+    }
+
+    @Test
+    fun openAllMerchantLocations_nearbyLocationArrivesLate_narrowsToTheUserRadius() {
+        // Regression test: monitorUserLocation() marks location as enabled before the first fix
+        // lands. Opening the screen in that window queried unbounded, and nothing restarted the
+        // query when the fix arrived, so Nearby kept showing locations from everywhere.
+        runBlocking {
+            val userLat = 33.712711
+            val userLng = -84.4951037
+            val userBounds = GeoBounds(
+                northLat = 34.002174157200685,
+                eastLng = -84.14712188964452,
+                southLat = 33.423247842799306,
+                westLng = -84.8430855103555,
+                centerLat = userLat,
+                centerLng = userLng
+            )
+            val physicalLocations = merchants.filter { it.type == MerchantType.PHYSICAL }
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(physicalLocations) }
+                }
+
+            val locationUpdates = MutableSharedFlow<UserLocation>(replay = 0, extraBufferCapacity = 1)
+            val locationMock =
+                mock<UserLocationStateInt> {
+                    on { getRadiusBounds(eq(userLat), eq(userLng), any()) } doReturn userBounds
+                    on { observeUpdates() } doReturn locationUpdates
+                    onBlocking { getCountryCodeFromLocation() } doReturn "US"
+                }
+            val dataSyncStatus =
+                mock<DataSyncStatusService> {
+                    on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { hasObservedLastError() } doReturn flow { emit(false) }
+                }
+
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                dataSyncStatus,
+                networkState,
+                mockPreferences,
+                mock<AnalyticsService>()
+            )
+            viewModel.init(ExploreTopic.Merchants)
+            viewModel.setFilterMode(FilterMode.Nearby)
+            viewModel.monitorUserLocation()
+            // no fix yet, and no map bounds either — the map never initialized
+
+            viewModel.openAllMerchantLocations("merchant1", "DashSpend")
+            kotlinx.coroutines.delay(200)
+
+            // Nothing to centre on yet, so the screen fills rather than staying empty
+            verify(dataSource).observeMerchantLocations(
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(GeoBounds.noBounds),
+                any()
+            )
+
+            locationUpdates.emit(UserLocation(userLat, userLng, 10.0))
+            kotlinx.coroutines.delay(200)
+
+            // The fix landed: the query is redone around the user
+            verify(dataSource).observeMerchantLocations(
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(userBounds),
+                any()
+            )
+            verify(locationMock, never()).getRadiusBounds(eq(0.0), eq(0.0), any())
         }
     }
 
