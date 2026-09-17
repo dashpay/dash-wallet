@@ -169,3 +169,12 @@ Requests:
 
 Also affects `dashpayExternalAccount`, so a wallet stops tracking its own outgoing contact
 payments past index 19.
+
+**Reproduced end to end (testnet, 2026-09-16).** Twenty sequential contact payments filled
+indices 0-19 and were all received. The 21st, `b837bcb2f4f50c29502cd32549b3c369f28157b4ead872b7f41351cebb121ab0`
+(29,000 duffs to `yR3kpYnbcPipq4982WcEK2mCBrQXh7P39K`, block 1555216, 2 confirmations), was
+never seen. With the receiving wallet's service running and synced through block 1555217,
+its database holds zero `transactions` rows, zero `txos` rows, and — decisively — zero
+`core_addresses` rows for the destination address. The address was never derived, so the
+BIP158 scan could not match it. Coins are on-chain and spendable by the seed, but invisible
+to the wallet permanently and unrecoverable by rescan.

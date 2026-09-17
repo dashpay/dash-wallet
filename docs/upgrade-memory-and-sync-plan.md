@@ -951,9 +951,50 @@ All fourteen of B's contact accounts sit at top index 19 regardless of use.
   `DEFAULT_EXTERNAL_GAP_LIMIT` (30), not `MIGRATION_GAP_LIMIT` (1000, BIP44/BIP32/CoinJoin
   only).
 
-### 20.5 To confirm end to end
+### 20.5 CONFIRMED end to end, 2026-09-16 19:43
 
-B sits at index 5, so 14 more payments reach index 19 and the 15th lands on index 20. The
-prediction is that B sees payments through index 19 and misses index 20 permanently. The
-static reading above is strong enough to file the SDK issue now; the walk to 20 is
-confirmation, not discovery.
+The walk to index 20 was run. B received every payment through index 19 and **missed the
+one that landed on index 20**, exactly as predicted.
+
+The sender broadcast it and the network accepted it:
+
+```
+19:43:25 TransactionBroadcast: broadcastTransaction: IX_TYPE: TX b837bcb2f4f5…1ab0 seen by 0
+19:43:27 TransactionBroadcast: broadcastTransaction: b837bcb2f4f5…1ab0 complete
+```
+
+Testnet insight confirms it on-chain — 29,000 duffs to
+`yR3kpYnbcPipq4982WcEK2mCBrQXh7P39K`, block **1555216**, 2 confirmations. That amount
+continues the sequence (10,000 … 28,000, then 29,000), so it is unambiguously the next
+payment in the run.
+
+B's side, read directly from `dash-sdk.db` with the service up and B synced through
+**1555217**, i.e. past the block carrying the payment:
+
+| Check | Result |
+|---|---|
+| `transactions` rows for `b837bcb2…` (either byte order) | 0 |
+| `txos` rows for `b837bcb2…` | 0 |
+| `core_addresses` rows for `yR3kpYnb…` | **0 — the address is unknown to B** |
+| Highest known index on the contact chain | 19 |
+| Used indices | 0 through 19, all 20 |
+| Unspent total, before and after | 16,905,873,269 unchanged |
+
+B did not merely fail to attribute the payment. It has **no record of the destination
+address at all**, so the filter scan could never match it. The coins are on-chain, spendable
+by B's seed, and invisible to B's wallet permanently.
+
+The device was locked throughout, but that is incidental: the cause is the unmaintained
+address pool, not key availability. B caught all nineteen earlier payments while equally
+locked.
+
+### 20.6 Controls that make this conclusive
+
+- **The payment really was sent** — the sender's own broadcast log plus two confirmations
+  on a public explorer, not merely an absence on B.
+- **B really was scanning** — the service was kept alive for the whole run and reached
+  `phase=SYNCED` at 1555217 after the payment confirmed at 1555216.
+- **B was otherwise healthy** — nineteen consecutive payments on the same chain were caught,
+  so this is not a broken wallet or a stalled engine.
+- **The window never moved** — top index 19 across all twenty uses, on all fourteen contact
+  accounts.
