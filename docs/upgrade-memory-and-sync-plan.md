@@ -1398,3 +1398,65 @@ Every one of the wrong values was published with `l1Synced=false`. A user who op
 restored wallet sees their balance swing by that much before it settles. Worth deciding whether
 the publisher should suppress or mark balances while `l1Synced` is false rather than emitting
 partial rescan state as fact.
+
+---
+
+## 27. Test 2 RUN: the restore bug loses real money — CONFIRMED 2026-09-17
+
+§24.3 showed a restored wallet comes back missing receiving accounts. This run turns that
+database observation into demonstrated fund loss.
+
+### 27.1 Setup
+
+After the §24 restore, B (`test-coinjoin-wallet-2`) holds an outgoing contact request to
+`test-contacts-33` (identity `FozRDBStPZAiuJixjmEZSosfv85c7xaR1DodPBszks1G`, the
+`org.dash.dashpay.testnet` app on emulator-5558) and **no receiving account for it**. The
+provisioning sweep had run repeatedly, including through a Contacts visit and a 214,000-block
+rewind (§26.3), and never repaired it.
+
+That outgoing request is precisely what entitles `test-contacts-33` to pay B.
+
+### 27.2 The payment
+
+```
+txid   491fc9f154356963a71a536ffb7cb57ec7c99e9fcf6b54c02fd599c19e0d4eba
+value  0.00010000 DASH -> yNqz8JTP71ddSCrwftBMmfrPFdxgAot9Bv
+block  1555561 (1 confirmation at time of check)
+```
+
+### 27.3 B, synced through the very block that contains it
+
+| Check against B's `dash-sdk.db` | Result |
+|---|---|
+| `core_addresses` rows for `yNqz8JTP…` | **0 — address unknown to B** |
+| `transactions` rows for the txid | 0 |
+| `txos` rows for the txid | 0 |
+| Total unspent, before vs. after | 16,902,773,043 — unchanged |
+| `dashpayReceivingFunds` accounts | still 7 |
+
+B reached `phase=SYNCED headers 1555561/1555561`, i.e. it scanned the block, and matched nothing.
+The address was never derived, so the BIP158 filter could not match it.
+
+### 27.4 Why this matters more than §20
+
+`rust-dashcore#1032` (the 20-address cap) needs a contact to have sent 20 payments first. This one
+needs **nothing**: a restore, and the very first payment from a sent-only contact is lost. On the
+reference wallet four contacts are in that state right now — `Bartek123`, `test-android-15-2`,
+`test-android-35-2`, `test-contacts-33`.
+
+This is the concrete reproduction to re-check against `dashpay/platform` PR #4740
+(`rescan_covers_restored_sent_only_account_and_reestablishment`) when that AAR is built. Re-run
+this exact payment afterwards; the test passes when B sees it.
+
+### 27.5 Incidental: a misleading broadcast warning on a cut-over sender
+
+The sender logged:
+
+```
+W BlockchainServiceImpl: peergroup not available, not broadcasting transaction 491fc9f1…
+```
+
+…and the transaction reached the chain anyway, via the SDK path. With dashj held the legacy
+peergroup is gone, so this warning fires on every send from a cut-over wallet and says the exact
+opposite of what happened. It cost time in this run and will mislead anyone reading a field log.
+Either route the message through the path that actually broadcasts, or drop it post-cutover.
