@@ -144,6 +144,8 @@ class SdkBindRetryService internal constructor(
     private val retryDelayMs: (Int) -> Long = ::bindRetryDelayMs,
     /** [SdkWalletBinder.lastBindFailure]: null once bound, else the latest failed pass. */
     private val bindFailures: Flow<SdkBindFailure?> = emptyFlow(),
+    /** [SdkWalletBinder.bindEstablished]: true once a pass in THIS process bound the wallet. */
+    private val bindEstablished: Flow<Boolean> = emptyFlow(),
     /** Durable record of the current blocker for the support report. */
     private val persistBlocker: suspend (SdkBindBlocker?) -> Unit = {},
     /** Post / clear the "unlock your phone" notification (background only). */
@@ -177,6 +179,7 @@ class SdkBindRetryService internal constructor(
             }
         },
         bindFailures = binder.lastBindFailure,
+        bindEstablished = binder.bindEstablished,
         persistBlocker = { blocker ->
             dashPayConfig.set(DashPayConfig.SDK_BIND_BLOCKER, blocker?.name ?: "NONE")
         },
@@ -213,20 +216,52 @@ class SdkBindRetryService internal constructor(
                 log.warn("SDK bind failure feed died; blocker classification stops", t)
             }
         }
+        scope.launch {
+            try {
+                bindEstablished.collect { established -> if (established) onBindEstablished() }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("SDK bind success feed died; the durable blocker may go stale", t)
+            }
+        }
+    }
+
+    /**
+     * A pass in THIS process left the wallet bound: drop the in-memory blocker
+     * AND overwrite the durable record with NONE.
+     *
+     * Kept separate from the `failure == null` arm of [onBindFailureChanged] on
+     * purpose. [SdkWalletBinder.lastBindFailure] is null both when the wallet is
+     * bound and before the first pass of a fresh process, so that arm cannot
+     * safely write NONE — doing so would erase a real blocker before this
+     * process has attempted anything. It therefore keys off the in-memory
+     * [_blocker], which a new process starts at null, so a blocker persisted by
+     * an EARLIER process was never cleared on success.
+     *
+     * Caught on emulator-5554 (2026-09-16): the app was force-stopped, the bind
+     * then succeeded in the new process and the notification cleared, yet
+     * `sdk_bind_blocker` still read OTHER in the support report.
+     */
+    private suspend fun onBindEstablished() {
+        val previous = _blocker.value
+        unlockedDenialStreak = 0
+        otherFailureStreak = 0
+        _blocker.value = null
+        log.info(
+            "SDK bind established — clearing the pending state ({})",
+            previous ?: "no blocker recorded in this process"
+        )
+        clearPendingNotice()
+        runCatching { persistBlocker(null) }
+            .onFailure { if (it is CancellationException) throw it; log.warn("failed to persist the cleared bind blocker", it) }
     }
 
     private suspend fun onBindFailureChanged(failure: SdkBindFailure?) {
-        if (failure == null) {
-            val previous = _blocker.value ?: return
-            unlockedDenialStreak = 0
-            otherFailureStreak = 0
-            _blocker.value = null
-            log.info("SDK bind established — clearing the pending state ({})", previous)
-            clearPendingNotice()
-            runCatching { persistBlocker(null) }
-                .onFailure { if (it is CancellationException) throw it; log.warn("failed to persist the cleared bind blocker", it) }
-            return
-        }
+        // Success is NOT handled here. `lastBindFailure` goes null both when the
+        // wallet is bound and before the first pass of a fresh process, so this
+        // feed cannot tell them apart. [onBindEstablished] owns the whole
+        // success path, keyed off a signal that only a bound pass raises.
+        if (failure == null) return
         // StateFlow conflates; a re-emission of the same failure is not a new one.
         if (failure.atMs == lastClassifiedFailureAtMs) return
         lastClassifiedFailureAtMs = failure.atMs

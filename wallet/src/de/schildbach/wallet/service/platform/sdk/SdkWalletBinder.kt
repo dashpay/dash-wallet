@@ -409,6 +409,17 @@ class SdkWalletBinder internal constructor(
     val lastBindFailure: StateFlow<SdkBindFailure?> = _lastBindFailure.asStateFlow()
 
     /**
+     * True once a pass in THIS process has left the app wallet bound.
+     *
+     * Deliberately distinct from [lastBindFailure] being null, which is also
+     * true before the first pass of a fresh process. Consumers that write a
+     * durable "nothing is blocking the bind" record need to tell those two
+     * apart, or a restart silently republishes a stale blocker.
+     */
+    private val _bindEstablished = MutableStateFlow(false)
+    val bindEstablished: StateFlow<Boolean> = _bindEstablished.asStateFlow()
+
+    /**
      * CONSECUTIVE bind passes that attempted and failed without leaving a
      * bound wallet — reported by [SdkBindRetryService] on every failed retry
      * (there is no engine fallback to drive any more). Reset to 0 by any
@@ -431,6 +442,7 @@ class SdkWalletBinder internal constructor(
         if (failed) {
             consecutiveBindFailuresCount++
             _bindRetryPending.value = true
+            _bindEstablished.value = false
             _lastBindFailure.value = SdkBindFailure(
                 cause = cause ?: IllegalStateException("bind pass left no bound SDK wallet"),
                 consecutiveFailures = consecutiveBindFailuresCount,
@@ -451,6 +463,7 @@ class SdkWalletBinder internal constructor(
             consecutiveBindFailuresCount = 0
             _bindRetryPending.value = false
             _lastBindFailure.value = null
+            _bindEstablished.value = true
             markBindEverSucceeded()
         }
     }

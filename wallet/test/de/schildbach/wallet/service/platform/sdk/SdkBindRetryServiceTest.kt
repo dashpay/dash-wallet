@@ -94,6 +94,7 @@ class SdkBindRetryServiceTest {
 
         // The "SDK setup pending" surface.
         val failures = kotlinx.coroutines.flow.MutableStateFlow<SdkBindFailure?>(null)
+        val established = kotlinx.coroutines.flow.MutableStateFlow(false)
         var appInBackground = false
         val notices = mutableListOf<SdkBindBlocker>()
         var noticeClears = 0
@@ -114,6 +115,7 @@ class SdkBindRetryServiceTest {
             deviceProvablyLocked = { deviceLocked },
             now = { nowMs },
             bindFailures = failures,
+            bindEstablished = established,
             persistBlocker = { persisted += it },
             showPendingNotice = { notices += it },
             clearPendingNotice = { noticeClears++ },
@@ -123,13 +125,16 @@ class SdkBindRetryServiceTest {
         /** Publish one failed pass the way the binder does. */
         fun fail(cause: Throwable) {
             signal.primeFailed(signal.failures + 1)
+            established.value = false
             failures.value = SdkBindFailure(cause, signal.failures, atMs = ++nowMs)
         }
 
+        /** Both signals, exactly as SdkWalletBinder.noteBindOutcome raises them. */
         fun succeed() {
             signal.pending = false
             signal.failures = 0
             failures.value = null
+            established.value = true
         }
     }
 
@@ -521,6 +526,31 @@ class SdkBindRetryServiceTest {
         assertEquals(null, service.blocker.value)
         assertEquals(1, h.noticeClears)
         assertEquals(listOf<SdkBindBlocker?>(SdkBindBlocker.DEVICE_LOCKED, null), h.persisted)
+    }
+
+    /**
+     * Regression, emulator-5554 2026-09-16: the app was force-stopped mid-repair,
+     * the bind then succeeded in the fresh process and the notification cleared,
+     * yet `sdk_bind_blocker` still read OTHER in the support report. The clear
+     * path keyed off the in-memory blocker, which a new process starts at null,
+     * so it early-returned and left the previous process's record standing.
+     */
+    @Test
+    fun bindSuccess_inAProcessThatNeverSawAFailure_stillClearsThePersistedRecord() = runTest {
+        val h = Harness()
+        val service = h.service(backgroundScope)
+        runCurrent()
+        // Fresh process: nothing failed here, so there is no in-memory blocker.
+        assertEquals(null, service.blocker.value)
+
+        h.succeed(); runCurrent()
+
+        assertEquals(
+            "the durable record must be overwritten with NONE even when this " +
+                "process never classified a blocker of its own",
+            listOf<SdkBindBlocker?>(null),
+            h.persisted
+        )
     }
 
     @Test
