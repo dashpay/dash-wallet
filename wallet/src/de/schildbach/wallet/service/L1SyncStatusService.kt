@@ -570,14 +570,6 @@ class L1SyncStatusService @Inject constructor(
         }.distinctUntilChanged()
 
     /**
-     * The engine-agnostic DETAIL readout for the Network Monitor
-     * ([mergeL1SyncDetail]) — same seam discipline as [status]: the engine
-     * choice is made here, reactively, and nothing above can observe it.
-     * The binder's [SdkWalletBinder.bindRetryPending] rides along so a
-     * failed wallet bind renders as [L1SyncStage.SETUP_RETRYING] instead of
-     * the dead "Not started" (MO-995).
-     */
-    /**
      * Last non-zero filter position seen in this process — the in-memory
      * backstop for the IDLE/CONNECTING window (see [mergeL1SyncDetail]).
      *
@@ -588,6 +580,14 @@ class L1SyncStatusService @Inject constructor(
     @Volatile private var lastFilterHeight = 0L
     @Volatile private var lastFilterTarget = 0L
 
+    /**
+     * The engine-agnostic DETAIL readout for the Network Monitor
+     * ([mergeL1SyncDetail]) — same seam discipline as [status]: the engine
+     * choice is made here, reactively, and nothing above can observe it.
+     * The binder's [SdkWalletBinder.bindRetryPending] rides along so a
+     * failed wallet bind renders as [L1SyncStage.SETUP_RETRYING] instead of
+     * the dead "Not started" (MO-995).
+     */
     val details: Flow<L1SyncDetail> =
         combine(
             cutoverCoordinator.sdkOwnsL1Flow(),

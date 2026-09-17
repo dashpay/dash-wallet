@@ -405,6 +405,28 @@ class CutoverCoordinatorTest {
     private val sameBuildVersionCode = CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE + 1
 
     /**
+     * REMOVED 2026-09-17 — `upgradeNotice_boundaryLatchIsRepersisted_evenWhenTheSeamDeclinesToCommit`.
+     *
+     * Its premise was the bind-evidence guard: the seam DECLINED to commit
+     * while `SDK_BIND_EVER_SUCCEEDED` was false, so launch 1 had to persist the
+     * boundary latch for a later launch to arm the explainer from.
+     *
+     * That guard is gone. The no-fallback policy (§12 of the upgrade memory and
+     * sync plan) removed the dashj fallback and made `dashjEngineMayStart()`
+     * return false unconditionally, so "decline the cutover and stay on dashj"
+     * would now leave a non-binding wallet with NO L1 engine at all — strictly
+     * worse than committing and letting the bind retry ladder, the unlock
+     * receiver and the pending-bind notice do their work.
+     *
+     * Nothing is left uncovered. The walletB shape it existed for is pinned by
+     * [upgradeSeam_commits_evenWhenTheSdkBindHasNeverSucceeded], which also
+     * asserts dashj does not start as a fallback, and the dropped-latch-write
+     * invariant it shared is pinned by
+     * [upgradeNotice_survivesADroppedBoundaryLatchWrite_andRepersistsIt].
+     */
+
+
+    /**
      * A DROPPED boundary-latch write must not cost the user the explainer.
      *
      * The crossing is computable on exactly one launch —

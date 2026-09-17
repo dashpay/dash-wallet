@@ -751,6 +751,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 updateAppWidget()
             }
 
+            /**
+             * The notification gate: should this transaction raise a
+             * "coins received" notification?
+             *
+             * [walletAuthored] is threaded through rather than recomputed here
+             * because our OWN send must never be announced as a receive —
+             * see [shouldAnnounceCoinsReceived], which owns that decision and
+             * is unit-tested against the corrected net amount.
+             */
             private fun passFilters(
                 tx: Transaction,
                 wallet: Wallet,

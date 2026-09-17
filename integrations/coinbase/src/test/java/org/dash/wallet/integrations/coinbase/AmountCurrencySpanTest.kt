@@ -33,6 +33,10 @@ import org.junit.Test
  */
 class AmountCurrencySpanTest {
 
+    /**
+     * The DASH branch: `applyNewValue` builds "$formattedValue $monetaryCode",
+     * so the span covers the trailing code.
+     */
     @Test
     fun dashSelected_spansTheTrailingCurrencyCode() {
         // applyNewValue returns "$formattedValue $monetaryCode".
@@ -47,6 +51,10 @@ class AmountCurrencySpanTest {
         assertEquals(AmountCurrencySpan(3, 8), span)
     }
 
+    /**
+     * The currency-first fiat branch: "$symbol $fiatBalance", so the span
+     * covers the LEADING symbol.
+     */
     @Test
     fun fiatCurrencyFirst_spansTheLeadingSymbol() {
         // applyNewValue returns "$symbol $fiatBalance".
@@ -61,6 +69,11 @@ class AmountCurrencySpanTest {
         assertEquals(AmountCurrencySpan(0, 2), span)
     }
 
+    /**
+     * The currency-last fiat branch: "$fiatBalance $symbol", so the span
+     * covers the trailing symbol — a multi-byte one here, because the crash
+     * was found on a koruna amount.
+     */
     @Test
     fun fiatCurrencyLast_spansTheTrailingSymbol() {
         // applyNewValue returns "$fiatBalance $symbol".
@@ -101,6 +114,11 @@ class AmountCurrencySpanTest {
         assert(span.from in 0..span.to && span.to <= text.length)
     }
 
+    /**
+     * THE CRASH (MO-995). `fiatBalance` is the 2-dp formatted figure, so it can
+     * be longer than the text whenever the input carries more decimals —
+     * `from` then exceeds `to` and `setSpan` throws. Must degrade to null.
+     */
     @Test
     fun reversedBounds_degradeToNullInsteadOfCrashing() {
         // fiatBalance longer than the whole text — the shape that used to throw.
@@ -115,6 +133,10 @@ class AmountCurrencySpanTest {
         assertNull(span)
     }
 
+    /**
+     * A zero-width range is not a span. Nothing to style here: the amount fills
+     * the whole text, so `from == to` and the caller must skip styling.
+     */
     @Test
     fun emptyRange_degradesToNull() {
         // Nothing to style: the amount fills the whole text.
@@ -129,6 +151,11 @@ class AmountCurrencySpanTest {
         assertNull(span)
     }
 
+    /**
+     * Currency-first with no room for a symbol falls through to the
+     * currency-last branch, where `from == to`. That must be null too, not a
+     * zero-width span that renders as an invisible style run.
+     */
     @Test
     fun currencyFirstWithNoRoomForASymbol_fallsBackAndDegradesToNull() {
         // text.length - fiatBalance.length == 0 sends this down the currency-last

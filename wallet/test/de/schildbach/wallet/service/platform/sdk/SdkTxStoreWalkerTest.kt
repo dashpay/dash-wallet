@@ -22,6 +22,7 @@ import kotlinx.coroutines.runBlocking
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -94,14 +95,15 @@ class SdkTxStoreWalkerTest {
     private fun walker(
         pageRows: Int = 1_000,
         tailRows: Int = 32,
-        payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts
+        payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts,
+        onQuery: (String) -> Unit = { queryLog += it }
     ) = SdkTxStoreWalker(
         db = db,
         walletId = walletId,
         pageTxoRows = pageRows,
         tailRows = tailRows,
         pageThrottleMs = 0L,
-        onQuery = { queryLog += it },
+        onQuery = onQuery,
         payloadFacts = payloadFacts
     )
 
@@ -373,14 +375,14 @@ class SdkTxStoreWalkerTest {
     private val recvAccount = 114L // type 12: contact pays US — our money
     private val extAccount = 115L // type 13: we pay the CONTACT — their money
 
-    private fun insertAccount(id: Long, type: Int) {
+    private fun insertAccount(id: Long, type: Int, ownerWalletId: ByteArray = walletId) {
         exec(
             "INSERT INTO accounts (id, walletId, accountType, accountIndex, accountTypeName, " +
                 "balanceConfirmed, balanceUnconfirmed, externalHighestUsed, internalHighestUsed, " +
                 "standardTag, registrationIndex, keyClass, userIdentityId, friendIdentityId, " +
                 "createdAt, lastUpdated) VALUES (?, ?, ?, 0, '', 0, 0, 0, 0, 0, 0, 0, ?, ?, 0, 0)",
             id,
-            walletId,
+            ownerWalletId,
             type,
             ByteArray(32).also { it[0] = id.toByte() },
             ByteArray(32).also { it[0] = id.toByte(); it[1] = 1 }
@@ -876,6 +878,83 @@ class SdkTxStoreWalkerTest {
     }
 
     @Test
+    fun reattribution_changeRowLandingMidWalk_neverPersistsTheIncompleteSum() = runBlocking {
+        // Interleaving the guard must survive: the missing change row lands
+        // AFTER the funded sum was read and BEFORE mirror completeness is
+        // judged. As two statements, the completeness probe then approved a
+        // mirror the sum never saw and the walker stamped OUTGOING/−0.4 from
+        // the incomplete total — the exact born-wrong write the guard exists
+        // to stop. Sums and completeness now come from one read, so the row
+        // is either in both or in neither; the wrong shape can never persist.
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_k0", bip44Account)
+        insertCoreAddress("bip44_k1", bip44Account)
+        insertCoreAddress("chg_k", bip44Account)
+
+        val funding = txid(67)
+        insertTx(funding, direction = 0, netAmount = 100_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTxo(funding, 0, 100_000_000, "bip44_k0")
+        val sweep = txid(68)
+        insertTx(sweep, direction = 0, netAmount = 60_000_000, payload = byteArrayOf(9), firstSeen = 1_700_000_002)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", sweep, funding)
+        insertTxo(sweep, 0, 60_000_000, "bip44_k1")
+        // vout 1 (0.39999774 change to chg_k) is absent when the walk begins.
+
+        val sweepFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 99_999_774,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf("bip44_k1", "chg_k")
+                )
+            } else {
+                null
+            }
+        }
+
+        // Land the missing row on the SECOND per-txid txos read of the walk.
+        // Before the fix that is the completeness probe, run after the SUM;
+        // after the fix there is only one such read, so the row never lands
+        // mid-decision at all.
+        var perTxidTxosReads = 0
+        var landed = false
+        val interleave: (String) -> Unit = { sql ->
+            queryLog += sql
+            if (sql.contains("FROM txos t WHERE t.walletId = ? AND t.txid IN")) {
+                perTxidTxosReads++
+                if (perTxidTxosReads == 2 && !landed) {
+                    landed = true
+                    insertTxo(sweep, 1, 39_999_774, "chg_k")
+                }
+            }
+        }
+
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = sweepFacts, onQuery = interleave).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        val served = requireNotNull(byHex[displayHexOf(sweep)])
+
+        // Never the incomplete-sum shape, served OR stored.
+        assertNotEquals(L1TxUiDirection.OUTGOING, served.direction)
+        assertNotEquals(-40_000_000L, served.netAmountDuffs)
+        val stored = storedShape(sweep)
+        assertTrue(
+            "stored $stored must be the untouched record or the correct INTERNAL/−fee, never the incomplete sum",
+            stored == Triple(0, 60_000_000L, null) || stored == Triple(2, -226L, 226L)
+        )
+
+        // Once the row is present for a whole walk, the record heals.
+        if (!landed) insertTxo(sweep, 1, 39_999_774, "chg_k")
+        val byHex2 = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = sweepFacts).walkAll { page -> page.forEach { byHex2[it.txidHex] = it } }
+        val healed = requireNotNull(byHex2[displayHexOf(sweep)])
+        assertEquals(L1TxUiDirection.INTERNAL, healed.direction)
+        assertEquals(-226L, healed.netAmountDuffs)
+        assertEquals(Triple(2, -226L, 226L), storedShape(sweep))
+    }
+
+    @Test
     fun reattribution_externalSend_unknownOutputAddress_stillPersistsDurably() = runBlocking {
         insertAccount(bip44Account, 0)
         insertCoreAddress("bip44_h0", bip44Account)
@@ -914,6 +993,63 @@ class SdkTxStoreWalkerTest {
         assertEquals(-20_000_226L, corrected.netAmountDuffs)
         assertEquals(226L, corrected.feeDuffs)
         assertEquals(Triple(1, -20_000_226L, 226L), storedShape(send))
+    }
+
+    @Test
+    fun reattribution_externalSend_toAnotherWalletsAddress_isForeignNotAMirrorHole() = runBlocking {
+        // core_addresses is shared by every wallet in the store. A second
+        // wallet's tracked address must read as a foreign payee for THIS
+        // wallet, not as a dropped mirror row: our txos will never gain a row
+        // for a coin that is not ours, so misreading it as "known" would defer
+        // the correction forever (the unscoped query did exactly that).
+        val otherWalletId = requireNotNull(walletIdFromHex("22".repeat(32)))
+        exec(
+            "INSERT INTO wallets (walletId, walletGroupId, birthHeight, syncedHeight, lastSynced, " +
+                "isImported, createdAt, lastUpdated) VALUES (?, ?, 0, 0, 0, 0, 0, 0)",
+            otherWalletId,
+            otherWalletId
+        )
+        val otherAccount = 99L
+        insertAccount(otherAccount, 0, ownerWalletId = otherWalletId)
+        insertCoreAddress("yOtherWalletsAddress", otherAccount)
+
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_j0", bip44Account)
+        insertCoreAddress("chg_j", bip44Account)
+
+        val receive = txid(65)
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTxo(receive, 0, 50_000_000, "bip44_j0")
+
+        // Same shape as the external-send case above, except the payee is the
+        // OTHER wallet's tracked address.
+        val send = txid(66)
+        insertTx(send, direction = 0, netAmount = 29_999_774, payload = byteArrayOf(8), firstSeen = 1_700_000_002)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", send, receive)
+        insertTxo(send, 1, 29_999_774, "chg_j")
+
+        val sendFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 8) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 49_999_774,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf("yOtherWalletsAddress", "chg_j")
+                )
+            } else {
+                null
+            }
+        }
+
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = sendFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        val corrected = requireNotNull(byHex[displayHexOf(send)])
+        assertEquals(L1TxUiDirection.OUTGOING, corrected.direction)
+        assertEquals(-20_000_226L, corrected.netAmountDuffs)
+        assertEquals(226L, corrected.feeDuffs)
+        assertEquals(Triple(1, -20_000_226L, 226L), storedShape(send))
+        assertTrue(queryLog.any { it.startsWith("UPDATE transactions") })
     }
 
     // ── pending_inputs reservations: the "lingering receive" fix ──────

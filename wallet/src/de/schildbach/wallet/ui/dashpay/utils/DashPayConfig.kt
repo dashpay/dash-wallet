@@ -482,8 +482,16 @@ open class DashPayConfig @Inject constructor(
 
         /**
          * MO-995: set the first time a launch is seen to have crossed the
-         * cutover boundary (the previous launch ran a pre-11.10 build), and
-         * never cleared except by a wallet wipe.
+         * cutover boundary — the previous launch ran a build BELOW
+         * `CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE` — and never cleared
+         * except by a wallet wipe.
+         *
+         * Deliberately phrased against that constant rather than a release
+         * name. The boundary has already moved once (11100000 -> 12000000 when
+         * the cutover slipped from 11.10 to 12.0.0), which silently turned
+         * every 11.1x version code from "already cut over" into "pre-cutover".
+         * A version named here would contradict the code the next time it
+         * moves; the constant cannot.
          *
          * WHY THIS EXISTS: `Configuration.lastVersionCode` is "the version the
          * PREVIOUS LAUNCH ran", not "the version this install upgraded from" —

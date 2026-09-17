@@ -435,7 +435,7 @@ s3)
   wake_unlock
   launch_app
 
-  # The recovery chain, in order. Each of these was broken until b49ef25b0:
+  # The recovery chain, in order. Each of these was broken until 5d89950bc:
   #   - ProcessLifecycleOwner never fired, so the foreground signal never existed
   #   - noteAppForeground was state-only, so nothing drove a retry
   #   - nothing else calls maybeRetry once the cutover correctly declines to commit
@@ -469,7 +469,7 @@ s3b)
   ;;
 
 s4)
-  say "S4 — memory trim -> SPV engine restart (the ea506f978 fix)"
+  say "S4 — memory trim -> SPV engine restart (the b994bb6a1 fix)"
   require_device; require_root
   show_state
   require_state CUT_OVER
@@ -480,10 +480,32 @@ s4)
   mark_log
   launch_app
   assert_log "engine started on a cold launch"   "L1 shadow SPV started"
-  note "firing TRIM_MEMORY_BACKGROUND deterministically"
+  # BACKGROUND (40) does NOT mean memory pressure — it means the process moved
+  # onto the LRU background list, i.e. the user left the app. 0b31e7980 stopped
+  # treating it as pressure, so the service must now IGNORE it. That is the
+  # MO-995 bug itself, so pin it: without this refute, a regression restoring
+  # `level >= TRIM_MEMORY_BACKGROUND` would tear L1 down on every backgrounding
+  # and S4 would still pass, because the COMPLETE leg below would cover for it.
+  note "firing TRIM_MEMORY_BACKGROUND — the service must IGNORE it"
   adbs am send-trim-memory "$PKG" BACKGROUND; sleep 6
-  assert_log "service tore down"                 "low memory detected, stopping service"
-  assert_log "engine stopped (release build)"    "L1 shadow sync stopped"
+  refute_log "background trim ignored (no teardown)" \
+      "memory pressure \(onTrimMemory level 40\), stopping service"
+  # COMPLETE (80) is genuine pressure and MUST stop the service. RUNNING_CRITICAL
+  # (15) is the other stop level, but `am send-trim-memory` delivers it while the
+  # app is foreground-visible, where the framework may re-raise it; COMPLETE is
+  # the deterministic one.
+  #
+  # The level is pinned to 80 rather than [0-9]+ on purpose. refute_log does not
+  # advance LOG_MARK, so both legs share one window: a level-40 teardown that
+  # arrived just after the refute sampled would otherwise satisfy this assertion
+  # and turn the regression it is meant to catch into a PASS. Re-marking here
+  # would fix that too, but it would also drop the cold-launch start line out of
+  # the window and break the >= 2 restart count below. Matching the exact level
+  # keeps both assertions honest without touching the window.
+  note "firing TRIM_MEMORY_COMPLETE — genuine pressure, the service must stop"
+  adbs am send-trim-memory "$PKG" COMPLETE; sleep 6
+  assert_log "service tore down (level 80)"      "memory pressure \(onTrimMemory level 80\), stopping service"
+  assert_log "engine stopped (release build)"    "L1ShadowLifecycle STOPPED"
   note "bringing the app back — the engine MUST restart"
   launch_app
   COUNT=$(grep -c "L1 shadow SPV started" "$(since_mark)")
@@ -497,7 +519,7 @@ s4)
 log)
   require_device
   f=$(pull_log); echo "$f"
-  grep -nE "cutover state|declining to commit|Keystore denied|L1 shadow SPV started|L1 shadow sync stopped|low memory detected|idling detected|starting peergroup|holding the dashj L1 engine|bind has never succeeded|explainer armed" "$f" | tail -40
+  grep -nE "cutover state|declining to commit|Keystore denied|L1 shadow SPV started|L1ShadowLifecycle STOPPED|memory pressure \(onTrimMemory|idling detected|starting peergroup|holding the dashj L1 engine|bind has never succeeded|explainer armed" "$f" | tail -40
   ;;
 
 *)

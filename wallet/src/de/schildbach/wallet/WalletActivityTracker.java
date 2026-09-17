@@ -141,16 +141,40 @@ public class WalletActivityTracker extends ActivitiesTracker {
         visibleActivityCount--;
         currentActivity = activity;
         if (visibleActivityCount == 0) {
-            AppForegroundMonitor.INSTANCE.noteBackground();
-            // MO-995: invoke the last-stopped hook explicitly. The base class's
-            // onStoppedLast() is NEVER reached, because this class overrides
-            // onActivityStarted/onActivityStopped without calling super, so
-            // ActivitiesTracker.numStarted never advances. That has been true
-            // since before this class existed — the anonymous tracker it
-            // replaced (WalletApplication, pre-fae81fefb) had the identical
-            // bug — so autoLogout has not been told the app backgrounded, and
-            // the zero-minute force-finish has not fired, for a long time.
-            onStoppedLast();
+            // A CONFIGURATION CHANGE IS NOT BACKGROUNDING. Android stops the
+            // outgoing instance before starting its replacement, so the count
+            // legitimately touches zero on a rotation, a dark-mode toggle, a
+            // locale change or a font-scale change while the user is still
+            // looking at the app. Counting stays balanced either way — the
+            // replacement's onActivityStarted takes it back to 1 — but the
+            // "app went away" signals must not fire.
+            //
+            // This matters because onStoppedLast() below was dead code until
+            // this branch re-enabled it, so the hazard arrived with the fix:
+            // setAppWentBackground(true) makes AutoLogout.shouldLogout() true
+            // outright on a zero-minute timeout, and the FORCE_FINISH_ACTION
+            // broadcast finishes the activity stack. Nine activities in
+            // AndroidManifest.xml neither pin portrait nor handle orientation
+            // themselves — MainActivity, AddressBookActivity,
+            // NetworkMonitorActivity and BlockInfoActivity among them — so
+            // rotating any of them would drop the user on the lock screen
+            // without ever having left the wallet.
+            if (activity.isChangingConfigurations()) {
+                log.info("{}: {} stopped for a configuration change — not treating it as background",
+                        logName, activity.getClass().getSimpleName());
+            } else {
+                AppForegroundMonitor.INSTANCE.noteBackground();
+                // MO-995: invoke the last-stopped hook explicitly. The base
+                // class's onStoppedLast() is NEVER reached, because this class
+                // overrides onActivityStarted/onActivityStopped without calling
+                // super, so ActivitiesTracker.numStarted never advances. That
+                // has been true since before this class existed — the anonymous
+                // tracker it replaced (WalletApplication, pre-fae81fefb) had the
+                // identical bug — so autoLogout has not been told the app
+                // backgrounded, and the zero-minute force-finish has not fired,
+                // for a long time.
+                onStoppedLast();
+            }
         }
         logState();
     }
