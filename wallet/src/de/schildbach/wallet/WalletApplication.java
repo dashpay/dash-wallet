@@ -1755,6 +1755,11 @@ public class WalletApplication extends MultiDexApplication
         PendingIntent alarmIntent;
 
         Intent serviceIntent = new Intent(context, BlockchainServiceImpl.class);
+        // ALARM-DIAG (see BlockchainServiceImpl.START_REASON_EXTRA and §28 of the
+        // upgrade memory and sync plan): stamp the reason so a delivered start is
+        // distinguishable from an app-opened one in a field log.
+        serviceIntent.putExtra(BlockchainServiceImpl.START_REASON_EXTRA,
+                "periodic-" + alarmIntervalMinutes + "min");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
             alarmIntent = PendingIntent.getForegroundService(context, 0, serviceIntent,
@@ -1764,6 +1769,29 @@ public class WalletApplication extends MultiDexApplication
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         }
         alarmManager.cancel(alarmIntent);
+
+        // ALARM-DIAG. Both schedulers here use setInexactRepeating, and only EXACT
+        // alarms are on Android's background FGS-start exemption list. The other
+        // exemption that can apply is the user-granted battery-optimisation
+        // whitelist — so record it, because every emulator used for testing turned
+        // out to hold it, which is why §28 could not be settled in the lab.
+        //
+        // NOTE these two schedulers share ONE PendingIntent (same component, same
+        // request code 0), so whichever runs last wins and the other is silently
+        // replaced. Observed on a test device: the armed alarm was the daily one
+        // with an 18-hour window, not the 15-minute restart.
+        String batteryExempt;
+        try {
+            android.os.PowerManager pm =
+                    (android.os.PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            batteryExempt = String.valueOf(pm.isIgnoringBatteryOptimizations(context.getPackageName()));
+        } catch (final Throwable t) {
+            batteryExempt = "unknown";
+        }
+        log.info("ALARM-DIAG armed reason=periodic-{}min firstFireInMinutes={} repeat=1440min "
+                        + "exact=false batteryOptimisationExempt={} - if no matching "
+                        + "'started by alarm' line follows, the background FGS start was refused",
+                alarmIntervalMinutes, alarmIntervalMinutes, batteryExempt);
 
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O || Build.VERSION.SDK_INT == Build.VERSION_CODES.O_MR1) {
             log.info("custom sync scheduling with JobScheduler for Android 8 and 8.1");

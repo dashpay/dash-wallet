@@ -276,6 +276,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
 
         /**
+         * ALARM-DIAG (§28). Stamped on the Intent behind every alarm-armed
+         * PendingIntent so a delivered start can be told apart from an
+         * app-opened one in a field log.
+         *
+         * The app CANNOT observe the refusal directly: when an alarm fires a
+         * `PendingIntent.getForegroundService` and the background FGS-start is
+         * not allowed, the system drops it — no exception reaches us. So the
+         * evidence is the ABSENCE of a matching `started by alarm` line after
+         * an `ALARM-DIAG armed` line. Grep `ALARM-DIAG` for the whole trail.
+         */
+        const val START_REASON_EXTRA = "start_reason"
+
+        /**
          * Does this `onTrimMemory` level mean the process is genuinely under
          * memory pressure, i.e. worth tearing the service down for?
          *
@@ -1158,6 +1171,31 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
+    /**
+     * ALARM-DIAG (§28). Record what was armed and, critically, whether this
+     * device holds the battery-optimisation exemption.
+     *
+     * Both schedulers use `setInexactRepeating`, and only EXACT alarms are on
+     * Android's background FGS-start exemption list. The one other exemption
+     * that applies here is the user-granted battery-optimisation whitelist. So
+     * on an exempt device the alarm start works and on a default device it
+     * should not — which is the whole question §28 could not settle, because
+     * every emulator used for testing happened to be whitelisted.
+     */
+    private fun logAlarmDiagnostics(reason: String, whenMs: Long) {
+        val exempt = try {
+            (getSystemService(POWER_SERVICE) as android.os.PowerManager)
+                .isIgnoringBatteryOptimizations(packageName)
+        } catch (t: Throwable) {
+            null
+        }
+        log.info(
+            "ALARM-DIAG armed reason={} at={} exact=false batteryOptimisationExempt={} — " +
+                "if no matching 'started by alarm' line follows, the background FGS start was refused",
+            reason, Date(whenMs), exempt?.toString() ?: "unknown"
+        )
+    }
+
     private fun rescheduleService() {
         // Schedule restart in 1 minute
         val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
@@ -1165,6 +1203,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             application,
             BlockchainServiceImpl::class.java
         )
+        serviceIntent.putExtra(START_REASON_EXTRA, "restart-15min")
         val alarmIntent: PendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true)
             PendingIntent.getForegroundService(
@@ -1188,6 +1227,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
 
         log.info("Scheduled service restart in 1 minute at {}", Date(restartTime))
+        logAlarmDiagnostics("restart-15min", restartTime)
     }
 
     private val blockchainDownloadListener: MyDownloadProgressTracker =
@@ -2607,6 +2647,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         log.info(".onStartCommand($intent)")
+        intent?.getStringExtra(START_REASON_EXTRA)?.let { reason ->
+            log.info("ALARM-DIAG service started by alarm (reason={}) — a background FGS start WAS permitted", reason)
+        }
         super.onStartCommand(intent, flags, startId)
         // MO-995 CRASH FIX — this MUST stay synchronous, before the coroutine.
         //
