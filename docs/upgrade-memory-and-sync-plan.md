@@ -1566,3 +1566,70 @@ service start is attempted, ship it to a tester whose device is *not* whiteliste
 `ForegroundServiceStartNotAllowedException` appears. Alternatively switch the alarms to
 `setExactAndAllowWhileIdle` (needs `SCHEDULE_EXACT_ALARM`/`USE_EXACT_ALARM`, which carries its own
 Play policy weight) and the question disappears.
+
+---
+
+## 29. Locked new-contact test — §16 ANSWERED, 2026-09-17
+
+Build 12000012 on emulator-5554 (B, `test-coinjoin-wallet-2`, PIN set). The trigger was the
+**acceptance** of a contact request B had already sent, not a new send — acceptance lands on the
+counterparty's schedule, so B can be locked when it arrives. That is what every earlier attempt at
+this test failed to isolate, because sending always required B unlocked.
+
+### 29.1 The lock DOES block DIP-15 account creation
+
+B locked, service running, `test-contacts-33` accepted on emulator-5558. B picked the acceptance up
+over its background platform sync while still locked, and then:
+
+```
+10:00:59  DashPay bring-up before SPV: status=SEED_BINDING_UNVERIFIED   (every unlocked bring-up: READY)
+10:05:45  KeyChainGroup: Activating a new HD chain: FriendKeyChain{P2PKH, accountPath=[9H, 1H, 15H, 224459747H, …
+10:05:47  account-build drain: queued=2 built=0 stillQueued=2 (blocked or still draining)
+10:05:47  contact provisioning: sweep success=1 errors=0, pendingBuilds=2
+```
+
+Four signals, all pointing the same way:
+
+- **`status=SEED_BINDING_UNVERIFIED`** while locked, against `READY` on every unlocked bring-up in
+  this document.
+- **`queued=2 built=0 stillQueued=2`**, explicitly reported as blocked. The two are the receiving
+  and external accounts for the newly-mutual relationship.
+- **`pendingBuilds=2`** — non-zero for the first time in the whole session. Every other sweep,
+  including all the ones that failed to repair the restore-dropped contacts, reported
+  `pendingBuilds=0`. So this is a genuinely different failure from §22/§27, not the same one.
+- **dashj got further than the SDK.** The friend key chain activated; the SDK-side account build
+  stalled. That locates the blockage at the keystore-backed derivation, not at discovery.
+
+### 29.2 Unlocking heals it
+
+```
+10:05:47  (locked)   queued=2 built=0 stillQueued=2   pendingBuilds=2
+10:08:31  (unlocked) queued=2 built=2 stillQueued=0
+```
+
+Afterwards `test-contacts-33` holds both a `dashpayReceivingFunds` and a `dashpayExternalAccount`;
+totals moved 7/7 -> 8/8 and the dark count fell 4 -> 3.
+
+**So this path is a deferral, not fund loss** — unlike §20 (the 20-address cap) and §27 (the
+sent-only restore bug), both of which lose money permanently. The exposure here is a window: any
+contact payment arriving between the acceptance and the next unlock has no watched address and is
+missed, and it is recovered only if the later rescan covers it.
+
+### 29.3 Caveat on what "unlock" proved
+
+The app process was already running and came to the foreground as the device unlocked, so the
+unlock and the app being foregrounded coincided. The measurement cannot separate "the device
+unlocking released the keystore" from "the app reaching the foreground drove the drain". The
+practical answer is the same either way — the user unlocking their phone fixes it — but if the
+distinction matters, repeat with the app swiped out of recents before unlocking.
+
+### 29.4 Bonus: a workaround for the §27 money loss
+
+The dark count fell from 4 to 3 because `test-contacts-33` got provisioned once the relationship
+became **mutual**. Its receiving account had been dropped by the §24 restore and no sweep had
+repaired it across many runs (§27).
+
+That confirms the rule exactly as `contacts.rs:150` states it, and it gives a field workaround for
+the §27 loss: **a restore-dropped sent-only channel is rebuilt as soon as the counterparty
+accepts.** Users stuck in that state can be told to get the other party to accept, rather than
+waiting for PR #4740. The three still-dark contacts are the ones that never accepted.
