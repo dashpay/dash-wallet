@@ -1241,3 +1241,89 @@ This is a live reproduction to re-check against `dashpay/platform` PR #4740
 - Whether DashPay contact requests hit the `no available addresses` failure on a fresh restore, as
   §23.4 predicts. B is in the right state to test it now.
 - Cold boot with no unlock (the §23 test 2), which no run has covered yet.
+
+---
+
+## 25. Cold-boot test, 2026-09-17: the wallet never resumes syncing after a reboot
+
+emulator-5554 (restored wallet from §24, PIN set, Android API 36), rebooted at 08:26:06.
+
+### 25.1 Before the first unlock: nothing runs, and that part is correct
+
+| Check | Result |
+|---|---|
+| User 0 state | `RUNNING_LOCKED` |
+| App process | not running |
+| Blockchain service | not running |
+| `am start-foreground-service` (the alarm path) | `Error: Not found; no service started.` |
+
+The app declares **no** `directBootAware` component, so while credential-encrypted storage is
+locked the service does not exist as far as the system is concerned and the start is refused
+outright. Nothing is corrupted; the wallet is simply dormant.
+
+This is a materially different state from every other locked test in this document. Those all had
+a live process with CE storage available, which is why binds could fail in interesting ways and
+why the `ACTION_USER_PRESENT` receiver had something to heal. Here no code runs at all — that
+receiver is registered at runtime by a running process, and there is no process.
+
+### 25.2 After the first unlock: still no sync — the workaround fails silently
+
+Unlock at 08:34:42 delivered `BOOT_COMPLETED` and `BootstrapReceiver` ran:
+
+```
+08:34:42 BootstrapReceiver: scheduling delayed blockchain service start for Android 15+
+08:34:40 DelayedServiceStartReceiver: starting delayed blockchain service   (pid 2537 = _test)
+```
+
+And then nothing. Six minutes later:
+
+| Check | Result |
+|---|---|
+| App process | running (SDK started, "restored 1 wallet(s)", DashPay drain ran) |
+| `dumpsys activity services` | **(nothing)** |
+| `L1Shadow phase=` lines | **none at all** |
+
+So the process is alive and the SDK is up, but there is no blockchain service and no L1 engine.
+**B did no block sync whatsoever until the app was opened by hand.**
+
+(The mainnet app on the same device did sync — it is a separate package at a separate height,
+2,540,414. Do not mistake its log lines for B's.)
+
+### 25.3 Root cause: two failures stacked
+
+**1. The Android 15+ branch defers through an alarm.** `BootstrapReceiver:106` sends
+`BOOT_COMPLETED` to `scheduleDelayedBlockchainServiceStart` — a 5-second `AlarmManager.set`,
+commented "to avoid BOOT_COMPLETED restrictions". But `BOOT_COMPLETED` is itself one of the
+documented exemptions to the background FGS-start restriction, and an alarm broadcast is not.
+Deferring through the alarm **throws the exemption away**.
+
+**2. The alarm lands on the guarded start.** `DelayedServiceStartReceiver` called
+`WalletApplication.startBlockchainService(false)`, whose entire body is inside:
+
+```java
+if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) { ... }
+```
+
+A process woken by an alarm broadcast sits well below that, so the method returned having done
+nothing — no log, no exception. This is the **same guard** that silently defeated the upgrade path
+on 2026-09-16 and was bypassed there by `startBlockchainServiceAfterUpgrade()`. The boot path was
+never given the same treatment.
+
+### 25.4 What was changed, and what remains a design decision
+
+`DelayedServiceStartReceiver` now calls the guard-bypassing start and logs a warning when it is
+refused, so this failure is diagnosable in a field log instead of invisible, and pre-Android-15
+devices actually resume syncing.
+
+That does **not** fully fix Android 15+. `BlockchainServiceImpl` is declared
+`foregroundServiceType="dataSync"`, and API 35+ prohibits launching a `dataSync` foreground
+service from `BOOT_COMPLETED`. The platform will still refuse; the difference is that it now says
+so. A real fix is a design choice, not a patch:
+
+- run post-boot catch-up as WorkManager expedited work rather than a foreground service, or
+- give the boot-time sync a foreground service type that API 35+ still permits from boot, or
+- accept that a rebooted phone does not sync until opened, and make that explicit in the UI.
+
+**Until one of those lands, a phone that reboots overnight does no catch-up at all until the user
+opens the app.** That subsumes the recovery-trigger gap noted in §18.6: it is not a 24-hour delay
+after a reboot, it is indefinite.
