@@ -1000,3 +1000,65 @@ locked.
   so this is not a broken wallet or a stalled engine.
 - **The window never moved** — top index 19 across all twenty uses, on all fourteen contact
   accounts.
+
+---
+
+## 21. Post-cutover DashPay goes intermittently dark: "no available addresses to use"
+
+Hit 2026-09-16 20:26 on B while trying to send a contact request for the section 16 retest.
+
+### 21.1 The chain
+
+```
+invalid quorum: quorum not found 6:[0,0,0,56,104,219,…]
+  -> Proof verification error: context provider error
+  -> that DAPI address is banned (ban_reason recorded)
+  -> once enough are banned: ExecutionError { inner: NoAvailableAddresses }
+  -> "Dapi client error: no available addresses to use"
+  -> PlatformRepo: error updating contacts
+```
+
+The user-visible symptom is a Dash Platform error on the Contacts screen. The failure is in
+`PlatformSynchronizationService.updateContactRequests`, which still runs on the **legacy
+dashj-platform** path (`org.dashj.platform.dashpay.ContactRequests` + `DapiClient`), not the Rust
+SDK. The SDK's own `rs_dapi_client` was healthy at the same moment, calling masternodes normally.
+
+### 21.2 The mitigation is present and did run — it is just incomplete
+
+`BlockchainServiceImpl:2404` already handles this. With the dashj engine held, `checkService()`
+never runs `initDashSync()` / `setMasternodeListManager()`, so the legacy DAPI client has no
+quorum source. The code wires it to `SdkSourcedQuorums` instead, and the log confirms it ran
+27 seconds before the failures:
+
+```
+20:26:10 cutover committed — Platform quorum lookups wired to the SDK-sourced quorum list
+20:26:37 rs_dapi_client: NoAvailableAddresses
+```
+
+No `serving an empty quorum list` or `SDK quorum key lookup failed` warning appeared, so the
+source was populated. The gap is the caveat `SdkSourcedQuorums` documents about itself:
+
+> `getCurrentQuorumsInfo` returns the CURRENT platform validator-set quorums. A proof signed by
+> a quorum that rotated out long ago can still miss.
+
+A proof signed by a rotated-out quorum is unverifiable, the address serving it gets banned, and
+with enough bans DashPay goes dark. Ban counts in the same window (64 at 0, 76 at 1, 5 at 2)
+show addresses cycling in and out rather than failing permanently.
+
+### 21.3 Consequence
+
+**Post-cutover DashPay contact reads and writes are intermittently unavailable**, by an amount
+that depends on how many referenced quorums have rotated out. Bans expire, so it recovers on its
+own, but any single attempt can fail. This is a cutover-caused regression: pre-cutover the legacy
+client had dashj's full masternode and quorum history.
+
+Worth deciding between: moving the contact-request path off the legacy client onto the SDK
+(the DASHJ-KILL-LIST direction), or widening the SDK quorum source beyond current validators.
+
+### 21.4 Effect on the section 16 retest
+
+The revised test needs **B** to send the contact request first, since a receiving account is only
+created when requests are mutual (`contacts.rs:150`). B is the cut-over wallet, so B is exactly
+the one that hits this. Either retry until the bans lapse, or use the shortcut: B already holds
+three outgoing-only contacts with no receiving account — `Bartek123`, `test-android-15-2`,
+`test-android-35-2` — which is precisely the state step 1 is meant to produce.
