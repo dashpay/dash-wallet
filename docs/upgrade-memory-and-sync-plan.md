@@ -1836,7 +1836,48 @@ reliably wakes it.
 Whether the FGS start would *also* be refused on a non-exempt device is now a secondary question.
 It cannot be reached until the alarm is delivered.
 
-### 32.5 The fix is small
+### 32.5 Forced overdue — it still refuses to fire
+
+Rather than wait, the emulator clock was jumped past the alarm's due time. The alarm went overdue
+and **still did not fire**:
+
+```
+device time: Fri Sep 18 00:28:04 PDT 2026
+type=RTC_WAKEUP origWhen=2026-09-18 00:22:53.658 window=+18h0m0s0ms repeatInterval=86400000 count=0
+whenElapsed=-5m11s287ms   maxWhenElapsed=+17h54m48s713ms
+```
+
+Five minutes past due, `count=0`, and the system still holds **17h54m** of remaining permission to
+defer. Nothing was suppressing it: deep idle is not even enabled on this emulator
+(`Unable to go deep idle; not enabled`), so Doze plays no part, and the app is
+`batteryOptimisationExempt=true`.
+
+**Being overdue does not compel delivery.** The window is the whole mechanism. This is a stronger
+demonstration than waiting would have produced, and it closes the question the §28 diagnostic was
+built to answer: the background FGS start is never reached, so whether it would be *refused* is
+moot until the window is fixed.
+
+Also confirmed along the way: there is no adb lever that forces it. `cmd alarm` offers only
+`set-time`/`set-timezone` with no flush, `deviceidle force-idle` is unavailable on the emulator,
+and stopping the service with `am stopservice` does not reach the `onDestroy` path that re-arms.
+
+### 32.6 Closing the app makes it worse
+
+Closing the app re-arms from scratch, and because `lastUsedAgo` has then crossed
+`LAST_USAGE_THRESHOLD_JUST_MS` (one hour) the backoff moves up a tier:
+
+```
+10:00:39  armed reason=periodic-15min   firstFireInMinutes=15
+12:22:53  armed reason=periodic-720min  firstFireInMinutes=720   (after the app was closed)
+          origWhen=2026-09-18 00:22:53  whenElapsed=+11h58m  maxWhenElapsed=+1d5h58m
+```
+
+So the next background sync moved from "15 minutes" to **between 12 and 30 hours away** — and it
+moved there at the exact moment the user stopped using the app, which is when background sync is
+the only thing keeping the wallet current. Every subsequent close re-arms again and pushes it out
+further, so a user who dips in and out keeps resetting the clock rather than accumulating progress.
+
+### 32.7 The fix is small
 
 Pass a repeat interval that matches the intent instead of `INTERVAL_DAY` — the window follows the
 interval, so a 15-minute repeat gets minutes of slack rather than hours. Or drop
