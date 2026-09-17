@@ -1492,3 +1492,77 @@ W BlockchainServiceImpl: peergroup not available, not broadcasting transaction 4
 peergroup is gone, so this warning fires on every send from a cut-over wallet and says the exact
 opposite of what happened. It cost time in this run and will mislead anyone reading a field log.
 Either route the message through the path that actually broadcasts, or drop it post-cutover.
+
+---
+
+## 28. The periodic alarm path — structural finding, 2026-09-17
+
+Follow-up to the §25.5 question of whether the boot failure is boot-specific. It is not, but the
+answer is conditional rather than a flat "broken". Recorded from code and documentation; the
+empirical confirmation was deliberately not run (see §28.4).
+
+### 28.1 Both alarms are inexact, so neither is exempt on its own
+
+| Scheduler | Call |
+|---|---|
+| `WalletApplication:1790` | `setInexactRepeating(RTC_WAKEUP, now + alarmInterval, INTERVAL_DAY, …)` |
+| `BlockchainServiceImpl:1183` | `setInexactRepeating(RTC_WAKEUP, restartTime, INTERVAL_FIFTEEN_MINUTES, …)` |
+
+Both fire a `PendingIntent.getForegroundService`, which is the right mechanism and correctly
+sidesteps the process-importance guard that defeated the boot path (§25.3). But Android's
+background FGS-start exemption list includes only **exact** alarms — "your app invokes an exact
+alarm to complete an action that the user requests". `setInexactRepeating` does not qualify.
+
+### 28.2 Every test in this document ran on a permissive device
+
+```
+$ adb shell dumpsys deviceidle whitelist
+user,hashengineering.darkcoin.wallet_test,10171
+```
+
+emulator-5554 has the app **user-whitelisted from battery optimisation**, which is itself an
+exemption on that same list. So background FGS starts are permitted here regardless of alarm
+exactness, and none of our runs measured the default state of a user's phone.
+
+The app exposes this toggle in Settings (`SettingsFragment.kt:220`,
+`SettingsViewModel.isIgnoringBatteryOptimizations`). So the install base splits in two:
+
+- **exemption granted** — the inexact alarms can start the service; background sync works;
+- **exemption not granted (the default)** — no exemption applies, and with the boot path
+  separately blocked (§25.5) there is **no working background sync path at all**. The wallet
+  syncs only while the user has it open.
+
+### 28.3 The two schedulers overwrite each other
+
+Both construct the PendingIntent with the same component and the same request code `0`, so they
+are the *same* PendingIntent and each `setInexactRepeating` replaces the other. Whichever ran last
+wins. Observed on B:
+
+```
+tag=*walarm*:…/BlockchainServiceImpl
+type=RTC_WAKEUP origWhen=2026-09-17 09:13:00 window=+18h0m0s0ms repeatInterval=86400000
+```
+
+A **24-hour** repeat with an **18-hour** delivery window — the `WalletApplication` daily alarm.
+The fifteen-minute restart alarm from `BlockchainServiceImpl` is not armed; it was overwritten.
+So the "15-minute periodic sync" is not what the device actually holds, and the §18.6 "up to 24h"
+figure is the optimistic reading of an alarm whose window is 18 hours wide.
+
+### 28.4 Not confirmed empirically, and why
+
+Confirming this on hardware needs the whitelist removed **and** the alarm made to fire. There is no
+force-fire command (`cmd alarm` offers only `set-time`), and the armed alarm's window runs 18 hours,
+so the only lever is jumping the emulator clock — which perturbs SPV sync and the wallet's own
+time handling enough to muddy any result. Deliberately not done.
+
+**What this changes:** §25.5 accepted "no background catch-up after a reboot" as a scoped decision.
+If 28.2 holds for users without the battery exemption, the real scope is "no background sync at
+all, ever, unless the user grants an exemption they are never prompted for". That is a materially
+larger product question than the one decided, and it should be settled before the v12 release
+rather than after.
+
+**Cheapest way to settle it** without clock games: add a one-line log at the point the alarm's
+service start is attempted, ship it to a tester whose device is *not* whitelisted, and read whether
+`ForegroundServiceStartNotAllowedException` appears. Alternatively switch the alarms to
+`setExactAndAllowWhileIdle` (needs `SCHEDULE_EXACT_ALARM`/`USE_EXACT_ALARM`, which carries its own
+Play policy weight) and the question disappears.
