@@ -1771,3 +1771,78 @@ was filling his heap.
 **Recommended next step for his case:** get a heap dump, or at minimum the same `MEM`/
 `ReplayMemTelemetry` trace from 12000012, to find what holds ~370 MB of JVM during FILTERS. Until
 that is known, any further memory work is guesswork.
+
+---
+
+## 32. The periodic alarm is not refused — it is simply never delivered
+
+First `ALARM-DIAG` output, emulator-5554, build 12000012, 2026-09-17. This sharpens §28 and
+partly corrects it.
+
+### 32.1 What was armed
+
+```
+10:00:39 WalletApplication: ALARM-DIAG armed reason=periodic-15min firstFireInMinutes=15
+         repeat=1440min exact=false batteryOptimisationExempt=true
+```
+
+Confirms §28.3 directly: the fifteen minutes is only the FIRST fire. Everything after is a
+**24-hour** repeat, because `WalletApplication:1790` passes `AlarmManager.INTERVAL_DAY` as the
+repeat interval regardless of which first-fire backoff was chosen.
+
+### 32.2 What happened next: nothing, for over two hours
+
+No `ALARM-DIAG service started by alarm` line ever followed, across a capture running to 12:20.
+`dumpsys alarm` explains why — the alarm is **still pending, overdue, undelivered**:
+
+```
+origWhen=2026-09-17 10:15:39.224  window=+18h0m0s0ms  repeatInterval=86400000  count=0
+whenElapsed=-2h5m15s509ms   maxWhenElapsed=+15h54m44s491ms
+operation=PendingIntent{… startForegroundService}
+```
+
+- due at 10:15:39, **2h05m overdue** at the time of reading;
+- `count=0` — it has never fired;
+- **`window=+18h`** — the system may defer delivery for up to eighteen hours, and is doing so;
+- ~15h55m of slack still remains before it must be delivered.
+
+Doze was `ACTIVE` (not idle) on both deep and light, and the app is
+`batteryOptimisationExempt=true`, so neither Doze nor the background-start restriction explains it.
+
+### 32.3 Correction to §28
+
+§28 framed the question as whether a background FGS start would be *refused*, and made it
+conditional on the battery-optimisation exemption. That framing was too narrow. **The start is
+never attempted**, because the alarm is not delivered.
+
+The cause is `setInexactRepeating(RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY, …)`:
+for an inexact repeating alarm the delivery window scales with the **repeat interval**, not with
+the first-fire delay. A 24-hour interval buys an 18-hour window. So the fifteen-minute backoff the
+code computes for a recently-used wallet is thrown away — the alarm inherits the daily alarm's
+slack either way.
+
+**The real background-sync cadence is therefore not 15 minutes, nor 24 hours, but "some time
+within an 18-hour window, at the system's convenience".** That is consistent with never having
+observed an alarm-driven service restart anywhere in this document, including the reference
+install's logs.
+
+### 32.4 What this makes of the §25.5 decision
+
+§25.5 accepted "no background catch-up after a reboot" as a scoped decision. §28 warned the real
+scope might be larger. It is: combined with §25 (boot start blocked on Android 15+), a v12 wallet
+has **no dependable background sync at all** — not because a start is refused, but because nothing
+reliably wakes it.
+
+Whether the FGS start would *also* be refused on a non-exempt device is now a secondary question.
+It cannot be reached until the alarm is delivered.
+
+### 32.5 The fix is small
+
+Pass a repeat interval that matches the intent instead of `INTERVAL_DAY` — the window follows the
+interval, so a 15-minute repeat gets minutes of slack rather than hours. Or drop
+`setInexactRepeating` for `setWindow`/`setExactAndAllowWhileIdle` and state the tolerance
+explicitly. Either removes the 18-hour window; the FGS-start question in §28 can then be tested for
+real.
+
+Not implemented — it changes wake-up frequency and therefore battery behaviour, which is a product
+call rather than a patch.
