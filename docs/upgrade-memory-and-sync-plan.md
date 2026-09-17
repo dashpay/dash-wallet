@@ -1327,3 +1327,74 @@ so. A real fix is a design choice, not a patch:
 **Until one of those lands, a phone that reboots overnight does no catch-up at all until the user
 opens the app.** That subsumes the recovery-trigger gap noted in §18.6: it is not a 24-hour delay
 after a reboot, it is indefinite.
+
+---
+
+## 26. Contact requests on the restored wallet — §23.4 CONFIRMED
+
+emulator-5554, restored wallet from §24, Contacts screen opened at ~09:09 on 2026-09-17.
+
+### 26.1 The prediction held
+
+§23.4 argued that the post-cutover DashPay failure is not upgrade-only, because
+`commitForFreshWalletSetup` commits the cutover for a restore too. The restored wallet's state
+confirms the premise — `cutover_state=CUT_OVER`, dashj held, quorum lookups wired to the
+SDK-sourced list at 08:43:20 — and opening Contacts produced the same failure:
+
+```
+09:09:26 rs_dapi_client: ExecutionError { inner: NoAvailableAddresses }
+09:09:26 Documents: Dapi client error: no available addresses to use
+09:09:38 (same, three more times)
+```
+
+**A clean install plus restore is exactly as exposed as an upgraded wallet.** This is a property of
+every v12 wallet, not an artifact of the upgrade seam, which strengthens the §21 case for moving
+the contact-request path off the legacy dashj-platform client onto the SDK.
+
+### 26.2 It is intermittent, and it did recover
+
+About a minute later the same call succeeded with no error:
+
+```
+09:10:19 updateContactRequests(false) starting now
+09:10:19 DapiClient: getDocuments(contractId=Bwr4WHCP…, type=contactRequest, …)
+09:10:38 updateContactRequests(true) starting now
+```
+
+That matches the ban-and-expire behaviour in §21.2 — addresses are banned on a failed proof
+verification and come back when the ban lapses. So the user-visible symptom is an intermittent
+Platform error on the Contacts screen rather than a permanent outage, which makes it easy to
+dismiss as flaky network and hard to attribute.
+
+### 26.3 Bonus 1: the provisioning rewind re-confirmed on a restore
+
+Opening Contacts rewound the filter scan. From a wallet sitting at tip 1555536:
+
+```
+phase=FILTERS 95.4% filters 1341329/1555557
+phase=FILTERS 98.2% filters 1471329/1555557
+phase=SYNCED  100%  filters 1555559/1555559
+```
+
+Roughly 214,000 blocks re-scanned. This is the same DashPay-provisioning rewind measured in §17.6,
+now seen on a freshly restored wallet and triggered simply by visiting the Contacts screen.
+
+### 26.4 Bonus 2: the published balance is badly wrong during the rewind
+
+While the rewind ran with `l1Synced=false`, `CutoverUiDataService` published these in sequence:
+
+| Time | Published balance (duffs) | In DASH |
+|---|---:|---:|
+| 09:10:11 | 28,214,058,609 | 282.1 |
+| 09:10:18 | 24,233,701,645 | 242.3 |
+| 09:10:26 | 21,351,026,841 | 213.5 |
+| 09:10:44 | 16,902,773,043 | **169.0** |
+
+The final figure is exactly the pre-wipe balance from §24, so the wallet ends correct. But for
+roughly 30 seconds it displayed up to **113 DASH more than the user actually has**, decreasing in
+steps as the rescan re-derived the UTXO set.
+
+Every one of the wrong values was published with `l1Synced=false`. A user who opens Contacts on a
+restored wallet sees their balance swing by that much before it settles. Worth deciding whether
+the publisher should suppress or mark balances while `l1Synced` is false rather than emitting
+partial rescan state as fact.
