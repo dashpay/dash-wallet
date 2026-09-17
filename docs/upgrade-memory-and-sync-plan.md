@@ -1324,9 +1324,41 @@ so. A real fix is a design choice, not a patch:
 - give the boot-time sync a foreground service type that API 35+ still permits from boot, or
 - accept that a rebooted phone does not sync until opened, and make that explicit in the UI.
 
-**Until one of those lands, a phone that reboots overnight does no catch-up at all until the user
-opens the app.** That subsumes the recovery-trigger gap noted in §18.6: it is not a 24-hour delay
-after a reboot, it is indefinite.
+### 25.5 DECIDED 2026-09-17: background catch-up after a reboot is NOT required
+
+The third option. Confirmed against the Android 15 behaviour-change documentation: `dataSync` is one
+of six foreground service types blocked from a `BOOT_COMPLETED` receiver (with `camera`,
+`mediaPlayback`, `phoneCall`, `mediaProjection`, `microphone`), it throws
+`ForegroundServiceStartNotAllowedException`, there is **no exemption**, and the restriction applies
+to any app targeting API 35+ — which we do.
+
+Consequences, accepted deliberately:
+
+- A phone that reboots overnight does no catch-up until someone opens the app. No incoming-payment
+  notifications until then. Funds are never at risk; only visibility is.
+- This subsumes the recovery-trigger gap in §18.6. After a reboot it is not a 24-hour delay, it is
+  indefinite — and that is now the intended behaviour, not a bug.
+
+**Code changed to match the decision.** `BootstrapReceiver` no longer calls
+`scheduleDelayedBlockchainServiceStart()` on API 35+. That 5-second `AlarmManager` hop was meant to
+dodge the restriction and provably cannot: an alarm broadcast is not an exempt start reason, and
+deferring through it discards the `BOOT_COMPLETED` exemption the receiver itself holds. It now logs
+plainly that post-boot sync is not attempted and that syncing resumes when the app is opened. That
+removes a doomed device wake-up and a log line that implied the opposite of what happened.
+
+`DelayedServiceStartReceiver`'s guard-bypass fix stays: it is still the fallback when
+`startBlockchainServiceAfterUpgrade()` is refused on the package-replaced path.
+
+**Still open, product-side:** surfacing staleness in the UI (a "last synced" indicator), so a user
+whose phone rebooted can tell the wallet is behind rather than assuming it is current. Not
+implemented — it is a design change, not a patch.
+
+**Worth one test before this is considered closed.** The cause is the general background
+FGS-start restriction plus the process-importance guard, not anything specific to boot. The same
+combination would block any background-initiated sync, which would mean the periodic alarm path is
+broken too. If that is so, the question stops being "how do we resume after a reboot" and becomes
+"does this wallet sync in the background at all", which is a materially bigger decision than the
+one just made.
 
 ---
 
