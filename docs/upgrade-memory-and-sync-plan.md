@@ -1113,3 +1113,55 @@ account that exists; this one is the account never being rebuilt at all.
 flagged the two incoming-only contacts — which need an *external* account and carry no receive-side
 exposure — while missing the three outgoing-only ones that are the real money risk. Corrected to
 `filter { it.isOutgoing }`; the log field is now `channelsWePublished`.
+
+---
+
+## 23. What the Phase 1 work does and does not do for a CLEAN INSTALL + RESTORE
+
+Asked 2026-09-16. The branch was built for the v11 -> v12 upgrade seam, so it is worth being
+explicit about which of it reaches a wallet restored from seed onto a fresh install.
+
+### 23.1 Applies unchanged, and two of them matter MORE on restore
+
+A restore replays from birth height, which is the longest sync the wallet ever performs. The
+survive-a-long-sync fixes are therefore most valuable here, not on the upgrade.
+
+| Fix | Why it reaches a restore |
+|---|---|
+| `ACTION_USER_PRESENT` receiver export (`3b697a3af`) | A restore onto a locked device sat unbound until the user next opened the app; it now heals on unlock. Not upgrade-specific. |
+| `SdkBindBlocker` classification, notification, and the durable clear (`9ebcbfc05`) | Any install can fail to bind; the support record stays honest on all of them. |
+| `shouldStopForIdle` replay guard + `holdWakeLockWhileReplaying` | **Most valuable here.** Without them a long restore is torn down mid-replay and re-enters the idle latch. |
+| SDK engine restart on every service start (`kickSdkEngines` from `resume()`) | A multi-hour restore sees many service restarts; previously the engines only ever came up once per process. |
+| `BRING_UP_BUDGET_MS` (20s) | Stops contact provisioning blocking SPV start on a large wallet. |
+| Log diet (quorum loggers -> WARN) + `WalletFileSizeGuard` autosave | Memory and I/O pressure during that same long replay. |
+| Corrected receival-coverage diagnostic (`406aeaae8`) | Now names the sent-only channels a restore actually drops (see §22) instead of the wrong two. |
+
+### 23.2 Inert on a fresh install
+
+The cutover state machine and its unconditional commit, the upgrade explainer
+(`CutoverSyncNoticeDialogFragment`), the `MY_PACKAGE_REPLACED` foreground-service start
+(`startBlockchainServiceAfterUpgrade`), and the advisory `REBUILD_WALLET` handling. A fresh
+install has no previous version, so none of this has anything to act on.
+
+### 23.3 Still broken on restore — and none of it is ours
+
+Both defects that actually lose money on a restored wallet are upstream:
+
+- **Sent-only contact accounts are never rebuilt** (§22) — `dashpay/platform` PR #4740, being
+  picked up in a separate session to build the AAR.
+- **DIP-15 chains capped at 20 addresses** (§20) — `dashpay/rust-dashcore#1032`, filed.
+
+### 23.4 Correction: §21 is NOT upgrade-only
+
+I had assumed the post-cutover DashPay-dark failure only affected upgraded wallets. It does not.
+
+`commitForFreshWalletSetup()` commits the cutover for a **restore or new wallet**, and
+`dashjEngineMayStart()` now returns `false` unconditionally. So dashj is held on a fresh install
+exactly as on an upgrade, the legacy dashj-platform DAPI client has no masternode list of its own,
+and it runs against the same current-validators-only `SdkSourcedQuorums` source.
+
+**A restored wallet is therefore just as exposed to the intermittent
+`Dapi client error: no available addresses to use` as B was tonight.** Contact requests are as
+fragile on a clean restore as on an upgraded install. That widens §21 from an upgrade-seam issue
+to something every v12 wallet carries, which strengthens the case for moving the contact-request
+path off the legacy client onto the SDK.
