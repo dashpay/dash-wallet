@@ -1073,6 +1073,96 @@ internal class ProbeWatchdogDecider(
 }
 
 /**
+ * Restart decision for the FILTER-STALL watchdog (MO-1022).
+ *
+ * ## The failure this exists for
+ *
+ * Measured on a Samsung A53 / Android 16, build 12000012, upgrading the
+ * "job flower" mainnet wallet (6,787 txs, 1,177 matched blocks). The SDK's
+ * SPV engine parked 2,971 blocks short of the tip and never recovered:
+ *
+ * ```
+ * Filters: Syncing 2538000/2540971 (99.9%) stored:2540971, downloaded: 0, last_activity: 240s
+ * Blocks:  WaitForEvents ... requested: 933, downloaded: 928,          last_activity: 239s
+ * ```
+ *
+ * Every filter was already on disk (`stored` == target), so nothing was
+ * waiting on the network for filters. The block fetcher had 933 requests
+ * out and 928 answers back — **five blocks that never arrived** — and its
+ * download coordinator had already spent its retry ladder (108 first
+ * attempts, 61 second, 19 third, 1 fourth) and stood down. Filter
+ * processing cannot pass a block it is still waiting for, so the scan
+ * froze. Observed frozen for 44 minutes, then a process relaunch moved it
+ * 45,000 blocks in 90 seconds before it hit the same wall again. The user
+ * sees "99%" forever.
+ *
+ * ## Why this is filter-specific rather than reusing the idle detector
+ *
+ * [de.schildbach.wallet.service.isSyncIdle] samples four counters —
+ * filters, headers, masternode list, tx events — and calls it idle only
+ * when NONE advance. During this stall HEADERS KEPT ADVANCING, because new
+ * blocks kept arriving and being chained (2540967 -> 2540974 while the
+ * filters sat still), and chainlocks kept validating. A multi-counter idle
+ * rule therefore reads the engine as healthy and never fires. The filter
+ * cursor is the only counter that tells the truth here.
+ *
+ * ## The rule
+ *
+ * Arm only when filters are demonstrably BEHIND (`filterTarget > 0 &&
+ * filterHeight < filterTarget`) — at or past target there is nothing to
+ * stall on, and before the target is known there is nothing to measure.
+ * Restart when that cursor has not moved for [stallThresholdMs], at most
+ * [maxRestarts] times per process, then report [Decision.EXHAUSTED] once
+ * and stay quiet. Pure, so the arming, the reset-on-progress and the
+ * give-up semantics are host-JVM unit-testable.
+ */
+internal class FilterStallWatchdogDecider(
+    private val stallThresholdMs: Long = L1ShadowSyncService.FILTER_STALL_THRESHOLD_MS,
+    private val maxRestarts: Int = L1ShadowSyncService.FILTER_STALL_MAX_RESTARTS
+) {
+    enum class Decision { NONE, RESTART, EXHAUSTED }
+
+    private var lastHeight: Long = -1L
+    private var lastAdvanceMs: Long = 0L
+    private var restartsIssued = 0
+    private var exhaustedReported = false
+
+    /**
+     * @param filterHeight the engine's current filter cursor.
+     * @param filterTarget the height it is scanning toward; 0 when unknown.
+     */
+    fun onCheck(nowMs: Long, filterHeight: Long, filterTarget: Long): Decision {
+        val behind = filterTarget > 0 && filterHeight < filterTarget
+        if (!behind) {
+            // Caught up, or the target is not known yet. Nothing to stall on,
+            // and the next spell of being behind must be timed from scratch.
+            lastHeight = -1L
+            return Decision.NONE
+        }
+        if (filterHeight != lastHeight) {
+            lastHeight = filterHeight
+            lastAdvanceMs = nowMs
+            return Decision.NONE
+        }
+        if (nowMs - lastAdvanceMs < stallThresholdMs) return Decision.NONE
+        return when {
+            restartsIssued < maxRestarts -> {
+                restartsIssued++
+                // Re-baseline: the restart gets a full window to show progress
+                // before it is judged again.
+                lastAdvanceMs = nowMs
+                Decision.RESTART
+            }
+            !exhaustedReported -> {
+                exhaustedReported = true
+                Decision.EXHAUSTED
+            }
+            else -> Decision.NONE
+        }
+    }
+}
+
+/**
  * Distinct wallet-relevant transaction count from the SDK's TXO rows:
  * every tx that FUNDED one of the wallet's TXOs plus every tx that SPENT
  * one. Pure (hex-keyed dedup — ByteArray has identity equality) so the
@@ -1716,6 +1806,7 @@ class L1ShadowSyncService internal constructor(
     private val progressLogIntervalMs: Long = PROGRESS_LOG_INTERVAL_MS,
     private val watchdogIntervalMs: Long = WATCHDOG_INTERVAL_MS,
     private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS,
+    private val filterStallThresholdMs: Long = FILTER_STALL_THRESHOLD_MS,
     /** Wallet-recreation collaborators; null (tests' default) disables [recoverByRecreatingWallet]. */
     private val recreator: ShadowWalletRecreator? = null,
     /**
@@ -1884,6 +1975,9 @@ class L1ShadowSyncService internal constructor(
 
     /** The once-per-process probe-loop restart state (see [ProbeWatchdogDecider]). */
     private val watchdogDecider = ProbeWatchdogDecider(probeStallThresholdMs)
+
+    /** MO-1022: the filter-cursor stall watchdog (see [FilterStallWatchdogDecider]). */
+    private val filterStallDecider = FilterStallWatchdogDecider(filterStallThresholdMs)
 
     /**
      * Wall-clock ms of the last app-initiated SDK L1 SELF-SPEND broadcast
@@ -2621,6 +2715,7 @@ class L1ShadowSyncService internal constructor(
             delay(watchdogIntervalMs)
             try {
                 checkProbeHeartbeat()
+                checkFilterStall()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 log.warn("L1Shadow watchdog check failed; will retry on the next tick", t)
@@ -2659,6 +2754,66 @@ class L1ShadowSyncService internal constructor(
                 }
                 ProbeWatchdogDecider.Decision.NONE -> Unit
             }
+        }
+    }
+
+    /**
+     * MO-1022: restart the SPV engine when the FILTER cursor is wedged.
+     *
+     * See [FilterStallWatchdogDecider] for the measured failure. In short:
+     * the engine can park with every filter already stored but a handful of
+     * matched blocks never delivered and its download coordinator out of
+     * retries, and filter processing cannot step past a block it is still
+     * waiting for. Nothing in the engine re-drives it; a process relaunch
+     * does, which is what this reproduces without needing the user to force
+     * stop the app.
+     *
+     * DELIBERATELY OUTSIDE [mutex]. Both [stop] and [startIfEnabled] take it
+     * themselves, so taking it here would deadlock the watchdog against the
+     * restart it is trying to perform. The cost is that a concurrent stop
+     * can land between the two calls; [startIfEnabled] re-reads the enable
+     * gate and the bound wallet, so the worst case is a start that declines.
+     */
+    private suspend fun checkFilterStall() {
+        if (runningWalletIdHex.value == null) return
+        val p = _progress.value
+        val decision = filterStallDecider.onCheck(nowMs(), p.filterHeight, p.filterTarget)
+        if (decision == FilterStallWatchdogDecider.Decision.NONE) return
+        when (decision) {
+            FilterStallWatchdogDecider.Decision.RESTART -> {
+                log.error(
+                    "L1Shadow filter-stall watchdog: the filter cursor has sat at {} of {} " +
+                        "({} blocks short) for over {} minutes while the engine is running — " +
+                        "restarting the SPV engine. Known shape (MO-1022): every filter stored, " +
+                        "a few matched blocks never delivered, the download coordinator out of " +
+                        "retries.",
+                    p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
+                    filterStallThresholdMs / 60_000
+                )
+                runCatching {
+                    stop()
+                    startIfEnabled()
+                }.onSuccess { started ->
+                    log.info(
+                        "L1Shadow filter-stall watchdog: engine restart {} (was stuck at {})",
+                        if (started == true) "succeeded" else "declined to start",
+                        p.filterHeight
+                    )
+                }.onFailure {
+                    if (it is CancellationException) throw it
+                    log.warn("L1Shadow filter-stall watchdog: the engine restart failed", it)
+                }
+            }
+            FilterStallWatchdogDecider.Decision.EXHAUSTED -> {
+                log.error(
+                    "L1Shadow filter-stall watchdog: the filter cursor is still wedged at {} of " +
+                        "{} after every restart this process was willing to spend — standing " +
+                        "down. This needs an SDK-side fix: the block download coordinator must " +
+                        "not abandon items permanently.",
+                    p.filterHeight, p.filterTarget
+                )
+            }
+            FilterStallWatchdogDecider.Decision.NONE -> Unit
         }
     }
 
@@ -3322,6 +3477,23 @@ class L1ShadowSyncService internal constructor(
          * 10s probes.
          */
         internal const val PROBE_STALL_THRESHOLD_MS = 5 * 60_000L
+
+        /**
+         * Filter cursor frozen this long, while demonstrably behind its
+         * target, means the engine is wedged rather than working: normal
+         * batch cadence moves it well inside a minute, and the MO-1022
+         * stall held for 44 minutes. Ten minutes is far above the former
+         * and far below the latter.
+         */
+        internal const val FILTER_STALL_THRESHOLD_MS = 10 * 60_000L
+
+        /**
+         * Engine restarts the filter-stall watchdog will spend before
+         * standing down. A restart demonstrably clears the MO-1022 wall
+         * (45,000 blocks in 90 s after a relaunch), but it is not free, and
+         * a wall that survives three of them is not ours to fix from here.
+         */
+        internal const val FILTER_STALL_MAX_RESTARTS = 3
 
         /** Retry backoff for a failed progress-monitor collection. */
         internal const val LOOP_RETRY_DELAY_MS = 5_000L

@@ -293,6 +293,176 @@ class L1ShadowSyncServiceTest {
         assertEquals("…and it completes on its own afterwards", 1, source.bringUpFinished)
     }
 
+    // ── MO-1022: the filter-stall watchdog ────────────────────────────
+
+    private fun stallDecider() = FilterStallWatchdogDecider(
+        stallThresholdMs = 10 * 60_000L,
+        maxRestarts = 3
+    )
+
+    @Test
+    fun filterStall_doesNotArmWhileTheCursorIsAdvancing() {
+        val d = stallDecider()
+        var now = 0L
+        var height = 2_400_000L
+        repeat(20) {
+            now += 60_000L
+            height += 5_000L
+            assertEquals(
+                FilterStallWatchdogDecider.Decision.NONE,
+                d.onCheck(now, height, 2_540_971L)
+            )
+        }
+    }
+
+    @Test
+    fun filterStall_doesNotArmWhenTheFiltersAreAtTarget() {
+        // Nothing to stall on: a frozen cursor AT the target is a finished scan.
+        val d = stallDecider()
+        var now = 0L
+        repeat(60) {
+            now += 60_000L
+            assertEquals(
+                FilterStallWatchdogDecider.Decision.NONE,
+                d.onCheck(now, 2_540_971L, 2_540_971L)
+            )
+        }
+    }
+
+    @Test
+    fun filterStall_doesNotArmBeforeTheTargetIsKnown() {
+        val d = stallDecider()
+        var now = 0L
+        repeat(60) {
+            now += 60_000L
+            assertEquals(
+                "a zero target means the engine has not said what it is scanning toward",
+                FilterStallWatchdogDecider.Decision.NONE,
+                d.onCheck(now, 0L, 0L)
+            )
+        }
+    }
+
+    @Test
+    fun filterStall_restartsOnceTheCursorHasBeenFrozenPastTheThreshold() {
+        // The MO-1022 shape: filters 2538000 of 2540971, frozen.
+        val d = stallDecider()
+        val stuck = 2_538_000L
+        val target = 2_540_971L
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, d.onCheck(0L, stuck, target))
+        // Nine minutes in: still inside the window.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(9 * 60_000L, stuck, target)
+        )
+        // Past ten: wedged.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(11 * 60_000L, stuck, target)
+        )
+    }
+
+    @Test
+    fun filterStall_givesTheRestartAFullWindowBeforeJudgingItAgain() {
+        val d = stallDecider()
+        val stuck = 2_538_000L
+        val target = 2_540_971L
+        d.onCheck(0L, stuck, target)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(11 * 60_000L, stuck, target)
+        )
+        // One minute after the restart the cursor has not moved yet — that is
+        // expected, not a second stall.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(12 * 60_000L, stuck, target)
+        )
+    }
+
+    @Test
+    fun filterStall_progressAfterARestartRearmsTheFullWindow() {
+        val d = stallDecider()
+        val target = 2_540_971L
+        d.onCheck(0L, 2_538_000L, target)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(11 * 60_000L, 2_538_000L, target)
+        )
+        // The restart worked and the cursor moved.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(12 * 60_000L, 2_540_000L, target)
+        )
+        // It then wedges again at the new height: a fresh ten minutes is
+        // required, not the leftover of the previous window.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(21 * 60_000L, 2_540_000L, target)
+        )
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(23 * 60_000L, 2_540_000L, target)
+        )
+    }
+
+    @Test
+    fun filterStall_standsDownAfterTheRestartBudgetAndSaysSoExactlyOnce() {
+        val d = stallDecider()
+        val stuck = 2_538_000L
+        val target = 2_540_971L
+        var now = 0L
+        d.onCheck(now, stuck, target)
+        repeat(3) {
+            now += 11 * 60_000L
+            assertEquals(
+                "restart $it must be spent",
+                FilterStallWatchdogDecider.Decision.RESTART,
+                d.onCheck(now, stuck, target)
+            )
+        }
+        now += 11 * 60_000L
+        assertEquals(
+            "the budget is spent — say so",
+            FilterStallWatchdogDecider.Decision.EXHAUSTED,
+            d.onCheck(now, stuck, target)
+        )
+        repeat(5) {
+            now += 11 * 60_000L
+            assertEquals(
+                "…and never again",
+                FilterStallWatchdogDecider.Decision.NONE,
+                d.onCheck(now, stuck, target)
+            )
+        }
+    }
+
+    @Test
+    fun filterStall_catchingUpClearsTheTimerSoALaterLagStartsFresh() {
+        val d = stallDecider()
+        val target = 2_540_971L
+        d.onCheck(0L, 2_538_000L, target)
+        // Caught up — the pending stall must be forgotten, not merely paused.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(5 * 60_000L, target, target)
+        )
+        // Target moves on and the cursor lags again; the old nine minutes
+        // must not count toward the new window.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(6 * 60_000L, target, 2_545_000L)
+        )
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(14 * 60_000L, target, 2_545_000L)
+        )
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(17 * 60_000L, target, 2_545_000L)
+        )
+    }
+
     // ── Ordered DashPay bring-up before SPV ───────────────────────────
     //
     // The restore fix is an ORDER, not a feature: contact receival/external
