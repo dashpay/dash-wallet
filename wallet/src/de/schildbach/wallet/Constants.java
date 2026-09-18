@@ -101,7 +101,7 @@ public final class Constants {
                 SUPPORTS_PLATFORM = !is32Bit;
                 SUPPORTS_INVITES = true;
                 SUPPORTS_TXMETADATA = true;
-                SUPPORTS_CONNECT = true;
+                SUPPORTS_CONNECT = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 if (SUPPORTS_PLATFORM) {
                     SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
