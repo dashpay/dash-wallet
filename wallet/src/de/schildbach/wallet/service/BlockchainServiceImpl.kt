@@ -227,6 +227,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private const val CLEANUP_WAIT_MS = 15_000L
         /** Additional wait before giving up, stopping and rescheduling the service. */
         private const val CLEANUP_EXTRA_WAIT_MS = 60_000L
+
+        /**
+         * Request code for the short restart alarm set by [rescheduleService]. Must differ from
+         * the 0 used by [WalletApplication.scheduleStartBlockchainService], whose cancel/replace
+         * during cleanup would otherwise wipe this alarm.
+         */
+        private const val RECOVERY_ALARM_REQUEST_CODE = 1
     }
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
@@ -712,19 +719,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             application,
             BlockchainServiceImpl::class.java
         )
+        // Request code RECOVERY_ALARM_REQUEST_CODE, not 0: WalletApplication.scheduleStartBlockchainService
+        // builds the same intent with request code 0 and cancels it during onDestroy, replacing it
+        // with the 15 minute to 24 hour usage backoff. Sharing the code meant every ordinary
+        // cleanup threw away this recovery deadline, which is the one the pending-payment
+        // verification depends on to get peers back quickly.
         val alarmIntent: PendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true)
             PendingIntent.getForegroundService(
-                application, 0, serviceIntent,
+                application, RECOVERY_ALARM_REQUEST_CODE, serviceIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         } else {
             PendingIntent.getService(
-                application, 0, serviceIntent,
+                application, RECOVERY_ALARM_REQUEST_CODE, serviceIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         }
-        // alarmManager.cancel(alarmIntent)
 
         val restartTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
         alarmManager.setInexactRepeating(

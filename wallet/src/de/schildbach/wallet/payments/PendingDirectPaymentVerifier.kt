@@ -240,7 +240,18 @@ class PendingDirectPaymentVerifier @Inject constructor(
         }
         unlockInputs(wallet, tx)
 
-        payment.serviceName?.let { metadataProvider.setTransactionService(tx.txId, it) }
+        // Only tag the service if nothing has been recorded yet. The purchase screen may already
+        // have marked this transaction with the gift card provider the user actually selected,
+        // which is more specific than the name the payment was submitted under: that one comes
+        // from the merchant's source field and falls back to CTXSpend, so overwriting it here
+        // could retag a PiggyCards order as CTX and send the details screen to the wrong
+        // provider, with no later correction on this path.
+        val recordedService = metadataProvider.getTransactionMetadata(tx.txId)?.service
+        if (recordedService.isNullOrEmpty()) {
+            payment.serviceName?.let { metadataProvider.setTransactionService(tx.txId, it) }
+        } else {
+            log.info("keeping the service already recorded for {}: {}", tx.txId, recordedService)
+        }
         val walletTx = wallet.getTransaction(tx.txId) ?: tx
         // harmless if the merchant already broadcast it; makes sure the network has it otherwise
         walletApplication.broadcastTransaction(walletTx)

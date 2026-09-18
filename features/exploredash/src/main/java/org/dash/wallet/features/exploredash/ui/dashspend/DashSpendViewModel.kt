@@ -26,6 +26,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -114,6 +115,13 @@ data class GiftCardShoppingCart constructor(
     }
     fun cardCount(): Int = items.sumOf { it.quantity }
 }
+
+/**
+ * The payment went through but the gift cards could not be stored, so there is a real purchase
+ * with no local record of what was bought.
+ */
+class GiftCardOrderNotSavedException(val txId: Sha256Hash, cause: Throwable) :
+    Exception("Gift cards could not be saved for $txId", cause)
 
 @HiltViewModel
 class DashSpendViewModel @Inject constructor(
@@ -304,6 +312,45 @@ class DashSpendViewModel @Inject constructor(
                 }
             }
         } ?: throw CTXSpendException("purchaseGiftCard error: no merchant")
+    }
+
+    /**
+     * Submits the payment and records the ordered cards as one operation that the caller's
+     * lifecycle cannot interrupt.
+     *
+     * The purchase screen runs on `viewLifecycleOwner.lifecycleScope`, so a screen lock or
+     * rotation during submission would otherwise cancel the caller and skip the recording, even
+     * though the payment itself continues. That is precisely the situation this recovery work
+     * exists for, and nothing else holds the order: [PendingDirectPayment] keeps the transaction
+     * and a service name, not the order ids or redemption challenges.
+     *
+     * @throws PaymentSubmissionPendingException if the submission result is unknown; the order is
+     *   recorded first, so a payment that did arrive still shows up as a gift card purchase.
+     * @throws GiftCardOrderNotSavedException if the payment succeeded but the cards could not be
+     *   stored, so the caller can say so instead of opening an empty details screen.
+     */
+    suspend fun payAndRecordOrder(
+        paymentUri: String,
+        giftCards: List<GiftCardInfo>
+    ): Sha256Hash = withContext(NonCancellable) {
+        val txId = try {
+            createSendingRequestFromDashUri(paymentUri)
+        } catch (ex: PaymentSubmissionPendingException) {
+            try {
+                saveGiftCardsForPendingPayment(ex.txId, giftCards)
+            } catch (e: Exception) {
+                // The unknown payment status is the more important thing to report.
+                log.error("could not record the pending gift card order for {}", ex.txId, e)
+            }
+            throw ex
+        }
+
+        try {
+            saveGiftCardDummy(txId, giftCards)
+        } catch (e: Exception) {
+            throw GiftCardOrderNotSavedException(txId, e)
+        }
+        txId
     }
 
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash = withContext(Dispatchers.IO) {

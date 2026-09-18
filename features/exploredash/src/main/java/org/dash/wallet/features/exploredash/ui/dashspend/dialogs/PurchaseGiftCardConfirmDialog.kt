@@ -86,6 +86,7 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardOrderNotSavedException
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
 import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
 import org.dash.wallet.features.exploredash.utils.SavingsFormatting
@@ -478,21 +479,8 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             }
             val transactionId = createSendingRequestFromDashUri(dashPaymentUrl, data)
             transactionId?.let {
-                try {
-                    viewModel.saveGiftCardDummy(transactionId, data)
-                    enterAmountViewModel.clearSavedState()
-                    showGiftCardDetailsDialog(transactionId)
-                } catch (e: Exception) {
-                    // saveGiftCardDummy awaits the insert, so a database failure lands here. The
-                    // details screen reads the cards from the database and takes the order id
-                    // from them, so opening it now would show an empty card that can never be
-                    // fetched. Say what happened instead. The payment itself succeeded, so the
-                    // entered amount is still cleared: sending the user back to a pre-filled
-                    // purchase screen would invite them to pay a second time.
-                    log.error("could not save gift cards for {}", transactionId, e)
-                    enterAmountViewModel.clearSavedState()
-                    showGiftCardSaveFailed()
-                }
+                enterAmountViewModel.clearSavedState()
+                showGiftCardDetailsDialog(it)
             }
         }
     }
@@ -502,7 +490,8 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         giftCards: List<GiftCardInfo>
     ): Sha256Hash? {
         return try {
-            viewModel.createSendingRequestFromDashUri(url)
+            // submission and order recording together, so a destroyed view cannot separate them
+            viewModel.payAndRecordOrder(url, giftCards)
         } catch (x: InsufficientMoneyException) {
             hideLoading()
             log.error("purchaseGiftCard InsufficientMoneyException", x)
@@ -520,29 +509,16 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             // checking the network in the background; the transaction shows up as sent once it is
             // found, and its inputs are released if it never appears. Don't let the user retry now.
             log.warn("purchaseGiftCard submission result unknown for {}", ex.txId, ex)
-            // The transaction is fully built and its id is final, so record the order now. The
-            // merchant may well have received the payment, and this screen is about to go away
-            // with the only copy of the order details. If the wallet later proves the payment
-            // never arrived, PendingDirectPaymentVerifier removes these rows again.
-            try {
-                // Persist first: clearing the entered amount discards the last copy of this
-                // order held anywhere, so it must not happen until the rows are written.
-                viewModel.saveGiftCardsForPendingPayment(ex.txId, giftCards)
-                enterAmountViewModel.clearSavedState()
-            } catch (e: Exception) {
-                // Keep the saved state so the order details are not lost as well, and still tell
-                // the user the payment status is unknown - that matters more than this failure.
-                log.error("could not save gift cards for pending payment {}", ex.txId, e)
-            }
-            hideLoading()
-            if (isAdded) {
-                AdaptiveDialog.create(
-                    R.drawable.ic_warning,
-                    getString(R.string.payment_submission_pending_title),
-                    getString(R.string.payment_submission_pending_message),
-                    getString(R.string.button_close)
-                ).show(requireActivity())
-            }
+            // payAndRecordOrder has already recorded the order against this transaction id.
+            enterAmountViewModel.clearSavedState()
+            showPaymentPending()
+            null
+        } catch (ex: GiftCardOrderNotSavedException) {
+            // The details screen reads the cards from the database and takes the order id from
+            // them, so opening it now would show an empty card that can never be fetched.
+            log.error("could not save gift cards for {}", ex.txId, ex)
+            enterAmountViewModel.clearSavedState()
+            showGiftCardSaveFailed()
             null
         } catch (ex: DirectPayException) {
             log.error("purchaseGiftCard DirectPayException", ex)
@@ -614,6 +590,26 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
      * The payment went through but nothing could be stored about the gift card. Explain that,
      * then leave the purchase flow the same way a successful purchase does.
      */
+    /**
+     * The payment was submitted but its result is unknown. Leave the purchase flow afterwards:
+     * this order is paid for as far as we know, and keeping the sheet open would put a live
+     * Confirm button back in front of the user once the warning is closed. Clearing the entered
+     * amount is not enough on its own, because the cart comes from the view model's order info,
+     * so Confirm would place and pay for a second identical order out of any other unlocked
+     * outputs.
+     */
+    private fun showPaymentPending() {
+        hideLoading()
+        if (isAdded) {
+            AdaptiveDialog.create(
+                R.drawable.ic_warning,
+                getString(R.string.payment_submission_pending_title),
+                getString(R.string.payment_submission_pending_message),
+                getString(R.string.button_close)
+            ).show(requireActivity()).also { dismissPurchaseFlow() }
+        }
+    }
+
     private fun showGiftCardSaveFailed() {
         hideLoading()
         if (isAdded) {
@@ -622,12 +618,15 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 getString(R.string.gift_card_save_failed_title),
                 getString(R.string.gift_card_save_failed_message),
                 getString(R.string.button_close)
-            ).show(requireActivity()).also {
-                val navController = findNavController()
-                navController.popBackStack(navController.graph.startDestinationId, false)
-                this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
-            }
+            ).show(requireActivity()).also { dismissPurchaseFlow() }
         }
+    }
+
+    /** Returns to the start of the flow and closes this sheet, as a successful purchase does. */
+    private fun dismissPurchaseFlow() {
+        val navController = findNavController()
+        navController.popBackStack(navController.graph.startDestinationId, false)
+        this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
     }
 
     private fun showGiftCardDetailsDialog(txId: Sha256Hash) {
