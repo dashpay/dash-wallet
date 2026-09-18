@@ -1887,3 +1887,112 @@ real.
 
 Not implemented — it changes wake-up frequency and therefore battery behaviour, which is a product
 call rather than a patch.
+
+## 33. Move the protobuf parse off the main thread
+
+Raised from Joel's 12000010 bundle (`joel-oom-crash-2026-09-18`): "crash on startup, never would
+finish syncing". The sync half is a consequence — the engine is progressing (`last_activity: 0s`,
+filters 2,272,092 / 2,540,300 = 89.4 %) but no session survives long enough to finish. The startup
+half is this section.
+
+### 33.1 The measurement
+
+`WalletApplication.fullInitialization()` → `loadWalletFromProtobuf()` is called from
+`WalletApplication.onCreate()`. Six loads are timed in the bundle's logs, and **every one ran on
+`[main]`**:
+
+```
+n=6   min 6,222 ms   median 10,320 ms   max 21,567 ms
+```
+
+```
+20:17:45 [main] WalletApplication - STARTUP fullInit: loadWalletFromProtobuf done in 14386ms
+00:00:50 [main] WalletApplication - STARTUP fullInit: loadWalletFromProtobuf done in 10320ms
+21:55:06 [main] WalletApplication - STARTUP fullInit: loadWalletFromProtobuf done in  6222ms
+```
+
+The input is a 61,641,747-byte wallet holding 33,297 transactions and 229 friend chains /
+29,970 keys. For scale, Andrei's "complicated" job-flower wallet (§MO-1022 work) is 10.2 MB and
+6,787 transactions.
+
+The ANR threshold is 5 s. The **fastest** observed load is 6.2 s. The app's own
+`ApplicationExitInfo` history over these logs records **33 ANRs**, 18 `LOW_MEMORY_LMK`, 5 crashes.
+Every cold start on this device is an ANR by construction.
+
+### 33.2 What is already in place, and why it is not enough
+
+Three guards already surround this parse, and none of them shortens it:
+
+- `WalletFileSizeGuard` — a **pre-parse** verdict on file size. Joel's file passes; it is 61 MB,
+  well under the 2 GiB protobuf wall.
+- `WalletLoadBudget` (20 s) — deliberately does **not** abort. `readWallet` cannot be interrupted
+  safely mid-parse, so the budget only marks the breadcrumb and arms safe mode for the next launch.
+  Joel's max load of 21.6 s is the first to cross it.
+- `StartupBreadcrumbs` safe mode — opens the app *without* the wallet after two deaths. It makes the
+  app reachable for a crash report; it is not a way to use the wallet.
+
+They convert "silent death" into "diagnosable death". The parse itself is untouched, and at
+6–21 s on the main thread it is the direct cause of the ANR count.
+
+### 33.3 Why it is on the main thread
+
+Not by accident. `WalletApplication` exposes the wallet synchronously and non-null:
+
+```java
+@Override public Wallet getWallet() { return wallet; }
+
+@Override public TransactionBag getTransactionBag() {
+    if (wallet == null) throw new IllegalStateException("Wallet is null");
+    return wallet;
+}
+```
+
+Parsing inside `onCreate()` is what makes that contract true for every caller that follows. The
+surface is large: ~37 `getWallet()` call sites plus ~359 `.wallet` references across the wallet
+module. A `null` window that did not previously exist would be observable at all of them.
+
+`observeWallet()` already exists as a `MutableStateFlow<Wallet>` — the asynchronous contract is
+half-built, it is simply not the one callers use.
+
+### 33.4 Options
+
+**A. Parse on a background thread, block only what needs the wallet.**
+`onCreate()` launches the load and returns. A gate (`awaitWallet()`, or collecting
+`observeWallet()`) is awaited by the first screen that needs wallet data; the launcher activity
+shows a loading state meanwhile. Removes the main-thread stall outright and is the only option that
+does. Cost: every synchronous `getWallet()` caller has to be audited for the new null window —
+this is the real work, not the threading.
+
+**B. Parse on a background thread, block `onCreate()` on the result.**
+A one-line change with no behavioural risk. It does **not** fix the ANR — the main thread still
+waits — but it moves the parse off the main thread's own stack, which changes the ANR trace and is
+worth nothing on its own. Rejected; recorded so it is not re-proposed.
+
+**C. Attack the parse cost instead of its thread.**
+Joel's 229 friend chains / 29,970 keys are the same shape of cost `FriendKeyChainLookahead` was
+built for (it defers friend-chain lookahead and took a pathological case from minutes to ~2 s). It
+is worth measuring how much of the 6–21 s is friend chains versus the 33,297 transactions before
+assuming the threading change is the whole answer. Complementary to A, not an alternative.
+
+### 33.5 Recommendation
+
+Do **C first as a measurement** — instrument the parse to attribute time between key chains and
+transactions on a copy of Joel's wallet — then **A**. A is the fix; C decides whether A alone is
+sufficient or whether the parse also has to get cheaper for the loading state to be tolerable.
+
+Scope A deliberately: the threading is small, the null-window audit across ~396 call sites is not.
+That audit is the estimate.
+
+### 33.6 What this does not address
+
+The other half of Joel's failure is memory, not time: PSS 2.3–2.45 GB, native heap 1.86 GB, JVM
+peaking at 475 MB of 512, driving 18 low-memory kills. Moving the parse off the main thread does
+not reduce the footprint — the parsed wallet is the same size wherever it is built, and the 1.86 GB
+of native heap held during the FILTERS replay is a separate, unattributed investigation.
+
+Nor does it help the two idle stops observed mid-replay at 12:45:35 and 13:00:00. Those are already
+fixed on the branch (`20975314f` replay guard, `b42f8f84e` re-arm) and simply absent from 12000010 —
+confirmed by zero matches for the wake-lock and "replay in progress" log lines in his logs. The
+filter-stall watchdog (`616ac58ff`) would **not** fire for him: he is progressing, not wedged.
+
+Not implemented.
