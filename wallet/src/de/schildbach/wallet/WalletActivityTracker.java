@@ -55,11 +55,24 @@ public class WalletActivityTracker extends ActivitiesTracker {
         this.restartService = restartService;
     }
 
+    /**
+     * DORMANT — deliberately not wired up. Reached only via
+     * ActivitiesTracker.onActivityStarted, which this class overrides without
+     * calling super, so it has never run here (nor in the anonymous tracker
+     * this class replaced, which had the same defect).
+     *
+     * NOT re-enabled along with onStoppedLast, and that is a deliberate
+     * decision rather than an oversight: this forces a full app restart on the
+     * first activity start after any upgrade. Its stated purpose — pushing
+     * v6.x installs through the PIN upgrade — is long obsolete, and switching
+     * it on now would make every 12.x upgrade restart the app during the
+     * cutover release. If the behaviour is still wanted, enable it on purpose
+     * and test the upgrade path; otherwise delete it and `myPackageReplaced`
+     * with it. Tracked separately from MO-995.
+     */
     @Override
     protected void onStartedAny(boolean isTheFirstOne, Activity activity) {
         super.onStartedAny(isTheFirstOne, activity);
-        // force restart if the app was updated
-        // this ensures that v6.x or previous will go through the PIN upgrade process
         if (!BuildConfig.DEBUG && app.myPackageReplaced) {
             log.info("restarting app due to upgrade");
             app.myPackageReplaced = false;
@@ -111,12 +124,58 @@ public class WalletActivityTracker extends ActivitiesTracker {
     public void onActivityStarted(@NonNull Activity activity) {
         visibleActivityCount++;
         currentActivity = activity;
+        // MO-995: the app-foreground signal, derived from THIS counter rather
+        // than the ActivitiesTracker base's onStartedFirst/onStoppedLast hooks —
+        // those never run, because this class overrides onActivityStarted /
+        // onActivityStopped without calling super, so the base's numStarted
+        // never advances. visibleActivityCount is the counter that actually
+        // tracks reality. See AppForegroundMonitor for why
+        // ProcessLifecycleOwner cannot supply this at all.
+        if (visibleActivityCount == 1) {
+            AppForegroundMonitor.INSTANCE.noteForeground();
+        }
         logState();
     }
 
     public void onActivityStopped(@NonNull Activity activity) {
         visibleActivityCount--;
         currentActivity = activity;
+        if (visibleActivityCount == 0) {
+            // A CONFIGURATION CHANGE IS NOT BACKGROUNDING. Android stops the
+            // outgoing instance before starting its replacement, so the count
+            // legitimately touches zero on a rotation, a dark-mode toggle, a
+            // locale change or a font-scale change while the user is still
+            // looking at the app. Counting stays balanced either way — the
+            // replacement's onActivityStarted takes it back to 1 — but the
+            // "app went away" signals must not fire.
+            //
+            // This matters because onStoppedLast() below was dead code until
+            // this branch re-enabled it, so the hazard arrived with the fix:
+            // setAppWentBackground(true) makes AutoLogout.shouldLogout() true
+            // outright on a zero-minute timeout, and the FORCE_FINISH_ACTION
+            // broadcast finishes the activity stack. Nine activities in
+            // AndroidManifest.xml neither pin portrait nor handle orientation
+            // themselves — MainActivity, AddressBookActivity,
+            // NetworkMonitorActivity and BlockInfoActivity among them — so
+            // rotating any of them would drop the user on the lock screen
+            // without ever having left the wallet.
+            if (activity.isChangingConfigurations()) {
+                log.info("{}: {} stopped for a configuration change — not treating it as background",
+                        logName, activity.getClass().getSimpleName());
+            } else {
+                AppForegroundMonitor.INSTANCE.noteBackground();
+                // MO-995: invoke the last-stopped hook explicitly. The base
+                // class's onStoppedLast() is NEVER reached, because this class
+                // overrides onActivityStarted/onActivityStopped without calling
+                // super, so ActivitiesTracker.numStarted never advances. That
+                // has been true since before this class existed — the anonymous
+                // tracker it replaced (WalletApplication, pre-fae81fefb) had the
+                // identical bug — so autoLogout has not been told the app
+                // backgrounded, and the zero-minute force-finish has not fired,
+                // for a long time.
+                onStoppedLast();
+            }
+        }
         logState();
     }
 

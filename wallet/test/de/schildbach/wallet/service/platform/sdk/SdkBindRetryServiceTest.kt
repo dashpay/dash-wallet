@@ -177,7 +177,7 @@ class SdkBindRetryServiceTest {
     }
 
     @Test
-    fun noteAppForeground_collapsesTheBackoffWindow() = runTest {
+    fun noteAppForeground_drivesARetryImmediately() = runTest {
         val h = Harness()
         h.signal.primeFailed()
         val service = h.service(backgroundScope)
@@ -194,10 +194,19 @@ class SdkBindRetryServiceTest {
         service.maybeRetry("poll")
         assertEquals(5, h.signal.passes)
 
-        // …until the app foregrounds, which resets the ladder.
+        // …until the app foregrounds, which now DRIVES a pass itself rather than
+        // only resetting the ladder for some other trigger to notice.
+        //
+        // MO-995: the old state-only behaviour depended on `maybeRetry` being
+        // called by CutoverUiDataService's bound-wallet wait loop — a loop that
+        // only runs while the cutover holds dashj with NO bound wallet. Once the
+        // coordinator refuses to commit onto an unbindable SDK that state never
+        // happens, so nothing ever polled and nothing ever retried (emulator S3:
+        // unlock + foreground produced zero binder activity; only an app restart
+        // healed it).
         service.noteAppForeground()
-        service.maybeRetry("poll")
-        assertEquals(6, h.signal.passes)
+        runCurrent()
+        assertEquals("foregrounding must itself run a bind pass", 6, h.signal.passes)
     }
 
     // ── The unlock heal receiver ──────────────────────────────────────
@@ -302,6 +311,14 @@ class SdkBindRetryServiceTest {
         val config = mockk<DashPayConfig>()
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { storedState }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        // "Has EVER bound" is true here on purpose: this models a wallet that
+        // bound successfully at some point and whose Keystore then started
+        // denying (e.g. the device locked). The commit is therefore legal, and
+        // the rollback is exactly the safety net under test. A never-bound
+        // wallet is refused up front instead — see
+        // CutoverCoordinatorTest.autoAdvance_refusesToCommit_*.
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns true
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) } returns false
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) } returns false
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns false
@@ -485,5 +502,113 @@ class SdkBindRetryServiceTest {
         binder.bindIfEnabled { WalletUnlock.Unencrypted }
         assertFalse(binder.bindRetryPending.value)
         assertEquals(0, binder.consecutiveBindFailures)
+    }
+
+    /**
+     * MO-995: the durable bind-success marker must be written on EVERY
+     * successful pass, including the "app wallet already bound" path — not only
+     * when a new SDK wallet is created.
+     *
+     * REGRESSION: the marker first lived inside `bindAppWallet(...).also { }`,
+     * which only runs on a fresh bind. On any launch that found the SDK wallet
+     * already bound, the marker was never written, so
+     * `CutoverCoordinator.commitForUpgradedWalletAsync` declined forever and
+     * the cutover never committed. Caught on the emulator: launch 2 of a clean
+     * run still logged "bind has never succeeded" while the L1 engine was
+     * demonstrably running.
+     */
+    @Test
+    fun binder_persistsTheBindSuccessMarker_evenWhenTheWalletWasAlreadyBound() = runBlocking {
+        val config = mockk<DashPayConfig>()
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) } returns false
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) } returns false
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns false
+        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
+        coEvery { config.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) } returns
+            SdkWalletBinder.GAP_WIDEN_HEAL_VERSION
+        var markerWritten = false
+        coEvery { config.set(DashPayConfig.SDK_BIND_EVER_SUCCEEDED, any<Boolean>()) } answers {
+            markerWritten = secondArg()
+            Unit
+        }
+        val walletId = "cd".repeat(32)
+        val sdk = mockk<DashSdkService>(relaxed = true)
+        coEvery { sdk.bindAppWallet(any(), any()) } returns walletId
+        // The ALREADY-BOUND path: the SDK reports the wallet is already loaded,
+        // so a fresh bindAppWallet() is not what establishes it.
+        coEvery { sdk.loadedWalletIds() } returns setOf(walletId)
+        val identityConfig = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityConfig> {
+            coEvery { loadBase() } returns de.schildbach.wallet.database.entity.BlockchainIdentityBaseData(
+                creationState = de.schildbach.wallet.database.entity.IdentityCreationState.NONE,
+                creationStateErrorMessage = null,
+                username = null,
+                usernameSecondary = null,
+                userId = null,
+                restoring = false
+            )
+        }
+        val binder = SdkWalletBinder(
+            sdkService = sdk,
+            mnemonicProvider = object : PlatformMnemonicProvider {
+                override suspend fun getMnemonicWords(unlock: WalletUnlock) =
+                    listOf("abandon", "abandon", "about")
+            },
+            identityConfig = identityConfig,
+            dashPayConfig = config,
+            walletData = mockk { io.mockk.every { wallet } returns null },
+            blockchainServiceConfig = mockk { coEvery { getWalletCreationDate() } returns null },
+            scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined),
+            supportsPlatform = { true },
+            backfillGate = DashPayBackfillGate.ALWAYS_RUN
+        )
+
+        binder.bindIfEnabled { WalletUnlock.Unencrypted }
+
+        assertTrue(
+            "a successful pass must persist SDK_BIND_EVER_SUCCEEDED regardless of which " +
+                "path established the bind — otherwise the upgrade seam declines forever",
+            markerWritten
+        )
+    }
+
+    /**
+     * The emulator S3 scenario, reduced: a pending retry, and NOTHING polling.
+     *
+     * This is the state the wallet is actually in after the coordinator
+     * declines to commit onto an unbindable SDK — CutoverUiDataService's
+     * bound-wallet wait loop (the sole caller of [SdkBindRetryService.maybeRetry])
+     * never runs, so no poll ever arrives. Foregrounding the app must be
+     * sufficient on its own, with no `maybeRetry` call anywhere in the test.
+     */
+    @Test
+    fun noteAppForeground_recoversWithNoPollingTriggerAtAll() = runTest {
+        val h = Harness()
+        h.signal.primeFailed()
+        val service = h.service(backgroundScope)
+
+        assertEquals("no poll has happened", 0, h.signal.passes)
+
+        service.noteAppForeground()
+        runCurrent()
+
+        assertEquals("a foreground visit alone must retry the bind", 1, h.signal.passes)
+    }
+
+    /**
+     * Foregrounding also ARMS the unlock receiver. Arming used to happen only
+     * inside [SdkBindRetryService.maybeRetry], so in the no-polling state above
+     * the receiver was never registered either — walletB logged
+     * "unlock-heal receiver registered" zero times.
+     */
+    @Test
+    fun noteAppForeground_armsTheUnlockReceiver() = runTest {
+        val h = Harness()
+        h.signal.primeFailed()
+        val service = h.service(backgroundScope)
+
+        service.noteAppForeground()
+        runCurrent()
+
+        assertEquals("the unlock-heal receiver must be armed by a foreground visit", 1, h.registrations)
     }
 }

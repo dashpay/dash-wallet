@@ -19,11 +19,28 @@ android {
     buildTypes {
         configureEach {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Shipped to consumers (the app) and applied when THEY minify — this
+            // is where this module's keep rules belong.
             consumerProguardFiles 'proguard-rules.pro'
         }
-        release {
-            minifyEnabled true
-        }
+        // NO minifyEnabled here. MO-995: this was the only module in the project
+        // that minified its own library output, and R8 stripped Hilt's
+        // `hilt_aggregated_deps.*` metadata out of the release classes jar
+        // (measured: 5 entries in debug, 0 in release). That metadata is how the
+        // APP module's Hilt processor discovers @AndroidEntryPoint classes in
+        // library modules, so the generated FragmentCImpl did not implement
+        // UpholdPortalFragment_GeneratedInjector and attaching the fragment
+        // crashed with a ClassCastException — release builds only, which is why
+        // it never appeared in development.
+        //
+        // The existing `-keep class org.dash.wallet.integrations.uphold.**` rule
+        // does not help: hilt_aggregated_deps is a different package.
+        //
+        // Dropping it costs nothing. The app module already sets
+        // minifyEnabled true (wallet/build.gradle, release), so every class here
+        // is still shrunk and obfuscated in the final APK — once, at the app
+        // level, with the whole program visible. Minifying a library separately
+        // only removes metadata its consumers still need.
     }
 
     compileOptions {
