@@ -342,16 +342,17 @@ class DashSpendViewModel @Inject constructor(
 
         try {
             response?.let { apiResponse ->
-                val updatedProviders = merchant.giftCardProviders.mapIndexed { index, giftCardProvider ->
-                    if (index == 0 && selectedProvider?.name == "CTX") {
+                // Refresh the provider row that matches the selected provider. The cached
+                // denominationsType from the explore dataset can disagree with what the
+                // provider's API currently sells (e.g. a merchant switching between fixed
+                // cards and a min-max range card), so it must be replaced here — the
+                // purchase screen decides the Fixed/Flexible mode from this row.
+                val updatedProviders = merchant.giftCardProviders.map { giftCardProvider ->
+                    if (giftCardProvider.provider == selectedProvider?.name) {
                         giftCardProvider.copy(
                             savingsPercentage = apiResponse.savingsPercentage,
-                            active = apiResponse.enabled
-                        )
-                    } else if (index == 0 && selectedProvider?.name == "PiggyCards") {
-                        giftCardProvider.copy(
-                            savingsPercentage = apiResponse.savingsPercentage,
-                            active = apiResponse.enabled
+                            active = apiResponse.enabled,
+                            denominationsType = apiResponse.denominationsType
                         )
                     } else {
                         giftCardProvider

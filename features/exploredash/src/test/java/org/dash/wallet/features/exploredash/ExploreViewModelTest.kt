@@ -21,6 +21,7 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -40,6 +41,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
 import org.dash.wallet.features.exploredash.data.explore.model.SortOption
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
+import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.explore.DenomOption
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
@@ -534,6 +536,288 @@ class ExploreViewModelTest {
             assertEquals(expected, actual)
             verify(dataSource).observePhysicalMerchants("", "", "", DenomOption.Both, "", bounds)
             verify(locationMock).getRadiusBounds(userLat, userLng, viewModel.radius)
+        }
+    }
+
+    @Test
+    fun openAllMerchantLocations_withoutMapBounds_stillLoadsLocations() {
+        // Regression test: the Google Map camera callback is the only writer of searchBounds.
+        // Without Google Play Services it never fires, and the locations flow used to wait on
+        // it forever, leaving the merchant locations screen permanently blank.
+        runBlocking {
+            val physicalLocations = merchants.filter { it.type == MerchantType.PHYSICAL }
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(physicalLocations) }
+                }
+
+            val locationMock = mock<UserLocationStateInt> {
+                onBlocking { getCountryCodeFromLocation() } doReturn "US"
+            }
+            val dataSyncStatus =
+                mock<DataSyncStatusService> {
+                    on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { hasObservedLastError() } doReturn flow { emit(false) }
+                }
+
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                dataSyncStatus,
+                networkState,
+                mockPreferences,
+                mock<AnalyticsService>()
+            )
+            viewModel.init(ExploreTopic.Merchants)
+            // searchBounds is deliberately never set — location services unavailable
+
+            viewModel.openAllMerchantLocations("merchant1", "DashSpend")
+            kotlinx.coroutines.delay(200)
+
+            assertEquals(physicalLocations, viewModel.allMerchantLocations.value)
+            verify(dataSource).observeMerchantLocations(
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(GeoBounds.noBounds),
+                eq(100)
+            )
+            verify(locationMock, never()).getRadiusBounds(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun openAllMerchantLocations_nearbyWithoutMapBounds_usesUserLocationNotOrigin() {
+        // Regression test for the review finding on the noBounds fallback: in Nearby mode
+        // with location enabled but no map bounds, the radius must be centered on the
+        // user's location — never on the noBounds placeholder center (0, 0).
+        runBlocking {
+            val userLat = 33.712711
+            val userLng = -84.4951037
+            val userBounds = GeoBounds(
+                northLat = 34.002174157200685,
+                eastLng = -84.14712188964452,
+                southLat = 33.423247842799306,
+                westLng = -84.8430855103555,
+                centerLat = userLat,
+                centerLng = userLng
+            )
+            val physicalLocations = merchants.filter { it.type == MerchantType.PHYSICAL }
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(physicalLocations) }
+                }
+
+            val locationMock =
+                mock<UserLocationStateInt> {
+                    on { getRadiusBounds(eq(userLat), eq(userLng), any()) } doReturn userBounds
+                    on { observeUpdates() } doReturn flowOf(UserLocation(userLat, userLng, 10.0))
+                    onBlocking { getCountryCodeFromLocation() } doReturn "US"
+                }
+            val dataSyncStatus =
+                mock<DataSyncStatusService> {
+                    on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { hasObservedLastError() } doReturn flow { emit(false) }
+                }
+
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                dataSyncStatus,
+                networkState,
+                mockPreferences,
+                mock<AnalyticsService>()
+            )
+            viewModel.init(ExploreTopic.Merchants)
+            viewModel.setFilterMode(FilterMode.Nearby)
+            viewModel.monitorUserLocation()
+            kotlinx.coroutines.delay(100)
+            // searchBounds is deliberately never set — the map never initialized
+
+            viewModel.openAllMerchantLocations("merchant1", "DashSpend")
+            kotlinx.coroutines.delay(200)
+
+            assertEquals(physicalLocations, viewModel.allMerchantLocations.value)
+            verify(locationMock).getRadiusBounds(userLat, userLng, viewModel.radius)
+            verify(locationMock, never()).getRadiusBounds(eq(0.0), eq(0.0), any())
+            verify(dataSource).observeMerchantLocations(
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(userBounds),
+                any()
+            )
+        }
+    }
+
+    @Test
+    fun openAllMerchantLocations_nearbyLocationArrivesLate_narrowsToTheUserRadius() {
+        // Regression test: monitorUserLocation() marks location as enabled before the first fix
+        // lands. Opening the screen in that window queried unbounded, and nothing restarted the
+        // query when the fix arrived, so Nearby kept showing locations from everywhere.
+        runBlocking {
+            val userLat = 33.712711
+            val userLng = -84.4951037
+            val userBounds = GeoBounds(
+                northLat = 34.002174157200685,
+                eastLng = -84.14712188964452,
+                southLat = 33.423247842799306,
+                westLng = -84.8430855103555,
+                centerLat = userLat,
+                centerLng = userLng
+            )
+            val physicalLocations = merchants.filter { it.type == MerchantType.PHYSICAL }
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(physicalLocations) }
+                }
+
+            val locationUpdates = MutableSharedFlow<UserLocation>(replay = 0, extraBufferCapacity = 1)
+            val locationMock =
+                mock<UserLocationStateInt> {
+                    on { getRadiusBounds(eq(userLat), eq(userLng), any()) } doReturn userBounds
+                    on { observeUpdates() } doReturn locationUpdates
+                    onBlocking { getCountryCodeFromLocation() } doReturn "US"
+                }
+            val dataSyncStatus =
+                mock<DataSyncStatusService> {
+                    on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { hasObservedLastError() } doReturn flow { emit(false) }
+                }
+
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                dataSyncStatus,
+                networkState,
+                mockPreferences,
+                mock<AnalyticsService>()
+            )
+            viewModel.init(ExploreTopic.Merchants)
+            viewModel.setFilterMode(FilterMode.Nearby)
+            viewModel.monitorUserLocation()
+            // no fix yet, and no map bounds either — the map never initialized
+
+            viewModel.openAllMerchantLocations("merchant1", "DashSpend")
+            kotlinx.coroutines.delay(200)
+
+            // Nothing to centre on yet, so the screen fills rather than staying empty
+            verify(dataSource).observeMerchantLocations(
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(GeoBounds.noBounds),
+                any()
+            )
+
+            locationUpdates.emit(UserLocation(userLat, userLng, 10.0))
+            kotlinx.coroutines.delay(200)
+
+            // The fix landed: the query is redone around the user
+            verify(dataSource).observeMerchantLocations(
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(userBounds),
+                any()
+            )
+            verify(locationMock, never()).getRadiusBounds(eq(0.0), eq(0.0), any())
+        }
+    }
+
+    @Test
+    fun openAllMerchantLocations_locationGrantedWhileOpen_narrowsToTheUserRadius() {
+        // Regression test: onResume calls monitorUserLocation() when permission has just been
+        // granted, which writes _isLocationEnabled but never _searchBounds. Keying the radius on
+        // the bounds alone left an already-open Nearby screen querying unbounded for good.
+        runBlocking {
+            val userLat = 33.712711
+            val userLng = -84.4951037
+            val userBounds = GeoBounds(
+                northLat = 34.002174157200685,
+                eastLng = -84.14712188964452,
+                southLat = 33.423247842799306,
+                westLng = -84.8430855103555,
+                centerLat = userLat,
+                centerLng = userLng
+            )
+            val physicalLocations = merchants.filter { it.type == MerchantType.PHYSICAL }
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(physicalLocations) }
+                }
+            val locationMock =
+                mock<UserLocationStateInt> {
+                    on { getRadiusBounds(eq(userLat), eq(userLng), any()) } doReturn userBounds
+                    on { observeUpdates() } doReturn flowOf(UserLocation(userLat, userLng, 10.0))
+                    onBlocking { getCountryCodeFromLocation() } doReturn "US"
+                }
+            val dataSyncStatus =
+                mock<DataSyncStatusService> {
+                    on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { hasObservedLastError() } doReturn flow { emit(false) }
+                }
+
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                dataSyncStatus,
+                networkState,
+                mockPreferences,
+                mock<AnalyticsService>()
+            )
+            viewModel.init(ExploreTopic.Merchants)
+            viewModel.setFilterMode(FilterMode.Nearby)
+            // location is still denied, and the map never produced bounds
+
+            viewModel.openAllMerchantLocations("merchant1", "DashSpend")
+            kotlinx.coroutines.delay(200)
+
+            verify(dataSource).observeMerchantLocations(
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(GeoBounds.noBounds),
+                any()
+            )
+
+            // Permission granted while the screen is open
+            viewModel.monitorUserLocation()
+            kotlinx.coroutines.delay(200)
+
+            verify(dataSource).observeMerchantLocations(
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(userBounds),
+                any()
+            )
         }
     }
 
