@@ -365,7 +365,7 @@ class L1ShadowSyncServiceTest {
     // ── Two-tier threshold: how long to wait is decided by what a restart costs ──
 
     @Test
-    fun filterStall_nearTheTip_restartsAfterTwoMinutesNotTen() {
+    fun filterStall_nearTheTip_makesItsFirstAttemptAfterThreeMinutesNotTen() {
         // MEASURED, Samsung SM-S901U 2026-09-19: cursor at 1,553,000 of
         // 1,556,891 with the durable watermark ALREADY at 1,556,890. The
         // watchdog restarted and 47 s later the engine was back at 1,556,890 —
@@ -378,12 +378,12 @@ class L1ShadowSyncServiceTest {
         d.onCheck(0L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(90_000L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
+            d.onCheck(2 * 60_000L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
         )
         assertEquals(
             "a restart that re-walks 1 block does not deserve a ten-minute wait",
             FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(2 * 60_000L + 1, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
+            d.onCheck(3 * 60_000L + 1, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
         )
     }
 
@@ -419,8 +419,44 @@ class L1ShadowSyncServiceTest {
         d.onCheck(0L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
         assertEquals(
             FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(2 * 60_000L + 1, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
+            d.onCheck(3 * 60_000L + 1, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
         )
+    }
+
+    @Test
+    fun filterStall_backsOffSoTheBudgetOutlivesOneNormalPause() {
+        // THE 90-SECOND RUN, 2026-09-19: with a flat threshold the spacing
+        // between restarts IS the threshold, so all three landed at 18:21,
+        // 18:24 and 18:26 and the watchdog stood down for the process by
+        // 18:28 — inside a spell shorter than the 6 min 32 s benign pause
+        // measured on the same device that morning. Backing off is what stops
+        // one bad spell costing the whole session's mitigation.
+        val d = stallDecider()
+        val stuck = 1_556_890L
+        val target = 1_556_896L
+        fun check(atMs: Long) =
+            d.onCheck(atMs, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
+
+        check(0L)
+        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(3 * 60_000L + 1))
+        // Second attempt waits 20 min, not another 3.
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(10 * 60_000L))
+        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(23 * 60_000L + 2))
+        // Third waits 30 more.
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(40 * 60_000L))
+        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(53 * 60_000L + 3))
+        assertEquals(FilterStallWatchdogDecider.Decision.EXHAUSTED, check(120 * 60_000L))
+    }
+
+    @Test
+    fun waitBeforeAttempt_isQuickOnlyForTheCheapFirstTry() {
+        val d = stallDecider()
+        assertEquals(3 * 60_000L, d.waitBeforeAttempt(0, nearTip = true))
+        assertEquals(10 * 60_000L, d.waitBeforeAttempt(0, nearTip = false))
+        // Later attempts ignore the tip: a remedy that failed once has not
+        // earned another quick go, wherever the cursor is.
+        assertEquals(20 * 60_000L, d.waitBeforeAttempt(1, nearTip = true))
+        assertEquals(30 * 60_000L, d.waitBeforeAttempt(2, nearTip = true))
     }
 
     @Test
@@ -537,15 +573,16 @@ class L1ShadowSyncServiceTest {
             FilterStallWatchdogDecider.Decision.NONE,
             d.onCheck(12 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
         )
-        // It then wedges again at the new height: a fresh ten minutes is
-        // required, not the leftover of the previous window.
+        // It then wedges again at the new height. A fresh window is required,
+        // not the leftover of the previous one — and it is the SECOND rung of
+        // the backoff (20 min), because a restart has already been spent.
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(21 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
+            d.onCheck(25 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
         )
         assertEquals(
             FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(23 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
+            d.onCheck(33 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
         )
     }
 
@@ -556,22 +593,23 @@ class L1ShadowSyncServiceTest {
         val target = 2_540_971L
         var now = 0L
         d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
-        repeat(3) {
-            now += 11 * 60_000L
+        // The rungs widen: 10 min (far from the tip), then 20, then 30.
+        listOf(11L, 21L, 31L).forEachIndexed { attempt, minutes ->
+            now += minutes * 60_000L
             assertEquals(
-                "restart $it must be spent",
+                "restart $attempt must be spent",
                 FilterStallWatchdogDecider.Decision.RESTART,
                 d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
             )
         }
-        now += 11 * 60_000L
+        now += 31 * 60_000L
         assertEquals(
             "the budget is spent — say so",
             FilterStallWatchdogDecider.Decision.EXHAUSTED,
             d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
         )
         repeat(5) {
-            now += 11 * 60_000L
+            now += 31 * 60_000L
             assertEquals(
                 "…and never again",
                 FilterStallWatchdogDecider.Decision.NONE,

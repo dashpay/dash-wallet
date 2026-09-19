@@ -1119,7 +1119,7 @@ internal class ProbeWatchdogDecider(
 internal class FilterStallWatchdogDecider(
     private val stallThresholdMs: Long = L1ShadowSyncService.FILTER_STALL_THRESHOLD_MS,
     private val maxRestarts: Int = L1ShadowSyncService.FILTER_STALL_MAX_RESTARTS,
-    private val nearTipThresholdMs: Long = L1ShadowSyncService.FILTER_STALL_NEAR_TIP_THRESHOLD_MS,
+    private val firstAttemptMs: Long = L1ShadowSyncService.FILTER_STALL_FIRST_ATTEMPT_MS,
     private val nearTipBlocks: Long = L1ShadowSyncService.FILTER_STALL_NEAR_TIP_BLOCKS
 ) {
     enum class Decision { NONE, RESTART, EXHAUSTED }
@@ -1139,6 +1139,20 @@ internal class FilterStallWatchdogDecider(
         private set
     var lastStillMs: Long = 0L
         private set
+
+    /**
+     * The wait before attempt [attempt], zero-based.
+     *
+     * 3 / 10 / 20 minutes near the tip, 10 / 20 / 30 elsewhere: quick to ask
+     * the first question when the answer is cheap, slow to repeat a remedy
+     * that has already failed once. Exhausting the budget then takes 33
+     * minutes rather than the 4.5 measured at a flat 90 s.
+     */
+    internal fun waitBeforeAttempt(attempt: Int, nearTip: Boolean): Long = when {
+        attempt == 0 -> if (nearTip) firstAttemptMs else stallThresholdMs
+        attempt == 1 -> stallThresholdMs * 2
+        else -> stallThresholdMs * 3
+    }
 
     /**
      * @param filterHeight the engine's current filter cursor.
@@ -1171,12 +1185,30 @@ internal class FilterStallWatchdogDecider(
             lastAdvanceMs = nowMs
             return Decision.NONE
         }
-        // Two tiers, chosen by what a restart would throw away rather than
-        // by taste: it resumes from walletSyncedHeight, so the price is the
-        // gap between that and the target, and near the tip there is no gap.
+        // BACKOFF, not a constant. The wait before attempt N is not the same
+        // as the wait before attempt N+1, because those two waits answer
+        // different questions.
+        //
+        // The FIRST wait asks "is this a pause or a wedge?". Near the tip a
+        // restart resumes from walletSyncedHeight, which is already at the
+        // target, so it costs about a minute and one was measured to HELP
+        // (2026-09-19: 1,553,000 -> 1,556,890 across it). Being quick there
+        // is nearly free. Mid-replay it is not — stop()'s watermark
+        // diagnostic recorded the durable value trailing by up to 155,000
+        // blocks — so the first wait stays long.
+        //
+        // Every LATER wait asks "did the last restart achieve anything?", and
+        // there the risk is the opposite one: with a flat threshold the
+        // spacing between restarts IS the threshold, so a short one spends
+        // the whole budget inside a single normal pause. Measured on the same
+        // device with the threshold at 90 s: restarts at 18:21, 18:24, 18:26,
+        // EXHAUSTED by 18:28 — the watchdog stood down for the process in
+        // under seven minutes, and the longest BENIGN pause we have measured
+        // is 6 min 32 s. Backing off keeps the budget alive across the whole
+        // session instead of burning it in one spell.
         val restartCostBlocks = filterTarget - walletSyncedHeight
         val nearTip = walletSyncedHeight > 0L && restartCostBlocks <= nearTipBlocks
-        val threshold = if (nearTip) nearTipThresholdMs else stallThresholdMs
+        val threshold = waitBeforeAttempt(restartsIssued, nearTip)
         if (nowMs - lastAdvanceMs < threshold) return Decision.NONE
         lastThresholdMs = threshold
         lastStillMs = nowMs - lastAdvanceMs
@@ -3586,8 +3618,9 @@ class L1ShadowSyncService internal constructor(
         internal const val FILTER_STALL_THRESHOLD_MS = 10 * 60_000L
 
         /**
-         * The NEAR-TIP threshold, used when a restart would cost almost
-         * nothing (see [FILTER_STALL_NEAR_TIP_BLOCKS]).
+         * The FIRST wait, used only when a restart would cost almost
+         * nothing (see [FILTER_STALL_NEAR_TIP_BLOCKS]). Later attempts back
+         * off — see [FilterStallWatchdogDecider.waitBeforeAttempt].
          *
          * A restart resumes from the DURABLE wallet watermark, not from the
          * filter cursor, so its price is `filterTarget - walletSyncedHeight`
@@ -3603,9 +3636,10 @@ class L1ShadowSyncService internal constructor(
          *    cursor by up to 155,000 blocks at teardown on the reference
          *    install.
          *
-         * So one threshold cannot be right for both. Two minutes near the tip
-         * buys back the wait the ten-minute rule imposed; ten minutes
-         * elsewhere keeps a false positive from throwing away a long replay.
+         * So one threshold cannot be right for both, and nor can one wait
+         * serve every attempt: three minutes to ask the first question when
+         * the answer is cheap, then backing off, because repeating a remedy
+         * that already failed is not worth the budget.
          *
          * The case this most matters for lands in the cheap tier: Joel's
          * 12000012 wedge held `filters 2541081/2541084 wallet 2541081` for
@@ -3615,7 +3649,7 @@ class L1ShadowSyncService internal constructor(
          * near the tip and would now be restarted after two; at 47 s a
          * restart that is the right trade.
          */
-        internal const val FILTER_STALL_NEAR_TIP_THRESHOLD_MS = 2 * 60_000L
+        internal const val FILTER_STALL_FIRST_ATTEMPT_MS = 3 * 60_000L
 
         /**
          * How close the DURABLE watermark must be to the target for a restart
