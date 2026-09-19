@@ -2088,3 +2088,81 @@ from 12000010. The filter-stall watchdog (`616ac58ff`) would **not** fire for hi
 progressing, not wedged.
 
 Not implemented.
+
+## 34. A database-lock lead on the filter stall (MO-1022)
+
+Observed on a Samsung SM-S901U, Android 16, build 12000014 (`12.0.0-upgrade`), 2026-09-19,
+during the first end-to-end upgrade run of this branch on real hardware.
+
+### 34.1 What was seen
+
+Thirty seconds before the filter cursor stopped advancing, Android's own connection pool refused
+the SDK database twice, with an escalating wait:
+
+```
+09:11:29.770 W/SQLiteConnectionPool: The connection pool for database
+  '/data/user/0/hashengineering.darkcoin.wallet_test/databases/dash-sdk.db' has been unable
+  to grant a connection to thread 1463 (arch_disk_io_3) with flags 0x2 for 4.0010004 seconds.
+09:11:29.770 W/SQLiteConnectionPool: Connections: 0 active, 1 idle, 3 available.
+09:11:33.771 W/SQLiteConnectionPool: …same thread… for 8.003 seconds.
+```
+
+Then:
+
+```
+09:12:04  L1Shadow phase=FILTERS 100.0%  headers 1556843/1556843  filters 1555999/1556842
+09:17:09  L1Shadow phase=FILTERS 100.0%  headers 1556844/1556844  filters 1555999/1556844
+09:18:17  L1Shadow phase=FILTERS 100.0%  headers 1556845/1556845  filters 1555999/1556845
+09:18:36  L1Shadow phase=SYNCED  100.0%  headers 1556845/1556845  filters 1556845/1556845
+```
+
+The cursor sat at 1,555,999 — 845 blocks short — for **6 min 32 s**, then cleared on its own.
+
+### 34.2 Why the numbers are the interesting part
+
+`flags 0x2` is `CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY`: the caller wants the PRIMARY
+connection, which is the one Android uses for writes and transactions. `arch_disk_io_3` is the
+SDK's native blocking-IO thread, so this is the Rust side reaching through to `dash-sdk.db`.
+
+`Connections: 0 active, 1 idle, 3 available` is the contradiction worth noticing. The pool has
+capacity and grants nothing, because the primary is not in that tally — it is held by someone
+else. A long-running WRITE transaction blocking the filter pipeline's own writes is the
+straightforward reading, and it fits the symptom: the engine keeps receiving headers (no write
+needed on that path) while the filter cursor, which must persist `synced_height` and fold wallet
+events, stops dead.
+
+Every previous look at MO-1022 assumed the engine was stuck on the NETWORK side. This is the first
+evidence pointing at storage contention instead.
+
+### 34.3 What it is NOT evidence of, yet
+
+- **One device, one occurrence, two lines.** Not reproduced.
+- **It recovered.** 6 min 32 s and then SYNCED, which is a pause, not a wedge. Joel's 12000012
+  stall sat at 2,541,081 for **49 minutes** and never recovered (§33 context). They may be the same
+  mechanism at different severities, or unrelated.
+- **The process was NOT idle during it.** Kernel I/O stats show the app reading 141 MB in a single
+  sample at 09:17:13 and writing 24 MB at 09:17:21. Whatever it was doing, it was doing it hard —
+  consistent with grinding through the last matched blocks, and also consistent with contention.
+- **Absence elsewhere proves nothing.** `SQLiteConnectionPool` is an Android FRAMEWORK logcat tag.
+  The app's `wallet.log` only carries its own slf4j logger, so no tester bundle collected as
+  `wallet.log` can contain this line — including both Joel bundles. The emulator-5556 run of the
+  same build shows zero, and that IS a logcat capture, so it is a real zero on that device.
+
+### 34.4 What would settle it
+
+The pool warning is free evidence that nobody is collecting. Two cheap steps:
+
+1. **Capture it.** Tester bundles are `wallet.log` files and structurally cannot show this. Either
+   add a logcat capture to the report bundle, or have the app watch for its own slow database
+   access and log through slf4j so it lands in `wallet.log`.
+2. **Name the writer.** If the primary connection is held by a long transaction, the holder is
+   app-side or SDK-side code that can be identified — a bulk `wallet-event batch` fold, the TXO
+   reconcile, or the display-cache sync are the candidates by size. Room can log slow queries;
+   the SDK side would need an issue.
+
+Until then this is a LEAD, not a diagnosis. The filter-stall watchdog (§ `616ac58ff`) remains the
+mitigation, and this run supports its 10-minute threshold: a genuine, self-clearing 6 min 32 s
+pause exists in normal operation, so a shorter threshold would restart a healthy engine and discard
+1.55 M blocks of filter progress for nothing.
+
+Not implemented.
