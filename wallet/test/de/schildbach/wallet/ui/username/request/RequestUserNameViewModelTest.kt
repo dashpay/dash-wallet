@@ -34,6 +34,8 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameCreationOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameNameStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.livedata.Resource
+import org.dashj.platform.dpp.document.Document
+import java.util.concurrent.CountDownLatch
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.username.UsernameType
@@ -845,6 +847,112 @@ class RequestUserNameViewModelTest {
         assertFalse(state.usernameExists)
         assertFalse(state.usernameContested)
         assertFalse(state.usernameBlocked)
+    }
+
+    // ── Stale availability results (CodeRabbit, #1564) ──────────────────────
+
+    @Test
+    fun checkUsername_lateResultForAReplacedName_doesNotOverwriteTheCurrentVerdict() = runVmTest {
+        // Two DAPI lookups can be in flight at once: the 600 ms debounce only drops a
+        // runnable that has not fired, so once a query is away more typing does not
+        // touch it. Here 'alice' (free) is held open until 'bob' (taken) has answered,
+        // then released — the classic out-of-order completion.
+        val aliceInFlight = CountDownLatch(1)
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } answers {
+                aliceInFlight.await()
+                Resource.success(null)
+            }
+            every { getVoteContendersOrThrow("alice") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+            every { getUsername("bob") } returns Resource.success(mockk<Document>())
+            every { getVoteContendersOrThrow("bob") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        viewModel.checkUsernameValid("alice", UsernameType.Primary)
+        viewModel.checkUsername("alice")
+
+        // The user types on: the field now holds 'bob', whose lookup answers first.
+        viewModel.checkUsernameValid("bob", UsernameType.Primary)
+        viewModel.checkUsername("bob")
+        viewModel.uiState.first { it.usernameCheckSuccess }
+        assertTrue("bob is registered", viewModel.uiState.value.usernameExists)
+
+        // Now alice's answer lands. It says "free" — for a name that is no longer there.
+        aliceInFlight.countDown()
+        viewModel.uiState.first { !it.checkingUsername }
+
+        val state = viewModel.uiState.value
+        assertTrue("bob's verdict must survive the late arrival", state.usernameExists)
+    }
+
+    @Test
+    fun checkUsername_lateResultAfterTheFieldIsCleared_isDropped() = runVmTest {
+        val inFlight = CountDownLatch(1)
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } answers {
+                inFlight.await()
+                Resource.success(null)
+            }
+            every { getVoteContendersOrThrow("alice") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        viewModel.checkUsernameValid("alice", UsernameType.Primary)
+        viewModel.checkUsername("alice")
+
+        // Field cleared while the query is out.
+        viewModel.reset()
+
+        inFlight.countDown()
+        Thread.sleep(200)
+
+        assertFalse(
+            "a cleared field has no current name for a verdict to describe",
+            viewModel.uiState.value.usernameCheckSuccess
+        )
+    }
+
+    @Test
+    fun checkUsername_lateFailureForAReplacedName_doesNotRaiseTheFailedFlag() = runVmTest {
+        // The fail-closed paths need the same gate: a stale failure would otherwise
+        // show the retry banner for a name the user has already moved past.
+        val aliceInFlight = CountDownLatch(1)
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } answers {
+                aliceInFlight.await()
+                Resource.error("DAPI timeout", null)
+            }
+            every { getUsername("bob") } returns Resource.success(null)
+            every { getVoteContendersOrThrow("bob") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        viewModel.checkUsernameValid("alice", UsernameType.Primary)
+        viewModel.checkUsername("alice")
+
+        viewModel.checkUsernameValid("bob", UsernameType.Primary)
+        viewModel.checkUsername("bob")
+        viewModel.uiState.first { it.usernameCheckSuccess }
+
+        aliceInFlight.countDown()
+        Thread.sleep(200)
+
+        val state = viewModel.uiState.value
+        assertFalse("alice's failure must not surface under bob", state.usernameCheckFailed)
+        assertTrue("bob's success must stand", state.usernameCheckSuccess)
     }
 
     // ── Advisory network-health warning ─────────────────────────────────────
