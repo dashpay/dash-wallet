@@ -2172,6 +2172,34 @@ events, stops dead.
 Every previous look at MO-1022 assumed the engine was stuck on the NETWORK side. This is the first
 evidence pointing at storage contention instead.
 
+### 34.2a CORRECTION, 2026-09-19: the event stream stopped too
+
+§34.2 as first written said the scan kept running and only the watermark write was blocked. That
+was wrong, and the error came from reading the batch lines at the END of the pause as though they
+spanned it. The SDK's `wallet-event batch` lines around the window:
+
+```
+09:12:08.727   <- last batch before the gap
+   (5 min 25 s with none)
+09:17:33.655   <- next batch
+09:18:36       SYNCED
+```
+
+So the event stream went quiet as well. The correct reading is that the WHOLE write-dependent
+pipeline paused and then resumed together — which fits the contention hypothesis better, not
+worse, because folding a batch is itself a write. What it does not support is the
+"scanning fine, only persistence blocked" distinction.
+
+**This matters beyond the wording.** The filter-stall watchdog's liveness gate (`616ac58ff` as
+fixed in `2a8247603`) was added on the strength of that distinction: do not restart while the
+engine is still delivering events. In the one case cited, it was not delivering events. The gate
+is still defensible in principle — an engine folding batches with a still cursor should not be
+restarted — but that case has NOT been observed, and the section previously implied it had.
+
+A further imprecision worth keeping: `wallet-event batch` is the SDK's NATIVE log line, while the
+watchdog's `lastWalletEventMs` is stamped from the Kotlin-side `walletEventStrings()` flow. They
+are expected to correspond and have not been shown to be 1:1.
+
 ### 34.3 What it is NOT evidence of, yet
 
 - **One device, one occurrence, two lines.** Not reproduced.
@@ -2179,8 +2207,9 @@ evidence pointing at storage contention instead.
   stall sat at 2,541,081 for **49 minutes** and never recovered (§33 context). They may be the same
   mechanism at different severities, or unrelated.
 - **The process was NOT idle during it.** Kernel I/O stats show the app reading 141 MB in a single
-  sample at 09:17:13 and writing 24 MB at 09:17:21. Whatever it was doing, it was doing it hard —
-  consistent with grinding through the last matched blocks, and also consistent with contention.
+  sample at 09:17:13 and writing 24 MB at 09:17:21. Note those samples fall at the END of the gap,
+  around the 09:17:33 batch that resumed it — they show the pipeline coming back, not running
+  throughout (§34.2a).
 - **Absence elsewhere proves nothing.** `SQLiteConnectionPool` is an Android FRAMEWORK logcat tag.
   The app's `wallet.log` only carries its own slf4j logger, so no tester bundle collected as
   `wallet.log` can contain this line — including both Joel bundles. The emulator-5556 run of the
