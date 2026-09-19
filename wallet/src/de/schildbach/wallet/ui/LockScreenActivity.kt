@@ -17,23 +17,16 @@
 package de.schildbach.wallet.ui
 
 import android.content.Context
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Parcel
 import android.security.keystore.KeyPermanentlyInvalidatedException
-import android.telephony.TelephonyManager
-import android.view.KeyCharacterMap
-import android.view.KeyEvent
 import android.view.View
-import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
@@ -148,7 +141,6 @@ open class LockScreenActivity : SecureActivity() {
 
         binding = ActivityLockScreenRootBinding.inflate(layoutInflater)
         super.setContentView(binding.root)
-        setupKeyboardBottomMargin()
         isLocked = autoLogout.shouldLogout()
         onBackPressedDispatcher.addCallback(this) {
             handleBackNavigation()
@@ -203,41 +195,6 @@ open class LockScreenActivity : SecureActivity() {
             if (hasBalance && configuration.lastBackupSeedTime == 0L) {
                 configuration.setLastBackupSeedTime()
             }
-        }
-    }
-
-    private fun setupKeyboardBottomMargin() {
-        if (!hasNavBar()) {
-            val set = ConstraintSet()
-            val layout = binding.lockScreen.numericKeyboard.parent as ConstraintLayout
-            set.clone(layout)
-            set.clear(R.id.numeric_keyboard, ConstraintSet.BOTTOM)
-            set.connect(R.id.numeric_keyboard, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
-            set.applyTo(layout)
-        }
-    }
-
-    private fun hasNavBar(): Boolean {
-        val tm: TelephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        // emulator
-        if ("Android" == tm.networkOperatorName || Build.FINGERPRINT.startsWith("generic")) {
-            return true
-        }
-        val id: Int = resources.getIdentifier("config_showNavigationBar", "bool", "android")
-
-        // Krip devices seem to incorrectly report config_showNavigationBar
-        val isKripDeviceWithoutNavBar = Build.BRAND == "KRIP" && when (Build.MODEL) {
-            "K5", "K5c", "K5b", "K4m", "KRIP_K4" -> true
-            else -> false
-        }
-
-        return if (id > 0 && !isKripDeviceWithoutNavBar) {
-            resources.getBoolean(id)
-        } else {
-            // Check for keys
-            val hasMenuKey = ViewConfiguration.get(this).hasPermanentMenuKey()
-            val hasBackKey = KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_BACK)
-            !hasMenuKey && !hasBackKey
         }
     }
 
