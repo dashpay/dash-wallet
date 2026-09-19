@@ -635,6 +635,35 @@ open class DashPayConfig @Inject constructor(
         val DASHPAY_BACKFILL_ARMED_FINGERPRINT = stringPreferencesKey("dashpay_backfill_armed_fingerprint")
 
         /**
+         * The durable filter-scan watermark AT THE MOMENT DIP-15 receival
+         * accounts were last REGISTERED — the §17 "uncovered contact chain"
+         * diagnostic's only sound input.
+         *
+         * Debt is a statement about ORDERING, not about the present: a
+         * contact chain is uncovered when it was registered while the scan
+         * had ALREADY passed its core height, because the scan that walked
+         * those blocks did so without the chain's addresses in its match
+         * set. Comparing the LIVE synced height against the contact floor
+         * cannot express that — after any wallet finishes syncing, the live
+         * height is above the floor by construction, so the comparison
+         * reports debt on every healthy wallet forever. This records the one
+         * value that distinguishes the two, once, when it is true.
+         *
+         * The HIGHEST such height is kept: a later registration above the
+         * floor is a real debt even if an earlier one sat below it.
+         *
+         * WALLET pins the record to the SDK wallet it describes, so a
+         * rebind onto a different wallet does not inherit its ordering.
+         *
+         * Absent means no registration has been observed by a build that
+         * records this — reported as "not determinable", never as debt.
+         */
+        val DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT =
+            longPreferencesKey("dashpay_contact_registration_synced_height")
+        val DASHPAY_CONTACT_REGISTRATION_WALLET =
+            stringPreferencesKey("dashpay_contact_registration_wallet")
+
+        /**
          * Last shielded balance (in duffs) persisted from a fully-synced
          * (READY) shielded runtime, so the More-screen "Shielded" card can
          * render the known balance INSTANTLY on open — even while a

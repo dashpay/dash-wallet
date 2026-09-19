@@ -878,6 +878,19 @@ class SdkWalletBinder internal constructor(
      * the condition occurred, and the section 16 test can then check whether
      * the payment ever becomes visible.
      *
+     * WHY THE LIVE SYNCED HEIGHT CANNOT ANSWER THIS. The condition is about
+     * ORDERING — was the chain registered after the scan had already walked
+     * its core height — and `syncedHeight > floor` is not that question. It
+     * is true of every wallet that has finished syncing, because finishing
+     * means the cursor ends above every contact's height. Compared live it
+     * reported OK at bind (cursor 0) and DEBT after a full rescan from
+     * genesis on the SAME wallet with the SAME coverage, which is the
+     * clearest possible demonstration that it measures progress, not debt.
+     * The verdict is therefore taken against
+     * [DashPayConfig.DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT], written by
+     * [recordContactRegistrationHeight] when a drain actually registers
+     * accounts, and the live height is logged only as context.
+     *
      * Never throws; a diagnostic must not affect a provisioning pass.
      */
     private suspend fun logContactCoverageDebt(walletId: String, identityId: ByteArray) {
@@ -885,33 +898,110 @@ class SdkWalletBinder internal constructor(
             val signals = sdkService.readDashPayBackfillSignals(walletId, identityId)
             val synced = signals.syncedHeight
             val floor = signals.receivedContactCoreHeightFloor ?: signals.contactCoreHeightFloor
-            if (synced == null || floor == null) {
-                log.info(
+            val registeredAt = readContactRegistrationHeight(walletId)
+            val contacts = signals.contactRequestCount
+            when (ContactCoverageDecider.decide(synced, floor, registeredAt)) {
+                ContactCoverageDecider.Verdict.NOT_DETERMINABLE -> log.info(
                     "DashPay contact coverage: not determinable on {}… (syncedHeight={}, " +
-                        "receivedContactFloor={}, contacts={})",
-                    walletId.take(8), synced, floor, signals.contactRequestCount
+                        "receivedContactFloor={}, registeredAtHeight={}, contacts={}) — the " +
+                        "live height alone cannot say whether the scan passed those chains " +
+                        "before or after they were registered",
+                    walletId.take(8), synced, floor, registeredAt, contacts
                 )
-                return
-            }
-            if (synced > floor) {
-                log.warn(
-                    "DashPay contact coverage DEBT on {}…: the filter scan is at {} but the " +
-                        "earliest received contact request sits at core height {} ({} blocks " +
-                        "below, {} contact request(s)). Payments to those chains were scanned " +
-                        "past. This is reported, not repaired — see §17 of the upgrade memory " +
-                        "and sync plan",
-                    walletId.take(8), synced, floor, synced - floor, signals.contactRequestCount
+
+                ContactCoverageDecider.Verdict.SWEEP_AHEAD_COVERS -> {
+                    // The scan is below the floor and will walk those blocks
+                    // with today's account set watched, so any ordering on
+                    // record is repaid by the sweep in flight.
+                    clearContactRegistrationHeight(walletId)
+                    log.info(
+                        "DashPay contact coverage OK on {}…: the scan is at {}, below the " +
+                            "earliest received contact height {} ({} contact request(s)) — the " +
+                            "sweep ahead covers those chains with the accounts registered now",
+                        walletId.take(8), synced, floor, contacts
+                    )
+                }
+
+                ContactCoverageDecider.Verdict.COVERED -> log.info(
+                    "DashPay contact coverage OK on {}…: receival accounts were registered at " +
+                        "scan height {}, at or below the earliest received contact height {} " +
+                        "({} contact request(s); scan now at {})",
+                    walletId.take(8), registeredAt, floor, contacts, synced
                 )
-            } else {
-                log.info(
-                    "DashPay contact coverage OK on {}…: scan at {} is at or below the earliest " +
-                        "received contact height {} ({} contact request(s))",
-                    walletId.take(8), synced, floor, signals.contactRequestCount
+
+                ContactCoverageDecider.Verdict.DEBT -> log.warn(
+                    "DashPay contact coverage DEBT on {}…: receival accounts were registered " +
+                        "with the filter scan already at {}, past the earliest received contact " +
+                        "request at core height {} ({} blocks below, {} contact request(s); " +
+                        "scan now at {}). Payments to those chains were scanned past. This is " +
+                        "reported, not repaired — see §17 of the upgrade memory and sync plan",
+                    walletId.take(8), registeredAt, floor,
+                    (registeredAt ?: 0L) - (floor ?: 0L), contacts, synced
                 )
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.debug("DashPay contact coverage diagnostic failed: {}", t.toString())
+        }
+    }
+
+    /**
+     * Record the scan's position as the ordering evidence for the receival
+     * accounts a drain has just registered
+     * ([DashPayConfig.DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT]).
+     *
+     * Keeps the HIGHEST height seen for this wallet: a later registration
+     * above the contact floor is a real debt regardless of an earlier one
+     * that sat below it, and only the worst ordering can prove coverage.
+     *
+     * Never throws — this feeds a diagnostic, and a provisioning pass must
+     * not fail because a preference write did.
+     */
+    private suspend fun recordContactRegistrationHeight(walletId: String, identityId: ByteArray) {
+        try {
+            val synced = sdkService.readDashPayBackfillSignals(walletId, identityId).syncedHeight
+                ?: return
+            val previous = readContactRegistrationHeight(walletId)
+            if (previous != null && previous >= synced) return
+            dashPayConfig.set(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_WALLET, walletId)
+            dashPayConfig.set(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT, synced)
+            log.info(
+                "DashPay receival-account registration recorded on {}… at scan height {}" +
+                    "{} — the §17 coverage verdict is taken against this, not the live height",
+                walletId.take(8), synced,
+                if (previous == null) "" else " (was $previous)"
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.debug("DashPay registration-height record failed: {}", t.toString())
+        }
+    }
+
+    /**
+     * The recorded registration height, or null when none belongs to this
+     * wallet — including a record written for a DIFFERENT SDK wallet, whose
+     * ordering says nothing about this one.
+     */
+    private suspend fun readContactRegistrationHeight(walletId: String): Long? {
+        val owner = dashPayConfig.get(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_WALLET)
+        if (owner != walletId) return null
+        return dashPayConfig.get(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT)
+    }
+
+    /**
+     * Reset the recorded ordering to 0 for this wallet, because a scan
+     * running below the contact floor is about to re-walk those blocks with
+     * today's accounts watched. 0 rather than absent: the accounts ARE
+     * registered, and their effective ordering is now at/below the scan —
+     * which is a coverage verdict of OK, not "not determinable".
+     */
+    private suspend fun clearContactRegistrationHeight(walletId: String) {
+        try {
+            dashPayConfig.set(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_WALLET, walletId)
+            dashPayConfig.set(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT, 0L)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.debug("DashPay registration-height reset failed: {}", t.toString())
         }
     }
 
@@ -1019,6 +1109,11 @@ class SdkWalletBinder internal constructor(
             // verdict lets THIS cycle pay it with a follow-up sweep instead
             // of leaving the money invisible until a relaunch.
             val registeredNew = backfillGate.noteAccountBuildsRegistered(report.built)
+            // §17 ordering evidence: these accounts exist as of NOW, so the
+            // scan's position NOW is the position they were registered at.
+            // Recorded before the coverage diagnostic runs, so this pass's
+            // own registrations are accounted for in this pass's verdict.
+            if (report.built > 0) recordContactRegistrationHeight(walletId, identityId)
             if (report.bound) {
                 logReceivalCoverageDiagnostics(walletId, identityId)
             }
@@ -1649,5 +1744,53 @@ class SdkWalletBinder internal constructor(
          * steady-state passes are cheap.
          */
         internal const val PROVISION_MIN_INTERVAL_MS = 60_000L
+    }
+}
+
+/**
+ * The §17 "uncovered contact chain" rule, as a pure function of three
+ * numbers, so it can be proven without an SDK, a wallet or a DataStore.
+ *
+ * The rule the old comparison got wrong: debt is about ORDERING, not about
+ * where the scan happens to be now. A DIP-15 receival chain is uncovered
+ * when it was registered while the scan had ALREADY walked past its core
+ * height — those blocks were filtered without its addresses in the match
+ * set, and nothing is known to go back for them. Asking instead whether the
+ * scan is now above the contact floor answers "has this wallet finished
+ * syncing", which is true of every healthy wallet and of none that is still
+ * catching up. It is the same verdict for opposite situations.
+ */
+internal object ContactCoverageDecider {
+    enum class Verdict {
+        /** No registration ordering is on record; refuse to guess. */
+        NOT_DETERMINABLE,
+
+        /**
+         * The scan is below the contact floor and will sweep those blocks
+         * with the accounts registered now — any recorded debt is repaid by
+         * the sweep in flight, so the record resets.
+         */
+        SWEEP_AHEAD_COVERS,
+
+        /** Accounts were registered at or below the floor. */
+        COVERED,
+
+        /** Accounts were registered above the floor: payments were missed. */
+        DEBT
+    }
+
+    /**
+     * @param syncedHeight durable filter-scan watermark, null when unknown.
+     * @param floor earliest RECEIVED contact request's core height, null
+     *   when the wallet holds none — in which case nothing can be uncovered.
+     * @param registeredAt the scan height when receival accounts were last
+     *   registered, null when no registration is on record for this wallet.
+     */
+    fun decide(syncedHeight: Long?, floor: Long?, registeredAt: Long?): Verdict = when {
+        syncedHeight == null || floor == null -> Verdict.NOT_DETERMINABLE
+        syncedHeight < floor -> Verdict.SWEEP_AHEAD_COVERS
+        registeredAt == null -> Verdict.NOT_DETERMINABLE
+        registeredAt > floor -> Verdict.DEBT
+        else -> Verdict.COVERED
     }
 }
