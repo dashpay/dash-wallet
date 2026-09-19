@@ -2226,109 +2226,100 @@ progressing, not wedged.
 
 Not implemented.
 
-## 34. A database-lock lead on the filter stall (MO-1022)
+## 34. What actually stalls the sync: a filter batch commits only when its SUCCESSOR is created
 
-Observed on a Samsung SM-S901U, Android 16, build 12000014 (`12.0.0-upgrade`), 2026-09-19,
-during the first end-to-end upgrade run of this branch on real hardware.
+Settled 2026-09-19 with SQL-level and SDK-level instrumentation on a Samsung SM-S901U. Two earlier
+hypotheses in this section were wrong and are recorded at the end so the reasoning is not repeated.
 
-### 34.1 What was seen
+### 34.1 The mechanism
 
-Thirty seconds before the filter cursor stopped advancing, Android's own connection pool refused
-the SDK database twice, with an escalating wait:
-
-```
-09:11:29.770 W/SQLiteConnectionPool: The connection pool for database
-  '/data/user/0/hashengineering.darkcoin.wallet_test/databases/dash-sdk.db' has been unable
-  to grant a connection to thread 1463 (arch_disk_io_3) with flags 0x2 for 4.0010004 seconds.
-09:11:29.770 W/SQLiteConnectionPool: Connections: 0 active, 1 idle, 3 available.
-09:11:33.771 W/SQLiteConnectionPool: …same thread… for 8.003 seconds.
-```
-
-Then:
+`dash_spv` downloads filters in 5,000-block batches. Its own log shows a batch being COMMITTED only
+after the NEXT batch has been created — every time, across three engine sessions:
 
 ```
-09:12:04  L1Shadow phase=FILTERS 100.0%  headers 1556843/1556843  filters 1555999/1556842
-09:17:09  L1Shadow phase=FILTERS 100.0%  headers 1556844/1556844  filters 1555999/1556844
-09:18:17  L1Shadow phase=FILTERS 100.0%  headers 1556845/1556845  filters 1555999/1556845
-09:18:36  L1Shadow phase=SYNCED  100.0%  headers 1556845/1556845  filters 1556845/1556845
+19:19:02  Creating lookahead batch  start=1547171
+19:19:04  Creating lookahead batch  start=1552171     <- successor created
+19:19:05  Committed batch           start=1547171     <- predecessor commits
 ```
 
-The cursor sat at 1,555,999 — 845 blocks short — for **6 min 32 s**, then cleared on its own.
-
-### 34.2 Why the numbers are the interesting part
-
-`flags 0x2` is `CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY`: the caller wants the PRIMARY
-connection, which is the one Android uses for writes and transactions. `arch_disk_io_3` is the
-SDK's native blocking-IO thread, so this is the Rust side reaching through to `dash-sdk.db`.
-
-`Connections: 0 active, 1 idle, 3 available` is the contradiction worth noticing. The pool has
-capacity and grants nothing, because the primary is not in that tally — it is held by someone
-else. A long-running WRITE transaction blocking the filter pipeline's own writes is the
-straightforward reading, and it fits the symptom: the engine keeps receiving headers (no write
-needed on that path) while the filter cursor, which must persist `synced_height` and fold wallet
-events, stops dead.
-
-Every previous look at MO-1022 assumed the engine was stuck on the NETWORK side. This is the first
-evidence pointing at storage contention instead.
-
-### 34.2a CORRECTION, 2026-09-19: the event stream stopped too
-
-§34.2 as first written said the scan kept running and only the watermark write was blocked. That
-was wrong, and the error came from reading the batch lines at the END of the pause as though they
-spanned it. The SDK's `wallet-event batch` lines around the window:
+The final batch runs from the last 5,000 boundary to the chain tip, and it has no successor. So it
+is never committed, and `committed_height` — the value the whole app reads as "how far are we
+synced" — parks at the last full boundary:
 
 ```
-09:12:08.727   <- last batch before the gap
-   (5 min 25 s with none)
-09:17:33.655   <- next batch
-09:18:36       SYNCED
+19:19:04  Creating lookahead batch 1552171-1556922 (active_batches=1)
+19:19:05  Batch 1552171-1556922: found 95 matching blocks across 1 behind wallets
+19:19:05  Committed batch 1547171-1552170, committed_height now 1552170
+          ... still uncommitted 9 minutes later
 ```
 
-So the event stream went quiet as well. The correct reading is that the WHOLE write-dependent
-pipeline paused and then resumed together — which fits the contention hypothesis better, not
-worse, because folding a batch is itself a write. What it does not support is the
-"scanning fine, only persistence blocked" distinction.
+The engine is not broken and nothing is lost. Every filter IS stored — the same dump reports
+`Filters: … stored:1556922` against a tip of 1,556,922. Only the COMMIT is withheld.
 
-**This matters beyond the wording.** The filter-stall watchdog's liveness gate (`616ac58ff` as
-fixed in `2a8247603`) was added on the strength of that distinction: do not restart while the
-engine is still delivering events. In the one case cited, it was not delivering events. The gate
-is still defensible in principle — an engine folding batches with a still cursor should not be
-restarted — but that case has NOT been observed, and the section previously implied it had.
+### 34.2 Everything it explains
 
-A further imprecision worth keeping: `wallet-event batch` is the SDK's NATIVE log line, while the
-watchdog's `lastWalletEventMs` is stamped from the Kotlin-side `walletEventStrings()` flow. They
-are expected to correspond and have not been shown to be 1:1.
+- **Why the cursor always parks a few thousand blocks short.** The gap is the final partial batch.
+- **Why it parks on odd round numbers** — 1,552,170, 1,547,170. Batch boundaries.
+- **Why it clears suddenly, in a burst.** The chain grows enough to form a new batch, which
+  releases the previous one. Observed at 18:53:30: `Batch 1556911-1556911: found 0 matching blocks`
+  is created, and `Committed batch 1552171-1556910` lands in the same second.
+- **Why restarting rarely helps.** A restart recreates the same final batch against a slightly
+  newer tip — 1556917, then 1556918, then 1556922 — and it stalls identically. One of four
+  watchdog restarts appeared to help; that was the tip advancing, not the restart.
+- **Why the wait is unpredictable.** It is the time for the chain to produce enough blocks, which
+  on testnet is erratic.
+- **Why Joel's 12000012 sat at 3 blocks short for 49 minutes.** Same shape on mainnet.
 
-### 34.3 What it is NOT evidence of, yet
+### 34.3 What it is NOT
 
-- **One device, one occurrence, two lines.** Not reproduced.
-- **It recovered.** 6 min 32 s and then SYNCED, which is a pause, not a wedge. Joel's 12000012
-  stall sat at 2,541,081 for **49 minutes** and never recovered (§33 context). They may be the same
-  mechanism at different severities, or unrelated.
-- **The process was NOT idle during it.** Kernel I/O stats show the app reading 141 MB in a single
-  sample at 09:17:13 and writing 24 MB at 09:17:21. Note those samples fall at the END of the gap,
-  around the 09:17:33 batch that resumed it — they show the pipeline coming back, not running
-  throughout (§34.2a).
-- **Absence elsewhere proves nothing.** `SQLiteConnectionPool` is an Android FRAMEWORK logcat tag.
-  The app's `wallet.log` only carries its own slf4j logger, so no tester bundle collected as
-  `wallet.log` can contain this line — including both Joel bundles. The emulator-5556 run of the
-  same build shows zero, and that IS a logcat capture, so it is a real zero on that device.
+- **Not the database.** Direct measurement during a stall: zero `SQLiteConnectionPool` warnings and
+  ZERO engine writes on `dash-sdk.db` — the only writes were Room's own
+  `room_table_modification_log` bookkeeping. The engine is not blocked on storage; it is not trying
+  to use it.
+- **Not the network.** `stored:1556922` means every filter arrived.
+- **Not the app's.** `committed_height` is the SDK's, and nothing on the app side can advance it.
 
-### 34.4 What would settle it
+### 34.4 Two earlier hypotheses, both wrong
 
-The pool warning is free evidence that nobody is collecting. Two cheap steps:
+Kept because both looked convincing and cost time.
 
-1. **Capture it.** Tester bundles are `wallet.log` files and structurally cannot show this. Either
-   add a logcat capture to the report bundle, or have the app watch for its own slow database
-   access and log through slf4j so it lands in `wallet.log`.
-2. **Name the writer.** If the primary connection is held by a long transaction, the holder is
-   app-side or SDK-side code that can be identified — a bulk `wallet-event batch` fold, the TXO
-   reconcile, or the display-cache sync are the candidates by size. Room can log slow queries;
-   the SDK side would need an issue.
+**"Database lock contention."** Built on a single `SQLiteConnectionPool` warning 30 s before one
+stall — a thread waiting 4 then 8 seconds for the primary WRITE connection to `dash-sdk.db`, with
+the pool reporting spare capacity. It was a coincidence. Under instrumentation the database is
+idle during a stall. The warning most likely came from the app's own observer queries (below).
 
-Until then this is a LEAD, not a diagnosis. The filter-stall watchdog (§ `616ac58ff`) remains the
-mitigation, and this run supports its 10-minute threshold: a genuine, self-clearing 6 min 32 s
-pause exists in normal operation, so a shorter threshold would restart a healthy engine and discard
-1.55 M blocks of filter progress for nothing.
+**"The scan runs, only persistence is blocked."** Corrected once already (§34.2a in the previous
+revision): the wallet-event stream stops during the stall too, so nothing was being persisted
+because nothing was being produced. That correction was right, but the conclusion drawn from it —
+that writes were blocked — was still wrong.
 
-Not implemented.
+The lesson worth keeping: both hypotheses came from the APP's logs, and the answer was in the
+SDK's own `files/sdk-logs/dash_spv/run.log`, which is pullable with `run-as` on a debug build and
+was not being read.
+
+### 34.5 A separate real finding: the app's observer queries are expensive
+
+Not the stall, but measured while chasing it. During a 2.5-minute window the app re-ran the same
+handful of Room observer queries on `dash-sdk.db` more than thirty times, at roughly 750 ms each:
+
+```
+754 ms  SELECT DISTINCT t.txid FROM txos t JOIN core_addresses ca ON ca.address...
+753 ms  SELECT s.spendingTxid, COUNT(*), COALESCE(SUM(s.amount), 0) FROM (SELECT...
+747 ms  SELECT t.txid, t.vout, t.amount, CASE WHEN EXISTS (SELECT 1 FROM core_...
+```
+
+with Room's `InvalidationTracker` tearing observer triggers down and rebuilding them throughout
+(36 `CREATE TEMP TRIGGER`, 18 `DROP TRIGGER`, 18 `BEGIN IMMEDIATE` in the same window). Roughly 25
+seconds of query time in 150 seconds. Worth its own investigation — it is a plausible source of the
+`SQLiteConnectionPool` warning that started §34 down the wrong path.
+
+### 34.6 Where this goes
+
+This is an SDK defect in `dash_spv::sync::filters::manager` and is not fixable from the app. The
+filter-stall watchdog stays as a mitigation, but §34.2 explains why it mostly cannot help: a
+restart does not create a successor batch. Its EXHAUSTED message already says the right thing —
+"this needs an SDK-side fix".
+
+To be filed against `dash_spv` with the log excerpts above. The fix is presumably to commit the
+final batch on its own completion rather than on the creation of the next one, or to flush it when
+the scan reaches the tip.
