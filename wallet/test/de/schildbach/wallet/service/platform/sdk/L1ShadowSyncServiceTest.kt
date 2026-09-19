@@ -364,28 +364,6 @@ class L1ShadowSyncServiceTest {
 
     // ── Two-tier threshold: how long to wait is decided by what a restart costs ──
 
-    @Test
-    fun filterStall_nearTheTip_makesItsFirstAttemptAfterThreeMinutesNotTen() {
-        // MEASURED, Samsung SM-S901U 2026-09-19: cursor at 1,553,000 of
-        // 1,556,891 with the durable watermark ALREADY at 1,556,890. The
-        // watchdog restarted and 47 s later the engine was back at 1,556,890 —
-        // ahead of where it had been stuck. Nothing to re-walk, so nothing to
-        // protect by waiting ten minutes.
-        val d = stallDecider()
-        val stuck = 1_553_000L
-        val target = 1_556_891L
-        val durable = 1_556_890L
-        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
-        assertEquals(
-            FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(2 * 60_000L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
-        )
-        assertEquals(
-            "a restart that re-walks 1 block does not deserve a ten-minute wait",
-            FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(3 * 60_000L + 1, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
-        )
-    }
 
     @Test
     fun filterStall_midReplay_stillWaitsTheFullTenMinutes() {
@@ -408,20 +386,6 @@ class L1ShadowSyncServiceTest {
         )
     }
 
-    @Test
-    fun filterStall_joelsWedgeLandsInTheCheapTier() {
-        // Joel's 12000012 report: filters 2541081 of 2541084, wallet 2541081,
-        // held for FORTY-NINE MINUTES and never recovered. A three-block gap,
-        // so the restart is cheap and the wait drops from never to two minutes.
-        val d = stallDecider()
-        val stuck = 2_541_081L
-        val target = 2_541_084L
-        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
-        assertEquals(
-            FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(3 * 60_000L + 1, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
-        )
-    }
 
     @Test
     fun filterStall_backsOffSoTheBudgetOutlivesOneNormalPause() {
@@ -438,26 +402,16 @@ class L1ShadowSyncServiceTest {
             d.onCheck(atMs, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
 
         check(0L)
-        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(3 * 60_000L + 1))
-        // Second attempt waits 20 min, not another 3.
-        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(10 * 60_000L))
-        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(23 * 60_000L + 2))
+        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(10 * 60_000L + 1))
+        // Second attempt waits 20 min, not another 10.
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(25 * 60_000L))
+        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(30 * 60_000L + 2))
         // Third waits 30 more.
-        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(40 * 60_000L))
-        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(53 * 60_000L + 3))
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(50 * 60_000L))
+        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(60 * 60_000L + 3))
         assertEquals(FilterStallWatchdogDecider.Decision.EXHAUSTED, check(120 * 60_000L))
     }
 
-    @Test
-    fun waitBeforeAttempt_isQuickOnlyForTheCheapFirstTry() {
-        val d = stallDecider()
-        assertEquals(3 * 60_000L, d.waitBeforeAttempt(0, nearTip = true))
-        assertEquals(10 * 60_000L, d.waitBeforeAttempt(0, nearTip = false))
-        // Later attempts ignore the tip: a remedy that failed once has not
-        // earned another quick go, wherever the cursor is.
-        assertEquals(20 * 60_000L, d.waitBeforeAttempt(1, nearTip = true))
-        assertEquals(30 * 60_000L, d.waitBeforeAttempt(2, nearTip = true))
-    }
 
     @Test
     fun filterStall_anUnknownWatermarkIsTreatedAsFarFromTheTip() {

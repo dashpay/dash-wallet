@@ -1118,9 +1118,7 @@ internal class ProbeWatchdogDecider(
  */
 internal class FilterStallWatchdogDecider(
     private val stallThresholdMs: Long = L1ShadowSyncService.FILTER_STALL_THRESHOLD_MS,
-    private val maxRestarts: Int = L1ShadowSyncService.FILTER_STALL_MAX_RESTARTS,
-    private val firstAttemptMs: Long = L1ShadowSyncService.FILTER_STALL_FIRST_ATTEMPT_MS,
-    private val nearTipBlocks: Long = L1ShadowSyncService.FILTER_STALL_NEAR_TIP_BLOCKS
+    private val maxRestarts: Int = L1ShadowSyncService.FILTER_STALL_MAX_RESTARTS
 ) {
     enum class Decision { NONE, RESTART, EXHAUSTED }
 
@@ -1141,16 +1139,35 @@ internal class FilterStallWatchdogDecider(
         private set
 
     /**
-     * The wait before attempt [attempt], zero-based.
+     * The wait before attempt [attempt], zero-based: 10 / 20 / 30 minutes.
      *
-     * 3 / 10 / 20 minutes near the tip, 10 / 20 / 30 elsewhere: quick to ask
-     * the first question when the answer is cheap, slow to repeat a remedy
-     * that has already failed once. Exhausting the budget then takes 33
-     * minutes rather than the 4.5 measured at a flat 90 s.
+     * The backoff stands, because with a flat threshold the spacing between
+     * restarts IS the threshold and a short one spends the whole budget
+     * inside a single normal pause (measured at 90 s: three restarts and
+     * EXHAUSTED in under seven minutes, against a 6 min 32 s benign pause on
+     * the same device).
+     *
+     * A FAST FIRST RUNG WAS TRIED AND WITHDRAWN. Three minutes when a restart
+     * looked cheap, judged by `filterTarget - walletSyncedHeight`. It was the
+     * wrong signal: `walletSyncedHeight` is the engine's IN-MEMORY committed
+     * cursor (`_engineWalletSyncedHeight`, fed from the event stream), while
+     * a restart resumes from the DURABLE `WalletEntity.syncedHeight` in the
+     * SDK's database — the value [L1ShadowSyncService.stop]'s own diagnostic
+     * warns can trail by up to 155,000 blocks.
+     *
+     * Observed on a Samsung SM-S901U, 2026-09-19: the gap read 4,741 blocks,
+     * the tier called it cheap and restarted at three minutes, and the engine
+     * resumed 20,000 blocks lower — re-walking to the tip, stalling, and
+     * restarting again. A loop, and worse than leaving it alone, because the
+     * same stall had cleared itself in 2–7 minutes on every earlier run.
+     *
+     * One favourable sample (47 s, a 1-block gap) is what made the tier look
+     * justified. It does not generalise. A fast first attempt needs the
+     * durable watermark, not a proxy for it.
      */
-    internal fun waitBeforeAttempt(attempt: Int, nearTip: Boolean): Long = when {
-        attempt == 0 -> if (nearTip) firstAttemptMs else stallThresholdMs
-        attempt == 1 -> stallThresholdMs * 2
+    internal fun waitBeforeAttempt(attempt: Int): Long = when (attempt) {
+        0 -> stallThresholdMs
+        1 -> stallThresholdMs * 2
         else -> stallThresholdMs * 3
     }
 
@@ -1206,9 +1223,7 @@ internal class FilterStallWatchdogDecider(
         // under seven minutes, and the longest BENIGN pause we have measured
         // is 6 min 32 s. Backing off keeps the budget alive across the whole
         // session instead of burning it in one spell.
-        val restartCostBlocks = filterTarget - walletSyncedHeight
-        val nearTip = walletSyncedHeight > 0L && restartCostBlocks <= nearTipBlocks
-        val threshold = waitBeforeAttempt(restartsIssued, nearTip)
+        val threshold = waitBeforeAttempt(restartsIssued)
         if (nowMs - lastAdvanceMs < threshold) return Decision.NONE
         lastThresholdMs = threshold
         lastStillMs = nowMs - lastAdvanceMs
@@ -3618,47 +3633,16 @@ class L1ShadowSyncService internal constructor(
         internal const val FILTER_STALL_THRESHOLD_MS = 10 * 60_000L
 
         /**
-         * The FIRST wait, used only when a restart would cost almost
-         * nothing (see [FILTER_STALL_NEAR_TIP_BLOCKS]). Later attempts back
-         * off — see [FilterStallWatchdogDecider.waitBeforeAttempt].
+         * WITHDRAWN: a short first wait for wallets where a restart looked
+         * cheap. See [FilterStallWatchdogDecider.waitBeforeAttempt] for the
+         * measurement that retired it — the cheapness was judged from the
+         * engine's in-memory cursor, while a restart resumes from the durable
+         * watermark, and on a Samsung SM-S901U the two differed by 20,000
+         * blocks and the "cheap" restart started a re-walk loop.
          *
-         * A restart resumes from the DURABLE wallet watermark, not from the
-         * filter cursor, so its price is `filterTarget - walletSyncedHeight`
-         * blocks of re-walking — not a constant. Measured both ends:
-         *
-         *  - Near the tip, 2026-09-19 on a Samsung SM-S901U: the cursor sat
-         *    at 1,553,000 of 1,556,891 with the wallet watermark already at
-         *    1,556,890. The watchdog restarted, and 47 s later the engine was
-         *    back at 1,556,890 — AHEAD of where it had been "stuck". Nothing
-         *    was lost, because there was nothing to re-walk.
-         *  - Mid-replay, the same restart is expensive: [stop]'s watermark
-         *    diagnostic recorded the durable value trailing the committed
-         *    cursor by up to 155,000 blocks at teardown on the reference
-         *    install.
-         *
-         * So one threshold cannot be right for both, and nor can one wait
-         * serve every attempt: three minutes to ask the first question when
-         * the answer is cheap, then backing off, because repeating a remedy
-         * that already failed is not worth the budget.
-         *
-         * The case this most matters for lands in the cheap tier: Joel's
-         * 12000012 wedge held `filters 2541081/2541084 wallet 2541081` for
-         * FORTY-NINE MINUTES and never recovered — a three-block gap, so a
-         * restart there costs seconds and the wait drops from never to two
-         * minutes. The longest BENIGN pause measured, 6 min 32 s, was also
-         * near the tip and would now be restarted after two; at 47 s a
-         * restart that is the right trade.
+         * Kept as a comment rather than a constant so the idea is not
+         * re-invented without the durable watermark to back it.
          */
-        internal const val FILTER_STALL_FIRST_ATTEMPT_MS = 3 * 60_000L
-
-        /**
-         * How close the DURABLE watermark must be to the target for a restart
-         * to count as cheap. Deliberately generous relative to the 47 s
-         * measurement (a 1-block gap) and far below the 155,000-block
-         * mid-replay case, so the classification is not sensitive to where
-         * exactly in that range a wallet sits.
-         */
-        internal const val FILTER_STALL_NEAR_TIP_BLOCKS = 5_000L
 
         /**
          * Engine restarts the filter-stall watchdog will spend before
