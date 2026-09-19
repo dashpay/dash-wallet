@@ -1888,12 +1888,15 @@ real.
 Not implemented — it changes wake-up frequency and therefore battery behaviour, which is a product
 call rather than a patch.
 
-## 33. Move the protobuf parse off the main thread
+## 33. Move the wallet load off the main thread
 
-Raised from Joel's 12000010 bundle (`joel-oom-crash-2026-09-18`): "crash on startup, never would
-finish syncing". The sync half is a consequence — the engine is progressing (`last_activity: 0s`,
-filters 2,272,092 / 2,540,300 = 89.4 %) but no session survives long enough to finish. The startup
-half is this section.
+Raised from Joel's 12000010 bundle (`joel-oom-crash-2026-09-18`): "crash on startup, never
+would finish syncing". The sync half is a consequence — the engine is progressing
+(`last_activity: 0s`, filters 2,272,092 / 2,540,300 = 89.4 %) but no session survives long
+enough to finish. The startup half is this section.
+
+Retitled from "the protobuf parse": §33.7 shows the parse is only part of the main-thread
+block, and §33.9 shows the expensive part of it has almost no consumer after the cutover.
 
 ### 33.1 The measurement
 
@@ -1905,15 +1908,9 @@ half is this section.
 n=6   min 6,222 ms   median 10,320 ms   max 21,567 ms
 ```
 
-```
-20:17:45 [main] WalletApplication - STARTUP fullInit: loadWalletFromProtobuf done in 14386ms
-00:00:50 [main] WalletApplication - STARTUP fullInit: loadWalletFromProtobuf done in 10320ms
-21:55:06 [main] WalletApplication - STARTUP fullInit: loadWalletFromProtobuf done in  6222ms
-```
-
 The input is a 61,641,747-byte wallet holding 33,297 transactions and 229 friend chains /
-29,970 keys. For scale, Andrei's "complicated" job-flower wallet (§MO-1022 work) is 10.2 MB and
-6,787 transactions.
+29,970 keys. For scale, Andrei's job-flower wallet is 10.2 MB and 6,787 transactions, and the
+emulator-5556 test wallet is 3,269 transactions and parses in 623–975 ms.
 
 The ANR threshold is 5 s. The **fastest** observed load is 6.2 s. The app's own
 `ApplicationExitInfo` history over these logs records **33 ANRs**, 18 `LOW_MEMORY_LMK`, 5 crashes.
@@ -1921,18 +1918,28 @@ Every cold start on this device is an ANR by construction.
 
 ### 33.2 What is already in place, and why it is not enough
 
-Three guards already surround this parse, and none of them shortens it:
+Three guards already surround this load, and none of them shortens it:
 
 - `WalletFileSizeGuard` — a **pre-parse** verdict on file size. Joel's file passes; it is 61 MB,
   well under the 2 GiB protobuf wall.
 - `WalletLoadBudget` (20 s) — deliberately does **not** abort. `readWallet` cannot be interrupted
   safely mid-parse, so the budget only marks the breadcrumb and arms safe mode for the next launch.
   Joel's max load of 21.6 s is the first to cross it.
-- `StartupBreadcrumbs` safe mode — opens the app *without* the wallet after two deaths. It makes the
-  app reachable for a crash report; it is not a way to use the wallet.
+- `StartupBreadcrumbs` safe mode — opens the app *without* the wallet after two deaths.
 
-They convert "silent death" into "diagnosable death". The parse itself is untouched, and at
-6–21 s on the main thread it is the direct cause of the ANR count.
+They convert "silent death" into "diagnosable death". The load itself is untouched.
+
+**Safe mode is firing on Joel's device.** The breadcrumb trail carries all three markers:
+
+```
+91 WALLET_LOAD_SKIPPED_SAFE_MODE  +25 ms
+98 SAFE_MODE_RETRY              +7202 ms
+99 SAFE_MODE_RETRY_OK          +28792 ms
+```
+
+So he has been through the crash-loop breaker — two consecutive deaths before the main UI, the app
+opened degraded, then the in-process retry recovered. The guard works. It is also evidence that the
+deaths cluster at load rather than spreading through the session.
 
 ### 33.3 Why it is on the main thread
 
@@ -1947,52 +1954,137 @@ Not by accident. `WalletApplication` exposes the wallet synchronously and non-nu
 }
 ```
 
-Parsing inside `onCreate()` is what makes that contract true for every caller that follows. The
-surface is large: ~37 `getWallet()` call sites plus ~359 `.wallet` references across the wallet
-module. A `null` window that did not previously exist would be observable at all of them.
-
+Loading inside `onCreate()` is what makes that contract true for every caller that follows.
 `observeWallet()` already exists as a `MutableStateFlow<Wallet>` — the asynchronous contract is
 half-built, it is simply not the one callers use.
 
-### 33.4 Options
+### 33.4 The main-thread block is LOAD, not parse
 
-**A. Parse on a background thread, block only what needs the wallet.**
-`onCreate()` launches the load and returns. A gate (`awaitWallet()`, or collecting
-`observeWallet()`) is awaited by the first screen that needs wallet data; the launcher activity
-shows a loading state meanwhile. Removes the main-thread stall outright and is the only option that
-does. Cost: every synchronous `getWallet()` caller has to be audited for the new null window —
-this is the real work, not the threading.
+Joel's fastest launch, from the breadcrumbs:
 
-**B. Parse on a background thread, block `onCreate()` on the result.**
-A one-line change with no behavioural risk. It does **not** fix the ANR — the main thread still
-waits — but it moves the parse off the main thread's own stack, which changes the ANR trace and is
-worth nothing on its own. Rejected; recorded so it is not re-proposed.
+```
+ 4 WALLET_LOAD_BEGIN            +15 ms
+ 5 WALLET_PROTOBUF_PARSED     +2710 ms
+ 6 WALLET_CONSISTENCY_CHECKED +5966 ms     <-- 3.3 s AFTER the parse
+ 7 FINALIZE_INIT_BEGIN        +5966 ms
+ 8 INIT_DASH_DONE             +6139 ms
+11 ONCREATE_COMPLETE          +6254 ms
+12 MAIN_UI_SHOWN              +6504 ms
+```
 
-**C. Attack the parse cost instead of its thread.**
-Joel's 229 friend chains / 29,970 keys are the same shape of cost `FriendKeyChainLookahead` was
-built for (it defers friend-chain lookahead and took a pathological case from minutes to ~2 s). It
-is worth measuring how much of the 6–21 s is friend chains versus the 33,297 transactions before
-assuming the threading change is the whole answer. Complementary to A, not an alternative.
+`isWalletConsistent()` calls dashj's `isConsistentOrThrow()`, which walks every transaction against
+the wallet's pools. On 33,297 transactions that is **3.3 seconds**, on the main thread, immediately
+after the parse — on this launch more than half the ANR budget by itself, against a parse that was
+2.7 s here versus a 10.3 s median.
 
-### 33.5 Recommendation
+The unit to move is therefore everything between `WALLET_LOAD_BEGIN` and
+`WALLET_CONSISTENCY_CHECKED`: parse, `adoptAuthenticationGroupExtension`, consistency check.
+Moving the parse alone leaves seconds behind.
 
-Do **C first as a measurement** — instrument the parse to attribute time between key chains and
-transactions on a copy of Joel's wallet — then **A**. A is the fix; C decides whether A alone is
-sufficient or whether the parse also has to get cheaper for the loading state to be tolerable.
+### 33.5 The precedent is in this codebase
 
-Scope A deliberately: the threading is small, the null-window audit across ~396 call sites is not.
-That audit is the estimate.
+`FriendKeyChainLookahead` solved the same shape one level down — work inside `readWallet` killing
+launches on a 2.5 MB file — and the pattern it used is the pattern here:
 
-### 33.6 What this does not address
+1. a `KeyChainFactory` handed to the serializer returns deferring subclasses, so the parse builds
+   the objects and returns without doing the expensive work;
+2. `completeAsync()` does that work on a background pool;
+3. `awaitComplete()` is a gate placed immediately before the one consumer that must not see a
+   partial state (`peerGroup.addWallet(wallet)`).
 
-The other half of Joel's failure is memory, not time: PSS 2.3–2.45 GB, native heap 1.86 GB, JVM
-peaking at 475 MB of 512, driving 18 low-memory kills. Moving the parse off the main thread does
-not reduce the footprint — the parsed wallet is the same size wherever it is built, and the 1.86 GB
-of native heap held during the FILTERS replay is a separate, unattributed investigation.
+A wallet-level gate is the same construction one level up. What makes it harder is that the
+consumer set is "the whole app" rather than one call, which is what §33.6 is about.
 
-Nor does it help the two idle stops observed mid-replay at 12:45:35 and 13:00:00. Those are already
-fixed on the branch (`20975314f` replay guard, `b42f8f84e` re-arm) and simply absent from 12000010 —
-confirmed by zero matches for the wake-lock and "replay in progress" log lines in his logs. The
-filter-stall watchdog (`616ac58ff`) would **not** fire for him: he is progressing, not wedged.
+### 33.6 Scope the audit by what runs before first frame
+
+The surface is ~37 `getWallet()` call sites and ~359 `.wallet` references. That number is the wrong
+estimate, because most of them are on screens the user has not opened. The question is how many run
+**before the first frame** — everything else can await the gate on its own path.
+
+Post-cutover that set is small, because `peerGroup.addWallet(wallet)` — the classic early consumer —
+never runs at all (`checkService()` returns at `BlockchainServiceImpl.kt:1506`), and the home screen
+is served by `CutoverUiDataService` and `SdkBlockchainStateService`.
+
+Measure it before estimating: instrument `getWallet()` to log its caller until `MAIN_UI_SHOWN`, run
+one launch, and the audit list is that log rather than a grep.
+
+### 33.7 What the Wallet is actually FOR after the cutover
+
+Enumerated from the real call sites, not from the class's history. Post-cutover the dashj `Wallet`
+has four jobs:
+
+1. **The keystore.** `isEncrypted` (12 sites), `keyCrypter`/`getKeyCrypter` (5), `keyChainSeed` (3),
+   `encrypt`/`decrypt`. Every PIN check, every send authorisation and the SDK bind itself run
+   `wallet.keyChainSeed.decrypt(wallet.keyCrypter, null, pinDerivedKey)`
+   (`SecurityGuardMnemonicProvider`). There is no other source — `SecurityGuard` stores keys
+   *derived from* the mnemonic, not the mnemonic.
+2. **The friend-chain store.** `addAndActivateHDChain`, still writing post-cutover (observed on
+   emulator-5556 at 21:25 creating `FriendKeyChain{…}` as contact requests arrived). The sending
+   chains carry the CONTACT's xpub, which `FriendChainAccess` documents as not re-derivable from
+   our seed.
+3. **A txid → transaction lookup.** `getTransaction(txid)` in `WalletTransactionMetadataProvider`
+   (×2), `TransactionResultViewModel`, `L1SendProbeService` — point lookups, fired when a
+   transaction detail screen opens or a tax category is set.
+4. **Diagnostics.** `L1ShadowSyncService` reads `getTransactions(false).size`,
+   `calculateAllSpendCandidates` and `lastBlockSeenHeight` for the parity facts.
+
+What it is NOT used for post-cutover: balance, history, the home screen, sends
+(`SdkL1SendService` never touches it), coin selection, or L1 sync. `lastBlockSeenHeight` is frozen
+— the autosave line reads `last seen block is height -1`.
+
+The one straggler is `SweepWalletFragment`, which still calls `getTransactions(...)` and
+`freshReceiveAddress()` for real work because paper-wallet sweep has not moved to the SDK.
+
+### 33.8 Which reframes the fix
+
+The 33,297 transactions are parsed on every launch, and cost 3.3 s of consistency checking on top,
+so that a detail screen the user may never open can do a hash lookup and a diagnostic can count
+them. Moving that to a background thread HIDES a cost that post-cutover should not be paid at all.
+
+Two options, and they are not exclusive:
+
+**A. Load asynchronously** (the original §33 proposal). Removes the main-thread stall. Does nothing
+about the ~430 MB the transactions occupy in a 512 MB JVM.
+
+**B. Do not materialise the transaction graph post-cutover.** Consumers 3 and 4 above are a hash
+lookup and a count. Both can be served lazily — on the first `getTransaction` call — or from the
+SDK store. This attacks the parse time AND the footprint.
+
+B is bounded by two real constraints: `readWallet` returns a `Wallet` that callers expect to be
+whole, and pre-cutover the transactions genuinely are load-bearing — so it has to be conditional on
+a committed cutover, which means two shapes of `Wallet` in one codebase. A wallet with an empty
+transaction set is a sharper edge than a wallet that arrives late; cf. DASHJ-KILL-LIST 1a, where a
+partial view was published as real.
+
+### 33.9 Do the measurement first
+
+dashj's `WalletProtobufSerializer` already instruments the WRITE side per category (observed on
+emulator-5556):
+
+```
+walletToProto (serial=12) timing: 22ms total, init=0ms, tx=0ms[0], keys=1ms,
+  scripts=0ms[0], metadata=0ms, ext=17ms, friendRecv=2ms, friendSend=0ms, build=0ms
+```
+
+There is no equivalent on the READ side. Mirroring it — tx, keys, scripts, extensions, friend
+chains — and running one launch against a copy of Joel's 61.6 MB wallet answers in one reading
+what share of the 6–21 s is transactions. That number decides between A and B, and it is the
+cheapest thing on this list.
+
+### 33.10 What this does not address
+
+The other half of Joel's failure is memory: PSS 2.3–2.45 GB, native heap 1.86 GB, JVM peaking at
+475 MB of 512, driving 18 low-memory kills. Option A does not reduce the footprint. Option B would,
+by an amount nobody has measured — a heap dump (`adb shell am dumpheap`) on a wallet of this shape
+is the way to attribute the 430 MB rather than estimate it.
+
+The 1.86 GB of native heap held during the FILTERS replay is the SDK's and is not reachable from
+here: the whole app-side SPV surface is `startSpv(dataDir)` — no batch size, no concurrency limit,
+no memory budget. That is an SDK issue to file, with the `ReplayMemTelemetry` curve attached.
+
+Nor does any of this help the two idle stops observed mid-replay at 12:45:35 and 13:00:00. Those
+are already fixed on the branch (`20975314f` replay guard, `b42f8f84e` re-arm) and simply absent
+from 12000010. The filter-stall watchdog (`616ac58ff`) would **not** fire for him: he is
+progressing, not wedged.
 
 Not implemented.
