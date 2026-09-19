@@ -186,7 +186,15 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainState.replaying = false
             blockchainState.impediments = composeImpediments()
             blockchainStateDao.saveState(blockchainState)
-            syncStageFlow.value = update.syncStage
+            // A caught-up snapshot must not REGRESS an established stage — that is
+            // the "syncing 100%" blip (see mayPreserveEstablishedSyncStage). But
+            // only an ESTABLISHED one: with the flow still null there is nothing to
+            // preserve, and holding the write would leave getSyncStage() reporting
+            // OFFLINE for a wallet that is actually caught up — the process-start
+            // case. Seed it then, and hold only afterwards.
+            if (!update.preserveEstablishedSyncStage || syncStageFlow.value == null) {
+                syncStageFlow.value = update.syncStage
+            }
         }
     }
 

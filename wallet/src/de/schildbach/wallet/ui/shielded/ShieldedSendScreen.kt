@@ -188,7 +188,7 @@ private fun ShieldedSendScreenContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 when {
-                    uiState.insufficientFunds -> Text(
+                    uiState.showInsufficientFunds -> Text(
                         text = stringResource(R.string.shielded_error_insufficient_funds),
                         style = MyTheme.Typography.BodyMedium,
                         color = MyTheme.Colors.red,
