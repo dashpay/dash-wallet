@@ -289,6 +289,28 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         const val START_REASON_EXTRA = "start_reason"
 
         /**
+         * Distinct PendingIntent request codes for the two alarms that both
+         * target this service.
+         *
+         * A PendingIntent's identity ignores EXTRAS — it is the package, the
+         * request code and the Intent's component/action/data. Both schedulers
+         * built theirs with request code 0 against this same component and no
+         * action, so they were THE SAME PendingIntent, and
+         * `FLAG_UPDATE_CURRENT` merely swapped the extras while the second
+         * `setInexactRepeating` replaced the first alarm outright. Observed on
+         * a test device: the armed alarm was the daily periodic one with an
+         * 18-hour window, not the 15-minute restart that had just been asked
+         * for.
+         *
+         * PERIODIC keeps 0 deliberately: an alarm already scheduled by an
+         * older build carries that code, and `AlarmManager.cancel` only
+         * matches an equal PendingIntent, so changing it would orphan the very
+         * alarm the reschedule means to replace.
+         */
+        const val ALARM_REQUEST_CODE_PERIODIC = 0
+        const val ALARM_REQUEST_CODE_RESTART = 1
+
+        /**
          * Does this `onTrimMemory` level mean the process is genuinely under
          * memory pressure, i.e. worth tearing the service down for?
          *
@@ -1216,12 +1238,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val alarmIntent: PendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true)
             PendingIntent.getForegroundService(
-                application, 0, serviceIntent,
+                application, ALARM_REQUEST_CODE_RESTART, serviceIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         } else {
             PendingIntent.getService(
-                application, 0, serviceIntent,
+                application, ALARM_REQUEST_CODE_RESTART, serviceIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         }

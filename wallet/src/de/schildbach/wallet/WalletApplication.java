@@ -1762,10 +1762,12 @@ public class WalletApplication extends MultiDexApplication
                 "periodic-" + alarmIntervalMinutes + "min");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
-            alarmIntent = PendingIntent.getForegroundService(context, 0, serviceIntent,
+            alarmIntent = PendingIntent.getForegroundService(context,
+                    BlockchainServiceImpl.ALARM_REQUEST_CODE_PERIODIC, serviceIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         } else {
-            alarmIntent = PendingIntent.getService(context, 0, serviceIntent,
+            alarmIntent = PendingIntent.getService(context,
+                    BlockchainServiceImpl.ALARM_REQUEST_CODE_PERIODIC, serviceIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         }
         alarmManager.cancel(alarmIntent);
@@ -1776,10 +1778,13 @@ public class WalletApplication extends MultiDexApplication
         // whitelist — so record it, because every emulator used for testing turned
         // out to hold it, which is why §28 could not be settled in the lab.
         //
-        // NOTE these two schedulers share ONE PendingIntent (same component, same
-        // request code 0), so whichever runs last wins and the other is silently
-        // replaced. Observed on a test device: the armed alarm was the daily one
-        // with an 18-hour window, not the 15-minute restart.
+        // The two schedulers used to share ONE PendingIntent (same component,
+        // same request code 0), so whichever ran last silently replaced the
+        // other — observed on a test device as the daily alarm with an 18-hour
+        // window standing where a 15-minute restart had just been armed. They
+        // now carry distinct request codes
+        // ([BlockchainServiceImpl.ALARM_REQUEST_CODE_PERIODIC] and
+        // ..._RESTART), so both survive.
         String batteryExempt;
         try {
             android.os.PowerManager pm =
@@ -1788,10 +1793,10 @@ public class WalletApplication extends MultiDexApplication
         } catch (final Throwable t) {
             batteryExempt = "unknown";
         }
-        log.info("ALARM-DIAG armed reason=periodic-{}min firstFireInMinutes={} repeat=1440min "
+        log.info("ALARM-DIAG armed reason=periodic-{}min firstFireInMinutes={} repeat={}min "
                         + "exact=false batteryOptimisationExempt={} - if no matching "
                         + "'started by alarm' line follows, the background FGS start was refused",
-                alarmIntervalMinutes, alarmIntervalMinutes, batteryExempt);
+                alarmIntervalMinutes, alarmIntervalMinutes, alarmIntervalMinutes, batteryExempt);
 
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O || Build.VERSION.SDK_INT == Build.VERSION_CODES.O_MR1) {
             log.info("custom sync scheduling with JobScheduler for Android 8 and 8.1");
@@ -1815,7 +1820,21 @@ public class WalletApplication extends MultiDexApplication
         } else if (!cancelOnly) {
             // workaround for no inexact set() before KitKat
             final long now = System.currentTimeMillis();
-            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY,
+            // SR-06. The repeat interval was hardcoded INTERVAL_DAY while the
+            // trigger time honoured `alarmInterval`, so the backoff chosen
+            // above was computed and then discarded. That is not merely a
+            // frequency question: setInexactRepeating's DELIVERY WINDOW scales
+            // with the REPEAT interval, so an INTERVAL_DAY repeat gets an
+            // 18-hour window and the alarm is not late, it is never delivered.
+            // §32.5 forced one overdue on a battery-exempt device with deep
+            // idle disabled and it still did not fire: count=0 with 17h54m of
+            // remaining permission to defer.
+            //
+            // Passing the interval that was already chosen is therefore a
+            // repair, not a policy change — the tiers (15 min just-used, 12 h
+            // recent, 24 h idle) ARE the battery policy, and honouring them is
+            // what implements it.
+            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, alarmInterval,
                     alarmIntent);
         }
     }
