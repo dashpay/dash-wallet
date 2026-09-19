@@ -273,14 +273,16 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             // (neutral, not red) until the pool is READY; legitimate red
             // errors resume the instant the button leaves PreparingShielded.
             val shieldedPreparing = buttonState == UsernameSubmitButtonState.PreparingShielded
-            // secondaryNameSameAsPrimary is part of the ENTRY condition, not just
-            // the disabled branch below: checkUsernameValid stops NEW lookups for a
-            // colliding name, but one already in flight for the suffixed name can
-            // land afterwards and set usernameCheckSuccess. This branch would then
-            // ask usernameSubmitButtonState — which takes no collision input, and
-            // for a Secondary enables on `!usernameExists && !usernameContestable`
-            // — about the STALE name while the field holds the bare primary, and
-            // enable submit for the duplicate.
+            // secondaryNameSameAsPrimary is part of the ENTRY condition, not just the
+            // disabled branch below. checkUsernameValid stops NEW lookups for a colliding
+            // name, and usernameCheckResultIsCurrent now drops a result whose label the
+            // field has moved on from — so the stale write this originally defended
+            // against can no longer land. It stays because it guards a different thing:
+            // usernameSubmitButtonState takes no collision input at all, and for a
+            // Secondary enables on `!usernameExists && !usernameContestable`, which a
+            // contested primary satisfies on its own (it is absent from the unique index
+            // until its vote resolves). Without this term a legitimate, current verdict
+            // for the bare primary would enable submit for the duplicate.
             if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess &&
                 !it.secondaryNameSameAsPrimary
             ) {
