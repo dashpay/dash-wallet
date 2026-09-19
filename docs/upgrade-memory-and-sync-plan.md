@@ -1923,8 +1923,78 @@ interval, so a 15-minute repeat gets minutes of slack rather than hours. Or drop
 explicitly. Either removes the 18-hour window; the FGS-start question in §28 can then be tested for
 real.
 
-Not implemented — it changes wake-up frequency and therefore battery behaviour, which is a product
-call rather than a patch.
+**Implemented 2026-09-19 (§32.8).** This section originally deferred it as a battery/product call.
+That was the wrong frame — see below.
+
+### 32.8 IMPLEMENTED, 2026-09-19 — and why the deferral was reconsidered
+
+QA on int19 reported the same defect independently (SR-06), which prompted a re-reading of the
+deferral. It does not hold up:
+
+> Not implemented — it changes wake-up frequency and therefore battery behaviour.
+
+The premise is that the alarm currently fires rarely and would afterwards fire often. It does not
+fire **at all**. §32.5 forced one overdue on a battery-exempt device with deep idle disabled and it
+still did not fire — `count=0` with 17h54m of remaining permission to defer. So the comparison is
+not "more wakeups versus fewer", it is "some versus none".
+
+And the battery policy is not being overridden, it is being implemented. The tiers already encode
+it — 15 minutes when the app was just used, 12 hours when recent, 24 hours when idle. The code
+computed the right tier and then discarded it:
+
+```java
+// before: trigger honours the tier, repeat is hardcoded
+alarmManager.setInexactRepeating(RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY, alarmIntent);
+// after
+alarmManager.setInexactRepeating(RTC_WAKEUP, now + alarmInterval, alarmInterval, alarmIntent);
+```
+
+**Scope note.** The `JobScheduler` branch above it always did this correctly, but it runs only on
+`SDK_INT == O || O_MR1` — Android 8.0 and 8.1 exactly. Every device from Android 9 onward took the
+`setInexactRepeating` path, including both reference installs and every test device.
+
+### 32.9 A second defect in the same lines: the two alarms were one alarm
+
+A `PendingIntent`'s identity ignores EXTRAS — it is the package, the request code, and the Intent's
+component/action/data. Both schedulers built theirs with **request code 0** against
+`BlockchainServiceImpl` with no action:
+
+| | armed by | repeat | request code |
+|---|---|---|---|
+| Periodic sync | `WalletApplication.scheduleStartBlockchainService`, from the service's `onDestroy` | tier (15 min / 12 h / 24 h) | **0** |
+| One-minute restart | `BlockchainServiceImpl.rescheduleService`, on a replay-interrupting stop or a blockstore timeout | 15 min | **0** |
+
+So they were the SAME `PendingIntent`. `FLAG_UPDATE_CURRENT` swapped the extras and the second
+`setInexactRepeating` replaced the first alarm outright — observed on a test device as the daily
+alarm with an 18-hour window standing where a 15-minute restart had just been armed. Whichever
+armed last won, silently.
+
+Now `ALARM_REQUEST_CODE_PERIODIC = 0` and `ALARM_REQUEST_CODE_RESTART = 1`, named in
+`BlockchainServiceImpl` so both sites share the definition. The periodic keeps 0 deliberately: an
+alarm scheduled by an older build carries that code, and `AlarmManager.cancel` only matches an
+EQUAL `PendingIntent`, so renumbering it would orphan the very alarm the reschedule means to
+replace.
+
+### 32.10 How to verify it — the test that has never passed
+
+Neither fix is unit-testable as written (static methods over a `Context`, calling `AlarmManager`).
+The verification is §28's, and it needs a device left alone:
+
+1. Open the app and use it, so `lastUsedAgo` is small. This matters: §32.6 showed that arming after
+   an hour of non-use selects the **720-minute** tier, not 15.
+2. Close it (swipe from recents), or let the idle detector stop the service. The periodic alarm is
+   armed from `BlockchainServiceImpl.onDestroy` — there is no other way to arm it.
+3. Expect `ALARM-DIAG armed reason=periodic-15min firstFireInMinutes=15 repeat=15min`. The
+   `repeat=15min` IS the fix; it read `repeat=1440min` before, and the line hardcoded that value so
+   it would have kept saying so.
+4. Confirm the window with `adb shell dumpsys alarm | grep -A6 darkcoin` — §32.5 caught the
+   18-hour window exactly there.
+5. **Do not touch the device.** Opening the app re-arms and restarts the clock.
+6. After ~15 minutes, look for a `started by alarm` line.
+
+Step 6 has never been observed to happen, on any device, in any build. Until it is, §28's question —
+whether the background FGS start is refused once the alarm IS delivered — remains unreachable
+rather than answered.
 
 ## 33. Move the wallet load off the main thread
 
