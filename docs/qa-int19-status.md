@@ -13,7 +13,7 @@ retested — see [Retest before closing](#retest-before-closing).
 | Fixed on this branch | 1 | SR-01 |
 | Addressed by the #1555 merge | 2 | D-056, D-031 |
 | Addressed by the pending master merge | 1 | D-011 |
-| Still applies | 7 | D-037, D-041, D-068, SR-22, SR-05, SR-03/04, SR-07 |
+| Still applies | 7 | D-037, **D-041** (root-caused to the SDK, see below), D-068, SR-22, SR-05, SR-03/04, SR-07 |
 | Applies by deliberate decision | 2 | SR-06, SR-08 |
 
 ---
@@ -117,10 +117,35 @@ A single process kill during replay leaves the home screen showing a **~22× inf
 (2,319–2,363 against an actual 107.08) with no syncing indicator. The bad value is persisted as
 `lastKnown`; only a force-stop clears it.
 
-**Partially mitigated, not fixed.** The replay guard and wake lock make a mid-replay kill less
-likely, but nothing stops a partial balance being persisted if one happens. Observed live on this
-branch's build on 2026-09-19: `SDK balance published: 11412881144` mid-replay against a settled
-`10708173522`. See also `DASHJ-KILL-LIST.md` §1a.
+**Root cause found 2026-09-19 — and it is worse than reported. Not fixable in this repo.**
+
+Reproduced on a Samsung on the job-flower wallet. The balance climbed to **3,024.56 DASH against a
+true 107.08** — 28x — and, unlike the QA report, **stayed wrong after the sync completed**, with no
+process kill involved at all:
+
+```
+19:18:43   107.08 DASH   <- app start, correct
+19:29:34   110.07        <- replay to tip begins
+19:31:07  3024.56        <- settles here, past SYNCED
+```
+
+The SDK's own database is correct throughout: 811 unspent txos totalling exactly 107.08173522, with
+`isSpent` and `spendingTxid` agreeing on every row. And this repo does no arithmetic — 
+`CutoverUiDataService.currentBalanceSplitDuffs` publishes whatever `wallet.balance()` returns. The
+wrong figure comes from the SDK's in-memory native ledger, which applies block events on top of an
+already-correct rehydrated balance and so double-counts anything re-walked.
+
+That explains the report's "only a force-stop fixes it": a restart rehydrates from the table, which
+is why every app start above reads exactly 107.08.
+
+**Assignment note.** This is `dash-spv` / `platform-wallet`, below the FFI, so iOS is equally
+exposed and an Android-side fix can only be a workaround — reconcile against the `txos` table once
+synced, or refuse to publish until then. Note the `l1Synced=false` suppression proposed in
+`DASHJ-KILL-LIST.md` §1a is necessary but no longer sufficient, because this instance was published
+with `l1Synced=true`. Full analysis in §1a.1 there.
+
+Reproduction: force a re-walk (the filter-stall watchdog's restart does it), watch the published
+balance climb, confirm the `txos` table stays correct.
 
 ### D-068 — CoinJoin funds stranded at cutover
 

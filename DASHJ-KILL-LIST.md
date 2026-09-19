@@ -79,6 +79,66 @@ The signal to fix it with is already present: **every wrong value was published 
 known-good figure, or mark the value as provisional in the UI. Today it emits partial rescan state
 as though it were settled.
 
+##### 1a.1 UPDATE 2026-09-19 — the source is the SDK's native ledger, and it does NOT self-correct
+
+Reproduced on a Samsung SM-S901U on the job-flower wallet, and this time the end state was WRONG
+too, which the 2026-09-17 reading was not.
+
+```
+18:47:57   107.08 DASH        <- correct
+18:52:54   107.08             <- app start
+19:00:24   107.08             <- app start
+19:11:02   107.08             <- app start
+19:18:43   107.08             <- app start
+19:29:34   110.07             <- replay to tip begins
+19:29:56  1649.00
+19:30:09  2942.25
+19:31:07  3024.56             <- settles here, 28x too high, and STAYS past SYNCED
+```
+
+**The SDK's own database is correct throughout.** Pulled mid-defect and queried directly:
+
+```
+UNSPENT   811 txos   107.08173522 DASH   <- the true balance, exactly
+spent    9236 txos   193556.21892690 DASH
+```
+
+Both spend markers agree — `isSpent` and `spendingTxid` classify identically, zero disagreement.
+So this is not missed spend detection, not double-inserted outputs, and not a persistence fault.
+
+**It is not our code either.** `CutoverUiDataService.currentBalanceSplitDuffs` does no arithmetic:
+
+```kotlin
+// Native ledger read — the SAME accessor L1ShadowSyncService.sdkBalanceDuffs
+// uses. A self-send debits this immediately; the Room `txos` table lags.
+val balance = wallet.balance()
+```
+
+It publishes whatever `wallet.balance()` returns. The wrong number comes out of the SDK's
+**in-memory native ledger**, which applies block events on top of an already-correct rehydrated
+balance and therefore double-counts anything re-walked. This wallet re-walked 20,000 blocks after a
+watchdog restart plus several full re-scans, which is why it reached 28x.
+
+That also explains D-041's reported "only a force-stop fixes it": a restart rehydrates the ledger
+from the `txos` table, which is why **every app start above reads exactly 107.08**.
+
+**Consequences for this item.** The `l1Synced=false` suppression proposed above is necessary but NO
+LONGER SUFFICIENT — the 2026-09-19 value was still wrong after SYNCED, so a wrong figure can now be
+published with `l1Synced=true`. Two further mitigations are available on the app side while the
+upstream fix is pending:
+
+- reconcile against the `txos` table once `synced` is true and publish that instead; the table was
+  correct at every point measured, and 1a's own requirement is that this value be right before
+  dashj can be deleted;
+- or treat a post-SYNCED disagreement between `wallet.balance()` and the table as a defect signal
+  and log it, so the field reports say which one was wrong.
+
+**The real repair is upstream**, in `dash-spv` / `platform-wallet`'s `wallet.balance()`. Like the
+filter-batch defect in §34 of the plan it sits below the FFI, so iOS is equally exposed. A cheap
+reproduction for whoever takes it: force a re-walk (the filter-stall watchdog's restart does it),
+watch the published balance climb, and confirm the `txos` table stays correct throughout — that
+distinguishes it from a persistence bug in one pass.
+
 Why this is a kill-list item and not just a bug: the rewind that exposes it is itself triggered by
 ordinary DashPay provisioning (§17.6, §26.3), so it is not a rare path, and the pre-cutover
 comparison against dashj's own balance (`L1Parity` probing) is the only thing that would currently
