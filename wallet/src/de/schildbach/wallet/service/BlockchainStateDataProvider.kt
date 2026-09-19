@@ -182,8 +182,15 @@ class BlockchainStateDataProvider @Inject constructor(
             // Null percent (transient SDK ERROR) preserves the row's value —
             // a peer hiccup must not flap isSynced() consumers 100 → 0 → 100.
             update.percentageSync?.let { blockchainState.percentageSync = it }
-            // The SDK has no replay concept — its re-scan reads as percent < 100.
-            blockchainState.replaying = false
+            // Phase 1b item 7: on the SDK path `replaying` means "the scan has
+            // not reached the tip", and it keeps the blockchain service alive
+            // (idle rule guard + wake lock) until it has. This used to be
+            // hard-coded false, so nothing protected the post-upgrade replay
+            // and the one-minute restart alarm never fired after an idle stop.
+            // Set from the percentage the SDK reports; a null percent (transient
+            // ERROR) leaves the flag as it was. BlockchainStateDao.saveState
+            // clears it at 100% as well.
+            update.percentageSync?.let { blockchainState.replaying = it < 100 }
             blockchainState.impediments = composeImpediments()
             blockchainStateDao.saveState(blockchainState)
             // A caught-up snapshot must not REGRESS an established stage — that is
@@ -260,6 +267,36 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainStateDao.saveState(
                 BlockchainState(true)
             )
+        }
+    }
+
+    /**
+     * Phase 1b item 8 (docs/upgrade-memory-and-sync-plan.md): the cutover
+     * just handed L1 to the SDK on an EXISTING (upgraded) wallet, so the SDK
+     * is about to scan from the wallet's birth height while the row still
+     * carries dashj's "synced, 100%". Mark the replay as started NOW — before
+     * the SDK's first progress update, which can trail the commit by minutes
+     * — so `isSynced()` reads false (the home screen shows syncing rather than
+     * dashj's stale 100%, emulator finding 3), the idle rule keeps the
+     * service alive (item 7), and the one-minute restart alarm applies
+     * (item 9). Only restore and rescan used to set the flag.
+     *
+     * Heights, dates and impediments are preserved; the percentage is zeroed
+     * because the SDK has scanned nothing yet — its first update replaces it
+     * with the real figure. Idempotent: a row already mid-replay is left
+     * alone. Never throws.
+     */
+    fun markReplayStartedForSdkTakeover() {
+        coroutineScope.launch {
+            val state = try {
+                blockchainStateDao.getState()
+            } catch (ex: SQLiteException) {
+                null
+            } ?: BlockchainState()
+            if (state.replaying && state.percentageSync < 100) return@launch
+            state.replaying = true
+            state.percentageSync = 0
+            blockchainStateDao.saveState(state)
         }
     }
 

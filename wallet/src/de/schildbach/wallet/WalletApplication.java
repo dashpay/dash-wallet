@@ -282,8 +282,6 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     CutoverCoordinator cutoverCoordinator;
     @Inject
-    de.schildbach.wallet.service.platform.sdk.CutoverAutoCommitObserver cutoverAutoCommitObserver;
-    @Inject
     CutoverEvidenceCollector cutoverEvidenceCollector;
     @Inject
     de.schildbach.wallet.service.platform.sdk.CutoverUiDataService cutoverUiDataService;
@@ -947,7 +945,17 @@ public class WalletApplication extends MultiDexApplication
 
     private void afterLoadWallet() {
         wallet.setSaveOnNextBlock(false);
-        wallet.autosaveToFile(walletFile, Constants.Files.WALLET_AUTOSAVE_DELAY_MS, TimeUnit.MILLISECONDS, null);
+        // Size-aware autosave debounce (Phase 1a item 6): a 62 MB wallet
+        // must not be re-serialized every 5 s during a sync burst. The delay
+        // follows the same heap-derived soft limit as the parse guard; see
+        // WalletFileSizeGuard.autosaveDelayMs. A fresh wallet has no file yet
+        // (length 0) and keeps the historical 5 s.
+        final long walletFileSize = walletFile.length();
+        final long autosaveDelayMs = WalletFileSizeGuard.autosaveDelayMs(walletFileSize, largeMemoryClassMb());
+        if (autosaveDelayMs != Constants.Files.WALLET_AUTOSAVE_DELAY_MS) {
+            log.info("wallet autosave debounce raised to {} ms for a {} byte wallet file", autosaveDelayMs, walletFileSize);
+        }
+        wallet.autosaveToFile(walletFile, autosaveDelayMs, TimeUnit.MILLISECONDS, null);
         final Wallet walletForMaintenance = wallet;
 
         // did blockchain rescan fail
@@ -1003,8 +1011,7 @@ public class WalletApplication extends MultiDexApplication
         // (which commit in setWallet). Each Phase-1 function is tested AFTER cutover, so
         // dashj should never have to dual-run and parity-match before the SDK takes over.
         // Idempotent (no-op once CUT_OVER) and self-gated on USE_KOTLIN_SDK_L1_SHADOW, so
-        // it stays inert when the SDK L1 engine is off; once committed the
-        // CutoverAutoCommitObserver parity path never runs (it stands down when CUT_OVER).
+        // it stays inert when the SDK L1 engine is off.
         //
         // The UPGRADE variant: identical commit, but it also arms the one-time
         // sync explainer when this launch is the one that actually flips the
@@ -1026,7 +1033,14 @@ public class WalletApplication extends MultiDexApplication
         // value here even though finalizeInitialization already persisted this
         // launch's code via config.updateLastVersionCode() — and it is stable
         // no matter which of the two afterLoadWallet() call paths runs first.
-        cutoverCoordinator.commitForUpgradedWalletAsync(config.lastVersionCode);
+        // Phase 1b item 8: when this launch moves an EXISTING wallet to
+        // CUT_OVER, the SDK is about to replay from birth while the row still
+        // says dashj is synced. Mark the replay as started so the service
+        // stays alive (item 7) and the home screen reads syncing, not 100%.
+        cutoverCoordinator.commitForUpgradedWalletAsync(config.lastVersionCode, () -> {
+            blockchainStateDataProvider.markReplayStartedForSdkTakeover();
+            return kotlin.Unit.INSTANCE;
+        });
     }
 
     private void deleteBlockchainFiles() {
@@ -1103,6 +1117,22 @@ public class WalletApplication extends MultiDexApplication
         log.addAppender(fileAppender);
         log.addAppender(logcatAppender);
         log.setLevel(Level.INFO);
+
+        // Log diet (docs/upgrade-memory-and-sync-plan.md, Phase 1a item 5).
+        // dashj's InstantSend/quorum machinery logs at INFO per islock and per
+        // quorum lookup: in the reference install's crash minute (2026-09-15
+        // 12:17 UTC) about 27,000 of the 28,000 lines were these three loggers
+        // and the per-transaction metadata lines below, and one of the three
+        // OutOfMemoryErrors fired inside logback itself. WARN keeps every
+        // real problem ("signature has already", CRITICAL, timeouts) and drops
+        // the chatter. dashj runs only for the Tools > dashj sync diagnostic
+        // now, but the diagnostic must not be able to fill the log either.
+        for (final String noisyDashjLogger : new String[] {
+                "org.bitcoinj.quorums.InstantSendManager",
+                "org.bitcoinj.quorums.SPVQuorumManager",
+                "org.bitcoinj.quorums.SigningManager" }) {
+            context.getLogger(noisyDashjLogger).setLevel(Level.WARN);
+        }
 
         // dashj's peer-timeout diagnostic WARN-logs a full thread dump on
         // EVERY peer timeout (96 dumps = 118k log lines in one flapping
@@ -1570,6 +1600,47 @@ public class WalletApplication extends MultiDexApplication
         }
     }
 
+    /**
+     * Start the blockchain service after an app UPGRADE, bypassing the
+     * process-importance guard in {@link #startBlockchainService(boolean)}.
+     *
+     * WHY THIS EXISTS. That guard only calls {@code startService} when the
+     * process importance is at or better than {@code IMPORTANCE_FOREGROUND};
+     * it is an old workaround for an Android P bug
+     * (issuetracker.google.com/issues/113122354). A process started for the
+     * {@code MY_PACKAGE_REPLACED} broadcast sits at receiver importance, well
+     * below that, so the call is a silent no-op. Measured on the 2026-09-16
+     * emulator upgrade test: the receiver fired, {@code startBlockchainService}
+     * did nothing, no foreground service ever started, and the SDK L1 engine
+     * — which since the §10.4 change only starts from the foreground service —
+     * never scanned a single block. Nothing would have started it for up to
+     * 18 hours, when the daily fallback alarm was due.
+     *
+     * {@code MY_PACKAGE_REPLACED} is one of the documented exemptions to the
+     * Android 12+ background foreground-service-start restrictions, so a
+     * {@code startForegroundService} from here is allowed; the service
+     * promotes itself immediately via the {@code START_AS_FOREGROUND_EXTRA}
+     * promise it already honors. If the platform refuses anyway, fall back to
+     * the same delayed AlarmManager start that the boot path uses on
+     * Android 15+, where an alarm-driven start is exempt.
+     *
+     * @return true when the start was issued directly, false when it was
+     *         deferred to the alarm.
+     */
+    public boolean startBlockchainServiceAfterUpgrade() {
+        final Intent serviceIntent = new Intent(this, BlockchainServiceImpl.class);
+        serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
+        try {
+            androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent);
+            log.info("blockchain service started as a foreground service after the package replacement");
+            return true;
+        } catch (final Throwable t) {
+            log.warn("could not start the blockchain service directly after the package replacement; "
+                    + "deferring to the alarm-driven start", t);
+            return false;
+        }
+    }
+
     @Deprecated(message = "not used")
     public void stopBlockchainService() {
         stopService(blockchainServiceIntent);
@@ -1684,6 +1755,11 @@ public class WalletApplication extends MultiDexApplication
         PendingIntent alarmIntent;
 
         Intent serviceIntent = new Intent(context, BlockchainServiceImpl.class);
+        // ALARM-DIAG (see BlockchainServiceImpl.START_REASON_EXTRA and §28 of the
+        // upgrade memory and sync plan): stamp the reason so a delivered start is
+        // distinguishable from an app-opened one in a field log.
+        serviceIntent.putExtra(BlockchainServiceImpl.START_REASON_EXTRA,
+                "periodic-" + alarmIntervalMinutes + "min");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
             alarmIntent = PendingIntent.getForegroundService(context, 0, serviceIntent,
@@ -1693,6 +1769,29 @@ public class WalletApplication extends MultiDexApplication
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         }
         alarmManager.cancel(alarmIntent);
+
+        // ALARM-DIAG. Both schedulers here use setInexactRepeating, and only EXACT
+        // alarms are on Android's background FGS-start exemption list. The other
+        // exemption that can apply is the user-granted battery-optimisation
+        // whitelist — so record it, because every emulator used for testing turned
+        // out to hold it, which is why §28 could not be settled in the lab.
+        //
+        // NOTE these two schedulers share ONE PendingIntent (same component, same
+        // request code 0), so whichever runs last wins and the other is silently
+        // replaced. Observed on a test device: the armed alarm was the daily one
+        // with an 18-hour window, not the 15-minute restart.
+        String batteryExempt;
+        try {
+            android.os.PowerManager pm =
+                    (android.os.PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            batteryExempt = String.valueOf(pm.isIgnoringBatteryOptimizations(context.getPackageName()));
+        } catch (final Throwable t) {
+            batteryExempt = "unknown";
+        }
+        log.info("ALARM-DIAG armed reason=periodic-{}min firstFireInMinutes={} repeat=1440min "
+                        + "exact=false batteryOptimisationExempt={} - if no matching "
+                        + "'started by alarm' line follows, the background FGS start was refused",
+                alarmIntervalMinutes, alarmIntervalMinutes, batteryExempt);
 
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O || Build.VERSION.SDK_INT == Build.VERSION_CODES.O_MR1) {
             log.info("custom sync scheduling with JobScheduler for Android 8 and 8.1");

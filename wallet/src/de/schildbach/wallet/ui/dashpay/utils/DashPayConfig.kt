@@ -448,36 +448,37 @@ open class DashPayConfig @Inject constructor(
          * `cutover state DUAL_RUNNING -> CUT_OVER (upgraded-wallet launch)`)
          * and armed the very same explainer a second time.
          *
-         * The ten-hour gap is structural, not a glitch: the seam's bind-evidence
-         * gate can never pass on the upgrade launch itself (the bind runs after
-         * the seam), so the commit — and with it the arming — always lands on
-         * some LATER process start, with no bound on when that is. Combined
-         * with the durable [CUTOVER_UPGRADE_BOUNDARY_CROSSED] latch, a
-         * [de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
-         * .rollbackForFailedBind] → re-commit cycle can arm it again and again.
-         * This latch makes all of those paths idempotent.
+         * The ten-hour gap came from the (since removed) bind-evidence gate,
+         * which could never pass on the upgrade launch itself, so the commit
+         * and the arming landed on a later process start. The seam commits
+         * on the upgrade launch now, but a wipe reset followed by a
+         * re-commit, or a failed state persist retried on the next launch,
+         * would still reach an arming site twice. This latch makes every
+         * such path idempotent.
          */
         val CUTOVER_UPGRADE_NOTICE_EVER_ARMED = booleanPreferencesKey("cutover_upgrade_notice_ever_armed")
 
         /**
-         * MO-995: set the first time the SDK wallet bind succeeds on this
-         * install, and never cleared except by a wallet wipe. It is the
-         * evidence the UPGRADE cutover seam requires before it will hand L1
-         * to the SDK — see
-         * [de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
-         * .commitForUpgradedWalletAsync].
-         *
-         * WHY PERSISTED and not the binder's in-memory state: the upgrade seam
-         * runs from `finalizeInitialization`, BEFORE the first bind pass of the
-         * process (platform sync starts the binder). An in-process signal is
-         * therefore always false at the seam and would defer every upgrade to
-         * the readiness-gated auto-commit. Persisting it means a device that
-         * has ever bound successfully still commits promptly, while a device
-         * whose keystore denies the bind never commits at all — the difference
-         * between walletC/D (bind fine, cut over) and walletB (16 keystore
-         * denials, cut over anyway, left with NO L1 engine).
+         * Set the first time the SDK wallet bind succeeds on this install, and
+         * never cleared except by a wallet wipe. DIAGNOSTIC ONLY since the
+         * no-fallback cutover policy (docs/upgrade-memory-and-sync-plan.md §12):
+         * it used to be the evidence the UPGRADE seam required before handing
+         * L1 to the SDK (MO-995 GATE 2), which could not be satisfied on the
+         * upgrade launch itself and so committed every upgrade one launch late
+         * with dashj running in between. The cutover now commits
+         * unconditionally; this key tells the support report whether the
+         * install has ever bound.
          */
         val SDK_BIND_EVER_SUCCEEDED = booleanPreferencesKey("sdk_bind_ever_succeeded")
+
+        /**
+         * The current [de.schildbach.wallet.service.platform.sdk.SdkBindBlocker]
+         * name while the SDK bind is pending, "NONE" once bound. Written by
+         * [de.schildbach.wallet.service.platform.sdk.SdkBindRetryService] so the
+         * support report can say WHY an install never finished its SDK setup
+         * (device locked vs. a keystore that denies while unlocked).
+         */
+        val SDK_BIND_BLOCKER = stringPreferencesKey("sdk_bind_blocker")
 
         /**
          * MO-995: set the first time a launch is seen to have crossed the
@@ -632,6 +633,35 @@ open class DashPayConfig @Inject constructor(
          */
         val DASHPAY_BACKFILL_ARMED_TARGET = longPreferencesKey("dashpay_backfill_armed_target")
         val DASHPAY_BACKFILL_ARMED_FINGERPRINT = stringPreferencesKey("dashpay_backfill_armed_fingerprint")
+
+        /**
+         * The durable filter-scan watermark AT THE MOMENT DIP-15 receival
+         * accounts were last REGISTERED — the §17 "uncovered contact chain"
+         * diagnostic's only sound input.
+         *
+         * Debt is a statement about ORDERING, not about the present: a
+         * contact chain is uncovered when it was registered while the scan
+         * had ALREADY passed its core height, because the scan that walked
+         * those blocks did so without the chain's addresses in its match
+         * set. Comparing the LIVE synced height against the contact floor
+         * cannot express that — after any wallet finishes syncing, the live
+         * height is above the floor by construction, so the comparison
+         * reports debt on every healthy wallet forever. This records the one
+         * value that distinguishes the two, once, when it is true.
+         *
+         * The HIGHEST such height is kept: a later registration above the
+         * floor is a real debt even if an earlier one sat below it.
+         *
+         * WALLET pins the record to the SDK wallet it describes, so a
+         * rebind onto a different wallet does not inherit its ordering.
+         *
+         * Absent means no registration has been observed by a build that
+         * records this — reported as "not determinable", never as debt.
+         */
+        val DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT =
+            longPreferencesKey("dashpay_contact_registration_synced_height")
+        val DASHPAY_CONTACT_REGISTRATION_WALLET =
+            stringPreferencesKey("dashpay_contact_registration_wallet")
 
         /**
          * Last shielded balance (in duffs) persisted from a fully-synced

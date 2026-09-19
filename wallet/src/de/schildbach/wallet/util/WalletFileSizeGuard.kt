@@ -107,6 +107,43 @@ object WalletFileSizeGuard {
         else -> Verdict.NORMAL
     }
 
+    /** The historical flat autosave debounce: 5 s after the last wallet change. */
+    const val AUTOSAVE_DELAY_DEFAULT_MS = 5_000L
+
+    /** Autosave debounce from half the soft limit up: one save per half minute at most. */
+    const val AUTOSAVE_DELAY_LARGE_MS = 30_000L
+
+    /** Autosave debounce at and above the soft limit (RISKY): one save per minute at most. */
+    const val AUTOSAVE_DELAY_RISKY_MS = 60_000L
+
+    /**
+     * Size-aware autosave debounce (docs/upgrade-memory-and-sync-plan.md,
+     * Phase 1a item 6). dashj autosaves the WHOLE wallet protobuf a fixed
+     * delay after the last change; on the reference install (62 MB file,
+     * 512 MB heap) the flat 5 s delay produced three full serializations in
+     * one 40 s sync burst, each a heap peak on top of the ~450 MB wallet
+     * object graph, and the shutdown-time save overlapped the next launch's
+     * parse (the 2026-09-16 00:00 OOM). A longer debounce is the suppression
+     * mechanism for bursts: dashj coalesces every change inside the window
+     * into one write.
+     *
+     * Tiers are derived from the same soft limit as [verdict] so they follow
+     * the device's heap: below half the soft limit the historical 5 s stands
+     * (a save is cheap); from half the soft limit, 30 s; at and above the soft
+     * limit (RISKY), 60 s. UNPARSEABLE never reaches autosave (the file is set
+     * aside before the parse) but maps to the RISKY tier for completeness.
+     * Pure — host-testable.
+     */
+    @JvmStatic
+    fun autosaveDelayMs(fileSizeBytes: Long, largeMemoryClassMb: Int): Long {
+        val softLimit = softLimitBytes(largeMemoryClassMb)
+        return when {
+            fileSizeBytes >= softLimit -> AUTOSAVE_DELAY_RISKY_MS
+            fileSizeBytes >= softLimit / 2 -> AUTOSAVE_DELAY_LARGE_MS
+            else -> AUTOSAVE_DELAY_DEFAULT_MS
+        }
+    }
+
     /**
      * Preserve a wallet file ASIDE — forensics and safety, NEVER delete: the
      * user's transaction history is in there even when it cannot be parsed,

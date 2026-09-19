@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -873,10 +874,24 @@ internal fun parityProbePolicy(
  * start"). The corrective action therefore has to rebuild the WALLET, not
  * just the scan:
  *
- * ## The self-heal: one full SDK-wallet rebuild, then stand down
+ * ## RETIRED AS AN ACTION (2026-09-16): the verdict is advisory
+ *
+ * [Decision.REBUILD_WALLET] is now LOGGED, never executed. On the emulator
+ * upgrade test (docs/upgrade-memory-and-sync-plan.md §10, finding 8) it
+ * fired on an inflated SDK balance three probes after the SDK first
+ * reached tip, removed the SDK wallet, deleted the SPV data dir and
+ * rescanned from genesis with no user involvement. Under the no-fallback
+ * cutover policy (§12) the SDK wallet is the ledger of record on every
+ * install from its first launch; wiping it on the word of a dashj engine
+ * that is itself catching up is not a self-heal. The decider and its table
+ * are kept so the evidence still lands in the log and the support report;
+ * [L1ShadowDebugReset] remains the manual path. The text below describes
+ * what the verdict USED to do.
+ *
+ * ## The self-heal (retired): one full SDK-wallet rebuild, then stand down
  *
  * On a persistent mismatch (either direction) the decider fires
- * [Decision.REBUILD_WALLET] exactly ONCE per process. The service runs
+ * [Decision.REBUILD_WALLET] exactly ONCE per process. The service ran
  * [L1ShadowSyncService.recoverByRecreatingWallet]: unbind the SDK wallet
  * and clear ALL SDK-side persistence for it (the full `removeAppWallet`
  * cascade — Room wallet/identity/TXO/address/shielded rows INCLUDING the
@@ -1046,6 +1061,120 @@ internal class ProbeWatchdogDecider(
         return when {
             !restartIssued -> {
                 restartIssued = true
+                Decision.RESTART
+            }
+            !exhaustedReported -> {
+                exhaustedReported = true
+                Decision.EXHAUSTED
+            }
+            else -> Decision.NONE
+        }
+    }
+}
+
+/**
+ * Restart decision for the FILTER-STALL watchdog (MO-1022).
+ *
+ * ## The failure this exists for
+ *
+ * Measured on a Samsung A53 / Android 16, build 12000012, upgrading the
+ * "job flower" mainnet wallet (6,787 txs, 1,177 matched blocks). The SDK's
+ * SPV engine parked 2,971 blocks short of the tip and never recovered:
+ *
+ * ```
+ * Filters: Syncing 2538000/2540971 (99.9%) stored:2540971, downloaded: 0, last_activity: 240s
+ * Blocks:  WaitForEvents ... requested: 933, downloaded: 928,          last_activity: 239s
+ * ```
+ *
+ * Every filter was already on disk (`stored` == target), so nothing was
+ * waiting on the network for filters. The block fetcher had 933 requests
+ * out and 928 answers back — **five blocks that never arrived** — and its
+ * download coordinator had already spent its retry ladder (108 first
+ * attempts, 61 second, 19 third, 1 fourth) and stood down. Filter
+ * processing cannot pass a block it is still waiting for, so the scan
+ * froze. Observed frozen for 44 minutes, then a process relaunch moved it
+ * 45,000 blocks in 90 seconds before it hit the same wall again. The user
+ * sees "99%" forever.
+ *
+ * ## Why this is filter-specific rather than reusing the idle detector
+ *
+ * [de.schildbach.wallet.service.isSyncIdle] samples four counters —
+ * filters, headers, masternode list, tx events — and calls it idle only
+ * when NONE advance. During this stall HEADERS KEPT ADVANCING, because new
+ * blocks kept arriving and being chained (2540967 -> 2540974 while the
+ * filters sat still), and chainlocks kept validating. A multi-counter idle
+ * rule therefore reads the engine as healthy and never fires. The filter
+ * cursor is the only counter that tells the truth here.
+ *
+ * ## The rule
+ *
+ * Arm only when filters are demonstrably BEHIND (`filterTarget > 0 &&
+ * filterHeight < filterTarget`) — at or past target there is nothing to
+ * stall on, and before the target is known there is nothing to measure.
+ * Restart when that cursor has not moved for [stallThresholdMs], at most
+ * [maxRestarts] times per process, then report [Decision.EXHAUSTED] once
+ * and stay quiet. Pure, so the arming, the reset-on-progress and the
+ * give-up semantics are host-JVM unit-testable.
+ */
+internal class FilterStallWatchdogDecider(
+    private val stallThresholdMs: Long = L1ShadowSyncService.FILTER_STALL_THRESHOLD_MS,
+    private val maxRestarts: Int = L1ShadowSyncService.FILTER_STALL_MAX_RESTARTS
+) {
+    enum class Decision { NONE, RESTART, EXHAUSTED }
+
+    private var lastHeight: Long = -1L
+    private var lastAdvanceMs: Long = 0L
+    private var restartsIssued = 0
+    private var exhaustedReported = false
+
+    /**
+     * @param filterHeight the engine's current filter cursor.
+     * @param filterTarget the height it is scanning toward; 0 when unknown.
+     * @param lastWalletEventMs when the engine last delivered ANY wallet
+     *   event, or 0 when none has been seen since the start. This is the
+     *   liveness signal that separates the two ways the cursor can sit
+     *   still — see the note below.
+     */
+    fun onCheck(
+        nowMs: Long,
+        filterHeight: Long,
+        filterTarget: Long,
+        lastWalletEventMs: Long
+    ): Decision {
+        val behind = filterTarget > 0 && filterHeight < filterTarget
+        if (!behind) {
+            // Caught up, or the target is not known yet. Nothing to stall on,
+            // and the next spell of being behind must be timed from scratch.
+            lastHeight = -1L
+            return Decision.NONE
+        }
+        if (filterHeight != lastHeight) {
+            lastHeight = filterHeight
+            lastAdvanceMs = nowMs
+            return Decision.NONE
+        }
+        if (nowMs - lastAdvanceMs < stallThresholdMs) return Decision.NONE
+        // A STILL CURSOR IS NOT A STOPPED ENGINE. Observed on a Samsung
+        // SM-S901U, 2026-09-19 (§34): the cursor sat at 1,555,999 for
+        // 6 min 32 s while the SDK logged `wallet-event batch: folded=N`
+        // throughout with `synced_height_persisted=None` — the scan was
+        // running the whole time and only the WATERMARK WRITE was blocked,
+        // behind a contended primary connection on dash-sdk.db. It then
+        // persisted 1556842 -> 1556845 in 130 ms and went SYNCED.
+        //
+        // Restarting there would have destroyed real, unpersisted scan
+        // progress to "fix" an engine that was working. So a restart
+        // requires the cursor to be still AND the event stream to have gone
+        // quiet for the same window. Events still arriving means alive.
+        if (lastWalletEventMs > 0L && nowMs - lastWalletEventMs < stallThresholdMs) {
+            return Decision.NONE
+        }
+        return when {
+            restartsIssued < maxRestarts -> {
+                restartsIssued++
+                // Re-baseline: the restart gets a full window to show progress
+                // before it is judged again.
+                lastAdvanceMs = nowMs
                 Decision.RESTART
             }
             !exhaustedReported -> {
@@ -1701,6 +1830,7 @@ class L1ShadowSyncService internal constructor(
     private val progressLogIntervalMs: Long = PROGRESS_LOG_INTERVAL_MS,
     private val watchdogIntervalMs: Long = WATCHDOG_INTERVAL_MS,
     private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS,
+    private val filterStallThresholdMs: Long = FILTER_STALL_THRESHOLD_MS,
     /** Wallet-recreation collaborators; null (tests' default) disables [recoverByRecreatingWallet]. */
     private val recreator: ShadowWalletRecreator? = null,
     /**
@@ -1717,7 +1847,9 @@ class L1ShadowSyncService internal constructor(
      * probe counters (the parity tests count that exact call); the @Inject
      * constructor turns it on.
      */
-    private val balanceFactsEnabled: Boolean = false
+    private val balanceFactsEnabled: Boolean = false,
+    /** How long [startIfEnabled] waits for the DashPay bring-up before starting SPV anyway. */
+    private val bringUpBudgetMs: Long = BRING_UP_BUDGET_MS
 ) {
     @Inject
     constructor(
@@ -1788,6 +1920,27 @@ class L1ShadowSyncService internal constructor(
     private var parityJob: Job? = null
     private var watchdogJob: Job? = null
     private var eventTapJob: Job? = null
+
+    /**
+     * The filter-stall watchdog's restart, held so a second decision cannot
+     * stack a concurrent teardown on top of one already in flight. Lives on
+     * the service [scope], NOT on `watchdogJob`, because `stop()` cancels
+     * that one.
+     */
+    private var stallRestartJob: Job? = null
+
+    /**
+     * When the engine last delivered ANY wallet event, monotonic-ish wall
+     * clock via [nowMs]; 0 until the first one of this run.
+     *
+     * The filter-stall watchdog's liveness signal. The cursor going still
+     * and the ENGINE going still are different failures — see the note in
+     * [FilterStallWatchdogDecider.onCheck] — and this is what tells them
+     * apart. Stamped on every event the tap sees, parsed or not: an event
+     * arriving at all proves the engine is producing.
+     */
+    @Volatile
+    private var lastWalletEventMs: Long = 0L
 
     /**
      * Parsed per-transaction engine events ([L1TxEvent]), live while the
@@ -1867,6 +2020,9 @@ class L1ShadowSyncService internal constructor(
 
     /** The once-per-process probe-loop restart state (see [ProbeWatchdogDecider]). */
     private val watchdogDecider = ProbeWatchdogDecider(probeStallThresholdMs)
+
+    /** MO-1022: the filter-cursor stall watchdog (see [FilterStallWatchdogDecider]). */
+    private val filterStallDecider = FilterStallWatchdogDecider(filterStallThresholdMs)
 
     /**
      * Wall-clock ms of the last app-initiated SDK L1 SELF-SPEND broadcast
@@ -2123,14 +2279,40 @@ class L1ShadowSyncService internal constructor(
                     // above). Best-effort: it returns a status rather than
                     // throwing, and any failure must not hold back SPV — Core
                     // sync is the wallet's primary function.
-                    try {
-                        val summary = source.startWalletSubsystems(walletIdHex)
-                        if (summary != null) {
-                            log.info("DashPay bring-up before SPV: $summary")
+                    //
+                    // Phase 1b item 10 (docs/upgrade-memory-and-sync-plan.md):
+                    // …and with a BUDGET. The bring-up needs the seed, and the
+                    // seed needs the lock-bound keystore (§12): on the reference
+                    // install's locked overnight starts it ran 766 s, 1,438 s
+                    // and 10,139 s with the filter position frozen, 0 of 177
+                    // accounts drained, and the idle rule tore the service down
+                    // before SPV ever began. Past the budget SPV starts; the
+                    // bring-up finishes in the background and logs when it
+                    // does, and the SDK marks late accounts covered at
+                    // synced_height=0 so the next scan picks them up.
+                    val bringUp = scope.async {
+                        runCatching { source.startWalletSubsystems(walletIdHex) }
+                    }
+                    val outcome = withTimeoutOrNull(bringUpBudgetMs) { bringUp.await() }
+                    when {
+                        outcome == null -> {
+                            log.warn(
+                                "DashPay bring-up before SPV exceeded its {} s budget — starting SPV now; " +
+                                    "the bring-up continues in the background",
+                                bringUpBudgetMs / 1000
+                            )
+                            scope.launch {
+                                bringUp.await()
+                                    .onSuccess { if (it != null) log.info("DashPay bring-up (finished after SPV start): $it") }
+                                    .onFailure { if (it !is CancellationException) log.warn("DashPay bring-up (after SPV start) failed", it) }
+                            }
                         }
-                    } catch (t: Throwable) {
-                        if (t is CancellationException) throw t
-                        log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
+                        outcome.isSuccess -> outcome.getOrNull()?.let { log.info("DashPay bring-up before SPV: $it") }
+                        else -> {
+                            val t = outcome.exceptionOrNull()
+                            if (t is CancellationException) throw t
+                            log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
+                        }
                     }
                     source.startSpv(dataDir.absolutePath)
                 }
@@ -2175,7 +2357,17 @@ class L1ShadowSyncService internal constructor(
      */
     suspend fun stop() {
         mutex.withLock {
-            if (runningWalletIdHex.value == null) return
+            val walletIdHex = runningWalletIdHex.value ?: return
+            // Phase 1b item 13 (docs/upgrade-memory-and-sync-plan.md): the
+            // watermark the SDK will resume from vs. what the engine had
+            // actually committed. The app CANNOT flush it — the SDK's WalletDao
+            // exposes no synced-height setter and the value is owned by the
+            // native engine — so every stop logs the gap as the evidence for
+            // Phase 1c item 15 (persist on a fixed cadence and on stop). On the
+            // reference install the durable value trailed the committed cursor
+            // by up to 155,000 blocks at teardown.
+            val committedAtStop = _engineWalletSyncedHeight.value
+            val filterAtStop = _progress.value.filterHeight
             runningWalletIdHex.value = null
             monitorJob?.cancel()
             monitorJob = null
@@ -2187,8 +2379,10 @@ class L1ShadowSyncService internal constructor(
             eventTapJob = null
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
+            logWatermarkAtStop(walletIdHex, committedAtStop, filterAtStop)
             _progress.value = ShadowSyncProgress.IDLE
             _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
+            lastWalletEventMs = 0L // a fresh run must not inherit this run's liveness
             lastStopAtMs = nowMs()
             stopCount++
             log.info(
@@ -2197,6 +2391,33 @@ class L1ShadowSyncService internal constructor(
                     "teardown #{} this process. Nothing runs until the next startIfEnabled().",
                 if (startedAtMs == 0L) "unknown" else humanDuration(lastStopAtMs - startedAtMs),
                 stopCount
+            )
+        }
+    }
+
+    /**
+     * Item 13 diagnostic: after the SPV client stopped, compare the SDK's
+     * durable `syncedHeight` (what the next start resumes from) with the
+     * cursor the engine had committed in this session. WARN when progress
+     * will be re-walked. Never throws.
+     */
+    private suspend fun logWatermarkAtStop(walletIdHex: String, committed: Long, filter: Long) {
+        val durable = runCatching { source.sdkWalletSyncedHeight(walletIdHex) }.getOrNull()
+        when {
+            durable == null || committed <= 0L -> log.info(
+                "L1ShadowLifecycle watermark at stop: durable syncedHeight={} committed cursor={} filter={}",
+                durable ?: "unknown", committed, filter
+            )
+            durable < committed -> log.warn(
+                "L1ShadowLifecycle watermark at stop: durable syncedHeight {} is {} blocks BEHIND the " +
+                    "committed cursor {} (filter {}). The SDK persists its synced height at 5,000-block " +
+                    "steps and the app has no setter for it, so the next start re-walks those blocks " +
+                    "(Phase 1c item 15)",
+                durable, committed - durable, committed, filter
+            )
+            else -> log.info(
+                "L1ShadowLifecycle watermark at stop: durable syncedHeight {} covers the committed cursor {} (filter {})",
+                durable, committed, filter
             )
         }
     }
@@ -2396,6 +2617,10 @@ class L1ShadowSyncService internal constructor(
         while (currentCoroutineContext().isActive) {
             try {
                 source.walletEventStrings().collect { debug ->
+                    // Liveness for the filter-stall watchdog, stamped before
+                    // any parsing: an event the parsers all drop still proves
+                    // the engine is alive and producing.
+                    lastWalletEventMs = nowMs()
                     // Chainlock feed first: it rides the SAME event stream but
                     // on OTHER variants (ChainLockProcessed / BlockProcessed),
                     // which parseL1TxEvent drops. Monotonic — a replayed or
@@ -2540,6 +2765,7 @@ class L1ShadowSyncService internal constructor(
             delay(watchdogIntervalMs)
             try {
                 checkProbeHeartbeat()
+                checkFilterStall()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 log.warn("L1Shadow watchdog check failed; will retry on the next tick", t)
@@ -2578,6 +2804,85 @@ class L1ShadowSyncService internal constructor(
                 }
                 ProbeWatchdogDecider.Decision.NONE -> Unit
             }
+        }
+    }
+
+    /**
+     * MO-1022: restart the SPV engine when the FILTER cursor is wedged.
+     *
+     * See [FilterStallWatchdogDecider] for the measured failure. In short:
+     * the engine can park with every filter already stored but a handful of
+     * matched blocks never delivered and its download coordinator out of
+     * retries, and filter processing cannot step past a block it is still
+     * waiting for. Nothing in the engine re-drives it; a process relaunch
+     * does, which is what this reproduces without needing the user to force
+     * stop the app.
+     *
+     * DELIBERATELY OUTSIDE [mutex]. Both [stop] and [startIfEnabled] take it
+     * themselves, so taking it here would deadlock the watchdog against the
+     * restart it is trying to perform. The cost is that a concurrent stop
+     * can land between the two calls; [startIfEnabled] re-reads the enable
+     * gate and the bound wallet, so the worst case is a start that declines.
+     */
+    private suspend fun checkFilterStall() {
+        if (runningWalletIdHex.value == null) return
+        val p = _progress.value
+        val decision = filterStallDecider.onCheck(
+            nowMs(), p.filterHeight, p.filterTarget, lastWalletEventMs
+        )
+        if (decision == FilterStallWatchdogDecider.Decision.NONE) return
+        when (decision) {
+            FilterStallWatchdogDecider.Decision.RESTART -> {
+                log.error(
+                    "L1Shadow filter-stall watchdog: the filter cursor has sat at {} of {} " +
+                        "({} blocks short) for over {} minutes while the engine is running — " +
+                        "restarting the SPV engine. Known shape (MO-1022): every filter stored, " +
+                        "a few matched blocks never delivered, the download coordinator out of " +
+                        "retries.",
+                    p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
+                    filterStallThresholdMs / 60_000
+                )
+                // THE RESTART MUST NOT RUN IN THIS COROUTINE. `stop()`
+                // cancels `watchdogJob`, and this check runs INSIDE it — so
+                // doing the restart inline cancels the very coroutine
+                // performing it: `startIfEnabled()` throws
+                // CancellationException at its first suspension point, the
+                // engine stays stopped, and the watchdog has turned a
+                // stalled-but-running engine into a dead one. Strictly worse
+                // than no watchdog at all.
+                //
+                // Launching on the service [scope] (which `stop()` does NOT
+                // cancel — it cancels the four loop jobs only) is what
+                // [checkProbeHeartbeat] already does for its own restart.
+                // The new run installs a fresh watchdogJob.
+                val stuckAt = p.filterHeight
+                stallRestartJob?.cancel()
+                stallRestartJob = scope.launch {
+                    runCatching {
+                        stop()
+                        startIfEnabled()
+                    }.onSuccess { started ->
+                        log.info(
+                            "L1Shadow filter-stall watchdog: engine restart {} (was stuck at {})",
+                            if (started == true) "succeeded" else "declined to start",
+                            stuckAt
+                        )
+                    }.onFailure {
+                        if (it is CancellationException) throw it
+                        log.warn("L1Shadow filter-stall watchdog: the engine restart failed", it)
+                    }
+                }.logCompletion("filter-stall engine restart")
+            }
+            FilterStallWatchdogDecider.Decision.EXHAUSTED -> {
+                log.error(
+                    "L1Shadow filter-stall watchdog: the filter cursor is still wedged at {} of " +
+                        "{} after every restart this process was willing to spend — standing " +
+                        "down. This needs an SDK-side fix: the block download coordinator must " +
+                        "not abandon items permanently.",
+                    p.filterHeight, p.filterTarget
+                )
+            }
+            FilterStallWatchdogDecider.Decision.NONE -> Unit
         }
     }
 
@@ -2739,25 +3044,24 @@ class L1ShadowSyncService internal constructor(
         )
         when (decision) {
             ShadowResetDecider.Decision.REBUILD_WALLET -> {
-                // The SPV-only hard reset this used to run left the +0.01
-                // inflation intact on device (it lives in the SDK WALLET
-                // ledger, not the SPV scan data). Self-heal with a ONE-TIME
-                // full SDK-wallet REBUILD instead — unbind + clear ALL
-                // SDK-side persistence, then re-bind from the RETAINED seed
-                // and re-scan. Fire-and-forget: recovery stops this probe
-                // loop. SDK-side ONLY — dashj/seed/keys are untouched.
+                // ADVISORY ONLY. This used to run recreateWalletInBackground():
+                // unbind the SDK wallet, clear all SDK persistence, delete the
+                // SPV data dir, re-bind and rescan from birth. Retired with the
+                // dashj fallback (Phase 1a item 2): the SDK wallet is the ledger
+                // of record, and on the emulator upgrade test this wiped a
+                // just-synced wallet on a transient inflation. Log the evidence
+                // for the SDK bug report; L1ShadowDebugReset is the manual path.
                 val direction = if (report.sdkDuffs > report.dashjDuffs) "INFLATED" else "DEFICIT"
                 log.warn(
                     "L1Parity {} MISMATCH persisted for {} consecutive synced probes " +
-                        "(sdk={} vs dashj={} duffs, delta={}) — the SDK L1 WALLET LEDGER " +
-                        "disagrees with dashj (an SPV-only reset already proved it does NOT " +
-                        "live in the scan data); self-healing with ONE full SDK-wallet rebuild " +
-                        "(unbind + clear SDK persistence, re-bind from the retained seed, " +
-                        "re-scan). SDK-side only — dashj, seed and keys are untouched",
+                        "(sdk={} vs dashj={} duffs, delta={}, sdkTx={} dashjTx={}) — the SDK " +
+                        "L1 wallet ledger disagrees with dashj. Automatic SDK-wallet rebuild is " +
+                        "DISABLED (no-fallback cutover policy); not acting. Use the debug reset " +
+                        "or a seed restore if the mismatch is real",
                     direction, ShadowResetDecider.RESET_CONSECUTIVE_PROBES,
-                    report.sdkDuffs, report.dashjDuffs, report.sdkDuffs - report.dashjDuffs
+                    report.sdkDuffs, report.dashjDuffs, report.sdkDuffs - report.dashjDuffs,
+                    report.sdkTxCount, report.dashjTxCount
                 )
-                recreateWalletInBackground()
             }
             ShadowResetDecider.Decision.STAND_DOWN -> {
                 _verificationStatus.value = L1VerificationStatus.FAILED
@@ -3193,6 +3497,14 @@ class L1ShadowSyncService internal constructor(
         internal const val PARITY_INTERVAL_MS = 10_000L
 
         /**
+         * Phase 1b item 10: the most [startIfEnabled] waits for the DashPay
+         * bring-up before starting SPV. 20 s is what the bring-up took on the
+         * reference install's one unlocked foreground launch; every locked
+         * background start ran into the minutes-to-hours range.
+         */
+        internal const val BRING_UP_BUDGET_MS = 20_000L
+
+        /**
          * Downtime past which [logEngineDowntimeIfResuming] escalates to WARN.
          * A routine `BlockchainServiceImpl` idle bounce is seconds to minutes
          * (three in the MO-995 log were ~30s, ~3min and 5h28m); ten minutes
@@ -3234,6 +3546,23 @@ class L1ShadowSyncService internal constructor(
          * 10s probes.
          */
         internal const val PROBE_STALL_THRESHOLD_MS = 5 * 60_000L
+
+        /**
+         * Filter cursor frozen this long, while demonstrably behind its
+         * target, means the engine is wedged rather than working: normal
+         * batch cadence moves it well inside a minute, and the MO-1022
+         * stall held for 44 minutes. Ten minutes is far above the former
+         * and far below the latter.
+         */
+        internal const val FILTER_STALL_THRESHOLD_MS = 10 * 60_000L
+
+        /**
+         * Engine restarts the filter-stall watchdog will spend before
+         * standing down. A restart demonstrably clears the MO-1022 wall
+         * (45,000 blocks in 90 s after a relaunch), but it is not free, and
+         * a wall that survives three of them is not ours to fix from here.
+         */
+        internal const val FILTER_STALL_MAX_RESTARTS = 3
 
         /** Retry backoff for a failed progress-monitor collection. */
         internal const val LOOP_RETRY_DELAY_MS = 5_000L

@@ -77,6 +77,10 @@ class L1ShadowSyncServiceTest {
         var stopCalls = 0
         var lastDataDir: String? = null
         var onStart: () -> Unit = {}
+        /** The DashPay bring-up: how long it takes, and how many times it ran. */
+        var bringUpDelayMs: Long = 0L
+        var bringUpCalls = 0
+        var bringUpFinished = 0
         // Ordered bring-up contract: what was called, in what order.
         var subsystemsCalls = 0
         var lastSubsystemsWalletId: String? = null
@@ -121,8 +125,11 @@ class L1ShadowSyncServiceTest {
         }
         override suspend fun startWalletSubsystems(walletIdHex: String): String? {
             subsystemsCalls++
+            bringUpCalls++
             lastSubsystemsWalletId = walletIdHex
             callOrder += "startWalletSubsystems"
+            if (bringUpDelayMs > 0) kotlinx.coroutines.delay(bringUpDelayMs)
+            bringUpFinished++
             return onStartWalletSubsystems(walletIdHex)
         }
 
@@ -239,7 +246,8 @@ class L1ShadowSyncServiceTest {
         probeStallThresholdMs: Long = L1ShadowSyncService.PROBE_STALL_THRESHOLD_MS,
         recreator: ShadowWalletRecreator? = null,
         cutoverState: String? = null,
-        dashjDiagnostic: Boolean = false
+        dashjDiagnostic: Boolean = false,
+        bringUpBudgetMs: Long = L1ShadowSyncService.BRING_UP_BUDGET_MS
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic),
@@ -249,8 +257,275 @@ class L1ShadowSyncServiceTest {
         parityIntervalMs = parityIntervalMs,
         watchdogIntervalMs = watchdogIntervalMs,
         probeStallThresholdMs = probeStallThresholdMs,
-        recreator = recreator
+        recreator = recreator,
+        bringUpBudgetMs = bringUpBudgetMs
     )
+
+    // ── Phase 1b item 10: SPV waits for the DashPay bring-up, but not forever ──
+
+    @Test
+    fun start_runsTheBringUpBeforeSpv_whenItFinishesInsideTheBudget() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        assertEquals(listOf("startWalletSubsystems", "startSpv"), source.callOrder)
+        assertEquals(1, source.bringUpFinished)
+    }
+
+    @Test
+    fun start_startsSpvAfterTheBudget_andLetsTheBringUpFinishInTheBackground() = runBlocking {
+        // The reference install's locked overnight starts: the bring-up needs
+        // the seed, the seed needs the unlocked keystore, and the filter
+        // position sat frozen for 12 minutes to 2.8 hours before SPV began.
+        val source = FakeSource(boundWalletId = walletIdHex).apply { bringUpDelayMs = 400L }
+        val service = service(source, bringUpBudgetMs = 50L)
+
+        val startedAt = System.currentTimeMillis()
+        assertTrue(service.startIfEnabled())
+        val elapsed = System.currentTimeMillis() - startedAt
+
+        assertEquals("SPV must start once the budget is spent", 1, source.startCalls)
+        assertTrue("the start must not wait out the whole bring-up (took ${elapsed}ms)", elapsed < 350)
+        assertEquals(1, source.bringUpCalls)
+        assertEquals("the bring-up was started, not finished, when SPV began", 0, source.bringUpFinished)
+
+        kotlinx.coroutines.delay(600L)
+        assertEquals("…and it completes on its own afterwards", 1, source.bringUpFinished)
+    }
+
+    // ── MO-1022: the filter-stall watchdog ────────────────────────────
+
+    private fun stallDecider() = FilterStallWatchdogDecider(
+        stallThresholdMs = 10 * 60_000L,
+        maxRestarts = 3
+    )
+
+    @Test
+    fun filterStall_doesNotArmWhileTheCursorIsAdvancing() {
+        val d = stallDecider()
+        var now = 0L
+        var height = 2_400_000L
+        repeat(20) {
+            now += 60_000L
+            height += 5_000L
+            assertEquals(
+                FilterStallWatchdogDecider.Decision.NONE,
+                d.onCheck(now, height, 2_540_971L, lastWalletEventMs = 0L)
+            )
+        }
+    }
+
+    @Test
+    fun filterStall_doesNotArmWhenTheFiltersAreAtTarget() {
+        // Nothing to stall on: a frozen cursor AT the target is a finished scan.
+        val d = stallDecider()
+        var now = 0L
+        repeat(60) {
+            now += 60_000L
+            assertEquals(
+                FilterStallWatchdogDecider.Decision.NONE,
+                d.onCheck(now, 2_540_971L, 2_540_971L, lastWalletEventMs = 0L)
+            )
+        }
+    }
+
+    @Test
+    fun filterStall_doesNotArmBeforeTheTargetIsKnown() {
+        val d = stallDecider()
+        var now = 0L
+        repeat(60) {
+            now += 60_000L
+            assertEquals(
+                "a zero target means the engine has not said what it is scanning toward",
+                FilterStallWatchdogDecider.Decision.NONE,
+                d.onCheck(now, 0L, 0L, lastWalletEventMs = 0L)
+            )
+        }
+    }
+
+    @Test
+    fun filterStall_restartsOnceTheCursorHasBeenFrozenPastTheThreshold() {
+        // The MO-1022 shape: filters 2538000 of 2540971, frozen.
+        val d = stallDecider()
+        val stuck = 2_538_000L
+        val target = 2_540_971L
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, d.onCheck(0L, stuck, target, lastWalletEventMs = 0L))
+        // Nine minutes in: still inside the window.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(9 * 60_000L, stuck, target, lastWalletEventMs = 0L)
+        )
+        // Past ten: wedged.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 0L)
+        )
+    }
+
+    @Test
+    fun filterStall_doesNotRestartWhileTheEngineIsStillDeliveringEvents() {
+        // THE SAMSUNG CASE (SM-S901U, 2026-09-19, §34). The cursor sat at
+        // 1,555,999 of 1,556,844 for 6 min 32 s — but the SDK was logging
+        // `wallet-event batch: folded=N` the whole time with
+        // `synced_height_persisted=None`. The scan was running; only the
+        // watermark WRITE was blocked, behind a contended primary connection
+        // on dash-sdk.db. It then persisted three heights in 130 ms and went
+        // SYNCED on its own.
+        //
+        // A restart there destroys real unpersisted scan progress to "fix" a
+        // healthy engine. A still cursor is not a stopped engine.
+        val d = stallDecider()
+        val stuck = 1_555_999L
+        val target = 1_556_844L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
+        // Twenty minutes of a frozen cursor — but events keep arriving.
+        var now = 60_000L
+        while (now <= 20 * 60_000L) {
+            assertEquals(
+                "events still arriving means the engine is alive, whatever the cursor says",
+                FilterStallWatchdogDecider.Decision.NONE,
+                d.onCheck(now, stuck, target, lastWalletEventMs = now - 1_000L)
+            )
+            now += 60_000L
+        }
+    }
+
+    @Test
+    fun filterStall_restartsWhenTheCursorAndTheEventStreamHaveBOTHGoneQuiet() {
+        // The real wedge: nothing moving on either signal.
+        val d = stallDecider()
+        val stuck = 2_538_000L
+        val target = 2_540_971L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(9 * 60_000L, stuck, target, lastWalletEventMs = 60_000L)
+        )
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 60_000L)
+        )
+    }
+
+    @Test
+    fun filterStall_eventsGoingQuietAfterAFrozenCursorStillRestarts() {
+        // Events kept the watchdog quiet, then the engine died too. The
+        // liveness signal must not latch the watchdog off forever.
+        val d = stallDecider()
+        val stuck = 1_555_999L
+        val target = 1_556_844L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(15 * 60_000L, stuck, target, lastWalletEventMs = 15 * 60_000L - 1_000L)
+        )
+        // Last event at 15 min; by 26 min both signals are past the window.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(26 * 60_000L, stuck, target, lastWalletEventMs = 15 * 60_000L)
+        )
+    }
+
+    @Test
+    fun filterStall_givesTheRestartAFullWindowBeforeJudgingItAgain() {
+        val d = stallDecider()
+        val stuck = 2_538_000L
+        val target = 2_540_971L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 0L)
+        )
+        // One minute after the restart the cursor has not moved yet — that is
+        // expected, not a second stall.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(12 * 60_000L, stuck, target, lastWalletEventMs = 0L)
+        )
+    }
+
+    @Test
+    fun filterStall_progressAfterARestartRearmsTheFullWindow() {
+        val d = stallDecider()
+        val target = 2_540_971L
+        d.onCheck(0L, 2_538_000L, target, lastWalletEventMs = 0L)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(11 * 60_000L, 2_538_000L, target, lastWalletEventMs = 0L)
+        )
+        // The restart worked and the cursor moved.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(12 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
+        )
+        // It then wedges again at the new height: a fresh ten minutes is
+        // required, not the leftover of the previous window.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(21 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
+        )
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(23 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
+        )
+    }
+
+    @Test
+    fun filterStall_standsDownAfterTheRestartBudgetAndSaysSoExactlyOnce() {
+        val d = stallDecider()
+        val stuck = 2_538_000L
+        val target = 2_540_971L
+        var now = 0L
+        d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
+        repeat(3) {
+            now += 11 * 60_000L
+            assertEquals(
+                "restart $it must be spent",
+                FilterStallWatchdogDecider.Decision.RESTART,
+                d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
+            )
+        }
+        now += 11 * 60_000L
+        assertEquals(
+            "the budget is spent — say so",
+            FilterStallWatchdogDecider.Decision.EXHAUSTED,
+            d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
+        )
+        repeat(5) {
+            now += 11 * 60_000L
+            assertEquals(
+                "…and never again",
+                FilterStallWatchdogDecider.Decision.NONE,
+                d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
+            )
+        }
+    }
+
+    @Test
+    fun filterStall_catchingUpClearsTheTimerSoALaterLagStartsFresh() {
+        val d = stallDecider()
+        val target = 2_540_971L
+        d.onCheck(0L, 2_538_000L, target, lastWalletEventMs = 0L)
+        // Caught up — the pending stall must be forgotten, not merely paused.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(5 * 60_000L, target, target, lastWalletEventMs = 0L)
+        )
+        // Target moves on and the cursor lags again; the old nine minutes
+        // must not count toward the new window.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(6 * 60_000L, target, 2_545_000L, lastWalletEventMs = 0L)
+        )
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(14 * 60_000L, target, 2_545_000L, lastWalletEventMs = 0L)
+        )
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(17 * 60_000L, target, 2_545_000L, lastWalletEventMs = 0L)
+        )
+    }
 
     // ── Ordered DashPay bring-up before SPV ───────────────────────────
     //
@@ -1002,12 +1277,14 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun probeParity_inflatedMismatch_selfHealsWithOneFullWalletRebuild() = runBlocking {
-        // Self-heal: a persistent inflated mismatch triggers a ONE-TIME full
-        // SDK-wallet REBUILD (the SPV-only reset is gone — device evidence
-        // showed the +0.01 inflation survives it, so it lives in the wallet
-        // ledger, not the scan data). The rebuild runs the removeWallet
-        // cascade + rebind — NOT the legacy L1-row purge or SDK clear.
+    fun probeParity_inflatedMismatch_logsTheRebuildVerdict_butNeverRebuilds() = runBlocking {
+        // The automatic SDK-wallet rebuild is retired (no-fallback cutover
+        // policy, docs/upgrade-memory-and-sync-plan.md Phase 1a item 2): on
+        // the 2026-09-16 emulator upgrade test it wiped a just-synced SDK
+        // wallet on a transient inflation and rescanned from genesis. The
+        // decider still reaches REBUILD_WALLET on the third consecutive probe,
+        // but the verdict is logged, not acted on: no removeWallet cascade, no
+        // rebind, no restart, no recovery marker.
         val source = inflatedSource()
         val recreator = FakeRecreator()
         val markerWrites = mutableListOf<Long>()
@@ -1015,21 +1292,13 @@ class L1ShadowSyncServiceTest {
         assertTrue(service.startIfEnabled())
         source.emitWithoutEdgeProbe(syncedComplete) // count the streak manually
 
-        repeat(2) { service.probeParity(walletIdHex) }
-        assertTrue(recreator.events.isEmpty()) // below the threshold
-
-        service.probeParity(walletIdHex) // third consecutive → ONE full rebuild
-        assertEquals(
-            listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
-            recreator.events
-        )
-        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
-        // The rebuild uses the removeWallet cascade — NOT the legacy SPV-only
-        // row purge or the broken SDK clearSpvStorage call.
+        repeat(3) { service.probeParity(walletIdHex) } // third consecutive → REBUILD_WALLET verdict
+        assertTrue("the verdict must not run the recreator", recreator.events.isEmpty())
+        assertTrue(recreator.removedWalletIds.isEmpty())
         assertEquals(0, source.clearL1RowsCalls)
         assertEquals(0, source.clearSpvStorageCalls)
-        assertEquals(2, source.startCalls) // initial + fresh post-rebind restart
-        assertEquals(listOf(1_000_000L), markerWrites) // recovery stamped the marker
+        assertEquals(1, source.startCalls) // no post-rebind restart
+        assertTrue("no recovery marker without a recovery", markerWrites.isEmpty())
     }
 
     @Test
@@ -1069,30 +1338,29 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun probeParity_inflationSurvivingTheRebuild_standsDownAsFailed_neverRebuildsTwice() = runBlocking {
+    fun probeParity_persistentInflation_standsDownAsFailed_withoutEverRebuilding() = runBlocking {
         val source = inflatedSource()
         val recreator = FakeRecreator()
         val service = service(source, recreator = recreator)
         assertTrue(service.startIfEnabled())
         source.progressFlow.value = syncedComplete
-        repeat(3) { service.probeParity(walletIdHex) } // → the one rebuild
-        assertEquals(1, recreator.removedWalletIds.size)
+        repeat(3) { service.probeParity(walletIdHex) } // → the (advisory) rebuild verdict
+        assertTrue(recreator.removedWalletIds.isEmpty())
 
-        // The rebuilt wallet's rescan completes but the inflation SURVIVES:
-        // a deterministic SDK ledger bug → stand down FAILED, no 2nd rebuild.
-        source.progressFlow.value = SpvSyncProgressData.EMPTY
-        source.progressFlow.value = syncedComplete
+        // The inflation persists: the decider's second acting verdict is
+        // STAND_DOWN → FAILED. Still no wallet touched.
         repeat(6) { service.probeParity(walletIdHex) }
-        assertEquals(1, recreator.removedWalletIds.size) // never rebuilds twice — no churn
+        assertTrue(recreator.removedWalletIds.isEmpty())
         assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
     }
 
     @Test
-    fun probeParity_recentSelfSpendBroadcast_deferstheRebuildUntilPastTheGraceWindow() = runBlocking {
+    fun probeParity_recentSelfSpendBroadcast_neverRebuilds_insideOrPastTheGraceWindow() = runBlocking {
         // Phase 5b wiring: SdkL1SendService calls noteSelfSpendBroadcast()
-        // after a successful SDK L1 send. The legitimate inflation window
-        // (mempool → mined → filter-scanned) must NOT trigger the rebuild;
-        // only a genuine post-grace inflation self-heals.
+        // after a successful SDK L1 send. Inside the grace window the decider
+        // suppresses the inflated streak (pinned by the decider unit tests);
+        // past it the verdict fires — and is logged only, so the wallet is
+        // never touched in either case.
         var now = 1_000_000L
         val source = inflatedSource()
         val recreator = FakeRecreator()
@@ -1105,12 +1373,12 @@ class L1ShadowSyncServiceTest {
             now += 60_000 // probe cadence, still inside the grace window
             service.probeParity(walletIdHex)
         }
-        assertTrue(recreator.events.isEmpty()) // suppressed — no rebuild during the grace window
+        assertTrue(recreator.events.isEmpty())
 
-        // Past the grace window the inflation is real → one full rebuild.
         now += L1ShadowSyncService.SELF_SPEND_GRACE_MS + 1
         repeat(3) { service.probeParity(walletIdHex) }
-        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertTrue(recreator.events.isEmpty())
+        assertTrue(recreator.removedWalletIds.isEmpty())
     }
 
     @Test
@@ -1233,41 +1501,31 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun probeParity_emptyDeficit_selfHealsWithOneFullWalletRebuild_thenStandsDown() = runBlocking {
+    fun probeParity_emptyDeficit_neverRebuilds_thenStandsDown() = runBlocking {
         val source = emptyDeficitSource()
         val recreator = FakeRecreator()
         val markerWrites = mutableListOf<Long>()
-        // The stranded-scan state (empty deficit + complete scan) self-heals
-        // with the SAME one-time full SDK-wallet rebuild as the inflated path.
+        // The stranded-scan state (empty deficit + complete scan) reaches the
+        // same advisory REBUILD_WALLET verdict as the inflated path — logged,
+        // never executed.
         val service = service(
             source, markerWrites = markerWrites, recreator = recreator
         )
         assertTrue(service.startIfEnabled())
         source.emitWithoutEdgeProbe(syncedComplete) // this test counts the streak manually
 
-        repeat(2) { service.probeParity(walletIdHex) }
-        assertTrue(recreator.events.isEmpty()) // below the threshold
-
-        service.probeParity(walletIdHex) // third consecutive → ONE full rebuild
-        assertEquals(
-            listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
-            recreator.events
-        )
-        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
-        // removeWallet's cascade replaces row deletion — no legacy row purge,
-        // no broken SDK clearSpvStorage call.
+        repeat(3) { service.probeParity(walletIdHex) } // third consecutive → REBUILD_WALLET verdict
+        assertTrue(recreator.events.isEmpty())
+        assertTrue(recreator.removedWalletIds.isEmpty())
         assertEquals(0, source.clearL1RowsCalls)
         assertEquals(0, source.clearSpvStorageCalls)
-        assertEquals(2, source.startCalls) // initial + fresh post-rebind restart
-        assertEquals(listOf(1_000_000L), markerWrites) // recovery stamped the marker
+        assertEquals(1, source.startCalls)
+        assertTrue(markerWrites.isEmpty())
 
-        // The rebuilt wallet's rescan STILL comes back empty: stand down
-        // FAILED — no second rebuild this process.
-        source.progressFlow.value = SpvSyncProgressData.EMPTY
-        source.progressFlow.value = syncedComplete
+        // The deficit persists: STAND_DOWN → FAILED, still nothing touched.
         repeat(6) { service.probeParity(walletIdHex) }
-        assertEquals(1, recreator.removedWalletIds.size)
-        assertEquals(2, source.startCalls)
+        assertTrue(recreator.removedWalletIds.isEmpty())
+        assertEquals(1, source.startCalls)
         assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
     }
 

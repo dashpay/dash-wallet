@@ -133,7 +133,7 @@ class BlockchainStateDataProviderTest {
         assertEquals(1_500_100, row.bestChainHeight)
         assertEquals(Date(2_000_000_000L), row.bestChainDate)
         assertEquals(90, row.percentageSync)
-        assertFalse("the SDK has no replay concept — the flag must clear", row.replaying)
+        assertTrue("below the tip on the SDK path IS a replay — the service must stay alive", row.replaying)
         assertEquals("a null chainlockHeight preserves the row's value", 1_499_990, row.chainlockHeight)
         assertEquals("null mnListHeight preserves the row's value", 1_499_000, row.mnlistHeight)
         assertEquals(
@@ -141,6 +141,63 @@ class BlockchainStateDataProviderTest {
             setOf(Impediment.STORAGE, Impediment.NETWORK),
             row.impediments
         )
+    }
+
+    @Test
+    fun updateSdkBlockchainState_replayingFollowsThePercentage() {
+        // Phase 1b item 7. Reference install, 2026-09-15: the SDK replay ran
+        // for eleven hours with `replaying` hard-coded false, so the idle rule
+        // stopped the service nine times and nothing rescheduled it.
+        dao.state = BlockchainState(Date(0L), 0, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 42, syncStage = SyncStage.BLOCKS))
+        awaitUntil("below-tip update applied") { dao.state?.percentageSync == 42 }
+        assertTrue("42% is a replay in progress", dao.state!!.replaying)
+
+        // A transient null percent (SDK ERROR blip) preserves both fields.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = null, syncStage = SyncStage.HEADERS))
+        awaitUntil("null-percent update applied") { provider.getSyncStage() == SyncStage.HEADERS }
+        assertEquals(42, dao.state!!.percentageSync)
+        assertTrue("a null percent must not clear the replay flag", dao.state!!.replaying)
+
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
+        awaitUntil("tip update applied") { dao.state?.percentageSync == 100 }
+        assertFalse("at the tip the replay is over", dao.state!!.replaying)
+        assertTrue(dao.state!!.isSynced())
+    }
+
+    @Test
+    fun markReplayStartedForSdkTakeover_flagsTheReplay_zeroesThePercent_keepsHeights() {
+        // Phase 1b item 8: dashj's "synced, 100%" row at the moment of the
+        // upgrade cutover. Emulator finding 3: the home screen kept showing
+        // this while the SDK scanned from genesis.
+        dao.state = BlockchainState(Date(1_000_000_000L), 1_500_000, false, EnumSet.noneOf(Impediment::class.java), 1_499_990, 1_499_000, 100)
+
+        provider.markReplayStartedForSdkTakeover()
+        awaitUntil("takeover marker applied") { dao.state?.replaying == true }
+
+        val row = dao.state!!
+        assertEquals("nothing scanned yet", 0, row.percentageSync)
+        assertFalse(row.isSynced())
+        assertEquals("heights are preserved", 1_500_000, row.bestChainHeight)
+        assertEquals(1_499_990, row.chainlockHeight)
+        assertEquals(1_499_000, row.mnlistHeight)
+        assertEquals(Date(1_000_000_000L), row.bestChainDate)
+
+        // The SDK's first real update then takes over the percentage.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 7, syncStage = SyncStage.BLOCKS))
+        awaitUntil("first SDK update applied") { dao.state?.percentageSync == 7 }
+        assertTrue(dao.state!!.replaying)
+    }
+
+    @Test
+    fun markReplayStartedForSdkTakeover_leavesAReplayAlreadyInProgressAlone() {
+        dao.state = BlockchainState(Date(0L), 10, true, EnumSet.noneOf(Impediment::class.java), 0, 0, 55)
+        provider.markReplayStartedForSdkTakeover()
+        // Nothing to await: the writer must not touch the row. Give it a moment anyway.
+        Thread.sleep(100)
+        assertEquals(55, dao.state!!.percentageSync)
+        assertTrue(dao.state!!.replaying)
     }
 
     @Test

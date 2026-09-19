@@ -170,7 +170,10 @@ public final class Constants {
         /** Filename of the wallet. */
         public static final String WALLET_FILENAME_PROTOBUF = "wallet-protobuf" + FILENAME_NETWORK_SUFFIX;
 
-        /** How often the wallet is autosaved. */
+        /**
+         * The default wallet autosave debounce. Large wallet files use a longer
+         * one — see {@code WalletFileSizeGuard.autosaveDelayMs}.
+         */
         public static final long WALLET_AUTOSAVE_DELAY_MS = 5 * DateUtils.SECOND_IN_MILLIS;
 
         /** Filename of the automatic key backup (old format, can only be read). */

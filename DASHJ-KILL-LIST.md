@@ -54,6 +54,65 @@ Most-used bitcoinj types repo-wide: `Coin` (105 files), `Transaction` (86), `Sha
   with the engine); dashj's `BlockchainState` (sync %, replaying, impediments) must be fully
   derived from `SpvSyncProgressData` (partially wired for the home header already).
 
+#### 1a. BLOCKER on the balance replacement: partial rescan state is published as fact
+
+`CutoverUiDataService` is the SDK-side replacement for the home-screen balance, so dashj cannot be
+deleted until this is right — after step B there is no second engine to sanity-check it against.
+
+Measured on a restored wallet, 2026-09-17 (see §26.4 of the upgrade memory and sync plan). Opening
+the Contacts screen triggered a DashPay-provisioning rewind of ~214,000 blocks, and during the
+re-scan the service published, in sequence:
+
+| Published balance | In DASH |
+|---:|---:|
+| 28,214,058,609 | 282.1 |
+| 24,233,701,645 | 242.3 |
+| 21,351,026,841 | 213.5 |
+| 16,902,773,043 | **169.0 — correct, matches pre-wipe exactly** |
+
+For ~30 seconds the wallet displayed up to **113 DASH more than the user actually has**, stepping
+down as the rescan re-derived the UTXO set. The end state is correct; the intermediate states are
+not, and they are indistinguishable from real money on screen.
+
+The signal to fix it with is already present: **every wrong value was published with
+`l1Synced=false`.** Options are to suppress publication while that flag is false, hold the last
+known-good figure, or mark the value as provisional in the UI. Today it emits partial rescan state
+as though it were settled.
+
+Why this is a kill-list item and not just a bug: the rewind that exposes it is itself triggered by
+ordinary DashPay provisioning (§17.6, §26.3), so it is not a rare path, and the pre-cutover
+comparison against dashj's own balance (`L1Parity` probing) is the only thing that would currently
+catch a regression here. That probe is suspended post-cutover and disappears entirely at step B.
+
+#### 1b. DEAD PATH still shouting: the dashj broadcast handler warns that it did not send
+
+`BlockchainServiceImpl.kt:2700`, inside the `ACTION_BROADCAST_TRANSACTION` handler:
+
+```kotlin
+if (peerGroup != null) {
+    peerGroup!!.broadcastTransaction(tx, minimum, true)
+} else {
+    log.warn("peergroup not available, not broadcasting transaction {}", tx.txId)
+}
+```
+
+Post-cutover `peerGroup` is always null, so **every send from a cut-over wallet logs that it is not
+broadcasting** — while `SdkL1SendService` broadcasts it perfectly well through the SDK. The message
+states the opposite of what happened.
+
+The codebase already knows this: `SweepTxBroadcaster`'s KDoc says "Post-cutover that peergroup
+broadcast no-ops ('peergroup not available, not broadcasting')" and routes around it. The warning
+was simply never adjusted.
+
+Measured 2026-09-17 (§27.5 of the upgrade memory and sync plan): a contact payment logged this
+warning on the sender and was nonetheless confirmed on chain in block 1555561. It cost real time in
+that test — the run was nearly written off as a failed send — and it will mislead anyone reading a
+field log, which is exactly when this line gets read.
+
+The whole handler is dead weight that dies with the engine at step B. Until then, either demote the
+message and say the SDK owns broadcast now, or drop it when the cutover is committed. Cheap, and it
+removes a false signal from every send log we collect between now and step B.
+
 ### 2. Key derivation / signing / seed handling
 - **What it does**: `DeterministicSeed` (10 files), `KeyChainGroup`, `DeterministicKeyChain`,
   `ECKey` (15), `KeyCrypterScrypt`/`KeyCrypterException` (17), `MnemonicCode`, `BIP38PrivateKey`,
@@ -109,6 +168,42 @@ Most-used bitcoinj types repo-wide: `Coin` (105 files), `Transaction` (86), `Sha
   key-usage report (masternode keys screen) still have no SDK query equivalents.
 - **Blast radius**: `wallet/.../ui/dashpay/**`, `wallet/.../service/platform/**` — ~50 files,
   plus the per-flavor `dash-sdk-{java,kotlin,android}` Gradle lines.
+
+#### 5a. App-side DIP-15 friend-chain provisioning — now redundant (added 2026-09-16)
+
+- **What it is**: `SdkWalletBinder.provisionContactAccountsIfEnabled` /
+  `provisionContactAccountsInBackground`, plus `DashPayBackfillGate`. It derives the
+  `m/9'/coin'/15'` per-contact keychains and registers them with the SDK so contact/username
+  payments land in the filter set.
+- **Why it exists**: its own comment says it — "the app keeps DashPay contacts on dashj and
+  never drives the SDK's contact-sync path, so the bound SDK L1 wallet derives NONE of the
+  `m/9'/coin'/15'` friend chains and misses contact/username payments". It was the patch for
+  the SDK not being told the contacts existed. The exposure was real: 0.0836 DASH of
+  genuinely-ours coins missed at scan time on the topple wallet.
+- **Why it is now redundant**: `1266edc1c` started calling the SDK's own ordered bring-up,
+  `PlatformWalletManager.startWalletSubsystems`, which does identity → contacts →
+  contact-account drain and reports `dashPaySyncRan` / `contactAccountsDrained` /
+  `contactAccountsPending`. Measured on emulator-5556, 2026-09-16: the bring-up reported
+  `status=READY dashPaySyncRan=true drained=14 pending=0`, and every app-side sweep afterwards
+  reported `pendingBuilds=0, drainScheduled=false`. The app sweep runs once a minute and finds
+  nothing. `DashPayBackfillGate` is already `ALWAYS_RUN`, i.e. a no-op shell: `evaluate` always
+  returns `shouldRun = true, reason = "backfill gate disabled"`, and every bookkeeping method
+  returns a constant.
+- **The one job left**: `startWalletSubsystems` runs only at engine start
+  (`L1ShadowSyncService.startIfEnabled`, guarded by `if (!source.isSpvRunning())`), so a contact
+  established while the engine is already running is not picked up by it. `updateContactRequests`
+  calls the app sweep with `force = addedContact` for exactly that case. **Deleting the sweep
+  requires the SDK to re-run its contact sync on a contact change, or the app to restart the
+  engine on one.** Confirm with the SDK team before removing.
+- **Kill**: delete `provisionContactAccountsIfEnabled`,
+  `provisionContactAccountsInBackground`, `DashPayBackfillGate` and its `ALWAYS_RUN` shell, the
+  `watchArmedBackfillRewind` poller, and the two call sites in `PlatformSyncService`
+  (`kickSdkEngines`, `updateContactRequests`). The rewind that catches payments missed before a
+  chain was derived is already the SDK's: it marks newly registered contacts at
+  `synced_height = 0` and its filter manager rescans via the account-generation guard
+  (`dash-spv/src/sync/filters/manager.rs`). That is also the single mechanism the whole
+  contact-payment recovery now depends on — see section 16 of
+  `docs/upgrade-memory-and-sync-plan.md`, which tests it.
 
 ### 6. Checkpoints / birth height / chain bootstrap
 - **What it does**: `CheckpointManager` (3 files) + `wallet/assets/checkpoints{,-testnet}.txt`
