@@ -2021,7 +2021,67 @@ Not a defect in either fix, and no change is proposed here. It is recorded becau
 alarm work cannot be tested on a wallet that is still replaying, and because "the alarm never
 fires" and "the alarm was never armed" are different failures that look identical in a field log.
 
-Step 6 of §32.10 has never been observed to happen, on any device, in any build. Until it is, §28's question —
+### 32.12 DELIVERED, 2026-09-19 — and §28 is answered
+
+Samsung SM-S901U, Android 16, build from `5f8c0a8ef`. The first time this alarm has been observed
+to fire.
+
+```
+19:36:05  ALARM-DIAG armed reason=periodic-15min firstFireInMinutes=15 repeat=15min
+          exact=false batteryOptimisationExempt=true
+20:08:33  ALARM-DIAG service started by alarm (reason=periodic-15min)
+          — a background FGS start WAS permitted
+```
+
+Confirmed independently in AlarmManager's own scheduling record rather than only in our logging:
+
+| | before the fix | after |
+|---|---|---|
+| `repeatInterval` | 86,400,000 ms (24 h) | **900,000 ms (15 min)** |
+| `window` | `+18h0m0s0ms` | **`+11m15s0ms`** |
+| PendingIntent | one shared `PI:35881e8` | two distinct identities |
+
+Due 13:06:26, delivered 13:08:33 — 2m7s into an 11m15s window — and AlarmManager then rolled to
+the next repeat by itself (`origWhen=13:21:26.872`), which is the repeat working rather than a
+re-arm from a service teardown. `reason=periodic-15min` is only ever set on the alarm's own
+PendingIntent, so the start provably came from the alarm.
+
+**§28 is answered.** That section asked whether the background `dataSync` FGS start would be
+REFUSED once an alarm reached it. It could never be tested, because the alarm never arrived —
+§32.5 could only show it going overdue with 17h54m of deferral still permitted. The delivery
+message's second clause settles it: on this device the background FGS start from an alarm **is
+permitted**.
+
+**Two things this does NOT establish.**
+
+The arming line records `batteryOptimisationExempt=true`. Every device used for this work has held
+that exemption, which is exactly why §28 could not be settled in the lab. Whether a NON-exempt
+device is also permitted the FGS start is still untested, and the reference installs are the
+likely non-exempt case.
+
+And §32.11 is unaffected: the alarm is only armed when the service stops, and the replay guard
+holds the service open while a replay runs. A wallet whose replay never completes still never arms
+it, however well the alarm works once armed.
+
+### 32.13 A second reason it was never seen: every teardown cancels it
+
+Found while running §32.10, and independent of the interval bug.
+
+`scheduleStartBlockchainService` calls `alarmManager.cancel(alarmIntent)` unconditionally before
+re-arming, and it runs from the service's `onDestroy`. So ANY start-and-stop of the service
+cancels the pending alarm and restarts its 15 minutes from zero. Observed directly: an alarm due
+at 12:51:05 was cancelled at 12:51:28 — 23 seconds after becoming due, still inside its window —
+because platform sync had woken the service, which then stopped and re-armed for 13:06:26.
+
+On a device whose service is touched more often than the alarm interval, the alarm can therefore
+be deferred indefinitely while appearing perfectly healthy in `dumpsys`. The interval fix does
+nothing about this. It only became visible because the window was short enough to watch a single
+cycle end to end.
+
+Not fixed. The obvious repair is to re-arm only when no equivalent alarm is already pending, or to
+leave a delivered-but-overdue alarm alone rather than cancelling it.
+
+Step 6 of §32.10 was first observed on 2026-09-19 — see §32.12. Until it is, §28's question —
 whether the background FGS start is refused once the alarm IS delivered — remains unreachable
 rather than answered.
 
