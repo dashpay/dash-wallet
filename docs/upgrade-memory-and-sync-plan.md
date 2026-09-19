@@ -1895,8 +1895,8 @@ would finish syncing". The sync half is a consequence — the engine is progress
 (`last_activity: 0s`, filters 2,272,092 / 2,540,300 = 89.4 %) but no session survives long
 enough to finish. The startup half is this section.
 
-Retitled from "the protobuf parse": §33.7 shows the parse is only part of the main-thread
-block, and §33.9 shows the expensive part of it has almost no consumer after the cutover.
+Retitled from "the protobuf parse": §33.4 shows the parse is only part of the main-thread
+block, and §33.7 shows the expensive part of it has almost no consumer after the cutover.
 
 ### 33.1 The measurement
 
