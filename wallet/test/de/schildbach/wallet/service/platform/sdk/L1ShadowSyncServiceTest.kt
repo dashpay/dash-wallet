@@ -310,7 +310,7 @@ class L1ShadowSyncServiceTest {
             height += 5_000L
             assertEquals(
                 FilterStallWatchdogDecider.Decision.NONE,
-                d.onCheck(now, height, 2_540_971L)
+                d.onCheck(now, height, 2_540_971L, lastWalletEventMs = 0L)
             )
         }
     }
@@ -324,7 +324,7 @@ class L1ShadowSyncServiceTest {
             now += 60_000L
             assertEquals(
                 FilterStallWatchdogDecider.Decision.NONE,
-                d.onCheck(now, 2_540_971L, 2_540_971L)
+                d.onCheck(now, 2_540_971L, 2_540_971L, lastWalletEventMs = 0L)
             )
         }
     }
@@ -338,7 +338,7 @@ class L1ShadowSyncServiceTest {
             assertEquals(
                 "a zero target means the engine has not said what it is scanning toward",
                 FilterStallWatchdogDecider.Decision.NONE,
-                d.onCheck(now, 0L, 0L)
+                d.onCheck(now, 0L, 0L, lastWalletEventMs = 0L)
             )
         }
     }
@@ -349,16 +349,80 @@ class L1ShadowSyncServiceTest {
         val d = stallDecider()
         val stuck = 2_538_000L
         val target = 2_540_971L
-        assertEquals(FilterStallWatchdogDecider.Decision.NONE, d.onCheck(0L, stuck, target))
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, d.onCheck(0L, stuck, target, lastWalletEventMs = 0L))
         // Nine minutes in: still inside the window.
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(9 * 60_000L, stuck, target)
+            d.onCheck(9 * 60_000L, stuck, target, lastWalletEventMs = 0L)
         )
         // Past ten: wedged.
         assertEquals(
             FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(11 * 60_000L, stuck, target)
+            d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 0L)
+        )
+    }
+
+    @Test
+    fun filterStall_doesNotRestartWhileTheEngineIsStillDeliveringEvents() {
+        // THE SAMSUNG CASE (SM-S901U, 2026-09-19, §34). The cursor sat at
+        // 1,555,999 of 1,556,844 for 6 min 32 s — but the SDK was logging
+        // `wallet-event batch: folded=N` the whole time with
+        // `synced_height_persisted=None`. The scan was running; only the
+        // watermark WRITE was blocked, behind a contended primary connection
+        // on dash-sdk.db. It then persisted three heights in 130 ms and went
+        // SYNCED on its own.
+        //
+        // A restart there destroys real unpersisted scan progress to "fix" a
+        // healthy engine. A still cursor is not a stopped engine.
+        val d = stallDecider()
+        val stuck = 1_555_999L
+        val target = 1_556_844L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
+        // Twenty minutes of a frozen cursor — but events keep arriving.
+        var now = 60_000L
+        while (now <= 20 * 60_000L) {
+            assertEquals(
+                "events still arriving means the engine is alive, whatever the cursor says",
+                FilterStallWatchdogDecider.Decision.NONE,
+                d.onCheck(now, stuck, target, lastWalletEventMs = now - 1_000L)
+            )
+            now += 60_000L
+        }
+    }
+
+    @Test
+    fun filterStall_restartsWhenTheCursorAndTheEventStreamHaveBOTHGoneQuiet() {
+        // The real wedge: nothing moving on either signal.
+        val d = stallDecider()
+        val stuck = 2_538_000L
+        val target = 2_540_971L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(9 * 60_000L, stuck, target, lastWalletEventMs = 60_000L)
+        )
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 60_000L)
+        )
+    }
+
+    @Test
+    fun filterStall_eventsGoingQuietAfterAFrozenCursorStillRestarts() {
+        // Events kept the watchdog quiet, then the engine died too. The
+        // liveness signal must not latch the watchdog off forever.
+        val d = stallDecider()
+        val stuck = 1_555_999L
+        val target = 1_556_844L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(15 * 60_000L, stuck, target, lastWalletEventMs = 15 * 60_000L - 1_000L)
+        )
+        // Last event at 15 min; by 26 min both signals are past the window.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(26 * 60_000L, stuck, target, lastWalletEventMs = 15 * 60_000L)
         )
     }
 
@@ -367,16 +431,16 @@ class L1ShadowSyncServiceTest {
         val d = stallDecider()
         val stuck = 2_538_000L
         val target = 2_540_971L
-        d.onCheck(0L, stuck, target)
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
         assertEquals(
             FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(11 * 60_000L, stuck, target)
+            d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 0L)
         )
         // One minute after the restart the cursor has not moved yet — that is
         // expected, not a second stall.
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(12 * 60_000L, stuck, target)
+            d.onCheck(12 * 60_000L, stuck, target, lastWalletEventMs = 0L)
         )
     }
 
@@ -384,25 +448,25 @@ class L1ShadowSyncServiceTest {
     fun filterStall_progressAfterARestartRearmsTheFullWindow() {
         val d = stallDecider()
         val target = 2_540_971L
-        d.onCheck(0L, 2_538_000L, target)
+        d.onCheck(0L, 2_538_000L, target, lastWalletEventMs = 0L)
         assertEquals(
             FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(11 * 60_000L, 2_538_000L, target)
+            d.onCheck(11 * 60_000L, 2_538_000L, target, lastWalletEventMs = 0L)
         )
         // The restart worked and the cursor moved.
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(12 * 60_000L, 2_540_000L, target)
+            d.onCheck(12 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
         )
         // It then wedges again at the new height: a fresh ten minutes is
         // required, not the leftover of the previous window.
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(21 * 60_000L, 2_540_000L, target)
+            d.onCheck(21 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
         )
         assertEquals(
             FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(23 * 60_000L, 2_540_000L, target)
+            d.onCheck(23 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
         )
     }
 
@@ -412,27 +476,27 @@ class L1ShadowSyncServiceTest {
         val stuck = 2_538_000L
         val target = 2_540_971L
         var now = 0L
-        d.onCheck(now, stuck, target)
+        d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
         repeat(3) {
             now += 11 * 60_000L
             assertEquals(
                 "restart $it must be spent",
                 FilterStallWatchdogDecider.Decision.RESTART,
-                d.onCheck(now, stuck, target)
+                d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
             )
         }
         now += 11 * 60_000L
         assertEquals(
             "the budget is spent — say so",
             FilterStallWatchdogDecider.Decision.EXHAUSTED,
-            d.onCheck(now, stuck, target)
+            d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
         )
         repeat(5) {
             now += 11 * 60_000L
             assertEquals(
                 "…and never again",
                 FilterStallWatchdogDecider.Decision.NONE,
-                d.onCheck(now, stuck, target)
+                d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
             )
         }
     }
@@ -441,25 +505,25 @@ class L1ShadowSyncServiceTest {
     fun filterStall_catchingUpClearsTheTimerSoALaterLagStartsFresh() {
         val d = stallDecider()
         val target = 2_540_971L
-        d.onCheck(0L, 2_538_000L, target)
+        d.onCheck(0L, 2_538_000L, target, lastWalletEventMs = 0L)
         // Caught up — the pending stall must be forgotten, not merely paused.
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(5 * 60_000L, target, target)
+            d.onCheck(5 * 60_000L, target, target, lastWalletEventMs = 0L)
         )
         // Target moves on and the cursor lags again; the old nine minutes
         // must not count toward the new window.
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(6 * 60_000L, target, 2_545_000L)
+            d.onCheck(6 * 60_000L, target, 2_545_000L, lastWalletEventMs = 0L)
         )
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(14 * 60_000L, target, 2_545_000L)
+            d.onCheck(14 * 60_000L, target, 2_545_000L, lastWalletEventMs = 0L)
         )
         assertEquals(
             FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(17 * 60_000L, target, 2_545_000L)
+            d.onCheck(17 * 60_000L, target, 2_545_000L, lastWalletEventMs = 0L)
         )
     }
 

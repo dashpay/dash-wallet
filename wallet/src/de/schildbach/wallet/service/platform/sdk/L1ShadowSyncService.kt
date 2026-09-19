@@ -1130,8 +1130,17 @@ internal class FilterStallWatchdogDecider(
     /**
      * @param filterHeight the engine's current filter cursor.
      * @param filterTarget the height it is scanning toward; 0 when unknown.
+     * @param lastWalletEventMs when the engine last delivered ANY wallet
+     *   event, or 0 when none has been seen since the start. This is the
+     *   liveness signal that separates the two ways the cursor can sit
+     *   still — see the note below.
      */
-    fun onCheck(nowMs: Long, filterHeight: Long, filterTarget: Long): Decision {
+    fun onCheck(
+        nowMs: Long,
+        filterHeight: Long,
+        filterTarget: Long,
+        lastWalletEventMs: Long
+    ): Decision {
         val behind = filterTarget > 0 && filterHeight < filterTarget
         if (!behind) {
             // Caught up, or the target is not known yet. Nothing to stall on,
@@ -1145,6 +1154,21 @@ internal class FilterStallWatchdogDecider(
             return Decision.NONE
         }
         if (nowMs - lastAdvanceMs < stallThresholdMs) return Decision.NONE
+        // A STILL CURSOR IS NOT A STOPPED ENGINE. Observed on a Samsung
+        // SM-S901U, 2026-09-19 (§34): the cursor sat at 1,555,999 for
+        // 6 min 32 s while the SDK logged `wallet-event batch: folded=N`
+        // throughout with `synced_height_persisted=None` — the scan was
+        // running the whole time and only the WATERMARK WRITE was blocked,
+        // behind a contended primary connection on dash-sdk.db. It then
+        // persisted 1556842 -> 1556845 in 130 ms and went SYNCED.
+        //
+        // Restarting there would have destroyed real, unpersisted scan
+        // progress to "fix" an engine that was working. So a restart
+        // requires the cursor to be still AND the event stream to have gone
+        // quiet for the same window. Events still arriving means alive.
+        if (lastWalletEventMs > 0L && nowMs - lastWalletEventMs < stallThresholdMs) {
+            return Decision.NONE
+        }
         return when {
             restartsIssued < maxRestarts -> {
                 restartsIssued++
@@ -1898,6 +1922,27 @@ class L1ShadowSyncService internal constructor(
     private var eventTapJob: Job? = null
 
     /**
+     * The filter-stall watchdog's restart, held so a second decision cannot
+     * stack a concurrent teardown on top of one already in flight. Lives on
+     * the service [scope], NOT on `watchdogJob`, because `stop()` cancels
+     * that one.
+     */
+    private var stallRestartJob: Job? = null
+
+    /**
+     * When the engine last delivered ANY wallet event, monotonic-ish wall
+     * clock via [nowMs]; 0 until the first one of this run.
+     *
+     * The filter-stall watchdog's liveness signal. The cursor going still
+     * and the ENGINE going still are different failures — see the note in
+     * [FilterStallWatchdogDecider.onCheck] — and this is what tells them
+     * apart. Stamped on every event the tap sees, parsed or not: an event
+     * arriving at all proves the engine is producing.
+     */
+    @Volatile
+    private var lastWalletEventMs: Long = 0L
+
+    /**
      * Parsed per-transaction engine events ([L1TxEvent]), live while the
      * shadow runs — the INSTANT receive feed [CutoverUiDataService]'s tx
      * pipeline consumes to insert mempool receives / flip IS-lock state
@@ -2337,6 +2382,7 @@ class L1ShadowSyncService internal constructor(
             logWatermarkAtStop(walletIdHex, committedAtStop, filterAtStop)
             _progress.value = ShadowSyncProgress.IDLE
             _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
+            lastWalletEventMs = 0L // a fresh run must not inherit this run's liveness
             lastStopAtMs = nowMs()
             stopCount++
             log.info(
@@ -2571,6 +2617,10 @@ class L1ShadowSyncService internal constructor(
         while (currentCoroutineContext().isActive) {
             try {
                 source.walletEventStrings().collect { debug ->
+                    // Liveness for the filter-stall watchdog, stamped before
+                    // any parsing: an event the parsers all drop still proves
+                    // the engine is alive and producing.
+                    lastWalletEventMs = nowMs()
                     // Chainlock feed first: it rides the SAME event stream but
                     // on OTHER variants (ChainLockProcessed / BlockProcessed),
                     // which parseL1TxEvent drops. Monotonic — a replayed or
@@ -2777,7 +2827,9 @@ class L1ShadowSyncService internal constructor(
     private suspend fun checkFilterStall() {
         if (runningWalletIdHex.value == null) return
         val p = _progress.value
-        val decision = filterStallDecider.onCheck(nowMs(), p.filterHeight, p.filterTarget)
+        val decision = filterStallDecider.onCheck(
+            nowMs(), p.filterHeight, p.filterTarget, lastWalletEventMs
+        )
         if (decision == FilterStallWatchdogDecider.Decision.NONE) return
         when (decision) {
             FilterStallWatchdogDecider.Decision.RESTART -> {
@@ -2790,19 +2842,36 @@ class L1ShadowSyncService internal constructor(
                     p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
                     filterStallThresholdMs / 60_000
                 )
-                runCatching {
-                    stop()
-                    startIfEnabled()
-                }.onSuccess { started ->
-                    log.info(
-                        "L1Shadow filter-stall watchdog: engine restart {} (was stuck at {})",
-                        if (started == true) "succeeded" else "declined to start",
-                        p.filterHeight
-                    )
-                }.onFailure {
-                    if (it is CancellationException) throw it
-                    log.warn("L1Shadow filter-stall watchdog: the engine restart failed", it)
-                }
+                // THE RESTART MUST NOT RUN IN THIS COROUTINE. `stop()`
+                // cancels `watchdogJob`, and this check runs INSIDE it — so
+                // doing the restart inline cancels the very coroutine
+                // performing it: `startIfEnabled()` throws
+                // CancellationException at its first suspension point, the
+                // engine stays stopped, and the watchdog has turned a
+                // stalled-but-running engine into a dead one. Strictly worse
+                // than no watchdog at all.
+                //
+                // Launching on the service [scope] (which `stop()` does NOT
+                // cancel — it cancels the four loop jobs only) is what
+                // [checkProbeHeartbeat] already does for its own restart.
+                // The new run installs a fresh watchdogJob.
+                val stuckAt = p.filterHeight
+                stallRestartJob?.cancel()
+                stallRestartJob = scope.launch {
+                    runCatching {
+                        stop()
+                        startIfEnabled()
+                    }.onSuccess { started ->
+                        log.info(
+                            "L1Shadow filter-stall watchdog: engine restart {} (was stuck at {})",
+                            if (started == true) "succeeded" else "declined to start",
+                            stuckAt
+                        )
+                    }.onFailure {
+                        if (it is CancellationException) throw it
+                        log.warn("L1Shadow filter-stall watchdog: the engine restart failed", it)
+                    }
+                }.logCompletion("filter-stall engine restart")
             }
             FilterStallWatchdogDecider.Decision.EXHAUSTED -> {
                 log.error(
