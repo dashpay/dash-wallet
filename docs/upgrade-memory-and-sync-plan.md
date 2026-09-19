@@ -1982,8 +1982,13 @@ The verification is §28's, and it needs a device left alone:
 
 1. Open the app and use it, so `lastUsedAgo` is small. This matters: §32.6 showed that arming after
    an hour of non-use selects the **720-minute** tier, not 15.
-2. Close it (swipe from recents), or let the idle detector stop the service. The periodic alarm is
-   armed from `BlockchainServiceImpl.onDestroy` — there is no other way to arm it.
+2. Get the SERVICE to stop — not the app. Swiping the app from recents does NOT do this, and the
+   recipe originally said it did: the blockchain service is a foreground service and survives the
+   swipe (verified on the Samsung, 2026-09-19 — the service logged on for minutes afterwards and
+   nothing was armed). The alarm is armed from `BlockchainServiceImpl.onDestroy` and there is no
+   other way, so the service has to actually stop, which in practice means the idle detector.
+   `am force-stop` is NOT a substitute: it kills without lifecycle callbacks, so `onDestroy` never
+   runs, and Android cancels the package's alarms into the bargain.
 3. Expect `ALARM-DIAG armed reason=periodic-15min firstFireInMinutes=15 repeat=15min`. The
    `repeat=15min` IS the fix; it read `repeat=1440min` before, and the line hardcoded that value so
    it would have kept saying so.
@@ -1992,7 +1997,31 @@ The verification is §28's, and it needs a device left alone:
 5. **Do not touch the device.** Opening the app re-arms and restarts the clock.
 6. After ~15 minutes, look for a `started by alarm` line.
 
-Step 6 has never been observed to happen, on any device, in any build. Until it is, §28's question —
+### 32.11 The replay guard and the alarm are in tension
+
+Found while trying to run §32.10 on the Samsung. The idle detector wanted to stop the service and
+the replay guard refused, correctly:
+
+```
+18:28:01  idle counters, but a replay is in progress (99%) — keeping the service alive until it completes
+18:53:33  replay in progress on the SDK path — acquiring the wake lock
+```
+
+Both mitigations are doing their job, and together they produce a gap neither anticipated. The
+guard (`20975314f`) holds the service open so a replay is not interrupted. The alarm exists to
+restart a service that has stopped. While a replay is in progress the service cannot stop, so the
+alarm is never ARMED at all — not merely undelivered.
+
+For a healthy wallet that is harmless: the replay finishes, the service idles out, the alarm arms.
+For a wallet whose replay never finishes — Joel's exact case, 89.4 % for days — the service is held
+open indefinitely and the periodic alarm never enters the picture. The wallet then depends entirely
+on the foreground service surviving, which §33's ANR and LMK evidence says it does not.
+
+Not a defect in either fix, and no change is proposed here. It is recorded because it means §32's
+alarm work cannot be tested on a wallet that is still replaying, and because "the alarm never
+fires" and "the alarm was never armed" are different failures that look identical in a field log.
+
+Step 6 of §32.10 has never been observed to happen, on any device, in any build. Until it is, §28's question —
 whether the background FGS start is refused once the alarm IS delivered — remains unreachable
 rather than answered.
 
