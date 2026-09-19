@@ -325,6 +325,44 @@ Consequences for the new mechanism:
 
 On the upgrade launch the home screen switches to the SDK immediately. The header holds the last-known dashj total under a syncing label until the SDK replay reaches the tip (section 10.1 and 11.3 show the hold engaging). For the reference install that replay is about 680,000 mainnet blocks, and with the current engine and idle detector it has not finished in two days. The one-time sync explainer already says this happens once; under the no-fallback policy that statement has to be true before the policy ships, which is why section 6 ties Phase 1a to 1b and 1c.
 
+### 12.4 The policy was re-decided against #1555, 2026-09-19
+
+This branch was built on a version of `fix/contested-username-restore-identity` that has since
+been rebased away, so it never carried #1555 ("restore L1 sync after service teardown, and never
+leave the wallet without an engine") or #1559. Merging them in forced the policy to be settled
+rather than assumed, because #1555 rebuilt the very mechanism §12.1 removed.
+
+**The two designs, both internally coherent:**
+
+| | #1555 | This branch (§12) |
+|---|---|---|
+| dashj fallback | kept — "never hold dashj without an SDK L1 owner" | removed; `dashjEngineMayStart()` returns false always |
+| Cutover commit | gated on a boundary crossing AND durable bind evidence, inside `commitLocked` so every path inherits it | unconditional, on the upgrade launch |
+| `CutoverAutoCommitObserver` | retained; owns the gated decision | deleted — every install commits on its first launch, so there is nothing to observe |
+| Worst case | two engines can overlap, but there is always AN engine | one engine, and a permanently failing bind leaves NONE |
+
+**Why the gate cannot simply be adopted here.** #1555's `dashjEngineMayStart()` consults the
+cutover state and returns true when the state allows dashj or the SDK L1 flag is off. Ours returns
+false unconditionally. Declining to commit therefore does not keep dashj running on this branch —
+it leaves the SDK not owning L1 *and* dashj held, which is strictly worse than either design alone.
+The gate is only meaningful with the fallback it was written alongside.
+
+**Decision (Eric, 2026-09-19): no-fallback stands.** The merge takes our side for
+`CutoverCoordinator`, `SdkBindRetryService`, `DashPayConfig`, the cutover emulator script and the
+four affected test files; `CutoverAutoCommitObserver` stays deleted.
+
+**The cost, stated plainly.** §12.2 already names the devices this hurts — walletB
+(HONOR PTP-N49), 7 keystore denials out of 16 while unlocked, `ACTION_USER_PRESENT` suppressed for
+ten hours. Under this policy such a device syncs nothing until the user turns on
+Tools › dashj sync. #1555 exists because that was observed in the field, and its emulator script
+asserts `wallet is NOT engine-less` and names our behaviour as "the old bug". We are knowingly
+reinstating it, betting that Phase 1a item 3's classification and error surface gets the user to
+act instead. That bet is the open item, not the merge.
+
+**Consequence for whoever merges from this base next.** The collision will recur on every merge
+until one side of the codebase gives way. Do not resolve it file-by-file from the diff — read this
+section first, because the resolution is a policy choice and the conflict markers do not say so.
+
 ## 13. Implementation status, 2026-09-16
 
 Branch `fix/upgrade-memory-and-sync` in the `dash-wallet-upgrade` worktree, forked from `fix/contested-username-restore-identity`. One commit per item; the full `test_testNet3DebugUnitTest` suite passes at the end. Nothing is pushed and nothing has run on a device yet.
