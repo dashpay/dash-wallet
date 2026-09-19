@@ -1118,7 +1118,9 @@ internal class ProbeWatchdogDecider(
  */
 internal class FilterStallWatchdogDecider(
     private val stallThresholdMs: Long = L1ShadowSyncService.FILTER_STALL_THRESHOLD_MS,
-    private val maxRestarts: Int = L1ShadowSyncService.FILTER_STALL_MAX_RESTARTS
+    private val maxRestarts: Int = L1ShadowSyncService.FILTER_STALL_MAX_RESTARTS,
+    private val nearTipThresholdMs: Long = L1ShadowSyncService.FILTER_STALL_NEAR_TIP_THRESHOLD_MS,
+    private val nearTipBlocks: Long = L1ShadowSyncService.FILTER_STALL_NEAR_TIP_BLOCKS
 ) {
     enum class Decision { NONE, RESTART, EXHAUSTED }
 
@@ -1128,18 +1130,34 @@ internal class FilterStallWatchdogDecider(
     private var exhaustedReported = false
 
     /**
+     * The threshold the last decision was taken against, and how long the
+     * cursor had actually sat still. Exposed so the log can state what
+     * happened instead of a constant — the two tiers mean the constant is
+     * no longer the answer.
+     */
+    var lastThresholdMs: Long = 0L
+        private set
+    var lastStillMs: Long = 0L
+        private set
+
+    /**
      * @param filterHeight the engine's current filter cursor.
      * @param filterTarget the height it is scanning toward; 0 when unknown.
      * @param lastWalletEventMs when the engine last delivered ANY wallet
      *   event, or 0 when none has been seen since the start. This is the
      *   liveness signal that separates the two ways the cursor can sit
      *   still — see the note below.
+     * @param walletSyncedHeight the DURABLE watermark a restart would resume
+     *   from. It decides how long to wait, because it decides what a restart
+     *   COSTS — see [L1ShadowSyncService.FILTER_STALL_NEAR_TIP_THRESHOLD_MS].
+     *   0 when unknown, which is treated as far from the tip.
      */
     fun onCheck(
         nowMs: Long,
         filterHeight: Long,
         filterTarget: Long,
-        lastWalletEventMs: Long
+        lastWalletEventMs: Long,
+        walletSyncedHeight: Long = 0L
     ): Decision {
         val behind = filterTarget > 0 && filterHeight < filterTarget
         if (!behind) {
@@ -1153,7 +1171,15 @@ internal class FilterStallWatchdogDecider(
             lastAdvanceMs = nowMs
             return Decision.NONE
         }
-        if (nowMs - lastAdvanceMs < stallThresholdMs) return Decision.NONE
+        // Two tiers, chosen by what a restart would throw away rather than
+        // by taste: it resumes from walletSyncedHeight, so the price is the
+        // gap between that and the target, and near the tip there is no gap.
+        val restartCostBlocks = filterTarget - walletSyncedHeight
+        val nearTip = walletSyncedHeight > 0L && restartCostBlocks <= nearTipBlocks
+        val threshold = if (nearTip) nearTipThresholdMs else stallThresholdMs
+        if (nowMs - lastAdvanceMs < threshold) return Decision.NONE
+        lastThresholdMs = threshold
+        lastStillMs = nowMs - lastAdvanceMs
         // A STILL CURSOR IS NOT A STOPPED ENGINE. Observed on a Samsung
         // SM-S901U, 2026-09-19 (§34): the cursor sat at 1,555,999 for
         // 6 min 32 s while the SDK logged `wallet-event batch: folded=N`
@@ -1166,7 +1192,7 @@ internal class FilterStallWatchdogDecider(
         // progress to "fix" an engine that was working. So a restart
         // requires the cursor to be still AND the event stream to have gone
         // quiet for the same window. Events still arriving means alive.
-        if (lastWalletEventMs > 0L && nowMs - lastWalletEventMs < stallThresholdMs) {
+        if (lastWalletEventMs > 0L && nowMs - lastWalletEventMs < threshold) {
             return Decision.NONE
         }
         return when {
@@ -2828,19 +2854,22 @@ class L1ShadowSyncService internal constructor(
         if (runningWalletIdHex.value == null) return
         val p = _progress.value
         val decision = filterStallDecider.onCheck(
-            nowMs(), p.filterHeight, p.filterTarget, lastWalletEventMs
+            nowMs(), p.filterHeight, p.filterTarget, lastWalletEventMs, p.walletSyncedHeight
         )
         if (decision == FilterStallWatchdogDecider.Decision.NONE) return
         when (decision) {
             FilterStallWatchdogDecider.Decision.RESTART -> {
                 log.error(
                     "L1Shadow filter-stall watchdog: the filter cursor has sat at {} of {} " +
-                        "({} blocks short) for over {} minutes while the engine is running — " +
-                        "restarting the SPV engine. Known shape (MO-1022): every filter stored, " +
-                        "a few matched blocks never delivered, the download coordinator out of " +
-                        "retries.",
+                        "({} blocks short) for {}s — past the {}s threshold for a wallet whose " +
+                        "durable watermark is {} ({} blocks from the target, so a restart " +
+                        "re-walks that much) — restarting the SPV engine. Known shape (MO-1022): " +
+                        "every filter stored, a few matched blocks never delivered, the download " +
+                        "coordinator out of retries.",
                     p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
-                    filterStallThresholdMs / 60_000
+                    filterStallDecider.lastStillMs / 1000,
+                    filterStallDecider.lastThresholdMs / 1000,
+                    p.walletSyncedHeight, p.filterTarget - p.walletSyncedHeight
                 )
                 // THE RESTART MUST NOT RUN IN THIS COROUTINE. `stop()`
                 // cancels `watchdogJob`, and this check runs INSIDE it — so
@@ -3555,6 +3584,47 @@ class L1ShadowSyncService internal constructor(
          * and far below the latter.
          */
         internal const val FILTER_STALL_THRESHOLD_MS = 10 * 60_000L
+
+        /**
+         * The NEAR-TIP threshold, used when a restart would cost almost
+         * nothing (see [FILTER_STALL_NEAR_TIP_BLOCKS]).
+         *
+         * A restart resumes from the DURABLE wallet watermark, not from the
+         * filter cursor, so its price is `filterTarget - walletSyncedHeight`
+         * blocks of re-walking — not a constant. Measured both ends:
+         *
+         *  - Near the tip, 2026-09-19 on a Samsung SM-S901U: the cursor sat
+         *    at 1,553,000 of 1,556,891 with the wallet watermark already at
+         *    1,556,890. The watchdog restarted, and 47 s later the engine was
+         *    back at 1,556,890 — AHEAD of where it had been "stuck". Nothing
+         *    was lost, because there was nothing to re-walk.
+         *  - Mid-replay, the same restart is expensive: [stop]'s watermark
+         *    diagnostic recorded the durable value trailing the committed
+         *    cursor by up to 155,000 blocks at teardown on the reference
+         *    install.
+         *
+         * So one threshold cannot be right for both. Two minutes near the tip
+         * buys back the wait the ten-minute rule imposed; ten minutes
+         * elsewhere keeps a false positive from throwing away a long replay.
+         *
+         * The case this most matters for lands in the cheap tier: Joel's
+         * 12000012 wedge held `filters 2541081/2541084 wallet 2541081` for
+         * FORTY-NINE MINUTES and never recovered — a three-block gap, so a
+         * restart there costs seconds and the wait drops from never to two
+         * minutes. The longest BENIGN pause measured, 6 min 32 s, was also
+         * near the tip and would now be restarted after two; at 47 s a
+         * restart that is the right trade.
+         */
+        internal const val FILTER_STALL_NEAR_TIP_THRESHOLD_MS = 2 * 60_000L
+
+        /**
+         * How close the DURABLE watermark must be to the target for a restart
+         * to count as cheap. Deliberately generous relative to the 47 s
+         * measurement (a 1-block gap) and far below the 155,000-block
+         * mid-replay case, so the classification is not sensitive to where
+         * exactly in that range a wallet sits.
+         */
+        internal const val FILTER_STALL_NEAR_TIP_BLOCKS = 5_000L
 
         /**
          * Engine restarts the filter-stall watchdog will spend before

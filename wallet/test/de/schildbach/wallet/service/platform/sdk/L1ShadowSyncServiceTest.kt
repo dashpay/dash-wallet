@@ -362,6 +362,85 @@ class L1ShadowSyncServiceTest {
         )
     }
 
+    // ── Two-tier threshold: how long to wait is decided by what a restart costs ──
+
+    @Test
+    fun filterStall_nearTheTip_restartsAfterTwoMinutesNotTen() {
+        // MEASURED, Samsung SM-S901U 2026-09-19: cursor at 1,553,000 of
+        // 1,556,891 with the durable watermark ALREADY at 1,556,890. The
+        // watchdog restarted and 47 s later the engine was back at 1,556,890 —
+        // ahead of where it had been stuck. Nothing to re-walk, so nothing to
+        // protect by waiting ten minutes.
+        val d = stallDecider()
+        val stuck = 1_553_000L
+        val target = 1_556_891L
+        val durable = 1_556_890L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(90_000L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
+        )
+        assertEquals(
+            "a restart that re-walks 1 block does not deserve a ten-minute wait",
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(2 * 60_000L + 1, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
+        )
+    }
+
+    @Test
+    fun filterStall_midReplay_stillWaitsTheFullTenMinutes() {
+        // The other end: stop()'s watermark diagnostic recorded the durable
+        // value trailing the committed cursor by up to 155,000 blocks at
+        // teardown. A restart there re-walks all of it, so the short tier
+        // must not apply.
+        val d = stallDecider()
+        val stuck = 2_300_000L
+        val target = 2_540_971L
+        val durable = 2_385_971L // 155,000 short of the target
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(3 * 60_000L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
+        )
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = durable)
+        )
+    }
+
+    @Test
+    fun filterStall_joelsWedgeLandsInTheCheapTier() {
+        // Joel's 12000012 report: filters 2541081 of 2541084, wallet 2541081,
+        // held for FORTY-NINE MINUTES and never recovered. A three-block gap,
+        // so the restart is cheap and the wait drops from never to two minutes.
+        val d = stallDecider()
+        val stuck = 2_541_081L
+        val target = 2_541_084L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(2 * 60_000L + 1, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
+        )
+    }
+
+    @Test
+    fun filterStall_anUnknownWatermarkIsTreatedAsFarFromTheTip() {
+        // 0 means "not reported". Assuming the cheap tier on no evidence
+        // would shorten the wait for a wallet that may be mid-replay.
+        val d = stallDecider()
+        val stuck = 1_553_000L
+        val target = 1_556_891L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = 0L)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(3 * 60_000L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = 0L)
+        )
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = 0L)
+        )
+    }
+
     @Test
     fun filterStall_doesNotRestartWhileTheEngineIsStillDeliveringEvents() {
         // THE SAMSUNG CASE (SM-S901U, 2026-09-19, §34). The cursor sat at
