@@ -20,6 +20,7 @@ package org.dash.wallet.common.services
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.uri.BitcoinURI
@@ -30,6 +31,15 @@ import java.util.function.Predicate
 
 class LeftoverBalanceException(missing: Coin, message: String) : InsufficientMoneyException(missing, message)
 class DirectPayException(message: String) : Exception(message)
+
+/**
+ * Thrown when a BIP70 payment was submitted but the merchant's response was lost, so the
+ * transaction may or may not have been broadcast. The transaction's inputs stay locked while
+ * the wallet keeps checking the network in the background; once the transaction is seen it is
+ * committed as sent, and if it never appears the inputs are released.
+ */
+class PaymentSubmissionPendingException(val txId: Sha256Hash, cause: Throwable?) :
+    Exception("Payment submission result unknown for $txId; verification pending", cause)
 
 interface SendPaymentService {
     @Throws(LeftoverBalanceException::class)

@@ -69,6 +69,7 @@ import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.LocalDashColors
@@ -82,8 +83,10 @@ import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardOrderNotSavedException
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
 import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
 import org.dash.wallet.features.exploredash.utils.SavingsFormatting
@@ -474,18 +477,21 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 }
                 return@launch
             }
-            val transactionId = createSendingRequestFromDashUri(dashPaymentUrl)
+            val transactionId = createSendingRequestFromDashUri(dashPaymentUrl, data)
             transactionId?.let {
                 enterAmountViewModel.clearSavedState()
-                viewModel.saveGiftCardDummy(transactionId, data)
-                showGiftCardDetailsDialog(transactionId)
+                showGiftCardDetailsDialog(it)
             }
         }
     }
 
-    private suspend fun createSendingRequestFromDashUri(url: String): Sha256Hash? {
+    private suspend fun createSendingRequestFromDashUri(
+        url: String,
+        giftCards: List<GiftCardInfo>
+    ): Sha256Hash? {
         return try {
-            viewModel.createSendingRequestFromDashUri(url)
+            // submission and order recording together, so a destroyed view cannot separate them
+            viewModel.payAndRecordOrder(url, giftCards)
         } catch (x: InsufficientMoneyException) {
             hideLoading()
             log.error("purchaseGiftCard InsufficientMoneyException", x)
@@ -497,6 +503,22 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                     getString(R.string.button_close)
                 ).show(requireActivity())
             }
+            null
+        } catch (ex: PaymentSubmissionPendingException) {
+            // The payment left the device but the merchant's answer was lost. The wallet keeps
+            // checking the network in the background; the transaction shows up as sent once it is
+            // found, and its inputs are released if it never appears. Don't let the user retry now.
+            log.warn("purchaseGiftCard submission result unknown for {}", ex.txId, ex)
+            // payAndRecordOrder has already recorded the order against this transaction id.
+            enterAmountViewModel.clearSavedState()
+            showPaymentPending()
+            null
+        } catch (ex: GiftCardOrderNotSavedException) {
+            // The details screen reads the cards from the database and takes the order id from
+            // them, so opening it now would show an empty card that can never be fetched.
+            log.error("could not save gift cards for {}", ex.txId, ex)
+            enterAmountViewModel.clearSavedState()
+            showGiftCardSaveFailed(ex.submissionPending)
             null
         } catch (ex: DirectPayException) {
             log.error("purchaseGiftCard DirectPayException", ex)
@@ -562,6 +584,66 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             }
             null
         }
+    }
+
+    /**
+     * The payment went through but nothing could be stored about the gift card. Explain that,
+     * then leave the purchase flow the same way a successful purchase does.
+     */
+    /**
+     * The payment was submitted but its result is unknown. Leave the purchase flow afterwards:
+     * this order is paid for as far as we know, and keeping the sheet open would put a live
+     * Confirm button back in front of the user once the warning is closed. Clearing the entered
+     * amount is not enough on its own, because the cart comes from the view model's order info,
+     * so Confirm would place and pay for a second identical order out of any other unlocked
+     * outputs.
+     */
+    private fun showPaymentPending() {
+        hideLoading()
+        if (isAdded) {
+            AdaptiveDialog.create(
+                R.drawable.ic_warning,
+                getString(R.string.payment_submission_pending_title),
+                getString(R.string.payment_submission_pending_message),
+                getString(R.string.button_close)
+            ).show(requireActivity()).also { dismissPurchaseFlow() }
+        }
+    }
+
+    /**
+     * The cards could not be stored. [submissionPending] says whether the payment's result was
+     * also unknown, which changes the message: we must not claim the payment succeeded when it
+     * might not have, and must not imply it failed when it might have gone through.
+     */
+    private fun showGiftCardSaveFailed(submissionPending: Boolean) {
+        hideLoading()
+        if (isAdded) {
+            AdaptiveDialog.create(
+                R.drawable.ic_warning,
+                getString(
+                    if (submissionPending) {
+                        R.string.payment_submission_pending_title
+                    } else {
+                        R.string.gift_card_save_failed_title
+                    }
+                ),
+                getString(
+                    if (submissionPending) {
+                        R.string.gift_card_pending_and_not_saved_message
+                    } else {
+                        R.string.gift_card_save_failed_message
+                    }
+                ),
+                getString(R.string.button_close)
+            ).show(requireActivity()).also { dismissPurchaseFlow() }
+        }
+    }
+
+    /** Returns to the start of the flow and closes this sheet, as a successful purchase does. */
+    private fun dismissPurchaseFlow() {
+        val navController = findNavController()
+        navController.popBackStack(navController.graph.startDestinationId, false)
+        this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
     }
 
     private fun showGiftCardDetailsDialog(txId: Sha256Hash) {

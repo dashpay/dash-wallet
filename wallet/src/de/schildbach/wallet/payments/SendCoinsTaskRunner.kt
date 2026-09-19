@@ -59,6 +59,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -69,6 +70,9 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.call
 import org.dash.wallet.common.util.ensureSuccessful
 import org.slf4j.LoggerFactory
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.UnknownHostException
 import java.util.function.Consumer
 import java.util.function.Predicate
 import javax.inject.Inject
@@ -84,12 +88,29 @@ class SendCoinsTaskRunner @Inject constructor(
     coinJoinService: CoinJoinService,
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
-    private val metadataProvider: TransactionMetadataProvider
+    private val metadataProvider: TransactionMetadataProvider,
+    private val pendingPaymentVerifier: PendingDirectPaymentVerifier
 ) : SendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
         private val MAX_NO_CHANGE_FEE = Coin.valueOf(10_0000).multiply(2) // 0.002 DASH
         private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
+        /** How long a BIP70 payment waits for network evidence after an ambiguous HTTP failure. */
+        private const val DEFAULT_AMBIGUOUS_SUBMISSION_WAIT_MS = 30_000L
+    }
+
+    @VisibleForTesting
+    internal var ambiguousSubmissionWaitMs = DEFAULT_AMBIGUOUS_SUBMISSION_WAIT_MS
+
+    /**
+     * Client for the BIP70 payment POST. Connection-failure retries are off on purpose: OkHttp
+     * would otherwise re-send the payment message on a fresh connection after a failure that may
+     * already have reached the merchant, and report only the last (often unrelated, e.g. DNS)
+     * failure. Seeing the first failure is what lets [isDefinitelyNotSubmitted] tell a request
+     * that never left the device from one whose result is unknown.
+     */
+    private val directPayHttpClient by lazy {
+        Constants.HTTP_CLIENT.newBuilder().retryOnConnectionFailure(false).build()
     }
     private var coinJoinSend = false
     private var coinJoinMode = CoinJoinMode.NONE
@@ -330,18 +351,28 @@ class SendCoinsTaskRunner @Inject constructor(
      * This method completes the transaction, sends it via HTTP to the payment URL,
      * and handles the payment acknowledgment.
      *
+     * The whole submission runs in a [NonCancellable] context: once the payment message may have
+     * left the device, cancelling the caller (screen lock, activity recreation) must not abandon
+     * the transaction in an unknown state.
+     *
+     * If the HTTP request fails after it may have reached the merchant, the signed transaction is
+     * handed to [PendingDirectPaymentVerifier]: its inputs are locked and the network is watched
+     * for it. If it shows up within [ambiguousSubmissionWaitMs] it is returned as sent; otherwise
+     * [PaymentSubmissionPendingException] is thrown and verification continues in the background.
+     *
      * @param sendRequest The send request (should already be created via createSendRequest)
      * @param finalPaymentIntent The payment intent containing the payment URL
      * @param serviceName Optional service name for transaction metadata
      * @return The committed transaction
      * @throws DirectPayException if the payment is not acknowledged
-     * @throws IOException if the HTTP request fails
+     * @throws PaymentSubmissionPendingException if the submission result is unknown
+     * @throws IOException if the HTTP request fails before it could have reached the merchant
      */
     private suspend fun directPay(
         sendRequest: SendRequest,
         finalPaymentIntent: PaymentIntent,
         serviceName: String?
-    ): Transaction {
+    ): Transaction = withContext(NonCancellable) {
         log.info("completing sendRequest transaction")
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
@@ -365,7 +396,7 @@ class SendCoinsTaskRunner @Inject constructor(
         val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_SEND_PAYMENT)
         val request = buildOkHttpDirectPayRequest(requestUrl, payment)
         try {
-            val response = Constants.HTTP_CLIENT.call(request)
+            val response = directPayHttpClient.call(request)
             response.ensureSuccessful()
             requestUrl.toUri().host?.let {
                 timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
@@ -382,51 +413,51 @@ class SendCoinsTaskRunner @Inject constructor(
             if (!acknowledged) {
                 throw DirectPayException("Payment was not acknowledged by the server")
             }
-        } catch (e: Exception) {
-            if (e !is DirectPayException) {
-                log.warn("Payment submission failed, but transaction may have been sent: ${sendRequest.tx.txId}", e)
-                val tx = sendRequest.tx
-                val delays = listOf(0L, 1000L, 3000L, 5000L)
-
-                for (delayMs in delays) {
-                    delay(delayMs)
-                    if (isTransactionOnNetwork(tx)) {
-                        log.info("Transaction found on network despite HTTP timeout: ${tx.txId}")
-                        // The BIP70 server may have broadcast the tx and our wallet may have already
-                        // picked it up via the P2P network — use maybeCommitTx to avoid throwing
-                        // "commitTx called on the same transaction twice" in that race.
-                        if (!wallet.maybeCommitTx(tx)) {
-                            log.info("tx was already in the wallet (received via network): {}", tx.txId)
-                        }
-                        return tx
-                    }
-                }
-
-                log.warn("Transaction not found on network after timeout, treating as failed: ${tx.txId}")
-                // throw exception below
-            }
+        } catch (e: DirectPayException) {
             throw e
+        } catch (e: Exception) {
+            val tx = sendRequest.tx
+
+            if (isDefinitelyNotSubmitted(e)) {
+                log.warn("Payment submission failed before the request could be sent: ${tx.txId}", e)
+                throw e
+            }
+
+            log.warn("Payment submission failed, but transaction may have been sent: ${tx.txId}", e)
+            // The merchant may have received the payment and broadcast the tx. Lock its inputs
+            // so a retry can't double-spend them, and watch the network for it. The verifier
+            // is application-scoped and persists the tx, so it keeps going after this call,
+            // the purchase screen and even the process are gone.
+            val verification = pendingPaymentVerifier.quarantine(tx, requestUrl, serviceName)
+            val result = withTimeoutOrNull(ambiguousSubmissionWaitMs) { verification.await() }
+
+            if (result != null) {
+                log.info("Transaction found on network despite HTTP failure: ${tx.txId}")
+                return@withContext result
+            }
+
+            if (verification.isCompleted) {
+                // resolved as never sent within the wait: inputs are released, report the failure
+                log.warn("Transaction not found on network, treating as failed: ${tx.txId}")
+                throw e
+            }
+
+            log.warn("Transaction ${tx.txId} not seen on network yet, verification continues in the background")
+            throw PaymentSubmissionPendingException(tx.txId, e)
         }
 
-
-        return sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true)
+        sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true)
     }
 
-    private fun isTransactionOnNetwork(transaction: Transaction): Boolean {
-        return try {
-            val wallet = walletData.wallet ?: return false
-            val inWalletTx = wallet.getTransaction(transaction.txId)
-            val confidence = (inWalletTx ?: transaction).confidence ?: return false
-
-            // If we have the wallet’s instance, also accept network source as proof
-            (inWalletTx != null && confidence.source == TransactionConfidence.Source.NETWORK) ||
-                    confidence.isChainLocked ||
-                    confidence.isTransactionLocked ||
-                    confidence.numBroadcastPeers() > 0
-        } catch (e: Exception) {
-            log.debug("Error checking transaction network status: ${e.message}")
-            false
-        }
+    /**
+     * True when the failure happened before any bytes could reach the server (DNS or TCP connect
+     * failure), so the merchant definitely did not receive the payment. Anything else - a
+     * dropped connection, a read timeout, a reset HTTP/2 stream - may have been processed by the
+     * merchant and is treated as ambiguous. Relies on [directPayHttpClient] not retrying, so the
+     * exception describes the only attempt made.
+     */
+    private fun isDefinitelyNotSubmitted(e: Exception): Boolean {
+        return e is UnknownHostException || e is ConnectException || e is NoRouteToHostException
     }
 
     fun createSendRequest(
