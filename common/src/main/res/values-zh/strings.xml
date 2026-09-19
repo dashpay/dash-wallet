@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">忽略</string>
+    <string name="button_settings">设置</string>
     <string name="network_unavailable_return">返回到钱包</string>
     <string name="button_continue">继续</string>
     <string name="get_quote">获得报价</string>
     <string name="button_close">关闭</string>
     <string name="button_cancel">取消</string>
+    <string name="button_clear">清除</string>
+    <string name="button_paste">粘贴</string>
     <string name="button_confirm">确认</string>
     <string name="button_retry">重试</string>
     <string name="button_send_report">发送报告</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">相机出现了问题. 您可能需要重启设备.</string>
     <string name="scan_camera_permission_dialog_title">相机授权</string>
     <string name="scan_camera_permission_dialog_message">为了扫描QR码, 您需要授权相机功能.</string>
-
     <!-- address input -->
     <string name="address_input_title">发送Dash</string>
     <string name="show_clipboard">显示剪切板中的内容</string>
@@ -137,7 +139,8 @@
     <string name="input_parser_invalid_paymentrequest">无效的付款请求:\n%s</string>
     <string name="input_parser_invalid_transaction">无效的交易:\n%s</string>
     <string name="address_input_paste_from">粘自%s</string>
-    <string name="input_connect">连接</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">登录</string>
 
     <!-- others -->
     <string name="confirm_sec">确认 (%ss)</string>
@@ -149,4 +152,5 @@
     <string name="send_coins_error_msg">支付Dash时出现了问题!</string>
     <string name="from_dash_wallet_on_this_device">从此设备的 Dash钱包</string>
     <string name="preposition_at">在</string>
-    </resources>
+    <string name="info">资讯</string>
+</resources>

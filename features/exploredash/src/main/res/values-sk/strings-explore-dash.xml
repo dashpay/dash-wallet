@@ -213,6 +213,7 @@
     <string name="purchase_gift_card_details">Podrobnosti darčekovej karty</string>
     <string name="purchase_original_purchase">Pôvodná kúpa</string>
     <string name="purchase_check_current_balance">Zobraziť podrobnosti o karte</string>
+    <string name="purchase_redeem_url_challange">Výzva</string>
     <string name="purchase_card_number">Číslo karty</string>
     <string name="purchase_card_pin">PIN karty</string>
     <string name="purchase_view_transaction">Zobraziť podrobnosti transakcie</string>

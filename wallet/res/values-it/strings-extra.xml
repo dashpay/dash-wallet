@@ -40,6 +40,8 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Acquista &amp; Vendi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_dash_dex">Dash DEX</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Ricevi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importa chiave privata</string>

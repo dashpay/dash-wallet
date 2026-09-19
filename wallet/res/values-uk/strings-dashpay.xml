@@ -104,8 +104,10 @@
     <string name="search_user_no_results">Немає відповідних користувачів</string>
     <string name="search_user_loading">Пошук по імені користувача<b>"%"</b> в Dash Network</string>
     <string name="contact_request_pending">Непідтверджені запити на додавання до контактів</string>
+    <string name="send_button_label">Відправити</string>
     <string name="pay">Оплатити</string>
     <string name="contact_request_received_title">%s надіслав запит на дружбу</string>
+    <string name="contact_request_received_card_title">%s надіслав вам запит на додавання в контакти</string>
     <string name="contact_request_accept">Прийняти</string>
     <string name="contact_request_ignore">Ігнорувати</string>
 
@@ -543,4 +545,11 @@
     <string name="create_instant_username_button">Створити миттєве ім\'я користувача</string>
     <string name="create_instant_username_cancel">Відміна</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">Сканувати QR</string>
+    <string name="dash_connect_status_disconnected">Disconnected</string>
+    <string name="dash_connect_approve_verify_identity">Підтвердьте свою особу</string>
+    <string name="dash_connect_username">Ім\'я користувача</string>
+    <string name="dash_connect_identity">Ідентично</string>
+    <string name="dash_connect_deny">Відмовитись</string>
+    <string name="dash_connect_confirm">Підтвердити</string>
+    </resources>

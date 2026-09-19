@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Ματαίωση</string>
+    <string name="button_settings">Ρυθμίσεις</string>
     <string name="network_unavailable_return">Επιστροφή στο Πορτοφόλι</string>
     <string name="button_continue">Συνέχεια</string>
     <string name="get_quote">Αποκτήστε προσφορά</string>
     <string name="button_close">κλείσιμο</string>
     <string name="button_cancel">Ακύρωση</string>
+    <string name="button_clear">Εκκαθάριση</string>
+    <string name="button_paste">Επικόλληση</string>
     <string name="button_confirm">Επιβεβαίωση</string>
     <string name="button_retry">Επανάληψη</string>
     <string name="button_send_report">Αποστολή αναφοράς</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">Η κάμερα αντιμετωπίζει κάποιο πρόβλημα. Πιθανόν να χρειάζεται επανεκκίνηση.</string>
     <string name="scan_camera_permission_dialog_title">Άδεια κάμερας</string>
     <string name="scan_camera_permission_dialog_message">Για να μπορέσετε να σκανάρετε QR code, πρέπει να δώσετε δικαίωμα ώστε να χρησιμοποιηθεί η κάμερα σας.</string>
-
     <!-- address input -->
     <string name="address_input_title">Αποστολή Dash</string>
     <string name="show_clipboard">Εμφάνιση περιεχομένου στο πρόχειρο</string>
@@ -137,7 +139,8 @@
     <string name="input_parser_invalid_paymentrequest">Μη έγκυρο αίτημα πληρωμής:\n%s</string>
     <string name="input_parser_invalid_transaction">Μη έγκυρη συναλλαγή:\n%s</string>
     <string name="address_input_paste_from">Επικόλληση από %s</string>
-    <string name="input_connect">Σύνδεση</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">Είσοδος</string>
 
     <!-- others -->
     <string name="confirm_sec">Επιβεβαίωση(%ss)</string>
@@ -149,4 +152,5 @@
     <string name="send_coins_error_msg">Πρόβλημα στην αποστολή νομισμάτων!</string>
     <string name="from_dash_wallet_on_this_device">Στο πορτοφόλι Dash σε αυτή τη συσκευή</string>
     <string name="preposition_at">σε</string>
-    </resources>
+    <string name="info">πληροφορίες</string>
+</resources>

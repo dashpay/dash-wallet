@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">閉じる</string>
+    <string name="button_settings">設定</string>
     <string name="network_unavailable_return">ウォレットに返金</string>
     <string name="button_continue">続ける</string>
     <string name="get_quote">見積もりを得る</string>
     <string name="button_close">閉じる</string>
     <string name="button_cancel">キャンセル</string>
+    <string name="button_clear">消去する</string>
+    <string name="button_paste">貼付け</string>
     <string name="button_confirm">確認する</string>
     <string name="button_retry">リトライ</string>
     <string name="button_send_report">レポートを送信</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">カメラに問題があります。デバイスを再起動する必要がある可能性があります。</string>
     <string name="scan_camera_permission_dialog_title">カメラの利用権限</string>
     <string name="scan_camera_permission_dialog_message">QRコードをスキャンするには、カメラを利用する権限を許可する必要があります。</string>
-
     <!-- address input -->
     <string name="address_input_title">Dashの送金</string>
     <string name="show_clipboard">クリップボードのコンテンツを表示する</string>
@@ -137,7 +139,8 @@
     <string name="input_parser_invalid_paymentrequest">無効な支払のリクエスト:\n%s</string>
     <string name="input_parser_invalid_transaction">無効なトランザクション:\n%s</string>
     <string name="address_input_paste_from">%sからペーストする</string>
-    <string name="input_connect">接続する</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">ログイン</string>
 
     <!-- others -->
     <string name="confirm_sec">確認 (%s秒)</string>
@@ -149,4 +152,5 @@
     <string name="send_coins_error_msg">送金に問題が発生しました！</string>
     <string name="from_dash_wallet_on_this_device">この端末のDashウォレットから</string>
     <string name="preposition_at">で</string>
-    </resources>
+    <string name="info">情報</string>
+</resources>

@@ -198,6 +198,7 @@
     <string name="purchase_gift_card_details">礼品卡详情</string>
     <string name="purchase_original_purchase">原始购买</string>
     <string name="purchase_check_current_balance">查看礼品卡详情</string>
+    <string name="purchase_redeem_url_challange">挑战</string>
     <string name="purchase_card_number">卡号</string>
     <string name="purchase_card_pin">卡密码</string>
     <string name="purchase_view_transaction">查看交易详情</string>

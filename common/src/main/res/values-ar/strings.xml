@@ -44,11 +44,13 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">تجاهل</string>
+    <string name="button_settings">الإعدادات</string>
     <string name="network_unavailable_return">العودة إلى المحفظة</string>
     <string name="button_continue">استمر</string>
     <string name="get_quote">احصل على السعر</string>
     <string name="button_close">اغلاق</string>
     <string name="button_cancel">إلغاء</string>
+    <string name="button_paste">لصق</string>
     <string name="button_confirm">تأكيد</string>
     <string name="button_retry">إعادة المحاولة</string>
     <string name="button_send_report">إرسال تقرير</string>
@@ -112,7 +114,6 @@
     <string name="scan_camera_problem_dialog_message">هناك مشكلة في الكاميرا. ربما تحتاج إلى إعادة تشغيل الجهاز.</string>
     <string name="scan_camera_permission_dialog_title">إذن الكاميرا</string>
     <string name="scan_camera_permission_dialog_message">من أجل مسح رموز QR، تحتاج إلى منح إذن لاستخدام الكاميرا.</string>
-
     <!-- address input -->
     <string name="address_input_title">إرسال داش</string>
     <string name="show_clipboard">اظهر المحتوى في لوحة الملاحظات </string>
@@ -127,8 +128,6 @@
     <string name="input_parser_unverifyable_paymentrequest">تعذر التحقق من طلب الدفع:\n%s</string>
     <string name="input_parser_invalid_paymentrequest">طلب دفع غير صالح:\n%s</string>
     <string name="input_parser_invalid_transaction">معاملة غير صالحة:\n%s</string>
-    <string name="input_connect">اتصال</string>
-
     <!-- others -->
     <string name="confirm_sec">تأكيد (%s)</string>
     <string name="cancel_transaction">إلغاء الصفقة؟</string>

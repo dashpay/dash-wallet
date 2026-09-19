@@ -104,8 +104,10 @@
     <string name="search_user_no_results">هیچ کاربری با این مشخصات یافت نشد</string>
     <string name="search_user_loading">جستجو برای نام کاربری<b> "%"</b> در شبکه دش</string>
     <string name="contact_request_pending">درخواست تماس پاسخی دریافت نکرده است</string>
+    <string name="send_button_label">ارسال</string>
     <string name="pay">پرداخت</string>
     <string name="contact_request_received_title">%sدرخواست ارتباط با شما داده است</string>
+    <string name="contact_request_received_card_title">%sیک درخواست ارتباط برایتان فرستاد</string>
     <string name="contact_request_accept">قبول</string>
     <string name="contact_request_ignore">رد</string>
 
@@ -543,4 +545,11 @@
     <string name="create_instant_username_button">ایجاد نام کاربری فوری</string>
     <string name="create_instant_username_cancel">لغو</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">اسکن کیوآر کد</string>
+    <string name="dash_connect_status_disconnected">عدم اتصال به شبکه</string>
+    <string name="dash_connect_approve_verify_identity">احراز هویت کنید</string>
+    <string name="dash_connect_username">نام کاربری</string>
+    <string name="dash_connect_identity">هویت</string>
+    <string name="dash_connect_deny">اجازه نمی‌دهم</string>
+    <string name="dash_connect_confirm">تائید</string>
+    </resources>

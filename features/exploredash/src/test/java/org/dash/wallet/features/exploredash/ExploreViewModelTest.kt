@@ -40,11 +40,13 @@ import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
 import org.dash.wallet.features.exploredash.data.explore.model.SortOption
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
+import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.explore.DenomOption
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.explore.FilterMode
+import org.dash.wallet.features.exploredash.ui.explore.ScreenState
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -534,6 +536,285 @@ class ExploreViewModelTest {
             assertEquals(expected, actual)
             verify(dataSource).observePhysicalMerchants("", "", "", DenomOption.Both, "", bounds)
             verify(locationMock).getRadiusBounds(userLat, userLng, viewModel.radius)
+        }
+    }
+
+    @Test
+    fun openAllMerchantLocations_withoutMapBounds_stillLoadsLocations() {
+        // Regression test: the Google Map camera callback is the only writer of searchBounds.
+        // Without Google Play Services it never fires, and the locations flow used to wait on
+        // it forever, leaving the merchant locations screen permanently blank.
+        runBlocking {
+            val physicalLocations = merchants.filter { it.type == MerchantType.PHYSICAL }
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(physicalLocations) }
+                }
+
+            val locationMock = mock<UserLocationStateInt> {
+                onBlocking { getCountryCodeFromLocation() } doReturn "US"
+            }
+            val dataSyncStatus =
+                mock<DataSyncStatusService> {
+                    on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { hasObservedLastError() } doReturn flow { emit(false) }
+                }
+
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                dataSyncStatus,
+                networkState,
+                mockPreferences,
+                mock<AnalyticsService>()
+            )
+            viewModel.init(ExploreTopic.Merchants)
+            // searchBounds is deliberately never set — location services unavailable
+
+            viewModel.openAllMerchantLocations("merchant1", "DashSpend")
+            kotlinx.coroutines.delay(200)
+
+            assertEquals(physicalLocations, viewModel.allMerchantLocations.value)
+            verify(dataSource).observeMerchantLocations(
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(GeoBounds.noBounds),
+                eq(100)
+            )
+            verify(locationMock, never()).getRadiusBounds(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun openAllMerchantLocations_nearbyWithoutMapBounds_usesUserLocationNotOrigin() {
+        // Regression test for the review finding on the noBounds fallback: in Nearby mode
+        // with location enabled but no map bounds, the radius must be centered on the
+        // user's location — never on the noBounds placeholder center (0, 0).
+        runBlocking {
+            val userLat = 33.712711
+            val userLng = -84.4951037
+            val userBounds = GeoBounds(
+                northLat = 34.002174157200685,
+                eastLng = -84.14712188964452,
+                southLat = 33.423247842799306,
+                westLng = -84.8430855103555,
+                centerLat = userLat,
+                centerLng = userLng
+            )
+            val physicalLocations = merchants.filter { it.type == MerchantType.PHYSICAL }
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(physicalLocations) }
+                }
+
+            val locationMock =
+                mock<UserLocationStateInt> {
+                    on { getRadiusBounds(eq(userLat), eq(userLng), any()) } doReturn userBounds
+                    on { observeUpdates() } doReturn flowOf(UserLocation(userLat, userLng, 10.0))
+                    onBlocking { getCountryCodeFromLocation() } doReturn "US"
+                }
+            val dataSyncStatus =
+                mock<DataSyncStatusService> {
+                    on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { hasObservedLastError() } doReturn flow { emit(false) }
+                }
+
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                dataSyncStatus,
+                networkState,
+                mockPreferences,
+                mock<AnalyticsService>()
+            )
+            viewModel.init(ExploreTopic.Merchants)
+            viewModel.setFilterMode(FilterMode.Nearby)
+            viewModel.monitorUserLocation()
+            kotlinx.coroutines.delay(100)
+            // searchBounds is deliberately never set — the map never initialized
+
+            viewModel.openAllMerchantLocations("merchant1", "DashSpend")
+            kotlinx.coroutines.delay(200)
+
+            assertEquals(physicalLocations, viewModel.allMerchantLocations.value)
+            verify(locationMock).getRadiusBounds(userLat, userLng, viewModel.radius)
+            verify(locationMock, never()).getRadiusBounds(eq(0.0), eq(0.0), any())
+            verify(dataSource).observeMerchantLocations(
+                eq("merchant1"),
+                eq("DashSpend"),
+                eq(""),
+                eq(""),
+                eq(DenomOption.Both),
+                eq(""),
+                eq(userBounds),
+                any()
+            )
+        }
+    }
+
+    private fun multiLocationChain(): Merchant =
+        Merchant(
+            plusCode = "",
+            addDate = "2021-09-08 11:22",
+            updateDate = "2021-09-08 12:22",
+            deeplink = "",
+            paymentMethod = "gift card"
+        ).apply {
+            id = 100
+            merchantId = "merchant1"
+            source = "DashSpend"
+            name = "Chipotle"
+            active = true
+            type = MerchantType.ONLINE
+            // The grouped Online query counts the chain's online and "both" rows
+            physicalAmount = 25
+        }
+
+    private fun viewModelWithLocationDisabled(dataSource: ExploreDataSource): ExploreViewModel {
+        dataSource.stub { onBlocking { getGiftCardProvidersFor(any()) } doReturn emptyList() }
+        val locationMock = mock<UserLocationStateInt> {
+            onBlocking { getCountryCodeFromLocation() } doReturn "US"
+        }
+        val dataSyncStatus = mock<DataSyncStatusService> {
+            on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+            on { hasObservedLastError() } doReturn flow { emit(false) }
+        }
+        return ExploreViewModel(
+            dataSource,
+            locationMock,
+            dataSyncStatus,
+            networkState,
+            mockPreferences,
+            mock<AnalyticsService>()
+        ).also { it.init(ExploreTopic.Merchants) }
+    }
+
+    private fun addressLessLocation(locationId: Int): Merchant =
+        Merchant(
+            plusCode = "merged",
+            addDate = "2021-09-08 11:22",
+            updateDate = "2021-09-08 12:22",
+            deeplink = "",
+            paymentMethod = "gift card"
+        ).apply {
+            id = locationId
+            merchantId = "merchant1"
+            source = "CTX"
+            name = "Starbucks"
+            active = true
+            type = MerchantType.PHYSICAL
+            // Coordinates survive, everything a person could read does not
+            address1 = ""
+            city = ""
+            territory = ""
+            latitude = 33.21492
+            longitude = -86.82601
+        }
+
+    @Test
+    fun openAllMerchantLocations_locationsWithoutAddresses_opensDetailsInsteadOfPicker() {
+        // Regression test: explore records can carry coordinates but no street, city or
+        // territory. A picker listing them shows nothing but blank rows, so the merchant
+        // details screen is opened instead.
+        runBlocking {
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(listOf(addressLessLocation(1), addressLessLocation(2))) }
+                }
+            val viewModel = viewModelWithLocationDisabled(dataSource)
+
+            viewModel.openAllMerchantLocations("merchant1", "DashSpend")
+            kotlinx.coroutines.delay(200)
+
+            assertEquals(ScreenState.DetailsGrouped, viewModel.screenState.value)
+        }
+    }
+
+    @Test
+    fun openAllMerchantLocations_someLocationsHaveAddresses_opensThePicker() {
+        // The picker is still the right destination as soon as one location can be told apart.
+        runBlocking {
+            val readable = addressLessLocation(1).apply {
+                address1 = "2171 Kent Dairy Rd"
+                city = "Alabaster"
+                territory = "Alabama"
+            }
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(listOf(addressLessLocation(2), readable)) }
+                }
+            val viewModel = viewModelWithLocationDisabled(dataSource)
+
+            viewModel.openAllMerchantLocations("merchant1", "DashSpend")
+            kotlinx.coroutines.delay(200)
+
+            assertEquals(ScreenState.MerchantLocations, viewModel.screenState.value)
+        }
+    }
+
+    @Test
+    fun openMerchantDetails_onlineTabGroupedChain_opensDetailsNotAllLocations() {
+        // Regression test: in the Online tab, tapping a chain whose grouped row counts many
+        // physical locations, with location services disabled, must open the merchant details.
+        // It used to fall through to the all-locations screen (which the seeded noBounds query
+        // then filled with every location of the chain).
+        runBlocking {
+            val dataSource = mock<ExploreDataSource>()
+            val viewModel = viewModelWithLocationDisabled(dataSource)
+            viewModel.setFilterMode(FilterMode.Online)
+            val chain = multiLocationChain()
+
+            viewModel.openMerchantDetails(chain, isGrouped = true)
+            kotlinx.coroutines.delay(100)
+
+            assertEquals(ScreenState.DetailsGrouped, viewModel.screenState.value)
+            assertEquals(chain, viewModel.selectedItem.value)
+            verify(dataSource, never()).observeMerchantLocations(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+            )
+        }
+    }
+
+    @Test
+    fun openMerchantDetails_allTabGroupedChainWithoutLocation_opensAllLocations() {
+        // Counterpart of the Online-tab test: on the physical tabs the all-locations screen is
+        // still the right destination when the nearest location cannot be resolved.
+        runBlocking {
+            val physicalLocations = merchants.filter { it.type == MerchantType.PHYSICAL }
+            val dataSource =
+                mock<ExploreDataSource> {
+                    onBlocking {
+                        observeMerchantLocations(any(), any(), any(), any(), any(), any(), any(), any())
+                    } doReturn flow { emit(physicalLocations) }
+                }
+            val viewModel = viewModelWithLocationDisabled(dataSource)
+            viewModel.setFilterMode(FilterMode.All)
+            val chain = multiLocationChain()
+
+            viewModel.openMerchantDetails(chain, isGrouped = true)
+            kotlinx.coroutines.delay(200)
+
+            assertEquals(ScreenState.MerchantLocations, viewModel.screenState.value)
+            assertEquals(physicalLocations, viewModel.allMerchantLocations.value)
         }
     }
 

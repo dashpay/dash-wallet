@@ -105,8 +105,10 @@ používateľské meno</b></string>
     <string name="search_user_no_results">Žiadni používatelia, ktorí by sa zhodovali</string>
     <string name="search_user_loading">V sieti Dash sa hľadá používateľské meno <b>"%"</b> </string>
     <string name="contact_request_pending">Žiadosť o kontakt čaká na potvrdenie</string>
+    <string name="send_button_label">Poslať</string>
     <string name="pay">Zaplatiť</string>
     <string name="contact_request_received_title">%s požiadal o priateľstvo</string>
+    <string name="contact_request_received_card_title">%s vám poslal žiadosť o kontakt</string>
     <string name="contact_request_accept">Prijať</string>
     <string name="contact_request_ignore">Ignorovať</string>
 
@@ -544,4 +546,12 @@ používateľské meno</b></string>
     <string name="create_instant_username_button">Vytvoriť okamžité používateľské meno</string>
     <string name="create_instant_username_cancel">Zrušiť</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">Skenovať QR kód</string>
+    <string name="dash_connect_status_disconnected">Odpojený</string>
+    <string name="dash_connect_approve_verify_identity">Overte svoju identitu</string>
+    <string name="dash_connect_username">Používateľské meno</string>
+    <string name="dash_connect_identity">Identita</string>
+    <string name="dash_connect_approve_no_withdraw_funds">Výber finančných prostriedkov</string>
+    <string name="dash_connect_deny">Zamietnuť</string>
+    <string name="dash_connect_confirm">Potvrdiť</string>
+    </resources>

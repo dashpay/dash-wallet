@@ -203,6 +203,7 @@
     <string name="purchase_gift_card_details">Mga detalye ng gift card</string>
     <string name="purchase_original_purchase">Orihinal na pagbili</string>
     <string name="purchase_check_current_balance">Tingnan ang mga detalye ng card</string>
+    <string name="purchase_redeem_url_challange">Hindi sinusuportahan ng swap backend na ito ang buy flow.</string>
     <string name="purchase_card_number">Numero ng card</string>
     <string name="purchase_card_pin">PIN ng Card</string>
     <string name="purchase_view_transaction">Tingnan ang Mga Detalye ng Transaksyon</string>
