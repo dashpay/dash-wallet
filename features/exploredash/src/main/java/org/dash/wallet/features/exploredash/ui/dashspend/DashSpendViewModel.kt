@@ -117,11 +117,17 @@ data class GiftCardShoppingCart constructor(
 }
 
 /**
- * The payment went through but the gift cards could not be stored, so there is a real purchase
- * with no local record of what was bought.
+ * The payment left the device but the gift cards could not be stored, so there is a purchase with
+ * no local record of what was bought and no order id left to recover it with.
+ *
+ * @param submissionPending true when the payment's result was also unknown. Both facts matter:
+ *   the caller must not offer a retry, and must not claim the payment succeeded either.
  */
-class GiftCardOrderNotSavedException(val txId: Sha256Hash, cause: Throwable) :
-    Exception("Gift cards could not be saved for $txId", cause)
+class GiftCardOrderNotSavedException(
+    val txId: Sha256Hash,
+    val submissionPending: Boolean,
+    cause: Throwable
+) : Exception("Gift cards could not be saved for $txId (pending=$submissionPending)", cause)
 
 @HiltViewModel
 class DashSpendViewModel @Inject constructor(
@@ -339,8 +345,12 @@ class DashSpendViewModel @Inject constructor(
             try {
                 saveGiftCardsForPendingPayment(ex.txId, giftCards)
             } catch (e: Exception) {
-                // The unknown payment status is the more important thing to report.
+                // Exactly the failure the success path reports, and more damaging here: the
+                // payment may have reached the merchant and this was the only copy of the order.
+                // Reporting just the pending status would let the caller dismiss the flow
+                // believing the order was recorded.
                 log.error("could not record the pending gift card order for {}", ex.txId, e)
+                throw GiftCardOrderNotSavedException(ex.txId, submissionPending = true, cause = e)
             }
             throw ex
         }
@@ -348,7 +358,7 @@ class DashSpendViewModel @Inject constructor(
         try {
             saveGiftCardDummy(txId, giftCards)
         } catch (e: Exception) {
-            throw GiftCardOrderNotSavedException(txId, e)
+            throw GiftCardOrderNotSavedException(txId, submissionPending = false, cause = e)
         }
         txId
     }

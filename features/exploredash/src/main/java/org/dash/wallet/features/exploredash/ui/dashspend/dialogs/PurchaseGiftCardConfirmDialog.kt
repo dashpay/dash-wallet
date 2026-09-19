@@ -518,7 +518,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             // them, so opening it now would show an empty card that can never be fetched.
             log.error("could not save gift cards for {}", ex.txId, ex)
             enterAmountViewModel.clearSavedState()
-            showGiftCardSaveFailed()
+            showGiftCardSaveFailed(ex.submissionPending)
             null
         } catch (ex: DirectPayException) {
             log.error("purchaseGiftCard DirectPayException", ex)
@@ -610,13 +610,30 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
-    private fun showGiftCardSaveFailed() {
+    /**
+     * The cards could not be stored. [submissionPending] says whether the payment's result was
+     * also unknown, which changes the message: we must not claim the payment succeeded when it
+     * might not have, and must not imply it failed when it might have gone through.
+     */
+    private fun showGiftCardSaveFailed(submissionPending: Boolean) {
         hideLoading()
         if (isAdded) {
             AdaptiveDialog.create(
                 R.drawable.ic_warning,
-                getString(R.string.gift_card_save_failed_title),
-                getString(R.string.gift_card_save_failed_message),
+                getString(
+                    if (submissionPending) {
+                        R.string.payment_submission_pending_title
+                    } else {
+                        R.string.gift_card_save_failed_title
+                    }
+                ),
+                getString(
+                    if (submissionPending) {
+                        R.string.gift_card_pending_and_not_saved_message
+                    } else {
+                        R.string.gift_card_save_failed_message
+                    }
+                ),
                 getString(R.string.button_close)
             ).show(requireActivity()).also { dismissPurchaseFlow() }
         }

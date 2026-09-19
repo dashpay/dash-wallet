@@ -737,15 +737,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             )
         }
 
+        // One-shot, not repeating. Nothing ever cancels this request code, so a repeating alarm
+        // would outlive the recovery it was scheduled for and keep waking the service every 15
+        // minutes alongside the backoff alarm, defeating the 12 and 24 hour intervals that one
+        // is meant to apply. The long-term safety net is that backoff alarm; this one only has
+        // to deliver the fast restart.
         val restartTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
-        alarmManager.setInexactRepeating(
-            AlarmManager.RTC_WAKEUP,
-            restartTime,
-            AlarmManager.INTERVAL_FIFTEEN_MINUTES,
-            alarmIntent
-        )
+        alarmManager.set(AlarmManager.RTC_WAKEUP, restartTime, alarmIntent)
 
-        log.info("Scheduled service restart in 1 minute at {}", Date(restartTime))
+        log.info("Scheduled one-shot service restart in 1 minute at {}", Date(restartTime))
     }
 
     private val blockchainDownloadListener: MyDownloadProgressTracker =

@@ -246,6 +246,7 @@
     <string name="retry">Retry</string>
     <string name="gift_card_purchase_failed">Gift card purchase failed</string>
     <string name="gift_card_save_failed_title">Gift card details not saved</string>
+    <string name="gift_card_pending_and_not_saved_message">Your payment was sent, but we could not confirm it reached the merchant and the gift card could not be saved on this device. Do not buy this gift card again. Check your transaction history, and contact support with that transaction if the card does not appear.</string>
     <string name="gift_card_save_failed_message">Your payment was sent successfully, but the gift card could not be saved on this device. Do not buy this gift card again. You can find the payment in your transaction history, and support can recover the card from it.</string>
     <string name="try_again">Try Again</string>
     <string name="cancel">Cancel</string>
