@@ -116,18 +116,23 @@ data class GiftCardShoppingCart constructor(
     fun cardCount(): Int = items.sumOf { it.quantity }
 }
 
-/**
- * The payment left the device but the gift cards could not be stored, so there is a purchase with
- * no local record of what was bought and no order id left to recover it with.
- *
- * @param submissionPending true when the payment's result was also unknown. Both facts matter:
- *   the caller must not offer a retry, and must not claim the payment succeeded either.
- */
-class GiftCardOrderNotSavedException(
-    val txId: Sha256Hash,
-    val submissionPending: Boolean,
-    cause: Throwable
-) : Exception("Gift cards could not be saved for $txId (pending=$submissionPending)", cause)
+/** How far a gift card purchase has got, held by the view model so it survives dialog recreation. */
+enum class GiftCardSubmissionState {
+    IDLE,
+
+    /** A payment is being submitted right now. */
+    IN_PROGRESS,
+
+    /** Submitted with an unknown result. It may have reached the merchant, so never resubmit. */
+    PENDING,
+
+    /** Paid for. */
+    COMPLETED
+}
+
+/** A second purchase was attempted while one was already submitted or unresolved. */
+class DuplicateGiftCardSubmissionException(val state: GiftCardSubmissionState) :
+    Exception("A gift card purchase is already $state")
 
 @HiltViewModel
 class DashSpendViewModel @Inject constructor(
@@ -320,53 +325,77 @@ class DashSpendViewModel @Inject constructor(
         } ?: throw CTXSpendException("purchaseGiftCard error: no merchant")
     }
 
+    private val _submissionState = MutableStateFlow(GiftCardSubmissionState.IDLE)
+
     /**
-     * Submits the payment and records the ordered cards as one operation that the caller's
-     * lifecycle cannot interrupt.
+     * Survives dialog recreation because this view model is scoped to the navigation graph, not
+     * to a fragment, so a dialog rebuilt after the activity is destroyed still sees that a
+     * purchase is outstanding.
+     */
+    val submissionState: StateFlow<GiftCardSubmissionState> = _submissionState.asStateFlow()
+
+    /**
+     * Submits the payment and records the ordered cards as one operation that neither the
+     * caller's lifecycle nor process death can pull apart.
      *
-     * The purchase screen runs on `viewLifecycleOwner.lifecycleScope`, so a screen lock or
-     * rotation during submission would otherwise cancel the caller and skip the recording, even
-     * though the payment itself continues. That is precisely the situation this recovery work
-     * exists for, and nothing else holds the order: [PendingDirectPayment] keeps the transaction
-     * and a service name, not the order ids or redemption challenges.
+     * The cards are written while the transaction is built and before anything is sent, because
+     * from that moment the payment can outlive this process: [PendingDirectPayment] keeps the
+     * transaction and the provider, not the order ids or redemption challenges, and those exist
+     * nowhere else. If the send then definitively fails, the rows are removed again.
      *
-     * @throws PaymentSubmissionPendingException if the submission result is unknown; the order is
-     *   recorded first, so a payment that did arrive still shows up as a gift card purchase.
-     * @throws GiftCardOrderNotSavedException if the payment succeeded but the cards could not be
-     *   stored, so the caller can say so instead of opening an empty details screen.
+     * @throws DuplicateGiftCardSubmissionException if a purchase is already under way or
+     *   unresolved, so a recreated dialog cannot pay for the same order twice.
+     * @throws PaymentSubmissionPendingException if the submission result is unknown. The state
+     *   stays [GiftCardSubmissionState.PENDING], blocking any further purchase.
      */
     suspend fun payAndRecordOrder(
         paymentUri: String,
         giftCards: List<GiftCardInfo>
     ): Sha256Hash = withContext(NonCancellable) {
-        val txId = try {
-            createSendingRequestFromDashUri(paymentUri)
-        } catch (ex: PaymentSubmissionPendingException) {
-            try {
-                saveGiftCardsForPendingPayment(ex.txId, giftCards)
-            } catch (e: Exception) {
-                // Exactly the failure the success path reports, and more damaging here: the
-                // payment may have reached the merchant and this was the only copy of the order.
-                // Reporting just the pending status would let the caller dismiss the flow
-                // believing the order was recorded.
-                log.error("could not record the pending gift card order for {}", ex.txId, e)
-                throw GiftCardOrderNotSavedException(ex.txId, submissionPending = true, cause = e)
-            }
-            throw ex
+        val current = _submissionState.value
+        if (current != GiftCardSubmissionState.IDLE) {
+            throw DuplicateGiftCardSubmissionException(current)
         }
+        _submissionState.value = GiftCardSubmissionState.IN_PROGRESS
 
+        var recordedTxId: Sha256Hash? = null
         try {
-            saveGiftCardDummy(txId, giftCards)
+            val txId = createSendingRequestFromDashUri(paymentUri) { newTxId ->
+                saveGiftCardDummy(newTxId, giftCards)
+                recordedTxId = newTxId
+            }
+            _submissionState.value = GiftCardSubmissionState.COMPLETED
+            txId
+        } catch (ex: PaymentSubmissionPendingException) {
+            // The merchant may hold this payment, so the purchase stays blocked for good.
+            _submissionState.value = GiftCardSubmissionState.PENDING
+            throw ex
         } catch (e: Exception) {
-            throw GiftCardOrderNotSavedException(txId, submissionPending = false, cause = e)
+            // Nothing was sent, or the send definitively failed, so any rows written for this
+            // transaction describe an order that was never placed.
+            recordedTxId?.let { txId ->
+                try {
+                    transactionMetadata.forgetTransaction(txId)
+                } catch (ce: Exception) {
+                    log.error("could not discard the order recorded for failed payment {}", txId, ce)
+                }
+            }
+            _submissionState.value = GiftCardSubmissionState.IDLE
+            throw e
         }
-        txId
     }
 
-    suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash = withContext(Dispatchers.IO) {
+    suspend fun createSendingRequestFromDashUri(
+        paymentUri: String,
+        onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
+    ): Sha256Hash = withContext(Dispatchers.IO) {
         val transaction = sendPaymentService.payWithDashUrl(
             paymentUri,
-            _giftCardMerchant.value?.source?.lowercase() ?: ServiceName.CTXSpend
+            // The selected provider, not the merchant's source field. These disagree for a
+            // PiggyCards order on a CTX-sourced merchant, and this is the name the recovery path
+            // stores and GiftCardDetailsViewModel routes retrieval by.
+            selectedProvider?.serviceName ?: ServiceName.CTXSpend,
+            onTransactionCreated
         )
         log.info("ctx spend transaction: ${transaction.txId}")
         transactionMetadata.markGiftCardTransaction(
@@ -603,22 +632,6 @@ class DashSpendViewModel @Inject constructor(
 
     suspend fun logout(provider: GiftCardProviderType) {
         providers[provider]?.logout()
-    }
-
-    /**
-     * Records a purchase whose payment result is unknown, so it looks like any other gift card
-     * purchase if the payment did reach the merchant. The success path marks the transaction from
-     * [createSendingRequestFromDashUri]; that never runs when submission ends in
-     * PaymentSubmissionPendingException, so do both here. If the wallet later proves the payment
-     * was never sent, PendingDirectPaymentVerifier discards all of it again.
-     */
-    suspend fun saveGiftCardsForPendingPayment(txId: Sha256Hash, giftCards: List<GiftCardInfo>) {
-        transactionMetadata.markGiftCardTransaction(
-            txId,
-            selectedProvider?.serviceName ?: ServiceName.CTXSpend,
-            _giftCardMerchant.value?.logoLocation
-        )
-        saveGiftCardDummy(txId, giftCards)
     }
 
     /**

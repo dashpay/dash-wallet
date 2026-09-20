@@ -82,6 +82,7 @@ class PendingDirectPaymentVerifierTest {
         walletApplication = mockk(relaxed = true)
         blockchainStateProvider = mockk(relaxed = true)
         every { blockchainStateProvider.getNetworkStatus() } returns NetworkStatus.DISCONNECTED
+        every { blockchainStateProvider.getConnectedPeerCount() } returns 0
         coEvery { blockchainStateProvider.getState() } returns null
         metadataProvider = mockk(relaxed = true)
         coEvery { metadataProvider.forgetTransaction(any()) } returns true
@@ -112,6 +113,7 @@ class PendingDirectPaymentVerifierTest {
 
     private fun goOnlineAndSynced() {
         every { blockchainStateProvider.getNetworkStatus() } returns NetworkStatus.CONNECTED
+        every { blockchainStateProvider.getConnectedPeerCount() } returns 4
         coEvery { blockchainStateProvider.getState() } returns BlockchainState(
             Date(), 100_000, false, EnumSet.noneOf(BlockchainState.Impediment::class.java), 0, 0, 100
         )
@@ -213,6 +215,22 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
+    fun `keeps inputs locked and keeps verifying when the quarantine cannot be persisted`() = runBlocking {
+        // After an ambiguous submission the merchant may already hold the transaction, so a
+        // storage failure must not free the inputs or report the payment as failed: that would
+        // let the caller offer a retry and pay twice.
+        coEvery { config.add(any()) } throws RuntimeException("datastore is gone")
+        val tx = createTransaction()
+
+        val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        delay(200)
+
+        tx.inputs.forEach { assertTrue(wallet.isLockedOutput(it.outpoint)) }
+        assertTrue("verification must continue in memory", verifier.isTracked(tx.txId))
+        assertFalse(result.isCompleted)
+    }
+
+    @Test
     fun `keeps inputs locked and the payment active when the release cannot be persisted`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 100L
@@ -265,6 +283,25 @@ class PendingDirectPaymentVerifierTest {
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
         assertFalse(verifier.isTracked(tx.txId))
         coVerify { config.remove(tx.txId) }
+    }
+
+    @Test
+    fun `does not release while no peers are connected, however synced the status looks`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        goOnlineAndSynced()
+        // NetworkStatus only leaves CONNECTED by way of DISCONNECTING, so it can read CONNECTED
+        // with no peers at all, and the cached chain tip stays recent for another half hour.
+        // Without peers there is no evidence either way, and the tx may already be on the network.
+        every { blockchainStateProvider.getConnectedPeerCount() } returns 0
+        val tx = createTransaction()
+
+        val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        delay(500)
+
+        assertFalse("must not declare a payment dead without ever seeing the network", result.isCompleted)
+        tx.inputs.forEach { assertTrue(wallet.isLockedOutput(it.outpoint)) }
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
     }
 
     @Test

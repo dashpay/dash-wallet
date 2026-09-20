@@ -109,11 +109,15 @@ class PendingDirectPaymentVerifier @Inject constructor(
         try {
             config.add(payment)
         } catch (e: Exception) {
-            // The locks live in memory only, and without a persisted record resume() could never
-            // find them again: they would strand these outputs until the process restarts.
-            log.error("could not persist pending direct payment {}, releasing its inputs", tx.txId, e)
-            unlockInputs(wallet, tx)
-            throw e
+            // Keep the locks and keep verifying. By this point the merchant may already hold the
+            // signed transaction, so the inputs must not become spendable and the caller must not
+            // be told the payment failed: it would offer a retry and could pay twice. Losing the
+            // record costs durability across process death, which is the lesser harm, so carry on
+            // verifying in memory.
+            log.error(
+                "could not persist pending direct payment {}, continuing to verify it in memory only",
+                tx.txId, e
+            )
         }
         log.info("quarantined possibly-sent tx {} ({} inputs locked)", tx.txId, tx.inputs.size)
         return track(tx, payment)
@@ -220,6 +224,14 @@ class PendingDirectPaymentVerifier @Inject constructor(
 
     private suspend fun isConnectedAndSynced(): Boolean {
         if (blockchainStateProvider.getNetworkStatus() != NetworkStatus.CONNECTED) {
+            return false
+        }
+        // Peers, not just NetworkStatus. The status only leaves CONNECTED by way of
+        // DISCONNECTING, so losing P2P while the device keeps internet leaves it reading
+        // CONNECTED with no peers, and the cached chain tip stays acceptable for another half
+        // hour. Without this the grace period could expire having seen no network at all, and a
+        // payment the merchant did broadcast would be declared dead and its order deleted.
+        if (blockchainStateProvider.getConnectedPeerCount() <= 0) {
             return false
         }
         val state = blockchainStateProvider.getState() ?: return false

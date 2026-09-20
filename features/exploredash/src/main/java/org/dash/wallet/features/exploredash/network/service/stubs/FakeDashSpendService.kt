@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.network.service.stubs
 import android.net.Uri
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
@@ -66,7 +67,11 @@ class FakeDashSpendService @Inject constructor(
         return realService.estimateNetworkFee(address, amount, emptyWallet)
     }
 
-    override suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction {
+    override suspend fun payWithDashUrl(
+        dashUri: String,
+        serviceName: String?,
+        onTransactionCreated: (suspend (Sha256Hash) -> Unit)?
+    ): Transaction {
         return if (dashUri.startsWith(DASH_SPEND_SCHEMA)) {
             val uri = Uri.parse(dashUri)
             val amount = Coin.valueOf(uri.getQueryParameter("amount")?.toLong() ?: 0)
@@ -75,7 +80,7 @@ class FakeDashSpendService @Inject constructor(
                 amount
             )
         } else {
-            realService.payWithDashUrl(dashUri, serviceName)
+            realService.payWithDashUrl(dashUri, serviceName, onTransactionCreated)
         }
     }
 

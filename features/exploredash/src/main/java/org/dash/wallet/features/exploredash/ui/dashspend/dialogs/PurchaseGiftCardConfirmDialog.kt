@@ -86,8 +86,9 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
-import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardOrderNotSavedException
+import org.dash.wallet.features.exploredash.ui.dashspend.DuplicateGiftCardSubmissionException
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardSubmissionState
 import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
 import org.dash.wallet.features.exploredash.utils.SavingsFormatting
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
@@ -107,6 +108,8 @@ data class PurchaseConfirmUIState(
     val youPayText: String = "",
     val breakdownText: String? = null,
     val isLoading: Boolean = false,
+    /** A purchase is already submitted or unresolved, so this order must not be paid for again. */
+    val submissionBlocked: Boolean = false,
     val useExpandedLayout: Boolean = false,
     val isNetworkAvailable: Boolean = true
 )
@@ -253,6 +256,19 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         viewModel.isNetworkAvailable.observe(viewLifecycleOwner) { isNetworkAvailable ->
             _uiState.update {
                 it.copy(isNetworkAvailable = isNetworkAvailable)
+            }
+        }
+
+        // Held by the view model, so a dialog rebuilt after activity recreation starts out
+        // knowing a purchase is outstanding instead of offering Confirm again.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.submissionState.collect { state ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = state == GiftCardSubmissionState.IN_PROGRESS,
+                        submissionBlocked = state != GiftCardSubmissionState.IDLE
+                    )
+                }
             }
         }
     }
@@ -513,12 +529,10 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             enterAmountViewModel.clearSavedState()
             showPaymentPending()
             null
-        } catch (ex: GiftCardOrderNotSavedException) {
-            // The details screen reads the cards from the database and takes the order id from
-            // them, so opening it now would show an empty card that can never be fetched.
-            log.error("could not save gift cards for {}", ex.txId, ex)
-            enterAmountViewModel.clearSavedState()
-            showGiftCardSaveFailed(ex.submissionPending)
+        } catch (ex: DuplicateGiftCardSubmissionException) {
+            // A purchase is already submitted or unresolved for this order. Do not start another.
+            log.warn("ignoring duplicate gift card submission, state is {}", ex.state)
+            hideLoading()
             null
         } catch (ex: DirectPayException) {
             log.error("purchaseGiftCard DirectPayException", ex)
@@ -605,35 +619,6 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 R.drawable.ic_warning,
                 getString(R.string.payment_submission_pending_title),
                 getString(R.string.payment_submission_pending_message),
-                getString(R.string.button_close)
-            ).show(requireActivity()).also { dismissPurchaseFlow() }
-        }
-    }
-
-    /**
-     * The cards could not be stored. [submissionPending] says whether the payment's result was
-     * also unknown, which changes the message: we must not claim the payment succeeded when it
-     * might not have, and must not imply it failed when it might have gone through.
-     */
-    private fun showGiftCardSaveFailed(submissionPending: Boolean) {
-        hideLoading()
-        if (isAdded) {
-            AdaptiveDialog.create(
-                R.drawable.ic_warning,
-                getString(
-                    if (submissionPending) {
-                        R.string.payment_submission_pending_title
-                    } else {
-                        R.string.gift_card_save_failed_title
-                    }
-                ),
-                getString(
-                    if (submissionPending) {
-                        R.string.gift_card_pending_and_not_saved_message
-                    } else {
-                        R.string.gift_card_save_failed_message
-                    }
-                ),
                 getString(R.string.button_close)
             ).show(requireActivity()).also { dismissPurchaseFlow() }
         }
@@ -837,7 +822,7 @@ internal fun PurchaseGiftCardConfirmView(
                 size = Size.Large,
                 isLoading = uiState.isLoading,
                 onClick = onConfirm,
-                isEnabled = uiState.isNetworkAvailable,
+                isEnabled = uiState.isNetworkAvailable && !uiState.isLoading && !uiState.submissionBlocked,
                 modifier = Modifier.weight(1f)
             )
         }

@@ -643,6 +643,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         @SuppressLint("WrongConstant")
         private fun changed(numPeers: Int) {
             if (stopped.get()) return
+            blockchainStateDataProvider.setConnectedPeerCount(numPeers)
             val networkStatus = blockchainStateDataProvider.getNetworkStatus()
             if (numPeers > 0 && networkStatus == NetworkStatus.CONNECTING) blockchainStateDataProvider.setNetworkStatus(
                 NetworkStatus.CONNECTED
@@ -1240,6 +1241,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.error("Error shutting down risk analyzer", e)
                 }
                 peerGroup = null
+                blockchainStateDataProvider.setConnectedPeerCount(0)
                 log.debug("releasing wakelock")
                 if (wakeLock!!.isHeld) {
                     wakeLock!!.release()
@@ -1441,6 +1443,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // re-lock inputs of BIP70 payments with an unknown result and keep watching for them
                 pendingDirectPaymentVerifier.resume()
                 peerConnectivityListener = PeerConnectivityListener()
+                blockchainStateDataProvider.setConnectedPeerCount(0)
                 broadcastPeerState(0)
                 blockChainFile =
                     File(getDir("blockstore", MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME)

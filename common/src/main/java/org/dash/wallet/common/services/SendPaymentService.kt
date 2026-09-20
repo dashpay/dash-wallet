@@ -65,7 +65,17 @@ interface SendPaymentService {
         val totalAmount: String
     )
 
-    suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction
+    /**
+     * @param onTransactionCreated invoked once the transaction is built and signed, before it is
+     *   submitted, so a caller can persist anything it will need to recover the payment later.
+     *   Runs while the payment is still recoverable: after this point the transaction may reach
+     *   the payee even if this process dies.
+     */
+    suspend fun payWithDashUrl(
+        dashUri: String,
+        serviceName: String?,
+        onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
+    ): Transaction
     fun isFeeTooHigh(tx: Transaction): Boolean
 
     /** support manual tx creation */

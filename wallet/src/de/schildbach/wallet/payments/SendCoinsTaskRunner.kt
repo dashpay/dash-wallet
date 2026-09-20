@@ -205,10 +205,14 @@ class SendCoinsTaskRunner @Inject constructor(
         return SendPaymentService.TransactionDetails(txFee?.toPlainString() ?: "", amountToSend, totalAmount)
     }
 
-    override suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction =
+    override suspend fun payWithDashUrl(
+        dashUri: String,
+        serviceName: String?,
+        onTransactionCreated: (suspend (Sha256Hash) -> Unit)?
+    ): Transaction =
         withContext(Dispatchers.IO) {
             val paymentIntent = paymentIntentParser.parse(dashUri, false)
-            createPaymentRequest(paymentIntent, serviceName)
+            createPaymentRequest(paymentIntent, serviceName, onTransactionCreated)
         }
 
     override suspend fun completeTransaction(sendRequest: SendRequest) {
@@ -298,12 +302,16 @@ class SendCoinsTaskRunner @Inject constructor(
         directPay(sendRequest, paymentIntent, serviceName)
     }
 
-    private suspend fun createPaymentRequest(basePaymentIntent: PaymentIntent, serviceName: String?): Transaction {
+    private suspend fun createPaymentRequest(
+        basePaymentIntent: PaymentIntent,
+        serviceName: String?,
+        onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
+    ): Transaction {
         val requestUrl = basePaymentIntent.paymentRequestUrl
         if (requestUrl != null) {
             val paymentIntent = fetchPaymentRequest(basePaymentIntent)
             val sendRequest = createRequestFromPaymentIntent(paymentIntent)
-            return sendPayment(paymentIntent, sendRequest, serviceName)
+            return sendPayment(paymentIntent, sendRequest, serviceName, onTransactionCreated)
         } else {
             val sendRequest = createRequestFromPaymentIntent(basePaymentIntent)
             val sendRequestForSigning = createSendRequest(
@@ -332,7 +340,8 @@ class SendCoinsTaskRunner @Inject constructor(
     private suspend fun sendPayment(
         finalPaymentIntent: PaymentIntent,
         sendRequest: SendRequest,
-        serviceName: String?
+        serviceName: String?,
+        onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Transaction {
         log.info("creating final sendRequest({}, ..., {})", finalPaymentIntent.paymentUrl, serviceName)
         val finalSendRequest = createSendRequest(
@@ -343,7 +352,7 @@ class SendCoinsTaskRunner @Inject constructor(
         )
         signSendRequest(finalSendRequest)
         log.info("created final send Request")
-        return directPay(finalSendRequest, finalPaymentIntent, serviceName)
+        return directPay(finalSendRequest, finalPaymentIntent, serviceName, onTransactionCreated)
     }
 
     /**
@@ -371,7 +380,8 @@ class SendCoinsTaskRunner @Inject constructor(
     private suspend fun directPay(
         sendRequest: SendRequest,
         finalPaymentIntent: PaymentIntent,
-        serviceName: String?
+        serviceName: String?,
+        onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Transaction = withContext(NonCancellable) {
         log.info("completing sendRequest transaction")
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
@@ -381,6 +391,11 @@ class SendCoinsTaskRunner @Inject constructor(
         serviceName?.let {
             metadataProvider.setTransactionService(sendRequest.tx.txId, serviceName)
         }
+        // The transaction id is final here and nothing has been sent yet, so this is the last
+        // point at which a caller can still record what it will need to recover the payment.
+        // Everything after this can outlive the process: the payee may receive the transaction
+        // even if we are killed before we learn the outcome.
+        onTransactionCreated?.invoke(sendRequest.tx.txId)
         val refundAddress = wallet.freshAddress(KeyChain.KeyPurpose.REFUND)
         val payment = PaymentProtocol.createPaymentMessage(
             listOf(sendRequest.tx),
