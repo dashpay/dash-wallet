@@ -165,4 +165,41 @@ class ContestedReregistrationGuardTest {
             .filter { contestedReregistrationAction(label, it) == ContestedReregistrationAction.SKIP_ALREADY_CONTENDING }
         assertEquals(listOf<Boolean?>(true), skipping)
     }
+
+    // ── The fall-through after a confirmed contender (review finding on #1564) ──
+
+    @Test
+    fun missingName_afterAConfirmedContender_defersInsteadOfParking() {
+        // The sibling of the unreadable-guard case. Here the guard SUCCEEDED and saw this
+        // identity's contender document, so registration was correctly skipped. If the
+        // recovery walks then fail to read the name back, that is a failed read, not an
+        // absent name — getVoteContenders collapses an exception into an empty map, so the
+        // walks cannot tell the two apart. Parking on that evidence clears `restoring`,
+        // shows the name as unavailable and routes the user to pick a different one,
+        // discarding a contested name whose 0.2 DASH prefund is already spent.
+        assertEquals(
+            MissingNameOutcome.DEFER_CONFIRMED_CONTENDER,
+            missingNameOutcome(confirmedOwnContender = true)
+        )
+    }
+
+    @Test
+    fun missingName_withNoConfirmedContender_keepsTheHistoricAskForANewNamePath() {
+        // A genuine device restore of a name-less identity: nothing was ever confirmed,
+        // so asking the user for a new username remains right. This must NOT become a
+        // deferral loop.
+        assertEquals(
+            MissingNameOutcome.PARK_ASK_FOR_NEW_NAME,
+            missingNameOutcome(confirmedOwnContender = false)
+        )
+    }
+
+    @Test
+    fun missingName_parkingRequiresPositiveAbsenceEvidence() {
+        // Restated as the invariant that matters: the destructive branch is reachable
+        // only when nothing was confirmed.
+        val parking = listOf(true, false)
+            .filter { missingNameOutcome(it) == MissingNameOutcome.PARK_ASK_FOR_NEW_NAME }
+        assertEquals(listOf(false), parking)
+    }
 }

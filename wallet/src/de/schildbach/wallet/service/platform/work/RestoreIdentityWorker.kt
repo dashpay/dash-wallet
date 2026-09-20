@@ -256,6 +256,11 @@ class RestoreIdentityWorker @AssistedInject constructor(
             // starts from an empty config (no requested USERNAME) and falls through
             // to the throw below (ask the user for a new username). Pre-cutover this
             // is skipped and the classic dashj retry path is unchanged.
+            //
+            // Carried out to the fall-through at the end of this method: once the guard
+            // has POSITIVELY seen this identity's contender document, "no name found"
+            // down there is a failed read, never an absent name.
+            var confirmedOwnContender = false
             if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
                 val requestedLabel = identityConfig.get(BlockchainIdentityConfig.USERNAME)
                 val cutoverCommitted = try {
@@ -334,6 +339,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 }
                 val alreadyContending =
                     reregistrationAction == ContestedReregistrationAction.SKIP_ALREADY_CONTENDING
+                confirmedOwnContender = confirmedOwnContender || alreadyContending
 
                 if (cutoverCommitted && !requestedLabel.isNullOrEmpty() && alreadyContending) {
                     log.info(
@@ -812,10 +818,28 @@ class RestoreIdentityWorker @AssistedInject constructor(
             // the historic "only the identity was recovered, ask for a new
             // username" path (a genuine device restore of a name-less identity).
             if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
-                blockchainIdentityData.creationState = IdentityCreationState.USERNAME_REGISTERING
-                blockchainIdentityData.restoring = false
-                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
-                error("missing domain document for ${blockchainIdentity.uniqueId}")
+                // ...unless the guard above already SAW this identity's contender document.
+                // Then the name exists and has been paid for, and the walks' failure to find
+                // it is a failed read: they call getVoteContenders, which collapses an
+                // exception into an empty map (PlatformRepo.kt:207), so a contender read that
+                // errors is indistinguishable there from a name with no contenders. Parking
+                // the identity on that evidence clears `restoring`, shows the name as
+                // unavailable and sends the user off to choose another one — discarding a
+                // contested name whose 0.2 DASH prefund is already spent. Defer instead, the
+                // way the registration paths do.
+                when (missingNameOutcome(confirmedOwnContender)) {
+                    MissingNameOutcome.DEFER_CONFIRMED_CONTENDER ->
+                        throw IllegalStateException(
+                            "contested name for ${blockchainIdentity.uniqueId} was confirmed on chain " +
+                                "but the recovery walk could not read it back (retryable)"
+                        )
+                    MissingNameOutcome.PARK_ASK_FOR_NEW_NAME -> {
+                        blockchainIdentityData.creationState = IdentityCreationState.USERNAME_REGISTERING
+                        blockchainIdentityData.restoring = false
+                        identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+                        error("missing domain document for ${blockchainIdentity.uniqueId}")
+                    }
+                }
             }
 
             //
@@ -1019,6 +1043,41 @@ internal enum class ContestedReregistrationAction {
     /** The vote state could not be read — defer the attempt retryably; decide nothing. */
     DEFER_UNREADABLE
 }
+
+/**
+ * What to do when the restore finished with no on-chain name recovered.
+ */
+internal enum class MissingNameOutcome {
+    /** Defer retryably: a contender was confirmed, so "not found" is a failed read. */
+    DEFER_CONFIRMED_CONTENDER,
+
+    /** The historic path: only the identity was recovered, so ask the user for a new name. */
+    PARK_ASK_FOR_NEW_NAME
+}
+
+/**
+ * Whether the "no name recovered" fall-through may park the identity.
+ *
+ * Parking is destructive in a way the name suggests it is not: it clears `restoring`, records
+ * "missing domain document", and the UI then shows the username as unavailable and routes the
+ * user to choose a DIFFERENT one. For a contested name whose 0.2 DASH vote-poll prefund is
+ * already spent, that discards something paid for.
+ *
+ * [confirmedOwnContender] is true once the re-registration guard has positively read this
+ * identity's own contender document. After that, the recovery walks failing to find the name
+ * cannot mean it is absent — they call `getVoteContenders`, which collapses an exception into
+ * an empty map (`PlatformRepo.kt:207`), so a contender read that errors looks exactly like a
+ * name with no contenders. The only honest reading is "could not read it back", which is
+ * retryable.
+ *
+ * Pure — host-testable.
+ */
+internal fun missingNameOutcome(confirmedOwnContender: Boolean): MissingNameOutcome =
+    if (confirmedOwnContender) {
+        MissingNameOutcome.DEFER_CONFIRMED_CONTENDER
+    } else {
+        MissingNameOutcome.PARK_ASK_FOR_NEW_NAME
+    }
 
 /**
  * The three-way guard decision, split out from the I/O so it is host-testable.

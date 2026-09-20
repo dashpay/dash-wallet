@@ -36,6 +36,7 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.livedata.Resource
 import org.dashj.platform.dpp.document.Document
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.username.UsernameType
@@ -967,10 +968,16 @@ class RequestUserNameViewModelTest {
         // taken (a read from before it was released, say); the second sees it free. Only
         // the second is current, so the field must end up reading "available".
         val firstAlice = CountDownLatch(1)
+        // getUsername runs on a real Dispatchers.IO thread, so starting a lookup does not
+        // establish that it has ENTERED the mock. Without this signal the replacement
+        // alice could arrive first, take the blocked branch, and the test would join it
+        // before the finally releases the latch — a timeout instead of a failure.
+        val firstAliceEntered = CountDownLatch(1)
         var aliceCalls = 0
         val platformRepo = mockk<PlatformRepo>(relaxed = true) {
             every { getUsername("alice") } answers {
                 if (aliceCalls++ == 0) {
+                    firstAliceEntered.countDown()
                     firstAlice.await()
                     Resource.success(mockk<Document>())   // stale: "taken"
                 } else {
@@ -992,6 +999,11 @@ class RequestUserNameViewModelTest {
         val staleAlice = try {
             viewModel.checkUsernameValid("alice", UsernameType.Primary)
             val job = viewModel.checkUsername("alice")
+            // Only now is the blocked response deterministically bound to the OLDER token.
+            assertTrue(
+                "the first alice lookup reached the mock",
+                firstAliceEntered.await(10, TimeUnit.SECONDS)
+            )
 
             viewModel.checkUsernameValid("bob", UsernameType.Primary)
             viewModel.checkUsername("bob")?.join()
