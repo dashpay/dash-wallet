@@ -957,6 +957,68 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
+    fun checkUsername_sameLabelRequestedTwice_dropsTheFirstLookup() = runVmTest {
+        // CodeRabbit follow-up on #1564: alice -> bob -> alice. Both the first and the
+        // third request carry the label "alice", so matching on the LABEL would let the
+        // first one's answer through while the third is still in flight.
+        //
+        // The two alice lookups must DISAGREE for this to prove anything — otherwise the
+        // stale write is indistinguishable from the fresh one. The first sees the name as
+        // taken (a read from before it was released, say); the second sees it free. Only
+        // the second is current, so the field must end up reading "available".
+        val firstAlice = CountDownLatch(1)
+        var aliceCalls = 0
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } answers {
+                if (aliceCalls++ == 0) {
+                    firstAlice.await()
+                    Resource.success(mockk<Document>())   // stale: "taken"
+                } else {
+                    Resource.success(null)                // current: "free"
+                }
+            }
+            every { getVoteContendersOrThrow("alice") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+            every { getUsername("bob") } returns Resource.success(null)
+            every { getVoteContendersOrThrow("bob") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        val staleAlice = try {
+            viewModel.checkUsernameValid("alice", UsernameType.Primary)
+            val job = viewModel.checkUsername("alice")
+
+            viewModel.checkUsernameValid("bob", UsernameType.Primary)
+            viewModel.checkUsername("bob")?.join()
+
+            // Back to alice — a NEW lookup, which answers immediately and says "free".
+            viewModel.checkUsernameValid("alice", UsernameType.Primary)
+            viewModel.checkUsername("alice")?.join()
+            assertTrue("the second alice lookup landed", viewModel.uiState.value.usernameCheckSuccess)
+            assertFalse("and reported alice available", viewModel.uiState.value.usernameExists)
+            job
+        } finally {
+            firstAlice.countDown()
+        }
+
+        // The first alice lookup now completes, saying "taken". Same label, older token.
+        staleAlice?.join()
+
+        val state = viewModel.uiState.value
+        assertFalse(
+            "the stale 'taken' verdict must not overwrite the current 'available' one",
+            state.usernameExists
+        )
+        assertTrue(state.usernameCheckSuccess)
+        assertFalse(state.checkingUsername)
+    }
+
+    @Test
     fun checkUsername_invalidKeystrokeWhileALookupIsOut_doesNotStrandTheSpinner() = runVmTest {
         // Review finding on #1564. A valid name starts a lookup (checkingUsername = true).
         // The user then types something INVALID, so the fragment schedules no replacement

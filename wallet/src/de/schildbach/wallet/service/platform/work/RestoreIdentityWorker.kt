@@ -115,6 +115,11 @@ class RestoreIdentityWorker @AssistedInject constructor(
                     KEY_IDENTITY to identity,
                 )
             )
+        } catch (ex: CancellationException) {
+            // WorkManager stopping this worker is not a restoration failure. Letting the
+            // broad handler below have it logged an analytics error and returned
+            // Result.failure, so an ordinary cancellation looked like a real defect.
+            throw ex
         } catch (ex: Exception) {
             analytics.logError(ex, "Restore Identity: failed to restore identity")
             Result.failure(
@@ -255,6 +260,8 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 val requestedLabel = identityConfig.get(BlockchainIdentityConfig.USERNAME)
                 val cutoverCommitted = try {
                     transparentUsernameCreation.isCutoverCommitted()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     log.warn("cutover-state read failed while completing DPNS registration; skipping", e)
                     false
@@ -845,6 +852,11 @@ class RestoreIdentityWorker @AssistedInject constructor(
             platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
             identityRepository.init()
             platformSyncService.initSync(true)
+        } catch (e: CancellationException) {
+            // Cancellation must not stamp an error on the identity row, and must not
+            // report the pre-block stage complete — nothing finished. Rethrow ahead of
+            // the broad handler, which would do both.
+            throw e
         } catch (e: Exception) {
             val blockchainIdentityData = identityConfig.load()
             blockchainIdentityData?.let {
