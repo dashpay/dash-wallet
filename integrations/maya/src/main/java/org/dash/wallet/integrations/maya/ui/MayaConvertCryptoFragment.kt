@@ -55,7 +55,6 @@ import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.model.getCoinBaseExchangeRateConversion
-import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
@@ -85,8 +84,15 @@ class MayaConvertCryptoFragment : Fragment() {
     private val decimalSeparator =
         DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
 
-    // Amount-entry state ported from the old ConvertViewFragment keyboard listener.
-    private var maxAmountSelected: Boolean = false
+    // Amount-entry state ported from the old ConvertViewFragment keyboard listener. The Max flag
+    // lives in the ViewModel (see [ConvertViewViewModel.maxAmountSelected]): it decides whether
+    // the swap sweeps the wallet, so it has to survive a configuration change along with the
+    // amount it belongs to.
+    private var maxAmountSelected: Boolean
+        get() = convertViewModel.maxAmountSelected
+        set(value) {
+            convertViewModel.maxAmountSelected = value
+        }
     private var canContinue: Boolean = false
 
     // Hard gate on Get quote independent of the entered value — false when the wallet has no
@@ -96,8 +102,33 @@ class MayaConvertCryptoFragment : Fragment() {
         get() = !convertViewModel.userDashAccountEmpty
     private var currencyOptions: List<String> = emptyList()
     private var pickedCurrencyIndex: Int = 0
-    private val pickedCurrencyOption: String
-        get() = currencyOptions.getOrNull(pickedCurrencyIndex) ?: ""
+
+    /**
+     * The currency the picker is on, derived from the displayed selection ([pickedCurrencyIndex])
+     * so the two can never disagree — see [ConvertViewViewModel.selectedPickerCurrency]. The
+     * option order is fixed by [resetViewSelection]: DASH / fiat / crypto for the sell direction,
+     * reversed at the ends for a buy.
+     */
+    private val pickedCurrencyType: CurrencyInputType
+        get() = currencyTypeFor(pickedCurrencyIndex)
+
+    private fun currencyTypeFor(index: Int): CurrencyInputType {
+        val dashToCrypto = convertViewModel.dashToCrypto.value == true
+        return when (index) {
+            0 -> if (dashToCrypto) CurrencyInputType.Dash else CurrencyInputType.Crypto
+            2 -> if (dashToCrypto) CurrencyInputType.Crypto else CurrencyInputType.Dash
+            else -> CurrencyInputType.Fiat
+        }
+    }
+
+    private fun indexOfCurrency(type: CurrencyInputType): Int {
+        val dashToCrypto = convertViewModel.dashToCrypto.value == true
+        return when (type) {
+            CurrencyInputType.Fiat -> 1
+            CurrencyInputType.Dash -> if (dashToCrypto) 0 else 2
+            CurrencyInputType.Crypto -> if (dashToCrypto) 2 else 0
+        }
+    }
 
     // Last crypto amount pair (value, currency code) used for the receive-amount line.
     private var lastCryptoAmount: Pair<String, String>? = null
@@ -125,7 +156,7 @@ class MayaConvertCryptoFragment : Fragment() {
                         onKeyInput = ::onKeyInput,
                         onContinueClick = {
                             if (!uiState.isProcessing) {
-                                convertViewModel.continueSwap(pickedCurrencyOption)
+                                convertViewModel.continueSwap()
                             }
                         }
                     )
@@ -139,14 +170,8 @@ class MayaConvertCryptoFragment : Fragment() {
         val dashPoolInfo = mayaViewModel.getPoolInfo(Constants.DASH_CURRENCY)
         val currencyMapper = MayaCurrencyMapper(requireContext())
 
-        // Tokens are qualified with their host network ("USDT (Ethereum)"); native L1 coins
-        // (BTC.BTC, …) show just the code.
-        val network = MayaCurrencyList.networkName(args.asset)
-        val displayCode = if (network != null) "${args.currency} ($network)" else args.currency
-
         uiState = uiState.copy(
-            // "Convert DASH to <code>" per design, e.g. "Convert DASH to USDT (Ethereum)".
-            title = getString(R.string.maya_address_input_title, displayCode),
+            title = getString(R.string.maya_convert_enter_amount_title),
             toCurrencyName = currencyMapper.getCurrencyName(args.currency),
             toAddress = getArgAddress(),
             toIconUrls = GenericUtils.getCoinIconUrls(args.currency.lowercase(), args.asset),
@@ -190,7 +215,8 @@ class MayaConvertCryptoFragment : Fragment() {
 
         convertViewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) { account ->
             selectedCoinBaseAccount = account
-            maxAmountSelected = false
+            // A stale Max entry is dropped by the ViewModel when the target currency actually
+            // changes — not here, which also fires when this screen's view is recreated.
             resetViewSelection(account)
         }
 
@@ -281,13 +307,14 @@ class MayaConvertCryptoFragment : Fragment() {
         }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
-            // An amount-too-low error (SwapKit's `noRoutesFound`, Maya's "amount too low")
-            // shouldn't pop a modal — surface it in the same inline red error the local
-            // min-amount check uses, so the user can simply raise the amount and retry without
-            // dismissing a dialog. The active backend's aggregator classifies and localizes the
-            // error (see SwapProvider): Maya's amount-too-low keeps its "below the allowed
-            // minimum" copy, while SwapKit's noRoutesFound — which can also mean the route is
-            // briefly unavailable — gets the same neutral no-route message the DEX buy screens show.
+            // An amount-too-low error (SwapKit's `sellAssetAmountTooSmall` / `noRoutesFound`,
+            // Maya's "amount too low") shouldn't pop a modal — surface it in the same inline red
+            // error the local min-amount check uses, so the user can simply raise the amount and
+            // retry without dismissing a dialog. The active backend's aggregator classifies and
+            // localizes the error (see SwapProvider): Maya's amount-too-low keeps its "below the
+            // allowed minimum" copy, SwapKit's explicit …AmountTooSmall gets below-the-minimum
+            // copy, and its ambiguous noRoutesFound — which can also mean the route is briefly
+            // unavailable — gets the neutral no-route message the DEX buy screens show.
             if (!it.isNullOrBlank() && viewModel.isAmountTooLowError(it)) {
                 setInlineError(getString(viewModel.errorMessageRes(it)))
                 return@observe
@@ -358,17 +385,21 @@ class MayaConvertCryptoFragment : Fragment() {
                 convertViewModel.amount.anchoredType != CurrencyInputType.Fiat,
                 convertViewModel.amount.anchoredCurrencyCode
             )
-            convertViewModel.selectedPickerCurrencyCode = convertViewModel.amount.anchoredCurrencyCode
-            pickedCurrencyIndex = when (convertViewModel.amount.anchoredType) {
-                CurrencyInputType.Dash -> 0
-                CurrencyInputType.Fiat -> 1
-                CurrencyInputType.Crypto -> 2
-            }
+            // The anchored currency is the one the user last typed in, so it — not the config's
+            // fiat code — decides which option the picker starts on.
+            convertViewModel.selectedPickerCurrency = convertViewModel.amount.anchoredType
+            pickedCurrencyIndex = indexOfCurrency(convertViewModel.amount.anchoredType)
             uiState = uiState.copy(
                 currencyOptions = currencyOptions,
                 selectedCurrencyIndex = pickedCurrencyIndex
             )
-            applyNewValue(convertViewModel.enteredConvertAmount, pickedCurrencyOption, isLocalized = true)
+            applyNewValue(convertViewModel.enteredConvertAmount, pickedCurrencyType, isLocalized = true)
+            // The value re-applied above comes from the formatted display string, which for fiat
+            // is rounded to the currency's 2 decimals — so a restored Max needs the exact balance
+            // pinned back on, taken from the balance as it stands now.
+            if (maxAmountSelected) {
+                convertViewModel.selectMaxAmount(pickedCurrencyType)
+            }
         }
     }
 
@@ -376,45 +407,30 @@ class MayaConvertCryptoFragment : Fragment() {
         if (uiState.isProcessing) return
         pickedCurrencyIndex = index
         uiState = uiState.copy(selectedCurrencyIndex = index)
-        val option = pickedCurrencyOption
-        setAmountValue(option)
-        convertViewModel.selectedPickerCurrencyCode = option
+        val type = pickedCurrencyType
+        convertViewModel.selectedPickerCurrency = type
+        setAmountValue(type)
     }
 
-    private fun setAmountValue(option: String) {
-        val value = convertViewModel.getAmountValue(option)
-        convertViewModel.amount.setAnchoredType(option)
-        val display = formatAmountForDisplay(option, value, isLocalized = false, isEditing = false)
+    private fun setAmountValue(type: CurrencyInputType) {
+        val value = convertViewModel.getAmountValue(type)
+        convertViewModel.amount.anchoredType = type
+        val display = formatAmountForDisplay(type, value, isLocalized = false, isEditing = false)
         convertViewModel.enteredConvertAmount = display
         uiState = uiState.copy(displayAmount = display)
     }
 
     private fun onMaxClick() {
         if (uiState.isProcessing) return
-        convertViewModel.selectedCryptoCurrencyAccount.value?.let { userAccountData ->
+        convertViewModel.selectedCryptoCurrencyAccount.value?.let { _ ->
             convertViewModel.getMaxAmount()?.let { maxAmount ->
-                val cryptoCurrency = userAccountData.coinbaseAccount.currency
-
-                if (convertViewModel.selectedPickerCurrencyCode == cryptoCurrency) {
-                    applyNewValue(
-                        maxAmount.crypto.toString(),
-                        convertViewModel.selectedPickerCurrencyCode,
-                        isLocalized = false
-                    )
-                } else {
-                    val cleanedValue =
-                        if (convertViewModel.selectedPickerCurrencyCode ==
-                            convertViewModel.selectedLocalCurrencyCode
-                        ) {
-                            maxAmount.fiat
-                        } else {
-                            maxAmount.dash
-                        }.toString()
-
-                    applyNewValue(cleanedValue, convertViewModel.selectedPickerCurrencyCode, isLocalized = false)
-                }
-
-                maxAmountSelected = true
+                // Enter the balance in whichever currency the picker is on.
+                val type = pickedCurrencyType
+                applyNewValue(maxAmount.getValue(type).toString(), type, isLocalized = false)
+                // Flag it as a Max and re-pin the exact balance: the line above re-anchors the
+                // amount on the displayed currency, so for fiat/crypto the DASH value it derives
+                // back is a satoshi or two short of the balance.
+                convertViewModel.selectMaxAmount(type)
             }
         }
     }
@@ -447,7 +463,7 @@ class MayaConvertCryptoFragment : Fragment() {
         if (isFraction) {
             val lengthOfDecimalPart = value.toString().length - value.toString().indexOf(decimalSeparator)
             val decimalsThreshold =
-                if (convertViewModel.selectedLocalCurrencyCode == pickedCurrencyOption) {
+                if (pickedCurrencyType == CurrencyInputType.Fiat) {
                     GenericUtils.getCurrencyDigits()
                 } else {
                     8
@@ -461,10 +477,10 @@ class MayaConvertCryptoFragment : Fragment() {
         if (!maxAmountSelected) {
             try {
                 appendIfValidAfter(value, number.toString())
-                applyNewValue(value.toString(), pickedCurrencyOption, isLocalized = true, isEditing = true)
+                applyNewValue(value.toString(), pickedCurrencyType, isLocalized = true, isEditing = true)
             } catch (x: Exception) {
                 value.deleteCharAt(value.length - 1)
-                applyNewValue(value.toString(), pickedCurrencyOption, isLocalized = true, isEditing = true)
+                applyNewValue(value.toString(), pickedCurrencyType, isLocalized = true, isEditing = true)
             }
         }
     }
@@ -487,7 +503,7 @@ class MayaConvertCryptoFragment : Fragment() {
             value.deleteCharAt(value.length - 1)
             convertViewModel.resetSwapValueError()
         }
-        applyNewValue(value.toString(), pickedCurrencyOption, isLocalized = true, isEditing = true)
+        applyNewValue(value.toString(), pickedCurrencyType, isLocalized = true, isEditing = true)
         maxAmountSelected = false
     }
 
@@ -502,14 +518,22 @@ class MayaConvertCryptoFragment : Fragment() {
             }
             value.append(decimalSeparator)
         }
-        applyNewValue(value.toString(), pickedCurrencyOption, isLocalized = true, isEditing = true)
+        applyNewValue(value.toString(), pickedCurrencyType, isLocalized = true, isEditing = true)
     }
 
-    private fun applyNewValue(value: String, currencyCode: String, isLocalized: Boolean, isEditing: Boolean = false) {
+    private fun applyNewValue(
+        value: String,
+        type: CurrencyInputType,
+        isLocalized: Boolean,
+        isEditing: Boolean = false
+    ) {
         val newValue = value.ifEmpty { "0" }
+        // Keep the ViewModel's picker in step with the currency this value is denominated in: the
+        // amount is anchored on it, so a mismatch would re-read the digits as another currency.
+        convertViewModel.selectedPickerCurrency = type
         convertViewModel.setEnteredAmount(newValue, isLocalized)
 
-        val display = formatAmountForDisplay(currencyCode, newValue, isLocalized, isEditing)
+        val display = formatAmountForDisplay(type, newValue, isLocalized, isEditing)
         convertViewModel.enteredConvertAmount = display
         uiState = uiState.copy(displayAmount = display)
 
@@ -527,7 +551,7 @@ class MayaConvertCryptoFragment : Fragment() {
      * (at the fiat's digit count) for fiat.
      */
     private fun formatAmountForDisplay(
-        currencyCode: String,
+        type: CurrencyInputType,
         value: String,
         isLocalized: Boolean,
         isEditing: Boolean
@@ -536,9 +560,8 @@ class MayaConvertCryptoFragment : Fragment() {
             return value
         }
         val amountBG = GenericUtils.toScaledBigDecimal(value, isLocalized)
-        return when (currencyCode) {
-            Constants.DASH_CURRENCY -> convertViewModel.cryptoFormat.format(amountBG)
-            convertViewModel.selectedLocalCurrencyCode -> {
+        return when (type) {
+            CurrencyInputType.Fiat -> {
                 val digits = GenericUtils.getCurrencyDigits()
                 convertViewModel.fiatFormat.format(amountBG.setScale(digits, RoundingMode.HALF_UP))
             }
@@ -653,17 +676,17 @@ class MayaConvertCryptoFragment : Fragment() {
             viewModel.dashWalletBalance.value?.let { dash ->
                 convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
                     val fiatAmount = rate.dashToFiat(dash).toFormattedString()
-                    return "${getString(R.string.entered_amount_is_too_high)} $fiatAmount"
+                    return "${getString(R.string.maya_max_amount_error)} $fiatAmount"
                 }
             }
         } else {
             convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
                 selectedCoinBaseAccount?.getCoinBaseExchangeRateConversion(rate)?.first?.let {
-                    return "${getString(R.string.entered_amount_is_too_high)} $it"
+                    return "${getString(R.string.maya_max_amount_error)} $it"
                 }
             }
         }
-        return getString(R.string.entered_amount_is_too_high)
+        return getString(R.string.maya_max_amount_error)
     }
 
     private fun minAmountErrorMessage(): String? {

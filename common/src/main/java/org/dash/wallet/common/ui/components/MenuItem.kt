@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,24 +32,47 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import android.content.res.Configuration
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
 
+/**
+ * Opacity of a disabled [MenuItem]. The design shows the disabled row dimmed as a whole — icon,
+ * title and subtitles alike — and a whole-row alpha is the only treatment that also covers the
+ * icon, since those are full-colour exchange/currency logos that a content token such as
+ * `contentDisabled` cannot recolour.
+ */
+private const val DISABLED_ROW_ALPHA = 0.4f
+
 @Composable
 fun MenuItem(
     title: String,
+    modifier: Modifier = Modifier,
+    /**
+     * When false the row is dimmed as a whole and nothing in it is tappable: [action],
+     * [onTrailingButtonClick] and [onInfoClick] are all suppressed and the row no longer
+     * reports itself as a button to accessibility services.
+     */
+    enabled: Boolean = true,
     helpTextAbove: String? = null,
     subtitle: String? = null,
     subtitleMaxLines: Int = Int.MAX_VALUE,
+    // Truncates `subtitle` from the middle to fit the available width (e.g. for addresses,
+    // where both the start and end need to stay checkable) instead of the standard end-ellipsis.
+    // Width-measured so it stays correct at any font scale, unlike a fixed character count.
+    subtitleMiddleEllipsis: Boolean = false,
     subtitle2: String? = null,
     icon: Int? = null,
     // Custom icon slot (e.g. a Coil AsyncImage for coin logos); used when `icon` is null
@@ -78,12 +102,13 @@ fun MenuItem(
     val effectiveChecked = checked ?: internalChecked
     val colors = LocalDashColors.current
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
+            .then(if (enabled) Modifier else Modifier.alpha(DISABLED_ROW_ALPHA))
             .background(Color.Transparent, RoundedCornerShape(10.dp))
-            .then(if (action != null) Modifier.clickable { action() } else Modifier)
-            .semantics { if (action != null) role = Role.Button }
+            .then(if (enabled && action != null) Modifier.clickable { action() } else Modifier)
+            .semantics { if (enabled && action != null) role = Role.Button }
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -159,8 +184,11 @@ fun MenuItem(
                             modifier = Modifier
                                 .size(15.dp)
                                 .then(
-                                    if (onInfoClick != null) Modifier.clickable { onInfoClick() }
-                                    else Modifier
+                                    if (enabled && onInfoClick != null) {
+                                        Modifier.clickable { onInfoClick() }
+                                    } else {
+                                        Modifier
+                                    }
                                 )
                         )
                     }
@@ -168,14 +196,23 @@ fun MenuItem(
 
                 // Subtitle
                 subtitle?.let {
-                    Text(
-                        text = it,
-                        style = MyTheme.Typography.BodyMedium,
-                        color = colors.textSecondary,
-                        maxLines = subtitleMaxLines,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (subtitleMiddleEllipsis) {
+                        MiddleEllipsisText(
+                            text = it,
+                            style = MyTheme.Typography.BodyMedium,
+                            color = colors.textSecondary,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        Text(
+                            text = it,
+                            style = MyTheme.Typography.BodyMedium,
+                            color = colors.textSecondary,
+                            maxLines = subtitleMaxLines,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 // Second subtitle
@@ -193,6 +230,7 @@ fun MenuItem(
             if (isToggled != null || checked != null) {
                 DashSwitch(
                     checked = effectiveChecked,
+                    enabled = enabled,
                     onCheckedChange = { newState ->
                         if (checked == null) internalChecked = newState
                         (onCheckedChange ?: onToggleChanged)?.invoke(newState)
@@ -213,7 +251,7 @@ fun MenuItem(
                     ) {
                         Text(
                             text = dashAmount,
-                            style = MyTheme.CaptionMedium,
+                            style = MyTheme.Typography.FootnoteMedium,
                             color = colors.textPrimary
                         )
                         // Dash logo
@@ -246,7 +284,8 @@ fun MenuItem(
                     text = trailingButtonText,
                     style = trailingButtonStyle ?: Style.Plain,
                     size = Size.Small,
-                    stretch = false
+                    stretch = false,
+                    isEnabled = enabled
                 )
             //                {
 //                    Text(
@@ -269,6 +308,44 @@ fun MenuItem(
                 )
             }
         }
+}
+
+/**
+ * Single-line text that keeps the start and end of [text] visible, truncating the middle
+ * with "…" only as much as needed to fit the measured width. Unlike a fixed character-count
+ * cut, this stays correct across screen widths, locales and font scales.
+ */
+@Composable
+private fun MiddleEllipsisText(
+    text: String,
+    style: TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    BoxWithConstraints(modifier = modifier) {
+        val maxWidthPx = with(density) { maxWidth.toPx() }
+        val display = remember(text, maxWidthPx, style, density.fontScale) {
+            middleEllipsizeToFit(text, maxWidthPx, style, measurer)
+        }
+        Text(text = display, style = style, color = color, maxLines = 1, overflow = TextOverflow.Clip)
+    }
+}
+
+private fun middleEllipsizeToFit(text: String, maxWidthPx: Float, style: TextStyle, measurer: TextMeasurer): String {
+    fun widthOf(s: String) = measurer.measure(text = s, style = style, softWrap = false).size.width
+
+    if (maxWidthPx <= 0f || widthOf(text) <= maxWidthPx) return text
+
+    var head = (text.length + 1) / 2
+    var tail = text.length - head
+    while (head + tail > 0) {
+        val candidate = "${text.take(head)}…${text.takeLast(tail)}"
+        if (widthOf(candidate) <= maxWidthPx) return candidate
+        if (head >= tail) head-- else tail--
+    }
+    return "…"
 }
 
 @Preview(name = "MenuItem Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
@@ -354,6 +431,16 @@ fun PreviewMenuItem() {
             trailingButtonText = "Label",
             onTrailingButtonClick = { }
         )
+
+            // Disabled row: dimmed as a whole and not tappable
+            MenuItem(
+                title = "Disabled Item",
+                subtitle = "Not available on this network",
+                icon = R.drawable.ic_dash_blue_filled,
+                enabled = false,
+                showChevron = true,
+                action = { }
+            )
 
             // Complex example matching Figma
             MenuItem(

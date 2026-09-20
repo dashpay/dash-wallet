@@ -4,6 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
+    android:fitsSystemWindows="true"
     android:background="@android:color/transparent"
     tools:background="@color/dash_deep_blue"
     tools:context="de.schildbach.wallet.ui.InviteHandlerActivity">

@@ -57,7 +57,8 @@ suspend fun Fragment.requestLocationPermission(
             arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
         )
     } else {
-        lifecycleScope.launch {
+        // View-scoped so the explainer dialog isn't shown against a destroyed view.
+        viewLifecycleOwner.lifecycleScope.launch {
             val result = showPermissionExplainerDialog(exploreTopic)
 
             if (result == true) {

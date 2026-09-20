@@ -116,6 +116,13 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/home_to_connections"
+            app:destination="@id/connectionsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -143,6 +150,13 @@
         <action
             android:id="@+id/payments_to_addressInput"
             app:destination="@id/addressInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/payments_to_connections"
+            app:destination="@id/connectionsFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
@@ -362,6 +376,25 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
+        <action
+            android:id="@+id/tools_to_connections"
+            app:destination="@id/connectionsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/connectionsFragment"
+        android:name="de.schildbach.wallet.ui.more.connections.ConnectionsFragment"
+        android:label="Connections">
+
+        <argument
+            android:name="scannedUri"
+            android:defaultValue="@null"
+            app:argType="string"
+            app:nullable="true" />
     </fragment>
 
     <fragment
@@ -656,7 +689,15 @@
         android:id="@+id/addressInputFragment"
         android:name="de.schildbach.wallet.ui.send.DashAddressInputFragment"
         android:label="Address Input"
-        tools:layout="@layout/fragment_address_input" />
+        tools:layout="@layout/fragment_address_input">
+
+        <action
+            android:id="@+id/addressInput_to_connections"
+            app:destination="@id/connectionsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
 
     <include app:graph="@navigation/nav_explore" />
     <include app:graph="@navigation/nav_coinbase" />

@@ -4,8 +4,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dash_deep_blue"
-    android:fitsSystemWindows="false">
+    android:fitsSystemWindows="true">
 
+    <!-- the root is the single inset point; insets are consumed there,
+         so children must not re-apply fitsSystemWindows -->
     <ViewAnimator
         android:id="@+id/root_view_switcher"
         android:layout_width="match_parent"
@@ -16,11 +18,11 @@
             android:id="@+id/lock_screen"
             layout="@layout/activity_lock_screen" />
 
+        <!-- insets are consumed by the root; do not re-apply fitsSystemWindows here -->
         <FrameLayout
             android:id="@+id/regular_content"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fitsSystemWindows="true" />
+            android:layout_height="match_parent" />
 
     </ViewAnimator>
 </FrameLayout>

@@ -34,6 +34,7 @@ import org.dash.wallet.integrations.uphold.api.getAllCards
 import org.dash.wallet.integrations.uphold.api.isAuthenticated
 import org.dash.wallet.integrations.uphold.api.listCardAddress
 import org.dash.wallet.integrations.uphold.utils.UpholdConfig
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 class ExchangeIntegrationListProvider @Inject constructor(
@@ -42,6 +43,10 @@ class ExchangeIntegrationListProvider @Inject constructor(
     private val upholdConfig: UpholdConfig,
     private val upholdClient: Lazy<UpholdClient>
 ) : ExchangeIntegrationProvider {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(ExchangeIntegrationListProvider::class.java)
+    }
 
     override suspend fun clearCachedAddresses() {
         coinbaseConfig.clearCurrencyAddresses()
@@ -80,14 +85,31 @@ class ExchangeIntegrationListProvider @Inject constructor(
             ) {
                 // determine if we are connected
                 if (coinBaseRepository.isAuthenticated) {
-                    val coinbaseAccount = coinBaseRepository.getUserAccount(currency)
-                    val coinbaseAddress = coinBaseRepository.createAddress(coinbaseAccount.uuid)
+                    // A failed account/address lookup must not hide Coinbase entirely: log why
+                    // and add the row without an address, so a logged-in user still sees the
+                    // integration instead of it silently vanishing from the list.
+                    val address = try {
+                        val coinbaseAccount = coinBaseRepository.getUserAccount(currency)
+                        val coinbaseAddress = coinBaseRepository.createAddress(coinbaseAccount.uuid)
+                        ((coinbaseAddress as? ResponseResource.Success)?.value).also {
+                            if (it == null) {
+                                log.warn("coinbase: createAddress for {} did not return an address", currency)
+                            }
+                        }
+                    } catch (e: IllegalStateException) {
+                        // getUserAccount: no usable account for this currency
+                        log.warn("coinbase: no {} account found: {}", currency, e.message)
+                        null
+                    } catch (e: Exception) {
+                        log.error("coinbase: failed to look up {} deposit address", currency, e)
+                        null
+                    }
 
                     exchangeIntegrations.add(
                         ExchangeIntegration(
                             "coinbase",
-                            coinBaseRepository.isAuthenticated,
-                            (coinbaseAddress as? ResponseResource.Success)?.value,
+                            true,
+                            address,
                             currency,
                             R.string.coinbase,
                             R.drawable.ic_coinbase
@@ -106,12 +128,9 @@ class ExchangeIntegrationListProvider @Inject constructor(
                     )
                 }
             }
-        } catch (e: IllegalStateException) {
-            // no account for this currency
-            e.printStackTrace()
         } catch (e: Exception) {
-            // another error? not connected?
-            e.printStackTrace()
+            // cached-address or auth-state lookup failed; auth state unknown, so no row
+            log.error("coinbase: failed to determine integration state for {}", currency, e)
         }
     }
 
@@ -130,40 +149,42 @@ class ExchangeIntegrationListProvider @Inject constructor(
         ) {
             try {
                 // determine if we are connected
-
                 if (upholdClient.get().isAuthenticated) {
-                    val cards = upholdClient.get().getAllCards()
+                    // Same rule as Coinbase: a failed card/address lookup must not hide Uphold
+                    // entirely -- log why and add the row without an address.
+                    val address = try {
+                        val card = upholdClient.get().getAllCards()?.find { it.currency == currency }
 
-                    if (cards != null) {
-                        val card = cards.find { it.currency == currency }
                         if (card != null) {
-                            val cardAddress = upholdClient.get().listCardAddress(card.id, currency)
-
-                            val address = cardAddress?.value
-                                ?: upholdClient.get().createCardAddress(
-                                    card.id,
-                                    currency
-                                )
-
-                            exchangeIntegrations.add(
-                                ExchangeIntegration(
-                                    "uphold",
-                                    true,
-                                    address,
-                                    currency,
-                                    R.string.uphold_account,
-                                    R.drawable.ic_uphold
-                                )
-                            )
+                            upholdClient.get().listCardAddress(card.id, currency)?.value
+                                ?: upholdClient.get().createCardAddress(card.id, currency)
+                        } else {
+                            log.warn("uphold: no {} card found", currency)
+                            null
                         }
+                    } catch (e: Exception) {
+                        log.error("uphold: failed to look up {} deposit address", currency, e)
+                        null
                     }
+
+                    exchangeIntegrations.add(
+                        ExchangeIntegration(
+                            "uphold",
+                            true,
+                            address,
+                            currency,
+                            R.string.uphold_account,
+                            R.drawable.ic_uphold
+                        )
+                    )
                 } else {
                     exchangeIntegrations.add(
                         ExchangeIntegration("uphold", false, null, null, R.string.uphold_account, R.drawable.ic_uphold)
                     )
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                // auth-state lookup failed; auth state unknown, so no row
+                log.error("uphold: failed to determine integration state for {}", currency, e)
             }
         }
     }

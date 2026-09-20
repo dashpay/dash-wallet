@@ -49,6 +49,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -80,6 +81,7 @@ class ToolsFragment : Fragment() {
                         onExtendPublicKeyClick = { handleExtendedPublicKey() },
                         onMasternodeKeysClick = { onMasternodeKeys() },
                         onCsvExportClick = { onTransactionExport() },
+                        onConnectionsClick = { onConnections() },
                         onZenLedgerExport = { onZenLedgerExport() },
                         onCreditsInfoClick = { onCreditsInfo() },
                         onBuyCredits = { onBuyCredits() }
@@ -144,6 +146,10 @@ class ToolsFragment : Fragment() {
                     .build()
             )
         }
+    }
+
+    private fun onConnections() {
+        safeNavigate(ToolsFragmentDirections.toolsToConnections())
     }
 
     private fun onNetworkMonitor() {

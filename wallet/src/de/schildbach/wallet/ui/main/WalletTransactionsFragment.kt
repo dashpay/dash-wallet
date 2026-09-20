@@ -93,6 +93,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     companion object {
         private const val HEADER_ITEM_TAG = "header"
         private val log = LoggerFactory.getLogger(WalletTransactionsFragment::class.java)
+        private val TX_ID_REGEX = Regex("^[0-9a-fA-F]{64}$")
     }
 
     private var firstPageLoadStartTime: Long = 0L
@@ -170,8 +171,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                 }
                             }
 
-                            rowView.transactionAmount == 1 -> {
+                            rowView.transactionAmount == 1 && TX_ID_REGEX.matches(rowView.id) -> {
                                 // Individual transaction — rowId is a 64-char txId hex string.
+                                // A CoinJoin/CrowdNode group can also contain a single tx, but its
+                                // rowId is a group id ("coinjoin_<date>", "crowdnode"), not a hash —
+                                // those fall through to the group loader below.
                                 viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
                                 TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(rowView.id))
                             }
@@ -184,7 +188,15 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                     val activity = if (isAdded) activity else null
                                     if (wrapper != null && activity != null) {
                                         viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                                        TransactionGroupDetailsFragment(wrapper).show(activity)
+                                        if (wrapper.transactions.size == 1) {
+                                            // Same routing as the in-memory path above: a group
+                                            // of one opens the transaction detail directly.
+                                            TransactionDetailsDialogFragment.newInstance(
+                                                Sha256Hash.wrap(wrapper.transactions.keys.first())
+                                            ).show(activity)
+                                        } else {
+                                            TransactionGroupDetailsFragment(wrapper).show(activity)
+                                        }
                                     } else if (wrapper == null) {
                                         log.warn("group {} not found in cache — cannot open details", rowView.id)
                                     }

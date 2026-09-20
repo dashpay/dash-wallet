@@ -50,6 +50,7 @@ import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitFee
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitQuoteRequest
+import org.dash.wallet.integrations.maya.swapkit.model.SwapKitQuoteResponse
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitRoute
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitSwapRequest
 import org.dash.wallet.integrations.maya.utils.MayaConfig
@@ -603,7 +604,7 @@ class SwapKitApiAggregator @Inject constructor(
                 slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT
             )
         ) ?: return null
-        return mapToSwapQuote(response.routes.bestRoute(), toAsset, response.error)
+        return mapToSwapQuote(response, toAsset)
     }
 
     override suspend fun getDefaultSwapQuote(
@@ -621,7 +622,7 @@ class SwapKitApiAggregator @Inject constructor(
                 destinationAddress = destinationAddress
             )
         ) ?: return null
-        return mapToSwapQuote(response.routes.bestRoute(), toAsset, response.error)
+        return mapToSwapQuote(response, toAsset)
     }
 
     override suspend fun getSwapInfo(swapRequest: SwapQuoteRequest): ResponseResource<SwapTradeUIModel> {
@@ -688,6 +689,13 @@ class SwapKitApiAggregator @Inject constructor(
                 buyAsset = swapRequest.target_maya_asset,
                 sellAmount = sellAmount,
                 slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT,
+                // Deliberately omitted, not an oversight: /v3/quote has no disableBalanceCheck /
+                // disableBuildTx escape hatch, so handing it a source address makes SwapKit
+                // balance-check that one address — which fails for an HD wallet whose balance is
+                // spread across UTXOs (and this is the unfunded current receive address anyway).
+                // Nothing is lost by leaving it out: the deposit address comes back from
+                // /v3/swap, so the intent — and the refund destination it refunds to — is only
+                // created there, and that call does report [sourceAddress].
                 // sourceAddress = sourceAddress,
                 destinationAddress = swapRequest.targetAddress
             )
@@ -698,7 +706,7 @@ class SwapKitApiAggregator @Inject constructor(
         }
         val route = quote.routes.bestRoute()
             ?: return ResponseResource.Failure(
-                MayaException(quote.providerErrors?.firstOrNull()?.message ?: "no swapkit route"),
+                MayaException(quote.noRouteError()),
                 false,
                 0,
                 null
@@ -897,7 +905,7 @@ class SwapKitApiAggregator @Inject constructor(
         }
         val route = quote.routes.bestRoute()
             ?: return ResponseResource.Failure(
-                MayaException(quote.providerErrors?.firstOrNull()?.message ?: "no swapkit route"),
+                MayaException(quote.noRouteError()),
                 false,
                 0,
                 null
@@ -1058,7 +1066,14 @@ class SwapKitApiAggregator @Inject constructor(
             .toPlainString()
     }
 
-    private fun mapToSwapQuote(route: SwapKitRoute?, toAsset: String, topLevelError: String?): SwapQuote? {
+    /**
+     * Maps a `/v3/quote` response to Maya's [SwapQuote]. Takes the whole response rather than a
+     * pre-picked route + error so that only the no-route case synthesizes an error string: callers
+     * treat a non-null [SwapQuote.error] as "unusable quote", so attaching a no-route reason to a
+     * response that *did* return a route would reject a perfectly good route.
+     */
+    private fun mapToSwapQuote(response: SwapKitQuoteResponse, toAsset: String): SwapQuote? {
+        val route = response.routes.bestRoute()
         if (route == null) {
             return SwapQuote(
                 dustThreshold = "0",
@@ -1075,7 +1090,9 @@ class SwapKitApiAggregator @Inject constructor(
                 recommendedMinAmountIn = "0",
                 slippageBps = 0,
                 warning = "",
-                error = topLevelError ?: "no route"
+                // A request-level failure names itself in `error`; when providers merely all
+                // declined, the reason is only in providerErrors (see noRouteError).
+                error = response.error ?: response.noRouteError()
             )
         }
         val expectedBaseUnits = humanToBuyAssetBaseUnits(route.expectedBuyAmount)
@@ -1108,7 +1125,9 @@ class SwapKitApiAggregator @Inject constructor(
             recommendedMinAmountIn = "0",
             slippageBps = slippageBpsInt,
             warning = route.warnings?.joinToString().orEmpty(),
-            error = topLevelError
+            // A usable route was returned, so this quote carries no error; per-provider
+            // providerErrors alongside it are informational (other providers still routed).
+            error = response.error
         )
     }
 
@@ -1196,13 +1215,36 @@ class SwapKitApiAggregator @Inject constructor(
             ?: first()
     }
 
+    /**
+     * Why a quote came back with no usable route, in the `"<code>: <detail>"` shape the error
+     * helpers parse ([SwapKitErrors.messageResFor], [isAmountTooLowError]).
+     *
+     * When every provider declines, SwapKit answers 200 with `routes: []`, a null top-level
+     * `error`, and the real reason only in `providerErrors[].errorCode` — e.g.
+     * `sellAssetAmountTooSmall` for a sell below MAYACHAIN's minimum. Passing the human
+     * `message` on instead (as this used to) lost the code, so every such quote fell through to
+     * the generic error dialog rather than the inline "amount too small" banner. The rendering
+     * lives in [SwapKitErrors.providerErrorMessage]; this adds the no-route policy on top: prefer
+     * a provider error that carries a code, and classify code-less failures as `noRoutesFound`.
+     */
+    private fun SwapKitQuoteResponse.noRouteError(): String {
+        val providerError = providerErrors?.firstOrNull { !it.errorCode.isNullOrBlank() }
+            ?: providerErrors?.firstOrNull()
+        val rendered = SwapKitErrors.providerErrorMessage(providerError)
+        return when {
+            rendered == null -> SwapKitErrors.NO_ROUTES_FOUND
+            providerError?.errorCode.isNullOrBlank() -> "${SwapKitErrors.NO_ROUTES_FOUND}: $rendered"
+            else -> rendered
+        }
+    }
+
     // SwapKit's own error vocabulary → friendly message resource (see SwapKitErrors).
     @StringRes
     override fun errorMessageRes(error: String?): Int = SwapKitErrors.messageResFor(error)
 
-    // SwapKit reports a below-minimum sell amount as `noRoutesFound` (no provider can fill it).
-    override fun isAmountTooLowError(error: String?): Boolean =
-        error?.substringBefore(':')?.trim() == "noRoutesFound"
+    // Below-minimum sell amounts arrive either as a top-level `noRoutesFound` or as a provider's
+    // `…AmountTooSmall`-family code; SwapKitErrors owns that vocabulary.
+    override fun isAmountTooLowError(error: String?): Boolean = SwapKitErrors.isAmountTooLow(error)
 
     override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: FiatValue) {
         // usdToFiat is the wallet's "1 USD in SELECTED_CURRENCY" rate. Unlike Maya

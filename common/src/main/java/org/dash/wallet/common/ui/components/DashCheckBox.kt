@@ -85,7 +85,7 @@ fun DashCheckbox(
                         Text(
                             text = it,
                             color = if (enabled) textPrimary else textSecondary,
-                            style = MyTheme.CaptionMedium
+                            style = MyTheme.Typography.FootnoteMedium
                         )
                     }
                     subtitle?.let {
@@ -115,7 +115,7 @@ fun DashCheckbox(
                         Text(
                             text = it,
                             color = textPrimary,
-                            style = MyTheme.CaptionMedium,
+                            style = MyTheme.Typography.FootnoteMedium,
                             textAlign = TextAlign.End
                         )
                     }
