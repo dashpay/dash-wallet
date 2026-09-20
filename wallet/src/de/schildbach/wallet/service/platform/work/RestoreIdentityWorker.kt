@@ -41,6 +41,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import de.schildbach.wallet.data.WalletData
+import kotlinx.coroutines.CancellationException
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dashpay.UsernameInfo
@@ -282,25 +283,50 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 // "never requested", so use the throwing variant and treat an
                 // unreadable vote state as already-requested. Deferring costs one
                 // more worker trigger; a duplicate costs 0.2 DASH irrecoverably.
-                val alreadyContending = if (contestedReregistrationCheckApplies(requestedLabel)) {
+                var voteStateFailure: Exception? = null
+                val contenderVerdict = if (contestedReregistrationCheckApplies(requestedLabel)) {
                     try {
                         isOwnIdentityAContender(
                             platformRepo.getVoteContendersOrThrow(requestedLabel!!).map.keys,
                             blockchainIdentity.uniqueIdentifier
                         )
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
-                        log.warn(
-                            "contested re-registration guard: could not read the vote state for '{}' — " +
-                                "treating it as ALREADY requested and skipping re-registration (fail closed; " +
-                                "a later trigger re-drives this)",
-                            requestedLabel,
-                            e
-                        )
-                        true
+                        voteStateFailure = e
+                        null
                     }
                 } else {
                     false
                 }
+
+                val reregistrationAction = contestedReregistrationAction(requestedLabel, contenderVerdict)
+                when (reregistrationAction) {
+                    // An unreadable vote state must NOT be answered by silently skipping.
+                    // Skipping protects the 0.2 DASH prefund, but it is only safe when the
+                    // name really did land: if it did not, nothing registers it, the
+                    // contested walk below legitimately finds no contender, and the
+                    // fall-through at the end of this method clears `restoring`, records
+                    // "missing domain document" and routes the user to pick a DIFFERENT
+                    // name — turning a transient DAPI failure into a dead end that no
+                    // retry reaches. The later walks cannot rescue it either; they collapse
+                    // their own failures into empty results.
+                    //
+                    // So defer the whole attempt the way the registration paths above do:
+                    // retryable, `restoring` left true, state left at USERNAME_REGISTERING,
+                    // and the next trigger re-drives the guard with a fresh read. Still no
+                    // duplicate — deferring costs one more worker trigger, a duplicate
+                    // costs 0.2 DASH irrecoverably.
+                    ContestedReregistrationAction.DEFER_UNREADABLE ->
+                        throw IllegalStateException(
+                            "contested re-registration guard could not read the vote state for " +
+                                "'$requestedLabel' (retryable)",
+                            voteStateFailure
+                        )
+                    else -> Unit
+                }
+                val alreadyContending =
+                    reregistrationAction == ContestedReregistrationAction.SKIP_ALREADY_CONTENDING
 
                 if (cutoverCommitted && !requestedLabel.isNullOrEmpty() && alreadyContending) {
                     log.info(
@@ -968,6 +994,48 @@ internal fun contestedReregistrationCheckApplies(requestedLabel: String?): Boole
  *
  * Pure — host-testable.
  */
+/**
+ * What the restore worker should do about a DPNS label it is about to re-register.
+ */
+internal enum class ContestedReregistrationAction {
+    /** Not a contestable label, or this identity is not among its contenders — register it. */
+    REGISTER,
+
+    /** This identity already contends for the label — skip; the contested walk recovers VOTING. */
+    SKIP_ALREADY_CONTENDING,
+
+    /** The vote state could not be read — defer the attempt retryably; decide nothing. */
+    DEFER_UNREADABLE
+}
+
+/**
+ * The three-way guard decision, split out from the I/O so it is host-testable.
+ *
+ * [ownIdentityIsContender] is the answer from `getVoteContendersOrThrow`, or **null** when
+ * that read failed. Null is the case that matters: the first version of this guard folded it
+ * into `true` (skip), reasoning that a duplicate costs 0.2 DASH while deferring costs one
+ * worker trigger. That is right about the duplicate and wrong about the deferral — skipping
+ * only defers registration if the name actually landed. If it did not, nothing here registers
+ * it, the contested walks find no contender (and collapse their own failures into empty
+ * results, so they cannot tell the difference either), and the worker falls through to the
+ * "missing domain document" branch, which clears `restoring` and sends the user off to choose
+ * another name. A transient DAPI failure would strand the restoration permanently.
+ *
+ * Keeping null distinct lets the caller abort retryably instead, which protects the prefund
+ * without deciding anything on evidence it does not have.
+ *
+ * Pure — host-testable.
+ */
+internal fun contestedReregistrationAction(
+    requestedLabel: String?,
+    ownIdentityIsContender: Boolean?
+): ContestedReregistrationAction = when {
+    !contestedReregistrationCheckApplies(requestedLabel) -> ContestedReregistrationAction.REGISTER
+    ownIdentityIsContender == null -> ContestedReregistrationAction.DEFER_UNREADABLE
+    ownIdentityIsContender -> ContestedReregistrationAction.SKIP_ALREADY_CONTENDING
+    else -> ContestedReregistrationAction.REGISTER
+}
+
 internal fun isOwnIdentityAContender(
     contenderIds: Collection<Identifier>,
     ownIdentityId: Identifier

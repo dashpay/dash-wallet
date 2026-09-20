@@ -56,6 +56,7 @@ import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
@@ -1253,13 +1254,20 @@ class RequestUserNameViewModel @Inject constructor(
         return true
     }
 
-    fun checkUsername(requestedUserName: String?) {
+    /**
+     * Starts the availability lookup for [requestedUserName], returning its [Job] — or null
+     * when there was no name to check. The handle exists so a test can await the TERMINAL
+     * handling of a specific lookup: a stale result is dropped without touching the UI
+     * state, so there is deliberately no state change to observe, and waiting on the state
+     * alone can pass off a newer lookup's value as proof the older one ran.
+     */
+    fun checkUsername(requestedUserName: String?): Job? {
         // Claim the slot SYNCHRONOUSLY, before the coroutine starts: checkUsername is
         // called from the main thread, so the last caller to return is unambiguously
         // the newest lookup, and every earlier one is stale from this point on.
-        val username = requestedUserName ?: return
+        val username = requestedUserName ?: return null
         pendingUsernameCheck = username
-        viewModelScope.launch {
+        return viewModelScope.launch {
             _uiState.update { it.copy(checkingUsername = true, usernameCheckFailed = false) }
             val usernameSearchResult = withContext(Dispatchers.IO) { platformRepo.getUsername(username) }
             if (usernameSearchResult.status != Status.SUCCESS) {
@@ -1646,6 +1654,14 @@ class RequestUserNameViewModel @Inject constructor(
         // Input moved on: any lookup still in flight for an older label is now
         // stale, whether or not this keystroke starts a replacement query.
         pendingUsernameCheck = username
+        // ...and that is exactly why the spinner needs deciding here. The caller
+        // schedules a replacement lookup only when this returns true; when it does
+        // not, the outstanding lookup will return through the stale guard WITHOUT
+        // writing checkingUsername = false, and nothing else would ever clear it —
+        // the availability spinner would sit there for the life of the screen.
+        // Leave it alone in the scheduling case: checkUsername sets it true again,
+        // and until it does the spinner should keep running.
+        val lookupWillFollow = validCharacters && validLength && !sameAsPrimary
         val gate = computeBalanceGate(username, contestable)
         _uiState.update {
             it.copy(
@@ -1659,13 +1675,14 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,
+                checkingUsername = if (lookupWillFollow) it.checkingUsername else false,
                 usernameCheckSuccess = false,
                 usernameCheckFailed = false,
                 usernameNonContestedLength = validateNonContestedUsernameSize(username),
                 usernameNonContestedChars = validateNonContestedUsernameCharacters(username)
             )
         }
-        return validCharacters && validLength && !sameAsPrimary
+        return lookupWillFollow
     }
 
     @Throws(NullPointerException::class)

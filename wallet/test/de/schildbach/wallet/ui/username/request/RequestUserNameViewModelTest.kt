@@ -876,20 +876,22 @@ class RequestUserNameViewModelTest {
         val viewModel = viewModel(platformRepo)
 
         viewModel.checkUsernameValid("alice", UsernameType.Primary)
-        viewModel.checkUsername("alice")
+        val aliceLookup = viewModel.checkUsername("alice")
 
         // The user types on: the field now holds 'bob', whose lookup answers first.
         viewModel.checkUsernameValid("bob", UsernameType.Primary)
-        viewModel.checkUsername("bob")
-        viewModel.uiState.first { it.usernameCheckSuccess }
+        viewModel.checkUsername("bob")?.join()
         assertTrue("bob is registered", viewModel.uiState.value.usernameExists)
 
         // Now alice's answer lands. It says "free" — for a name that is no longer there.
+        // Join ALICE's own job: bob has already cleared checkingUsername, so waiting on
+        // the state could return from bob's value before alice reached the stale guard.
         aliceInFlight.countDown()
-        viewModel.uiState.first { !it.checkingUsername }
+        aliceLookup?.join()
 
         val state = viewModel.uiState.value
         assertTrue("bob's verdict must survive the late arrival", state.usernameExists)
+        assertFalse("and alice's 'free' must not have been recorded", state.usernameCheckFailed)
     }
 
     @Test
@@ -908,13 +910,13 @@ class RequestUserNameViewModelTest {
         val viewModel = viewModel(platformRepo)
 
         viewModel.checkUsernameValid("alice", UsernameType.Primary)
-        viewModel.checkUsername("alice")
+        val lookup = viewModel.checkUsername("alice")
 
         // Field cleared while the query is out.
         viewModel.reset()
 
         inFlight.countDown()
-        Thread.sleep(200)
+        lookup?.join()
 
         assertFalse(
             "a cleared field has no current name for a verdict to describe",
@@ -941,18 +943,94 @@ class RequestUserNameViewModelTest {
         val viewModel = viewModel(platformRepo)
 
         viewModel.checkUsernameValid("alice", UsernameType.Primary)
-        viewModel.checkUsername("alice")
+        val aliceLookup = viewModel.checkUsername("alice")
 
         viewModel.checkUsernameValid("bob", UsernameType.Primary)
-        viewModel.checkUsername("bob")
-        viewModel.uiState.first { it.usernameCheckSuccess }
+        viewModel.checkUsername("bob")?.join()
 
         aliceInFlight.countDown()
-        Thread.sleep(200)
+        aliceLookup?.join()
 
         val state = viewModel.uiState.value
         assertFalse("alice's failure must not surface under bob", state.usernameCheckFailed)
         assertTrue("bob's success must stand", state.usernameCheckSuccess)
+    }
+
+    @Test
+    fun checkUsername_invalidKeystrokeWhileALookupIsOut_doesNotStrandTheSpinner() = runVmTest {
+        // Review finding on #1564. A valid name starts a lookup (checkingUsername = true).
+        // The user then types something INVALID, so the fragment schedules no replacement
+        // query; the outstanding lookup returns through the stale guard, which writes
+        // nothing. Without clearing the flag in the validity pass, the availability
+        // spinner would run for the rest of the screen's life.
+        val inFlight = CountDownLatch(1)
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } answers {
+                inFlight.await()
+                Resource.success(null)
+            }
+            every { getVoteContendersOrThrow("alice") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        // The latch is released in a finally: a failed assertion must not strand a
+        // blocked IO thread, which keeps the test JVM alive instead of failing.
+        val lookup = try {
+            assertTrue(viewModel.checkUsernameValid("alice", UsernameType.Primary))
+            val job = viewModel.checkUsername("alice")
+            assertTrue("the lookup is out", viewModel.uiState.value.checkingUsername)
+
+            // '_' is outside [a-zA-Z0-9-], so no replacement lookup is scheduled.
+            assertFalse(viewModel.checkUsernameValid("alice_x", UsernameType.Primary))
+            assertFalse(
+                "the spinner must stop when nothing will answer for the new input",
+                viewModel.uiState.value.checkingUsername
+            )
+            job
+        } finally {
+            inFlight.countDown()
+        }
+
+        // The old lookup completing must not resurrect it either.
+        lookup?.join()
+        assertFalse(viewModel.uiState.value.checkingUsername)
+    }
+
+    @Test
+    fun checkUsernameValid_stillValid_leavesTheSpinnerRunningForTheReplacementLookup() = runVmTest {
+        // The complement: when a replacement query IS coming, the spinner keeps running
+        // across the 600 ms debounce rather than flickering off and on.
+        val inFlight = CountDownLatch(1)
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername(any()) } answers {
+                inFlight.await()
+                Resource.success(null)
+            }
+            every { getVoteContendersOrThrow(any()) } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        val lookup = try {
+            viewModel.checkUsernameValid("alice", UsernameType.Primary)
+            val job = viewModel.checkUsername("alice")
+            assertTrue(viewModel.uiState.value.checkingUsername)
+
+            assertTrue(viewModel.checkUsernameValid("alicia", UsernameType.Primary))
+            assertTrue(
+                "a replacement lookup is coming — keep the spinner",
+                viewModel.uiState.value.checkingUsername
+            )
+            job
+        } finally {
+            inFlight.countDown()
+        }
+        lookup?.join()
     }
 
     // ── Advisory network-health warning ─────────────────────────────────────
