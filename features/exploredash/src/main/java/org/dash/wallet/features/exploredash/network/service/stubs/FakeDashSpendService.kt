@@ -77,10 +77,15 @@ class FakeDashSpendService @Inject constructor(
         return if (dashUri.startsWith(DASH_SPEND_SCHEMA)) {
             val uri = Uri.parse(dashUri)
             val amount = Coin.valueOf(uri.getQueryParameter("amount")?.toLong() ?: 0)
-            realService.sendCoins(
+            val transaction = realService.sendCoins(
                 Address.fromBase58(walletDataProvider.networkParameters, "yiCvnqNp53bjCReThnPx8ttuhM7JXUUyfQ"),
                 amount
             )
+            // Callers persist the order from this callback, so skipping it leaves a completed
+            // purchase with nothing for the details screen to load. Later than the real path,
+            // which calls it before submitting, but sendCoins gives no pre-send suspension point.
+            onTransactionCreated?.invoke(transaction.txId)
+            transaction
         } else {
             realService.payWithDashUrl(dashUri, serviceName, recovery, onTransactionCreated)
         }

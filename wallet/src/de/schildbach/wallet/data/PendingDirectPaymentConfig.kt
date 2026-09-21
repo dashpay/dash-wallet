@@ -155,10 +155,10 @@ open class PendingDirectPaymentConfig @Inject constructor(
             // pending payment stopped being restored and the next write erased them all.
             try {
                 readable.add(PendingDirectPayment.fromJson(array.getJSONObject(i)))
-            } catch (e: JSONException) {
-                log.error("could not read pending direct payment at index {}, keeping it as is", i, e)
-                (array.opt(i) as? JSONObject)?.let { unreadable.add(it) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
+                // Deliberately broad: hex decoding throws a decoder exception derived from
+                // IllegalStateException and Sha256Hash.wrap has its own runtime failures, so
+                // naming types would let one entry escape and hide every payment again.
                 log.error("could not read pending direct payment at index {}, keeping it as is", i, e)
                 (array.opt(i) as? JSONObject)?.let { unreadable.add(it) }
             }

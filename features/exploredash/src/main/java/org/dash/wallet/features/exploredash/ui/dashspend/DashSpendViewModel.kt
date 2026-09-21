@@ -350,8 +350,22 @@ class DashSpendViewModel @Inject constructor(
         _submissionState.value = GiftCardSubmissionState.IDLE
     }
 
-    /** True while an order is submitted or unresolved, so no further purchase may be started. */
-    fun isSubmissionBlocked(): Boolean = _submissionState.value != GiftCardSubmissionState.IDLE
+    /**
+     * Claims the right to submit, atomically, returning false when a purchase is already under
+     * way or unresolved.
+     *
+     * Callers must claim before creating the order at the merchant. Leaving the claim to
+     * [payAndRecordOrder] let two quick taps both get past the check and each create an order,
+     * because the first had not reached that point yet. Release an unused claim with
+     * [releaseUnusedSubmission].
+     */
+    fun tryStartSubmission(): Boolean =
+        _submissionState.compareAndSet(GiftCardSubmissionState.IDLE, GiftCardSubmissionState.IN_PROGRESS)
+
+    /** Gives back a claim that never reached submission, so the user can try again. */
+    fun releaseUnusedSubmission() {
+        _submissionState.compareAndSet(GiftCardSubmissionState.IN_PROGRESS, GiftCardSubmissionState.IDLE)
+    }
 
     /**
      * Submits the payment and records the ordered cards as one operation that neither the
@@ -371,11 +385,13 @@ class DashSpendViewModel @Inject constructor(
         paymentUri: String,
         giftCards: List<GiftCardInfo>
     ): Sha256Hash = withContext(NonCancellable) {
-        val current = _submissionState.value
-        if (current != GiftCardSubmissionState.IDLE) {
-            throw DuplicateGiftCardSubmissionException(current)
+        // Accepts a claim already made by the caller, and claims one itself otherwise, so this
+        // stays a guard of last resort for any caller that does not pre-claim.
+        if (_submissionState.value != GiftCardSubmissionState.IN_PROGRESS &&
+            !_submissionState.compareAndSet(GiftCardSubmissionState.IDLE, GiftCardSubmissionState.IN_PROGRESS)
+        ) {
+            throw DuplicateGiftCardSubmissionException(_submissionState.value)
         }
-        _submissionState.value = GiftCardSubmissionState.IN_PROGRESS
 
         var recordedTxId: Sha256Hash? = null
         try {
