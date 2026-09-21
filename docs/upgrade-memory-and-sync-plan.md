@@ -2322,6 +2322,45 @@ The engine is not broken and no filter is lost. The same dump reports `Filters: 
 against a tip of 1,556,922. What is stuck is the *block* fetch the match triggered, and the commit
 that waits on it.
 
+### 34.1a It PERSISTS, and it costs a re-walk on every process start
+
+Added 2026-09-21 from a Samsung SM-S901U run on the `743d7af42` build. Two process restarts,
+nine minutes apart, resumed the filter scan from the SAME height:
+
+```
+12:09:01  phase=CONNECTING  filters 1532170/1558127  wallet 1558127   <- restart 1
+12:09:14  phase=SYNCED      filters 1558142/1558142  wallet 1558142   <- re-walked, 13 s
+12:17:09  Process ... has died: cch+5 SVC                            <- cached-process kill
+12:18:15  phase=CONNECTING  filters 1532170/1558146  wallet 1558146   <- restart 2, SAME height
+```
+
+Two things follow, neither of which was visible from the earlier single-session observations:
+
+- **The withheld commit is durable, not transient.** Reaching SYNCED does not advance the stored
+  `committed_height`: it stayed at 1,532,170 across a restart that had already walked past it to
+  1,558,142. So the cost is not "the UI reads stalled for a while" — it is ~26,000 blocks of filter
+  re-walk on EVERY process start, indefinitely.
+- **The wallet watermark and the filter commit disagree.** `wallet` tracked the tip (1,558,146)
+  while `filters` sat 26,000 blocks below it. These are two different persisted values and only one
+  of them is advancing.
+
+**And the batch-boundary model is confirmed arithmetically.** Every parked height observed so far
+is congruent modulo `BATCH_PROCESSING_SIZE` = 5,000:
+
+| height | mod 5,000 |
+|---|---|
+| 1,547,170 | 2,170 |
+| 1,552,170 | 2,170 |
+| 1,532,170 | 2,170 |
+
+The same residue, across two devices, two sessions and two chain tips. §34.2 inferred "it parks on
+odd round numbers — batch boundaries" from two values on one occasion; the residue makes it
+arithmetic rather than a hunch, with the offset being the sync start height.
+
+Incidental but relevant to the memory work: the 12:17:09 death was `cch+5 SVC` — the platform
+evicting a cached process under device memory pressure, alongside Chrome and Play Store, not a
+crash of ours. Every such eviction pays the re-walk above.
+
 ### 34.2 Everything it explains
 
 - **Why the cursor always parks a few thousand blocks short.** The gap is the final partial batch.
