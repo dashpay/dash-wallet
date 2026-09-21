@@ -469,7 +469,12 @@ class DashSpendViewModel @Inject constructor(
                 providerResponseList.add(
                     provider.copy(
                         savingsPercentage = details.savingsPercentage,
-                        active = details.enabled
+                        active = details.enabled,
+                        // The explore dataset's cached type goes stale when a merchant switches
+                        // between fixed cards and a range card. ItemDetails picks the range or
+                        // fixed subtitle from this row, so leaving it cached would disagree with
+                        // the purchase screen, which resolves the mode from the same live data.
+                        denominationsType = details.denominationsType
                     )
                 )
             } else {

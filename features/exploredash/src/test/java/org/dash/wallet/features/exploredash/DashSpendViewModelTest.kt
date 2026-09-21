@@ -112,14 +112,19 @@ class DashSpendViewModelTest {
         giftCardProviders = listOf(cachedCtxRow, cachedPiggyCardsRow)
     }
 
-    private fun viewModel(piggyCardsRepository: DashSpendRepository): DashSpendViewModel {
+    private fun viewModel(
+        piggyCardsRepository: DashSpendRepository,
+        ctxRepository: DashSpendRepository = mock(),
+        providers: List<GiftCardProvider> = listOf(cachedCtxRow, cachedPiggyCardsRow)
+    ): DashSpendViewModel {
         val providerDao = mock<GiftCardProviderDao> {
             onBlocking {
                 getProviderByMerchantId(eq(merchantId), eq(GiftCardProviderType.PiggyCards.name))
             } doReturn cachedPiggyCardsRow
+            onBlocking { getProvidersByMerchantId(eq(merchantId)) } doReturn providers
         }
         val repositoryFactory = mock<DashSpendRepositoryFactory> {
-            on { create(eq(GiftCardProviderType.CTX)) } doReturn mock<DashSpendRepository>()
+            on { create(eq(GiftCardProviderType.CTX)) } doReturn ctxRepository
             on { create(eq(GiftCardProviderType.PiggyCards)) } doReturn piggyCardsRepository
         }
 
@@ -167,6 +172,37 @@ class DashSpendViewModelTest {
             assertEquals("min-max", updated.denominationsType)
             assertEquals(3.0, updated.minCardPurchase!!, 0.0)
             assertEquals(2000.0, updated.maxCardPurchase!!, 0.0)
+        }
+    }
+
+    @Test
+    fun updateMerchantDetailsForAllProviders_liveTypeReplacesTheCachedOne() {
+        // Regression test: the list and details subtitles read denominationsType from the
+        // provider row this refresh writes. It used to carry only savings and availability, so a
+        // merchant that had switched between fixed cards and a range still showed the explore
+        // dataset's stale type while the purchase screen showed the live one.
+        runBlocking {
+            val ctx = mock<DashSpendRepository> {
+                onBlocking { isUserSignedIn() } doReturn true
+                onBlocking { getMerchant(eq("ctx-source")) } doReturn liveRangeCard.copy(id = "ctx-source")
+            }
+            // Not signed in, so this provider has no live data and must keep what it cached
+            val piggyCards = mock<DashSpendRepository> {
+                onBlocking { isUserSignedIn() } doReturn false
+            }
+            val viewModel = viewModel(piggyCards, ctxRepository = ctx)
+
+            val updated = viewModel.updateMerchantDetailsForAllProviders(merchant())
+
+            val refreshed = updated.giftCardProviders.first { it.provider == GiftCardProviderType.CTX.name }
+            assertEquals("min-max", refreshed.denominationsType)
+            assertEquals(175, refreshed.savingsPercentage)
+            assertEquals(true, refreshed.active)
+
+            val untouched = updated.giftCardProviders.first {
+                it.provider == GiftCardProviderType.PiggyCards.name
+            }
+            assertEquals(cachedPiggyCardsRow, untouched)
         }
     }
 }
