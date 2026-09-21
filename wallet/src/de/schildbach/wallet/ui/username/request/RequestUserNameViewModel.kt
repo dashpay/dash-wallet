@@ -56,6 +56,7 @@ import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
@@ -92,7 +93,6 @@ import javax.inject.Inject
 import kotlin.math.max
 
 data class RequestUserNameUIState(
-    val usernameVerified: Boolean = false,
     val usernameRequestSubmitting: Boolean = false,
     val usernameRequestSubmitted: Boolean = false,
     val checkingUsername: Boolean = false,
@@ -127,6 +127,11 @@ data class RequestUserNameUIState(
     val usernameSubmittedAmbiguous: Boolean = false,
     val usernameLengthValid: Boolean = false,
     val usernameCharactersValid: Boolean = false,
+    /**
+     * The INSTANT (secondary) name is the same DPNS name as the contested
+     * primary — see [secondaryNameCollidesWithPrimary]. Blocks submission.
+     */
+    val secondaryNameSameAsPrimary: Boolean = false,
     val usernameTooShort: Boolean = true,  // default zero length username
     val usernameContestable: Boolean = false,
     val usernameContested: Boolean = false,
@@ -1190,6 +1195,7 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun reset() {
         lastGateUsername = null
+        usernameCheckToken++
         // networkSlow is screen-entry-scoped (advisory probe result), not
         // per-username state — clearing the input must not wipe it. Same
         // for the shielded-gate mirrors: they are SERVICE state, and the
@@ -1233,77 +1239,108 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    fun checkUsername(requestedUserName: String?) {
-        viewModelScope.launch {
-            requestedUserName?.let { username ->
-                _uiState.update { it.copy(checkingUsername = true, usernameCheckFailed = false) }
-                val usernameSearchResult = withContext(Dispatchers.IO) { platformRepo.getUsername(username) }
-                if (usernameSearchResult.status != Status.SUCCESS) {
-                    // Fail CLOSED: a lookup that never completed says
-                    // nothing about availability — the old default read it
-                    // as "name is free" (observed live: a registered name
-                    // showed as available on-device).
-                    log.warn(
-                        "checkUsername('{}'): availability lookup failed (status={}, message={})",
-                        username, usernameSearchResult.status, usernameSearchResult.message,
-                        usernameSearchResult.exception
-                    )
-                    _uiState.update {
-                        it.copy(checkingUsername = false, usernameCheckSuccess = false, usernameCheckFailed = true)
-                    }
-                    return@launch
-                }
-                val usernameExists = usernameSearchResult.data != null
-                var usernameContested = false
-                var firstCreatedAt = -1L
-                val usernameBlocked = try {
-                    withContext(Dispatchers.IO) {
-                        val contenders = platformRepo.getVoteContendersOrThrow(username)
-                        usernameContested = contenders.map.isNotEmpty()
-                        var maxApprovalVotes = 0
-                        firstCreatedAt = try {
-                            contenders.map.values.minOf { contender ->
-                                val document = contender.serializedDocument?.let {
-                                    DomainDocument(platformRepo.platform.names.deserialize(it))
-                                }
-                                maxApprovalVotes = max(contender.votes, maxApprovalVotes)
-                                document?.createdAt ?: -1
-                            }
-                        } catch (e: NoSuchElementException) {
-                            -1L
-                        }
+    /**
+     * True when [username]'s lookup has been overtaken by newer input, in which case its
+     * result must not reach the UI state. Logged, because on-device forensics need to tell
+     * "the query never answered" apart from "the answer arrived for a name the user had
+     * already replaced".
+     */
+    private fun usernameCheckIsStale(username: String, token: Long): Boolean {
+        if (usernameCheckResultIsCurrent(token, usernameCheckToken)) return false
+        log.info(
+            "checkUsername('{}') #{}: result overtaken (current is #{}); dropping it",
+            username, token, usernameCheckToken
+        )
+        return true
+    }
 
-                        // is the name blocked
-                        firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    // Same fail-closed discipline: a failed contest lookup
-                    // must not pass as "not contested".
-                    log.warn("checkUsername('{}'): vote-contenders lookup failed", username, e)
-                    _uiState.update {
-                        it.copy(checkingUsername = false, usernameCheckSuccess = false, usernameCheckFailed = true)
-                    }
-                    return@launch
-                }
-                // One line per completed query, for on-device forensics.
-                log.info(
-                    "checkUsername('{}'): exists={} contested={} blocked={}",
-                    username, usernameExists, usernameContested, usernameBlocked
+    /**
+     * Starts the availability lookup for [requestedUserName], returning its [Job] — or null
+     * when there was no name to check. The handle exists so a test can await the TERMINAL
+     * handling of a specific lookup: a stale result is dropped without touching the UI
+     * state, so there is deliberately no state change to observe, and waiting on the state
+     * alone can pass off a newer lookup's value as proof the older one ran.
+     */
+    fun checkUsername(requestedUserName: String?): Job? {
+        // Claim the slot SYNCHRONOUSLY, before the coroutine starts: checkUsername is
+        // called from the main thread, so the last caller to return is unambiguously
+        // the newest lookup, and every earlier one is stale from this point on.
+        val username = requestedUserName ?: return null
+        val token = ++usernameCheckToken
+        return viewModelScope.launch {
+            _uiState.update { it.copy(checkingUsername = true, usernameCheckFailed = false) }
+            val usernameSearchResult = withContext(Dispatchers.IO) { platformRepo.getUsername(username) }
+            if (usernameSearchResult.status != Status.SUCCESS) {
+                // Fail CLOSED: a lookup that never completed says
+                // nothing about availability — the old default read it
+                // as "name is free" (observed live: a registered name
+                // showed as available on-device).
+                log.warn(
+                    "checkUsername('{}'): availability lookup failed (status={}, message={})",
+                    username, usernameSearchResult.status, usernameSearchResult.message,
+                    usernameSearchResult.exception
                 )
+                if (usernameCheckIsStale(username, token)) return@launch
                 _uiState.update {
-                    it.copy(
-                        checkingUsername = false,
-                        usernameCheckSuccess = true,
-                        usernameCheckFailed = false,
-                        usernameSubmittedError = false,
-                        usernameSubmittedPoolSyncing = false,
-                        usernameContested = usernameContested, usernameExists = usernameExists,
-                        usernameBlocked = usernameBlocked,
-                        votingPeriodStart = if (firstCreatedAt == -1L) System.currentTimeMillis() else firstCreatedAt
-                    )
+                    it.copy(checkingUsername = false, usernameCheckSuccess = false, usernameCheckFailed = true)
                 }
+                return@launch
+            }
+            val usernameExists = usernameSearchResult.data != null
+            var usernameContested = false
+            var firstCreatedAt = -1L
+            val usernameBlocked = try {
+                withContext(Dispatchers.IO) {
+                    val contenders = platformRepo.getVoteContendersOrThrow(username)
+                    usernameContested = contenders.map.isNotEmpty()
+                    var maxApprovalVotes = 0
+                    firstCreatedAt = try {
+                        contenders.map.values.minOf { contender ->
+                            val document = contender.serializedDocument?.let {
+                                DomainDocument(platformRepo.platform.names.deserialize(it))
+                            }
+                            maxApprovalVotes = max(contender.votes, maxApprovalVotes)
+                            document?.createdAt ?: -1
+                        }
+                    } catch (e: NoSuchElementException) {
+                        -1L
+                    }
+
+                    // is the name blocked
+                    firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Same fail-closed discipline: a failed contest lookup
+                // must not pass as "not contested".
+                log.warn("checkUsername('{}'): vote-contenders lookup failed", username, e)
+                if (usernameCheckIsStale(username, token)) return@launch
+                _uiState.update {
+                    it.copy(checkingUsername = false, usernameCheckSuccess = false, usernameCheckFailed = true)
+                }
+                return@launch
+            }
+            // One line per completed query, for on-device forensics.
+            log.info(
+                "checkUsername('{}'): exists={} contested={} blocked={}",
+                username, usernameExists, usernameContested, usernameBlocked
+            )
+            // The verdict below carries usernameExists/Contested/Blocked for THIS
+            // label. Writing it after the field moved on would judge the new name
+            // by the old name's answer — and enable submit on it.
+            if (usernameCheckIsStale(username, token)) return@launch
+            _uiState.update {
+                it.copy(
+                    checkingUsername = false,
+                    usernameCheckSuccess = true,
+                    usernameCheckFailed = false,
+                    usernameSubmittedError = false,
+                    usernameSubmittedPoolSyncing = false,
+                    usernameContested = usernameContested, usernameExists = usernameExists,
+                    usernameBlocked = usernameBlocked,
+                    votingPeriodStart = if (firstCreatedAt == -1L) System.currentTimeMillis() else firstCreatedAt
+                )
             }
         }
     }
@@ -1325,11 +1362,6 @@ class RequestUserNameViewModel @Inject constructor(
                         usernameRequestDao.update(usernameRequest)
                     }
                 }
-            }
-            _uiState.update {
-                it.copy(
-                    usernameVerified = true
-                )
             }
         }
     }
@@ -1377,6 +1409,17 @@ class RequestUserNameViewModel @Inject constructor(
      * test-demo1/test-demo11 swallowed with no explanation).
      */
     private var lastGateUsername: String? = null
+
+    // Identifies the ONE lookup whose availability verdict the UI is currently
+    // entitled to show. Bumped by both the per-keystroke validity pass (so the field
+    // moving on invalidates an outstanding lookup even when the new name is invalid
+    // and starts no replacement query) and by each lookup itself.
+    //
+    // A monotonic token, not the label: the same name can be requested twice with a
+    // detour in between (alice -> bob -> alice), and comparing labels would let the
+    // FIRST alice lookup pass as current while the second is still in flight — clearing
+    // the spinner early and writing an older read's verdict. A token separates them.
+    private var usernameCheckToken: Long = 0L
 
     /** The resolved balance gate: button enablement + row copy inputs. */
     private data class BalanceGateResult(
@@ -1599,12 +1642,35 @@ class RequestUserNameViewModel @Inject constructor(
         val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
         val contestable = Names.isUsernameContestable(username)
 
+        // MO-973 report 3: the instant (secondary) screen PRE-FILLS the input with
+        // the contested primary and only enforces `startsWith(primary)` — nothing
+        // requires a suffix, the suffix-character rule is commented out, and the
+        // clear button puts the bare primary back. So the field can sit at exactly
+        // the primary name, which is not a second name at all: DPNS would reject
+        // the duplicate, and the usual availability query cannot catch it because a
+        // contested name is absent from the unique index until its vote resolves.
+        // Compare NORMALIZED labels so homoglyph collisions (o/0, i/l/1) count too.
+        val sameAsPrimary = usernameType == UsernameType.Secondary &&
+            secondaryNameCollidesWithPrimary(username, requestedUserName)
+
         lastGateUsername = username
+        // Input moved on: any lookup still in flight is now stale, whether or not
+        // this keystroke starts a replacement query.
+        usernameCheckToken++
+        // ...and that is exactly why the spinner needs deciding here. The caller
+        // schedules a replacement lookup only when this returns true; when it does
+        // not, the outstanding lookup will return through the stale guard WITHOUT
+        // writing checkingUsername = false, and nothing else would ever clear it —
+        // the availability spinner would sit there for the life of the screen.
+        // Leave it alone in the scheduling case: checkUsername sets it true again,
+        // and until it does the spinner should keep running.
+        val lookupWillFollow = validCharacters && validLength && !sameAsPrimary
         val gate = computeBalanceGate(username, contestable)
         _uiState.update {
             it.copy(
                 usernameLengthValid = validLength,
                 usernameCharactersValid = validCharacters && !startOrEndWithHyphen,
+                secondaryNameSameAsPrimary = sameAsPrimary,
                 usernameContestable = contestable,
                 enoughBalance = gate.enoughBalance,
                 requiredAmount = gate.requiredAmount,
@@ -1612,13 +1678,14 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,
+                checkingUsername = if (lookupWillFollow) it.checkingUsername else false,
                 usernameCheckSuccess = false,
                 usernameCheckFailed = false,
                 usernameNonContestedLength = validateNonContestedUsernameSize(username),
                 usernameNonContestedChars = validateNonContestedUsernameCharacters(username)
             )
         }
-        return validCharacters && validLength
+        return lookupWillFollow
     }
 
     @Throws(NullPointerException::class)
@@ -1703,3 +1770,48 @@ class RequestUserNameViewModel @Inject constructor(
                 } == true
     }
 }
+
+/**
+ * Is [secondary] — the INSTANT username — the same DPNS name as the contested
+ * [primary]?
+ *
+ * The instant name exists to be usable immediately while the contested one is in
+ * voting, so it must be a DIFFERENT name. The request screen pre-fills it with the
+ * primary and expects a suffix (contested `gffh` + instant `gffh-2`), but nothing
+ * required the suffix to be there.
+ *
+ * Compared on the DPNS-NORMALIZED label (`Names.normalizeString`: lowercase,
+ * o→0, i/l→1) because that, not the typed text, is what the contract's unique
+ * index keys on — `asdo` and `asd0` are the same name to DPNS and must collide
+ * here too.
+ *
+ * A null/blank primary means there is nothing to collide with (single-name flow).
+ *
+ * Pure — host-testable.
+ */
+/**
+ * True when the availability verdict produced by lookup [checkedToken] is still the one the
+ * UI should show, given that [currentToken] is the newest claim on that slot.
+ *
+ * `checkUsername` starts a fresh coroutine per debounced keystroke burst and never cancels
+ * the previous one, and the 600 ms debounce only drops a runnable that has not fired yet —
+ * once a lookup is away, more typing does not touch it. Two DAPI round-trips
+ * (`getUsername` plus `getVoteContendersOrThrow`) can therefore be in flight at once and
+ * complete out of order. The older one would otherwise write `usernameCheckSuccess = true`
+ * together with ITS `usernameExists` / `usernameContested` / `usernameBlocked`, and submit
+ * would be enabled for the name now in the box on the strength of a different name's answer.
+ *
+ * Tokens rather than labels, because the label does not identify a lookup: in
+ * `alice -> bob -> alice` both the first and the third request carry the label "alice", and
+ * label equality would let the FIRST one's answer through while the third is still running.
+ * Each claim on the slot — every keystroke, and every lookup — takes a fresh token, so only
+ * the newest one can write.
+ *
+ * Pure — host-testable.
+ */
+internal fun usernameCheckResultIsCurrent(checkedToken: Long, currentToken: Long): Boolean =
+    checkedToken == currentToken
+
+internal fun secondaryNameCollidesWithPrimary(secondary: String, primary: String?): Boolean =
+    !primary.isNullOrBlank() && secondary.isNotBlank() &&
+        Names.normalizeString(secondary) == Names.normalizeString(primary)

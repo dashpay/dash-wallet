@@ -41,6 +41,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import de.schildbach.wallet.data.WalletData
+import kotlinx.coroutines.CancellationException
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dashpay.UsernameInfo
@@ -114,6 +115,11 @@ class RestoreIdentityWorker @AssistedInject constructor(
                     KEY_IDENTITY to identity,
                 )
             )
+        } catch (ex: CancellationException) {
+            // WorkManager stopping this worker is not a restoration failure. Letting the
+            // broad handler below have it logged an analytics error and returned
+            // Result.failure, so an ordinary cancellation looked like a real defect.
+            throw ex
         } catch (ex: Exception) {
             analytics.logError(ex, "Restore Identity: failed to restore identity")
             Result.failure(
@@ -177,6 +183,9 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 )
             }
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 1)
+            // Identity-cache CBOR tolerance for this read now lives in
+            // IdentityRepositoryImpl.getIdentityFromPublicKeyId, which every caller
+            // shares — see its KDoc.
             val existingIdentity = identityRepository.getIdentityFromPublicKeyId()
                 ?: throw IllegalArgumentException("identity $identity doesn't exist on the network")
 
@@ -247,15 +256,98 @@ class RestoreIdentityWorker @AssistedInject constructor(
             // starts from an empty config (no requested USERNAME) and falls through
             // to the throw below (ask the user for a new username). Pre-cutover this
             // is skipped and the classic dashj retry path is unchanged.
+            //
+            // Carried out to the fall-through at the end of this method: once the guard
+            // has POSITIVELY seen this identity's contender document, "no name found"
+            // down there is a failed read, never an absent name.
+            var confirmedOwnContender = false
             if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
                 val requestedLabel = identityConfig.get(BlockchainIdentityConfig.USERNAME)
                 val cutoverCommitted = try {
                     transparentUsernameCreation.isCutoverCommitted()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     log.warn("cutover-state read failed while completing DPNS registration; skipping", e)
                     false
                 }
-                if (cutoverCommitted && !requestedLabel.isNullOrEmpty()) {
+                // A CONTESTED name that HAS already been requested is invisible
+                // here: `recoverUsernames` resolves a name through the DPNS unique
+                // index, and for a contested label that index is not awarded until
+                // the vote concludes — so `currentUsername` stays null even though
+                // the identity's own contender document is on chain. Re-registering
+                // on that basis pays the 0.2 DASH prefunded specialized balance a
+                // SECOND time.
+                //
+                // Field evidence (testnet 12000000, emulator, 2026-09-10): identity
+                // 7oct2Gqw… funded 0.25, registered `test-contested-1000` (explorer
+                // shows the name and exactly 20,000,000,000 credits gone to the vote
+                // poll beyond gas), then this block re-registered it and the FFI
+                // rejected the duplicate — "Insufficient identity balance
+                // 4680452100 required 20000100000". Each later trigger burned another
+                // preorder document's gas (blocks 570460, 570461) for a name the
+                // identity already owns.
+                //
+                // So ASK FIRST, with the single targeted query the candidate set
+                // already implies (see [ownContestedCandidates], which reads this
+                // same USERNAME pref). Fails CLOSED: `getVoteContenders` collapses a
+                // failed read into "no contenders", which is indistinguishable from
+                // "never requested", so use the throwing variant and treat an
+                // unreadable vote state as already-requested. Deferring costs one
+                // more worker trigger; a duplicate costs 0.2 DASH irrecoverably.
+                var voteStateFailure: Exception? = null
+                val contenderVerdict = if (contestedReregistrationCheckApplies(requestedLabel)) {
+                    try {
+                        isOwnIdentityAContender(
+                            platformRepo.getVoteContendersOrThrow(requestedLabel!!).map.keys,
+                            blockchainIdentity.uniqueIdentifier
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        voteStateFailure = e
+                        null
+                    }
+                } else {
+                    false
+                }
+
+                val reregistrationAction = contestedReregistrationAction(requestedLabel, contenderVerdict)
+                when (reregistrationAction) {
+                    // An unreadable vote state must NOT be answered by silently skipping.
+                    // Skipping protects the 0.2 DASH prefund, but it is only safe when the
+                    // name really did land: if it did not, nothing registers it, the
+                    // contested walk below legitimately finds no contender, and the
+                    // fall-through at the end of this method clears `restoring`, records
+                    // "missing domain document" and routes the user to pick a DIFFERENT
+                    // name — turning a transient DAPI failure into a dead end that no
+                    // retry reaches. The later walks cannot rescue it either; they collapse
+                    // their own failures into empty results.
+                    //
+                    // So defer the whole attempt the way the registration paths above do:
+                    // retryable, `restoring` left true, state left at USERNAME_REGISTERING,
+                    // and the next trigger re-drives the guard with a fresh read. Still no
+                    // duplicate — deferring costs one more worker trigger, a duplicate
+                    // costs 0.2 DASH irrecoverably.
+                    ContestedReregistrationAction.DEFER_UNREADABLE ->
+                        throw IllegalStateException(
+                            "contested re-registration guard could not read the vote state for " +
+                                "'$requestedLabel' (retryable)",
+                            voteStateFailure
+                        )
+                    else -> Unit
+                }
+                val alreadyContending =
+                    reregistrationAction == ContestedReregistrationAction.SKIP_ALREADY_CONTENDING
+                confirmedOwnContender = confirmedOwnContender || alreadyContending
+
+                if (cutoverCommitted && !requestedLabel.isNullOrEmpty() && alreadyContending) {
+                    log.info(
+                        "'{}' is a contested name this identity already contends for — skipping DPNS " +
+                            "re-registration; the contested-name walk below recovers the voting state",
+                        requestedLabel
+                    )
+                } else if (cutoverCommitted && !requestedLabel.isNullOrEmpty()) {
                     log.info("identity has no on-chain name yet — registering DPNS name '{}' via the SDK", requestedLabel)
                     identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.PREORDER_REGISTERING)
                     identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
@@ -726,10 +818,28 @@ class RestoreIdentityWorker @AssistedInject constructor(
             // the historic "only the identity was recovered, ask for a new
             // username" path (a genuine device restore of a name-less identity).
             if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
-                blockchainIdentityData.creationState = IdentityCreationState.USERNAME_REGISTERING
-                blockchainIdentityData.restoring = false
-                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
-                error("missing domain document for ${blockchainIdentity.uniqueId}")
+                // ...unless the guard above already SAW this identity's contender document.
+                // Then the name exists and has been paid for, and the walks' failure to find
+                // it is a failed read: they call getVoteContenders, which collapses an
+                // exception into an empty map (PlatformRepo.kt:207), so a contender read that
+                // errors is indistinguishable there from a name with no contenders. Parking
+                // the identity on that evidence clears `restoring`, shows the name as
+                // unavailable and sends the user off to choose another one — discarding a
+                // contested name whose 0.2 DASH prefund is already spent. Defer instead, the
+                // way the registration paths do.
+                when (missingNameOutcome(confirmedOwnContender)) {
+                    MissingNameOutcome.DEFER_CONFIRMED_CONTENDER ->
+                        throw IllegalStateException(
+                            "contested name for ${blockchainIdentity.uniqueId} was confirmed on chain " +
+                                "but the recovery walk could not read it back (retryable)"
+                        )
+                    MissingNameOutcome.PARK_ASK_FOR_NEW_NAME -> {
+                        blockchainIdentityData.creationState = IdentityCreationState.USERNAME_REGISTERING
+                        blockchainIdentityData.restoring = false
+                        identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+                        error("missing domain document for ${blockchainIdentity.uniqueId}")
+                    }
+                }
             }
 
             //
@@ -766,6 +876,11 @@ class RestoreIdentityWorker @AssistedInject constructor(
             platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
             identityRepository.init()
             platformSyncService.initSync(true)
+        } catch (e: CancellationException) {
+            // Cancellation must not stamp an error on the identity row, and must not
+            // report the pre-block stage complete — nothing finished. Rethrow ahead of
+            // the broad handler, which would do both.
+            throw e
         } catch (e: Exception) {
             val blockchainIdentityData = identityConfig.load()
             blockchainIdentityData?.let {
@@ -889,3 +1004,110 @@ internal fun contestedNameListsCanMatch(
     targetedScan: Boolean,
     ownCandidateNames: Set<String>
 ): Boolean = !targetedScan || ownCandidateNames.any { Names.isUsernameContestable(it) }
+
+/**
+ * Is the re-registration guard in [RestoreIdentityWorker] worth a vote-state query
+ * for [requestedLabel]?
+ *
+ * Only a CONTESTABLE label can be sitting in a vote poll invisible to
+ * `recoverUsernames`. A non-contestable name resolves through the ordinary DPNS
+ * unique index the moment it lands, so for those `currentUsername == null` really
+ * does mean "never registered" and the historic behaviour is exactly right — no
+ * query, no behaviour change.
+ *
+ * Blank/absent label means there is nothing to re-register at all.
+ */
+internal fun contestedReregistrationCheckApplies(requestedLabel: String?): Boolean =
+    !requestedLabel.isNullOrBlank() && Names.isUsernameContestable(requestedLabel)
+
+/**
+ * Is [ownIdentityId] one of the [contenderIds] for a contested name?
+ *
+ * True means this identity's own contender document is already on chain for that
+ * name — the vote is under way, the 0.2 DASH prefunded specialized balance has
+ * already been paid, and re-registering would pay it again. Mirrors the identity
+ * match the contested-name walk itself uses (`uniqueIdentifier == identifier`).
+ *
+ * Pure — host-testable.
+ */
+/**
+ * What the restore worker should do about a DPNS label it is about to re-register.
+ */
+internal enum class ContestedReregistrationAction {
+    /** Not a contestable label, or this identity is not among its contenders — register it. */
+    REGISTER,
+
+    /** This identity already contends for the label — skip; the contested walk recovers VOTING. */
+    SKIP_ALREADY_CONTENDING,
+
+    /** The vote state could not be read — defer the attempt retryably; decide nothing. */
+    DEFER_UNREADABLE
+}
+
+/**
+ * What to do when the restore finished with no on-chain name recovered.
+ */
+internal enum class MissingNameOutcome {
+    /** Defer retryably: a contender was confirmed, so "not found" is a failed read. */
+    DEFER_CONFIRMED_CONTENDER,
+
+    /** The historic path: only the identity was recovered, so ask the user for a new name. */
+    PARK_ASK_FOR_NEW_NAME
+}
+
+/**
+ * Whether the "no name recovered" fall-through may park the identity.
+ *
+ * Parking is destructive in a way the name suggests it is not: it clears `restoring`, records
+ * "missing domain document", and the UI then shows the username as unavailable and routes the
+ * user to choose a DIFFERENT one. For a contested name whose 0.2 DASH vote-poll prefund is
+ * already spent, that discards something paid for.
+ *
+ * [confirmedOwnContender] is true once the re-registration guard has positively read this
+ * identity's own contender document. After that, the recovery walks failing to find the name
+ * cannot mean it is absent — they call `getVoteContenders`, which collapses an exception into
+ * an empty map (`PlatformRepo.kt:207`), so a contender read that errors looks exactly like a
+ * name with no contenders. The only honest reading is "could not read it back", which is
+ * retryable.
+ *
+ * Pure — host-testable.
+ */
+internal fun missingNameOutcome(confirmedOwnContender: Boolean): MissingNameOutcome =
+    if (confirmedOwnContender) {
+        MissingNameOutcome.DEFER_CONFIRMED_CONTENDER
+    } else {
+        MissingNameOutcome.PARK_ASK_FOR_NEW_NAME
+    }
+
+/**
+ * The three-way guard decision, split out from the I/O so it is host-testable.
+ *
+ * [ownIdentityIsContender] is the answer from `getVoteContendersOrThrow`, or **null** when
+ * that read failed. Null is the case that matters: the first version of this guard folded it
+ * into `true` (skip), reasoning that a duplicate costs 0.2 DASH while deferring costs one
+ * worker trigger. That is right about the duplicate and wrong about the deferral — skipping
+ * only defers registration if the name actually landed. If it did not, nothing here registers
+ * it, the contested walks find no contender (and collapse their own failures into empty
+ * results, so they cannot tell the difference either), and the worker falls through to the
+ * "missing domain document" branch, which clears `restoring` and sends the user off to choose
+ * another name. A transient DAPI failure would strand the restoration permanently.
+ *
+ * Keeping null distinct lets the caller abort retryably instead, which protects the prefund
+ * without deciding anything on evidence it does not have.
+ *
+ * Pure — host-testable.
+ */
+internal fun contestedReregistrationAction(
+    requestedLabel: String?,
+    ownIdentityIsContender: Boolean?
+): ContestedReregistrationAction = when {
+    !contestedReregistrationCheckApplies(requestedLabel) -> ContestedReregistrationAction.REGISTER
+    ownIdentityIsContender == null -> ContestedReregistrationAction.DEFER_UNREADABLE
+    ownIdentityIsContender -> ContestedReregistrationAction.SKIP_ALREADY_CONTENDING
+    else -> ContestedReregistrationAction.REGISTER
+}
+
+internal fun isOwnIdentityAContender(
+    contenderIds: Collection<Identifier>,
+    ownIdentityId: Identifier
+): Boolean = contenderIds.any { it == ownIdentityId }
