@@ -41,6 +41,16 @@ class DirectPayException(message: String) : Exception(message)
 class PaymentSubmissionPendingException(val txId: Sha256Hash, cause: Throwable?) :
     Exception("Payment submission result unknown for $txId; verification pending", cause)
 
+/**
+ * Facts a caller wants kept with a payment so one recovered long afterwards looks like the
+ * original. Only for payments whose submission result may be unknown; ordinary payments record
+ * their metadata directly.
+ */
+data class PaymentRecoveryMetadata(
+    val isGiftCardPurchase: Boolean = false,
+    val merchantIconUrl: String? = null
+)
+
 interface SendPaymentService {
     @Throws(LeftoverBalanceException::class)
     suspend fun sendCoins(
@@ -74,6 +84,7 @@ interface SendPaymentService {
     suspend fun payWithDashUrl(
         dashUri: String,
         serviceName: String?,
+        recovery: PaymentRecoveryMetadata? = null,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Transaction
     fun isFeeTooHigh(tx: Transaction): Boolean

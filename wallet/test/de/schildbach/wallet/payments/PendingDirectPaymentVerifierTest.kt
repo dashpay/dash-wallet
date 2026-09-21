@@ -41,6 +41,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.BlockchainStateProvider
+import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -335,17 +336,48 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
-    fun `resume drops payments that cannot be parsed`() = runBlocking {
+    fun `resume keeps a payment it cannot restore`() = runBlocking {
         val txId = Sha256Hash.of(byteArrayOf(9))
         coEvery { config.getAll() } returns listOf(
             PendingDirectPayment(txId, byteArrayOf(0, 1), paymentUrl, null, System.currentTimeMillis())
         )
 
         verifier.resume()
+        delay(300)
 
-        withTimeout(5_000) {
-            coVerify(timeout = 5_000) { config.remove(txId) }
-        }
+        // failing to deserialize says nothing about whether the merchant got the payment, so the
+        // record must survive for another attempt rather than being destroyed
+        coVerify(exactly = 0) { config.remove(txId) }
         assertFalse(verifier.isTracked(txId))
+    }
+
+    @Test
+    fun `restores gift card metadata when a recovered purchase is committed`() = runBlocking {
+        val tx = createTransaction()
+        val result = verifier.quarantine(
+            tx,
+            paymentUrl,
+            "PiggyCards",
+            PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = "https://logo.example/x.png")
+        )
+
+        tx.confidence.markBroadcastBy(PeerAddress(params, InetAddress.getLoopbackAddress(), 9999))
+        withTimeout(5_000) { result.await() }
+
+        // the purchase screen could not record this: marking a gift card transaction needs the
+        // transaction to be in the wallet, which it only is once committed here
+        coVerify { metadataProvider.markGiftCardTransaction(tx.txId, "PiggyCards", "https://logo.example/x.png") }
+    }
+
+    @Test
+    fun `does not mark an ordinary payment as a gift card purchase`() = runBlocking {
+        val tx = createTransaction()
+        val result = verifier.quarantine(tx, paymentUrl, "SomeService")
+
+        tx.confidence.markBroadcastBy(PeerAddress(params, InetAddress.getLoopbackAddress(), 9999))
+        withTimeout(5_000) { result.await() }
+
+        coVerify(exactly = 0) { metadataProvider.markGiftCardTransaction(any(), any(), any()) }
+        coVerify { metadataProvider.setTransactionService(tx.txId, "SomeService") }
     }
 }

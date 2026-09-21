@@ -273,7 +273,22 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) {
+            // A fresh instance means the user opened this screen to buy something. A rebuilt one
+            // (activity recreation) must keep whatever state the outstanding purchase left.
+            viewModel.beginNewPurchase()
+        }
+    }
+
     private fun onConfirmButtonClicked() {
+        // Before purchaseGiftCard(), which would create a fresh order at the merchant: a stale
+        // dialog must not get that far while a purchase is submitted or unresolved.
+        if (viewModel.isSubmissionBlocked()) {
+            log.warn("ignoring Confirm, a gift card purchase is already outstanding")
+            return
+        }
         viewLifecycleOwner.lifecycleScope.launch {
             // Double-check merchant is still available before proceeding
             if (viewModel.giftCardMerchant.value == null) {

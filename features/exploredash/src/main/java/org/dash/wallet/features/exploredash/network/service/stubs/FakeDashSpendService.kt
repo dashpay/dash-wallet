@@ -26,6 +26,7 @@ import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.SendPaymentService
 import java.util.function.Consumer
 import java.util.function.Predicate
@@ -70,6 +71,7 @@ class FakeDashSpendService @Inject constructor(
     override suspend fun payWithDashUrl(
         dashUri: String,
         serviceName: String?,
+        recovery: PaymentRecoveryMetadata?,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)?
     ): Transaction {
         return if (dashUri.startsWith(DASH_SPEND_SCHEMA)) {
@@ -80,7 +82,7 @@ class FakeDashSpendService @Inject constructor(
                 amount
             )
         } else {
-            realService.payWithDashUrl(dashUri, serviceName, onTransactionCreated)
+            realService.payWithDashUrl(dashUri, serviceName, recovery, onTransactionCreated)
         }
     }
 

@@ -335,6 +335,25 @@ class DashSpendViewModel @Inject constructor(
     val submissionState: StateFlow<GiftCardSubmissionState> = _submissionState.asStateFlow()
 
     /**
+     * Starts a new purchase from a clean state. Called only when the confirmation screen is
+     * genuinely created by the user, never when it is rebuilt after activity recreation, so an
+     * outstanding purchase stays blocked while a later, separate order is still allowed.
+     *
+     * A submission that is still running is left alone: it belongs to a purchase already in
+     * flight, and this view model outlives the screen that started it.
+     */
+    fun beginNewPurchase() {
+        if (_submissionState.value == GiftCardSubmissionState.IN_PROGRESS) {
+            log.info("not resetting submission state, a purchase is still in progress")
+            return
+        }
+        _submissionState.value = GiftCardSubmissionState.IDLE
+    }
+
+    /** True while an order is submitted or unresolved, so no further purchase may be started. */
+    fun isSubmissionBlocked(): Boolean = _submissionState.value != GiftCardSubmissionState.IDLE
+
+    /**
      * Submits the payment and records the ordered cards as one operation that neither the
      * caller's lifecycle nor process death can pull apart.
      *
@@ -395,6 +414,13 @@ class DashSpendViewModel @Inject constructor(
             // PiggyCards order on a CTX-sourced merchant, and this is the name the recovery path
             // stores and GiftCardDetailsViewModel routes retrieval by.
             selectedProvider?.serviceName ?: ServiceName.CTXSpend,
+            // The purchase screen cannot record this itself for a payment that stays unresolved:
+            // marking a gift card transaction needs the transaction to be in the wallet. Carry it
+            // so recovery can restore the expense category and merchant icon after committing.
+            PaymentRecoveryMetadata(
+                isGiftCardPurchase = true,
+                merchantIconUrl = _giftCardMerchant.value?.logoLocation
+            ),
             onTransactionCreated
         )
         log.info("ctx spend transaction: ${transaction.txId}")

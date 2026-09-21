@@ -59,6 +59,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -208,11 +209,12 @@ class SendCoinsTaskRunner @Inject constructor(
     override suspend fun payWithDashUrl(
         dashUri: String,
         serviceName: String?,
+        recovery: PaymentRecoveryMetadata?,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)?
     ): Transaction =
         withContext(Dispatchers.IO) {
             val paymentIntent = paymentIntentParser.parse(dashUri, false)
-            createPaymentRequest(paymentIntent, serviceName, onTransactionCreated)
+            createPaymentRequest(paymentIntent, serviceName, recovery, onTransactionCreated)
         }
 
     override suspend fun completeTransaction(sendRequest: SendRequest) {
@@ -305,13 +307,14 @@ class SendCoinsTaskRunner @Inject constructor(
     private suspend fun createPaymentRequest(
         basePaymentIntent: PaymentIntent,
         serviceName: String?,
+        recovery: PaymentRecoveryMetadata? = null,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Transaction {
         val requestUrl = basePaymentIntent.paymentRequestUrl
         if (requestUrl != null) {
             val paymentIntent = fetchPaymentRequest(basePaymentIntent)
             val sendRequest = createRequestFromPaymentIntent(paymentIntent)
-            return sendPayment(paymentIntent, sendRequest, serviceName, onTransactionCreated)
+            return sendPayment(paymentIntent, sendRequest, serviceName, recovery, onTransactionCreated)
         } else {
             val sendRequest = createRequestFromPaymentIntent(basePaymentIntent)
             val sendRequestForSigning = createSendRequest(
@@ -341,6 +344,7 @@ class SendCoinsTaskRunner @Inject constructor(
         finalPaymentIntent: PaymentIntent,
         sendRequest: SendRequest,
         serviceName: String?,
+        recovery: PaymentRecoveryMetadata? = null,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Transaction {
         log.info("creating final sendRequest({}, ..., {})", finalPaymentIntent.paymentUrl, serviceName)
@@ -352,7 +356,7 @@ class SendCoinsTaskRunner @Inject constructor(
         )
         signSendRequest(finalSendRequest)
         log.info("created final send Request")
-        return directPay(finalSendRequest, finalPaymentIntent, serviceName, onTransactionCreated)
+        return directPay(finalSendRequest, finalPaymentIntent, serviceName, recovery, onTransactionCreated)
     }
 
     /**
@@ -381,6 +385,7 @@ class SendCoinsTaskRunner @Inject constructor(
         sendRequest: SendRequest,
         finalPaymentIntent: PaymentIntent,
         serviceName: String?,
+        recovery: PaymentRecoveryMetadata? = null,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Transaction = withContext(NonCancellable) {
         log.info("completing sendRequest transaction")
@@ -443,7 +448,7 @@ class SendCoinsTaskRunner @Inject constructor(
             // so a retry can't double-spend them, and watch the network for it. The verifier
             // is application-scoped and persists the tx, so it keeps going after this call,
             // the purchase screen and even the process are gone.
-            val verification = pendingPaymentVerifier.quarantine(tx, requestUrl, serviceName)
+            val verification = pendingPaymentVerifier.quarantine(tx, requestUrl, serviceName, recovery)
             val result = withTimeoutOrNull(ambiguousSubmissionWaitMs) { verification.await() }
 
             if (result != null) {

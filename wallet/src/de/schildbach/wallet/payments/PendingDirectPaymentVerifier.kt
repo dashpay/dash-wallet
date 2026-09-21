@@ -41,6 +41,7 @@ import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.services.BlockchainStateProvider
+import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
@@ -96,14 +97,21 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * @return a deferred that completes with the committed transaction once it is seen on the
      *         network, or with null if it never appears and its inputs were released.
      */
-    suspend fun quarantine(tx: Transaction, paymentUrl: String, serviceName: String?): Deferred<Transaction?> {
+    suspend fun quarantine(
+        tx: Transaction,
+        paymentUrl: String,
+        serviceName: String?,
+        recovery: PaymentRecoveryMetadata? = null
+    ): Deferred<Transaction?> {
         val wallet = walletData.wallet ?: throw IllegalStateException("wallet is not available")
         val payment = PendingDirectPayment(
             txId = tx.txId,
             txBytes = tx.bitcoinSerialize(),
             paymentUrl = paymentUrl,
             serviceName = serviceName,
-            createdAt = System.currentTimeMillis()
+            createdAt = System.currentTimeMillis(),
+            isGiftCardPurchase = recovery?.isGiftCardPurchase ?: false,
+            merchantIconUrl = recovery?.merchantIconUrl
         )
         lockInputs(wallet, tx)
         try {
@@ -150,8 +158,13 @@ class PendingDirectPaymentVerifier @Inject constructor(
                         }
                         track(tx, payment)
                     } catch (e: Exception) {
-                        log.error("could not restore pending direct payment {}, dropping it", payment.txId, e)
-                        config.remove(payment.txId)
+                        // Keep it. Failing to deserialize, lock or track says nothing about
+                        // whether the merchant received the payment, and dropping the record
+                        // destroys the only information a later attempt could recover it from.
+                        log.error(
+                            "could not restore pending direct payment {}, keeping it to retry",
+                            payment.txId, e
+                        )
                     }
                 }
             } catch (e: Exception) {
@@ -252,17 +265,20 @@ class PendingDirectPaymentVerifier @Inject constructor(
         }
         unlockInputs(wallet, tx)
 
-        // Only tag the service if nothing has been recorded yet. The purchase screen may already
-        // have marked this transaction with the gift card provider the user actually selected,
-        // which is more specific than the name the payment was submitted under: that one comes
-        // from the merchant's source field and falls back to CTXSpend, so overwriting it here
-        // could retag a PiggyCards order as CTX and send the details screen to the wrong
-        // provider, with no later correction on this path.
-        val recordedService = metadataProvider.getTransactionMetadata(tx.txId)?.service
-        if (recordedService.isNullOrEmpty()) {
-            payment.serviceName?.let { metadataProvider.setTransactionService(tx.txId, it) }
+        // Restore the metadata the purchase screen would have written had it seen the payment
+        // succeed. It could not: marking a gift card transaction inserts metadata that requires
+        // the transaction to be in the wallet, and it was not until the commit just above. Only
+        // a payment recorded as a gift card purchase gets this; an ordinary BIP70 payment must
+        // not be marked as one.
+        if (payment.isGiftCardPurchase && payment.serviceName != null) {
+            metadataProvider.markGiftCardTransaction(tx.txId, payment.serviceName, payment.merchantIconUrl)
         } else {
-            log.info("keeping the service already recorded for {}: {}", tx.txId, recordedService)
+            val recordedService = metadataProvider.getTransactionMetadata(tx.txId)?.service
+            if (recordedService.isNullOrEmpty()) {
+                payment.serviceName?.let { metadataProvider.setTransactionService(tx.txId, it) }
+            } else {
+                log.info("keeping the service already recorded for {}: {}", tx.txId, recordedService)
+            }
         }
         val walletTx = wallet.getTransaction(tx.txId) ?: tx
         // harmless if the merchant already broadcast it; makes sure the network has it otherwise

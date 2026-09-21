@@ -45,6 +45,10 @@ data class PendingDirectPayment(
     val paymentUrl: String,
     val serviceName: String?,
     val createdAt: Long,
+    /** This payment bought gift cards, so recovery must restore their metadata, not just a service. */
+    val isGiftCardPurchase: Boolean = false,
+    /** Merchant logo to restore with a recovered gift card purchase. */
+    val merchantIconUrl: String? = null,
     /**
      * True once the payment has been judged never sent and its inputs released, leaving only the
      * removal of the records saved against it. Such a payment must never be locked or verified
@@ -58,6 +62,8 @@ data class PendingDirectPayment(
         .put(KEY_PAYMENT_URL, paymentUrl)
         .put(KEY_SERVICE_NAME, serviceName ?: JSONObject.NULL)
         .put(KEY_CREATED_AT, createdAt)
+        .put(KEY_GIFT_CARD, isGiftCardPurchase)
+        .put(KEY_ICON_URL, merchantIconUrl ?: JSONObject.NULL)
         .put(KEY_ABANDONED, abandoned)
 
     companion object {
@@ -67,6 +73,8 @@ data class PendingDirectPayment(
         private const val KEY_SERVICE_NAME = "serviceName"
         private const val KEY_CREATED_AT = "createdAt"
         private const val KEY_ABANDONED = "abandoned"
+        private const val KEY_GIFT_CARD = "giftCard"
+        private const val KEY_ICON_URL = "iconUrl"
 
         fun fromJson(json: JSONObject): PendingDirectPayment = PendingDirectPayment(
             txId = Sha256Hash.wrap(json.getString(KEY_TX_ID)),
@@ -74,6 +82,8 @@ data class PendingDirectPayment(
             paymentUrl = json.getString(KEY_PAYMENT_URL),
             serviceName = if (json.isNull(KEY_SERVICE_NAME)) null else json.getString(KEY_SERVICE_NAME),
             createdAt = json.getLong(KEY_CREATED_AT),
+            isGiftCardPurchase = json.optBoolean(KEY_GIFT_CARD, false),
+            merchantIconUrl = if (json.isNull(KEY_ICON_URL)) null else json.optString(KEY_ICON_URL, "").ifEmpty { null },
             abandoned = json.optBoolean(KEY_ABANDONED, false)
         )
     }
@@ -93,40 +103,66 @@ open class PendingDirectPaymentConfig @Inject constructor(
 
     private val mutex = Mutex()
 
-    open suspend fun getAll(): List<PendingDirectPayment> = decode(get(PENDING_PAYMENTS))
+    open suspend fun getAll(): List<PendingDirectPayment> = decode(get(PENDING_PAYMENTS)).readable
 
     open suspend fun add(payment: PendingDirectPayment) = mutex.withLock {
-        val payments = getAll().filter { it.txId != payment.txId } + payment
-        set(PENDING_PAYMENTS, encode(payments))
+        val stored = decode(get(PENDING_PAYMENTS))
+        val payments = stored.readable.filter { it.txId != payment.txId } + payment
+        set(PENDING_PAYMENTS, encode(payments, stored.unreadable))
     }
 
     open suspend fun remove(txId: Sha256Hash) = mutex.withLock {
-        val payments = getAll()
-        val remaining = payments.filter { it.txId != txId }
-        if (remaining.size != payments.size) {
-            set(PENDING_PAYMENTS, encode(remaining))
+        val stored = decode(get(PENDING_PAYMENTS))
+        val remaining = stored.readable.filter { it.txId != txId }
+        if (remaining.size != stored.readable.size) {
+            set(PENDING_PAYMENTS, encode(remaining, stored.unreadable))
         }
     }
 
-    private fun encode(payments: List<PendingDirectPayment>): String {
+    /**
+     * What was on disk: the entries we could read, and the raw entries we could not. Unreadable
+     * entries are carried through every write rather than dropped, so a single bad record cannot
+     * quietly delete a payment some later version might still make sense of.
+     */
+    private data class StoredPayments(
+        val readable: List<PendingDirectPayment>,
+        val unreadable: List<JSONObject>
+    )
+
+    private fun encode(payments: List<PendingDirectPayment>, unreadable: List<JSONObject>): String {
         val array = JSONArray()
         payments.forEach { array.put(it.toJson()) }
+        unreadable.forEach { array.put(it) }
         return array.toString()
     }
 
-    private fun decode(value: String?): List<PendingDirectPayment> {
+    private fun decode(value: String?): StoredPayments {
         if (value.isNullOrEmpty()) {
-            return emptyList()
+            return StoredPayments(emptyList(), emptyList())
         }
-        return try {
-            val array = JSONArray(value)
-            (0 until array.length()).map { PendingDirectPayment.fromJson(array.getJSONObject(it)) }
+
+        val array = try {
+            JSONArray(value)
         } catch (e: JSONException) {
-            log.error("could not parse pending direct payments, discarding: {}", value, e)
-            emptyList()
-        } catch (e: IllegalArgumentException) {
-            log.error("could not parse pending direct payments, discarding: {}", value, e)
-            emptyList()
+            log.error("pending direct payments are not a JSON array, discarding: {}", value, e)
+            return StoredPayments(emptyList(), emptyList())
         }
+
+        val readable = mutableListOf<PendingDirectPayment>()
+        val unreadable = mutableListOf<JSONObject>()
+        for (i in 0 until array.length()) {
+            // Per entry: one malformed record used to return an empty list, so every other
+            // pending payment stopped being restored and the next write erased them all.
+            try {
+                readable.add(PendingDirectPayment.fromJson(array.getJSONObject(i)))
+            } catch (e: JSONException) {
+                log.error("could not read pending direct payment at index {}, keeping it as is", i, e)
+                (array.opt(i) as? JSONObject)?.let { unreadable.add(it) }
+            } catch (e: IllegalArgumentException) {
+                log.error("could not read pending direct payment at index {}, keeping it as is", i, e)
+                (array.opt(i) as? JSONObject)?.let { unreadable.add(it) }
+            }
+        }
+        return StoredPayments(readable, unreadable)
     }
 }
