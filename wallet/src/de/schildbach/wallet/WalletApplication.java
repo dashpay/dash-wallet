@@ -1793,11 +1793,6 @@ public class WalletApplication extends MultiDexApplication
         } catch (final Throwable t) {
             batteryExempt = "unknown";
         }
-        log.info("ALARM-DIAG armed reason=periodic-{}min firstFireInMinutes={} repeat={}min "
-                        + "exact=false batteryOptimisationExempt={} - if no matching "
-                        + "'started by alarm' line follows, the background FGS start was refused",
-                alarmIntervalMinutes, alarmIntervalMinutes, alarmIntervalMinutes, batteryExempt);
-
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O || Build.VERSION.SDK_INT == Build.VERSION_CODES.O_MR1) {
             log.info("custom sync scheduling with JobScheduler for Android 8 and 8.1");
             JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
@@ -1836,6 +1831,16 @@ public class WalletApplication extends MultiDexApplication
             // what implements it.
             alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, alarmInterval,
                     alarmIntent);
+
+            // Logged HERE, and only here, because this line carries a diagnostic contract: a
+            // missing 'started by alarm' after it means the start was refused. Emitted before the
+            // branch, cancelOnly and the Android 8/8.1 JobScheduler path — neither of which arms
+            // an alarm at all — produced permanent false refusals in field logs, and its own text
+            // matches a grep for the contract, which is how two "delivered" readings were misread.
+            log.info("ALARM-DIAG armed reason=periodic-{}min firstFireInMinutes={} repeat={}min "
+                            + "exact=false batteryOptimisationExempt={} - if no matching "
+                            + "'started by alarm' line follows, the background FGS start was refused",
+                    alarmIntervalMinutes, alarmIntervalMinutes, alarmIntervalMinutes, batteryExempt);
         }
     }
 

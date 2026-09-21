@@ -2886,16 +2886,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
 
         serviceScope.launch {
+            // Prevent multiple cleanup operations using atomic flag.
+            //
+            // This claim is made BEFORE the try below, because the loser of the race must not run
+            // that try's finally block: it owns neither isCleaningUp nor cleanupDeferred nor
+            // checkMutex, and serviceJob.cancel() there would cancel the WINNER's cleanup out from
+            // under it (serviceScope is built on serviceJob). Returning from inside the try also
+            // ran the finally, so one scheduled destroy decremented pendingDestroys twice and could
+            // drive it negative — at which point isCleaningUpNow and awaitPreviousInstanceCleanup
+            // both report "nothing pending" and a new instance races the old one for the wallet
+            // file lock, which is the OverlappingFileLockException this counter exists to prevent.
+            if (!isCleaningUp.compareAndSet(false, true)) {
+                log.info("Another onDestroy() is already running cleanup, skipping duplicate cleanup")
+                pendingDestroys.decrementAndGet()
+                cleanupMonitorJob.cancel()
+                return@launch
+            }
+
             try {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
                 onCreateCompleted.await() // wait until onCreate is finished
                 log.info("The check() mutex is locked: {}", checkMutex.isLocked)
-                // Prevent multiple cleanup operations using atomic flag
-                if (!isCleaningUp.compareAndSet(false, true)) {
-                    log.info("Another onDestroy() is already running cleanup, skipping duplicate cleanup")
-                    pendingDestroys.decrementAndGet()
-                    return@launch
-                }
 
                 // Create cleanup coordination only if none exists or existing one is already completed
                 val existingCleanup = cleanupDeferred
