@@ -2360,6 +2360,14 @@ class CutoverUiDataService internal constructor(
     private val _pipelineLagging = MutableStateFlow(false)
 
     /**
+     * The last figure actually written to [WalletUIConfig.LAST_TOTAL_BALANCE]
+     * this session, so the seed write can be logged ONCE per distinct value —
+     * the publication line is change-gated on the displayed figure and the
+     * ticker re-persists silently, so without this the write is invisible.
+     */
+    private var lastPersistedDuffs: Long? = null
+
+    /**
      * The LAST KNOWN total balance ([WalletUIConfig.LAST_TOTAL_BALANCE], the
      * same fast-startup seed the dashj
      * [WalletBalanceObserver][de.schildbach.wallet.transactions.WalletBalanceObserver]
@@ -2509,7 +2517,21 @@ class CutoverUiDataService internal constructor(
             l1Synced
                 .distinctUntilChanged()
                 .catch { e -> log.error("SDK L1 sync-state feed failed; balance stays held", e) }
-                .collect { _l1Synced.value = it }
+                .collect { synced ->
+                    _l1Synced.value = synced
+                    // EDGE LOG. The publication line below only prints when the
+                    // balance VALUE changes, so a wallet whose figure settled
+                    // before the scan caught up flips to synced with no line at
+                    // all — twice on 2026-09-21 the display decision had to be
+                    // inferred rather than read. One line per flip, regardless.
+                    log.info(
+                        "SDK L1 display predicate -> l1Synced={} | published={} duffs pipelineLagging={} " +
+                            "lastKnown={} (the header's 'Syncing balance' label and the balance hold " +
+                            "both follow this)",
+                        synced, _sdkTotalBalance.value?.value ?: "none", _pipelineLagging.value,
+                        _lastKnownTotalBalance.value?.value ?: "none"
+                    )
+                }
         }
         launch {
             pipelineLagging
@@ -2520,7 +2542,13 @@ class CutoverUiDataService internal constructor(
                     log.error("SDK pipeline-lag feed failed; the launch seed stays unpersisted", e)
                     emit(true)
                 }
-                .collect { _pipelineLagging.value = it }
+                .collect { lagging ->
+                    _pipelineLagging.value = lagging
+                    log.info(
+                        "SDK L1 block pipeline -> lagging={} (gates the durable seed only; l1Synced={})",
+                        lagging, _l1Synced.value
+                    )
+                }
         }
         launch { balancePipeline(walletIdHex) }
         launch { txPipeline(walletIdHex) }
@@ -2827,6 +2855,22 @@ class CutoverUiDataService internal constructor(
         }
         if (!persist) return
         runCatching { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs) }
+            .onSuccess {
+                // EDGE LOG: once per distinct value written, not per tick. The
+                // publication line above is gated on the DISPLAYED figure
+                // changing, and the ticker re-runs this write every interval,
+                // so a seed that lands only after the pipeline drains — with
+                // the figure long settled — used to leave no trace at all.
+                if (lastPersistedDuffs != duffs) {
+                    lastPersistedDuffs = duffs
+                    log.info(
+                        "SDK balance PERSISTED as the launch seed: {} duffs (was {}) | l1Synced={} " +
+                            "pipelineLagging={} rescanArmedHold={} backfillSettled={} buildsSettled={}",
+                        duffs, _lastKnownTotalBalance.value?.value ?: "none", synced, lagging,
+                        armedRescanHold, backfillStatus.settled, buildsSettled
+                    )
+                }
+            }
             .onFailure { log.warn("failed to persist LAST_TOTAL_BALANCE", it) }
     }
 
