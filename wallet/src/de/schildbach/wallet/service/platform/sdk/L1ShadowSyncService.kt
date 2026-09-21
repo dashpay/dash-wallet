@@ -190,19 +190,54 @@ data class ShadowSyncProgress(
      * IDLE/ERROR/still on headers) trails far outside the tolerance and
      * keeps the gate closed (fail-closed).
      *
-     * ALSO requires the block/tx pipeline not to be PROVABLY lagging
-     * ([blockPipelineLagging]) — the field incident this closes: the
-     * filters sub-progress reported Synced (scan position at tip) one
-     * minute into a three-hour replay while the engine's block
-     * download/processing pipeline was still churning through the matched
-     * blocks, so the app declared l1Synced=true and persisted a partial
-     * 48.86 DASH as the last-known balance.
+     * OR — the iOS rule, adopted 2026-09-21 — the SDK's own aggregate says
+     * so ([aggregateCaughtUp]). The two are a union: the height test keeps
+     * every fixture and every reading that fed it exact; the aggregate
+     * absorbs the one case the height test cannot, a filter commit parked a
+     * few thousand blocks short by dash-spv itself (plan §34) while every
+     * filter is already on disk.
+     *
+     * NO LONGER requires the block/tx pipeline to be drained. That veto
+     * ([blockPipelineLagging]) used to live here, closing the field incident
+     * where the filters sub-progress read Synced one minute into a
+     * three-hour replay and the app persisted a partial 48.86 DASH as the
+     * last-known balance. The protection is not gone — it moved to the ONE
+     * place being wrong is expensive, the durable seed
+     * (`CutoverUiDataService`'s persist gate, via
+     * `L1SyncStatusService.sdkPipelineLagging`). Kept out of the DISPLAY
+     * predicate so this reads "synced" when iOS would: iOS never had the
+     * veto, and with it in place the §34 stall parks the wallet cursor with
+     * the filter cursor and the veto holds "syncing" forever at 99%.
      */
     val scanCaughtUpToTip: Boolean get() =
         headerTarget > 0 && headerHeight >= headerTarget &&
             filterTarget > 0 &&
-            headerTarget - filterHeight <= SCAN_TIP_TOLERANCE_BLOCKS &&
-            !blockPipelineLagging
+            (headerTarget - filterHeight <= SCAN_TIP_TOLERANCE_BLOCKS || aggregateCaughtUp)
+
+    /**
+     * THE iOS RULE. `SyncingActivityMonitor` (dashwallet-ios) calls the wallet
+     * synced when the engine's overall percentage is `>= 0.999`; this is
+     * that test, on the same number.
+     *
+     * [overallPercent] is dash-spv's `SyncProgress::percentage()`: the MEAN
+     * of the headers, filter-headers and filters phases (blocks and
+     * masternodes do not contribute), where the filters phase reports its
+     * COMMITTED height over target. Verified against the shipped engine on
+     * 2026-09-21 — `71.5%` reported at filters 14.5% is exactly
+     * (100 + 100 + 14.5) / 3, and `99.4%` at filters 98.33% is exactly
+     * (100 + 100 + 98.33) / 3. (Two older comments in this file said it
+     * "under-reports"; that was a previous SDK.)
+     *
+     * What 0.999 on a three-phase mean tolerates: a filters shortfall of up
+     * to 0.3% of chain height with the other two phases at 100%. At today's
+     * testnet height that is ~4,600 blocks — wide enough to cover the §34
+     * final-partial-batch stall (2,167 short, 99.954% → synced; 3 short on
+     * mainnet, 99.99994% → synced) and NOT a real mid-scan (4,752 short read
+     * 99.898% → not synced). Requires both targets known so an all-zero
+     * snapshot can never pass.
+     */
+    val aggregateCaughtUp: Boolean get() =
+        headerTarget > 0 && filterTarget > 0 && overallPercent >= IOS_SYNC_DONE_THRESHOLD
 
     /**
      * The engine's block-download/tx-processing pipeline DEMONSTRABLY
@@ -244,6 +279,15 @@ data class ShadowSyncProgress(
          * set even if not yet filter-scanned.
          */
         const val SCAN_TIP_TOLERANCE_BLOCKS = 2L
+
+        /**
+         * The iOS "synced" threshold on the engine's aggregate percentage —
+         * `SyncingActivityMonitor.swift`: `if sdkProgress >= 0.999 { .syncDone }`.
+         * Same constant, same number, so the two clients call the same
+         * engine state synced at the same instant. See [aggregateCaughtUp]
+         * for what it tolerates and why.
+         */
+        const val IOS_SYNC_DONE_THRESHOLD = 0.999
     }
 }
 
@@ -252,9 +296,15 @@ data class ShadowSyncProgress(
  * (shadow idle: flag off or not started). The percent is the COMBINED
  * header+filter progress — (headerHeight + filterHeight) over
  * (headerTarget + filterTarget) — one monotonic number across the whole
- * pipeline; the SDK's own [ShadowSyncProgress.overallPercent] is
- * deliberately NOT used (it under-reports during the filter scan —
- * observed live: 1.0% at filters 1402000/1514660). Renders side by side
+ * pipeline. The SDK's own [ShadowSyncProgress.overallPercent] is not the
+ * DISPLAYED number here: it is a three-phase mean (headers, filter headers,
+ * filters — see [ShadowSyncProgress.aggregateCaughtUp]), so during the
+ * filter scan it sits well above the filter position and would read as
+ * further along than the scan the user is waiting on. (An older note here
+ * said it "under-reports, 1.0% at filters 1402000/1514660"; that was a
+ * previous SDK — on the shipped engine it is the mean, verified
+ * 2026-09-21.) It IS consulted for the 100% decision, through
+ * [ShadowSyncProgress.scanCaughtUpToTip]. Renders side by side
  * with the "DashJ N%" status in the sync header, so it stays short.
  * English-only like the rest of the debug instrumentation. Pure —
  * host-testable.
@@ -288,8 +338,11 @@ private fun syncPct(h: Long, t: Long): Int =
  * The SDK L1 scan progress as a single 0..100 percent, for the home-screen
  * "Syncing N%" header AFTER cutover (Phase 5d) when the SDK owns L1 and the
  * dashj percent no longer advances. Same combined header+filter metric as
- * [kotlinSyncLabel] (the SDK's own `overallPercent` under-reports during the
- * filter scan); only the SYNCED phase may claim 100%. Pure — host-testable.
+ * [kotlinSyncLabel] for the DISPLAYED figure (the SDK's three-phase mean would
+ * read ahead of the filter scan the user is waiting on); the 100% decision
+ * is [ShadowSyncProgress.scanCaughtUpToTip], which since 2026-09-21 includes
+ * the iOS aggregate rule ([ShadowSyncProgress.aggregateCaughtUp]). Pure —
+ * host-testable.
  */
 fun shadowSyncPercent(progress: ShadowSyncProgress): Int = when (progress.phase) {
     ShadowSyncPhase.IDLE, ShadowSyncPhase.CONNECTING -> 0
@@ -299,8 +352,11 @@ fun shadowSyncPercent(progress: ShadowSyncProgress): Int = when (progress.phase)
     // ~2.5 min bumps the targets and drops the overall state back to
     // SYNCING — see [ShadowSyncProgress.scanCaughtUpToTip]). So an active
     // scan claims 100% once the filter scan has caught up to a real header
-    // tip within [SCAN_TIP_TOLERANCE_BLOCKS]; a genuine mid-scan still caps
-    // at 99%. Fail-closed for IDLE/CONNECTING/ERROR above.
+    // tip within [SCAN_TIP_TOLERANCE_BLOCKS] OR the engine's aggregate is at
+    // the iOS threshold ([ShadowSyncProgress.aggregateCaughtUp] — the §34
+    // stall, parked a few thousand short with every filter stored); a
+    // genuine mid-scan still caps at 99%. Fail-closed for
+    // IDLE/CONNECTING/ERROR above.
     else -> if (progress.scanCaughtUpToTip) {
         100
     } else {
@@ -361,14 +417,18 @@ internal fun shadowProgressLine(p: ShadowSyncProgress): String = String.format(
 
 /**
  * Whether the engine is ACTIVELY syncing/replaying, for the replay memory
- * telemetry ([replayMemTelemetryLine]): not caught up on the drain-aware
- * predicate — the scan position trails the tip, the phase never reached a
- * caught-up state, OR the block/tx pipeline provably lags
+ * telemetry ([replayMemTelemetryLine]): not caught up — the scan position
+ * trails the tip and the aggregate is below the iOS threshold, the phase
+ * never reached a caught-up state — OR the block/tx pipeline provably lags
  * ([ShadowSyncProgress.blockPipelineLagging] — the phase can hold SYNCED
- * right through an armed replay). Exactly the negation of the shared
- * caught-up predicate (`sdkL1ScanCaughtUp`), spelled out here so the
- * telemetry stops the moment "synced" settles for the UI too. Pure —
- * host-testable.
+ * right through an armed replay).
+ *
+ * DELIBERATELY STRICTER than the UI's `sdkL1ScanCaughtUp` since 2026-09-21:
+ * that predicate dropped the pipeline-lag veto so the header reads "synced"
+ * when iOS would, but this is telemetry about whether the engine is still
+ * doing replay WORK, and a churning block pipeline is exactly that. So the
+ * two can disagree by design — the UI settled, the memory telemetry still
+ * sampling — for as long as the pipeline lags. Pure — host-testable.
  */
 internal val ShadowSyncProgress.replayActive: Boolean get() =
     !(synced || scanCaughtUpToTip) || blockPipelineLagging
@@ -3061,6 +3121,29 @@ class L1ShadowSyncService internal constructor(
             FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH -> {
                 // NO RESTART. Logged once per process, with everything needed
                 // to recognise it in a support bundle without reading source.
+                //
+                // THE COST CLAIM HAS TO BE COMPUTED, NOT ASSUMED. A restart's
+                // re-walk is the distance from the cursor BACK to the durable
+                // watermark — not the cursor's distance to the target. Near the
+                // tip the two values are often equal, and then a restart is
+                // CHEAP and only the "useless" half of the argument holds.
+                // The first version of this line reported
+                // `filterTarget - walletSyncedHeight` as "blocks back" and so
+                // claimed a 2,167-block re-walk on a release build where the
+                // watermark and the cursor were both 1,555,999 and a restart
+                // would have cost nothing. Suppression is still right there;
+                // overstating why is not.
+                val reWalk = p.filterHeight - p.walletSyncedHeight
+                val costClause = when {
+                    p.walletSyncedHeight <= 0L ->
+                        "the durable watermark is not known yet, so the re-walk cost cannot be stated"
+                    reWalk > 0L ->
+                        "a restart resumes from the durable watermark ${p.walletSyncedHeight}, " +
+                            "re-walking $reWalk blocks to get back here"
+                    else ->
+                        "a restart would be cheap here — the durable watermark " +
+                            "${p.walletSyncedHeight} is level with the cursor — but no less useless"
+                }
                 log.error(
                     "L1Shadow filter-stall watchdog: SDK-FINAL-BATCH — the filter cursor has " +
                         "sat at {} of {} ({} blocks short, inside one {}-block dash_spv commit " +
@@ -3068,8 +3151,7 @@ class L1ShadowSyncService internal constructor(
                         "final-partial-batch defect (plan section 34): the last batch matched " +
                         "blocks it never received, so pending_blocks() never reaches zero and " +
                         "committed_height is withheld. NOT restarting — a restart recreates the " +
-                        "same batch and stalls identically, and it would resume from the " +
-                        "durable watermark {} ({} blocks back), re-walking that for nothing. " +
+                        "same batch, matches the same blocks and stalls identically; {}. " +
                         "It clears when the chain advances enough to re-cut the batch boundary. " +
                         "Needs an SDK-side fix; the engine's own run.log " +
                         "(files/sdk-logs/dash_spv/run.log, attached to support reports) carries " +
@@ -3077,7 +3159,7 @@ class L1ShadowSyncService internal constructor(
                     p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
                     SDK_FILTER_BATCH_BLOCKS,
                     filterStallDecider.lastStillMs / 1000,
-                    p.walletSyncedHeight, p.filterTarget - p.walletSyncedHeight
+                    costClause
                 )
             }
             FilterStallWatchdogDecider.Decision.EXHAUSTED -> {

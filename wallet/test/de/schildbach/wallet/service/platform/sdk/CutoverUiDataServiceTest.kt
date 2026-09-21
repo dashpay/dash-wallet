@@ -901,6 +901,8 @@ class CutoverUiDataServiceTest {
         notify: (Long) -> Unit = {},
         txEvents: Flow<L1TxEvent> = kotlinx.coroutines.flow.emptyFlow(),
         l1Synced: Flow<Boolean> = flowOf(true),
+        /** The block-pipeline lag that gates the durable seed only; default = drained. */
+        pipelineLagging: Flow<Boolean> = flowOf(false),
         rescanRecentlyArmed: () -> Boolean = { false },
         /** The DIP-15 contact-backfill bookkeeping; default = nothing owed. */
         dashPayBackfillStatus: DashPayBackfillStatus = DashPayBackfillStatus.SETTLED,
@@ -934,6 +936,7 @@ class CutoverUiDataServiceTest {
         notifyCoinsReceived = notify,
         txEvents = txEvents,
         l1Synced = l1Synced,
+        pipelineLagging = pipelineLagging,
         rescanRecentlyArmed = rescanRecentlyArmed,
         dashPayBackfillStatus = { dashPayBackfillStatus },
         deferredContactBuildCount = {
@@ -1085,6 +1088,51 @@ class CutoverUiDataServiceTest {
         assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
         // …but is never written back as the launch seed.
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_laggingBlockPipeline_publishesTheBalanceButDoesNotPersistIt() = runTest {
+        // 2026-09-21: the pipeline-lag veto moved OUT of the "synced"
+        // predicate (so the header reads synced when iOS would) and INTO this
+        // gate alone. The field incident it guards against is unchanged:
+        // filters at the tip one minute into a three-hour replay, matched
+        // blocks still being processed, and a partial 48.86 DASH persisted as
+        // the seed every later launch opened on. With l1Synced=true and the
+        // pipeline provably lagging, the figure must display and must NOT be
+        // written back.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(4_886_000_000L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(true),
+            pipelineLagging = flowOf(true)
+        )
+        service.start()
+        runCurrent()
+
+        assertEquals(Coin.valueOf(4_886_000_000L), service.sdkBalanceOrNull())
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_drainedBlockPipeline_persistsAgain() = runTest {
+        // The mirror image: the same wallet once the cursor catches the tip.
+        // Nothing else holds the seed, so it must be written — the guard is
+        // a veto, not a latch.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(10_708_173_522L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(true),
+            pipelineLagging = flowOf(false)
+        )
+        service.start()
+        runCurrent()
+
+        assertEquals(Coin.valueOf(10_708_173_522L), service.sdkBalanceOrNull())
+        // atLeast, not exactly: the refresh ticker republishes (and re-persists)
+        // the same figure on every tick inside runCurrent().
+        coVerify(atLeast = 1) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 10_708_173_522L) }
     }
 
     @Test

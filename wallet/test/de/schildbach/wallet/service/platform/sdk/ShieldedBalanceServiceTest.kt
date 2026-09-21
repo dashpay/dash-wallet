@@ -291,7 +291,10 @@ class ShieldedBalanceServiceTest {
      */
     private fun caughtUpProgress() = ShadowSyncProgress(
         phase = ShadowSyncPhase.FILTERS,
-        overallPercent = 1.0, // the SDK under-reports the percent; the gate ignores it
+        // The SDK's three-phase mean; 1.0 is honest for a fixture at the tip.
+        // Since 2026-09-21 the gate READS it (the iOS aggregate rule), so a
+        // fixture that is behind on heights must lower this too.
+        overallPercent = 1.0,
         headerHeight = 1_500_000,
         headerTarget = 1_500_000,
         filterHeight = 1_500_000,
@@ -959,8 +962,12 @@ class ShieldedBalanceServiceTest {
         assertFalse(evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.ERROR)).allowed)
 
         // Genuinely mid-scan: headers at the tip but the filter scan far
-        // behind (the real "still scanning" state) stays closed.
-        assertFalse(evaluateWalletFundingGate(caughtUp.copy(filterHeight = 1_400_000)).allowed)
+        // behind (the real "still scanning" state) stays closed. The aggregate
+        // must be honest too — (100 + 100 + 93.3) / 3 — or the iOS rule would
+        // call this caught up.
+        assertFalse(
+            evaluateWalletFundingGate(caughtUp.copy(filterHeight = 1_400_000, overallPercent = 0.978)).allowed
+        )
         // All-zero snapshot (no real sub-progress — the post-reset watermark
         // signature) cannot prove caught-up: closed even if phase were SYNCED.
         assertFalse(
@@ -974,22 +981,47 @@ class ShieldedBalanceServiceTest {
         // Headers not yet at the tip → closed even if filters look full.
         assertFalse(evaluateWalletFundingGate(caughtUp.copy(headerHeight = 1_499_000)).allowed)
 
-        // Tolerance boundary: within SCAN_TIP_TOLERANCE_BLOCKS of the tip is
-        // caught up; one block further is not.
+        // Tolerance boundary, HEIGHT rule (aggregate unknown = 0.0): within
+        // SCAN_TIP_TOLERANCE_BLOCKS of the tip is caught up; one block further
+        // is not.
+        val noAggregate = caughtUp.copy(overallPercent = 0.0)
         assertTrue(
             evaluateWalletFundingGate(
-                caughtUp.copy(
-                    filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS
-                )
+                noAggregate.copy(filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS)
             ).allowed
         )
         assertFalse(
             evaluateWalletFundingGate(
+                noAggregate.copy(filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS - 1)
+            ).allowed
+        )
+        // The same one-block-past-tolerance gap WITH an honest aggregate OPENS:
+        // 3 short of 1.5M is 99.9998%, and since 2026-09-21 the gate applies
+        // the iOS rule (>= 0.999). This is the change, stated as a test: the
+        // §34 stall (2,167 short, 99.954%) opens too.
+        assertTrue(
+            evaluateWalletFundingGate(
+                caughtUp.copy(filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS - 1)
+            ).allowed
+        )
+        assertTrue(
+            evaluateWalletFundingGate(
                 caughtUp.copy(
-                    filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS - 1
+                    headerHeight = 1_558_166, headerTarget = 1_558_166,
+                    filterHeight = 1_555_999, filterTarget = 1_558_166, overallPercent = 0.99954
                 )
             ).allowed
         )
+
+        // THE VETO THE GATE KEEPS. A caught-up scan with the block pipeline
+        // provably lagging — this wallet's own spends not yet applied to the
+        // ledger — is closed, with a reason that names the pipeline. The
+        // display predicate dropped this veto; a spend must not.
+        val lagging = evaluateWalletFundingGate(caughtUp.copy(walletSyncedHeight = 1_200_000))
+        assertFalse(lagging.allowed)
+        assertTrue(lagging.reason, lagging.reason.contains("processing matched blocks"))
+        // Unknown cursor (0) is not lag: the gate cannot wedge a wallet at the tip.
+        assertTrue(evaluateWalletFundingGate(caughtUp.copy(walletSyncedHeight = 0)).allowed)
     }
 
     @Test
@@ -1008,8 +1040,12 @@ class ShieldedBalanceServiceTest {
     @Test
     fun shieldFromWallet_scanNotCaughtUp_isNotBroadcast() = runBlocking {
         val source = readySource()
-        // Headers at the tip but the filter scan far behind (mid-scan).
-        val service = service(source, progress = { caughtUpProgress().copy(filterHeight = 1_400_000) })
+        // Headers at the tip but the filter scan far behind (mid-scan), with
+        // an honest aggregate — or the iOS rule would open the gate.
+        val service = service(
+            source,
+            progress = { caughtUpProgress().copy(filterHeight = 1_400_000, overallPercent = 0.978) }
+        )
 
         assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
         assertEquals(0, source.fundCalls)

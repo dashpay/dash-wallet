@@ -174,6 +174,34 @@ internal fun isSpvProgressStalled(
 }
 
 /**
+ * The stall verdict with the iOS caught-up rule applied on top.
+ *
+ * The phase-based verdict above reads any progress snapshot that sits
+ * unchanged for [thresholdMs] mid-scan as a NETWORK stall, and the row turns
+ * that into the red "unable to connect" banner. In the dash-spv
+ * final-partial-batch stall (plan §34) the snapshot IS unchanged for many
+ * minutes — the filter commit is parked — while every filter has arrived and
+ * the engine is healthy, so the banner is factually wrong and iOS, applying
+ * the same 0.999 aggregate rule, shows nothing at all. A snapshot the
+ * aggregate calls caught up ([ShadowSyncProgress.aggregateCaughtUp]) is
+ * therefore never a stall here. The caller LOGS that exemption instead
+ * (`SdkBlockchainStateService`), so the stall stays visible in the log
+ * without being reported to the user as a connectivity failure.
+ *
+ * ERROR still stalls immediately — the aggregate is not consulted for a
+ * fault. Pure — host-testable.
+ */
+internal fun isSpvProgressStalled(
+    progress: ShadowSyncProgress,
+    msSinceProgressChange: Long,
+    thresholdMs: Long = SPV_STALL_THRESHOLD_MS
+): Boolean = when {
+    progress.phase == ShadowSyncPhase.ERROR -> true
+    progress.aggregateCaughtUp -> false
+    else -> isSpvProgressStalled(progress.phase, msSinceProgressChange, thresholdMs)
+}
+
+/**
  * Rust SPV phase → the neutral [SyncStage] the pre-cutover pipeline maps
  * dashj's `PeerGroup.SyncStage` onto (see
  * [de.schildbach.wallet.service.BlockchainStateDataProvider]'s `toNeutral`):

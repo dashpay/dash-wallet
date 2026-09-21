@@ -163,6 +163,48 @@ class SdkBlockchainStateMapperTest {
         }
     }
 
+    // ── isSpvProgressStalled(progress, …): the iOS caught-up exemption ──
+
+    @Test
+    fun stall_isNotReportedWhenTheAggregateSaysCaughtUp() {
+        // The §34 final-partial-batch stall as the Samsung reported it: the
+        // snapshot sits unchanged for far longer than the threshold, filters
+        // parked 2,167 short, every filter stored, aggregate 99.954%. The
+        // phase-based verdict says stalled; the aggregate-aware one must not,
+        // or the user sees "unable to connect" on a wallet iOS calls synced.
+        val parked = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.99954,
+            headerHeight = 1_558_166, headerTarget = 1_558_166,
+            filterHeight = 1_555_999, filterTarget = 1_558_166
+        )
+        val longStill = SPV_STALL_THRESHOLD_MS * 20
+        assertTrue("the snapshot IS static", isSpvProgressStalled(parked.phase, longStill))
+        assertFalse("…but it is not a network stall", isSpvProgressStalled(parked, longStill))
+    }
+
+    @Test
+    fun stall_isStillReportedBelowTheAggregateThreshold() {
+        // Same shape, aggregate 99.898% (4,752 short): a real mid-scan that has
+        // gone quiet. The banner is right to show.
+        val midScan = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.99898,
+            headerHeight = 1_556_922, headerTarget = 1_556_922,
+            filterHeight = 1_552_170, filterTarget = 1_556_922
+        )
+        assertTrue(isSpvProgressStalled(midScan, SPV_STALL_THRESHOLD_MS))
+        assertFalse(isSpvProgressStalled(midScan, SPV_STALL_THRESHOLD_MS - 1))
+    }
+
+    @Test
+    fun stall_errorIsImmediateEvenWhenTheAggregateReadsCaughtUp() {
+        // A fault is a fault: the aggregate is not consulted for ERROR.
+        val faulted = ShadowSyncProgress(
+            ShadowSyncPhase.ERROR, 1.0,
+            headerHeight = 100, headerTarget = 100, filterHeight = 100, filterTarget = 100
+        )
+        assertTrue(isSpvProgressStalled(faulted, 0))
+    }
+
     // ── deriveBlockchainStateUpdate ───────────────────────────────────
 
     @Test

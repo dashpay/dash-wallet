@@ -2244,25 +2244,87 @@ class L1ShadowSyncServiceTest {
     // ── The committed-cursor drain predicate + its event parser ───────
 
     @Test
-    fun scanCaughtUpToTip_requiresTheBlockPipelineDrained() {
+    fun scanCaughtUpToTip_ignoresThePipelineLag_whichIsExposedSeparately() {
+        // 2026-09-21: the pipeline-lag veto LEFT this predicate (iOS never had
+        // it, and in the §34 stall it pinned "syncing" on forever). It is still
+        // computed, still exposed, and still applied — to the durable seed
+        // only (L1SyncStatusService.sdkPipelineLagging → CutoverUiDataService).
         val filtersAtTip = ShadowSyncProgress(
             ShadowSyncPhase.FILTERS, 1.0,
             headerHeight = 1_514_660, headerTarget = 1_514_660,
             filterHeight = 1_514_659, filterTarget = 1_514_660
         )
-        // No cursor evidence (0): pre-change behavior — caught up.
         assertTrue(filtersAtTip.scanCaughtUpToTip)
         assertFalse(filtersAtTip.blockPipelineLagging)
-        // Cursor provably behind the tip: the engine is still downloading /
-        // processing matched blocks — NOT caught up (the premature-synced
-        // field incident).
+        // Cursor provably behind the tip: the LAG is still reported…
         val churning = filtersAtTip.copy(walletSyncedHeight = 1_200_000)
         assertTrue(churning.blockPipelineLagging)
-        assertFalse(churning.scanCaughtUpToTip)
-        // Cursor within SCAN_TIP_TOLERANCE_BLOCKS of the tip: drained.
+        // …but no longer vetoes "caught up" for the display.
+        assertTrue(churning.scanCaughtUpToTip)
         val drained = filtersAtTip.copy(walletSyncedHeight = 1_514_658)
         assertFalse(drained.blockPipelineLagging)
         assertTrue(drained.scanCaughtUpToTip)
+    }
+
+    // ── The iOS rule: aggregate >= 0.999 (plan §34 / SyncingActivityMonitor.swift) ──
+
+    @Test
+    fun aggregateCaughtUp_truthTable_onTheObservedNumbers() {
+        // Each row is a REAL reading, with the SDK's three-phase mean it
+        // produced (headers and filter headers at 100%, filters committed/target).
+        fun p(committed: Long, target: Long, aggregate: Double) = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, aggregate,
+            headerHeight = target, headerTarget = target,
+            filterHeight = committed, filterTarget = target
+        )
+        // Samsung SM-S901U, 2026-09-21 13:00: the SDK-FINAL-BATCH stall, 2,167
+        // short. (100 + 100 + 99.861) / 3 = 99.954% -> synced, as on iOS.
+        assertTrue(p(1_555_999, 1_558_166, 0.99954).aggregateCaughtUp)
+        // Joel's mainnet report: 3 blocks short for 49 minutes -> synced.
+        assertTrue(p(2_540_968, 2_540_971, 0.9999994).aggregateCaughtUp)
+        // Samsung 2026-09-19: 4,752 short. (100 + 100 + 99.695) / 3 = 99.898%
+        // -> below the threshold, NOT synced. The rule still catches a real gap.
+        assertFalse(p(1_552_170, 1_556_922, 0.99898).aggregateCaughtUp)
+        // Exactly at the threshold counts (iOS uses >=).
+        assertTrue(p(1_000, 1_000, 0.999).aggregateCaughtUp)
+        // An all-zero snapshot can never pass, whatever the percent says.
+        assertFalse(ShadowSyncProgress(ShadowSyncPhase.FILTERS, 1.0, 0, 0, 0, 0).aggregateCaughtUp)
+        assertFalse(ShadowSyncProgress(ShadowSyncPhase.FILTERS, 1.0, 100, 100, 50, 0).aggregateCaughtUp)
+    }
+
+    @Test
+    fun scanCaughtUpToTip_isTheUnionOfTheHeightRuleAndTheAggregateRule() {
+        val stalled = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.99954,
+            headerHeight = 1_558_166, headerTarget = 1_558_166,
+            filterHeight = 1_555_999, filterTarget = 1_558_166
+        )
+        // Height rule alone says no (2,167 > SCAN_TIP_TOLERANCE_BLOCKS)…
+        assertTrue(stalled.headerTarget - stalled.filterHeight > ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS)
+        // …the aggregate says yes, so the union says caught up.
+        assertTrue(stalled.scanCaughtUpToTip)
+        // The height rule still works on its own when the aggregate is unknown
+        // (0.0 — every fixture that predates the aggregate).
+        assertTrue(stalled.copy(overallPercent = 0.0, filterHeight = 1_558_165).scanCaughtUpToTip)
+        // And a genuine mid-scan fails both.
+        assertFalse(stalled.copy(overallPercent = 0.7, filterHeight = 1_200_000).scanCaughtUpToTip)
+        // The header chain must itself be at a known tip for either rule.
+        assertFalse(stalled.copy(headerHeight = 1_558_000).scanCaughtUpToTip)
+    }
+
+    @Test
+    fun shadowSyncPercent_claims100OnTheAggregateRule_andTheLabelFollows() {
+        val stalled = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.99954,
+            headerHeight = 1_558_166, headerTarget = 1_558_166,
+            filterHeight = 1_555_999, filterTarget = 1_558_166
+        )
+        // The home header: 100%, not the 99% the combined-height math yields.
+        assertEquals(100, shadowSyncPercent(stalled))
+        // The debug label follows the same predicate.
+        assertEquals("Kotlin 100%", kotlinSyncLabel(stalled.copy(phase = ShadowSyncPhase.SYNCED), L1VerificationStatus.PROBING))
+        // Below the threshold the honest combined percent is shown, capped.
+        assertEquals(99, shadowSyncPercent(stalled.copy(overallPercent = 0.99898, filterHeight = 1_552_170)))
     }
 
     // ── Replay memory telemetry (pure parts) ──────────────────────────
@@ -2274,8 +2336,10 @@ class L1ShadowSyncServiceTest {
             headerHeight = 1_514_660, headerTarget = 1_514_660,
             filterHeight = 1_514_659, filterTarget = 1_514_660
         )
-        // Mid-scan: active.
-        assertTrue(atTip.copy(filterHeight = 1_200_000).replayActive)
+        // Mid-scan: active. The aggregate must be realistic too — 314k blocks
+        // short cannot read 100%, and since 2026-09-21 `overallPercent` is
+        // load-bearing (the iOS rule); the fixture's 1.0 was inert before.
+        assertTrue(atTip.copy(filterHeight = 1_200_000, overallPercent = 0.93).replayActive)
         // SDK-latched SYNCED but the block pipeline provably lags: STILL active
         // (the armed-replay shape the phase check alone would miss).
         assertTrue(
