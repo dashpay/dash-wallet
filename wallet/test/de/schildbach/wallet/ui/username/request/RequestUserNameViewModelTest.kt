@@ -880,14 +880,13 @@ class RequestUserNameViewModelTest {
         val aliceLookup = viewModel.checkUsername("alice")
 
         // The user types on: the field now holds 'bob', whose lookup answers first.
-        viewModel.checkUsernameValid("bob", UsernameType.Primary)
-        viewModel.checkUsername("bob")?.join()
-        assertTrue("bob is registered", viewModel.uiState.value.usernameExists)
-
-        // Now alice's answer lands. It says "free" — for a name that is no longer there.
-        // Join ALICE's own job: bob has already cleared checkingUsername, so waiting on
-        // the state could return from bob's value before alice reached the stale guard.
-        aliceInFlight.countDown()
+        try {
+            viewModel.checkUsernameValid("bob", UsernameType.Primary)
+            viewModel.checkUsername("bob")?.join()
+            assertTrue("bob is registered", viewModel.uiState.value.usernameExists)
+        } finally {
+            aliceInFlight.countDown()
+        }
         aliceLookup?.join()
 
         val state = viewModel.uiState.value
