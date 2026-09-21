@@ -169,6 +169,9 @@ assert_log() {
 }
 
 # refute_log <label> <grep-pattern>   — PASS if absent from the new lines
+# Samples ONCE. Correct only for a window that is already closed — i.e. after
+# something has been asserted that could only be logged later than the line
+# being refuted. For "this must never happen", use refute_log_for.
 refute_log() {
   local label="$1" pat="$2"
   local w; w=$(since_mark)
@@ -176,6 +179,32 @@ refute_log() {
     fail "$label" "(unexpected: $pat)"
     grep -E "$pat" "$w" | head -2 | sed 's/^/          /'
   else printf '   \033[32mPASS\033[0m %s\n' "$label"; fi
+}
+
+# refute_log_for <label> <grep-pattern> [budget-secs]
+# PASS only if the pattern stays absent for the WHOLE budget.
+#
+# The counterpart to assert_log's polling, and needed for the same reason.
+# check() is asynchronous and can reach checkService() long after the event
+# that triggered it, so a single sample taken seconds after launch proves
+# nothing about a forbidden start: the window simply had not been written yet
+# when it was read. A one-shot refutation of a line that has not had time to
+# appear passes for free — the worst kind of green.
+#
+# Uses the same default budget as assert_log so the two agree on how long
+# "startup" lasts on this emulator.
+refute_log_for() {
+  local label="$1" pat="$2" budget="${3:-45}" waited=0 w
+  while [ "$waited" -lt "$budget" ]; do
+    w=$(since_mark)
+    if grep -qE "$pat" "$w"; then
+      fail "$label" "(unexpected after ${waited}s: $pat)"
+      grep -E "$pat" "$w" | head -2 | sed 's/^/          /'
+      return 0
+    fi
+    sleep 5; waited=$((waited + 5))
+  done
+  printf '   \033[32mPASS\033[0m %s (absent for %ss)\n' "$label" "$budget"
 }
 
 # assert_not_committed <label> — reads the PERSISTED state, not the log.
@@ -404,8 +433,8 @@ s1)
   assert_log "launch 1 committed"                "cutover state DUAL_RUNNING -> CUT_OVER \(upgraded-wallet launch\)"
   assert_log "explainer armed"                   "one-time sync explainer armed"
   assert_log "dashj held"                        "holding the dashj L1 engine"
-  refute_log "dashj did NOT start"               "starting peergroup"
   assert_log "SDK L1 engine started"             "L1 shadow SPV started"
+  refute_log_for "dashj did NOT start"           "starting peergroup"
   ;;
 
 s2)
@@ -421,8 +450,8 @@ s2)
   start_service
   assert_log "keystore denied the master alias"  "Keystore denied '(encrypt|createWallet)' on lock-bound alias"
   assert_log "committed despite the broken bind" "DUAL_RUNNING -> CUT_OVER"
-  refute_log "dashj did NOT start as a fallback" "starting peergroup"
   assert_log "dashj held"                        "holding the dashj L1 engine"
+  refute_log_for "dashj did NOT start as a fallback" "starting peergroup"
   note "no-fallback policy: the bind is retried at unlock (s3); nothing syncs until then"
   ;;
 
@@ -452,7 +481,7 @@ s3)
   # The state was already committed in s2 (unconditional commit); the heal
   # only has to start the SDK engine.
   assert_log "SDK L1 engine started after the heal" "L1 shadow SPV started"
-  refute_log "dashj did NOT start"               "starting peergroup"
+  refute_log_for "dashj did NOT start"           "starting peergroup"
   ;;
 
 s3b)
@@ -466,6 +495,10 @@ s3b)
   launch_app
   assert_log "dashj held"                        "holding the dashj L1 engine"
   assert_log "SDK L1 engine started"             "L1 shadow SPV started"
+  # S3b had no negative assertion at all: it is the launch that follows an
+  # in-session heal, which is exactly the shape where a late checkService()
+  # could still reach for dashj.
+  refute_log_for "dashj did NOT start"           "starting peergroup"
   ;;
 
 s4)

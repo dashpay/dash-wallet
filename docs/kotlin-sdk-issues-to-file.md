@@ -160,12 +160,23 @@ would have reached 0-25.
 
 Requests:
 
-- Return the contact account's extended public key from
-  `extended_public_key_for_account_type` so the checker reaches `maintain_gap_limit`. The
-  material is already persisted — every contact account row carries
-  `accountExtendedPubKeyBytes` (104 bytes) — and friend-chain receiving addresses derive from
-  that xpub alone, so no seed or device unlock is needed. This looks like unfinished wiring
-  rather than a cryptographic limit.
+- Make the checker reach `maintain_gap_limit` for the two DashPay pools. The material is
+  already persisted — every contact account row carries `accountExtendedPubKeyBytes`
+  (104 bytes) — and friend-chain receiving addresses derive from that xpub alone, so no seed
+  and no device unlock is needed. This is unfinished wiring, not a cryptographic limit.
+
+  Resolve it in `wallet_checker.rs`, **not** by teaching
+  `extended_public_key_for_account_type` to return the contact xpub. That helper takes
+  `AccountTypeToCheck`, which is a FIELDLESS enum: given only `DashpayReceivingFunds` it
+  cannot say *which* contact account is being asked about, so there is no correct value for it
+  to return. `wallet_checker.rs` already holds the fully-keyed `AccountType`, so either it
+  does the lookup itself, or it passes that keyed value down — but the fieldless helper cannot
+  be the place the decision is made.
+
+  (An earlier revision of this section asked for exactly that helper change. The note at the
+  top of this issue corrected the root cause; this bullet had not been brought in line, so the
+  issue as filed still points implementers at an API change that cannot fix the defect.
+  rust-dashcore#1032 needs a comment saying so.)
 - Replace the hardcoded `20` with a named constant. Note `DEFAULT_CONTACT_GAP_LIMIT = 10`
   exists in `rs-platform-wallet/src/wallet/identity/crypto/dip14.rs:254` (quoting DIP-15's
   recommendation) but has **no consumer** — neither it nor `derive_contact_payment_address`

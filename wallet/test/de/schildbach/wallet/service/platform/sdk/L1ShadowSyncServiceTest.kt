@@ -289,7 +289,10 @@ class L1ShadowSyncServiceTest {
         assertEquals(1, source.bringUpCalls)
         assertEquals("the bring-up was started, not finished, when SPV began", 0, source.bringUpFinished)
 
-        kotlinx.coroutines.delay(600L)
+        // Poll to a generous ceiling rather than sleeping 600 ms against a
+        // 400 ms fake: the margin was 200 ms of scheduler luck, and this test
+        // asserts only THAT the detached bring-up completes, never how fast.
+        withTimeout(5_000) { while (source.bringUpFinished == 0) delay(5) }
         assertEquals("…and it completes on its own afterwards", 1, source.bringUpFinished)
     }
 
