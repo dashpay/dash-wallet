@@ -2392,10 +2392,29 @@ seconds of query time in 150 seconds. Worth its own investigation — it is a pl
 
 ### 34.6 Where this goes
 
-This is an SDK defect in `dash_spv::sync::filters::manager` and is not fixable from the app. The
-filter-stall watchdog stays as a mitigation, but §34.2 explains why it mostly cannot help: a
-restart recreates the same batch, matches the same blocks, and fails to fetch them again. Its
-EXHAUSTED message already says the right thing — "this needs an SDK-side fix".
+This is an SDK defect in `dash_spv::sync::filters::manager` and is not fixable from the app.
+
+**What we do about it on our side.** The watchdog now RECOGNISES this stall and declines to restart
+into it (`FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH`). The signature it uses is the
+bound: a final-partial-batch stall always parks the cursor LESS than one commit batch
+(`BATCH_PROCESSING_SIZE` = 5,000) short of the target. Within that bound a restart is wrong twice —
+useless (§34.2) and expensive (it resumes from the durable watermark, which `stop()` has recorded
+trailing by up to 155,000 blocks) — so it logs one `SDK-FINAL-BATCH` line naming the defect and
+stands down. A stall WIDER than one batch is a different animal and still earns the restart.
+
+Two things about that worth keeping in view:
+
+- **MO-1022 is this defect.** Its recorded cursor, 2,538,000 of 2,540,971, is 2,971 blocks short —
+  inside one batch. So the stall this watchdog was originally built to restart now takes the report
+  path instead. That rests on reading the "a restart demonstrably clears the wall (45,000 blocks in
+  90 s)" note on `FILTER_STALL_MAX_RESTARTS` as a RE-WALK and not a cure: a cursor 2,971 short
+  cannot advance 45,000 blocks, so the figure must describe resuming from a much lower durable
+  watermark and climbing back. If that reading is ever disproved, the restart suppression is what
+  to revisit — `filterStall_theRecordedMo1022CursorIsItselfTheFinalBatchShape` pins it.
+- **5,000 is a copied constant**, read from the SDK's source and not published by the FFI. The
+  clean discriminator is `stored_height == target && committed_height < target` — unambiguous, no
+  magic number — but `stored_height` is not exposed through `SpvSyncProgressData`. Asking for it is
+  a request on the issue below.
 
 **To be filed against `dash_spv`,** with the log excerpts above. Two questions for that issue,
 since the gate itself is defensible and the bug is on the side of it:

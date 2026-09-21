@@ -319,6 +319,98 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
+    fun filterStall_reportsTheSdkFinalBatchInsteadOfRestarting() {
+        // Plan section 34. The real Samsung numbers: parked at 1,552,170 of
+        // 1,556,922 — 4,752 blocks short, inside one 5,000-block dash_spv
+        // commit batch. A restart recreates the same batch and stalls
+        // identically, and it resumes from the durable watermark, so it pays a
+        // re-walk for nothing. The watchdog must NOT spend a restart here.
+        val d = stallDecider()
+        val stuck = 1_552_170L
+        val target = 1_556_922L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
+        // Past the 10-minute threshold with the cursor still and the event
+        // stream quiet, the decision is the REPORT, never a restart.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH,
+            d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 0L)
+        )
+        // Once per process, then silence — it is a diagnosis, not an alarm.
+        var now = 11 * 60_000L
+        repeat(30) {
+            now += 60_000L
+            assertEquals(
+                FilterStallWatchdogDecider.Decision.NONE,
+                d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
+            )
+        }
+    }
+
+    @Test
+    fun filterStall_stillRestartsWhenTheStallIsWiderThanOneBatch() {
+        // The discriminator has to cut both ways: a mid-replay wedge more than
+        // one commit batch from the target is NOT the section 34 shape, and
+        // still earns the restart the watchdog exists to issue.
+        val d = stallDecider()
+        val stuck = 1_400_000L // 156,922 short — many batches behind
+        val target = 1_556_922L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 0L)
+        )
+    }
+
+    @Test
+    fun filterStall_theRecordedMo1022CursorIsItselfTheFinalBatchShape() {
+        // Pinning a consequence that deserves to be visible rather than
+        // buried in a fixture change.
+        //
+        // MO-1022's recorded observation — the stall this watchdog was built
+        // for — is filters 2,538,000 of 2,540,971: only 2,971 blocks short,
+        // i.e. INSIDE one 5,000-block commit batch. So MO-1022 and plan
+        // section 34 are the same shape, and after this change MO-1022's own
+        // case no longer earns a restart.
+        //
+        // That is deliberate, and it rests on reading the
+        // "restart demonstrably clears the wall (45,000 blocks in 90 s)" note
+        // on FILTER_STALL_MAX_RESTARTS as a RE-WALK rather than a cure: a
+        // cursor 2,971 short cannot advance 45,000 blocks, so that figure must
+        // describe the engine resuming from the durable watermark well below
+        // the cursor and climbing back — exactly the cost section 34.2 says a
+        // restart pays for nothing. If that reading is ever disproved, this
+        // test is where to start.
+        val d = stallDecider()
+        val stuck = 2_538_000L
+        val target = 2_540_971L
+        assertTrue(d.isFinalBatchSignature(stuck, target))
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH,
+            d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 0L)
+        )
+    }
+
+    @Test
+    fun finalBatchSignature_boundsAreExactlyOneCommitBatch() {
+        val d = stallDecider()
+        val target = 1_556_922L
+        // 4,999 short — inside the batch.
+        assertTrue(d.isFinalBatchSignature(target - 4_999L, target))
+        // Exactly 5,000 short — a WHOLE batch behind, so a boundary the
+        // engine should have committed. Not the signature.
+        assertFalse(d.isFinalBatchSignature(target - 5_000L, target))
+        // Three blocks short: the mainnet report that sat 49 minutes.
+        assertTrue(d.isFinalBatchSignature(target - 3L, target))
+        // Degenerate inputs must never be read as the signature: an unknown
+        // target, an unknown cursor, or a cursor at/past the target.
+        assertFalse(d.isFinalBatchSignature(target - 3L, 0L))
+        assertFalse(d.isFinalBatchSignature(0L, target))
+        assertFalse(d.isFinalBatchSignature(target, target))
+        assertFalse(d.isFinalBatchSignature(target + 10L, target))
+    }
+
+    @Test
     fun filterStall_doesNotArmWhenTheFiltersAreAtTarget() {
         // Nothing to stall on: a frozen cursor AT the target is a finished scan.
         val d = stallDecider()
@@ -348,9 +440,14 @@ class L1ShadowSyncServiceTest {
 
     @Test
     fun filterStall_restartsOnceTheCursorHasBeenFrozenPastTheThreshold() {
-        // The MO-1022 shape: filters 2538000 of 2540971, frozen.
+        // A WIDE stall: filters 2490000 of 2540971 — 50,971 blocks short, ten
+        // commit batches behind, so it is not the section 34 final-partial-batch
+        // shape and a restart is still the intended action. (MO-1022's own
+        // recorded cursor, 2538000 of 2540971, is only 2,971 short and now takes
+        // the SDK_FINAL_BATCH path -- see
+        // filterStall_theRecordedMo1022CursorIsItselfTheFinalBatchShape.)
         val d = stallDecider()
-        val stuck = 2_538_000L
+        val stuck = 2_490_000L
         val target = 2_540_971L
         assertEquals(FilterStallWatchdogDecider.Decision.NONE, d.onCheck(0L, stuck, target, lastWalletEventMs = 0L))
         // Nine minutes in: still inside the window.
@@ -399,7 +496,10 @@ class L1ShadowSyncServiceTest {
         // measured on the same device that morning. Backing off is what stops
         // one bad spell costing the whole session's mitigation.
         val d = stallDecider()
-        val stuck = 1_556_890L
+        // Widened past one commit batch on purpose: the rungs under test are a
+        // TIMING property, and a gap inside one batch now takes the
+        // SDK_FINAL_BATCH path instead of restarting at all.
+        val stuck = 1_500_000L
         val target = 1_556_896L
         fun check(atMs: Long) =
             d.onCheck(atMs, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
@@ -421,7 +521,7 @@ class L1ShadowSyncServiceTest {
         // 0 means "not reported". Assuming the cheap tier on no evidence
         // would shorten the wait for a wallet that may be mid-replay.
         val d = stallDecider()
-        val stuck = 1_553_000L
+        val stuck = 1_500_000L // more than one commit batch behind
         val target = 1_556_891L
         d.onCheck(0L, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = 0L)
         assertEquals(
@@ -437,17 +537,22 @@ class L1ShadowSyncServiceTest {
     @Test
     fun filterStall_doesNotRestartWhileTheEngineIsStillDeliveringEvents() {
         // THE SAMSUNG CASE (SM-S901U, 2026-09-19, §34). The cursor sat at
-        // 1,555,999 of 1,556,844 for 6 min 32 s — but the SDK was logging
-        // `wallet-event batch: folded=N` the whole time with
-        // `synced_height_persisted=None`. The scan was running; only the
-        // watermark WRITE was blocked, behind a contended primary connection
-        // on dash-sdk.db. It then persisted three heights in 130 ms and went
-        // SYNCED on its own.
+        // 1,555,999 of 1,556,844 for 6 min 32 s and then recovered UNAIDED,
+        // persisting three heights in 130 ms and going SYNCED.
         //
-        // A restart there destroys real unpersisted scan progress to "fix" a
-        // healthy engine. A still cursor is not a stopped engine.
+        // An earlier version of this comment said the SDK logged
+        // `wallet-event batch: folded=N` throughout with only the watermark
+        // write blocked behind a contended dash-sdk.db connection. That was a
+        // misreading: the event stream had stopped too and the database is
+        // idle during a stall (§34.3/§34.4). The rule this test pins is still
+        // right — a still cursor is not a stopped engine, so events arriving
+        // veto a restart — but it is a conservative guard, not what explains
+        // the Samsung stall.
         val d = stallDecider()
-        val stuck = 1_555_999L
+        // Widened past one commit batch: the real Samsung gap, 845 blocks, is
+        // now the SDK_FINAL_BATCH shape, and this test is named for the
+        // LIVENESS gate.
+        val stuck = 1_500_000L
         val target = 1_556_844L
         d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
         // Twenty minutes of a frozen cursor — but events keep arriving.
@@ -466,7 +571,7 @@ class L1ShadowSyncServiceTest {
     fun filterStall_restartsWhenTheCursorAndTheEventStreamHaveBOTHGoneQuiet() {
         // The real wedge: nothing moving on either signal.
         val d = stallDecider()
-        val stuck = 2_538_000L
+        val stuck = 2_490_000L
         val target = 2_540_971L
         d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
         assertEquals(
@@ -482,9 +587,10 @@ class L1ShadowSyncServiceTest {
     @Test
     fun filterStall_eventsGoingQuietAfterAFrozenCursorStillRestarts() {
         // Events kept the watchdog quiet, then the engine died too. The
-        // liveness signal must not latch the watchdog off forever.
+        // liveness signal must not latch the watchdog off forever. Gap widened
+        // past one commit batch so the RESTART path is what is under test.
         val d = stallDecider()
-        val stuck = 1_555_999L
+        val stuck = 1_500_000L
         val target = 1_556_844L
         d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
         assertEquals(
@@ -501,7 +607,7 @@ class L1ShadowSyncServiceTest {
     @Test
     fun filterStall_givesTheRestartAFullWindowBeforeJudgingItAgain() {
         val d = stallDecider()
-        val stuck = 2_538_000L
+        val stuck = 2_490_000L
         val target = 2_540_971L
         d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
         assertEquals(
@@ -520,33 +626,33 @@ class L1ShadowSyncServiceTest {
     fun filterStall_progressAfterARestartRearmsTheFullWindow() {
         val d = stallDecider()
         val target = 2_540_971L
-        d.onCheck(0L, 2_538_000L, target, lastWalletEventMs = 0L)
+        d.onCheck(0L, 2_490_000L, target, lastWalletEventMs = 0L)
         assertEquals(
             FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(11 * 60_000L, 2_538_000L, target, lastWalletEventMs = 0L)
+            d.onCheck(11 * 60_000L, 2_490_000L, target, lastWalletEventMs = 0L)
         )
         // The restart worked and the cursor moved.
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(12 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
+            d.onCheck(12 * 60_000L, 2_500_000L, target, lastWalletEventMs = 0L)
         )
         // It then wedges again at the new height. A fresh window is required,
         // not the leftover of the previous one — and it is the SECOND rung of
         // the backoff (20 min), because a restart has already been spent.
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(25 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
+            d.onCheck(25 * 60_000L, 2_500_000L, target, lastWalletEventMs = 0L)
         )
         assertEquals(
             FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(33 * 60_000L, 2_540_000L, target, lastWalletEventMs = 0L)
+            d.onCheck(33 * 60_000L, 2_500_000L, target, lastWalletEventMs = 0L)
         )
     }
 
     @Test
     fun filterStall_standsDownAfterTheRestartBudgetAndSaysSoExactlyOnce() {
         val d = stallDecider()
-        val stuck = 2_538_000L
+        val stuck = 2_490_000L
         val target = 2_540_971L
         var now = 0L
         d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
@@ -579,25 +685,27 @@ class L1ShadowSyncServiceTest {
     fun filterStall_catchingUpClearsTheTimerSoALaterLagStartsFresh() {
         val d = stallDecider()
         val target = 2_540_971L
-        d.onCheck(0L, 2_538_000L, target, lastWalletEventMs = 0L)
+        d.onCheck(0L, 2_490_000L, target, lastWalletEventMs = 0L)
         // Caught up — the pending stall must be forgotten, not merely paused.
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
             d.onCheck(5 * 60_000L, target, target, lastWalletEventMs = 0L)
         )
         // Target moves on and the cursor lags again; the old nine minutes
-        // must not count toward the new window.
+        // must not count toward the new window. The new target is more than
+        // one commit batch ahead so this still exercises the RESTART path
+        // rather than the SDK_FINAL_BATCH report.
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(6 * 60_000L, target, 2_545_000L, lastWalletEventMs = 0L)
+            d.onCheck(6 * 60_000L, target, 2_555_000L, lastWalletEventMs = 0L)
         )
         assertEquals(
             FilterStallWatchdogDecider.Decision.NONE,
-            d.onCheck(14 * 60_000L, target, 2_545_000L, lastWalletEventMs = 0L)
+            d.onCheck(14 * 60_000L, target, 2_555_000L, lastWalletEventMs = 0L)
         )
         assertEquals(
             FilterStallWatchdogDecider.Decision.RESTART,
-            d.onCheck(17 * 60_000L, target, 2_545_000L, lastWalletEventMs = 0L)
+            d.onCheck(17 * 60_000L, target, 2_555_000L, lastWalletEventMs = 0L)
         )
     }
 

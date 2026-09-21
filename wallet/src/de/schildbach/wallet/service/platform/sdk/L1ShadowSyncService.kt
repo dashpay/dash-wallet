@@ -1121,12 +1121,18 @@ internal class FilterStallWatchdogDecider(
     private val stallThresholdMs: Long = L1ShadowSyncService.FILTER_STALL_THRESHOLD_MS,
     private val maxRestarts: Int = L1ShadowSyncService.FILTER_STALL_MAX_RESTARTS
 ) {
-    enum class Decision { NONE, RESTART, EXHAUSTED }
+    /**
+     * [SDK_FINAL_BATCH] is a REPORT, not an action: the stall has been
+     * identified as the `dash_spv` final-partial-batch defect (§34), for which
+     * a restart is both useless and expensive. See [isFinalBatchSignature].
+     */
+    enum class Decision { NONE, RESTART, EXHAUSTED, SDK_FINAL_BATCH }
 
     private var lastHeight: Long = -1L
     private var lastAdvanceMs: Long = 0L
     private var restartsIssued = 0
     private var exhaustedReported = false
+    private var finalBatchReported = false
 
     /**
      * The threshold the last decision was taken against, and how long the
@@ -1255,6 +1261,13 @@ internal class FilterStallWatchdogDecider(
         if (lastWalletEventMs > 0L && nowMs - lastWalletEventMs < threshold) {
             return Decision.NONE
         }
+        // A CONFIRMED stall, so it is now worth asking WHICH stall — because for
+        // the one we have root-caused, restarting is the wrong move twice over.
+        if (isFinalBatchSignature(filterHeight, filterTarget)) {
+            if (finalBatchReported) return Decision.NONE
+            finalBatchReported = true
+            return Decision.SDK_FINAL_BATCH
+        }
         return when {
             restartsIssued < maxRestarts -> {
                 restartsIssued++
@@ -1270,6 +1283,49 @@ internal class FilterStallWatchdogDecider(
             else -> Decision.NONE
         }
     }
+
+    /**
+     * Whether a confirmed stall carries the shape of the `dash_spv`
+     * final-partial-batch defect (plan §34), for which a restart must NOT be
+     * issued.
+     *
+     * `dash_spv` commits filters in `BATCH_PROCESSING_SIZE` = 5,000-block
+     * batches, in order, and the LAST batch runs from the last boundary to the
+     * tip. When that batch matches blocks it then never fetches, its
+     * `pending_blocks()` never reaches zero, its commit is withheld, and
+     * `committed_height` — which is what [filterHeight] is — parks inside one
+     * batch of the target. That bound is the signature: a stall of this kind is
+     * always LESS than 5,000 blocks short.
+     *
+     * Restarting there is wrong on both counts at once, which is why this is
+     * worth a special case rather than a tier:
+     *
+     * - **Useless.** A restart recreates the same final batch against a
+     *   slightly newer tip, matches the same blocks, fails the same fetch and
+     *   stalls identically (§34.2 — observed across four restarts; the one that
+     *   appeared to help was the chain advancing, not the restart).
+     * - **Expensive.** A restart resumes from the DURABLE watermark, not from
+     *   this cursor — [L1ShadowSyncService.stop]'s own diagnostic has recorded
+     *   that trailing by up to 155,000 blocks. So the cost is a re-walk, paid
+     *   to achieve nothing. This is the same miscosting that sank the fast
+     *   near-tip rung; the conclusion just runs the other way.
+     *
+     * THE WEAKNESS, STATED. 5,000 is `dash_spv`'s internal constant, read from
+     * its source, not anything the FFI publishes. If the SDK retunes it this
+     * predicate silently widens or narrows, and the app cannot tell. The clean
+     * discriminator would be "every filter STORED but not committed", which is
+     * unambiguous and costs no magic number — but `stored_height` is not
+     * exposed through `SpvSyncProgressData`. Asking for it is a request on the
+     * `dash_spv` issue; until then this bound is the best available proxy.
+     *
+     * The cost of a false positive is bounded: a genuine wedge within 5,000
+     * blocks of the target stops receiving a restart it probably could not use
+     * either, and the next process start brings the engine up regardless.
+     */
+    internal fun isFinalBatchSignature(filterHeight: Long, filterTarget: Long): Boolean =
+        filterTarget > 0 &&
+            filterHeight in 1 until filterTarget &&
+            filterTarget - filterHeight < L1ShadowSyncService.SDK_FILTER_BATCH_BLOCKS
 }
 
 /**
@@ -3002,13 +3058,36 @@ class L1ShadowSyncService internal constructor(
                     }
                 }.logCompletion("filter-stall engine restart")
             }
+            FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH -> {
+                // NO RESTART. Logged once per process, with everything needed
+                // to recognise it in a support bundle without reading source.
+                log.error(
+                    "L1Shadow filter-stall watchdog: SDK-FINAL-BATCH — the filter cursor has " +
+                        "sat at {} of {} ({} blocks short, inside one {}-block dash_spv commit " +
+                        "batch) for {}s with the wallet-event stream quiet. This is the " +
+                        "final-partial-batch defect (plan section 34): the last batch matched " +
+                        "blocks it never received, so pending_blocks() never reaches zero and " +
+                        "committed_height is withheld. NOT restarting — a restart recreates the " +
+                        "same batch and stalls identically, and it would resume from the " +
+                        "durable watermark {} ({} blocks back), re-walking that for nothing. " +
+                        "It clears when the chain advances enough to re-cut the batch boundary. " +
+                        "Needs an SDK-side fix; the engine's own run.log " +
+                        "(files/sdk-logs/dash_spv/run.log, attached to support reports) carries " +
+                        "the matched-block count and its requested count.",
+                    p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
+                    SDK_FILTER_BATCH_BLOCKS,
+                    filterStallDecider.lastStillMs / 1000,
+                    p.walletSyncedHeight, p.filterTarget - p.walletSyncedHeight
+                )
+            }
             FilterStallWatchdogDecider.Decision.EXHAUSTED -> {
                 log.error(
                     "L1Shadow filter-stall watchdog: the filter cursor is still wedged at {} of " +
-                        "{} after every restart this process was willing to spend — standing " +
-                        "down. This needs an SDK-side fix: the block download coordinator must " +
-                        "not abandon items permanently.",
-                    p.filterHeight, p.filterTarget
+                        "{} ({} blocks short — MORE than one {}-block commit batch, so this is " +
+                        "not the section 34 final-partial-batch shape) after every restart this " +
+                        "process was willing to spend — standing down. Needs an SDK-side fix.",
+                    p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
+                    SDK_FILTER_BATCH_BLOCKS
                 )
             }
             FilterStallWatchdogDecider.Decision.NONE -> Unit
@@ -3704,6 +3783,19 @@ class L1ShadowSyncService internal constructor(
          * a wall that survives three of them is not ours to fix from here.
          */
         internal const val FILTER_STALL_MAX_RESTARTS = 3
+
+        /**
+         * `dash_spv`'s filter-commit batch size — `BATCH_PROCESSING_SIZE` in
+         * `dash-spv/src/sync/filters/manager.rs`.
+         *
+         * Mirrored here, not published by the FFI, and used for exactly one
+         * purpose: recognising the final-partial-batch stall
+         * ([FilterStallWatchdogDecider.isFinalBatchSignature]), whose cursor
+         * always parks inside one batch of the target. If the SDK retunes its
+         * constant this copy goes silently stale, which is a known weakness
+         * of the approach and is argued in that function's KDoc.
+         */
+        internal const val SDK_FILTER_BATCH_BLOCKS = 5_000L
 
         /** Retry backoff for a failed progress-monitor collection. */
         internal const val LOOP_RETRY_DELAY_MS = 5_000L
