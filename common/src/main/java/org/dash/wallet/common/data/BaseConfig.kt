@@ -133,6 +133,18 @@ abstract class BaseConfig(
         }
     }
 
+    /**
+     * Apply several key writes in ONE DataStore transaction.
+     *
+     * [set] is a transaction PER KEY, so a group of keys that is only
+     * meaningful together can be torn apart by a process death between two
+     * consecutive calls, leaving a half-written record that still reads as
+     * valid. Write such a group through this instead.
+     */
+    open suspend fun editPreferences(transform: (MutablePreferences) -> Unit) {
+        context.dataStore.edit { preferences -> transform(preferences) }
+    }
+
     /** Remove [key] entirely, so a later [get] returns null (not a stale value). */
     open suspend fun <T> remove(key: Preferences.Key<T>) {
         context.dataStore.edit { preferences ->

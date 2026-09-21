@@ -858,4 +858,25 @@ open class DashPayConfig @Inject constructor(
         }
         return installedDate
     }
+
+    /**
+     * Record [syncedHeight] as the contact-registration floor for [walletId] —
+     * both keys in ONE DataStore transaction.
+     *
+     * [DASHPAY_CONTACT_REGISTRATION_WALLET] and
+     * [DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT] are only meaningful as a
+     * pair, so they have to be written as one. Two [set] calls are two separate
+     * `dataStore.edit`s: a process death between them leaves the NEW wallet id
+     * standing against the PREVIOUS wallet's height, and the reader gates only
+     * on the id matching — so it would serve that stale height as this wallet's
+     * floor and mis-report §17 coverage, in whichever direction the two heights
+     * happen to differ. Nothing later repairs it, because the recorder only
+     * overwrites a height it can see is LOWER than the one it is recording.
+     */
+    open suspend fun setContactRegistration(walletId: String, syncedHeight: Long) {
+        editPreferences { preferences ->
+            preferences[DASHPAY_CONTACT_REGISTRATION_WALLET] = walletId
+            preferences[DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT] = syncedHeight
+        }
+    }
 }

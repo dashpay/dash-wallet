@@ -1179,9 +1179,12 @@ internal class FilterStallWatchdogDecider(
      *   liveness signal that separates the two ways the cursor can sit
      *   still — see the note below.
      * @param walletSyncedHeight the DURABLE watermark a restart would resume
-     *   from. It decides how long to wait, because it decides what a restart
-     *   COSTS — see [L1ShadowSyncService.FILTER_STALL_NEAR_TIP_THRESHOLD_MS].
-     *   0 when unknown, which is treated as far from the tip.
+     *   from. INFORMATIONAL ONLY: this decision does not read it, and the wait
+     *   comes from [waitBeforeAttempt], which sees only the attempt number. It
+     *   is threaded through so the caller can log what the restart it is about
+     *   to issue will COST. It did once select a fast first rung; that rung was
+     *   withdrawn, because the value it was read from is the in-memory cursor,
+     *   not this one. 0 when unknown.
      */
     fun onCheck(
         nowMs: Long,
@@ -1206,13 +1209,14 @@ internal class FilterStallWatchdogDecider(
         // as the wait before attempt N+1, because those two waits answer
         // different questions.
         //
-        // The FIRST wait asks "is this a pause or a wedge?". Near the tip a
-        // restart resumes from walletSyncedHeight, which is already at the
-        // target, so it costs about a minute and one was measured to HELP
-        // (2026-09-19: 1,553,000 -> 1,556,890 across it). Being quick there
-        // is nearly free. Mid-replay it is not — stop()'s watermark
-        // diagnostic recorded the durable value trailing by up to 155,000
-        // blocks — so the first wait stays long.
+        // The FIRST wait asks "is this a pause or a wedge?", and it has to be
+        // long enough to outlast a benign pause. The longest benign one
+        // measured is 6 min 32 s (§34), so 10 minutes. A fast rung for the
+        // near-tip case was tried and WITHDRAWN: it judged a restart cheap
+        // from walletSyncedHeight, which is the engine's in-memory cursor,
+        // while a restart actually resumes from the DURABLE watermark —
+        // stop()'s diagnostic recorded that trailing by up to 155,000 blocks,
+        // so "cheap" was wrong by a re-walk, and the Samsung looped on it.
         //
         // Every LATER wait asks "did the last restart achieve anything?", and
         // there the risk is the opposite one: with a flat threshold the
@@ -1229,16 +1233,24 @@ internal class FilterStallWatchdogDecider(
         lastStillMs = nowMs - lastAdvanceMs
         // A STILL CURSOR IS NOT A STOPPED ENGINE. Observed on a Samsung
         // SM-S901U, 2026-09-19 (§34): the cursor sat at 1,555,999 for
-        // 6 min 32 s while the SDK logged `wallet-event batch: folded=N`
-        // throughout with `synced_height_persisted=None` — the scan was
-        // running the whole time and only the WATERMARK WRITE was blocked,
-        // behind a contended primary connection on dash-sdk.db. It then
-        // persisted 1556842 -> 1556845 in 130 ms and went SYNCED.
+        // 6 min 32 s and then recovered UNAIDED, persisting 1556842 ->
+        // 1556845 in 130 ms and going SYNCED. A restart in that window would
+        // have torn down an engine that was about to finish.
         //
-        // Restarting there would have destroyed real, unpersisted scan
-        // progress to "fix" an engine that was working. So a restart
-        // requires the cursor to be still AND the event stream to have gone
-        // quiet for the same window. Events still arriving means alive.
+        // So a restart requires the cursor to be still AND the event stream
+        // to have gone quiet for the same window. Events still arriving means
+        // alive.
+        //
+        // HOW MUCH THIS BUYS, HONESTLY: not that case. An earlier revision of
+        // this comment claimed the SDK logged `wallet-event batch: folded=N`
+        // throughout that stall with only the watermark write blocked behind a
+        // contended dash-sdk.db connection. That was a misreading of the logs
+        // — the event stream had stopped too, and under instrumentation the
+        // database is idle during a stall (§34.3, §34.4). The real cause was a
+        // final partial filter batch holding its own commit on blocks it never
+        // received, which this gate does not detect. The gate is kept as a
+        // cheap guard against the case it names; the BACKOFF above is what
+        // limits the damage when a stall is one the watchdog cannot cure.
         if (lastWalletEventMs > 0L && nowMs - lastWalletEventMs < threshold) {
             return Decision.NONE
         }

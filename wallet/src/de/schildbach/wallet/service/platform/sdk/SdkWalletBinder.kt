@@ -834,19 +834,6 @@ class SdkWalletBinder internal constructor(
     }
 
     /**
-     * One provisioning pass — the SDK sweep + drain
-     * ([DashSdkService.provisionDashPayContactAccounts]) with its gate
-     * accounting, wallet.log lines and post-drain receival-coverage
-     * diagnostics. Throws freely; the caller
-     * ([provisionContactAccountsIfEnabled]) contains the fallout.
-     *
-     * @return whether the pass's own drain left a registration OUTSTANDING —
-     *   the gate's signal, consumed and then re-raised from the pass's built
-     *   count by [DashPayBackfillGate.recordPassOutcome] — i.e. whether a
-     *   follow-up sweep is owed. Always false without an identity, and with
-     *   a gate that records nothing ([DashPayBackfillGate.ALWAYS_RUN]).
-     */
-    /**
      * Report whether DIP-15 contact chains are registered at core heights the
      * filter scan has ALREADY passed — the "uncovered contact chain" condition
      * of docs/upgrade-memory-and-sync-plan.md §17.
@@ -963,8 +950,7 @@ class SdkWalletBinder internal constructor(
                 ?: return
             val previous = readContactRegistrationHeight(walletId)
             if (previous != null && previous >= synced) return
-            dashPayConfig.set(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_WALLET, walletId)
-            dashPayConfig.set(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT, synced)
+            dashPayConfig.setContactRegistration(walletId, synced)
             log.info(
                 "DashPay receival-account registration recorded on {}… at scan height {}" +
                     "{} — the §17 coverage verdict is taken against this, not the live height",
@@ -997,14 +983,26 @@ class SdkWalletBinder internal constructor(
      */
     private suspend fun clearContactRegistrationHeight(walletId: String) {
         try {
-            dashPayConfig.set(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_WALLET, walletId)
-            dashPayConfig.set(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT, 0L)
+            dashPayConfig.setContactRegistration(walletId, 0L)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.debug("DashPay registration-height reset failed: {}", t.toString())
         }
     }
 
+    /**
+     * One provisioning pass — the SDK sweep + drain
+     * ([DashSdkService.provisionDashPayContactAccounts]) with its gate
+     * accounting, wallet.log lines and post-drain receival-coverage
+     * diagnostics. Throws freely; the caller
+     * ([provisionContactAccountsIfEnabled]) contains the fallout.
+     *
+     * @return whether the pass's own drain left a registration OUTSTANDING —
+     *   the gate's signal, consumed and then re-raised from the pass's built
+     *   count by [DashPayBackfillGate.recordPassOutcome] — i.e. whether a
+     *   follow-up sweep is owed. Always false without an identity, and with
+     *   a gate that records nothing ([DashPayBackfillGate.ALWAYS_RUN]).
+     */
     private suspend fun runProvisioningSweep(walletId: String, identityId: ByteArray?): Boolean {
         val report = sdkService.provisionDashPayContactAccounts(walletId)
         identityId?.let { backfillGate.recordPassOutcome(walletId, it, report) }
