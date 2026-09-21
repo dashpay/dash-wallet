@@ -186,7 +186,24 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainState.replaying = false
             blockchainState.impediments = composeImpediments()
             blockchainStateDao.saveState(blockchainState)
-            syncStageFlow.value = update.syncStage
+            // A caught-up snapshot must not REGRESS a COMPLETE stage — that is the
+            // "syncing 100%" blip (see mayPreserveEstablishedSyncStage): a live
+            // shadow SPV never latches SYNCED, so a FILTERS snapshot that has caught
+            // up to the tip would otherwise drag a finished row back to BLOCKS.
+            //
+            // COMPLETE is the ONLY stage worth holding. Preserving whatever happened
+            // to be there pinned the wallet OFFLINE across a reconnect: IDLE,
+            // CONNECTING and ERROR all map to SyncStage.OFFLINE and all WRITE it
+            // (shadowSyncPercent reports 0 for them, so they never set the preserve
+            // flag), and the caught-up FILTERS snapshot that follows recovery does
+            // set it — so the forward transition OFFLINE → BLOCKS was suppressed and
+            // the wallet read as offline while its scan was active and at the tip.
+            // A null flow is likewise not something to preserve: holding the write
+            // would leave getSyncStage() reporting OFFLINE for a caught-up wallet at
+            // process start. Both fall out of comparing against COMPLETE.
+            if (!update.preserveEstablishedSyncStage || syncStageFlow.value != SyncStage.COMPLETE) {
+                syncStageFlow.value = update.syncStage
+            }
         }
     }
 

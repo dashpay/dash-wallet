@@ -80,8 +80,21 @@ internal data class SdkBlockchainStateUpdate(
     val percentageSync: Int?,
     /** Masternode-list sync height, or null (unknown — preserve). */
     val mnListHeight: Int?,
-    /** Neutral sync stage for [org.dash.wallet.common.services.BlockchainStateProvider.observeSyncStage]. */
+    /**
+     * Neutral sync stage for
+     * [org.dash.wallet.common.services.BlockchainStateProvider.observeSyncStage].
+     * Always the phase's own stage — the value to WRITE, and the value to seed
+     * with when nothing is established yet. Whether an already-established stage
+     * may be left alone instead is [preserveEstablishedSyncStage].
+     */
     val syncStage: SyncStage,
+    /**
+     * True when this snapshot must not REGRESS a stage that is already
+     * established — see [mayPreserveEstablishedSyncStage]. With no established
+     * stage the writer still applies [syncStage], so a process start never
+     * reports OFFLINE for a caught-up wallet.
+     */
+    val preserveEstablishedSyncStage: Boolean,
     /**
      * Whether a NETWORK impediment should be derived: the SDK has no
      * dashj-style impediment events, so a stalled/errored scan is the
@@ -178,6 +191,45 @@ internal fun sdkSyncStage(phase: ShadowSyncPhase): SyncStage = when (phase) {
 }
 
 /**
+ * May a stage ALREADY ESTABLISHED for this wallet be left alone on this snapshot?
+ *
+ * The defect this serves is the stage and the percent disagreeing.
+ * `percentageSync` is written from [shadowSyncPercent], which claims 100 as soon
+ * as the filter scan has caught up to the header tip — but the engine does not
+ * latch SYNCED (every new block bumps the targets and drops it back to a scan
+ * phase). So a fully-synced wallet keeps flipping SYNCED → FILTERS → SYNCED, and
+ * because the stage was written unconditionally it regressed to BLOCKS while the
+ * percent stayed 100. The home screen rendered that pair as "syncing 100%" while
+ * Tools, reading the row, still said synced.
+ *
+ * Field evidence (MO-973 report 3, Samsung, 2026-09-11): 59 such blips on a
+ * wallet synced for hours, e.g. `FILTERS 100.0%` at 13:45:13 → `SYNCED` at
+ * 13:45:14.
+ *
+ * ESTABLISHED is load-bearing, and is the writer's business rather than this
+ * function's: with no prior stage there is nothing to preserve, and suppressing
+ * the write would leave `syncStageFlow` null, which `getSyncStage()` reports as
+ * OFFLINE. A cold start on an already-synced wallet — first snapshot caught up,
+ * engine not yet latched to SYNCED — would then read offline. So this only says
+ * the stage MAY be held; [SdkBlockchainStateUpdate.syncStage] still carries the
+ * phase's own stage as the value to seed with.
+ *
+ * Deliberately narrow — [scanPercent] is [shadowSyncPercent], which already reads
+ * 0 for IDLE / CONNECTING / ERROR, so those can never be held:
+ * - ERROR keeps reporting OFFLINE. That is how the fault is surfaced, alongside
+ *   the stall impediment (pinned by `derive_errorPreservesPercentage`).
+ * - IDLE / CONNECTING keep reporting OFFLINE. A cold reconnect knows no heights
+ *   at all and must read offline, not "still synced" (pinned by
+ *   `derive_noHeightKnowledgePreservesHeightAndDate`).
+ * - a genuine re-scan caps at 99 and still moves the stage.
+ * - SYNCED is never held; reaching the terminal state must always be written.
+ *
+ * Pure — host-testable.
+ */
+internal fun mayPreserveEstablishedSyncStage(phase: ShadowSyncPhase, scanPercent: Int): Boolean =
+    phase != ShadowSyncPhase.SYNCED && scanPercent >= 100
+
+/**
  * The full field derivation — one snapshot to one row update. Field notes:
  * - bestChainHeight: the SDK header tip ([ShadowSyncProgress.headerHeight]),
  *   dashj's `chainHead.height` analogue; preserved while 0 (no knowledge).
@@ -236,6 +288,17 @@ internal fun deriveBlockchainStateUpdate(
                 .coerceAtMost(tipTimeMs)
         else -> null
     }
+    // The raw scan percent drives the stage; percentageSync is that same value
+    // with the "no trustworthy position" phases nulled out (preserve). Sharing
+    // one source is what stops the two fields disagreeing about whether the scan
+    // still has work to do.
+    val scanPercent = shadowSyncPercent(p)
+    val percent = when (p.phase) {
+        ShadowSyncPhase.ERROR,
+        ShadowSyncPhase.IDLE,
+        ShadowSyncPhase.CONNECTING -> null
+        else -> scanPercent
+    }
     return SdkBlockchainStateUpdate(
         bestChainHeight = bestChainHeight,
         bestChainDateMs = bestChainDateMs,
@@ -245,14 +308,10 @@ internal fun deriveBlockchainStateUpdate(
         // previously-synced bar 99→0 (the restart sawtooth). Same
         // "don't regress on unknown" treatment bestChainHeight already gets;
         // only real scan phases (and a genuine ERROR → null) move it.
-        percentageSync = when (p.phase) {
-            ShadowSyncPhase.ERROR,
-            ShadowSyncPhase.IDLE,
-            ShadowSyncPhase.CONNECTING -> null
-            else -> shadowSyncPercent(p)
-        },
+        percentageSync = percent,
         mnListHeight = p.mnListHeight.takeIf { it > 0 }?.toInt(),
         syncStage = sdkSyncStage(p.phase),
+        preserveEstablishedSyncStage = mayPreserveEstablishedSyncStage(p.phase, scanPercent),
         networkStalled = snapshot.stalled,
         // 0 = "no chainlock observed this session" — preserve, exactly like
         // the other unknown-is-null fields; never claim height 0.

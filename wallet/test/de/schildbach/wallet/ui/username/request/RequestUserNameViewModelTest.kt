@@ -34,6 +34,9 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameCreationOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameNameStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.livedata.Resource
+import org.dashj.platform.dpp.document.Document
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.username.UsernameType
@@ -845,6 +848,262 @@ class RequestUserNameViewModelTest {
         assertFalse(state.usernameExists)
         assertFalse(state.usernameContested)
         assertFalse(state.usernameBlocked)
+    }
+
+    // ── Stale availability results (CodeRabbit, #1564) ──────────────────────
+
+    @Test
+    fun checkUsername_lateResultForAReplacedName_doesNotOverwriteTheCurrentVerdict() = runVmTest {
+        // Two DAPI lookups can be in flight at once: the 600 ms debounce only drops a
+        // runnable that has not fired, so once a query is away more typing does not
+        // touch it. Here 'alice' (free) is held open until 'bob' (taken) has answered,
+        // then released — the classic out-of-order completion.
+        val aliceInFlight = CountDownLatch(1)
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } answers {
+                aliceInFlight.await()
+                Resource.success(null)
+            }
+            every { getVoteContendersOrThrow("alice") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+            every { getUsername("bob") } returns Resource.success(mockk<Document>())
+            every { getVoteContendersOrThrow("bob") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        viewModel.checkUsernameValid("alice", UsernameType.Primary)
+        val aliceLookup = viewModel.checkUsername("alice")
+
+        // The user types on: the field now holds 'bob', whose lookup answers first.
+        try {
+            viewModel.checkUsernameValid("bob", UsernameType.Primary)
+            viewModel.checkUsername("bob")?.join()
+            assertTrue("bob is registered", viewModel.uiState.value.usernameExists)
+        } finally {
+            aliceInFlight.countDown()
+        }
+        aliceLookup?.join()
+
+        val state = viewModel.uiState.value
+        assertTrue("bob's verdict must survive the late arrival", state.usernameExists)
+        assertFalse("and alice's 'free' must not have been recorded", state.usernameCheckFailed)
+    }
+
+    @Test
+    fun checkUsername_lateResultAfterTheFieldIsCleared_isDropped() = runVmTest {
+        val inFlight = CountDownLatch(1)
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } answers {
+                inFlight.await()
+                Resource.success(null)
+            }
+            every { getVoteContendersOrThrow("alice") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        viewModel.checkUsernameValid("alice", UsernameType.Primary)
+        val lookup = viewModel.checkUsername("alice")
+
+        // Field cleared while the query is out.
+        viewModel.reset()
+
+        inFlight.countDown()
+        lookup?.join()
+
+        assertFalse(
+            "a cleared field has no current name for a verdict to describe",
+            viewModel.uiState.value.usernameCheckSuccess
+        )
+    }
+
+    @Test
+    fun checkUsername_lateFailureForAReplacedName_doesNotRaiseTheFailedFlag() = runVmTest {
+        // The fail-closed paths need the same gate: a stale failure would otherwise
+        // show the retry banner for a name the user has already moved past.
+        val aliceInFlight = CountDownLatch(1)
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } answers {
+                aliceInFlight.await()
+                Resource.error("DAPI timeout", null)
+            }
+            every { getUsername("bob") } returns Resource.success(null)
+            every { getVoteContendersOrThrow("bob") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        viewModel.checkUsernameValid("alice", UsernameType.Primary)
+        val aliceLookup = viewModel.checkUsername("alice")
+
+        viewModel.checkUsernameValid("bob", UsernameType.Primary)
+        viewModel.checkUsername("bob")?.join()
+
+        aliceInFlight.countDown()
+        aliceLookup?.join()
+
+        val state = viewModel.uiState.value
+        assertFalse("alice's failure must not surface under bob", state.usernameCheckFailed)
+        assertTrue("bob's success must stand", state.usernameCheckSuccess)
+    }
+
+    @Test
+    fun checkUsername_sameLabelRequestedTwice_dropsTheFirstLookup() = runVmTest {
+        // CodeRabbit follow-up on #1564: alice -> bob -> alice. Both the first and the
+        // third request carry the label "alice", so matching on the LABEL would let the
+        // first one's answer through while the third is still in flight.
+        //
+        // The two alice lookups must DISAGREE for this to prove anything — otherwise the
+        // stale write is indistinguishable from the fresh one. The first sees the name as
+        // taken (a read from before it was released, say); the second sees it free. Only
+        // the second is current, so the field must end up reading "available".
+        val firstAlice = CountDownLatch(1)
+        // getUsername runs on a real Dispatchers.IO thread, so starting a lookup does not
+        // establish that it has ENTERED the mock. Without this signal the replacement
+        // alice could arrive first, take the blocked branch, and the test would join it
+        // before the finally releases the latch — a timeout instead of a failure.
+        val firstAliceEntered = CountDownLatch(1)
+        var aliceCalls = 0
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } answers {
+                if (aliceCalls++ == 0) {
+                    firstAliceEntered.countDown()
+                    firstAlice.await()
+                    Resource.success(mockk<Document>())   // stale: "taken"
+                } else {
+                    Resource.success(null)                // current: "free"
+                }
+            }
+            every { getVoteContendersOrThrow("alice") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+            every { getUsername("bob") } returns Resource.success(null)
+            every { getVoteContendersOrThrow("bob") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        val staleAlice = try {
+            viewModel.checkUsernameValid("alice", UsernameType.Primary)
+            val job = viewModel.checkUsername("alice")
+            // Only now is the blocked response deterministically bound to the OLDER token.
+            assertTrue(
+                "the first alice lookup reached the mock",
+                firstAliceEntered.await(10, TimeUnit.SECONDS)
+            )
+
+            viewModel.checkUsernameValid("bob", UsernameType.Primary)
+            viewModel.checkUsername("bob")?.join()
+
+            // Back to alice — a NEW lookup, which answers immediately and says "free".
+            viewModel.checkUsernameValid("alice", UsernameType.Primary)
+            viewModel.checkUsername("alice")?.join()
+            assertTrue("the second alice lookup landed", viewModel.uiState.value.usernameCheckSuccess)
+            assertFalse("and reported alice available", viewModel.uiState.value.usernameExists)
+            job
+        } finally {
+            firstAlice.countDown()
+        }
+
+        // The first alice lookup now completes, saying "taken". Same label, older token.
+        staleAlice?.join()
+
+        val state = viewModel.uiState.value
+        assertFalse(
+            "the stale 'taken' verdict must not overwrite the current 'available' one",
+            state.usernameExists
+        )
+        assertTrue(state.usernameCheckSuccess)
+        assertFalse(state.checkingUsername)
+    }
+
+    @Test
+    fun checkUsername_invalidKeystrokeWhileALookupIsOut_doesNotStrandTheSpinner() = runVmTest {
+        // Review finding on #1564. A valid name starts a lookup (checkingUsername = true).
+        // The user then types something INVALID, so the fragment schedules no replacement
+        // query; the outstanding lookup returns through the stale guard, which writes
+        // nothing. Without clearing the flag in the validity pass, the availability
+        // spinner would run for the rest of the screen's life.
+        val inFlight = CountDownLatch(1)
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername("alice") } answers {
+                inFlight.await()
+                Resource.success(null)
+            }
+            every { getVoteContendersOrThrow("alice") } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        // The latch is released in a finally: a failed assertion must not strand a
+        // blocked IO thread, which keeps the test JVM alive instead of failing.
+        val lookup = try {
+            assertTrue(viewModel.checkUsernameValid("alice", UsernameType.Primary))
+            val job = viewModel.checkUsername("alice")
+            assertTrue("the lookup is out", viewModel.uiState.value.checkingUsername)
+
+            // '_' is outside [a-zA-Z0-9-], so no replacement lookup is scheduled.
+            assertFalse(viewModel.checkUsernameValid("alice_x", UsernameType.Primary))
+            assertFalse(
+                "the spinner must stop when nothing will answer for the new input",
+                viewModel.uiState.value.checkingUsername
+            )
+            job
+        } finally {
+            inFlight.countDown()
+        }
+
+        // The old lookup completing must not resurrect it either.
+        lookup?.join()
+        assertFalse(viewModel.uiState.value.checkingUsername)
+    }
+
+    @Test
+    fun checkUsernameValid_stillValid_leavesTheSpinnerRunningForTheReplacementLookup() = runVmTest {
+        // The complement: when a replacement query IS coming, the spinner keeps running
+        // across the 600 ms debounce rather than flickering off and on.
+        val inFlight = CountDownLatch(1)
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername(any()) } answers {
+                inFlight.await()
+                Resource.success(null)
+            }
+            every { getVoteContendersOrThrow(any()) } returns mockk {
+                every { map } returns emptyMap()
+                every { lockVoteTally } returns 0
+            }
+        }
+        val viewModel = viewModel(platformRepo)
+
+        val lookup = try {
+            viewModel.checkUsernameValid("alice", UsernameType.Primary)
+            val job = viewModel.checkUsername("alice")
+            assertTrue(viewModel.uiState.value.checkingUsername)
+
+            assertTrue(viewModel.checkUsernameValid("alicia", UsernameType.Primary))
+            assertTrue(
+                "a replacement lookup is coming — keep the spinner",
+                viewModel.uiState.value.checkingUsername
+            )
+            job
+        } finally {
+            inFlight.countDown()
+        }
+        lookup?.join()
     }
 
     // ── Advisory network-health warning ─────────────────────────────────────

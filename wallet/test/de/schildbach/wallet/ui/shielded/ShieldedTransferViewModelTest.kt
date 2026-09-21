@@ -1057,4 +1057,61 @@ class ShieldedVerificationStatusMappingTest {
         assertNull(map(L1VerificationStatus.UNKNOWN, ShadowSyncProgress.IDLE))
         assertNull(map(L1VerificationStatus.VERIFIED, ShadowSyncProgress.IDLE))
     }
+
+    // ── MO-973 report 3: "Insufficient funds" after a SUCCESSFUL transfer ──
+
+    /**
+     * The defect: 0.5 DASH moved to the shielded pool from a 1 DASH wallet, the
+     * transfer succeeded, and "Insufficient funds" appeared afterwards. The
+     * message was the first branch of the hint/error `when` and had no
+     * submit-state guard, while [ShieldedTransferUIState.canContinue] greyed the
+     * button out with exactly that guard. Once a transfer broadcasts, the spent
+     * output leaves the CONFIRMED balance while the change is still unconfirmed,
+     * so the live amount-vs-balance comparison flips true for a transfer that
+     * already went through.
+     */
+    @Test
+    fun `the insufficient-funds message is not shown after a submit leaves Idle`() {
+        // A shortfall that IS real while composing.
+        val composing = ShieldedTransferUIState(
+            ready = true,
+            readyCheckDone = true,
+            chainSynced = true,
+            shieldedSyncStatus = ShieldedSyncStatus.READY,
+            walletShieldingAvailable = true,
+            dashMode = true,
+            amountText = "0.5",
+            walletBalance = Dash(10_000_000L) // 0.1 DASH — less than the 0.5 asked
+        )
+        assertTrue(composing.insufficientFunds)
+        assertTrue(composing.showInsufficientFunds)
+
+        // ...but never once a submit is in flight or terminal.
+        for (state in listOf(
+            ShieldedSubmitState.Proving,
+            ShieldedSubmitState.Success
+        )) {
+            val submitted = composing.copy(submitState = state)
+            assertTrue("raw comparison still true", submitted.insufficientFunds)
+            assertFalse("message must be suppressed in $state", submitted.showInsufficientFunds)
+        }
+    }
+
+    /** NotSent is provably pre-broadcast: the user composes again, so show it. */
+    @Test
+    fun `a real shortfall is still shown after a NotSent result`() {
+        val notSent = ShieldedTransferUIState(
+            ready = true,
+            readyCheckDone = true,
+            chainSynced = true,
+            shieldedSyncStatus = ShieldedSyncStatus.READY,
+            walletShieldingAvailable = true,
+            dashMode = true,
+            amountText = "0.5",
+            walletBalance = Dash(10_000_000L),
+            submitState = ShieldedSubmitState.NotSent("nope")
+        )
+        assertTrue(notSent.showInsufficientFunds)
+    }
+
 }
