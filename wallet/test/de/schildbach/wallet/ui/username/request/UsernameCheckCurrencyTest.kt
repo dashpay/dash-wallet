@@ -21,51 +21,52 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Pins [usernameCheckResultIsCurrent] — the gate that keeps an availability verdict from being
- * applied to a name the user has already replaced.
+ * Pins [usernameCheckResultIsCurrent] — the gate that keeps an availability verdict from
+ * being applied once a newer claim has taken the slot.
  *
- * CodeRabbit finding on dashpay/dash-wallet#1564: `checkUsername` launches a coroutine per
- * debounced keystroke burst and cancels nothing, so a slow lookup can land after a newer one
- * and write its own `usernameExists` / `usernameContested` / `usernameBlocked` over the current
- * name's state.
+ * CodeRabbit findings on dashpay/dash-wallet#1564. The first was that `checkUsername`
+ * launches a coroutine per debounced keystroke burst and cancels nothing, so a slow lookup
+ * can land after a newer one and write its own `usernameExists` / `usernameContested` /
+ * `usernameBlocked` over the current name's state. The second was that comparing LABELS is
+ * not enough to tell two lookups apart, which is why this takes tokens.
  */
 class UsernameCheckCurrencyTest {
 
     @Test
-    fun theNameStillInTheFieldIsCurrent() {
-        assertTrue(usernameCheckResultIsCurrent("alice", "alice"))
+    fun theNewestClaimOnTheSlotIsCurrent() {
+        assertTrue(usernameCheckResultIsCurrent(checkedToken = 7L, currentToken = 7L))
     }
 
     @Test
-    fun aNameTheFieldHasMovedPastIsNotCurrent() {
-        assertFalse(usernameCheckResultIsCurrent("alice", "bob"))
+    fun anOvertakenLookupIsNotCurrent() {
+        assertFalse(usernameCheckResultIsCurrent(checkedToken = 6L, currentToken = 7L))
     }
 
     @Test
-    fun aClearedFieldLeavesNothingCurrent() {
-        // reset() nulls the pending label; a verdict has no name left to describe.
-        assertFalse(usernameCheckResultIsCurrent("alice", null))
+    fun aRepeatedLabelStillGetsItsOwnToken() {
+        // The case label equality got wrong: alice -> bob -> alice. Every claim takes a
+        // fresh token, so the FIRST alice lookup (#1) cannot pass while the third (#5) is
+        // the live one — even though both were asked about the same name.
+        val firstAlice = 1L
+        val secondAlice = 5L
+        assertFalse(
+            "the first alice lookup must not answer for the second",
+            usernameCheckResultIsCurrent(checkedToken = firstAlice, currentToken = secondAlice)
+        )
+        assertTrue(usernameCheckResultIsCurrent(checkedToken = secondAlice, currentToken = secondAlice))
     }
 
     @Test
-    fun matchingIsExactNotAPrefix() {
-        // The instant-name screen pre-fills the primary and the user appends a suffix, so
-        // prefix-matching would treat the primary's verdict as the suffixed name's.
-        assertFalse(usernameCheckResultIsCurrent("alice", "alice1"))
-        assertFalse(usernameCheckResultIsCurrent("alice1", "alice"))
+    fun tokensOnlyEverMoveForward() {
+        // The token is monotonic, so "checked > current" is not a state the VM can reach.
+        // Pinned anyway: the predicate must not treat it as current if it ever did.
+        assertFalse(usernameCheckResultIsCurrent(checkedToken = 8L, currentToken = 7L))
     }
 
     @Test
-    fun matchingIsCaseSensitiveOnTheRawLabel() {
-        // The raw label is what both checkUsernameValid and checkUsername receive; DPNS
-        // normalization happens elsewhere. Two spellings are two different lookups.
-        assertFalse(usernameCheckResultIsCurrent("Alice", "alice"))
-    }
-
-    @Test
-    fun aNameRetypedAfterDetouringIsCurrentAgain() {
-        // alice -> bob -> alice: a lookup still in flight for 'alice' describes exactly what
-        // the field holds again, so applying it is correct, not stale.
-        assertTrue(usernameCheckResultIsCurrent("alice", "alice"))
+    fun theInitialSlotIsNotClaimedByAnyLookup() {
+        // usernameCheckToken starts at 0 and every lookup pre-increments, so no real
+        // lookup ever carries 0 — a reset (which bumps) cannot be satisfied by one.
+        assertFalse(usernameCheckResultIsCurrent(checkedToken = 0L, currentToken = 1L))
     }
 }

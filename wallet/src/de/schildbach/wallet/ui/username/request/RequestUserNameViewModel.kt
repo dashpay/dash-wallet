@@ -56,6 +56,7 @@ import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
@@ -1194,7 +1195,7 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun reset() {
         lastGateUsername = null
-        pendingUsernameCheck = null
+        usernameCheckToken++
         // networkSlow is screen-entry-scoped (advisory probe result), not
         // per-username state — clearing the input must not wipe it. Same
         // for the shielded-gate mirrors: they are SERVICE state, and the
@@ -1244,22 +1245,29 @@ class RequestUserNameViewModel @Inject constructor(
      * "the query never answered" apart from "the answer arrived for a name the user had
      * already replaced".
      */
-    private fun usernameCheckIsStale(username: String): Boolean {
-        if (usernameCheckResultIsCurrent(username, pendingUsernameCheck)) return false
+    private fun usernameCheckIsStale(username: String, token: Long): Boolean {
+        if (usernameCheckResultIsCurrent(token, usernameCheckToken)) return false
         log.info(
-            "checkUsername('{}'): result overtaken — field now holds '{}'; dropping it",
-            username, pendingUsernameCheck
+            "checkUsername('{}') #{}: result overtaken (current is #{}); dropping it",
+            username, token, usernameCheckToken
         )
         return true
     }
 
-    fun checkUsername(requestedUserName: String?) {
+    /**
+     * Starts the availability lookup for [requestedUserName], returning its [Job] — or null
+     * when there was no name to check. The handle exists so a test can await the TERMINAL
+     * handling of a specific lookup: a stale result is dropped without touching the UI
+     * state, so there is deliberately no state change to observe, and waiting on the state
+     * alone can pass off a newer lookup's value as proof the older one ran.
+     */
+    fun checkUsername(requestedUserName: String?): Job? {
         // Claim the slot SYNCHRONOUSLY, before the coroutine starts: checkUsername is
         // called from the main thread, so the last caller to return is unambiguously
         // the newest lookup, and every earlier one is stale from this point on.
-        val username = requestedUserName ?: return
-        pendingUsernameCheck = username
-        viewModelScope.launch {
+        val username = requestedUserName ?: return null
+        val token = ++usernameCheckToken
+        return viewModelScope.launch {
             _uiState.update { it.copy(checkingUsername = true, usernameCheckFailed = false) }
             val usernameSearchResult = withContext(Dispatchers.IO) { platformRepo.getUsername(username) }
             if (usernameSearchResult.status != Status.SUCCESS) {
@@ -1272,7 +1280,7 @@ class RequestUserNameViewModel @Inject constructor(
                     username, usernameSearchResult.status, usernameSearchResult.message,
                     usernameSearchResult.exception
                 )
-                if (usernameCheckIsStale(username)) return@launch
+                if (usernameCheckIsStale(username, token)) return@launch
                 _uiState.update {
                     it.copy(checkingUsername = false, usernameCheckSuccess = false, usernameCheckFailed = true)
                 }
@@ -1307,7 +1315,7 @@ class RequestUserNameViewModel @Inject constructor(
                 // Same fail-closed discipline: a failed contest lookup
                 // must not pass as "not contested".
                 log.warn("checkUsername('{}'): vote-contenders lookup failed", username, e)
-                if (usernameCheckIsStale(username)) return@launch
+                if (usernameCheckIsStale(username, token)) return@launch
                 _uiState.update {
                     it.copy(checkingUsername = false, usernameCheckSuccess = false, usernameCheckFailed = true)
                 }
@@ -1321,7 +1329,7 @@ class RequestUserNameViewModel @Inject constructor(
             // The verdict below carries usernameExists/Contested/Blocked for THIS
             // label. Writing it after the field moved on would judge the new name
             // by the old name's answer — and enable submit on it.
-            if (usernameCheckIsStale(username)) return@launch
+            if (usernameCheckIsStale(username, token)) return@launch
             _uiState.update {
                 it.copy(
                     checkingUsername = false,
@@ -1402,13 +1410,16 @@ class RequestUserNameViewModel @Inject constructor(
      */
     private var lastGateUsername: String? = null
 
-    // The label whose availability verdict the UI is currently entitled to show.
-    // Written by BOTH the per-keystroke validity pass and the debounced lookup, so
-    // it tracks the field even when a keystroke produces no new query (an invalid
-    // name). Kept in the VM rather than read back from lastGateUsername so that
-    // checkUsername() stays self-contained and callable without a prior validity
-    // pass. See usernameCheckResultIsCurrent.
-    private var pendingUsernameCheck: String? = null
+    // Identifies the ONE lookup whose availability verdict the UI is currently
+    // entitled to show. Bumped by both the per-keystroke validity pass (so the field
+    // moving on invalidates an outstanding lookup even when the new name is invalid
+    // and starts no replacement query) and by each lookup itself.
+    //
+    // A monotonic token, not the label: the same name can be requested twice with a
+    // detour in between (alice -> bob -> alice), and comparing labels would let the
+    // FIRST alice lookup pass as current while the second is still in flight — clearing
+    // the spinner early and writing an older read's verdict. A token separates them.
+    private var usernameCheckToken: Long = 0L
 
     /** The resolved balance gate: button enablement + row copy inputs. */
     private data class BalanceGateResult(
@@ -1643,9 +1654,17 @@ class RequestUserNameViewModel @Inject constructor(
             secondaryNameCollidesWithPrimary(username, requestedUserName)
 
         lastGateUsername = username
-        // Input moved on: any lookup still in flight for an older label is now
-        // stale, whether or not this keystroke starts a replacement query.
-        pendingUsernameCheck = username
+        // Input moved on: any lookup still in flight is now stale, whether or not
+        // this keystroke starts a replacement query.
+        usernameCheckToken++
+        // ...and that is exactly why the spinner needs deciding here. The caller
+        // schedules a replacement lookup only when this returns true; when it does
+        // not, the outstanding lookup will return through the stale guard WITHOUT
+        // writing checkingUsername = false, and nothing else would ever clear it —
+        // the availability spinner would sit there for the life of the screen.
+        // Leave it alone in the scheduling case: checkUsername sets it true again,
+        // and until it does the spinner should keep running.
+        val lookupWillFollow = validCharacters && validLength && !sameAsPrimary
         val gate = computeBalanceGate(username, contestable)
         _uiState.update {
             it.copy(
@@ -1659,13 +1678,14 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,
+                checkingUsername = if (lookupWillFollow) it.checkingUsername else false,
                 usernameCheckSuccess = false,
                 usernameCheckFailed = false,
                 usernameNonContestedLength = validateNonContestedUsernameSize(username),
                 usernameNonContestedChars = validateNonContestedUsernameCharacters(username)
             )
         }
-        return validCharacters && validLength && !sameAsPrimary
+        return lookupWillFollow
     }
 
     @Throws(NullPointerException::class)
@@ -1770,23 +1790,27 @@ class RequestUserNameViewModel @Inject constructor(
  * Pure — host-testable.
  */
 /**
- * True when an availability verdict fetched for [checkedLabel] still describes what the user
- * has in the field, [currentLabel].
+ * True when the availability verdict produced by lookup [checkedToken] is still the one the
+ * UI should show, given that [currentToken] is the newest claim on that slot.
  *
- * `checkUsername` starts a fresh coroutine per debounced keystroke burst and never cancels the
- * previous one, and the 600 ms debounce only drops a runnable that has not fired yet — once a
- * lookup is away, more typing does not touch it. Two DAPI round-trips (`getUsername` plus
- * `getVoteContendersOrThrow`) can therefore be in flight at once and complete out of order.
- * The older one would otherwise write `usernameCheckSuccess = true` together with ITS
- * `usernameExists` / `usernameContested` / `usernameBlocked`, and submit would be enabled for
- * the name now in the box on the strength of a different name's answer.
+ * `checkUsername` starts a fresh coroutine per debounced keystroke burst and never cancels
+ * the previous one, and the 600 ms debounce only drops a runnable that has not fired yet —
+ * once a lookup is away, more typing does not touch it. Two DAPI round-trips
+ * (`getUsername` plus `getVoteContendersOrThrow`) can therefore be in flight at once and
+ * complete out of order. The older one would otherwise write `usernameCheckSuccess = true`
+ * together with ITS `usernameExists` / `usernameContested` / `usernameBlocked`, and submit
+ * would be enabled for the name now in the box on the strength of a different name's answer.
  *
- * A null [currentLabel] means the field was cleared (reset), so nothing is current.
+ * Tokens rather than labels, because the label does not identify a lookup: in
+ * `alice -> bob -> alice` both the first and the third request carry the label "alice", and
+ * label equality would let the FIRST one's answer through while the third is still running.
+ * Each claim on the slot — every keystroke, and every lookup — takes a fresh token, so only
+ * the newest one can write.
  *
  * Pure — host-testable.
  */
-internal fun usernameCheckResultIsCurrent(checkedLabel: String, currentLabel: String?): Boolean =
-    currentLabel != null && checkedLabel == currentLabel
+internal fun usernameCheckResultIsCurrent(checkedToken: Long, currentToken: Long): Boolean =
+    checkedToken == currentToken
 
 internal fun secondaryNameCollidesWithPrimary(secondary: String, primary: String?): Boolean =
     !primary.isNullOrBlank() && secondary.isNotBlank() &&

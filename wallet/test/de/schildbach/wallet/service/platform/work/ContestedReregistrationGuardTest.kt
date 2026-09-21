@@ -17,6 +17,7 @@
 package de.schildbach.wallet.service.platform.work
 
 import org.dashj.platform.dpp.identifier.Identifier
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -98,5 +99,107 @@ class ContestedReregistrationGuardTest {
     fun `the sole contender being us is detected`() {
         // The live case: uncontested-so-far vote poll with only our document.
         assertTrue(isOwnIdentityAContender(listOf(ownId), ownId))
+    }
+
+    // ── The three-way decision (review finding on #1564) ────────────────────
+
+    @Test
+    fun action_unreadableVoteState_defersInsteadOfSkipping() {
+        // The regression this pins: folding an unreadable read into "skip" protects the
+        // 0.2 DASH prefund but only defers registration IF the name actually landed. If
+        // it did not, nothing registers it, the contested walks find no contender, and
+        // the worker falls through to the "missing domain document" branch, which clears
+        // `restoring` and sends the user off to choose another name. A transient DAPI
+        // failure would strand the restoration where no retry reaches it.
+        assertEquals(
+            ContestedReregistrationAction.DEFER_UNREADABLE,
+            contestedReregistrationAction("test-contested-1000", null)
+        )
+    }
+
+    @Test
+    fun action_knownContender_skipsTheDuplicate() {
+        assertEquals(
+            ContestedReregistrationAction.SKIP_ALREADY_CONTENDING,
+            contestedReregistrationAction("test-contested-1000", true)
+        )
+    }
+
+    @Test
+    fun action_knownNonContender_registers() {
+        assertEquals(
+            ContestedReregistrationAction.REGISTER,
+            contestedReregistrationAction("test-contested-1000", false)
+        )
+    }
+
+    @Test
+    fun action_uncontestableLabel_registersWithoutConsultingTheVoteState() {
+        // 20 characters — past the contestable ceiling, so no vote poll exists and a
+        // failed read is irrelevant. It must not become a deferral loop.
+        val uncontestable = "abcdefghijklmnopqrst"
+        assertEquals(
+            ContestedReregistrationAction.REGISTER,
+            contestedReregistrationAction(uncontestable, null)
+        )
+        assertEquals(
+            ContestedReregistrationAction.REGISTER,
+            contestedReregistrationAction(uncontestable, false)
+        )
+    }
+
+    @Test
+    fun action_noRequestedLabel_registers() {
+        // Nothing to guard; the historic name-less restore path still applies.
+        assertEquals(ContestedReregistrationAction.REGISTER, contestedReregistrationAction(null, null))
+        assertEquals(ContestedReregistrationAction.REGISTER, contestedReregistrationAction("", null))
+        assertEquals(ContestedReregistrationAction.REGISTER, contestedReregistrationAction("   ", null))
+    }
+
+    @Test
+    fun action_neverSkipsOnEvidenceItDoesNotHave() {
+        // The two-sided bar, restated over the new tri-state: a skip must be backed by a
+        // positive contender answer, and only a positive answer may produce one.
+        val label = "test-contested-1000"
+        val skipping = listOf<Boolean?>(null, true, false)
+            .filter { contestedReregistrationAction(label, it) == ContestedReregistrationAction.SKIP_ALREADY_CONTENDING }
+        assertEquals(listOf<Boolean?>(true), skipping)
+    }
+
+    // ── The fall-through after a confirmed contender (review finding on #1564) ──
+
+    @Test
+    fun missingName_afterAConfirmedContender_defersInsteadOfParking() {
+        // The sibling of the unreadable-guard case. Here the guard SUCCEEDED and saw this
+        // identity's contender document, so registration was correctly skipped. If the
+        // recovery walks then fail to read the name back, that is a failed read, not an
+        // absent name — getVoteContenders collapses an exception into an empty map, so the
+        // walks cannot tell the two apart. Parking on that evidence clears `restoring`,
+        // shows the name as unavailable and routes the user to pick a different one,
+        // discarding a contested name whose 0.2 DASH prefund is already spent.
+        assertEquals(
+            MissingNameOutcome.DEFER_CONFIRMED_CONTENDER,
+            missingNameOutcome(confirmedOwnContender = true)
+        )
+    }
+
+    @Test
+    fun missingName_withNoConfirmedContender_keepsTheHistoricAskForANewNamePath() {
+        // A genuine device restore of a name-less identity: nothing was ever confirmed,
+        // so asking the user for a new username remains right. This must NOT become a
+        // deferral loop.
+        assertEquals(
+            MissingNameOutcome.PARK_ASK_FOR_NEW_NAME,
+            missingNameOutcome(confirmedOwnContender = false)
+        )
+    }
+
+    @Test
+    fun missingName_parkingRequiresPositiveAbsenceEvidence() {
+        // Restated as the invariant that matters: the destructive branch is reachable
+        // only when nothing was confirmed.
+        val parking = listOf(true, false)
+            .filter { missingNameOutcome(it) == MissingNameOutcome.PARK_ASK_FOR_NEW_NAME }
+        assertEquals(listOf(false), parking)
     }
 }

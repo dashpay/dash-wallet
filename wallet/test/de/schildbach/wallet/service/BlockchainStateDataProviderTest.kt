@@ -349,4 +349,64 @@ class BlockchainStateDataProviderTest {
         assertEquals(SyncStage.BLOCKS, provider.getSyncStage())
     }
 
+    /**
+     * Review finding on #1564: preservation must not pin a wallet OFFLINE.
+     *
+     * IDLE/CONNECTING/ERROR map to SyncStage.OFFLINE and WRITE it (shadowSyncPercent
+     * reports 0 for them, so they never set the preserve flag). The caught-up FILTERS
+     * snapshot that follows a reconnect DOES set it — so a rule that preserved any
+     * established stage suppressed the forward transition and left the wallet reading
+     * offline with an active scan sitting at the tip.
+     */
+    @Test
+    fun sdkUpdate_caughtUpScanAfterConnectingMustLeaveOffline() {
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 0, syncStage = SyncStage.OFFLINE)
+        )
+        awaitUntil("offline established") { provider.getSyncStage() == SyncStage.OFFLINE }
+
+        // Recovery: the scan is active and caught up to the tip.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.BLOCKS, preserveEstablishedSyncStage = true)
+        )
+
+        awaitUntil("forward transition out of OFFLINE") { provider.getSyncStage() == SyncStage.BLOCKS }
+        assertEquals(SyncStage.BLOCKS, provider.getSyncStage())
+    }
+
+    @Test
+    fun sdkUpdate_caughtUpScanAfterAnErrorMustLeaveOffline() {
+        // An ERROR snapshot writes OFFLINE the same way a CONNECTING one does.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 0, syncStage = SyncStage.OFFLINE, networkStalled = true)
+        )
+        awaitUntil("offline established") { provider.getSyncStage() == SyncStage.OFFLINE }
+
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.BLOCKS, preserveEstablishedSyncStage = true)
+        )
+
+        awaitUntil("forward transition out of OFFLINE") { provider.getSyncStage() == SyncStage.BLOCKS }
+        assertEquals(SyncStage.BLOCKS, provider.getSyncStage())
+    }
+
+    /**
+     * The other direction still holds: an intermediate stage must not be held either,
+     * so a genuine HEADERS -> BLOCKS advance during a caught-up scan still lands.
+     */
+    @Test
+    fun sdkUpdate_caughtUpScanAdvancesAnIntermediateStage() {
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 50, syncStage = SyncStage.HEADERS)
+        )
+        awaitUntil("headers established") { provider.getSyncStage() == SyncStage.HEADERS }
+
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.BLOCKS, preserveEstablishedSyncStage = true)
+        )
+
+        awaitUntil("stage advanced") { provider.getSyncStage() == SyncStage.BLOCKS }
+        assertEquals(SyncStage.BLOCKS, provider.getSyncStage())
+    }
+
 }
