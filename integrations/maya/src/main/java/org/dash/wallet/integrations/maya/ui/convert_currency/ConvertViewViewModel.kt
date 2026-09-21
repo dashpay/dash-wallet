@@ -386,9 +386,11 @@ class ConvertViewViewModel @Inject constructor(
                         // ([maxAmountSelected]) rather than inferring it: a fiat- or
                         // crypto-anchored Max doesn't survive the round trip back to DASH as an
                         // exact match. The comparison stays as a fallback for a full balance the
-                        // user typed in by hand.
+                        // user typed in by hand. getEstimatedDashBalance() is null until the
+                        // wallet is loaded; comparing against null is simply "not a sweep",
+                        // the same way getMaxAmount()/selectMaxAmount() treat it.
                         maxAmountSelected ||
-                            amount.dash.toDash() == walletDataProvider.getEstimatedDashBalance()!!,
+                            amount.dash.toDash() == walletDataProvider.getEstimatedDashBalance(),
                         address,
                         it.currency,
                         it.asset,
