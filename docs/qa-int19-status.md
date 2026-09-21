@@ -36,12 +36,21 @@ twenty lines above.
 
 **A second defect was found while fixing it, not in the report.** The watchdog judged on the filter
 cursor alone. On a Samsung SM-S901U on 2026-09-19 the cursor sat at 1,555,999 of 1,556,844 for
-**6 min 32 s** while the SDK logged `wallet-event batch: folded=N` throughout with
-`synced_height_persisted=None` — the scan was running the whole time and only the watermark WRITE
-was blocked. It then persisted three heights in 130 ms and reached SYNCED unaided. A restart there
-would have discarded real unpersisted progress to "fix" a healthy engine. The decision now also
-requires the wallet-event stream to have gone quiet for the same window. See
-[plan §34](upgrade-memory-and-sync-plan.md).
+**6 min 32 s**, then cleared on its own — three heights persisted in 130 ms and the engine reached
+SYNCED unaided. A restart there would have torn down an engine that was about to recover. Two
+changes followed: the decision now also requires the wallet-event stream to have gone quiet for
+the same window, and successive restarts back off (10 → 20 → 30 min) instead of firing every
+10 minutes.
+
+*Correction.* An earlier revision of this note claimed the SDK logged `wallet-event batch: folded=N`
+**throughout** the stall, and concluded the scan was running while only the watermark WRITE was
+blocked. That was a misreading of the logs: the event stream stopped too, and nothing was blocked —
+the final partial filter batch was holding its own commit because it had matched blocks it never
+received. See [plan §34](upgrade-memory-and-sync-plan.md) for the mechanism. This matters for the
+fix as well as the record: because the event stream *does* go quiet during these stalls, the
+liveness gate would not have suppressed this restart. It remains a sound conservative guard, but
+the **backoff** is what actually limits the damage of a watchdog that cannot cure this class of
+stall.
 
 3 new tests; `L1ShadowSyncServiceTest` 111/111.
 

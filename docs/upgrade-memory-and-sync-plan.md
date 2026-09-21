@@ -2286,25 +2286,26 @@ progressing, not wedged.
 
 Not implemented.
 
-## 34. What actually stalls the sync: a filter batch commits only when its SUCCESSOR is created
+## 34. What actually stalls the sync: the final filter batch waits on blocks that never arrive
 
-Settled 2026-09-19 with SQL-level and SDK-level instrumentation on a Samsung SM-S901U. Two earlier
-hypotheses in this section were wrong and are recorded at the end so the reasoning is not repeated.
+Settled 2026-09-19 with SQL-level and SDK-level instrumentation on a Samsung SM-S901U, and
+confirmed against the `dash_spv` source on 2026-09-21. Three earlier hypotheses in this section
+were wrong and are recorded at the end so the reasoning is not repeated.
 
 ### 34.1 The mechanism
 
-`dash_spv` downloads filters in 5,000-block batches. Its own log shows a batch being COMMITTED only
-after the NEXT batch has been created — every time, across three engine sessions:
+`dash_spv` downloads filters in 5,000-block batches and commits them **in order**:
+`try_commit_batches` walks `active_batches.first_key_value()` and stops at the first batch that is
+not ready, so the lowest un-committable batch holds up every batch above it. The readiness gate is
+two lines (`sync/filters/manager.rs:781`):
 
-```
-19:19:02  Creating lookahead batch  start=1547171
-19:19:04  Creating lookahead batch  start=1552171     <- successor created
-19:19:05  Committed batch           start=1547171     <- predecessor commits
+```rust
+if !batch.scanned() { break; }
+if batch.pending_blocks() > 0 { break; }
 ```
 
-The final batch runs from the last 5,000 boundary to the chain tip, and it has no successor. So it
-is never committed, and `committed_height` — the value the whole app reads as "how far are we
-synced" — parks at the last full boundary:
+The final batch runs from the last 5,000 boundary to the chain tip. On the observed stall it
+scanned clean and **matched 95 blocks** — which become pending block downloads:
 
 ```
 19:19:04  Creating lookahead batch 1552171-1556922 (active_batches=1)
@@ -2313,19 +2314,26 @@ synced" — parks at the last full boundary:
           ... still uncommitted 9 minutes later
 ```
 
-The engine is not broken and nothing is lost. Every filter IS stored — the same dump reports
-`Filters: … stored:1556922` against a tip of 1,556,922. Only the COMMIT is withheld.
+Those 95 blocks were never fetched — the engine's own dump reported `requested: 0` against them.
+So `pending_blocks()` stays at 95 forever, the gate never opens, and `committed_height` — the value
+the whole app reads as "how far are we synced" — parks at the last full boundary.
+
+The engine is not broken and no filter is lost. The same dump reports `Filters: … stored:1556922`
+against a tip of 1,556,922. What is stuck is the *block* fetch the match triggered, and the commit
+that waits on it.
 
 ### 34.2 Everything it explains
 
 - **Why the cursor always parks a few thousand blocks short.** The gap is the final partial batch.
 - **Why it parks on odd round numbers** — 1,552,170, 1,547,170. Batch boundaries.
-- **Why it clears suddenly, in a burst.** The chain grows enough to form a new batch, which
-  releases the previous one. Observed at 18:53:30: `Batch 1556911-1556911: found 0 matching blocks`
-  is created, and `Committed batch 1552171-1556910` lands in the same second.
+- **Why it clears suddenly, in a burst.** The chain advancing re-cuts the batch boundary, so the
+  stuck range is re-formed as a batch that matches nothing and therefore has nothing pending.
+  Observed at 18:53:30: `Batch 1556911-1556911: found 0 matching blocks` is created, and
+  `Committed batch 1552171-1556910` lands in the same second.
 - **Why restarting rarely helps.** A restart recreates the same final batch against a slightly
-  newer tip — 1556917, then 1556918, then 1556922 — and it stalls identically. One of four
-  watchdog restarts appeared to help; that was the tip advancing, not the restart.
+  newer tip — 1556917, then 1556918, then 1556922 — it matches the same blocks, fails to fetch
+  them again, and stalls identically. One of four watchdog restarts appeared to help; that was the
+  tip advancing, not the restart.
 - **Why the wait is unpredictable.** It is the time for the chain to produce enough blocks, which
   on testnet is erratic.
 - **Why Joel's 12000012 sat at 3 blocks short for 49 minutes.** Same shape on mainnet.
@@ -2339,9 +2347,9 @@ The engine is not broken and nothing is lost. Every filter IS stored — the sam
 - **Not the network.** `stored:1556922` means every filter arrived.
 - **Not the app's.** `committed_height` is the SDK's, and nothing on the app side can advance it.
 
-### 34.4 Two earlier hypotheses, both wrong
+### 34.4 Three earlier hypotheses, all wrong
 
-Kept because both looked convincing and cost time.
+Kept because each looked convincing and cost time.
 
 **"Database lock contention."** Built on a single `SQLiteConnectionPool` warning 30 s before one
 stall — a thread waiting 4 then 8 seconds for the primary WRITE connection to `dash-sdk.db`, with
@@ -2353,9 +2361,18 @@ revision): the wallet-event stream stops during the stall too, so nothing was be
 because nothing was being produced. That correction was right, but the conclusion drawn from it —
 that writes were blocked — was still wrong.
 
-The lesson worth keeping: both hypotheses came from the APP's logs, and the answer was in the
-SDK's own `files/sdk-logs/dash_spv/run.log`, which is pullable with `run-as` on a debug build and
-was not being read.
+**"A batch commits only when its SUCCESSOR is created."** The revision of this section written on
+2026-09-19 claimed exactly that, from three sessions of log ordering in which a `Creating lookahead
+batch` line was always followed within a second or two by the predecessor's `Committed batch`. The
+correlation is real but not causal: a tick runs commit (phase 3) before create (phase 4), and while
+`active_batches` is under the lookahead cap a new batch is created on nearly every tick — so a
+batch whose blocks land between ticks always appears to commit "because" a successor was made. The
+source has no such rule. Inferring a gate from log ordering instead of reading `try_commit_batches`
+is what cost the extra day.
+
+The lesson worth keeping: all three hypotheses came from the APP's logs, and the answer was in the
+SDK's own `files/sdk-logs/dash_spv/run.log` and then in the `dash_spv` source. The log is pullable
+with `run-as` on a debug build and was not being read; the source was available the whole time.
 
 ### 34.5 A separate real finding: the app's observer queries are expensive
 
@@ -2377,9 +2394,14 @@ seconds of query time in 150 seconds. Worth its own investigation — it is a pl
 
 This is an SDK defect in `dash_spv::sync::filters::manager` and is not fixable from the app. The
 filter-stall watchdog stays as a mitigation, but §34.2 explains why it mostly cannot help: a
-restart does not create a successor batch. Its EXHAUSTED message already says the right thing —
-"this needs an SDK-side fix".
+restart recreates the same batch, matches the same blocks, and fails to fetch them again. Its
+EXHAUSTED message already says the right thing — "this needs an SDK-side fix".
 
-To be filed against `dash_spv` with the log excerpts above. The fix is presumably to commit the
-final batch on its own completion rather than on the creation of the next one, or to flush it when
-the scan reaches the tip.
+**To be filed against `dash_spv`,** with the log excerpts above. Two questions for that issue,
+since the gate itself is defensible and the bug is on the side of it:
+
+1. Why is `pending_blocks()` 95 with `requested: 0`? Blocks matched by a filter should be
+   requested; a pending count that nothing is driving to zero is a stuck queue, not backpressure.
+2. Should a batch whose block fetches cannot make progress commit its filter range anyway, or at
+   least surface the stall? Today it is silent, indefinite, and indistinguishable from a healthy
+   engine to every consumer of `committed_height`.
