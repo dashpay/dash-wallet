@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -207,6 +209,21 @@ class SdkBindRetryService internal constructor(
     @Volatile
     private var lastClassifiedFailureAtMs = Long.MIN_VALUE
 
+    /**
+     * Serializes [onBindFailureChanged] against [onBindEstablished].
+     *
+     * The two run on SEPARATE collectors, and both suspend part-way through
+     * (persistBlocker) while holding a decision made before the suspension.
+     * Re-reading `_blocker` after the suspension is not enough on its own: the
+     * failure handler can pass that check and then be overtaken, so its
+     * showPendingNotice lands AFTER onBindEstablished's clearPendingNotice and
+     * the "unlock your device" notification survives on a bound wallet, with
+     * nothing left to dismiss it until a next failure a healed bind never
+     * produces. Holding one lock across each handler's whole body makes the
+     * post-or-clear decision and the act of posting indivisible.
+     */
+    private val outcomeMutex = Mutex()
+
     init {
         scope.launch {
             try {
@@ -242,7 +259,7 @@ class SdkBindRetryService internal constructor(
      * then succeeded in the new process and the notification cleared, yet
      * `sdk_bind_blocker` still read OTHER in the support report.
      */
-    private suspend fun onBindEstablished() {
+    private suspend fun onBindEstablished() = outcomeMutex.withLock {
         val previous = _blocker.value
         unlockedDenialStreak = 0
         otherFailureStreak = 0
@@ -262,6 +279,11 @@ class SdkBindRetryService internal constructor(
         // feed cannot tell them apart. [onBindEstablished] owns the whole
         // success path, keyed off a signal that only a bound pass raises.
         if (failure == null) return
+        outcomeMutex.withLock { classifyAndAnnounce(failure) }
+    }
+
+    /** The body of [onBindFailureChanged], under [outcomeMutex]. */
+    private suspend fun classifyAndAnnounce(failure: SdkBindFailure) {
         // StateFlow conflates; a re-emission of the same failure is not a new one.
         if (failure.atMs == lastClassifiedFailureAtMs) return
         lastClassifiedFailureAtMs = failure.atMs
