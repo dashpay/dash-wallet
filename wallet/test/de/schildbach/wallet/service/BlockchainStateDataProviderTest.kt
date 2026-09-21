@@ -191,6 +191,32 @@ class BlockchainStateDataProviderTest {
     }
 
     @Test
+    fun markReplayStartedForSdkTakeover_movesTheStageOffComplete() {
+        // Review finding on #1568: the takeover marker fixed the ROW but not
+        // the STAGE. dashj has usually finished by the cutover, so
+        // syncStageFlow sits at COMPLETE, and getSyncStage() kept reporting a
+        // finished sync over a row that says "replaying from 0%" — for however
+        // long it took the SDK's first progress update to arrive. Every
+        // syncStage consumer (MainViewModel.observeSyncStage) read the wrong
+        // thing in that window.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE)
+        )
+        awaitUntil("dashj-era COMPLETE established") { provider.getSyncStage() == SyncStage.COMPLETE }
+
+        dao.state = BlockchainState(Date(1_000L), 1_500_000, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+        provider.markReplayStartedForSdkTakeover()
+
+        awaitUntil("stage left COMPLETE with the row") { provider.getSyncStage() != SyncStage.COMPLETE }
+        assertEquals(
+            "a takeover replay is a block scan, not an offline wallet",
+            SyncStage.BLOCKS,
+            provider.getSyncStage()
+        )
+        assertTrue("and the row agrees", dao.state!!.replaying)
+    }
+
+    @Test
     fun markReplayStartedForSdkTakeover_leavesAReplayAlreadyInProgressAlone() {
         dao.state = BlockchainState(Date(0L), 10, true, EnumSet.noneOf(Impediment::class.java), 0, 0, 55)
         provider.markReplayStartedForSdkTakeover()

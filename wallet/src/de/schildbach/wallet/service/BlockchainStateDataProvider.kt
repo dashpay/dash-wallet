@@ -306,6 +306,22 @@ class BlockchainStateDataProvider @Inject constructor(
             state.replaying = true
             state.percentageSync = 0
             blockchainStateDao.saveState(state)
+            // The STAGE has to move with the row, in this same serialized job.
+            //
+            // isSynced() is fixed by the replaying flag above, but getSyncStage()
+            // reads syncStageFlow, and dashj typically leaves that at COMPLETE —
+            // it had finished before the cutover handed the wallet over. Nothing
+            // corrects it until the SDK's first progress update lands, so every
+            // syncStage consumer (MainViewModel.observeSyncStage) reads "finished"
+            // over a row that says "replaying from 0%".
+            //
+            // BLOCKS, not null: null reads as OFFLINE (see getSyncStage), which
+            // would claim the opposite falsehood — disconnected rather than done
+            // — and a takeover replay IS a block scan. A real stage from the SDK
+            // replaces this on the first update, and it cannot be held back by
+            // the COMPLETE-preservation rule above precisely because it is no
+            // longer COMPLETE.
+            syncStageFlow.value = SyncStage.BLOCKS
         }
     }
 

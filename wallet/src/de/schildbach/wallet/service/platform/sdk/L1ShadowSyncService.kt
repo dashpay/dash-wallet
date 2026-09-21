@@ -24,6 +24,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
@@ -2001,6 +2002,17 @@ class L1ShadowSyncService internal constructor(
     /** Running latch: the wallet id the probe compares, null when stopped. */
     private val runningWalletIdHex = MutableStateFlow<String?>(null)
 
+    /**
+     * The DashPay bring-up once it has outlived its budget and [startIfEnabled]
+     * has stopped awaiting it — service-owned so [stop] can end it.
+     *
+     * It runs on the long-lived injected [scope], not as a child of the start
+     * that created it, so neither a cancelled start nor [stop]'s teardown of
+     * the four loop jobs touches it. Held here so both can.
+     */
+    @Volatile
+    private var detachedBringUp: Deferred<Result<String?>>? = null
+
     private var monitorJob: Job? = null
     private var parityJob: Job? = null
     private var watchdogJob: Job? = null
@@ -2375,7 +2387,16 @@ class L1ShadowSyncService internal constructor(
                     // bring-up finishes in the background and logs when it
                     // does, and the SDK marks late accounts covered at
                     // synced_height=0 so the next scan picks them up.
-                    val bringUp = scope.async {
+                    // A bring-up DETACHED by an earlier start may still be
+                    // running. The runningWalletIdHex guard above does not
+                    // cover that: a start which detached one and then failed
+                    // (startSpv throwing, say) leaves it in flight with
+                    // runningWalletIdHex still null. Adding a second
+                    // startWalletSubsystems on top of it is exactly the
+                    // overlap this must not create, so join the one in flight.
+                    val bringUp = detachedBringUp?.takeIf { it.isActive }?.also {
+                        log.info("DashPay bring-up from an earlier start is still running; joining it")
+                    } ?: scope.async {
                         runCatching { source.startWalletSubsystems(walletIdHex) }
                     }
                     val outcome = withTimeoutOrNull(bringUpBudgetMs) { bringUp.await() }
@@ -2386,14 +2407,23 @@ class L1ShadowSyncService internal constructor(
                                     "the bring-up continues in the background",
                                 bringUpBudgetMs / 1000
                             )
+                            // Service-owned from here: nobody is awaiting it
+                            // any more, so stop() is the only thing that can
+                            // end it.
+                            detachedBringUp = bringUp
                             scope.launch {
                                 bringUp.await()
                                     .onSuccess { if (it != null) log.info("DashPay bring-up (finished after SPV start): $it") }
                                     .onFailure { if (it !is CancellationException) log.warn("DashPay bring-up (after SPV start) failed", it) }
+                                if (detachedBringUp === bringUp) detachedBringUp = null
                             }
                         }
-                        outcome.isSuccess -> outcome.getOrNull()?.let { log.info("DashPay bring-up before SPV: $it") }
+                        outcome.isSuccess -> {
+                            if (detachedBringUp === bringUp) detachedBringUp = null
+                            outcome.getOrNull()?.let { log.info("DashPay bring-up before SPV: $it") }
+                        }
                         else -> {
+                            if (detachedBringUp === bringUp) detachedBringUp = null
                             val t = outcome.exceptionOrNull()
                             if (t is CancellationException) throw t
                             log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
@@ -2442,6 +2472,17 @@ class L1ShadowSyncService internal constructor(
      */
     suspend fun stop() {
         mutex.withLock {
+            // BEFORE the early return. A bring-up that outlived its budget is
+            // not one of the four loop jobs, and it is not covered by
+            // runningWalletIdHex either — a start that detached one and then
+            // failed leaves it running with that still null, so the return
+            // below would step straight over it and the next start would run a
+            // second startWalletSubsystems alongside it.
+            detachedBringUp?.let {
+                log.info("cancelling a DashPay bring-up still running past its budget")
+                it.cancel()
+            }
+            detachedBringUp = null
             val walletIdHex = runningWalletIdHex.value ?: return
             // Phase 1b item 13 (docs/upgrade-memory-and-sync-plan.md): the
             // watermark the SDK will resume from vs. what the engine had

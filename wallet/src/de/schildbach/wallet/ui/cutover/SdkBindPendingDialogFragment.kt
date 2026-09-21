@@ -30,9 +30,12 @@ import de.schildbach.wallet.service.platform.sdk.SdkBindBlocker
 import de.schildbach.wallet.service.platform.sdk.SdkBindPendingTexts
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogSdkBindPendingBinding
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import org.slf4j.LoggerFactory
 
 /**
  * The foreground half of the "SDK setup pending" surface
@@ -55,6 +58,9 @@ class SdkBindPendingDialogFragment :
     private val binding by viewBinding(DialogSdkBindPendingBinding::bind)
     private val viewModel by viewModels<SdkBindPendingViewModel>()
 
+    /** @see showRetryInFlight */
+    private var retryFeedbackJob: Job? = null
+
     override val expandToContent = true
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -63,7 +69,7 @@ class SdkBindPendingDialogFragment :
         binding.closeButton.setOnClickListener { dismissAllowingStateLoss() }
         binding.retryButton.setOnClickListener {
             viewModel.retryNow()
-            render(SdkBindBlocker.OTHER)
+            showRetryInFlight()
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -76,6 +82,32 @@ class SdkBindPendingDialogFragment :
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Acknowledge the retry tap, then GUARANTEE the controls come back.
+     *
+     * Rendering OTHER shows the spinner and hides the retry button, because
+     * OTHER does not need the user. That was previously the whole story, and it
+     * stranded the sheet: if the retry produced the SAME blocker, the service
+     * assigned an equal value to its StateFlow, which conflates, so no emission
+     * reached the collector and nothing re-rendered. The user was left with a
+     * spinner and no way to try again short of dismissing the sheet.
+     *
+     * So the in-flight state is TIME-BOXED rather than event-terminated. A real
+     * emission — a different blocker, or null on success — still wins, because
+     * the collector renders or dismisses on it and this job's late write is
+     * cancelled below by the next tap or by view destruction. If nothing
+     * arrives, the current blocker is re-rendered from the StateFlow's value
+     * and the button returns.
+     */
+    private fun showRetryInFlight() {
+        retryFeedbackJob?.cancel()
+        render(SdkBindBlocker.OTHER)
+        retryFeedbackJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(RETRY_FEEDBACK_MS)
+            viewModel.blocker.value?.let { render(it) }
         }
     }
 
@@ -93,12 +125,30 @@ class SdkBindPendingDialogFragment :
     }
 
     companion object {
+        private val log = LoggerFactory.getLogger(SdkBindPendingDialogFragment::class.java)
         private const val TAG = "sdk_bind_pending"
 
-        fun showOnce(activity: FragmentActivity) {
+        /** How long the retry tap shows as in flight before the controls return. */
+        private const val RETRY_FEEDBACK_MS = 2_000L
+
+        /**
+         * @return whether the sheet is now on screen — shown here, or already
+         *   showing. False means the showing was REFUSED (saved fragment
+         *   state), and the caller must keep it pending: the blocker that
+         *   triggered this is a StateFlow value that will not re-emit on its
+         *   own. Same contract as
+         *   [CutoverSyncNoticeDialogFragment.showOnce].
+         */
+        fun showOnce(activity: FragmentActivity): Boolean {
             val fm = activity.supportFragmentManager
-            if (fm.isStateSaved || fm.findFragmentByTag(TAG) != null) return
-            SdkBindPendingDialogFragment().show(fm, TAG)
+            if (fm.findFragmentByTag(TAG) != null) return true
+            if (fm.isStateSaved) {
+                log.info("SDK bind pending sheet not shown yet: fragment state is saved; staying pending")
+                return false
+            }
+            return runCatching { SdkBindPendingDialogFragment().show(fm, TAG) }
+                .onFailure { log.warn("SDK bind pending sheet could not be shown; staying pending", it) }
+                .isSuccess
         }
 
         fun dismissIfShown(activity: FragmentActivity) {

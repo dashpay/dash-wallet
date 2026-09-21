@@ -295,7 +295,14 @@ class SdkBindRetryService internal constructor(
             runCatching { persistBlocker(blocker) }
                 .onFailure { if (it is CancellationException) throw it; log.warn("failed to persist the bind blocker", it) }
         }
-        if (appInBackground()) showPendingNotice(blocker)
+        // Re-read _blocker AFTER persistBlocker's suspension. onBindEstablished
+        // can run in the gap: it sets _blocker to null and calls
+        // clearPendingNotice(), and this would then resume and repost "unlock
+        // your device" for a wallet that is already bound — a notification with
+        // nothing left to dismiss it until the next failure, which on a healed
+        // bind never comes. The blocker this call classified has to still be the
+        // one in force.
+        if (_blocker.value == blocker && appInBackground()) showPendingNotice(blocker)
     }
 
     /**

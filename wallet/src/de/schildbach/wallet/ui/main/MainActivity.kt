@@ -151,6 +151,18 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     /** Same lock-screen deferral for the one-time post-upgrade sync explainer. */
     private var pendingCutoverUpgradeNotice = false
+
+    /**
+     * Same deferral for the "SDK setup pending" sheet, and it needs one more
+     * than the others do.
+     *
+     * Its trigger is a StateFlow, not an event: if the blocker arrives while
+     * the lock screen is up, or while showOnce refuses on saved fragment state,
+     * the collector drops it — and an UNCHANGED StateFlow value never emits
+     * again, so nothing retries for the rest of the session. The bind can then
+     * stay blocked with no foreground explanation and no retry surface at all.
+     */
+    private var pendingSdkBindPendingSheet = false
     var composeHostFrameLayout: ComposeHostFrameLayout? = null
 
     val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -349,9 +361,15 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.sdkBindBlocker.collect { blocker ->
                     if (blocker == null) {
+                        pendingSdkBindPendingSheet = false
                         SdkBindPendingDialogFragment.dismissIfShown(this@MainActivity)
-                    } else if (!lockScreenDisplayed) {
-                        SdkBindPendingDialogFragment.showOnce(this@MainActivity)
+                    } else if (lockScreenDisplayed) {
+                        pendingSdkBindPendingSheet = true
+                    } else {
+                        // Clear ONLY on a real showing — showOnce also refuses
+                        // while the fragment manager has saved state.
+                        pendingSdkBindPendingSheet =
+                            !SdkBindPendingDialogFragment.showOnce(this@MainActivity)
                     }
                 }
             }
@@ -420,6 +438,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         if (pendingCutoverUpgradeNotice && !lockScreenDisplayed) {
             pendingCutoverUpgradeNotice = !CutoverSyncNoticeDialogFragment.showOnce(this)
         }
+        retrySdkBindPendingSheet()
         // The periodic contact-request poll is scoped to the blockchain service
         // and can stall across service teardown/restart; force a throttled
         // refresh here so returning to the home screen promptly surfaces new
@@ -679,6 +698,24 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
+    /**
+     * Re-drive a "SDK setup pending" sheet whose showing was refused earlier.
+     *
+     * Re-reads the blocker rather than trusting the flag alone: the bind can
+     * heal while the sheet is pending, and the collector that would dismiss it
+     * only restarts at STARTED — so without this check a resume could raise a
+     * sheet for an already-bound wallet and then take it straight back down.
+     */
+    private fun retrySdkBindPendingSheet() {
+        if (!pendingSdkBindPendingSheet) return
+        if (viewModel.sdkBindBlocker.value == null) {
+            pendingSdkBindPendingSheet = false
+            return
+        }
+        if (lockScreenDisplayed) return
+        pendingSdkBindPendingSheet = !SdkBindPendingDialogFragment.showOnce(this)
+    }
+
     override fun onLockScreenDeactivated() {
         super.onLockScreenDeactivated()
         if (config.showNotificationsExplainer) {
@@ -697,6 +734,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             // explainer outright (2026-09-16 emulator upgrade test).
             pendingCutoverUpgradeNotice = !CutoverSyncNoticeDialogFragment.showOnce(this)
         }
+
+        retrySdkBindPendingSheet()
 
         if (pendingMixedFundsMigration) {
             pendingMixedFundsMigration = false
