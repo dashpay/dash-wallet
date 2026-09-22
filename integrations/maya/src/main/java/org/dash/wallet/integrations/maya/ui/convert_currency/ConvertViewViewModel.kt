@@ -19,15 +19,18 @@ package org.dash.wallet.integrations.maya.ui.convert_currency
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
@@ -35,6 +38,7 @@ import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
@@ -48,6 +52,7 @@ import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
+import org.dash.wallet.integrations.maya.utils.MaxSendable
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -64,6 +69,8 @@ class ConvertViewViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val analyticsService: AnalyticsService,
     private val swapProvider: SwapProvider,
+    // Sole source of the "max sendable" figure — see [maxSendableAmount].
+    private val sendPaymentService: SendPaymentService,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     companion object {
@@ -119,8 +126,6 @@ class ConvertViewViewModel @Inject constructor(
     var destinationAddress: String? = null
     lateinit var account: AccountDataUIModel
     val amount = Amount()
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-        .noCode().minDecimals(6).optionalDecimals()
     val cryptoFormat: DecimalFormat = DecimalFormat(
         "0.########",
         DecimalFormatSymbols(GenericUtils.getDeviceLocale())
@@ -145,8 +150,22 @@ class ConvertViewViewModel @Inject constructor(
 
     var minAllowedSwapAmount: String = MayaConstants.MIN_USD_AMOUNT
 
-    var maxForDashWalletAmount: String = "0"
     val onContinueEvent = SingleLiveEvent<SwapRequest>()
+
+    /**
+     * Last successfully computed [maxSendableAmount], readable without suspending so the screen
+     * can name the real limit in its "more than max" message. [Coin.ZERO] until the first
+     * estimate lands.
+     */
+    @Volatile
+    var lastMaxSendableAmount: Coin = Coin.ZERO
+        private set
+
+    // Sweep estimate paired with the balance it was computed from; invalidated by any other
+    // balance turning up. Guarded by [maxSendableMutex], which also keeps two callers from
+    // paying for the same estimate concurrently.
+    private var maxSendableCache: Pair<Coin, Coin>? = null
+    private val maxSendableMutex = Mutex()
 
     private var minAllowedSwapDashCoin: Coin = Coin.ZERO
     private var maxForDashCoinBaseAccount: Coin = Coin.ZERO
@@ -199,7 +218,6 @@ class ConvertViewViewModel @Inject constructor(
     val validSwapValue = SingleLiveEvent<String>()
 
     init {
-        updateDashWalletBalance()
         // do we need this?
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
@@ -320,15 +338,16 @@ class ConvertViewViewModel @Inject constructor(
         validSwapValue.call()
     }
 
-    fun checkEnteredAmountValue(checkSendingConditions: Boolean): SwapValueErrorType {
-        val coin = try {
-            if (dashToCrypto.value == true) {
-                Coin.parseCoin(maxForDashWalletAmount.replace(',', '.'))
-            } else {
-                maxForDashCoinBaseAccount
-            }
-        } catch (x: Exception) {
-            Coin.ZERO
+    /**
+     * Bounds the entry by what can actually be sent, not by the gross balance: an amount above
+     * [maxSendableAmount] can't be delivered, and bounding by the balance let the user carry it
+     * all the way to the preview before finding out.
+     */
+    suspend fun checkEnteredAmountValue(checkSendingConditions: Boolean): SwapValueErrorType {
+        val coin = if (dashToCrypto.value == true) {
+            maxSendableAmount()
+        } else {
+            maxForDashCoinBaseAccount
         }
 
         _enteredConvertDashAmount.value?.let {
@@ -361,6 +380,13 @@ class ConvertViewViewModel @Inject constructor(
             maxAmountSelected = false
         }
         _dashToCrypto.value = dashToCrypto
+
+        if (dashToCrypto) {
+            // A non-zero balance isn't the same as having something to sell — the fee may eat all
+            // of it. Warm the estimate now so Max is instant, and let it close the gate if what
+            // is left after the sweep fee is nothing.
+            refreshMaxSendable()
+        }
     }
 
     fun clear() {
@@ -377,18 +403,19 @@ class ConvertViewViewModel @Inject constructor(
             analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_CONTINUE, mapOf())
             // What the user typed in is exactly what [amount] is anchored on.
             logEnteredAmountCurrency(amount.anchoredType)
+            // A sweep is what the Max button asked for, so take it from that intent
+            // ([maxAmountSelected]) rather than inferring it: a fiat- or crypto-anchored Max
+            // doesn't survive the round trip back to DASH as an exact match. The comparison
+            // stays as a fallback for a max the user typed in by hand — measured against the
+            // sendable figure, since that is what Max itself now enters, and evaluated only
+            // when the flag is unset so the estimate is skipped on the common path.
+            val isMaxSwap = maxAmountSelected ||
+                MaxSendable.isTypedMax(amount.dash.toCoin(), maxSendableAmount())
             onContinueEvent.value = selectedCryptoCurrencyAccount.value?.coinbaseAccount?.let {
                 destinationAddress?.let { address ->
                     SwapRequest(
                         amount,
-                        // A sweep is what the Max button asked for, so take it from that intent
-                        // ([maxAmountSelected]) rather than inferring it: a fiat- or
-                        // crypto-anchored Max doesn't survive the round trip back to DASH as an
-                        // exact match. The comparison stays as a fallback for a full balance the
-                        // user typed in by hand.
-                        maxAmountSelected ||
-                            amount.dash.toCoin() ==
-                            walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED),
+                        isMaxSwap,
                         address,
                         it.currency,
                         it.asset,
@@ -451,32 +478,114 @@ class ConvertViewViewModel @Inject constructor(
         return convertedValue
     }
 
-    private fun updateDashWalletBalance(balance: Coin = walletDataProvider.getWalletBalance()) {
-        maxForDashWalletAmount = dashFormat.minDecimals(0)
-            .optionalDecimals(0, 8).format(balance).toString()
-    }
+    /**
+     * The largest DASH amount this wallet can actually deliver in a max sell, and the single
+     * figure every Max path is driven from — the button's entered value, the entry bound in
+     * [checkEnteredAmountValue] and the hand-typed-max fallback in [continueSwap].
+     *
+     * A max sell is a sweep and the miner fee comes out of the sweep's single output, so the
+     * deliverable amount is `balance − fee`, not the balance. This is deliberately the same call
+     * `SwapKitApiAggregator.getSwapInfo` makes to quote a maximum, so entry, quote and deposit all
+     * agree on one number; reading the gross `Wallet.BalanceType.ESTIMATED` here instead is what
+     * made Max show an amount the swap would never use (MO-997).
+     *
+     * Estimation is not cheap — it builds and signs a candidate sweep, which derives the wallet
+     * key — so the result is cached against the balance it was computed from and recomputed only
+     * once that balance moves. Serialized so a pre-warm and a Max tap can't both pay for it.
+     */
+    suspend fun maxSendableAmount(): Coin = estimateMaxSendable() ?: Coin.ZERO
 
-    fun getMaxAmount(): Amount? {
-        return walletDataProvider.wallet?.let {
-            val balance = it.getBalance(Wallet.BalanceType.ESTIMATED)
-            amount.copy().apply { dash = balance.toBigDecimal() }
+    /**
+     * [maxSendableAmount], but distinguishing "this wallet can send nothing" ([Coin.ZERO]) from
+     * "the estimate failed" (null), which callers must not act on: a transient failure would
+     * otherwise read as an empty wallet and wipe a pinned Max.
+     */
+    private suspend fun estimateMaxSendable(): Coin? = withContext(Dispatchers.IO) {
+        // Off the main thread deliberately: unlike its neighbours in SendCoinsTaskRunner,
+        // estimateNetworkFee runs on the caller's dispatcher, and it derives the wallet key and
+        // completes a candidate transaction — every entry point here is a Main-dispatched
+        // viewModelScope/lifecycleScope coroutine, which would make that an ANR.
+        maxSendableMutex.withLock {
+            val wallet = walletDataProvider.wallet ?: return@withLock null
+            val balance = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
+            maxSendableCache?.let { (cachedForBalance, cachedSendable) ->
+                if (cachedForBalance == balance) {
+                    return@withLock cachedSendable
+                }
+            }
+
+            val sendable = try {
+                MaxSendable.coerceSendable(
+                    sendPaymentService.estimateNetworkFee(
+                        walletDataProvider.currentReceiveAddress(),
+                        balance,
+                        emptyWallet = true
+                    ).amountToSend
+                )
+            } catch (e: Exception) {
+                // Insufficient funds for the fee lands here too, but so does a genuine failure,
+                // and the two aren't worth telling apart: leave the cache alone so the next Max
+                // tap retries rather than pinning a wrong figure until the balance happens to
+                // move.
+                log.warn("max sell: sweep estimate failed for balance {}", balance.toFriendlyString(), e)
+                return@withLock null
+            }
+
+            log.info(
+                "max sell: sendable {} of balance {}",
+                sendable.toFriendlyString(),
+                balance.toFriendlyString()
+            )
+            maxSendableCache = balance to sendable
+            lastMaxSendableAmount = sendable
+            sendable
         }
     }
 
     /**
-     * Records that the entered amount is the whole wallet ([maxAmountSelected]) and re-pins
-     * [amount]'s DASH component to the exact balance.
+     * Computes [maxSendableAmount] ahead of the user reaching for Max, so the button doesn't have
+     * to wait on the estimate, and closes the Get-quote gate on a wallet whose whole balance is
+     * eaten by the fee — for this flow that is as empty as a zero balance.
+     */
+    private fun refreshMaxSendable() {
+        viewModelScope.launch {
+            val sendable = estimateMaxSendable() ?: return@launch
+            if (_dashToCrypto.value == true && !sendable.isPositive && !userDashAccountEmpty) {
+                userDashAccountEmpty = true
+                userDashAccountEmptyError.call()
+            }
+        }
+    }
+
+    /** The Max entry in every currency, or null when there is nothing this wallet can send. */
+    suspend fun getMaxAmount(): Amount? {
+        val sendable = maxSendableAmount()
+        if (!sendable.isPositive) {
+            return null
+        }
+        return amount.copy().apply { dash = sendable.toBigDecimal() }
+    }
+
+    /**
+     * Records that the entered amount is a max ([maxAmountSelected]) and re-pins [amount]'s DASH
+     * component to the exact [maxSendableAmount].
      *
      * Call it right after the Max value has been entered in [displayType]: entering it re-anchors
      * [amount] on the picker's currency, and for fiat or crypto the DASH value is then a rounded
-     * back-conversion rather than the balance (see [maxAmountSelected]) — which the Maya quote and
-     * the amount checks both read. Assigning [Amount.dash] recomputes fiat and crypto from the
-     * exact balance; the anchor is restored to [displayType] afterwards (that setter doesn't
+     * back-conversion rather than the sendable amount (see [maxAmountSelected]) — which the quote
+     * and the amount checks both read. Assigning [Amount.dash] recomputes fiat and crypto from the
+     * exact figure; the anchor is restored to [displayType] afterwards (that setter doesn't
      * recompute) so the picker's currency still drives what's displayed and logged.
      */
-    fun selectMaxAmount(displayType: CurrencyInputType) {
-        val balance = walletDataProvider.wallet?.getBalance(Wallet.BalanceType.ESTIMATED) ?: return
-        amount.dash = balance.toBigDecimal()
+    suspend fun selectMaxAmount(displayType: CurrencyInputType) {
+        // A failed estimate leaves the entry exactly as it was; only a real zero — the fee has
+        // caught up with the balance — retracts the Max, since there is no longer a max to pin.
+        val sendable = estimateMaxSendable() ?: return
+        if (!sendable.isPositive) {
+            maxAmountSelected = false
+            return
+        }
+        amount.dash = sendable.toBigDecimal()
         amount.anchoredType = displayType
         savedStateHandle[KEY_AMOUNT] = amount.copy()
         maxAmountSelected = true
