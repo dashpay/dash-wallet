@@ -2656,20 +2656,50 @@ hidden. Being cached at 1.2 GB is the condition; the kill is the consequence.
 Every process death costs the re-walk of §34.1a on the next launch (~26,000 filters from
 1,532,170), and the re-walk is what pumps the heap. The two threads meet here.
 
-### 36.3 A service stop with no recorded caller (open)
+### 36.3 The foreground service demotes itself on a synced wallet — ROOT CAUSE of the evictions
 
-Twice — 16:58:53 and 17:27:45 — `BlockchainServiceImpl.onDestroy()` ran via
-`ActivityThread.handleStopService` with the PROCESS SURVIVING (no `am_kill`, no `has died`, same pid
-before and after), within a second of `onTrimMemory(20)` (UI hidden). The engine was torn down,
-the alarm re-armed, and the display predicate flipped false; a foreground resume 3.5 s later
-restarted it (16:58:57, the ordinary start pair). Every `stopSelf()` in the service logs a
-distinctive line (idle detector, memory pressure ≥ `TRIM_MEMORY_COMPLETE`, FGS 6-hour timeout,
-init failure, blockstore timeout), and none appeared. The only external `stopService` callers are
-the `@Deprecated("not used")` `stopBlockchainService()` and the Tools diagnostic
-`restartBlockchainService()` (1.5 s gap, single start — does not match). `AppForegroundMonitor` is
-state-only. The caller-side stack is not logged anywhere. **Whoever stops the service when the
-app backgrounds while synced is unidentified**, and it leaves the process cached — the state §36.2's
-pressure kills happen in.
+Found at 17:45 the same day, from the `events` log buffer rather than from ours:
+
+```
+17:36:18.292  am_foreground_service_start  BlockchainServiceImpl  PROC_STATE_TOP
+17:36:18.676  am_foreground_service_stop   … STOP_FOREGROUND                <- 384 ms later
+17:45:05.774  onTrimMemory(40)             TRIM_MEMORY_BACKGROUND: we are on the cached LRU list
+17:45:09.753  am_proc_died  … 905          lowmemorykiller, the third of the day
+17:45:32.138  am_foreground_service_start  (new pid)  PROC_STATE_FGS
+17:45:32.462  am_foreground_service_stop   … STOP_FOREGROUND                <- 324 ms later
+```
+
+`STOP_FOREGROUND` is the reason code for the app calling `stopForeground()` itself. The caller is
+`BlockchainServiceImpl.handleBlockchainStateNotification`:
+
+```kotlin
+if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver) {
+    //Remove ongoing notification if blockchain sync finished
+    stopForeground(true)
+    foregroundService = ForegroundService.NONE
+    nm!!.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC)
+}
+```
+
+On a synced wallet the FIRST `BlockchainState` row written after start satisfies this, so the
+service leaves the foreground state a few hundred milliseconds after every `start foreground
+service` line. Our own log says "start foreground service" and nothing else, which is why every
+earlier reading of these deaths concluded the FGS was up when it was not.
+
+This is dashj-era design — no persistent notification once synced — and under dashj a background
+service was tolerable. Post-cutover the SDK engine and its native heap (§36.1, 1.2 GB reserved)
+live in this process. Demoted, the process is CACHED (adj 900–905) the moment the UI hides;
+`lowmemorykiller` takes it on the next pressure event; the relaunch re-walks ~26,000 filters from
+the parked boundary (§34.1a); the re-walk pumps the heap back up. All three pressure kills on
+2026-09-21 (12:17, 16:12, 17:45) are this loop, and so is the 17:45:05 `TRIM_MEMORY_BACKGROUND` that
+preceded the last one. The two "service stops with the process surviving" (16:58:53, 17:27:45) are
+the same state seen from the other side: a background service the system is free to stop.
+
+**Decision, not a patch.** Keeping the process out of the cached list means keeping the foreground
+notification while synced — a visible change in behaviour that was removed on purpose once. The
+alternatives are narrower: keep the FGS only while the SDK engine holds a large native heap; or
+re-promote on `onTrimMemory(TRIM_MEMORY_UI_HIDDEN)`; or accept the eviction and make the relaunch
+cheap, which is §34 fixed in dash-spv. Owner's call. What is no longer in doubt is the mechanism.
 
 ### 36.4 Battery exemption — a correction
 
