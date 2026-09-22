@@ -195,13 +195,18 @@ refute_log() {
 # "startup" lasts on this emulator.
 refute_log_for() {
   local label="$1" pat="$2" budget="${3:-45}" waited=0 w
-  while [ "$waited" -lt "$budget" ]; do
+  # Check-then-sleep, with the check repeated ONCE MORE after the deadline.
+  # The first version checked through second 40 of a 45 s budget, slept to
+  # 45 and exited PASS — a forbidden line written in the final five seconds
+  # produced a false pass (CodeRabbit on #1568).
+  while :; do
     w=$(since_mark)
     if grep -qE "$pat" "$w"; then
       fail "$label" "(unexpected after ${waited}s: $pat)"
       grep -E "$pat" "$w" | head -2 | sed 's/^/          /'
       return 0
     fi
+    [ "$waited" -ge "$budget" ] && break
     sleep 5; waited=$((waited + 5))
   done
   printf '   \033[32mPASS\033[0m %s (absent for %ss)\n' "$label" "$budget"

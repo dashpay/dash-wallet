@@ -335,15 +335,84 @@ class L1ShadowSyncServiceTest {
             FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH,
             d.onCheck(11 * 60_000L, stuck, target, lastWalletEventMs = 0L)
         )
-        // Once per process, then silence — it is a diagnosis, not an alarm.
+        // Once per PARK, then silence for the restart hold — it is a diagnosis,
+        // not an alarm. (29 minutes: the 30th minute is where the hold ends and
+        // the stall falls through to a restart — pinned separately below.)
         var now = 11 * 60_000L
-        repeat(30) {
+        repeat(29) {
             now += 60_000L
             assertEquals(
                 FilterStallWatchdogDecider.Decision.NONE,
                 d.onCheck(now, stuck, target, lastWalletEventMs = 0L)
             )
         }
+    }
+
+    @Test
+    fun filterStall_finalBatchReportIsPerPark_notPerProcess() {
+        // CodeRabbit on #1568: as a process-lifetime latch, one report silenced
+        // every later restart in the process — including for a different,
+        // recoverable wedge in the same range. The cursor MOVING ends a park;
+        // the next park earns its own report.
+        val d = stallDecider()
+        val target = 1_558_166L
+        d.onCheck(0L, 1_555_999L, target, lastWalletEventMs = 0L)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH,
+            d.onCheck(11 * 60_000L, 1_555_999L, target, lastWalletEventMs = 0L)
+        )
+        // The chain re-cuts the boundary and the cursor advances: park over.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(12 * 60_000L, 1_558_166L, target, lastWalletEventMs = 0L)
+        )
+        // A NEW park at the next boundary, against a moved target, gets a NEW
+        // report rather than the silence the old latch imposed.
+        val target2 = 1_563_166L
+        d.onCheck(13 * 60_000L, 1_560_999L, target2, lastWalletEventMs = 0L)
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH,
+            d.onCheck(24 * 60_000L, 1_560_999L, target2, lastWalletEventMs = 0L)
+        )
+    }
+
+    @Test
+    fun filterStall_aParkOutlastingTheHoldFallsThroughToARestart() {
+        // The signature is a distance heuristic, so its suppression is bounded.
+        // The longest genuine final-batch park measured is 10 m 40 s; a stall
+        // that is still there after the 30-minute hold is not well explained
+        // by that defect, and the watchdog resumes doing its job — ladder and
+        // backoff intact.
+        val d = stallDecider()
+        val stuck = 1_555_999L
+        val target = 1_558_166L
+        d.onCheck(0L, stuck, target, lastWalletEventMs = 0L)
+        val reportedAt = 11 * 60_000L
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH,
+            d.onCheck(reportedAt, stuck, target, lastWalletEventMs = 0L)
+        )
+        // Inside the hold: withheld.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(reportedAt + L1ShadowSyncService.FINAL_BATCH_RESTART_HOLD_MS - 1, stuck, target, lastWalletEventMs = 0L)
+        )
+        // At the hold: the first restart of the ordinary ladder.
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(reportedAt + L1ShadowSyncService.FINAL_BATCH_RESTART_HOLD_MS, stuck, target, lastWalletEventMs = 0L)
+        )
+        // …and the ladder's backoff governs from there: the second rung is 20
+        // minutes, so 19 minutes on is still NONE and 20 is the next restart.
+        val afterFirst = reportedAt + L1ShadowSyncService.FINAL_BATCH_RESTART_HOLD_MS
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.NONE,
+            d.onCheck(afterFirst + 19 * 60_000L, stuck, target, lastWalletEventMs = 0L)
+        )
+        assertEquals(
+            FilterStallWatchdogDecider.Decision.RESTART,
+            d.onCheck(afterFirst + 20 * 60_000L, stuck, target, lastWalletEventMs = 0L)
+        )
     }
 
     @Test

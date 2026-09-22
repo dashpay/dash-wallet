@@ -224,6 +224,24 @@ class SdkBindRetryService internal constructor(
      */
     private val outcomeMutex = Mutex()
 
+    /**
+     * The most recent value the failure feed delivered, recorded by the
+     * collector BEFORE it waits on [outcomeMutex]. The identity check in
+     * [classifyAndAnnounce] compares against this under the lock.
+     *
+     * Why the mutex alone is not enough (CodeRabbit on #1568): the feed is a
+     * StateFlow, so the collector only ever sees the latest failure — but a
+     * failure A can be parked waiting for the lock while success B and then
+     * failure C are delivered. When A finally runs it is stale twice over,
+     * yet nothing about A itself says so; the timestamp dedup below only
+     * catches a RE-emission of the same failure. Recording the newest
+     * emission here, sequentially, gives the lock holder a current value to
+     * compare against: A is not it, so A is dropped instead of advancing the
+     * streaks and publishing an outdated blocker ahead of C.
+     */
+    @Volatile
+    private var latestBindFailure: SdkBindFailure? = null
+
     init {
         scope.launch {
             try {
@@ -278,12 +296,29 @@ class SdkBindRetryService internal constructor(
         // wallet is bound and before the first pass of a fresh process, so this
         // feed cannot tell them apart. [onBindEstablished] owns the whole
         // success path, keyed off a signal that only a bound pass raises.
+        // Recorded BEFORE the lock, null included: this collector is
+        // sequential, so by the time a queued call acquires the mutex this
+        // already holds whatever the feed delivered after it — a newer
+        // failure, or the null a success leaves behind.
+        latestBindFailure = failure
         if (failure == null) return
         outcomeMutex.withLock { classifyAndAnnounce(failure) }
     }
 
     /** The body of [onBindFailureChanged], under [outcomeMutex]. */
     private suspend fun classifyAndAnnounce(failure: SdkBindFailure) {
+        // IDENTITY FIRST, under the lock: is this still the feed's latest
+        // value? A failure that waited on the mutex while a success (null) or
+        // a newer failure was delivered is stale, and classifying it would
+        // advance the streaks and publish an outdated blocker ahead of the
+        // current one. See [latestBindFailure].
+        if (failure !== latestBindFailure) {
+            log.info(
+                "SDK bind failure from {} superseded while waiting for classification; dropping it",
+                failure.atMs
+            )
+            return
+        }
         // StateFlow conflates; a re-emission of the same failure is not a new one.
         if (failure.atMs == lastClassifiedFailureAtMs) return
         lastClassifiedFailureAtMs = failure.atMs

@@ -1179,7 +1179,9 @@ internal class ProbeWatchdogDecider(
  */
 internal class FilterStallWatchdogDecider(
     private val stallThresholdMs: Long = L1ShadowSyncService.FILTER_STALL_THRESHOLD_MS,
-    private val maxRestarts: Int = L1ShadowSyncService.FILTER_STALL_MAX_RESTARTS
+    private val maxRestarts: Int = L1ShadowSyncService.FILTER_STALL_MAX_RESTARTS,
+    /** How long a reported final-batch shape suppresses restarts before falling through. */
+    private val finalBatchRestartHoldMs: Long = L1ShadowSyncService.FINAL_BATCH_RESTART_HOLD_MS
 ) {
     /**
      * [SDK_FINAL_BATCH] is a REPORT, not an action: the stall has been
@@ -1193,6 +1195,8 @@ internal class FilterStallWatchdogDecider(
     private var restartsIssued = 0
     private var exhaustedReported = false
     private var finalBatchReported = false
+    /** When [Decision.SDK_FINAL_BATCH] was last reported; the restart hold is measured from here. */
+    private var finalBatchReportedAtMs = 0L
 
     /**
      * The threshold the last decision was taken against, and how long the
@@ -1270,6 +1274,13 @@ internal class FilterStallWatchdogDecider(
         if (filterHeight != lastHeight) {
             lastHeight = filterHeight
             lastAdvanceMs = nowMs
+            // A moving cursor ends the park. The final-batch report is PER
+            // PARK, not per process: the next park earns its own report and
+            // its own restart hold. (CodeRabbit on #1568: as a process-lifetime
+            // latch this silenced every later restart, including for a
+            // different, recoverable wedge in the same range.)
+            finalBatchReported = false
+            finalBatchReportedAtMs = 0L
             return Decision.NONE
         }
         // BACKOFF, not a constant. The wait before attempt N is not the same
@@ -1324,9 +1335,24 @@ internal class FilterStallWatchdogDecider(
         // A CONFIRMED stall, so it is now worth asking WHICH stall — because for
         // the one we have root-caused, restarting is the wrong move twice over.
         if (isFinalBatchSignature(filterHeight, filterTarget)) {
-            if (finalBatchReported) return Decision.NONE
-            finalBatchReported = true
-            return Decision.SDK_FINAL_BATCH
+            if (!finalBatchReported) {
+                finalBatchReported = true
+                finalBatchReportedAtMs = nowMs
+                return Decision.SDK_FINAL_BATCH
+            }
+            // The signature is a DISTANCE heuristic, not proof (see
+            // isFinalBatchSignature): a different, recoverable wedge inside the
+            // same range looks identical from here. So the suppression is
+            // BOUNDED: for finalBatchRestartHoldMs after the report a restart is
+            // withheld — that is the window a real final-batch park clears in
+            // on its own, and a restart inside it re-walks for nothing. Past
+            // it, the stall falls through to the ordinary restart ladder below,
+            // backoff included, because by then "the chain will re-cut the
+            // boundary" has had every chance and the cost of being wrong has
+            // flipped: an engine that stays wedged for half an hour is one a
+            // restart might actually help. (CodeRabbit on #1568: "retain the
+            // diagnostic report but allow a restart after a longer threshold".)
+            if (nowMs - finalBatchReportedAtMs < finalBatchRestartHoldMs) return Decision.NONE
         }
         return when {
             restartsIssued < maxRestarts -> {
@@ -3878,6 +3904,20 @@ class L1ShadowSyncService internal constructor(
          * of the approach and is argued in that function's KDoc.
          */
         internal const val SDK_FILTER_BATCH_BLOCKS = 5_000L
+
+        /**
+         * How long a reported final-batch park ([FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH])
+         * suppresses the watchdog's restart before the stall falls through to
+         * the ordinary restart ladder.
+         *
+         * Thirty minutes — the third backoff rung ([FilterStallWatchdogDecider.waitBeforeAttempt]),
+         * and about three times the longest final-batch park measured today
+         * (10 m 40 s, Samsung SM-S901U, 2026-09-21 16:46–16:57). A genuine
+         * final-batch park clears well inside this when the chain re-cuts the
+         * boundary; a wedge that survives it is no longer well explained by
+         * that defect and gets the restart the watchdog exists to give.
+         */
+        internal const val FINAL_BATCH_RESTART_HOLD_MS = 30 * 60_000L
 
         /** Retry backoff for a failed progress-monitor collection. */
         internal const val LOOP_RETRY_DELAY_MS = 5_000L
