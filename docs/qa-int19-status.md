@@ -5,6 +5,8 @@ Source: QA testing by Pasta on an **int19** build. Assessed 2026-09-19 against t
 2026-09-21 at `4a0a9ea9c` (base now `feat/kotlin-sdk-phase-1`) after a day of device testing on
 release builds `12000016`/`12000017`; the entries below carry dated updates where that changed
 anything, and **A-01** (Andrei's post-upgrade "still 99%") is added at the end of the fixed list.
+**A-02** (Andrei's 2026-09-22 "resync got stuck") is fixed on the stacked branch
+`fix/sync-process-stalls`; #1568 itself takes only review fixes from here.
 
 "Addressed" below means *the defect's cause is fixed on this branch*. It does **not** mean
 retested — see [Retest before closing](#retest-before-closing).
@@ -13,7 +15,7 @@ retested — see [Retest before closing](#retest-before-closing).
 
 | Status | Count | IDs |
 |---|---|---|
-| Fixed on this branch | 3 | SR-01, **SR-06** (delivered on device 2026-09-21), **A-01** (Andrei's "still 99%", 2026-09-21) |
+| Fixed on this branch | 4 | SR-01, **SR-06** (delivered on device 2026-09-21), **A-01** (Andrei's "still 99%", 2026-09-21), **A-02** (Andrei's "resync got stuck", 2026-09-22 — on `fix/sync-process-stalls`) |
 | Addressed by the #1555 merge | 2 | D-056, D-031 |
 | Addressed by the pending master merge | 1 | D-011 |
 | Still applies | 7 | D-037, **D-041** (SDK defect; the display hold and the seed gate are now proven on device — see the 2026-09-21 update), D-068, SR-22, SR-05, SR-03/04, SR-07 |
@@ -104,6 +106,31 @@ one-block blip.
 log says why. The root cause is dash-spv's `pending_blocks()` never draining (plan §34), traced
 into `blocks/sync_manager.rs` and paused at the `requested` vs `from_storage` fork; the issue draft
 is repinned to the shipping engine revision and still unfiled.
+
+---
+
+### A-02 — "Mo-1022 resync got stuck" (Andrei, 2026-09-22)
+
+*Reported with logs and two screenshots from the Samsung SM-A536B (Android 16), release `12000017`.
+Not reproduced on our devices: it needs a blockchain reset AND a pending wallet shield whose
+InstantSend never arrives, together.*
+
+**The defect.** After a blockchain reset the SPV engine was stopped by the idle detector at 06:31 UTC
+and never ran again; four hours later the Network Monitor read "Network engine not started" and the
+header "Syncing balance". Not the §34 filter park — the engine was off. The service's `onDestroy`
+cleanup hung in `ShieldedBalanceServiceImpl.stop()`, waiting on a mutex held by a bring-up that was
+itself parked inside the SDK's `bindShielded`, which was queued behind a resumed wallet shield
+waiting indefinitely for a ChainLock (`shield_guard`, rs-platform-wallet). Every later start refused
+itself as a "deadlock in onDestroy". Full chain in
+[plan §37](upgrade-memory-and-sync-plan.md).
+
+**Fixed** on `fix/sync-process-stalls`: `stop()` is bounded at 5 s and makes the abandoned bring-up
+inert; a start refused by a cleanup stuck past 5 minutes ends the process when the app is in the
+background, so the next alarm start is clean. The platform half — the guard held across an unbounded
+wait — is drafted as [kotlin-sdk-issues-to-file.md §17](kotlin-sdk-issues-to-file.md).
+
+**Not yet proven on device.** Unit-pinned only (`ShieldedBalanceServiceTest`,
+`CleanupDeadlockPolicyTest`). A device proof needs the stuck asset lock's wallet, which is Andrei's.
 
 ---
 
