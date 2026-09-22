@@ -72,6 +72,12 @@ class SweepWalletActivity: AbstractBindServiceActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        if (isFinishing) {
+            // LockScreenActivity finishes us when there is no wallet (e.g. the activity was
+            // launched directly on a fresh install) - don't touch the wallet or its services.
+            return
+        }
+
         binding = ActivitySweepWalletBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.appbar.toolbar.title = getString(R.string.sweep_wallet_activity_title)
