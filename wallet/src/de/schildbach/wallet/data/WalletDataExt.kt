@@ -38,9 +38,25 @@ import org.bitcoinj.core.Context
 suspend fun WalletData.freshReceiveAddressOffMain(): Address = withContext(Dispatchers.IO) {
     @Suppress("DEPRECATION")
     wallet?.let { Context.propagate(it.context) }
-    freshReceiveAddress()
+    // [WalletData.freshReceiveAddressLive], not the plain accessor: post-cutover
+    // the dashj chain is HELD and its pointer is frozen, so the plain one hands
+    // back an address the chain has already paid (SR-03 / D-003). The live one
+    // asks the engine that actually owns the chain now. Pre-cutover the two are
+    // the same call.
+    freshReceiveAddressLive()
 }
 
 /** Base58 variant of [freshReceiveAddressOffMain] — same off-main contract. */
 suspend fun WalletData.freshReceiveAddressStringOffMain(): String =
     freshReceiveAddressOffMain().toBase58()
+
+/**
+ * The wallet's CURRENT receive address, read off the calling thread — the
+ * address to advertise (Receive screen, QR) rather than a newly issued one.
+ * Same seam and same engine-vs-dashj reasoning as [freshReceiveAddressOffMain].
+ */
+suspend fun WalletData.currentReceiveAddressOffMain(): Address = withContext(Dispatchers.IO) {
+    @Suppress("DEPRECATION")
+    wallet?.let { Context.propagate(it.context) }
+    currentReceiveAddressLive()
+}

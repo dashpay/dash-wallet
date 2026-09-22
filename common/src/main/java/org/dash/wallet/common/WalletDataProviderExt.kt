@@ -44,7 +44,19 @@ import org.dash.wallet.common.transactions.filters.LockedTransaction
  * `freshReceiveAddressString()` keep working unchanged.
  */
 suspend fun WalletDataProvider.freshReceiveAddressStringOffMain(): String =
-    withContext(Dispatchers.IO) { freshReceiveAddressString() }
+    withContext(Dispatchers.IO) { freshReceiveAddressStringLive() }
+
+/**
+ * The wallet's current receive address, read OFF the calling thread.
+ *
+ * Same seam and same reason as [freshReceiveAddressStringOffMain], for the
+ * callers that want the address the wallet is currently advertising rather than
+ * a newly issued one (Maya's refund/source address, the swap aggregator). The
+ * `Live` accessor underneath is what makes this the ENGINE's next unused address
+ * post-cutover instead of the held dashj chain's frozen pointer.
+ */
+suspend fun WalletDataProvider.currentReceiveAddressStringOffMain(): String =
+    withContext(Dispatchers.IO) { currentReceiveAddressStringLive() }
 
 /** [WalletDataProvider.observeTotalBalance] as neutral [Dash] amounts. */
 fun WalletDataProvider.observeTotalDashBalance(): Flow<Dash> = observeTotalBalance()

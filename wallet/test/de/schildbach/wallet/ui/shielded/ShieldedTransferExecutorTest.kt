@@ -44,6 +44,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.bitcoinj.core.Address
+import org.bitcoinj.params.TestNet3Params
+
+/** A valid testnet address — the executor base58-encodes what the wallet returns. */
+private const val UNSHIELD_DESTINATION_BASE58 = "ydW78zVxRgNhANX2qtG4saSCC5ejNQjw2U"
 
 /**
  * Verifies the app-scoped spend owner [ShieldedTransferExecutor]:
@@ -71,8 +76,14 @@ class ShieldedTransferExecutorTest {
     private val dispatcher = UnconfinedTestDispatcher()
 
     private val shieldedService = mockk<ShieldedBalanceService>()
+    private val unshieldDestination =
+        Address.fromBase58(TestNet3Params.get(), UNSHIELD_DESTINATION_BASE58)
+
     private val walletData = mockk<WalletData> {
-        every { freshReceiveAddressString() } returns "yTestAddressBase58"
+        // The unshield destination comes from the `Live` accessor — the engine's
+        // next UNUSED address post-cutover, dashj's fresh one before it (SR-03 /
+        // D-003). It returns a dashj Address, which the executor base58-encodes.
+        every { freshReceiveAddressLive() } returns unshieldDestination
     }
     private val notificationService = mockk<NotificationService>(relaxUnitFun = true)
     private val appContext = mockk<Context> {
@@ -154,12 +165,12 @@ class ShieldedTransferExecutorTest {
         executor.submit(ShieldedTransferDirection.FromShielded, Dash.parse("1"))
         assertEquals(ShieldedSubmitState.Success, executor.submitState.value)
         // the withdraw draws a fresh Core receive address
-        coVerify { shieldedService.withdrawToCore("yTestAddressBase58", Dash.parse("1")) }
+        coVerify { shieldedService.withdrawToCore(UNSHIELD_DESTINATION_BASE58, Dash.parse("1")) }
     }
 
     @Test
     fun freshAddressFailure_isNotSent_notAmbiguous() = runTest(dispatcher) {
-        every { walletData.freshReceiveAddressString() } throws IllegalStateException("wallet locked")
+        every { walletData.freshReceiveAddressLive() } throws IllegalStateException("wallet locked")
         val executor = executor()
 
         executor.submit(ShieldedTransferDirection.FromShielded, Dash.parse("1"))

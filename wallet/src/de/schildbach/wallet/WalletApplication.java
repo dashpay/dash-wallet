@@ -1996,16 +1996,129 @@ public class WalletApplication extends MultiDexApplication
         autoLogout.stopTimer();
     }
 
-    @NotNull
-    @Override
-    public Address currentReceiveAddress() {
-        return wallet.currentReceiveAddress();
+    /**
+     * The cutover overlay behind {@link #currentReceiveAddress()} and
+     * {@link #freshReceiveAddress()}: the ENGINE's next unused BIP-44 external
+     * address, or null to keep the dashj answer.
+     *
+     * <p>Post-cutover the dashj wallet is HELD — it never sees a block, so its
+     * receive key chain's pointer stays wherever the restore left it (index 0 on
+     * a fresh restore) and both methods below served an address the chain had
+     * already paid (SR-03 / D-003). The engine's pointer comes from the SPV
+     * scan's used-set, so it skips that range. See
+     * {@code CutoverUiDataService.sdkReceiveAddressOrNull} for why this is the
+     * cached engine value rather than a live FFI read, and
+     * {@link #currentReceiveAddressLive()} for the off-main callers that want
+     * the live one.
+     */
+    @Nullable
+    private Address sdkReceiveAddressOrNull() {
+        if (cutoverUiDataService == null) {
+            return null;
+        }
+        return toDashjAddressOrNull(cutoverUiDataService.sdkReceiveAddressOrNull());
+    }
+
+    /**
+     * Parse a base58 address the SDK produced into the dashj type, or null when
+     * it is absent or unparseable. A malformed engine address must degrade to
+     * the dashj fallback, never throw out of a receive-address read.
+     */
+    @Nullable
+    private Address toDashjAddressOrNull(@Nullable final String base58) {
+        if (base58 == null) {
+            return null;
+        }
+        try {
+            return Address.fromBase58(getNetworkParameters(), base58);
+        } catch (final Exception x) {
+            log.warn("engine receive address {} is not valid on {}; keeping dashj",
+                    base58, getNetworkParameters().getId(), x);
+            return null;
+        }
     }
 
     @NotNull
     @Override
+    public Address currentReceiveAddress() {
+        final Address sdkAddress = sdkReceiveAddressOrNull();
+        if (sdkAddress != null) {
+            return sdkAddress;
+        }
+        return wallet.currentReceiveAddress();
+    }
+
+    /**
+     * Post-cutover this returns the ENGINE's next unused receive address too —
+     * the engine exposes no per-invoice issuing marker
+     * ({@code core_wallet_next_receive_address} is idempotent and answers from
+     * the used-set), so "fresh" and "current" coincide until a payment lands and
+     * moves the pointer. That is a deliberate narrowing of dashj's per-call
+     * handout, and it is the correct trade here: dashj's post-cutover "fresh"
+     * walked forward from a frozen index-0 base and handed out addresses the
+     * chain had ALREADY paid, which is worse on both counts this method exists
+     * for (correctness and reuse).
+     *
+     * <p>It also no longer forces dashj's synchronous full-wallet save on this
+     * path (~1.2s at 215 DashPay friend chains), because no dashj key is issued.
+     */
+    @NotNull
+    @Override
     public Address freshReceiveAddress() {
+        final Address sdkAddress = sdkReceiveAddressOrNull();
+        if (sdkAddress != null) {
+            return sdkAddress;
+        }
         return wallet.freshReceiveAddress();
+    }
+
+    /**
+     * A LIVE engine read of the next unused receive address, bypassing the cache
+     * {@link #sdkReceiveAddressOrNull()} serves, or null when the engine has no
+     * answer (pre-cutover, rolled back, SDK not up, read failed).
+     *
+     * <p>BLOCKS on the SDK FFI — it takes the engine's wallet-manager write
+     * lock — so both public callers below are contracted off-main.
+     */
+    @Nullable
+    private Address liveSdkReceiveAddressOrNull() {
+        if (cutoverUiDataService == null) {
+            return null;
+        }
+        return toDashjAddressOrNull(cutoverUiDataService.sdkReceiveAddressLiveBlockingOrNull());
+    }
+
+    /**
+     * {@link #currentReceiveAddress()} with a LIVE engine read instead of the
+     * cached one — for callers already off the main thread that want the
+     * engine's answer as of this instant (the Receive screen and the QR it
+     * shows, the unshield destination, the exchange-integration deposit
+     * addresses). Falls back to {@link #currentReceiveAddress()} whenever the
+     * engine has no answer, so it is always safe to prefer over it.
+     *
+     * <p>BLOCKS: off-main callers only. See {@code WalletData.currentReceiveAddressLive}.
+     */
+    @NotNull
+    @Override
+    public Address currentReceiveAddressLive() {
+        final Address live = liveSdkReceiveAddressOrNull();
+        return live != null ? live : currentReceiveAddress();
+    }
+
+    /**
+     * {@link #freshReceiveAddress()} with a LIVE engine read. Post-cutover this
+     * is the same engine address {@link #currentReceiveAddressLive()} returns
+     * (see {@link #freshReceiveAddress()} for why the two coincide there);
+     * pre-cutover it is dashj's per-invoice handout, unchanged.
+     *
+     * <p>BLOCKS: off-main callers only — pre-cutover it still forces dashj's
+     * synchronous full-wallet save.
+     */
+    @NotNull
+    @Override
+    public Address freshReceiveAddressLive() {
+        final Address live = liveSdkReceiveAddressOrNull();
+        return live != null ? live : freshReceiveAddress();
     }
 
     @NotNull

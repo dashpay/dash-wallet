@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.currentReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.services.InsufficientFundsException
@@ -681,7 +682,7 @@ class SwapKitApiAggregator @Inject constructor(
         // until funded and still wallet-owned, so any NEAR refund is recoverable. Safe now
         // that disableBuildTx=true skips SwapKit's per-address balance check — the only
         // reason the max-balance address was originally required.
-        val sourceAddress = walletDataProvider.currentReceiveAddressString()
+        val sourceAddress = walletDataProvider.currentReceiveAddressStringOffMain()
 
         val quote = webApi.getQuote(
             SwapKitQuoteRequest(
@@ -864,7 +865,7 @@ class SwapKitApiAggregator @Inject constructor(
         // quote createBuyOrder would, but stop before /v3/swap (no deposit address is created).
         // The converted DASH lands in the wallet, so the destination is our own receive address;
         // the caller passes the asset's example address as the refund/source address.
-        val destinationAddress = walletDataProvider.currentReceiveAddressString()
+        val destinationAddress = walletDataProvider.currentReceiveAddressStringOffMain()
         return when (
             val result = requestBuyRoute(sellAsset, sellAmount, refundAddress, destinationAddress)
         ) {

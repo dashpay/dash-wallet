@@ -845,6 +845,20 @@ class CutoverUiDataServiceTest {
 
         override suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = utxoCount
 
+        /**
+         * The ENGINE's next unused receive address (null = read unavailable),
+         * and how many times it has been asked for — the refresh cadence is
+         * part of the contract, since the pointer only moves when a receive
+         * lands and that arrives as a tx event.
+         */
+        var nextReceiveAddress: String? = "yENGINEnextUnusedAddress"
+        var nextReceiveAddressReads = 0
+
+        override fun nextReceiveAddressOrNull(walletIdHex: String, accountIndex: Int): String? {
+            nextReceiveAddressReads++
+            return nextReceiveAddress
+        }
+
         override suspend fun currentTotalDuffs(walletIdHex: String): Long =
             currentBalanceSplitDuffs(walletIdHex).total
 
@@ -1419,6 +1433,112 @@ class CutoverUiDataServiceTest {
         runCurrent()
 
         assertNull(service.sdkSpendableUtxoCountOrNull())
+    }
+
+    // ── Receive-address overlay (SR-03 / D-003) ──────────────────────
+
+    @Test
+    fun preCutover_receiveAddressKeepsTheDashjChain() = runTest {
+        // Pre-cutover dashj still owns the key chain and its pointer is live,
+        // so the overlay must not engage — nor touch the SDK at all.
+        val source = FakeSource()
+        val service = buildService(source, configWithState("DUAL_RUNNING"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertNull(service.sdkReceiveAddressOrNull())
+        assertNull(service.sdkReceiveAddressLiveOrNull())
+        assertEquals(0, source.nextReceiveAddressReads)
+    }
+
+    @Test
+    fun postCutover_receiveAddressServedFromTheEngine() = runTest {
+        // FIX-pin (SR-03 / D-003): post-cutover the dashj wallet is HELD, so
+        // its receive pointer is frozen wherever the restore left it — index 0
+        // on a fresh restore, an address the chain has ALREADY paid. The
+        // engine's pointer comes from the SPV scan's used-set.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+    }
+
+    @Test
+    fun postCutover_receiveAddressAdvancesOnAnEngineTxEvent() = runTest {
+        // The one thing that moves the engine's pointer is a receive landing on
+        // the current address — which arrives as a tx event, so the cache the
+        // synchronous overlay serves must be re-read on that event.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope, txEvents = events
+        )
+        service.start()
+        runCurrent()
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+
+        source.nextReceiveAddress = "yENGINEsecondUnusedAddress"
+        events.emit(
+            L1TxEvent.Detected(displayHex(3), 1_000_000L, null, contextCode = 0, directionCode = 0)
+        )
+        runCurrent()
+
+        assertEquals("yENGINEsecondUnusedAddress", service.sdkReceiveAddressOrNull())
+    }
+
+    @Test
+    fun postCutover_failedEngineReadHoldsTheLastAddress() = runTest {
+        // Unlike the balance split and the UTXO count, a failed read must NOT
+        // drop the override to null: null sends the overlay back to the frozen
+        // dashj index-0 address, which is the defect itself. A slightly stale
+        // engine address is at worst one the engine has not yet marked used.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope, txEvents = events
+        )
+        service.start()
+        runCurrent()
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+
+        source.nextReceiveAddress = null
+        events.emit(
+            L1TxEvent.Detected(displayHex(4), 1_000_000L, null, contextCode = 0, directionCode = 0)
+        )
+        runCurrent()
+
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+        // …and the live read reports the same held value rather than nothing.
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressLiveOrNull())
+    }
+
+    @Test
+    fun postCutover_receiveAddressUnavailableFromTheStartFallsBackToDashj() = runTest {
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+            .apply { nextReceiveAddress = null }
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertNull(service.sdkReceiveAddressOrNull())
+    }
+
+    @Test
+    fun postCutover_liveReceiveAddressBypassesTheCache() = runTest {
+        // The Receive screen reads live: it must see a pointer move that no tx
+        // event or ticker has published into the cache yet.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        source.nextReceiveAddress = "yENGINEliveAddress"
+
+        assertEquals("yENGINEliveAddress", service.sdkReceiveAddressLiveOrNull())
+        // …and publishes what it read, so the synchronous overlay follows.
+        assertEquals("yENGINEliveAddress", service.sdkReceiveAddressOrNull())
     }
 
     @Test

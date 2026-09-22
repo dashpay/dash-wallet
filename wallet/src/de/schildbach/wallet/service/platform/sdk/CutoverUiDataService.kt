@@ -1160,6 +1160,38 @@ interface CutoverUiSource {
     suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = null
 
     /**
+     * The wallet's NEXT UNUSED BIP-44 external (receive) address, base58, read
+     * straight from the ENGINE over the FFI
+     * (`core_wallet_next_receive_address` →
+     * `ManagedCoreWallet.nextReceiveAddress`) — deliberately NOT from the SDK's
+     * Room `core_addresses` mirror. The mirror is a persistence PROJECTION the
+     * engine writes behind itself (`onPersistAccountAddressPoolEntry`), so it
+     * lags every used-marker by a persistence pass; the engine's own used-set is
+     * the only thing that answers "which address has nobody paid yet" at the
+     * instant the Receive screen asks.
+     *
+     * This is the post-cutover replacement for dashj's
+     * `currentReceiveAddress()`. Post-cutover the dashj wallet is HELD, so its
+     * key chain never sees the chain and its "current" pointer sits wherever the
+     * restore left it — index 0 on a fresh restore, i.e. an address the wallet
+     * has ALREADY been paid on (SR-03/D-003: the Receive screen re-served the
+     * funded address after Reset Wallet + restore). The engine's pointer, fed by
+     * the SPV scan's used-set, skips that range.
+     *
+     * Synchronous by construction: the FFI call needs no coroutine and the
+     * manager handle is available without suspending, which is what lets the
+     * non-suspending [de.schildbach.wallet.WalletApplication.currentReceiveAddress]
+     * overlay serve an engine-authoritative answer rather than a cached one. It
+     * DOES take the engine's wallet-manager write lock, so callers must be off
+     * the main thread — see [CutoverUiDataService.sdkReceiveAddressLiveOrNull].
+     *
+     * Null when unavailable (SDK not started, wallet not loaded, no BIP-44
+     * account yet, FFI error) — "unknown", never a wrong address; the caller
+     * falls back. Default null: sources without a core wallet (test fixtures).
+     */
+    fun nextReceiveAddressOrNull(walletIdHex: String, accountIndex: Int = 0): String? = null
+
+    /**
      * ONE-SHOT count of the wallet's own transaction RECORDS — the distinct
      * txids the wallet's TXOs fund or spend, i.e. the cardinality of the set
      * [observeWalletTxRecords] / [forEachWalletTxRecordPage] enumerate. This
@@ -1331,6 +1363,37 @@ internal class DashSdkCutoverUiSource(
 
     override suspend fun currentTotalDuffs(walletIdHex: String): Long =
         currentBalanceSplitDuffs(walletIdHex).total
+
+    /**
+     * See [CutoverUiSource.nextReceiveAddressOrNull]. Engine-only: the wallet
+     * manager handle is read WITHOUT [DashSdkService.ensureStarted] (this is a
+     * non-suspending call), so it simply answers null while the SDK is not up —
+     * post-cutover it always is, because the pipelines that consume this have
+     * already started it.
+     *
+     * [ManagedPlatformWallet.coreWallet] hands out an owned handle, so it is
+     * closed with `use` exactly like every other core-wallet call site
+     * (`widenAddressWindows`, `CoreSendAllNative`).
+     */
+    override fun nextReceiveAddressOrNull(walletIdHex: String, accountIndex: Int): String? {
+        val manager = service.walletManagerOrNull() ?: return null
+        val wallet = manager.wallets.value[walletIdHex] ?: return null
+        return try {
+            wallet.coreWallet().use { core -> core.nextReceiveAddress(accountIndex) }
+                .takeIf { it.isNotBlank() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // Never propagate: every caller treats null as "keep the previous /
+            // fall back to dashj", which is always safe; throwing here would
+            // take down the balance refresh this rides on.
+            log.warn(
+                "engine next-receive-address read failed for account {} on {}…: {}",
+                accountIndex, walletIdHex.take(8), e.message
+            )
+            null
+        }
+    }
 
     override suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? {
         val walletId = walletIdFromHex(walletIdHex) ?: return null
@@ -2341,6 +2404,98 @@ class CutoverUiDataService internal constructor(
     fun sdkSpendableUtxoCountOrNull(): Int? =
         _sdkSpendableUtxoCount.value?.takeIf { _l1Synced.value }
 
+    private val _sdkReceiveAddress = MutableStateFlow<String?>(null)
+
+    /**
+     * The ENGINE's next unused BIP-44 external (receive) address, base58, or
+     * null while the cutover UI feed is inactive / the read is unavailable.
+     * Refreshed on the same cadence as the native balance split
+     * ([refreshNativeSplit]: initial seed, engine tx events, ticker) — and that
+     * cadence is exactly right for this value, because the ONE thing that moves
+     * the engine's pointer is a receive landing on the current address, which IS
+     * an engine tx event.
+     */
+    val sdkReceiveAddress: StateFlow<String?> = _sdkReceiveAddress.asStateFlow()
+
+    /**
+     * Synchronous, NON-BLOCKING cutover overlay for
+     * [de.schildbach.wallet.WalletApplication.currentReceiveAddress] /
+     * [de.schildbach.wallet.WalletApplication.freshReceiveAddress], or null to
+     * keep the dashj address.
+     *
+     * ## Why an overlay was needed (SR-03 / D-003)
+     *
+     * Post-cutover the dashj wallet is HELD: it never sees a block, so its
+     * receive key chain's "current" pointer stays wherever the restore left it —
+     * index 0 on a fresh restore. The Receive screen therefore re-served the
+     * very address the wallet had already been funded on, and `freshReceiveAddress()`
+     * walked forward from the same index-0 base through the used range instead
+     * of skipping it. That is a correctness defect (a payer sees a reused
+     * address) and a privacy one (address reuse links payments).
+     *
+     * The engine's own pointer is derived from the SPV scan's used-set, so it
+     * skips every address the chain has already paid. This overlay serves that.
+     *
+     * ## Why it serves the CACHE and not a live FFI read
+     *
+     * The FFI read takes the engine's wallet-manager WRITE lock, and this
+     * accessor is reachable from the main thread (widgets, loaders, Java call
+     * sites with no coroutine). The cache is refreshed by the very event that
+     * can invalidate it, so its staleness window is the gap between an engine tx
+     * event and the next line of [refreshNativeSplit] — sub-millisecond in
+     * practice. Off-main callers that want the guarantee rather than the
+     * practice use [sdkReceiveAddressLiveOrNull].
+     *
+     * ## Why there is no [_l1Synced] gate
+     *
+     * Unlike the UTXO count, holding back here has no safe direction: the dashj
+     * fallback post-cutover is a KNOWN-WRONG address (index 0 of a restored,
+     * frozen chain), not a sound over-estimate. A mid-scan engine answer can
+     * still be an address the scan has not yet found a payment for, but it is
+     * the engine's honest best answer and it converges as the scan advances —
+     * strictly better than serving an address we can already see on chain.
+     */
+    fun sdkReceiveAddressOrNull(): String? = _sdkReceiveAddress.value
+
+    /**
+     * LIVE engine read of the next unused receive address, bypassing the cache —
+     * for callers that are already off the main thread and want the engine's
+     * answer as of THIS instant (the Receive screen, the unshield destination,
+     * the buy/sell integrations' deposit address). Publishes what it reads, so
+     * the cache the synchronous [sdkReceiveAddressOrNull] serves is refreshed as
+     * a side effect.
+     *
+     * BLOCKS on the FFI (it takes the engine's wallet-manager write lock), hence
+     * [Dispatchers.IO]. Null when the cutover is not active or the read is
+     * unavailable — the caller falls back, it never returns a guessed address.
+     */
+    suspend fun sdkReceiveAddressLiveOrNull(): String? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            sdkReceiveAddressLiveBlockingOrNull()
+        }
+
+    /**
+     * [sdkReceiveAddressLiveOrNull] without the coroutine — the whole read is
+     * synchronous (the FFI call needs no suspension), so the Java call sites
+     * that are already on a background thread
+     * ([de.schildbach.wallet.WalletApplication.currentReceiveAddressLive] and
+     * [de.schildbach.wallet.WalletApplication.freshReceiveAddressLive], which
+     * the paper-wallet sweep drives off its background handler) can use it
+     * directly instead of bridging into `runBlocking`.
+     *
+     * BLOCKS on the engine's wallet-manager write lock — off-main only.
+     */
+    fun sdkReceiveAddressLiveBlockingOrNull(): String? {
+        if (!_cutoverActive.value) return null
+        val walletIdHex = activeWalletIdHex ?: return null
+        val address = source.nextReceiveAddressOrNull(walletIdHex)
+        // A failed read leaves the last known value in place rather than
+        // clearing it: an empty cache sends the synchronous overlay back to the
+        // frozen dashj address, which is the defect this exists to fix.
+        if (address != null) _sdkReceiveAddress.value = address
+        return address ?: _sdkReceiveAddress.value
+    }
+
     /**
      * Whether the SDK's L1 scan has caught up. Mirrors EXACTLY the predicate
      * behind the home header's blinking "Syncing balance" label
@@ -2479,6 +2634,12 @@ class CutoverUiDataService internal constructor(
                         _sdkConfirmedBalance.value = null
                         _sdkMaxSendable.value = null
                         _sdkSpendableUtxoCount.value = null
+                        // A rollback puts dashj back in charge of the key chain,
+                        // so the engine address must stop being served — and the
+                        // bound id must go with it, or a live read could still
+                        // answer from the wallet the rollback just abandoned.
+                        _sdkReceiveAddress.value = null
+                        activeWalletIdHex = null
                         return@collectLatest
                     }
                     log.info("cutover committed — serving home-screen data from the SDK")
@@ -2491,6 +2652,8 @@ class CutoverUiDataService internal constructor(
                         _sdkConfirmedBalance.value = null
                         _sdkMaxSendable.value = null
                         _sdkSpendableUtxoCount.value = null
+                        _sdkReceiveAddress.value = null
+                        activeWalletIdHex = null
                     }
                 }
         }
@@ -2498,6 +2661,11 @@ class CutoverUiDataService internal constructor(
 
     private suspend fun runPipelines() = coroutineScope {
         val walletIdHex = awaitBoundWallet()
+        // Bind the id here rather than only in [txPipeline]: the receive-address
+        // live read ([sdkReceiveAddressLiveOrNull]) is reachable from the UI the
+        // moment the cutover is active, i.e. potentially before the tx pipeline's
+        // first line runs. Same value, published sooner.
+        activeWalletIdHex = walletIdHex
         // Observability: the instant-receive tap is gated on
         // USE_KOTLIN_SDK_L1_SHADOW ([L1ShadowSyncService.startIfEnabled])
         // while THIS service gates on CUTOVER_STATE. A committed cutover
@@ -2747,6 +2915,22 @@ class CutoverUiDataService internal constructor(
             log.warn("SDK spendable-UTXO-count read failed; falling back to the dashj count", t)
             _sdkSpendableUtxoCount.value = null
         }
+        // The RECEIVE ADDRESS rides the same cadence for a reason of its own:
+        // the only thing that moves the engine's pointer is a receive landing on
+        // the current address, and that is precisely an engine tx event — one of
+        // the two triggers of this function. Unlike the reads above, a failed one
+        // HOLDS the last known address instead of dropping to null: null sends
+        // the overlay back to the frozen dashj index-0 address, which is the
+        // defect ([sdkReceiveAddressOrNull]), whereas a slightly stale engine
+        // address is at worst one the engine has not yet marked used.
+        val nextReceive = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            source.nextReceiveAddressOrNull(walletIdHex)
+        }
+        if (nextReceive != null) {
+            _sdkReceiveAddress.value = nextReceive
+        } else if (_sdkReceiveAddress.value == null) {
+            log.info("engine next-receive-address unavailable; the Receive screen stays on dashj")
+        }
     }
 
     private suspend fun updateSdkBalance(duffs: Long) {
@@ -2884,11 +3068,14 @@ class CutoverUiDataService internal constructor(
     }
 
     /**
-     * The bound SDK wallet id once [txPipeline] runs — read by the historical-
-     * mixing classification probe in [syncDisplayCache]
-     * ([CutoverUiSource.coinJoinFundedTxids] is wallet-scoped). Volatile only
-     * for memory visibility; both writer and reader live on [txPipeline]'s
-     * sequential collector.
+     * The bound SDK wallet id for the whole run of the pipelines — set by
+     * [runPipelines] as soon as [awaitBoundWallet] resolves, re-set (to the same
+     * value) by [txPipeline], and cleared when the cutover goes inactive.
+     *
+     * Read by the historical-mixing classification probe in [syncDisplayCache]
+     * ([CutoverUiSource.coinJoinFundedTxids] is wallet-scoped) and by the
+     * receive-address live read ([sdkReceiveAddressLiveOrNull]) — the latter
+     * from arbitrary UI coroutines, which is what the [Volatile] is for.
      */
     @Volatile
     private var activeWalletIdHex: String? = null
