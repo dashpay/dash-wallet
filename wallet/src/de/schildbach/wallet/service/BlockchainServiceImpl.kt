@@ -380,6 +380,49 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         /** Whether a previous instance of this service is still tearing down. */
         val isCleaningUpNow: Boolean get() = isCleaningUp.get() || pendingDestroys.get() > 0
 
+        /**
+         * `SystemClock.elapsedRealtime()` at which the active [cleanupDeferred]
+         * was created; 0 until the first destroy. Read by the onCreate guard to
+         * measure how long a refused start has been waiting on a cleanup that
+         * never finishes.
+         */
+        private val cleanupStartedAtMs = AtomicLong(0)
+
+        /**
+         * Plan §37: how long a previous instance's cleanup may stay unfinished
+         * before a refused start ends the PROCESS instead of only stopping
+         * itself. The periodic alarm retries every 15 minutes, so the exit
+         * lands on the first retry past this bound.
+         */
+        internal const val CLEANUP_DEADLOCK_EXIT_MS = 5 * 60_000L
+
+        /** What a start refused by an unfinished cleanup does next — see [decideOnCleanupDeadlock]. */
+        enum class CleanupDeadlockAction { STOP_SELF, EXIT_PROCESS }
+
+        /**
+         * Plan §37 (Andrei, 2026-09-22): a shutdown parked behind a native SDK
+         * call never completed, so every start for four hours logged "deadlock
+         * in onDestroy" and stopped itself — the process lived on with the
+         * engine off and nothing in it could ever recover. A cleanup that has
+         * been stuck past [CLEANUP_DEADLOCK_EXIT_MS] is not going to finish;
+         * ending the process is the only exit, and the next start (the alarm,
+         * or the user) then begins from a clean one.
+         *
+         * Never while the app is visible: the start being refused is the one
+         * the user's own foreground triggered, and exiting would close the app
+         * in their face. They get the refusal as before; the background retry
+         * gets the exit.
+         *
+         * Pure, so both axes are pinned by test.
+         */
+        @JvmStatic
+        fun decideOnCleanupDeadlock(stuckForMs: Long, appVisible: Boolean): CleanupDeadlockAction =
+            if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS && !appVisible) {
+                CleanupDeadlockAction.EXIT_PROCESS
+            } else {
+                CleanupDeadlockAction.STOP_SELF
+            }
+
         /** Retries of a lock-blocked blockstore open before giving up. */
         private const val BLOCKSTORE_LOCK_RETRIES = 3
 
@@ -2157,6 +2200,31 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         onCreateCompleted.complete(Unit)
                     }
 
+                    // Plan §37: a cleanup stuck past the bound is never going to
+                    // finish. With the app in the background, end the process so
+                    // the next start gets a clean one; stopSelf alone left the
+                    // engine off for four hours on 2026-09-22.
+                    val startedAt = cleanupStartedAtMs.get()
+                    val stuckForMs = if (startedAt == 0L) 0L else SystemClock.elapsedRealtime() - startedAt
+                    val appVisible = AppForegroundMonitor.isForeground.value
+                    if (decideOnCleanupDeadlock(stuckForMs, appVisible) == CleanupDeadlockAction.EXIT_PROCESS) {
+                        log.error(
+                            "The previous instance's cleanup has been stuck for {} min with the app in the " +
+                                "background — ending the process so the next start begins from a clean one " +
+                                "(plan §37)",
+                            stuckForMs / 60_000
+                        )
+                        Runtime.getRuntime().exit(0)
+                        return@launch
+                    }
+                    if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS) {
+                        log.error(
+                            "The previous instance's cleanup has been stuck for {} min; the app is visible, " +
+                                "so not ending the process now — the next background start will (plan §37)",
+                            stuckForMs / 60_000
+                        )
+                    }
+
                     // Stop the service - we cannot safely initialize with cleanup still running
                     withContext(Dispatchers.Main) {
                         stopSelf()
@@ -2926,6 +2994,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 val existingCleanup = cleanupDeferred
                 if (existingCleanup == null || existingCleanup.isCompleted) {
                     cleanupDeferred = CompletableDeferred()
+                    cleanupStartedAtMs.set(SystemClock.elapsedRealtime())
                     log.info("Created new cleanupDeferred for coordination (previous was {})",
                         if (existingCleanup == null) "null" else "completed")
                 } else {
