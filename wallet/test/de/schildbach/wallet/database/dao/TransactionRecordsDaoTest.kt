@@ -18,7 +18,6 @@
 package de.schildbach.wallet.database.dao
 
 import androidx.room.Room
-import androidx.room.withTransaction
 import androidx.test.core.app.ApplicationProvider
 import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
@@ -31,6 +30,7 @@ import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -106,18 +106,26 @@ class TransactionRecordsDaoTest {
     }
 
     @Test
-    fun `the three deletes roll back together when the surrounding transaction fails`() = runBlocking {
+    fun `a failure in the last delete rolls back the earlier ones`() = runBlocking {
         seed(txId)
 
-        // Joining an outer transaction that then fails proves the deletes are transactional:
-        // without the @Transaction boundary the earlier ones would already have committed.
+        // No surrounding transaction, which is how production calls this, so the only thing that
+        // can roll the earlier deletes back is the method's own @Transaction boundary. A trigger
+        // aborts the metadata delete, which forgetTransaction runs last, after the gift cards and
+        // the queued platform changes have already been deleted inside the transaction.
+        //
+        // This doubles as the mutation check: remove @Transaction and each delete commits on its
+        // own, so the first two survive the abort and the assertion below fails.
+        db.openHelper.writableDatabase.execSQL(
+            "CREATE TRIGGER fail_metadata_delete BEFORE DELETE ON transaction_metadata " +
+                "BEGIN SELECT RAISE(ABORT, 'delete blocked'); END;"
+        )
+
         try {
-            db.withTransaction {
-                dao.forgetTransaction(txId)
-                throw RuntimeException("something after the cleanup failed")
-            }
-        } catch (expected: RuntimeException) {
-            // rollback is the point of the test
+            dao.forgetTransaction(txId)
+            fail("expected the blocked delete to abort the cleanup")
+        } catch (expected: Exception) {
+            // aborting is the point of the test
         }
 
         assertEquals(Triple(1, 1, 1), rowCounts(txId))
