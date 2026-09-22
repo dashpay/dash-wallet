@@ -623,10 +623,6 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
     }
 
     /**
-     * The payment went through but nothing could be stored about the gift card. Explain that,
-     * then leave the purchase flow the same way a successful purchase does.
-     */
-    /**
      * The payment was submitted but its result is unknown. Leave the purchase flow afterwards:
      * this order is paid for as far as we know, and keeping the sheet open would put a live
      * Confirm button back in front of the user once the warning is closed. Clearing the entered

@@ -323,7 +323,13 @@ class SendCoinsTaskRunner @Inject constructor(
                 true,
                 sendRequest.ensureMinRequiredFee
             )
-            return sendCoins(sendRequestForSigning, serviceName = serviceName)
+            val transaction = sendCoins(sendRequestForSigning, serviceName = serviceName)
+            // Same contract as the BIP70 branch: a caller that persists its order from this
+            // callback must not silently get nothing. It fires after the send here, because
+            // sendCoins completes the transaction internally and offers no suspending hook
+            // beforehand. There is no ambiguous submission on this path, so nothing waits on it.
+            onTransactionCreated?.invoke(transaction.txId)
+            return transaction
         }
     }
 

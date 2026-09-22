@@ -81,11 +81,20 @@ class PendingDirectPaymentVerifier @Inject constructor(
         private const val DEFAULT_SYNCED_GRACE_MS = 5 * 60_000L
         /** A chain tip older than this means we are not really caught up, whatever the sync state says. */
         private const val RECENT_CHAIN_TIP_MS = 30 * 60_000L
+        /**
+         * How long a released payment is still watched before its records are discarded.
+         *
+         * Releasing does not prove the payment never happened: the payee chooses when to relay
+         * the transaction, so one that withholds it until the grace period expires can broadcast
+         * afterwards. Keep watching, and keep the order, well beyond that point.
+         */
+        private const val DEFAULT_RECORD_RETENTION_MS = 24 * 60 * 60_000L
     }
 
     @VisibleForTesting internal var pollIntervalMs = DEFAULT_POLL_INTERVAL_MS
     @VisibleForTesting internal var minAgeMs = DEFAULT_MIN_AGE_MS
     @VisibleForTesting internal var syncedGraceMs = DEFAULT_SYNCED_GRACE_MS
+    @VisibleForTesting internal var recordRetentionMs = DEFAULT_RECORD_RETENTION_MS
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobs = ConcurrentHashMap<Sha256Hash, Deferred<Transaction?>>()
@@ -146,14 +155,11 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 log.info("resuming verification of {} pending direct payment(s)", pending.size)
                 for (payment in pending) {
                     try {
-                        if (payment.abandoned) {
-                            // already released; its inputs are spendable and only the records
-                            // saved against it still need removing
-                            discardRecords(payment)
-                            continue
-                        }
                         val tx = Transaction(wallet.params, payment.txBytes)
-                        if (!isTracked(tx.txId)) {
+                        // An abandoned payment keeps its watch but not its locks: the inputs were
+                        // already released, and re-locking outputs the user may since have spent
+                        // would be wrong. The watch continues so a late broadcast is still caught.
+                        if (!payment.abandoned && !isTracked(tx.txId)) {
                             lockInputs(wallet, tx)
                         }
                         track(tx, payment)
@@ -204,12 +210,16 @@ class PendingDirectPaymentVerifier @Inject constructor(
 
     private suspend fun verify(tx: Transaction, payment: PendingDirectPayment): Transaction? {
         log.info("watching the network for possibly-sent tx {} (submitted to {})", tx.txId, payment.paymentUrl)
+        var current = payment
         var syncedSince = 0L
 
         while (true) {
             try {
                 if (isTransactionOnNetwork(tx)) {
-                    return commit(tx, payment)
+                    // Also the late-broadcast case: a released payment is still watched, so a
+                    // payee that held the transaction back cannot leave us with a paid order
+                    // whose records were thrown away.
+                    return commit(tx, current)
                 }
 
                 val now = System.currentTimeMillis()
@@ -219,11 +229,17 @@ class PendingDirectPaymentVerifier @Inject constructor(
                     0L
                 }
 
-                if (syncedSince != 0L &&
-                    now - syncedSince >= syncedGraceMs &&
-                    now - payment.createdAt >= minAgeMs
-                ) {
-                    release(tx, payment)
+                if (!current.abandoned) {
+                    if (syncedSince != 0L &&
+                        now - syncedSince >= syncedGraceMs &&
+                        now - current.createdAt >= minAgeMs
+                    ) {
+                        // Frees the inputs, but the order stays and so does this watch: silence
+                        // for the grace period is not proof the payment never reached the payee.
+                        current = release(tx, current)
+                    }
+                } else if (now - current.createdAt >= recordRetentionMs) {
+                    discardRecords(current)
                     return null
                 }
             } catch (e: CancellationException) {
@@ -287,10 +303,18 @@ class PendingDirectPaymentVerifier @Inject constructor(
         return walletTx
     }
 
-    private suspend fun release(tx: Transaction, payment: PendingDirectPayment) {
+    /**
+     * Frees the inputs of a payment that has gone unseen for the whole grace period, and records
+     * that. The order is deliberately kept and the watch continues: the payee decides when to
+     * relay the transaction, so one that withholds it could otherwise have the records deleted
+     * and then broadcast.
+     *
+     * @return the payment as now stored, marked abandoned
+     */
+    private suspend fun release(tx: Transaction, payment: PendingDirectPayment): PendingDirectPayment {
         log.warn(
-            "possibly-sent tx {} was never seen on the network while connected and synced; " +
-                "the merchant did not receive the payment, releasing its inputs",
+            "possibly-sent tx {} has not been seen on the network while connected and synced; " +
+                "releasing its inputs but keeping the order and watching for a late broadcast",
             tx.txId
         )
         // Record the release durably before anything else. Until this lands, the payment must
@@ -306,10 +330,10 @@ class PendingDirectPaymentVerifier @Inject constructor(
             throw e
         }
 
-        // Past this point the stored payment says abandoned, so resume() will only ever retry the
-        // cleanup: it is safe to free the inputs and start discarding the records.
+        // Past this point the stored payment says abandoned, so a restart will not lock these
+        // inputs again, only carry on watching.
         walletData.wallet?.let { unlockInputs(it, tx) }
-        discardRecords(abandoned)
+        return abandoned
     }
 
     /**
@@ -318,6 +342,15 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * platform changes behind with nothing left to retry them.
      */
     private suspend fun discardRecords(payment: PendingDirectPayment) {
+        // The transaction can arrive between the last network check and this call. forgetTransaction
+        // then reports settled without deleting anything, because the wallet holds it, and finishing
+        // here would lose the gift card metadata commit() restores. Look again first.
+        walletData.wallet?.getTransaction(payment.txId)?.let { walletTx ->
+            log.info("abandoned payment {} turned out to be real after all, committing it", payment.txId)
+            commit(walletTx, payment)
+            return
+        }
+
         val settled = try {
             metadataProvider.forgetTransaction(payment.txId)
         } catch (e: Exception) {

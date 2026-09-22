@@ -158,6 +158,7 @@ class PendingDirectPaymentVerifierTest {
     fun `releases inputs when connected and synced for the grace period without seeing the tx`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 100L
+        verifier.recordRetentionMs = 0L
         goOnlineAndSynced()
         val tx = createTransaction()
 
@@ -175,6 +176,7 @@ class PendingDirectPaymentVerifierTest {
     fun `removes optimistically saved gift cards when the payment is abandoned`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 100L
+        verifier.recordRetentionMs = 0L
         goOnlineAndSynced()
         val tx = createTransaction()
 
@@ -201,6 +203,7 @@ class PendingDirectPaymentVerifierTest {
     fun `keeps the payment when its records could not be discarded`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 100L
+        verifier.recordRetentionMs = 0L
         goOnlineAndSynced()
         // cleanup deferred, e.g. no wallet available to confirm the transaction is absent
         coEvery { metadataProvider.forgetTransaction(any()) } returns false
@@ -255,6 +258,7 @@ class PendingDirectPaymentVerifierTest {
     fun `keeps the payment when discarding its records throws`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 100L
+        verifier.recordRetentionMs = 0L
         goOnlineAndSynced()
         coEvery { metadataProvider.forgetTransaction(any()) } throws RuntimeException("database is gone")
         val tx = createTransaction()
@@ -266,7 +270,8 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
-    fun `resume retries the cleanup of an abandoned payment without locking its inputs`() = runBlocking {
+    fun `resume keeps watching an abandoned payment without locking its inputs`() = runBlocking {
+        verifier.recordRetentionMs = 0L
         val tx = createTransaction()
         coEvery { config.getAll() } returns listOf(
             PendingDirectPayment(
@@ -303,6 +308,48 @@ class PendingDirectPaymentVerifierTest {
         assertFalse("must not declare a payment dead without ever seeing the network", result.isCompleted)
         tx.inputs.forEach { assertTrue(wallet.isLockedOutput(it.outpoint)) }
         coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+    }
+
+    @Test
+    fun `keeps the order and keeps watching after releasing the inputs`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        goOnlineAndSynced()
+        val tx = createTransaction()
+
+        val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        delay(500)
+
+        // The payee decides when to relay the transaction, so silence is not proof it never
+        // arrived. Free the inputs, but keep the order and the watch.
+        tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
+        coVerify { config.add(match { it.txId == tx.txId && it.abandoned }) }
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+        assertFalse("the watch must continue past release", result.isCompleted)
+    }
+
+    @Test
+    fun `commits a payment broadcast after its inputs were released`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        goOnlineAndSynced()
+        val tx = createTransaction()
+
+        val result = verifier.quarantine(
+            tx,
+            paymentUrl,
+            "PiggyCards",
+            PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = "https://logo.example/x.png")
+        )
+        delay(400)
+        // a payee that withheld the transaction until after release finally relays it
+        tx.confidence.markBroadcastBy(PeerAddress(params, InetAddress.getLoopbackAddress(), 9999))
+
+        val committed = withTimeout(5_000) { result.await() }
+
+        assertNotNull("a late broadcast must still be committed", committed)
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+        coVerify { metadataProvider.markGiftCardTransaction(tx.txId, "PiggyCards", "https://logo.example/x.png") }
     }
 
     @Test
