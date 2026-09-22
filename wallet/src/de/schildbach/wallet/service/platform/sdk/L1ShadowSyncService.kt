@@ -1377,8 +1377,10 @@ internal class FilterStallWatchdogDecider(
      *
      * `dash_spv` commits filters in `BATCH_PROCESSING_SIZE` = 5,000-block
      * batches, in order, and the LAST batch runs from the last boundary to the
-     * tip. When that batch matches blocks it then never fetches, its
-     * `pending_blocks()` never reaches zero, its commit is withheld, and
+     * tip. Before it commits that batch the engine runs its committed-range
+     * sweep — every filter since wallet birth re-tested against the scripts
+     * derived during the scan, inline on the filter task, with no persisted
+     * progress (plan §34, corrected 2026-09-22) — and until that finishes
      * `committed_height` — which is what [filterHeight] is — parks inside one
      * batch of the target. That bound is the signature: a stall of this kind is
      * always LESS than 5,000 blocks short.
@@ -1386,10 +1388,9 @@ internal class FilterStallWatchdogDecider(
      * Restarting there is wrong on both counts at once, which is why this is
      * worth a special case rather than a tier:
      *
-     * - **Useless.** A restart recreates the same final batch against a
-     *   slightly newer tip, matches the same blocks, fails the same fetch and
-     *   stalls identically (§34.2 — observed across four restarts; the one that
-     *   appeared to help was the chain advancing, not the restart).
+     * - **Useless.** A restart throws the walk away and begins it again from
+     *   birth (§34.2 — observed across four restarts on 2026-09-21; the one
+     *   that appeared to help was a sweep completing, not the restart).
      * - **Expensive.** A restart resumes from the DURABLE watermark, not from
      *   this cursor — [L1ShadowSyncService.stop]'s own diagnostic has recorded
      *   that trailing by up to 155,000 blocks. So the cost is a re-walk, paid
@@ -3197,13 +3198,14 @@ class L1ShadowSyncService internal constructor(
     /**
      * MO-1022: restart the SPV engine when the FILTER cursor is wedged.
      *
-     * See [FilterStallWatchdogDecider] for the measured failure. In short:
-     * the engine can park with every filter already stored but a handful of
-     * matched blocks never delivered and its download coordinator out of
-     * retries, and filter processing cannot step past a block it is still
-     * waiting for. Nothing in the engine re-drives it; a process relaunch
-     * does, which is what this reproduces without needing the user to force
-     * stop the app.
+     * See [FilterStallWatchdogDecider] for the measured failures. Two shapes
+     * are known (plan §34, corrected 2026-09-22). Inside one commit batch of
+     * the target: the final batch's commit is held behind dash_spv's
+     * committed-range sweep, which a restart only begins again — the decider
+     * reports it and holds. Further out: the engine is honestly
+     * `WaitingForConnections` on a device that has lost its network
+     * (2026-09-22, 21 minutes), where a restart buys nothing until the
+     * network returns; the watchdog does not check connectivity today.
      *
      * DELIBERATELY OUTSIDE [mutex]. Both [stop] and [startIfEnabled] take it
      * themselves, so taking it here would deadlock the watchdog against the
@@ -3224,9 +3226,9 @@ class L1ShadowSyncService internal constructor(
                     "L1Shadow filter-stall watchdog: the filter cursor has sat at {} of {} " +
                         "({} blocks short) for {}s — past the {}s threshold for a wallet whose " +
                         "durable watermark is {} ({} blocks from the target, so a restart " +
-                        "re-walks that much) — restarting the SPV engine. Known shape (MO-1022): " +
-                        "every filter stored, a few matched blocks never delivered, the download " +
-                        "coordinator out of retries.",
+                        "re-walks that much) — restarting the SPV engine. Known shape (plan section 34): " +
+                        "the device offline with the engine honestly WaitingForConnections, where this " +
+                        "restart buys nothing until the network returns.",
                     p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
                     filterStallDecider.lastStillMs / 1000,
                     filterStallDecider.lastThresholdMs / 1000,
@@ -3277,14 +3279,15 @@ class L1ShadowSyncService internal constructor(
                     "L1Shadow filter-stall watchdog: SDK-FINAL-BATCH — the filter cursor has " +
                         "sat at {} of {} ({} blocks short, inside one {}-block dash_spv commit " +
                         "batch) for {}s with the wallet-event stream quiet. This is the " +
-                        "final-partial-batch defect (plan section 34): the last batch matched " +
-                        "blocks it never received, so pending_blocks() never reaches zero and " +
-                        "committed_height is withheld. NOT restarting — a restart recreates the " +
-                        "same batch, matches the same blocks and stalls identically; {}. " +
-                        "It clears when the chain advances enough to re-cut the batch boundary. " +
-                        "Needs an SDK-side fix; the engine's own run.log " +
-                        "(files/sdk-logs/dash_spv/run.log, attached to support reports) carries " +
-                        "the matched-block count and its requested count.",
+                        "final-batch park (plan section 34): the last batch's commit is held behind " +
+                        "dash_spv's committed-range sweep — every filter since wallet birth re-tested " +
+                        "against the scripts derived during the scan, inline on the filter task, " +
+                        "dominated by BIP158 false positives — which a phone does not finish before " +
+                        "something stops the engine. NOT restarting — a restart throws the walk away " +
+                        "and begins it again; {}. It clears only when the sweep completes and its " +
+                        "matched blocks are processed. Fixed upstream by dropping the sweep " +
+                        "(rust-dashcore#1016); the engine's own run.log (files/sdk-logs/dash_spv/run.log, " +
+                        "attached to support reports) carries the 'Rescan committed filters' line.",
                     p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
                     SDK_FILTER_BATCH_BLOCKS,
                     filterStallDecider.lastStillMs / 1000,
@@ -4135,10 +4138,14 @@ class L1ShadowSyncService internal constructor(
          *
          * Thirty minutes — the third backoff rung ([FilterStallWatchdogDecider.waitBeforeAttempt]),
          * and about three times the longest final-batch park measured today
-         * (10 m 40 s, Samsung SM-S901U, 2026-09-21 16:46–16:57). A genuine
-         * final-batch park clears well inside this when the chain re-cuts the
-         * boundary; a wedge that survives it is no longer well explained by
-         * that defect and gets the restart the watchdog exists to give.
+         * (10 m 40 s, Samsung SM-S901U, 2026-09-21 16:46–16:57). A final-batch
+         * park clears when the engine's committed-range sweep completes (plan
+         * §34, corrected 2026-09-22): seconds to ~10 minutes on testnet, and on
+         * a mainnet wallet with 13k derived scripts never yet observed to
+         * finish — so on that wallet the restart this falls through to only
+         * restarts the same sweep. Not retuned: the fix is upstream
+         * (rust-dashcore#1016 drops the sweep), and until it ships no hold
+         * length is right.
          */
         internal const val FINAL_BATCH_RESTART_HOLD_MS = 30 * 60_000L
 

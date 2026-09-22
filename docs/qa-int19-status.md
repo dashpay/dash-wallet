@@ -103,9 +103,14 @@ read via the accessibility tree on the emulator: no "Syncing balance", no banner
 one-block blip.
 
 **What it is not.** A fix for the stall. The commit still parks; the screen now says synced and the
-log says why. The root cause is dash-spv's `pending_blocks()` never draining (plan §34), traced
-into `blocks/sync_manager.rs` and paused at the `requested` vs `from_storage` fork; the issue draft
-is repinned to the shipping engine revision and still unfiled.
+log says why. The root cause, corrected 2026-09-22 (plan §34): before it commits the final batch,
+dash-spv re-tests every committed filter since wallet birth against the scripts derived during the
+scan, inline on the filter task, with no persisted progress — a walk dominated by BIP158 false
+positives (1.66% of 1.6M mainnet filters at this wallet's 13,024 scripts) that a phone never
+finishes before something stops the engine, and which our integration branch's durable pending-sweep
+set restarts from scratch on every launch. Already open upstream as rust-dashcore#1002 and fixed
+by dropping the sweep in rust-dashcore#1016 (draft); our issue draft is retired in favour of a
+comment there.
 
 ---
 

@@ -2304,107 +2304,116 @@ progressing, not wedged.
 
 Not implemented.
 
-## 34. What actually stalls the sync: the final filter batch waits on blocks that never arrive
+## 34. What actually stalls the sync: the final batch's commit waits on a full-history sweep
 
-Settled 2026-09-19 with SQL-level and SDK-level instrumentation on a Samsung SM-S901U, and
-confirmed against the `dash_spv` source on 2026-09-21. Three earlier hypotheses in this section
-were wrong and are recorded at the end so the reasoning is not repeated.
+Rewritten 2026-09-22. The revision of this section written on 2026-09-19/21 said the final filter
+batch "waits on blocks that never arrive" — that matched blocks were never fetched, so
+`pending_blocks()` never drained. That was wrong, and the evidence that settles it is Andrei's
+engine log from the same day (§37): the final batch's 65 matched blocks were **all processed**
+within six seconds, and the batch still did not commit for the next seven minutes. What ran in
+those minutes is the mechanism. The earlier text is kept under §34.4 with the other wrong
+hypotheses.
 
-### 34.1 The mechanism
+### 34.1 The mechanism: the committed-range sweep
 
-`dash_spv` downloads filters in 5,000-block batches and commits them **in order**:
-`try_commit_batches` walks `active_batches.first_key_value()` and stops at the first batch that is
-not ready, so the lowest un-committable batch holds up every batch above it. The readiness gate is
-two lines (`sync/filters/manager.rs:781`):
+When block processing derives new scripts (gap-limit extension as payments are found, CoinJoin
+pools), `dash_spv` records them and, before it will commit the LAST batch — the moment the forward
+pipeline has drained — re-tests **every committed filter since wallet birth** against them
+(`rescan_committed_range`, `sync/filters/manager.rs`, rust-dashcore#866/#974/#989, "the #846
+case"). Three properties make that fatal on a phone:
 
-```rust
-if !batch.scanned() { break; }
-if batch.pending_blocks() > 0 { break; }
+- **It runs inline on the filter task.** No ticks, no commits, no progress bumps, no message
+  handling while it walks. Andrei's `Filters:` status froze with `last_activity` climbing, and at
+  shutdown the coordinator reported one task that never answered the stop signal: the filter task,
+  the only one with no "received shutdown signal" line.
+- **It has no persisted progress.** An engine stop, a watchdog restart, an idle stop or a
+  `lowmemorykiller` kill throws the whole walk away.
+- **Its cost is false positives, not real matches.** BIP158 as shipped is P=19, M=784,931. Each
+  filter tested against S scripts false-matches with probability ≈ S/784,931. The set on Andrei's
+  wallet is 13,024 scripts — his keychain has 13,041 keys; every address derived during the restore
+  entered it — so **1.66% of all 1.6M mainnet filters "match"**, about 26,000 block downloads
+  for nothing, each of which the batch's commit then also waits on.
+
+The arithmetic checks three times against logs:
+
+| observation | filters | expected FP at 13k scripts | logged |
+|---|---|---|---|
+| forward rescan of one batch, Andrei 06:22 | 5,000 | 83 | `Rescan found 93 additional blocks` |
+| emulator restoration sweep, testnet (~9.7k scripts implied) | 1,556,000 | — | `Committed-range rescan found 19305 additional blocks` |
+| iOS field log of the same wallet shape (rust-dashcore#1002) | 2,300,000 | 38,000 | `found 41546 additional blocks` |
+
+The engine is not broken and no filter is lost. `stored:2542949` against a tip of 2,542,949: every
+filter arrived. What is stuck is a re-test the engine insists on finishing before it will advance
+`committed_height`, and which it cannot finish in the time a phone gives it.
+
+Log signature, in the engine's own `files/sdk-logs/dash_spv/run.log`:
+
+```
+06:24:20  Batch 2539849-2542949: found 65 matching blocks across 1 behind wallets
+06:24:26  SyncEvent: BlockProcessed(height=2542946 …)          <- the 65th and last
+06:24:26  Rescan committed filters (934848-2539848) for new scripts across 1 wallets (sweep #1)
+          … nothing for 7 minutes …
+06:31:25  Shutdown timeout after 5s, 1 tasks may not have completed cleanly
 ```
 
-The final batch runs from the last 5,000 boundary to the chain tip. On the observed stall it
-scanned clean and **matched 95 blocks** — which become pending block downloads:
+### 34.1a Why it recurs on every start — and that part is ours
 
-```
-19:19:04  Creating lookahead batch 1552171-1556922 (active_batches=1)
-19:19:05  Batch 1552171-1556922: found 95 matching blocks across 1 behind wallets
-19:19:05  Committed batch 1547171-1552170, committed_height now 1552170
-          ... still uncommitted 9 minutes later
-```
+Upstream `dev` loses the sweep's obligation when the engine dies. Our integration branch does
+not: commit `80e07b8f` (2026-08-19, part of our rust-dashcore#979 draft, "durable pending-sweep
+set — replay interrupted script rescans after restart") persists the pending script set in
+`metadata/filters_pending_sweep.dat` and re-seeds it into the lowest active batch at every start.
+It is cleared only by a commit that follows a COMPLETED sweep.
 
-Those 95 blocks were never fetched — the engine's own dump reported `requested: 0` against them.
-So `pending_blocks()` stays at 95 forever, the gate never opens, and `committed_height` — the value
-the whole app reads as "how far are we synced" — parks at the last full boundary.
+Andrei's file holds 13,024 scripts and is dated 2026-09-18 16:11:18 — the first replay after the
+upgrade. No session since has completed a sweep, so every start logs `Recovered pending script
+sweep … scripts=13024`, pays ~90 false-positive block fetches per forward batch it re-walks
+(`Rescan filters (2474849-2479848) … found 93 additional blocks`), reaches the tip, and enters the
+same full-history sweep again. The durable set turned a lost sweep into a permanent one. This is
+the mechanism behind "the same park after every restart" that §34.2 previously attributed to the
+tip re-forming the same batch.
 
-The engine is not broken and no filter is lost. The same dump reports `Filters: … stored:1556922`
-against a tip of 1,556,922. What is stuck is the *block* fetch the match triggered, and the commit
-that waits on it.
+The parked height is still a batch boundary — the sweep gates the commit of the final partial
+batch, so the cursor sits at the last full 5,000 boundary — and the mod-5,000 residue table in the
+old text stands as arithmetic. It just does not mean what it was read to mean.
 
-### 34.1a It PERSISTS, and it costs a re-walk on every process start
+### 34.2 Everything it explains — with two corrections
 
-Added 2026-09-21 from a Samsung SM-S901U run on the `743d7af42` build. Two process restarts,
-nine minutes apart, resumed the filter scan from the SAME height:
-
-```
-12:09:01  phase=CONNECTING  filters 1532170/1558127  wallet 1558127   <- restart 1
-12:09:14  phase=SYNCED      filters 1558142/1558142  wallet 1558142   <- re-walked, 13 s
-12:17:09  Process ... has died: cch+5 SVC                            <- cached-process kill
-12:18:15  phase=CONNECTING  filters 1532170/1558146  wallet 1558146   <- restart 2, SAME height
-```
-
-Two things follow, neither of which was visible from the earlier single-session observations:
-
-- **The withheld commit is durable, not transient.** Reaching SYNCED does not advance the stored
-  `committed_height`: it stayed at 1,532,170 across a restart that had already walked past it to
-  1,558,142. So the cost is not "the UI reads stalled for a while" — it is ~26,000 blocks of filter
-  re-walk on EVERY process start, indefinitely.
-- **The wallet watermark and the filter commit disagree.** `wallet` tracked the tip (1,558,146)
-  while `filters` sat 26,000 blocks below it. These are two different persisted values and only one
-  of them is advancing.
-
-**And the batch-boundary model is confirmed arithmetically.** Every parked height observed so far
-is congruent modulo `BATCH_PROCESSING_SIZE` = 5,000:
-
-| height | mod 5,000 |
-|---|---|
-| 1,547,170 | 2,170 |
-| 1,552,170 | 2,170 |
-| 1,532,170 | 2,170 |
-
-The same residue, across two devices, two sessions and two chain tips. §34.2 inferred "it parks on
-odd round numbers — batch boundaries" from two values on one occasion; the residue makes it
-arithmetic rather than a hunch, with the offset being the sync start height.
-
-Incidental but relevant to the memory work: the 12:17:09 death was `cch+5 SVC` — the platform
-evicting a cached process under device memory pressure, alongside Chrome and Play Store, not a
-crash of ours. Every such eviction pays the re-walk above.
-
-### 34.2 Everything it explains
-
-- **Why the cursor always parks a few thousand blocks short.** The gap is the final partial batch.
-- **Why it parks on odd round numbers** — 1,552,170, 1,547,170. Batch boundaries.
-- **Why it clears suddenly, in a burst.** The chain advancing re-cuts the batch boundary, so the
-  stuck range is re-formed as a batch that matches nothing and therefore has nothing pending.
-  Observed at 18:53:30: `Batch 1556911-1556911: found 0 matching blocks` is created, and
-  `Committed batch 1552171-1556910` lands in the same second.
-- **Why restarting rarely helps.** A restart recreates the same final batch against a slightly
-  newer tip — 1556917, then 1556918, then 1556922 — it matches the same blocks, fails to fetch
-  them again, and stalls identically. One of four watchdog restarts appeared to help; that was the
-  tip advancing, not the restart.
-- **Why the wait is unpredictable.** It is the time for the chain to produce enough blocks, which
-  on testnet is erratic.
-- **Why Joel's 12000012 sat at 3 blocks short for 49 minutes.** Same shape on mainnet.
+- **Why the cursor parks a few thousand blocks short.** The final partial batch cannot commit
+  while the sweep runs. Same as before.
+- **Why it "clears in a burst".** The sweep FINISHED. On the emulator, testnet, the restoration's
+  sweep took 83 s and then 80 s of block fetching, and every later sweep 1–3 s; the Samsung
+  SM-S901U's 9-minute testnet parks were sweeps completing. The previous text said "the chain
+  advancing re-cuts the batch boundary" — that was a coincidence of a `Creating lookahead batch`
+  line landing in the same tick as the resumed commit. **Correction.**
+- **Why restarting never helps** on the mainnet wallet. A restart discards the walk and, with our
+  durable set, starts it again from birth. **Correction** to "the tip advancing, not the
+  restart": the tip is irrelevant.
+- **Why mainnet is so much worse than testnet.** Mainnet filters are larger (busier blocks), there
+  are 1.6M of them since a 2018 birth, and the derived-script set of a 6,787-transaction CoinJoin
+  wallet is the whole keychain. Andrei's sweep did not finish in 7 minutes; the iOS side measured
+  the same shape at 21–27 minutes of sync where dropping the sweep gives 6–9.
+- **Why Joel's 12000012 sat 3 blocks short for 49 minutes**, and why Andrei's 12000015 sat at
+  2,538,000 all evening on 2026-09-21: the same sweep, killed by `lowmemorykiller` three times in
+  25 minutes with the native heap at 3.28 GB (§36.2). Whether the sweep's segment loads and the
+  ~26k matched-block fetches are what inflate the heap is the obvious hypothesis and is not proven.
+- **Why the wallet-event stream goes quiet during the park** (SR-01's note): nothing is being
+  produced while the filter task is inside the walk.
 
 ### 34.3 What it is NOT
 
-- **Not the database.** Direct measurement during a stall: zero `SQLiteConnectionPool` warnings and
-  ZERO engine writes on `dash-sdk.db` — the only writes were Room's own
-  `room_table_modification_log` bookkeeping. The engine is not blocked on storage; it is not trying
-  to use it.
-- **Not the network.** `stored:1556922` means every filter arrived.
-- **Not the app's.** `committed_height` is the SDK's, and nothing on the app side can advance it.
+- **Not a stuck block fetch.** All 65 of the final batch's matched blocks were processed; the
+  `requested: 11, downloaded: 10` in the same dump is one legitimate retry, not a lost block.
+- **Not the database.** Measured on 2026-09-19: zero engine writes on `dash-sdk.db` during a
+  park. Consistent — the sweep reads filter segments, it does not write the wallet database.
+- **Not the network.** Every filter is stored before the sweep begins.
+- **Not the only stall in Andrei's log, either.** The 06:08 watchdog restart at 68,087 short was a
+  different animal: every peer ping-timed out at 06:00:35, DNS failed for 21 minutes, and the app
+  logged a NEW network at 06:21:49; the engine reconnected 11 seconds later. The engine's
+  `WaitingForConnections … last_activity: 437s` was honest, and our watchdog restarted an engine
+  that had no network to use. A device-offline stall is not an engine stall and should not earn a
+  restart; the watchdog does not check connectivity today.
 
-### 34.4 Three earlier hypotheses, all wrong
+### 34.4 Four earlier hypotheses, all wrong
 
 Kept because each looked convincing and cost time.
 
@@ -2431,6 +2440,16 @@ The lesson worth keeping: all three hypotheses came from the APP's logs, and the
 SDK's own `files/sdk-logs/dash_spv/run.log` and then in the `dash_spv` source. The log is pullable
 with `run-as` on a debug build and was not being read; the source was available the whole time.
 
+**"The final batch's matched blocks are never fetched, so `pending_blocks()` never drains."** The
+2026-09-19/21 revision of this section, built on a dump that showed `requested: 0` against 95
+pending blocks. Those blocks had come `from_storage` — a re-walk finds its matched blocks already
+persisted — and were processed; the counter read was misunderstood. What no dump before Andrei's
+showed, because the app logs and the status summaries do not carry it, is the `Rescan committed
+filters` line that follows the last `BlockProcessed`. The correction is §34.1. The lesson is the
+same as the other three: the answer was in the engine's `run.log`, this time one line past where
+the reading stopped.
+
+
 ### 34.5 A separate real finding: the app's observer queries are expensive
 
 Not the stall, but measured while chasing it. During a 2.5-minute window the app re-ran the same
@@ -2449,64 +2468,44 @@ seconds of query time in 150 seconds. Worth its own investigation — it is a pl
 
 ### 34.6 Where this goes
 
-This is an SDK defect in `dash_spv::sync::filters::manager` and is not fixable from the app.
+This is an SDK defect and upstream already holds both halves of the conversation:
 
-**What we do about it on our side.** Two layers, both landed 2026-09-21.
+- **rust-dashcore#1002** (romchornyi, iOS, 2026-09-04, on hold): describes this wallet shape
+  exactly — "~6.7k transactions, ~13k CoinJoin scripts derived during the scan … one silent
+  multi-minute pass over ~2.3M filters matching ~41k blocks, with no persisted progress" — and
+  proposes replacing the sweep with a durable `synced_height` rewind.
+- **rust-dashcore#1016** (ZocoLini, the dash-spv owner, draft, updated 2026-09-22): "drop the
+  committed-range sweep and the collected-scripts rescan". Sync measured 21–27 min → 6–9 min.
+  Gives up the #846 case on the stated grounds that the fund-losing sync bugs are now fixed
+  (#985, #996, #1000, #1001, #989) and the sweep "doesn't discover anything new". Depends on
+  **#1015** (mergeable, in review).
+- The owner's position, 2026-09-07 on #1002: the backward rescan is the wrong direction in either
+  shape; report any lost balance and he will investigate it personally.
 
-*The watchdog* RECOGNISES this stall and declines to restart into it
-(`FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH`, `743d7af42`). The signature it uses is the
-bound: a final-partial-batch stall always parks the cursor LESS than one commit batch
-(`BATCH_PROCESSING_SIZE` = 5,000) short of the target. Within that bound a restart is wrong twice —
-useless (§34.2) and expensive (it resumes from the durable watermark, which `stop()` has recorded
-trailing by up to 155,000 blocks) — so it logs one `SDK-FINAL-BATCH` line naming the defect and
-stands down. A stall WIDER than one batch is a different animal and still earns the restart.
-Refined the same day after review (`4a0a9ea9c`): the report is per PARK, not per process — a moving
-cursor clears it — and the suppression is BOUNDED at `FINAL_BATCH_RESTART_HOLD_MS` (30 min, the
-third backoff rung, ~3× the longest park measured). A stall still there after the hold falls
-through to the ordinary restart ladder. The signature is a distance heuristic, not proof, and a
-process-lifetime latch would have silenced restarts for a different, recoverable wedge in the same
-range.
+**What we do.** Not file the issue this section used to promise — it is already open twice. The
+Android evidence (the 4-hour park, the false-positive arithmetic, the durable-set recurrence)
+belongs as a comment on #1016; the draft is in the `rust-dashcore-spvstall` worktree,
+`docs/dash-spv-issue.md`, marked retired. The fix path for our builds is to cut a new integration
+branch from the shipping pin `d525f431`, merge #1016 (which merge-trees onto the pin with zero
+conflicts but will not compile as-is: our Phase-0 seeding calls the two batch methods it deletes),
+delete our durable pending-sweep machinery along with it, and ship that as the next SDK drop.
 
-*The sync-status rule* — the user-facing half — is §35: the app now calls the wallet synced the way
-iOS does, on the engine's aggregate percentage, so this stall reads as "synced" instead of "99%"
-and the 90-second static-progress banner becomes a WARN. Proven on device the same day; the
-sequence is in §35.3.
-
-Two things about that worth keeping in view:
-
-- **MO-1022 is this defect.** Its recorded cursor, 2,538,000 of 2,540,971, is 2,971 blocks short —
-  inside one batch. So the stall this watchdog was originally built to restart now takes the report
-  path instead. That rests on reading the "a restart demonstrably clears the wall (45,000 blocks in
-  90 s)" note on `FILTER_STALL_MAX_RESTARTS` as a RE-WALK and not a cure: a cursor 2,971 short
-  cannot advance 45,000 blocks, so the figure must describe resuming from a much lower durable
-  watermark and climbing back. If that reading is ever disproved, the restart suppression is what
-  to revisit — `filterStall_theRecordedMo1022CursorIsItselfTheFinalBatchShape` pins it.
-- **5,000 is a copied constant**, read from the SDK's source and not published by the FFI. The
-  clean discriminator is `stored_height == target && committed_height < target` — unambiguous, no
-  magic number — but `stored_height` is not exposed through `SpvSyncProgressData`. Asking for it is
-  request 3 on the issue below. The FFI change itself is drafted and compiles — `dash-spv-ffi`
-  already exports the field; the drop is one function, `progress_to_ffi` in
-  `rs-platform-wallet-ffi`, and the fix is append-only through JNI to Kotlin — in the parked
-  worktree `platform-spv-progress-ffi` (branch `feat/spv-progress-ffi-stored-height`, uncommitted).
-  Not pursued further on 2026-09-21 in favour of the user-facing rule in §35.
-
-**To be filed against `dash_spv`,** with the log excerpts above. Two questions for that issue,
-since the gate itself is defensible and the bug is on the side of it:
-
-1. Why is `pending_blocks()` 95 with `requested: 0`? Blocks matched by a filter should be
-   requested; a pending count that nothing is driving to zero is a stuck queue, not backpressure.
-2. Should a batch whose block fetches cannot make progress commit its filter range anyway, or at
-   least surface the stall? Today it is silent, indefinite, and indistinguishable from a healthy
-   engine to every consumer of `committed_height`.
-3. Expose `stored_height` — or the pending-block count — through the FFI, so a client can tell this
-   stall from a wedge without copying `BATCH_PROCESSING_SIZE` out of the source (§34.6, §35.6).
+**What stays true on our side, and what changes.** §35's sync rule and §34.6's old watchdog
+verdict (`SDK_FINAL_BATCH`, hold 30 min) still describe the user-facing behaviour correctly: the
+cursor parks inside one batch of the target with every filter stored. Their log lines were reworded
+on 2026-09-22 to name the sweep instead of the pending-block story. Two things they get wrong
+until the SDK drop lands: the 30-minute hold is too SHORT for a mainnet sweep that has never been
+seen to finish, and after it the restart ladder restarts the very sweep it is waiting on; and the
+idle detector's stop 3–7 minutes after "synced" (release builds stop the SDK engines) cuts the
+sweep short every time. Neither is worth patching — both become moot with no sweep — but both are
+why the park is permanent on today's builds rather than merely long.
 
 **Correction to an earlier draft of the issue.** It said "iOS is equally exposed". iOS runs the
 same engine and reads the same parked value, but its synced test is an averaged 99.9% threshold
 (§35.1), which hides any shortfall under roughly 0.3% of chain height. The defect is not
-Android-specific; one client's tolerance hid the common case and the other's did not. The draft,
-repinned to the shipping engine revision `d525f431`, is `docs/dash-spv-issue.md` in the
-`rust-dashcore-spvstall` worktree. Still unfiled.
+Android-specific; one client's tolerance hid the common case and the other's did not — and it was
+the iOS side that first described the sweep in #1002.
+
 
 ## 35. Sync status: the iOS rule, adopted 2026-09-21
 
