@@ -41,7 +41,6 @@ import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.model.CoinbaseToDashExchangeRateUIModel
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import javax.inject.Inject
 
@@ -57,18 +56,43 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
     var coinbaseExchangeRate: CoinbaseToDashExchangeRateUIModel? = null
     private var maxAmountInDashWalletFormatted: String = CoinbaseConstants.VALUE_ZERO
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    // Not locale-aware: every value this produces is an INPUT -- to maxValue, to
+    // applyCoinbaseExchangeRate, to BigDecimal -- never something shown to the user.
+    // withLocale() gave it the device's decimal mark, so on a comma-decimal locale MAX
+    // handed "1,5" to a pipeline that can only read "1.5": the DASH branch left it
+    // unparseable and the transfer button never enabled.
+    private val dashFormat = MonetaryFormat()
         .noCode().minDecimals(6).optionalDecimals()
     val decimalSeparator =
         DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
     private val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode()
 
     var fiatAmount: Fiat? = null
-    var fiatBalance: String = ""
     var inputValue: String = CoinbaseConstants.VALUE_ZERO
     var isMaxAmountSelected: Boolean = false
-    var formattedValue: String = ""
     val onContinueTransferEvent = SingleLiveEvent<Pair<Fiat, Coin>>()
+
+    /**
+     * The digits-only slice of the text [applyNewValue] last returned -- without the
+     * currency symbol or code. Single source of truth for the span bounds the view styles
+     * and for the keypad's decimal gate, so neither can be paired with text from the other
+     * branch (MO-995).
+     */
+    var amountPart: String = CoinbaseConstants.VALUE_ZERO
+        private set
+
+    /** The mode [applyNewValue] last formatted in. */
+    internal var amountMode: AmountMode = AmountMode.DASH
+        private set
+
+    /** Bounds of the currency label in the text [applyNewValue] last returned. */
+    internal var currencySpan: AmountCurrencySpan? = null
+        private set
+
+    /** Decimal places the keypad may accept for the text now on screen. */
+    val maxDecimals: Int
+        get() = amountMode.maxDecimals
+
     var isFiatSelected: Boolean = false
         set(value) {
             if (field != value) {
@@ -84,8 +108,19 @@ class EnterAmountToTransferViewModel @Inject constructor(
     val dashBalanceInWalletState: StateFlow<Coin>
         get() = _dashBalanceInWallet
 
-    var localCurrencyCode: String = Constants.USD_CURRENCY
-        private set
+    private val _localCurrencyCode = MutableStateFlow(Constants.USD_CURRENCY)
+
+    /** Selected local currency, for synchronous formatting inside this ViewModel. */
+    val localCurrencyCode: String
+        get() = _localCurrencyCode.value
+
+    /**
+     * Emits the selected local currency: seeded with the default, then re-emitted once the
+     * real value loads from [WalletUIConfig]. The view must rebuild its currency picker on
+     * every emission -- reading the code once in onViewCreated left the fiat option
+     * labelled USD for the life of the view (MO-995 C).
+     */
+    val localCurrencyCodeState: LiveData<String> = _localCurrencyCode.asLiveData()
 
     private val _localCurrencyExchangeRate = MutableLiveData<ExchangeRate?>()
     val localCurrencyExchangeRate: LiveData<ExchangeRate?>
@@ -111,7 +146,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
         setDashWalletBalance()
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
-            .onEach { localCurrencyCode = it }
+            .onEach { _localCurrencyCode.value = it }
             .flatMapLatest(exchangeRates::observeExchangeRate)
             .onEach(_localCurrencyExchangeRate::postValue)
             .launchIn(viewModelScope)
@@ -137,50 +172,34 @@ class EnterAmountToTransferViewModel @Inject constructor(
             .optionalDecimals(0, 8).format(dashBalanceInWalletState.value).toString()
     }
 
-    fun applyNewValue(value: String, monetaryCode: String): String {
-        inputValue = value.ifEmpty { CoinbaseConstants.VALUE_ZERO }
-        val isFraction = inputValue.indexOf(decimalSeparator) > -1
-        val lengthOfDecimalPart = inputValue.length - inputValue.indexOf(decimalSeparator)
-
-        return if (localCurrencyCode == monetaryCode) {
-            val cleanedValue = GenericUtils.formatFiatWithoutComma(inputValue)
-            fiatAmount = Fiat.parseFiat(localCurrencyCode, cleanedValue)
-            val localCurrencySymbol = GenericUtils.getLocalCurrencySymbol(localCurrencyCode)
-
-            fiatBalance = if (isFraction && lengthOfDecimalPart > 2) {
-                format.format(fiatAmount).toString()
-            } else {
-                inputValue
-            }
-            if (fiatAmount!!.isCurrencyFirst()) {
-                "$localCurrencySymbol $fiatBalance"
-            } else {
-                "$fiatBalance $localCurrencySymbol"
-            }
-        } else {
-            val rawFormattedValue = if (inputValue.contains("E")) {
-                DecimalFormat("########.########").format(inputValue.toDouble())
-            } else {
-                inputValue
-            }
-            
-            // Limit to 8 decimal places max using BigDecimal for proper rounding
-            formattedValue = if (rawFormattedValue.endsWith(".") || rawFormattedValue.isEmpty()) {
-                // Don't process incomplete decimal entries
-                rawFormattedValue
-            } else if (isFraction && lengthOfDecimalPart <= 8) {
-                // Preserve input format for incomplete decimal entries like "0.0"
-                rawFormattedValue
-            } else {
-                try {
-                    val bigDecimal = rawFormattedValue.toBigDecimal()
-                    bigDecimal.setScale(8, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
-                } catch (e: Exception) {
-                    rawFormattedValue
-                }
-            }
-            "$formattedValue $monetaryCode"
-        }
+    /**
+     * Formats [value] for display and republishes everything derived from it -- the digits
+     * slice ([amountPart]), the currency-label bounds ([currencySpan]) and the keypad's
+     * decimal limit ([maxDecimals]) -- so no caller can pair the returned text with bounds
+     * or a limit belonging to the other branch.
+     *
+     * MO-995: this used to take the currency picker's visible LABEL and branch on
+     * `localCurrencyCode == monetaryCode`. The label is the selected currency code, which
+     * loads asynchronously, so a stale "USD" against a real "BYN" failed to match and sent
+     * a fiat amount down the DASH branch -- 8 decimals, a "USD" label on a BYN figure, a
+     * keypad gated at 2 places that then refused every digit, and span bounds taken from
+     * the other branch's field, which crashed `Spannable.setSpan`. It now branches on the
+     * boolean the picker itself sets, and labels with its own [localCurrencyCode].
+     */
+    fun applyNewValue(value: String, isFiat: Boolean): String {
+        val amount = transferAmount(
+            value = value,
+            isFiat = isFiat,
+            localCurrencyCode = localCurrencyCode,
+            decimalSeparator = decimalSeparator,
+            fiatFormat = format
+        )
+        amountMode = amount.mode
+        inputValue = amount.inputValue
+        fiatAmount = amount.fiatAmount
+        amountPart = amount.amountPart
+        currencySpan = amount.currencySpan
+        return amount.text
     }
 
     val hasBalance: Boolean
@@ -226,9 +245,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
     private fun applyCoinbaseExchangeRate(amount: String): String {
         return coinbaseExchangeRate?.let { uiModel ->
-            val cleanedValue = amount
-                .replace(',', '.') // TODO: the amount sometimes comes here with a comma as decimal separator.
-                // TODO: it's better to identify the root of this and replace in there to prevent this problem from appearing anywhere else.
+            val cleanedValue = GenericUtils.formatFiatWithoutComma(amount)
                 .toBigDecimal() / uiModel.currencyToDashExchangeRate
             cleanedValue.setScale(8, RoundingMode.HALF_UP).toPlainString()
         } ?: CoinbaseConstants.VALUE_ZERO

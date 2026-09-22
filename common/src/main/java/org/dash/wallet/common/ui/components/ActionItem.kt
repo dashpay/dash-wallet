@@ -92,6 +92,11 @@ fun ActionItem(
     /** One-line secondary text under [title] (`Action item / Var 3`); null renders `Var 1`. */
     subtitle: String? = null,
     /**
+     * Lines [subtitle] may wrap to before it ellipsizes. Defaults to the one-line contract
+     * above; ignored when [subtitleMiddleEllipsis] is set, which is single-line by nature.
+     */
+    subtitleMaxLines: Int = 1,
+    /**
      * Truncates [subtitle] from the middle to fit the available width (e.g. for addresses,
      * where both the start and end need to stay checkable) instead of the standard end-ellipsis.
      * Width-measured so it stays correct at any font scale, unlike a fixed character count.
@@ -167,7 +172,7 @@ fun ActionItem(
                         text = it,
                         style = MyTheme.Typography.Footnote,
                         color = colors.textSecondary,
-                        maxLines = 1,
+                        maxLines = subtitleMaxLines,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth()
                     )
