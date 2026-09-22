@@ -168,8 +168,16 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
         val minDate = de.schildbach.wallet.Constants.EARLIEST_HD_SEED_CREATION_TIME * 1000L
         val maxDate = System.currentTimeMillis()
 
-        // Set initial date to today
+        // Open on the date already chosen, else on the EARLIEST selectable one
+        // — never on today. This dialog's confirm button is a one-tap commit,
+        // and the value it commits decides how much of the chain gets scanned:
+        // opening on today means an accidental confirm scans almost nothing and
+        // restores a fraction of the balance (SR-22). Opening on the floor makes
+        // that same accidental confirm cost sync time instead of history, which
+        // is the direction this screen's whole rule already leans ("scanning too
+        // early only costs time; scanning too late hides funds").
         val calendar = Calendar.getInstance()
+        calendar.timeInMillis = viewModel.selectedCreationDate.value?.times(1000L) ?: minDate
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH)
         val day = calendar.get(Calendar.DAY_OF_MONTH)
