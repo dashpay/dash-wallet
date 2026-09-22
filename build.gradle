@@ -14,7 +14,7 @@ buildscript {
         // #4439 (TXO reconcile) + the restore branch (#4474/#4475) + the ordered
         // bring-up binding (#4658) + #4643 keystore fixes, on the fork engine pin
         // af88edf6 (v4.2-dev pin 93260bf + rust-dashcore #979/#1001/#989).
-        dashSdkVersion = '0.1.0-v42int21-SNAPSHOT'
+        dashSdkVersion = '0.1.0-v42int22-SNAPSHOT'
         // 4.0.1 fixes the CBOR crash that aborted every identity read:
         // IdentityPublicKey.toObject() put the raw ContractBounds object
         // (SingleContractDocumentType) into the map handed to Cbor, which has
