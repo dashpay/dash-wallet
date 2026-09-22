@@ -227,8 +227,11 @@ class SdkBlockchainStateService internal constructor(
                     log.warn(
                         "SPV progress static for {}s at {} of {} filters ({} short, aggregate {}%) — " +
                             "at the iOS synced threshold with the filter commit parked, so NOT raising " +
-                            "the network impediment; this is the dash-spv final-partial-batch stall " +
-                            "(plan section 34) and it clears when the chain re-cuts the batch boundary",
+                            "the network impediment; this is the dash-spv final-batch park (plan section 34): " +
+                            "the last commit is held behind the engine's committed-range sweep, and it clears " +
+                            "when that sweep completes — on a mainnet wallet with thousands of derived " +
+                            "scripts that has not been seen to happen (fixed upstream by dropping the sweep, " +
+                            "rust-dashcore#1016)",
                         stillMs / 1000, p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
                         String.format(java.util.Locale.US, "%.3f", p.overallPercent * 100)
                     )
