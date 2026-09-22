@@ -240,6 +240,16 @@ public final class CameraManager {
         if (focusMode != null)
             parameters.setFocusMode(focusMode);
 
+        // Meter and focus on the center of the frame, where the user aims the code.
+        // Without this the camera meters the whole scene, and a bright QR on a dark
+        // screen (dark-mode web page) gets blown out beyond what the decoder can read.
+        final List<Camera.Area> centerArea =
+                Collections.singletonList(new Camera.Area(new Rect(-333, -333, 333, 333), 1000));
+        if (parameters.getMaxNumMeteringAreas() > 0)
+            parameters.setMeteringAreas(centerArea);
+        if (parameters.getMaxNumFocusAreas() > 0)
+            parameters.setFocusAreas(centerArea);
+
         parameters.setPreviewSize(cameraResolution.width, cameraResolution.height);
 
         camera.setParameters(parameters);
@@ -253,10 +263,35 @@ public final class CameraManager {
         }
     }
 
+    /** Luminance below which everything is clipped to black by [buildStretchedLuminanceSource]. */
+    private static final int HIGHLIGHT_STRETCH_FLOOR = 216;
+
     public PlanarYUVLuminanceSource buildLuminanceSource(final byte[] data) {
+        // Decode the full preview frame rather than cropping to the framing rectangle.
+        // The on-screen box is only a visual guide: cropping forces the user to fill it,
+        // which pushes the phone inside the camera's minimum focus distance and clips the
+        // QR quiet zone when slightly misaligned (persistent NotFoundException).
         return new PlanarYUVLuminanceSource(data, cameraResolution.width, cameraResolution.height,
-                (int) framePreview.left, (int) framePreview.top, (int) framePreview.width(),
-                (int) framePreview.height(), false);
+                0, 0, cameraResolution.width, cameraResolution.height, false);
+    }
+
+    /**
+     * A luminance source with the highlight range [{@value HIGHLIGHT_STRETCH_FLOOR}..255]
+     * stretched to full scale. Recovers QR codes that the camera overexposed (bright code
+     * on a dark screen), where the "black" modules land around luminance 220 and the
+     * binarizer sees a uniform white card.
+     */
+    public PlanarYUVLuminanceSource buildStretchedLuminanceSource(final byte[] data) {
+        final int pixels = cameraResolution.width * cameraResolution.height;
+        final byte[] stretched = new byte[pixels];
+        final int range = 255 - HIGHLIGHT_STRETCH_FLOOR;
+        for (int i = 0; i < pixels; i++) {
+            final int v = data[i] & 0xff;
+            stretched[i] = v <= HIGHLIGHT_STRETCH_FLOOR
+                    ? 0 : (byte) ((v - HIGHLIGHT_STRETCH_FLOOR) * 255 / range);
+        }
+        return new PlanarYUVLuminanceSource(stretched, cameraResolution.width, cameraResolution.height,
+                0, 0, cameraResolution.width, cameraResolution.height, false);
     }
 
     public void setTorch(final boolean enabled) {

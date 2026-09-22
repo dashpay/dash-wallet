@@ -22,9 +22,8 @@ import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.View
+import android.view.ViewPropertyAnimator
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
@@ -51,6 +50,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
@@ -89,6 +89,7 @@ import org.slf4j.LoggerFactory
 class SearchFragment : Fragment(R.layout.fragment_search) {
     companion object {
         private const val SCROLL_OFFSET_FOR_UP = 700
+        private const val SYNC_ERROR_DISPLAY_MS = 15_000L
         private val log = LoggerFactory.getLogger(SearchFragment::class.java)
     }
 
@@ -103,6 +104,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var previousScreenState: ScreenState = ScreenState.SearchResults
     private var onBackPressedCallback: OnBackPressedCallback? = null
     private var transitionAnimator: AnimatorSet? = null
+    private var manageGpsAnimator: ViewPropertyAnimator? = null
+    private var syncErrorJob: Job? = null
 
     private val isPhysicalSearch: Boolean
         get() = viewModel.exploreTopic == ExploreTopic.ATMs || viewModel.filterMode.value == FilterMode.Nearby
@@ -200,7 +203,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         binding.manageGpsView.managePermissionsBtn.setOnClickListener {
-            lifecycleScope.launch {
+            // View-scoped: the flow suspends on a config read before touching the permission
+            // launcher and requireActivity().
+            viewLifecycleOwner.lifecycleScope.launch {
                 runLocationFlow(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestSettings)
             }
         }
@@ -286,14 +291,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 is FirebaseNetworkException -> {
                     // if the network is unreachable, show the error for 15 seconds
                     syncMessage.text = getString(R.string.sync_in_progress_network_error)
-                    Handler(Looper.getMainLooper())
-                        .postDelayed(
-                            {
-                                clearSyncStatus(binding)
-                                viewModel.setObservedLastError()
-                            },
-                            15000
-                        )
+                    // View-scoped rather than a bare Handler: a raw postDelayed held the whole
+                    // destroyed view tree for 15s after onDestroyView(). Cancelling the previous
+                    // job also stops an older timer from clearing a freshly shown error early.
+                    syncErrorJob?.cancel()
+                    syncErrorJob = viewLifecycleOwner.lifecycleScope.launch {
+                        delay(SYNC_ERROR_DISPLAY_MS)
+                        clearSyncStatus(binding)
+                        viewModel.setObservedLastError()
+                    }
                 }
                 else -> syncMessage.text = getString(R.string.sync_in_progress_error)
             }
@@ -322,6 +328,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         // against a destroyed view binding.
         transitionAnimator?.cancel()
         transitionAnimator = null
+        manageGpsAnimator?.cancel()
+        manageGpsAnimator = null
+        syncErrorJob = null
         super.onDestroyView()
     }
 
@@ -354,16 +363,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val isTabDisabled = !isLocationEnabled && isNearby
         searchHeaderAdapter.controlsVisible = !isTabDisabled
 
+        // Hold the view directly: the end action can run after onDestroyView(), when reading
+        // the binding delegate would throw.
+        val manageGpsRoot = binding.manageGpsView.root
+
         if (isTabDisabled) {
-            binding.manageGpsView.root.isVisible = true
+            manageGpsRoot.isVisible = true
         }
 
-        binding.manageGpsView.root
+        manageGpsAnimator?.cancel()
+        manageGpsAnimator = manageGpsRoot
             .animate()
             .alpha(if (isTabDisabled) 1f else 0f)
             .setDuration(300)
-            .withEndAction { binding.manageGpsView.root.isVisible = isTabDisabled }
-            .start()
+            .withEndAction { manageGpsRoot.isVisible = isTabDisabled }
+        manageGpsAnimator?.start()
     }
 
     private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>, topic: ExploreTopic) {
@@ -412,7 +426,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     bottomSheet.isDraggable = isBottomSheetDraggable()
                     bottomSheetWasExpanded = false
                 } else if (!hasLocationBeenRequested) {
-                    lifecycleScope.launch {
+                    viewLifecycleOwner.lifecycleScope.launch {
                         requestLocationPermission(
                             viewModel.exploreTopic,
                             viewModel.exploreConfig,
@@ -572,7 +586,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun setupScreenTransitions() {
         viewModel.screenState.observe(viewLifecycleOwner) { state ->
-            lifecycleScope.launch {
+            // View-scoped: this delays before driving the transitions, all of which read the
+            // binding, so it must not survive onDestroyView().
+            viewLifecycleOwner.lifecycleScope.launch {
                 if (isKeyboardShowing) {
                     delay(100)
                 }
@@ -648,7 +664,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 hideKeyboard()
 
                 // Add small delay to ensure keyboard is hidden and layout adjusts
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     delay(150)
                     // Force window to adjust after keyboard is hidden
                     requireActivity().window?.setSoftInputMode(
@@ -1041,7 +1057,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     it.website?.let { website -> openWebsite(website) }
                 },
                 onBuyGiftCardButtonClicked = {
-                    lifecycleScope.launch {
+                    // View-scoped: isUserSignedInService() can hit the network to refresh an
+                    // expired token, and showLoginDialog() then needs requireActivity().
+                    viewLifecycleOwner.lifecycleScope.launch {
                         dashSpendViewModel.selectedProvider = selectedProvider
                         if (!dashSpendViewModel.isUserSignedInService(selectedProvider)) {
                             showLoginDialog(selectedProvider)

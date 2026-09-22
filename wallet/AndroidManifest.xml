@@ -73,6 +73,13 @@
         tools:ignore="LockedOrientationActivity"
         tools:replace="android:allowBackup,android:fullBackupContent,android:dataExtractionRules">
 
+        <!-- Android 16 (API 36) ignores screenOrientation/resizability restrictions on large
+             screens (sw >= 600dp) by default. This property keeps the portrait locks working
+             until layouts are made responsive. It stops working when targeting API 37+. -->
+        <property
+            android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY"
+            android:value="true" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${GOOGLE_PLAY_API_KEY}" />
@@ -117,7 +124,20 @@
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme"
             android:launchMode="singleTop"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- DashConnect (MO-945): login (dash-key:) and key-registration (dash-st:)
+                 URIs from external scanners and browsers route to the Connections screen -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <data android:scheme="dash-key" />
+                <data android:scheme="dash-st" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+            </intent-filter>
+        </activity>
 
         <activity-alias
             android:name="de.schildbach.wallet.MainActivity"
@@ -437,10 +457,5 @@
             android:name="android.nfc.disable_beam_default"
             android:value="true" />
 
-        <activity
-            android:name="org.dash.wallet.integrations.coinbase.ui.CoinBaseWebClientActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"
-            android:exported="true" />
     </application>
 </manifest>

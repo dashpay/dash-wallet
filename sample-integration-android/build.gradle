@@ -38,10 +38,11 @@ android {
         }
     }
 
+    compileSdk 36
+
     defaultConfig {
-        compileSdk 35
         minSdkVersion 24
-        targetSdkVersion 35
+        targetSdkVersion 36
         multiDexEnabled true
     }
     compileOptions {

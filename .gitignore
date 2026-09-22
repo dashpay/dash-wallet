@@ -34,6 +34,9 @@ output-metadata.json
 service.properties
 wallet/assets/explore/*.db
 .deploy/*.json
+.deploy/keystore.jks
+.deploy/.explore_db_flavor
 *.keystore
-.java-version # used by jenv for choosing java version at the command line
+# used by jenv for choosing java version at the command line
+.java-version
 .bundle/config
