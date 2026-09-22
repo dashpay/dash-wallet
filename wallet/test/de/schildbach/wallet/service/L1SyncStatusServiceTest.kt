@@ -29,6 +29,7 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
@@ -1001,6 +1002,167 @@ class L1SyncStatusServiceTest {
         assertTrue(
             "target ${detail.filterTarget} must not trail height ${detail.filterHeight}",
             detail.filterTarget >= detail.filterHeight
+        )
+    }
+
+    // ── SR-22: the scan floor a user-supplied restore date leaves behind ──
+
+    /**
+     * 2015-03-29, the sentinel `DashWalletFactory.restoreWalletFromSeed`
+     * stamps on EVERY seed restore ("always the oldest possible time"), so a
+     * seed-restored wallet's own key time carries no information.
+     */
+    private val sentinelSecs = 1_427_610_960L
+
+    /** A date the user could pick on the restore screen: 2024-03-05. */
+    private val chosenDateSecs = 1_709_596_800L
+
+    /** A genuine key creation time from a protobuf backup: 2019-01-01. */
+    private val realKeyTimeSecs = 1_546_300_800L
+
+    @Test
+    fun boundedScan_flagsTheSeedRestoreThatSkippedNineYearsOfChain() {
+        // SR-22 exactly: seed restore (key time = the sentinel), user picks a
+        // date, the SDK scans only from there. Everything before it — where
+        // 85.4 of the reported 107.08 tDASH lived — was never looked at.
+        assertEquals(
+            chosenDateSecs,
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = chosenDateSecs,
+                walletEarliestKeyCreationTimeSecs = sentinelSecs
+            )
+        )
+    }
+
+    @Test
+    fun boundedScan_saysNothingWhenTheUserPickedNoDate() {
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = null,
+                walletEarliestKeyCreationTimeSecs = sentinelSecs
+            )
+        )
+        // A wallet restored from a protobuf backup scans from its own genuine
+        // key time. Nothing the keys could have received predates that, so the
+        // scan is COMPLETE and must not be flagged.
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = null,
+                walletEarliestKeyCreationTimeSecs = realKeyTimeSecs
+            )
+        )
+    }
+
+    @Test
+    fun boundedScan_followsTheSdkRuleThatAGenuineKeyTimeOverridesALaterPick() {
+        // sdkWalletBirthTimeSecs takes the MINIMUM, so a backup restore whose
+        // keys predate the chosen date is scanned in full — no warning is owed.
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = chosenDateSecs,
+                walletEarliestKeyCreationTimeSecs = realKeyTimeSecs
+            )
+        )
+        // A date EARLIER than the keys scans more than necessary, never less.
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = sentinelSecs - 1,
+                walletEarliestKeyCreationTimeSecs = realKeyTimeSecs
+            )
+        )
+    }
+
+    @Test
+    fun boundedScan_followsTheDashjRuleWhereTheUsersDateWinsOutright() {
+        // dashj's fresh-store checkpointing reads
+        // `getWalletCreationDate() ?: wallet.earliestKeyCreationTime` — no
+        // minimum — so the SAME inputs that are safe under the SDK skip real
+        // history here, and the status must say so.
+        assertEquals(
+            chosenDateSecs,
+            boundedScanStartSecs(
+                sdkOwnsL1 = false,
+                configuredCreationDateSecs = chosenDateSecs,
+                walletEarliestKeyCreationTimeSecs = realKeyTimeSecs
+            )
+        )
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = false,
+                configuredCreationDateSecs = null,
+                walletEarliestKeyCreationTimeSecs = realKeyTimeSecs
+            )
+        )
+    }
+
+    @Test
+    fun boundedScan_claimsNothingBeforeTheWalletHasLoaded() {
+        // Every cold start spends its first moments with no wallet. A verdict
+        // taken then would be a guess in one direction or the other; take none.
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = chosenDateSecs,
+                walletEarliestKeyCreationTimeSecs = null
+            )
+        )
+    }
+
+    @Test
+    fun status_carriesTheScanFloorWithoutWithholdingTheSyncedGate() {
+        // The gate stays open — a bounded scan that has caught up IS usable,
+        // and permanently disabling sends/shortcuts would be the worse bug.
+        // What changes is only what the UI is allowed to CLAIM.
+        val status = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = progress(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_514_659),
+            dashjState = null,
+            scanStartDateSecs = chosenDateSecs
+        )
+        assertTrue(status.isSynced)
+        assertTrue(status.isFullySynced)
+        assertTrue(status.isPartialScan)
+        assertEquals(chosenDateSecs, status.scanStartDateSecs)
+    }
+
+    @Test
+    fun status_isNotPartialOnAnOrdinaryWallet() {
+        val status = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = progress(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_514_659),
+            dashjState = null
+        )
+        assertTrue(status.isSynced)
+        assertFalse(status.isPartialScan)
+        assertNull(status.scanStartDateSecs)
+    }
+
+    @Test
+    fun detail_carriesTheScanFloorInBothEngineRegimes() {
+        assertEquals(
+            chosenDateSecs,
+            mergeL1SyncDetail(
+                sdkOwnsL1 = true,
+                progress = progress(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_514_659),
+                sessionChainLockHeight = 0,
+                state = null,
+                scanStartDateSecs = chosenDateSecs
+            ).scanStartDateSecs
+        )
+        assertEquals(
+            chosenDateSecs,
+            mergeL1SyncDetail(
+                sdkOwnsL1 = false,
+                progress = progress(),
+                sessionChainLockHeight = 0,
+                state = dashjState(percentageSync = 100),
+                scanStartDateSecs = chosenDateSecs
+            ).scanStartDateSecs
         )
     }
 }

@@ -55,6 +55,19 @@
             android:layout_marginTop="2dp"
             tools:text="@string/network_monitor_connection_connected" />
 
+        <!-- SR-22: only visible when the scan started at a user-supplied
+             wallet creation date, i.e. when "Synced" above is a claim about
+             part of the chain. Says which part, and how to widen it. -->
+        <TextView
+            android:id="@+id/network_status_partial_warning"
+            style="@style/Overline.Secondary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            tools:text="@string/sync_partial_scan_warning" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

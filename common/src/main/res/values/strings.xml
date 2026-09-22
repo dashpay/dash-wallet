@@ -95,6 +95,11 @@
     <string name="send_coins_error_dusty_send">The amount is too small to send</string>
     <string name="send_coins_error_insufficient_money">Insufficient funds</string>
     <string name="syncing">Syncing</string>
+    <!-- SR-22: shown INSTEAD of a bare "Synced" whenever the scan started at a
+         user-supplied wallet creation date, so the balance and history only
+         cover the chain from that date forward. %1$s is the date. -->
+    <string name="sync_synced_from">Synced from %1$s</string>
+    <string name="sync_partial_scan_warning">This wallet was restored with a creation date of %1$s, so transactions before that date were never downloaded. Rescan the blockchain without a date to see the full history.</string>
     <string name="no_connection">No internet connection</string>
     <string name="rate_not_available">Not available</string>
 
