@@ -286,7 +286,7 @@ android {
         minSdkVersion 29
         targetSdkVersion 35
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 12000014
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 12000017
         versionName project.hasProperty('versionName') ? project.property('versionName') : "12.0.0-upgrade"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
