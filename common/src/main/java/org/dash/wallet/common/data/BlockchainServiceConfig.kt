@@ -21,6 +21,8 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
@@ -63,6 +65,20 @@ open class BlockchainServiceConfig @Inject constructor(
         } else {
             null
         }
+    }
+
+    /**
+     * [getWalletCreationDate] as a live feed, applying the same sentinel rule:
+     * only a date strictly later than [Constants.EARLIEST_HD_SEED_CREATION_TIME]
+     * carries information, everything else is null ("the user never chose one").
+     *
+     * Exists because the sync seam has to keep TELLING the user that a
+     * user-supplied restore date bounded the scan, for as long as it holds —
+     * and a one-shot suspend read cannot notice the date being cleared by a
+     * later full rescan (Settings → Rescan blockchain with no date).
+     */
+    fun observeWalletCreationDate(): Flow<Long?> = observe(WALLET_CREATION_DATE).map { creationDate ->
+        creationDate?.takeIf { it > Constants.EARLIEST_HD_SEED_CREATION_TIME }
     }
 
     suspend fun setWalletCreationDate(date: Long?) {
