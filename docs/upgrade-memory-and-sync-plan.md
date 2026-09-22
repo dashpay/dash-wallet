@@ -2731,3 +2731,85 @@ disk at process start, and it is the parked boundary. The 17:21 relaunch's resum
 captured (the progress log's 30-second cadence went straight from IDLE to SYNCED), so 1,532,170 is
 confirmed for that morning's four sightings and inferred, not shown, for that one. §34.1a stands
 with that refinement.
+
+## 37. The shutdown deadlock (Andrei, 2026-09-22)
+
+Reported as "Mo-1022 resync got stuck" on the Samsung SM-A536B (Android 16), release `12000017`,
+with two screenshots taken at 10:26 UTC: the home header on "Syncing balance" over 0.141144, and the
+Network Monitor reading **"Not started / Network engine not started"**, 100%, filters
+1,594,848 / 2,542,929. It is not the filter park of §34. The engine was genuinely not running, and
+had not been since 06:31 UTC — four hours.
+
+### 37.1 The timeline (UTC; the device logs in UTC, the screenshots in Berlin time)
+
+| time | event |
+|---|---|
+| 05:37:02 | Startup shielded bring-up resumes a pending wallet shield for asset lock `c19a7104…:0` — tracked since 09-18, status `Broadcast`, no proof. The resume enters the SDK and does not come back. |
+| 05:37:22 | Blockchain reset for the Mo-1022 resync. The reset's `onDestroy` stops the shielded runtime, clearing its ready latch. Filters rewound to 934,848. |
+| 05:40:05 | Service returns. Because the latch was cleared, the bring-up calls `bindShielded`. It blocks inside the SDK and never returns. |
+| 05:43:08 | The resumed shield's InstantSend wait times out after 300 s (`IS-lock did not propagate within 300s`); it moves to `waiting for ChainLock...` with no deadline. |
+| 06:08:05 | Filter-stall watchdog restarts the engine at 2,474,848 (68,087 short, 600 s static). 14 minutes of `Failed to resolve DNS seed` follow before a peer is reached at 06:22:21, with 1,000 peers loaded from disk. |
+| 06:24:24 | Filters reach 2,539,848 — the §34 park at 3,101 short. `display predicate -> l1Synced=true`; the §35 WARN fires at 06:27:07 and 06:29:09; no banner. Everything from 2026-09-21 behaved. |
+| 06:31:20 | `idling detected, stopping service`. Release build, so `stopSdkEngines()` runs. The SPV stops cleanly at 06:31:28. |
+| 06:31:28 | `ShieldedBalanceServiceImpl.stop()` waits on its mutex. The mutex is held by the bring-up parked in the native bind. The cleanup never finishes. |
+| 06:50 → 10:00 | Twelve alarm-driven starts each log `Cleanup did not complete within 15 seconds … deadlock in onDestroy` and stop themselves. The process is never replaced. |
+
+The Network Monitor's 1,594,848 is the process-scoped `lastFilterHeight` backstop from the last
+time the screen was open, 05:42–05:45; the 100% is the persisted row's percent. Both are what an
+IDLE engine legitimately renders. The stale height is cosmetic.
+
+### 37.2 The lock chain
+
+Four layers, each individually defensible, composing into a process that cannot recover:
+
+1. **rs-platform-wallet** `shielded/fund_from_asset_lock.rs:219` — `shielded_fund_from_asset_lock`
+   takes `shield_guard` and holds it across `resolve_chain_proof_after_is_timeout`, whose wait the
+   FFI resume path (`shielded_send.rs`, "wait for the ChainLock indefinitely — a broadcast asset
+   lock is pending finality, never failed") passes as `None`. This lock was reconstructed from an
+   on-chain record on 09-18 but has never been IS-locked and is evidently not chainlocked, so the
+   wait is forever.
+2. **rs-platform-wallet** `platform_wallet.rs:973` — `install_shielded_views`, the tail of
+   `bind_shielded`, takes the same `shield_guard`. The bind queues behind the stuck resume.
+3. **App** `ShieldedBalanceServiceImpl` — `ensureShieldedReadyInner` holds its Kotlin mutex across
+   the native bind; `stop()` took the same mutex with no bound.
+4. **App** `BlockchainServiceImpl.onCreate` — refuses to start while a previous cleanup is active,
+   which is right, but nothing gave up on the stuck cleanup, so the refusal repeated for four hours.
+
+Why the other devices never showed it: the same resume ran on 09-19, 09-20 and 09-21 and failed
+within 15 s each time on `transport not ready`, releasing the guard. Today the SPV was connected
+when it ran, so it entered the 300 s IS wait and then the endless CL wait. And only a blockchain
+reset clears the ready latch mid-process; without one the bind is skipped and the stuck resume is
+harmless. Two rare conditions, both required.
+
+### 37.3 What this branch does (`fix/sync-process-stalls`)
+
+Layers 3 and 4, in the app:
+
+- `ShieldedBalanceServiceImpl.stop()` waits at most `STOP_LOCK_TIMEOUT_MS` (5 s) for the lock, then
+  tears the Kotlin side down without it. A `stopGeneration` counter, bumped by every stop, lets the
+  abandoned bring-up recognise on return that it was superseded: it reports not-ready and starts
+  nothing, and the next trigger binds afresh. There is nothing to stop natively in that branch —
+  the sync loop is only started after the bind. Pinned by
+  `stop_returnsWithinItsBound_whenTheBringUpIsParkedInTheNativeBind`.
+- `BlockchainServiceImpl`: a start refused by an unfinished cleanup now measures how long that
+  cleanup has been stuck (`cleanupStartedAtMs`). Past `CLEANUP_DEADLOCK_EXIT_MS` (5 min) with the
+  app in the background, it ends the process (`decideOnCleanupDeadlock` → `EXIT_PROCESS`); the next
+  alarm start gets a clean one. Never while the app is visible — that start is the user's own, and
+  exiting would close the app on them; they get the refusal as before. On Andrei's device the first
+  refusal at 06:50 was already 19 minutes in, so the exit would have landed there. Pinned by
+  `CleanupDeadlockPolicyTest`.
+
+Cost of the exit: whatever dashj autosave had not yet flushed. With the SDK owning L1 the dashj
+wallet changes rarely, and the alternative is the zombie.
+
+### 37.4 What remains
+
+- **Platform** (layer 1, the root): `shield_guard` must not be held across an unbounded proof
+  wait, or the resume path must bound its ChainLock wait. Drafted as
+  [kotlin-sdk-issues-to-file.md §17](kotlin-sdk-issues-to-file.md). Separately, the tracked lock
+  `c19a7104…:0` needs a way out — it has been `Broadcast` with no proof since 09-18 and every
+  start re-attempts it.
+- The idle detector stopping the SDK engines in release (`PlatformSyncService.shutdown`, debug
+  keeps them warm) is what turned a stuck shielded bring-up into a stopped L1 engine. That policy
+  is §36.3's question from the other side and is not changed here.
+- The 14-minute reconnect after the 06:08 watchdog restart, with 1,000 peers on disk, is unexplained.
