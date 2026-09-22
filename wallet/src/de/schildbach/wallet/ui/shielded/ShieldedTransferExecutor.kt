@@ -604,7 +604,11 @@ class ShieldedTransferExecutor @Inject constructor(
             ShieldedTransferDirection.FromShielded ->
                 shieldedBalanceService.withdrawToCore(
                     debugUnshieldDestinationOverride()
-                        ?: walletDataProvider.freshReceiveAddressString(),
+                        // `Live`, not the plain accessor: this whole function runs
+                        // on [ioDispatcher], and post-cutover the dashj chain is
+                        // HELD — the plain read would unshield into an address the
+                        // chain has already paid (SR-03 / D-003).
+                        ?: walletDataProvider.freshReceiveAddressLive().toBase58(),
                     amount
                 )
         }

@@ -53,6 +53,31 @@ interface WalletData {
     fun freshReceiveAddress(): Address
     fun currentReceiveAddress(): Address
 
+    /**
+     * [currentReceiveAddress] / [freshReceiveAddress] answered by a LIVE read of
+     * whichever engine actually owns the key chain right now, instead of a
+     * cached one.
+     *
+     * Post-cutover that is the Kotlin SDK: the dashj wallet is HELD, so its
+     * receive pointer is frozen wherever the restore left it (index 0 on a fresh
+     * restore) and both plain methods above would serve an address the chain has
+     * ALREADY paid — SR-03 / D-003, the Receive screen re-serving the funded
+     * address after Reset Wallet + restore. [de.schildbach.wallet.WalletApplication]
+     * overrides these to read the engine's next UNUSED address over the SDK FFI
+     * (`core_wallet_next_receive_address`), NOT the SDK's Room address mirror,
+     * which lags the engine's used-set by a persistence pass.
+     *
+     * Pre-cutover — and in this default — they are the dashj answers unchanged,
+     * so `fresh` keeps its per-invoice handout there.
+     *
+     * BLOCKING: post-cutover these take the engine's wallet-manager lock (and
+     * pre-cutover `fresh` still forces dashj's synchronous full-wallet save).
+     * Call them off the main thread — [freshReceiveAddressOffMain] and
+     * [de.schildbach.wallet.ui.payments.PaymentsViewModel] already impose that.
+     */
+    fun currentReceiveAddressLive(): Address = currentReceiveAddress()
+    fun freshReceiveAddressLive(): Address = freshReceiveAddress()
+
     val networkId: String
         get() = networkParameters.id
     fun freshReceiveAddressString(): String = freshReceiveAddress().toBase58()

@@ -22,7 +22,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,8 +29,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.currentReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
@@ -192,10 +191,11 @@ class DEXRefundAddressViewModel @Inject constructor(
         _uiState.update { it.copy(isSubmitting = true, orderErrorRes = null) }
         viewModelScope.launch {
             // The converted DASH lands in the wallet's current receive address.
-            // Deriving the receive address touches the keychain — keep it off the main thread.
-            val destinationAddress = withContext(Dispatchers.IO) {
-                walletDataProvider.currentReceiveAddressString()
-            }
+            // currentReceiveAddressStringOffMain imposes the IO dispatcher the read
+            // needs (it touches the keychain, and post-cutover the SDK engine) and
+            // is what makes this the engine's next UNUSED address rather than the
+            // held dashj chain's frozen pointer — see SR-03 / D-003.
+            val destinationAddress = walletDataProvider.currentReceiveAddressStringOffMain()
             when (
                 val result = swapProvider.createBuyOrder(state.asset, sellAmount, destinationAddress, validAddress)
             ) {

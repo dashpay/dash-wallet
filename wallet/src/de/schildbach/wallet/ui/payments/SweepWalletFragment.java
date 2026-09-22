@@ -618,7 +618,13 @@ public class SweepWalletFragment extends Fragment {
         // SendCoinsOfflineTask callbacks keep their main-looper affinity).
         backgroundHandler.post(() -> {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
-            final Address receivingAddress = application.getWallet().freshReceiveAddress();
+            // Through the application, not the dashj wallet directly, and through
+            // the LIVE accessor: post-cutover the dashj chain is HELD and its
+            // pointer frozen, so sweeping the paper wallet straight into it would
+            // land the funds on an address the chain has already paid
+            // (SR-03 / D-003). Already on the background handler, as the live
+            // read requires.
+            final Address receivingAddress = application.freshReceiveAddressLive();
             handler.post(() -> {
                 if (!isAdded()) {
                     return;
