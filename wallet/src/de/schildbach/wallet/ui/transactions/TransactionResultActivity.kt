@@ -355,7 +355,10 @@ class TransactionResultActivity : LockScreenActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.transaction.value?.confidence?.removeEventListener(transactionResultViewBinder)
+
+        if (::transactionResultViewBinder.isInitialized) {
+            viewModel.transaction.value?.confidence?.removeEventListener(transactionResultViewBinder)
+        }
     }
 
     private fun rescanBlockchain() {
