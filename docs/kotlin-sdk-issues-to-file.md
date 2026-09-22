@@ -196,3 +196,35 @@ its database holds zero `transactions` rows, zero `txos` rows, and — decisivel
 `core_addresses` rows for the destination address. The address was never derived, so the
 BIP158 scan could not match it. Coins are on-chain and spendable by the seed, but invisible
 to the wallet permanently and unrecoverable by rescan.
+
+## 17. `shield_guard` is held across an unbounded ChainLock wait, so `bind_shielded` can block forever
+
+> **DRAFT — not filed.** Belongs on dashpay/platform (`rs-platform-wallet`, `rs-platform-wallet-ffi`).
+> Field case: Android `12000017`, Samsung SM-A536B, 2026-09-22; plan §37.
+
+`PlatformWallet::shielded_fund_from_asset_lock` (`wallet/shielded/fund_from_asset_lock.rs:219`)
+takes `self.shield_guard` ("single-flight: serialise shield-class operations") and holds it across
+`resolve_chain_proof_after_is_timeout`. The FFI resume entry
+`platform_wallet_manager_shielded_resume_fund_from_asset_lock` (`shielded_send.rs`) passes
+`cl_wait = None` — "wait for the ChainLock indefinitely — a broadcast asset lock is pending finality,
+never failed". `install_shielded_views` (`platform_wallet.rs:973`), the tail of `bind_shielded`,
+takes the same guard. So a resume whose lock is never chainlocked holds the guard forever, and every
+subsequent `bind_shielded` on that wallet blocks forever inside the FFI — a host coroutine that
+cannot be cancelled.
+
+Observed: asset lock `c19a7104…:0` (`AssetLockShieldedAddressTopUp`, 10,443,097 duffs) was
+reconstructed from an on-chain record on 2026-09-18 with `status=Broadcast has_proof=false`. Every
+app start since re-attempts the resume. On 09-19/20/21 it failed within 15 s on "transport not
+ready" and released the guard. On 09-22 the SPV was connected: the 300 s IS wait timed out at
+05:43:08, `not yet chain-locked, waiting for ChainLock...`, and the resume was still inside the FFI
+in every thread dump through 06:35. A `bind_shielded` issued at 05:40:05 never returned. The host's
+shutdown then waited on that bind and the L1 engine stayed off for four hours.
+
+Asks, any one of which breaks the chain:
+
+1. Do not hold `shield_guard` across a proof wait. Resolve funding first, then take the guard for
+   the build/submit section that actually needs single-flight.
+2. Bound the resume path's ChainLock wait (the direct `shieldedFundFromAssetLock` already bounds
+   its IS wait at 300 s); surface `TransactionBroadcastUnconfirmed` and let the host retry.
+3. A way out for a tracked lock that is `Broadcast` with no proof and not chainlocked after N
+   hours — mark it failed/abandoned rather than resuming it on every start.
