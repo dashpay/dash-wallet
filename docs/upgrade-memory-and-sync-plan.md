@@ -2587,8 +2587,20 @@ the line itself is proven only on the earlier build (13:00 the same day).
 
 ### 35.4 What it costs, and what it is not
 
-- **The display can be briefly low.** 371 ms on the Samsung. It corrects on the next publication.
-  The seed cannot be, by construction.
+- **The display can be briefly WRONG in either direction during a re-walk.** 371 ms low (107.43) on
+  the Samsung's fresh restore. Then, in a scripted 3× stop/wait-5-min/restart run on the emulator
+  the same evening, **1.5 s HIGH**: the process-restart re-walk from 1,532,170 was still applying
+  blocks when the aggregate crossed 0.999, and the D-041 intermediate it had just published
+  (11759172275, 117.59 DASH) became the live figure the instant the display predicate flipped —
+  until the next publication at 108.05 1.5 s later. One cycle in three; it needs an inflated
+  intermediate to land inside that window. The seed was never touched (10805162729 all three
+  cycles), so nothing survives the next launch — but the user can see it. The narrowing worth
+  deciding: keep the pipeline-lag veto on the DISPLAYED FIGURE only — hold last-known while
+  `pipelineLagging`, label following the aggregate. A "synced" label over a held, correct figure for
+  1.5 s is a smaller contradiction than a synced label over 117.59. Not done; owner's call.
+- **Per-restart cost, measured** (emulator, three cycles): resume at 1,532,170 every time, re-walk
+  2–7 s, SYNCED at +17/+17/+22 s, seed written at +63 s in each. No stall, no banner, no watchdog
+  decision in any cycle.
 - **Parity with iOS, including its blind spot.** Both clients now read the §34 stall as synced.
   Neither can tell it from a real wedge without the FFI signal (§35.6).
 - **This treats the symptom.** Andrei's screen reads synced and the log says why. The commit is not
