@@ -148,14 +148,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        if (isFinishing) {
-            // LockScreenActivity finishes us when there is no wallet - everything below
-            // (upgradeWalletKeyChains, handleIntent, ...) assumes there is one.
-            return
-        }
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             // no-op on API 35+, where edge-to-edge is enforced

@@ -141,14 +141,8 @@ class TransactionResultActivity : LockScreenActivity() {
     lateinit var dashPayProfileDao: DashPayProfileDao
 
     @SuppressLint("SetTextI18n")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        if (isFinishing) {
-            // LockScreenActivity finishes us when there is no wallet, but the view binder below
-            // requires one.
-            return
-        }
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         // Re-arm the deferred finish before the recreated sheet runs its lifecycle, so dismissing
         // the restored DashPayUserBottomSheet still finishes this host activity.

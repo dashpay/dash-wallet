@@ -131,10 +131,16 @@ open class LockScreenActivity : SecureActivity() {
         get() = configuration.remindBackupSeed && configuration.lastBackupSeedReminderMoreThan24hAgo()
     private val lockScreenDeactivatedListeners = arrayListOf<() -> Unit>()
 
+    /**
+     * Subclasses must not override this - Hilt forbids making it final, but the whole body runs
+     * even when there is no wallet and the activity is already finishing. Override
+     * [onCreateWithWallet] instead.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         if (walletData.wallet == null) {
+            log.warn("no wallet, finishing {}", javaClass.simpleName)
             finish()
             return
         }
@@ -150,7 +156,17 @@ open class LockScreenActivity : SecureActivity() {
         initViewModel()
 
         setupBackupSeedReminder()
+
+        onCreateWithWallet(savedInstanceState)
     }
+
+    /**
+     * Subclasses override this instead of [onCreate]. It runs at the point where onCreate() used
+     * to hand control back to the subclass, but only once the lock screen is set up and a wallet
+     * is known to exist - when there is none, the activity is finished and this is never called,
+     * so overrides can rely on [WalletDataProvider.wallet] being non-null.
+     */
+    protected open fun onCreateWithWallet(savedInstanceState: Bundle?) = Unit
 
     override fun setContentView(contentViewResId: Int) {
         if (isFinishing) return
