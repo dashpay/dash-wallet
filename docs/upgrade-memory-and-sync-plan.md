@@ -2433,13 +2433,26 @@ seconds of query time in 150 seconds. Worth its own investigation — it is a pl
 
 This is an SDK defect in `dash_spv::sync::filters::manager` and is not fixable from the app.
 
-**What we do about it on our side.** The watchdog now RECOGNISES this stall and declines to restart
-into it (`FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH`). The signature it uses is the
+**What we do about it on our side.** Two layers, both landed 2026-09-21.
+
+*The watchdog* RECOGNISES this stall and declines to restart into it
+(`FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH`, `743d7af42`). The signature it uses is the
 bound: a final-partial-batch stall always parks the cursor LESS than one commit batch
 (`BATCH_PROCESSING_SIZE` = 5,000) short of the target. Within that bound a restart is wrong twice —
 useless (§34.2) and expensive (it resumes from the durable watermark, which `stop()` has recorded
 trailing by up to 155,000 blocks) — so it logs one `SDK-FINAL-BATCH` line naming the defect and
 stands down. A stall WIDER than one batch is a different animal and still earns the restart.
+Refined the same day after review (`4a0a9ea9c`): the report is per PARK, not per process — a moving
+cursor clears it — and the suppression is BOUNDED at `FINAL_BATCH_RESTART_HOLD_MS` (30 min, the
+third backoff rung, ~3× the longest park measured). A stall still there after the hold falls
+through to the ordinary restart ladder. The signature is a distance heuristic, not proof, and a
+process-lifetime latch would have silenced restarts for a different, recoverable wedge in the same
+range.
+
+*The sync-status rule* — the user-facing half — is §35: the app now calls the wallet synced the way
+iOS does, on the engine's aggregate percentage, so this stall reads as "synced" instead of "99%"
+and the 90-second static-progress banner becomes a WARN. Proven on device the same day; the
+sequence is in §35.3.
 
 Two things about that worth keeping in view:
 
@@ -2453,7 +2466,11 @@ Two things about that worth keeping in view:
 - **5,000 is a copied constant**, read from the SDK's source and not published by the FFI. The
   clean discriminator is `stored_height == target && committed_height < target` — unambiguous, no
   magic number — but `stored_height` is not exposed through `SpvSyncProgressData`. Asking for it is
-  a request on the issue below.
+  request 3 on the issue below. The FFI change itself is drafted and compiles — `dash-spv-ffi`
+  already exports the field; the drop is one function, `progress_to_ffi` in
+  `rs-platform-wallet-ffi`, and the fix is append-only through JNI to Kotlin — in the parked
+  worktree `platform-spv-progress-ffi` (branch `feat/spv-progress-ffi-stored-height`, uncommitted).
+  Not pursued further on 2026-09-21 in favour of the user-facing rule in §35.
 
 **To be filed against `dash_spv`,** with the log excerpts above. Two questions for that issue,
 since the gate itself is defensible and the bug is on the side of it:
@@ -2463,3 +2480,212 @@ since the gate itself is defensible and the bug is on the side of it:
 2. Should a batch whose block fetches cannot make progress commit its filter range anyway, or at
    least surface the stall? Today it is silent, indefinite, and indistinguishable from a healthy
    engine to every consumer of `committed_height`.
+3. Expose `stored_height` — or the pending-block count — through the FFI, so a client can tell this
+   stall from a wedge without copying `BATCH_PROCESSING_SIZE` out of the source (§34.6, §35.6).
+
+**Correction to an earlier draft of the issue.** It said "iOS is equally exposed". iOS runs the
+same engine and reads the same parked value, but its synced test is an averaged 99.9% threshold
+(§35.1), which hides any shortfall under roughly 0.3% of chain height. The defect is not
+Android-specific; one client's tolerance hid the common case and the other's did not. The draft,
+repinned to the shipping engine revision `d525f431`, is `docs/dash-spv-issue.md` in the
+`rust-dashcore-spvstall` worktree. Still unfiled.
+
+## 35. Sync status: the iOS rule, adopted 2026-09-21
+
+Andrei's report after upgrading — "still 99%" — was the §34 stall's user-facing form, and it was
+still there on a build carrying the watchdog fix. The watchdog only stopped us making the stall
+worse; the screen still said the wallet was not synced, and after 90 static seconds it said the
+network was unreachable. Neither was true.
+
+### 35.1 Why iOS never showed it
+
+Both clients receive the identical progress struct (`FFISpvSyncProgress`, four fields per phase);
+they differ only in the test they apply. dashwallet-ios (`SyncingActivityMonitor.swift`) calls the
+wallet done when the engine's overall percentage is `>= 0.999`, falling through from
+`WaitForEvents` because the overall state can never be `Synced` while filters is not. That
+percentage is dash-spv's `SyncProgress::percentage()` — the MEAN of headers, filter headers and
+filters (blocks and masternodes do not contribute), with the filters phase reporting
+`committed_height / target`.
+
+Verified against the shipped engine on 2026-09-21: `71.5%` reported at filters 14.5% is exactly
+(100 + 100 + 14.5) / 3, and `99.4%` at filters 98.33% is exactly (100 + 100 + 98.33) / 3. Two
+comments in this codebase said the aggregate "under-reports (1.0% at filters 1402000/1514660)";
+that was a previous SDK, and both are corrected.
+
+What the threshold tolerates, on the two shapes we had measured:
+
+| shortfall | filters phase | 3-phase mean | iOS |
+|---|---|---|---|
+| 4,752 of 1,556,922 (Samsung, 2026-09-19) | 99.695% | **99.898%** | still syncing |
+| 3 blocks (Joel, mainnet, 49 min) | 99.99981% | **99.99994%** | **synced** |
+
+Android compared exact heights — `filterHeight < filterTarget`, `SCAN_TIP_TOLERANCE_BLOCKS = 2` — so
+it reported every instance as a stall. iOS reports neither as one. Its own source concedes the
+trade: `syncDone` "knows nothing about how much of what was scanned is durably persisted… a wallet
+can report 'synced' while rows are still materializing", and it LOGS the durable watermark at
+completion rather than gating on it. A possible false "synced" against a certain false "stall".
+
+### 35.2 What changed (`68d2ff02f`, `3e9fa5d9c`, `4a0a9ea9c`)
+
+- **`ShadowSyncProgress.scanCaughtUpToTip`** is now the UNION of the 2-block height rule and
+  `aggregateCaughtUp` (`overallPercent >= IOS_SYNC_DONE_THRESHOLD = 0.999`, both targets known). The
+  height rule keeps every fixture exact; the aggregate absorbs the case the heights cannot.
+- **`sdkL1ScanCaughtUp`** — THE ONE DEFINITION behind the "Syncing balance" label, the balance
+  display hold, the stage label and the header percent — DROPS the `blockPipelineLagging` veto.
+  iOS never had it, and in the §34 stall the wallet cursor parks WITH the filter cursor, so the
+  veto held "syncing" forever at 99%.
+- **The veto moves rather than dies**, to the two places being wrong is expensive: the durable
+  last-known seed (`CutoverUiDataService.persist`, via a new `L1SyncStatusService.sdkPipelineLagging`
+  flow — a wrong displayed figure corrects on the next tick, a wrong persisted one seeded every
+  launch: the 48.86 DASH incident), and the funding gate `evaluateWalletFundingGate` shared by L1
+  sends and shielded transfers (matched blocks still processing means this wallet's own spends not
+  yet applied; a send built on that ledger is a double-spend). Both were found by grepping for
+  consumers of the predicate, not by design — the funding gate nearly shipped without it.
+- **The 90-second stall verdict** gains an aggregate-aware overload: a static snapshot at the iOS
+  threshold is NOT reported as a NETWORK impediment. It is still logged, once per static spell
+  (`SdkBlockchainStateService`), naming the shape and the numbers. ERROR still stalls immediately.
+- **Edge logs** (`3e9fa5d9c`): the publication line is gated on the displayed VALUE changing, so a
+  wallet whose figure settles before the scan catches up flips to synced with no line at all —
+  twice on the day the display decision had to be inferred rather than read. Three lines, once per
+  edge: `display predicate -> l1Synced=…`, `block pipeline -> lagging=…`,
+  `SDK balance PERSISTED as the launch seed: …` with every gate term.
+
+### 35.3 Proven on device, 2026-09-21
+
+Release builds (`12000016`, `12000017`), emulator (Android 16) and Samsung SM-S901U (Android 16).
+The Samsung run is a fresh restore of the job-flower wallet, and it parked at the boundary this
+plan has recorded five times that day:
+
+```
+16:28:17  block pipeline -> lagging=true                          replay underway
+16:44-46  balance 1.33 -> 120.5 -> 104.6 -> 108.05, all l1Synced=false   D-041 swing held from display
+16:46:24  FILTERS 99.0%  filters 1510999/1558260                 last engine line before the park
+16:46:45  display predicate -> l1Synced=true | 107.43 | pipelineLagging=true
+                                                                 the AGGREGATE rule: 2,261 short, 99.952%
+16:46:46  published 10805162729                                  display low for 371 ms, then exact
+16:48:15  W  SPV progress static for 90s at 1555999 of 1558260 (2261 short, aggregate 99.952%)
+             — NOT raising the network impediment                THE WARN IN PLACE OF THE BANNER
+16:49:45  headers 1558261, filters still 1555999                 new block; clock reset; WARN repeats 16:51:18, 16:54:16
+16:57:21  block pipeline -> lagging=false;  SYNCED 1558261        park cleared at ~10 m 40 s
+16:57:39  SDK balance PERSISTED as the launch seed: 10805162729 (was 0)
+          l1Synced=true pipelineLagging=false backfillSettled=true buildsSettled=true
+```
+
+Zero `networkStalled=true` lines across the park. Under the previous build this minute reads
+"Syncing 99%", a red "unable to connect", and at 16:56 three watchdog restarts each re-walking from
+1,532,170 for nothing.
+
+The emulator sessions added: the aggregate rule absorbing a 2,230-block park at 100.0% (session 1);
+the seed read back exactly on the next launch (`lastKnown=10805162729`); a home header with no
+"Syncing balance" and no banner, and no flicker on a one-block blip; the seed re-written once on
+the relaunch's ticker, 33 s after the lag cleared. The final published figure on both devices,
+`10805162729` duffs, equals the `txos` sum verified directly that morning (812 unspent).
+
+Not observed on this build: `SDK-FINAL-BATCH`. The Samsung park cleared at ~10 m 40 s, inside the
+watchdog's 10-minute threshold plus its 60-second tick. No restart happened, which was the point;
+the line itself is proven only on the earlier build (13:00 the same day).
+
+### 35.4 What it costs, and what it is not
+
+- **The display can be briefly low.** 371 ms on the Samsung. It corrects on the next publication.
+  The seed cannot be, by construction.
+- **Parity with iOS, including its blind spot.** Both clients now read the §34 stall as synced.
+  Neither can tell it from a real wedge without the FFI signal (§35.6).
+- **This treats the symptom.** Andrei's screen reads synced and the log says why. The commit is not
+  `pending_blocks()` ever draining; that is the dash-spv trace in the `rust-dashcore-spvstall`
+  worktree, paused at the `requested` vs `from_storage` fork (`blocks/sync_manager.rs`): the same
+  `requested: 0` is consistent with "never fetched" and with "every match was already on disk",
+  which need opposite fixes, and the rest of that Display line — `from_storage`, `downloaded`,
+  `processed` — has not yet been read off a stalled device.
+
+### 35.5 Fixture fallout, stated plainly
+
+Several tests built "mid-scan" snapshots with `overallPercent = 1.0` because the field was inert.
+It is load-bearing now, so those fixtures carry honest aggregates ((100 + 100 + f) / 3). One test
+changes MEANING by design and says so: the shielded-gate tolerance boundary — three blocks short of
+1.5M is 99.9998%, and the gate opens there now. The `SdkBlockchainStateServiceTest` class fixture
+(`FILTERS, 1.0, … 50/100`) would have exempted its own stall from the banner; it is 0.833 now.
+
+### 35.6 Follow-ups
+
+- The stall WARN repeats once per BLOCK during a park (each header advance changes the snapshot and
+  resets the 90-second clock: 16:48:15, 16:51:18, 16:54:16). Keying the spell on the filter cursor
+  alone would make it once per park. Bounded and informative as is; minor.
+- The FFI signal (`stored_height`, pending-block counts) is what replaces the copied 5,000 in both
+  the watchdog and the stall verdict with an exact test. Drafted, parked (§34.6).
+- The QA doc carries Andrei's report as **A-01**.
+
+## 36. Process lifecycle and memory, observed 2026-09-21
+
+Incidental to the sync work, but this plan began as memory work, and the day produced the clearest
+memory data yet.
+
+### 36.1 The native heap ratchets and does not come back
+
+`ReplayMemTelemetry` across the Samsung's fresh restore (`12000017`):
+
+```
+16:32:47  FILTERS   alloc  661 MB   reserved  722 MB   filters 236k
+16:34:34  FILTERS   alloc 1016 MB   reserved 1059 MB   filters 296k     <- allocation peak, 6 min in
+16:36:22  FILTERS   alloc  487 MB   reserved 1085 MB
+16:41:22  FILTERS   alloc  325 MB   reserved 1116 MB
+16:46:24  FILTERS   alloc  346 MB   reserved 1148 MB
+16:49:45  FILTERS   alloc  365 MB   reserved 1217 MB   parked at the tip
+```
+
+Allocation peaked at 1.0 GB early and fell back to ~350 MB; the RESERVED native heap never came
+down — 722 MB to 1.2 GB with two thirds of it freed. The allocator is holding ~850 MB of empty
+pages. A session with no replay (upgrade-in-place, emulator) sat at 383 MB reserved. The replay is
+what inflates it, and nothing returns it. That 1.2 GB is the footprint `lowmemorykiller` sees when
+the app is backgrounded.
+
+### 36.2 Four process deaths, two kinds — and a correction
+
+| time | device | record | kind |
+|---|---|---|---|
+| 12:17:09 | Samsung | `has died: cch+5 SVC`, 1 s after `onTrimMemory(20/40)` | **pressure kill** of a cached process |
+| 15:54:49 | emulator | `Killing … remove task` | task swiped away |
+| 16:12:42 | Samsung | `has died: cch+5 SVC`, 1 s after `onTrimMemory(20/40)`; lmk sweeping Chrome, Play Store, keychain, Maps alongside | **pressure kill** |
+| 17:11:36 | Samsung | `am_kill … 900, remove task` | task swiped away |
+
+An earlier note in this session called the 17:11 death "the third eviction". It was a task
+removal; the record says so. Two of the four were `lowmemorykiller`; those two happened to a
+process that was CACHED — no foreground service protecting it — within a second of the UI going
+hidden. Being cached at 1.2 GB is the condition; the kill is the consequence.
+
+Every process death costs the re-walk of §34.1a on the next launch (~26,000 filters from
+1,532,170), and the re-walk is what pumps the heap. The two threads meet here.
+
+### 36.3 A service stop with no recorded caller (open)
+
+Twice — 16:58:53 and 17:27:45 — `BlockchainServiceImpl.onDestroy()` ran via
+`ActivityThread.handleStopService` with the PROCESS SURVIVING (no `am_kill`, no `has died`, same pid
+before and after), within a second of `onTrimMemory(20)` (UI hidden). The engine was torn down,
+the alarm re-armed, and the display predicate flipped false; a foreground resume 3.5 s later
+restarted it (16:58:57, the ordinary start pair). Every `stopSelf()` in the service logs a
+distinctive line (idle detector, memory pressure ≥ `TRIM_MEMORY_COMPLETE`, FGS 6-hour timeout,
+init failure, blockstore timeout), and none appeared. The only external `stopService` callers are
+the `@Deprecated("not used")` `stopBlockchainService()` and the Tools diagnostic
+`restartBlockchainService()` (1.5 s gap, single start — does not match). `AppForegroundMonitor` is
+state-only. The caller-side stack is not logged anywhere. **Whoever stops the service when the
+app backgrounds while synced is unidentified**, and it leaves the process cached — the state §36.2's
+pressure kills happen in.
+
+### 36.4 Battery exemption — a correction
+
+The Samsung IS battery-optimisation exempt: `dumpsys deviceidle` lists the package, and the app's
+own `isIgnoringBatteryOptimizations` logged `true`. An earlier note said "NO" from a grep of the
+`deviceidle whitelist` subcommand, which is a different list. Consequences: the §28/§32 question
+— does a NON-exempt device permit the alarm's background FGS start — is still unanswered by any
+device we have; and exemption did not prevent either pressure kill, which is expected, since
+`lowmemorykiller` reclaims cached processes regardless.
+
+### 36.5 The re-walk is a process-death cost, not an engine-stop cost
+
+An in-process engine restart (16:58:57, 17:36:18) came back IDLE → SYNCED at the tip in ~15 s with
+no lag: the engine keeps its in-memory `committed_height`. A PROCESS restart (16:27, 17:21) shows
+`lagging=true` for ~9 s while the filter cursor climbs back: the stored value is reloaded from
+disk at process start, and it is the parked boundary. The 17:21 relaunch's resume height was not
+captured (the progress log's 30-second cadence went straight from IDLE to SYNCED), so 1,532,170 is
+confirmed for that morning's four sightings and inferred, not shown, for that one. §34.1a stands
+with that refinement.

@@ -1,7 +1,10 @@
 # QA int19 (Pasta) — defect status against `fix/upgrade-memory-and-sync`
 
 Source: QA testing by Pasta on an **int19** build. Assessed 2026-09-19 against this branch at
-`5058e9194`, which now contains #1555 and #1559 via the merge in `1d9bbf659`.
+`5058e9194`, which now contains #1555 and #1559 via the merge in `1d9bbf659`. Re-assessed
+2026-09-21 at `4a0a9ea9c` (base now `feat/kotlin-sdk-phase-1`) after a day of device testing on
+release builds `12000016`/`12000017`; the entries below carry dated updates where that changed
+anything, and **A-01** (Andrei's post-upgrade "still 99%") is added at the end of the fixed list.
 
 "Addressed" below means *the defect's cause is fixed on this branch*. It does **not** mean
 retested — see [Retest before closing](#retest-before-closing).
@@ -10,11 +13,11 @@ retested — see [Retest before closing](#retest-before-closing).
 
 | Status | Count | IDs |
 |---|---|---|
-| Fixed on this branch | 1 | SR-01 |
+| Fixed on this branch | 3 | SR-01, **SR-06** (delivered on device 2026-09-21), **A-01** (Andrei's "still 99%", 2026-09-21) |
 | Addressed by the #1555 merge | 2 | D-056, D-031 |
 | Addressed by the pending master merge | 1 | D-011 |
-| Still applies | 7 | D-037, **D-041** (root-caused to the SDK, see below), D-068, SR-22, SR-05, SR-03/04, SR-07 |
-| Applies by deliberate decision | 2 | SR-06, SR-08 |
+| Still applies | 7 | D-037, **D-041** (SDK defect; the display hold and the seed gate are now proven on device — see the 2026-09-21 update), D-068, SR-22, SR-05, SR-03/04, SR-07 |
+| Applies by deliberate decision | 1 | SR-08 |
 
 ---
 
@@ -53,6 +56,54 @@ the **backoff** is what actually limits the damage of a watchdog that cannot cur
 stall.
 
 3 new tests; `L1ShadowSyncServiceTest` 111/111.
+
+**2026-09-21 update.** The watchdog now also RECOGNISES the §34 stall and declines to restart into
+it (`SDK_FINAL_BATCH`, `743d7af42`): a confirmed stall parked less than one 5,000-block commit
+batch short is reported once per park and not restarted — a restart recreates the same batch and
+re-walks from the durable watermark for nothing. After review the suppression was bounded
+(`4a0a9ea9c`): a park still there after 30 minutes falls through to the ordinary restart ladder,
+because the signature is a distance heuristic and a process-lifetime latch would have silenced
+restarts for a different, recoverable wedge. On device: `SDK-FINAL-BATCH` fired at 13:00:56 on a
+release build at the real 10-minute threshold (2,167 short, event stream quiet, no restart, cleared
+on its own 13½ minutes later); the later 12000017 park cleared at ~10 m 40 s, inside the threshold
+plus the 60-second tick, so no watchdog decision was reached there — a correct non-event. Plan
+§34.6, §35.3. `L1ShadowSyncServiceTest` 123/123.
+
+### A-01 — "Still 99%" after upgrading (Andrei, 2026-09-21)
+
+*Reported live, on a build carrying the SR-01 fix. Reproduced on device the same day: yes (Samsung
+SM-S901U, three parks; emulator, one).*
+
+**The defect.** The home header sits at "Syncing 99%" indefinitely on a wallet whose engine has
+every filter downloaded, and after 90 static seconds shows the red "unable to connect" banner.
+Neither is true. This is the user-facing form of the dash-spv final-partial-batch stall in
+[plan §34](upgrade-memory-and-sync-plan.md): the filter COMMIT parks a few thousand blocks short of
+the target (1,555,999 five times on 2026-09-21) while every filter is stored, and Android's synced
+test compared exact heights with a 2-block tolerance, so the park read as "not synced" for as long
+as it lasted. iOS never showed it: its test is the engine's aggregate percentage `>= 0.999`, a
+three-phase mean that absorbs any shortfall under ~0.3% of chain height.
+
+**Fixed** in `68d2ff02f` by adopting the iOS rule — plan §35. The synced predicate is now the union
+of the height rule and `overallPercent >= 0.999`; the 90-second stall verdict does not raise the
+NETWORK impediment at that threshold but logs a WARN naming the shape and numbers; the
+pipeline-lag veto that used to sit inside the synced predicate moved to the durable seed and the
+funding gate, the two places being wrong is expensive. `3e9fa5d9c` added once-per-edge logs for
+the display decision and the seed write, because the publication line is value-gated and the
+decision had otherwise to be inferred.
+
+**Proven on device**, release build `12000017`, fresh restore on the Samsung:
+`display predicate -> l1Synced=true` at 16:46:45 with the cursor 2,261 short at 99.952% (the
+aggregate rule; the height rule could not have fired); `SPV progress static for 90s … NOT raising
+the network impediment` at 16:48:15 and zero `networkStalled=true` across an 11-minute park; the
+seed written once at 16:57:39 after the pipeline drained, at exactly the ledger's
+`10805162729` duffs. The displayed figure was low by 0.62 DASH for 371 ms before correcting. Header
+read via the accessibility tree on the emulator: no "Syncing balance", no banner, no flicker on a
+one-block blip.
+
+**What it is not.** A fix for the stall. The commit still parks; the screen now says synced and the
+log says why. The root cause is dash-spv's `pending_blocks()` never draining (plan §34), traced
+into `blocks/sync_manager.rs` and paused at the `requested` vs `from_storage` fork; the issue draft
+is repinned to the shipping engine revision and still unfiled.
 
 ---
 
@@ -156,6 +207,29 @@ with `l1Synced=true`. Full analysis in §1a.1 there.
 Reproduction: force a re-walk (the filter-stall watchdog's restart does it), watch the published
 balance climb, confirm the `txos` table stays correct.
 
+**2026-09-21 update — the SDK defect stands; the app-side containment is now proven on device.**
+Two fresh restores and one upgrade-in-place on release builds, both devices:
+
+- The mid-replay swing showed every time — Samsung 1.33 → 120.5 → 104.6 → 110.2 → … → 108.05,
+  emulator 157.2 and 117.59 — and every one of those lines carried `l1Synced=false`, so the header
+  held the last-known figure (or, with none, the live one) and never displayed an inflated value.
+- The figure settled on `10805162729` duffs = **108.05162729** on both devices — one TXO (0.97 DASH)
+  above the 107.08 recorded above, and equal to the ledger read directly that morning (812 unspent
+  txos). A real receive, not drift; checked before calling it.
+- The launch seed was written ONLY after the block pipeline drained — `PERSISTED … pipelineLagging=false`
+  18 s after `lagging=false` on the Samsung, and read back exactly on the next launch — because the
+  pipeline-lag veto now gates the seed directly (plan §35.2). This is the guard the original report's
+  "persisted as `lastKnown`" was missing.
+- No process-kill-during-replay case was run today, so the report's exact trigger is still not
+  re-tested under the new gates; the mechanism it depends on (persisting a partial) is closed by
+  construction, and the display path is observed.
+
+Two observability notes for `DASHJ-KILL-LIST.md` §1a: publication is skipped when the value is
+unchanged, so a wallet whose figure settles before the scan catches up flips to `l1Synced=true`
+with no line — a suppression keyed on `l1Synced=false` alone would have hidden a CORRECT balance
+permanently. `3e9fa5d9c` adds once-per-edge logs for the flip and the seed write so the decision is
+read, not inferred.
+
 ### D-068 — CoinJoin funds stranded at cutover
 
 *Reproduced on device: yes (S12).* **Funds stranded.**
@@ -207,8 +281,18 @@ Correct, and diagnosed to the bottom in [plan §32](upgrade-memory-and-sync-plan
 overdue does not compel delivery. Combined with §25 (boot start blocked on Android 15+), a v12
 wallet has **no dependable background sync at all**.
 
-§32.7 leaves the fix deferred because it changes wake-up frequency and therefore battery
-behaviour — a product call, not a patch. **Open decision, not an oversight.**
+§32.7 originally left the fix deferred because it changes wake-up frequency and therefore battery
+behaviour — a product call, not a patch.
+
+**2026-09-21 update — fixed on this branch** (`90851e8e9`; §32.8–32.13). The repeat interval now
+honours the backoff already being computed (15 min just-used, 12 h recent, 24 h idle) instead of a
+hardcoded `INTERVAL_DAY`, and the two schedulers no longer share one PendingIntent request code, so
+neither silently replaces the other. **Delivered for the first time ever** at 13:08:33 on a Samsung
+SM-S901U: `repeat=15min`, window `+11m15s`, `a background FGS start WAS permitted` — which also
+answers §28 for a battery-exempt device. Still open: §32.13 (every service teardown cancels the
+alarm), §32.11 (the replay guard can prevent it arming at all), and whether a NON-exempt device
+permits the start — the Samsung turned out to be exempt (plan §36.4), so no device we have answers
+that. Kept in this section for the history; the summary table counts it as fixed.
 
 ### SR-08 — Prod build seeds all SDK flags
 
