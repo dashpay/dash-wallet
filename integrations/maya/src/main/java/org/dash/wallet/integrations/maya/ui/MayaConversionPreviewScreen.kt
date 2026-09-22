@@ -217,7 +217,7 @@ private fun FromRow(state: MayaConversionPreviewUIState) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(CommonR.string.from_dash_wallet_on_this_device),
-            style = MyTheme.Caption,
+            style = MyTheme.Typography.Footnote,
             color = LocalDashColors.current.textSecondary,
             modifier = Modifier
                 .fillMaxWidth()
@@ -249,7 +249,7 @@ private fun FromRow(state: MayaConversionPreviewUIState) {
                     )
                     Text(
                         text = state.fromDashAmount,
-                        style = MyTheme.Caption,
+                        style = MyTheme.Typography.Footnote,
                         color = LocalDashColors.current.textPrimary
                     )
                 }
@@ -320,7 +320,7 @@ private fun CoinBadge(
         Column {
             Text(
                 text = name,
-                style = MyTheme.CaptionMedium,
+                style = MyTheme.Typography.FootnoteMedium,
                 color = LocalDashColors.current.textPrimary
             )
             Text(

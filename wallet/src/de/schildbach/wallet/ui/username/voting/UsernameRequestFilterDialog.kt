@@ -28,6 +28,7 @@ import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
 import org.dash.wallet.common.ui.radio_group.setupRadioGroup
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.getStringArrayOrDefault
 
 enum class UsernameGroupOption {
     VotingPeriodNone,
@@ -93,11 +94,17 @@ class UsernameRequestFilterDialog : OffsetDialogFragment(R.layout.dialog_usernam
 
     private fun setupSortByOptions() {
 
-        val sortByOptionNames = binding.root.resources.getStringArray(R.array.usernames_sort_by_options).mapIndexed { i, it ->
+        val sortByOptionNames = requireContext().getStringArrayOrDefault(
+            R.array.usernames_sort_by_options,
+            UsernameSortOption.entries.size
+        ).mapIndexed { i, it ->
             IconifiedViewItem(getString(if (i < 2) R.string.date else R.string.votes, it))
         }
 
-        val groupByOptionNames = binding.root.resources.getStringArray(R.array.usernames_group_by_options).mapIndexed { i, it ->
+        val groupByOptionNames = requireContext().getStringArrayOrDefault(
+            R.array.usernames_group_by_options,
+            UsernameGroupOption.entries.size
+        ).mapIndexed { i, it ->
             IconifiedViewItem(
                 if (i == 0) {
                     it
@@ -127,7 +134,10 @@ class UsernameRequestFilterDialog : OffsetDialogFragment(R.layout.dialog_usernam
     }
 
     private fun setupTypeOptions() {
-        val optionNames = binding.root.resources.getStringArray(R.array.usernames_type_options).map {
+        val optionNames = requireContext().getStringArrayOrDefault(
+            R.array.usernames_type_options,
+            UsernameTypeOption.entries.size
+        ).map {
             IconifiedViewItem(it)
         }
 

@@ -147,7 +147,7 @@ fun MayaConvertResultScreen(
                 if (state.explorerLinkText != null) {
                     Text(
                         text = state.explorerLinkText,
-                        style = MyTheme.CaptionMedium,
+                        style = MyTheme.Typography.FootnoteMedium,
                         color = LocalDashColors.current.dashBlue,
                         textAlign = TextAlign.Center,
                         modifier = Modifier

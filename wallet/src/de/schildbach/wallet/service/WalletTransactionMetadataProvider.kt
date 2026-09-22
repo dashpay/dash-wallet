@@ -47,7 +47,6 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
 import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.decodeBitmap
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.integrations.maya.data.SwapOrderDao
 import org.slf4j.LoggerFactory
