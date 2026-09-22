@@ -3,7 +3,7 @@ buildscript {
         kotlin_version = '2.1.0'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.12.0'
-        dashjVersion = '22.0.4'
+        dashjVersion = '22.0.5'
         // Dash Platform Kotlin SDK (org.dashj:dash-sdk-android). Single source of
         // truth for both the dependency coordinate (wallet/build.gradle) and the
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
@@ -20,7 +20,7 @@ buildscript {
         // (SingleContractDocumentType) into the map handed to Cbor, which has
         // no converter for it -> IllegalArgumentException("No converter for ...").
         // 4.0.1 calls this.toObject() first. Cbor.kt itself is unchanged.
-        dppVersion = "4.0.1-SNAPSHOT"
+        dppVersion = "4.0.1"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
