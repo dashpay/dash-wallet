@@ -24,6 +24,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CreditBalanceInfo
+import de.schildbach.wallet.data.DashPayUserLink
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
@@ -277,6 +278,56 @@ open class DashPayViewModel @Inject constructor(
 
     fun getContact(userId: String?) {
         contactUserIdLiveData.value = userId
+    }
+
+    private val _verifyUserLink = MutableLiveData<Resource<UsernameSearchResult>?>()
+    val verifyUserLink: LiveData<Resource<UsernameSearchResult>?>
+        get() = _verifyUserLink
+    private var verifyUserLinkJob: Job? = null
+
+    /**
+     * Verifies a scanned `dashpay://user` payload against Platform. The QR
+     * proves nothing by itself: display data comes exclusively from the
+     * Platform profile + DPNS lookup ([PlatformRepo.updateDashPayProfile]),
+     * and the QR's username param is only an early mismatch check — if it
+     * doesn't match the resolved DPNS label the user is treated as not found.
+     * Users we already have a relationship with are trusted from local data.
+     */
+    fun verifyUserLink(link: DashPayUserLink) {
+        verifyUserLinkJob?.cancel()
+        verifyUserLinkJob = viewModelScope.launch(Dispatchers.IO) {
+            _verifyUserLink.postValue(Resource.loading(null))
+            try {
+                val userData = resolveUserLink(link)
+                if (userData != null) {
+                    logEvent(AnalyticsConstants.UsersContacts.SCAN_USER_QR_SUCCESS)
+                    _verifyUserLink.postValue(Resource.success(userData))
+                } else {
+                    _verifyUserLink.postValue(Resource.error("user link not verified: ${link.username}"))
+                }
+            } catch (ex: Exception) {
+                _verifyUserLink.postValue(Resource.error(formatExceptionMessage("verify user link", ex)))
+            }
+        }
+    }
+
+    /** Returns the verified user, or null when Platform doesn't back the link's claim. */
+    private suspend fun resolveUserLink(link: DashPayUserLink): UsernameSearchResult? {
+        val local = platformRepo.getLocalUserDataByUserId(link.userId)
+        if (local != null && local.type != UsernameSearchResult.Type.NO_RELATIONSHIP) {
+            return local
+        }
+        platformRepo.updateDashPayProfile(link.userId)
+        val profile = platformRepo.loadProfileByUserId(link.userId)
+        if (profile == null || profile.username.lowercase() != link.username.lowercase()) {
+            return null
+        }
+        return platformRepo.getLocalUserDataByUserId(link.userId)
+    }
+
+    fun clearVerifyUserLink() {
+        verifyUserLinkJob?.cancel()
+        _verifyUserLink.value = null
     }
 
     fun getLocalContactDataByUserId(userId: String) = liveData(Dispatchers.IO) {

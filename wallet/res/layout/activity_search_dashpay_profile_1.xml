@@ -69,6 +69,39 @@
         app:layout_constraintStart_toStartOf="parent"
         app:srcCompat="@drawable/ic_add_contact" />
 
+    <LinearLayout
+        android:id="@+id/qr_buttons_row"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="24dp"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/search">
+
+        <Button
+            android:id="@+id/my_qr_button"
+            style="@style/Button.Primary.Large.LightBlue"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="5dp"
+            android:layout_weight="1"
+            android:text="@string/search_user_my_qr"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/scan_qr_button"
+            style="@style/Button.Primary.Large.LightBlue"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:layout_weight="1"
+            android:text="@string/search_user_scan_qr" />
+    </LinearLayout>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/search_results_rv"
         android:layout_width="0dp"
@@ -83,7 +116,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/search" />
+        app:layout_constraintTop_toBottomOf="@id/qr_buttons_row" />
 
     <include
         android:id="@+id/user_search_empty_result"
