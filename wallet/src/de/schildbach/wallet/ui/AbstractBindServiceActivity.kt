@@ -48,7 +48,7 @@ abstract class AbstractBindServiceActivity : LockScreenActivity() {
     override fun onResume() {
         super.onResume()
 
-        if (isFinishing) {
+        if (finishedWithoutWallet) {
             // no wallet - binding would start BlockchainServiceImpl, which needs one
             return
         }

@@ -127,6 +127,15 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     protected var isLocked: Boolean = false
+
+    /**
+     * Set when [onCreate] gave up because there is no wallet. Lifecycle callbacks must check this
+     * rather than [isFinishing]: Activity.finish() only marks the activity finishing when the
+     * activity manager can finish it right away, so an activity finished mid-launch (for instance
+     * while a task is being restored) still reports isFinishing == false while it runs onStart().
+     */
+    protected var finishedWithoutWallet = false
+        private set
     private val shouldShowBackupReminder
         get() = configuration.remindBackupSeed && configuration.lastBackupSeedReminderMoreThan24hAgo()
     private val lockScreenDeactivatedListeners = arrayListOf<() -> Unit>()
@@ -141,6 +150,7 @@ open class LockScreenActivity : SecureActivity() {
 
         if (walletData.wallet == null) {
             log.warn("no wallet, finishing {}", javaClass.simpleName)
+            finishedWithoutWallet = true
             finish()
             return
         }
@@ -217,9 +227,9 @@ open class LockScreenActivity : SecureActivity() {
     override fun onStart() {
         super.onStart()
 
-        if (isFinishing) {
-            // onCreate() finished us for having no wallet, but the system still starts the
-            // activity - everything below touches the lock screen binding it never inflated
+        if (finishedWithoutWallet) {
+            // onCreate() gave up for having no wallet, but the system still starts the activity -
+            // everything below touches the lock screen binding it never inflated
             return
         }
 

@@ -201,7 +201,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onStart() {
         super.onStart()
 
-        if (isFinishing) {
+        if (finishedWithoutWallet) {
             return
         }
 
@@ -306,9 +306,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onResume() {
         super.onResume()
 
-        if (isFinishing) {
-            // no wallet: onCreateWithWallet() never ran and checkWalletEncryptionDialog()
-            // below dereferences the wallet
+        if (finishedWithoutWallet) {
+            // onCreateWithWallet() never ran and checkWalletEncryptionDialog() below
+            // dereferences the wallet
             return
         }
 
