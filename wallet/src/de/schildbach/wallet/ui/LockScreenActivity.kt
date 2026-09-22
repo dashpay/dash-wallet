@@ -101,7 +101,7 @@ open class LockScreenActivity : SecureActivity() {
     private val pinLength by lazy { configuration.pinLength }
 
     val lockScreenDisplayed: Boolean
-        get() = binding.rootViewSwitcher.displayedChild == 0
+        get() = ::binding.isInitialized && binding.rootViewSwitcher.displayedChild == 0
 
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
@@ -216,6 +216,13 @@ open class LockScreenActivity : SecureActivity() {
 
     override fun onStart() {
         super.onStart()
+
+        if (isFinishing) {
+            // onCreate() finished us for having no wallet, but the system still starts the
+            // activity - everything below touches the lock screen binding it never inflated
+            return
+        }
+
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         val showLockScreen = !keepUnlocked && configuration.autoLogoutEnabled &&

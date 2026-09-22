@@ -201,6 +201,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onStart() {
         super.onStart()
 
+        if (isFinishing) {
+            return
+        }
+
         if (!lockScreenDisplayed && config.showNotificationsExplainer) {
             explainPushNotifications()
         }
@@ -301,6 +305,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onResume() {
         super.onResume()
+
+        if (isFinishing) {
+            // no wallet: onCreateWithWallet() never ran and checkWalletEncryptionDialog()
+            // below dereferences the wallet
+            return
+        }
+
         turnOnAutoLogout()
         checkTimeSkew(viewModel)
         checkLowStorageAlert()
