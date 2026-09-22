@@ -67,7 +67,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -190,6 +189,7 @@ class MainViewModel @Inject constructor(
     // serializer for seconds. See the ANR note on the collector.
     private var chainHeight: Int = 0
     private var headersHeight: Int = 0
+    private var lastIsBlockchainSynced: Boolean? = null
     private val _syncStage = MutableStateFlow(SyncStage.OFFLINE)
     val syncStage: StateFlow<SyncStage>
         get() = _syncStage
@@ -377,8 +377,10 @@ class MainViewModel @Inject constructor(
         // flowOn() applies to everything UPSTREAM of it, i.e. to this onEach, so the
         // body now runs on Dispatchers.IO. Everything it touches is safe there:
         // updateSyncStatus/updatePercentage only call LiveData.postValue (designed for
-        // background threads), and headersHeight/chainHeight are confined to this one
-        // sequential collector.
+        // background threads) and never read LiveData.value (which is only updated on
+        // the main thread and would be racy to read here), and headersHeight/
+        // chainHeight/lastIsBlockchainSynced are confined to this one sequential
+        // collector.
         blockchainStateProvider.observeState()
             .filterNotNull()
             .onEach { state ->
@@ -388,10 +390,9 @@ class MainViewModel @Inject constructor(
                 chainHeight = state.bestChainHeight
                 if (!state.replaying) {
                     log.info(
-                        "blockchain state update: mnlist={}; chain={}; wallet={}",
+                        "blockchain state update: mnlist={}; chain={}",
                         headersHeight,
-                        chainHeight,
-                        walletData.wallet?.lastBlockSeenHeight
+                        chainHeight
                     )
                 }
             }
@@ -888,8 +889,14 @@ class MainViewModel @Inject constructor(
     }
 
     private fun updateSyncStatus(state: BlockchainState) {
-        if (_isBlockchainSynced.value != state.isSynced()) {
-            _isBlockchainSynced.postValue(state.isSynced())
+        // Dedup against lastIsBlockchainSynced, NOT _isBlockchainSynced.value: this runs on the
+        // Dispatchers.IO collector, but LiveData.value is only updated on the main thread once the
+        // runnable posted by postValue() is processed, so a background-thread read of .value can
+        // observe a stale value and cause missed/redundant posts.
+        val isSynced = state.isSynced()
+        if (lastIsBlockchainSynced != isSynced) {
+            lastIsBlockchainSynced = isSynced
+            _isBlockchainSynced.postValue(isSynced)
         }
         _isBlockchainSyncFailed.postValue(state.syncFailed())
         _isNetworkUnavailable.postValue(state.impediments.contains(BlockchainState.Impediment.NETWORK))

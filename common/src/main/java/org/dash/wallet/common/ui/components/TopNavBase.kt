@@ -100,7 +100,7 @@ fun TopNavBase(
                 ) {
                     Text(
                         text = leadingText,
-                        style = MyTheme.CaptionMedium,
+                        style = MyTheme.Typography.FootnoteMedium,
                         color = colors.textPrimary
                     )
                 }
@@ -147,7 +147,7 @@ fun TopNavBase(
                 ) {
                     Text(
                         text = trailingText,
-                        style = MyTheme.CaptionMedium,
+                        style = MyTheme.Typography.FootnoteMedium,
                         color = colors.dashBlue
                     )
                 }

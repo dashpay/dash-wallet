@@ -22,6 +22,7 @@ import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.InviteHistoryHeaderRowBinding
+import org.dash.wallet.common.util.getStringArrayOrDefault
 
 open class InvitesHeaderViewHolder(val binding: InviteHistoryHeaderRowBinding,
                                    val onFilterListener: OnFilterListener) :
@@ -38,7 +39,10 @@ open class InvitesHeaderViewHolder(val binding: InviteHistoryHeaderRowBinding,
     ) {
 
         itemView.apply {
-            val array = context.resources.getStringArray(R.array.invite_filter)
+            val array = context.getStringArrayOrDefault(
+                R.array.invite_filter,
+                InvitesHistoryViewModel.Filter.entries.size
+            )
             binding.inviteFilterText.text = array[filter.ordinal]
             binding.inviteFilter.setOnClickListener {
                 filterClick.postValue(filter)

@@ -34,6 +34,7 @@ import androidx.activity.viewModels
 import androidx.annotation.NavigationRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -52,6 +53,7 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
+import de.schildbach.wallet.ui.more.connections.ConnectionsFragment
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.ui.staking.createCrowdNodeWithdrawalReminderDialog
 import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
@@ -192,8 +194,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             log.warn("started without a wallet - closing (launch onboarding instead)")
             return
         }
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            // no-op on API 35+, where edge-to-edge is enforced
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            @Suppress("DEPRECATION")
+            window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
+        }
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         this.setupBottomNavigation(viewModel)
@@ -465,9 +471,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    override fun onBackPressed() {
-        if (!goBack()) {
-            super.onBackPressed()
+    override fun handleBackNavigation() {
+        if (!lockScreenDisplayed && !goBack()) {
+            super.handleBackNavigation()
         }
     }
 
@@ -493,10 +499,40 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
+    /**
+     * Navigates to the Connections screen with a scanned/opened DashConnect URI. On a cold
+     * start the nav host is not ready while handleIntent runs from onCreate, so retry once
+     * the view hierarchy is laid out.
+     */
+    private fun navigateToConnections(uri: String, isRetry: Boolean = false) {
+        try {
+            findNavController(R.id.nav_host_fragment).navigate(
+                R.id.connectionsFragment,
+                bundleOf(ConnectionsFragment.ARG_SCANNED_URI to uri)
+            )
+        } catch (e: IllegalStateException) {
+            if (!isRetry) {
+                window.decorView.post { navigateToConnections(uri, isRetry = true) }
+            } else {
+                log.warn("could not navigate to connections for DashConnect uri", e)
+            }
+        }
+    }
+
     private fun handleIntent(intent: Intent) {
         if (intent.hasExtra(EXTRA_RESET_BLOCKCHAIN)) {
             goBack(true)
             recreate()
+            return
+        }
+        if (Intent.ACTION_VIEW == intent.action &&
+            intent.data?.scheme in listOf("dash-key", "dash-st")
+        ) {
+            // DashConnect (MO-945): login / key-registration URI opened from an
+            // external scanner or browser — handled by the Connections screen
+            val uri = intent.data.toString()
+            intent.data = null // consume, so recreation doesn't navigate again
+            navigateToConnections(uri)
             return
         }
         if (intent.hasExtra(EXTRA_INVITE)) {

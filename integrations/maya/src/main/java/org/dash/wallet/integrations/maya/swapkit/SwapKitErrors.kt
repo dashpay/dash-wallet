@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.maya.swapkit
 
 import androidx.annotation.StringRes
 import org.dash.wallet.integrations.maya.R
+import org.dash.wallet.integrations.maya.swapkit.model.SwapKitProviderError
 
 /**
  * Maps a raw SwapKit error into a user-facing, localized message resource.
@@ -37,6 +38,9 @@ import org.dash.wallet.integrations.maya.R
  * its "User-Facing Error Display" section lists which screens show which of these messages.
  */
 object SwapKitErrors {
+    /** Top-level code for "no provider can carry this pair/amount"; also our no-provider-error fallback. */
+    const val NO_ROUTES_FOUND = "noRoutesFound"
+
     /**
      * Friendly message resource for [rawError] — the message carried by the failed swap's
      * exception. The leading token (before an optional `": <detail>"`) is treated as the SwapKit
@@ -51,10 +55,12 @@ object SwapKitErrors {
     fun messageResFor(rawError: String?): Int {
         // Match on the code prefix so both a bare "validation_error" and a
         // "validation_error: <detail>" map to the same friendly message.
-        val code = rawError?.substringBefore(':')?.trim().orEmpty()
+        val code = codeOf(rawError)
+        // Per-provider below-minimum codes are family-matched, not enumerated (see isBelowMinimumCode).
+        if (isBelowMinimumCode(code)) return R.string.dex_error_amount_too_small
         return when (code) {
             // /v3/quote
-            "noRoutesFound" -> R.string.dex_error_no_route
+            NO_ROUTES_FOUND -> R.string.dex_error_no_route
             "blackListAsset" -> R.string.dex_error_blacklisted
             "invalidRequest", "validation_error" -> R.string.dex_error_validation
             "apiKeyInvalid", "unauthorized" -> R.string.dex_error_unavailable
@@ -70,4 +76,50 @@ object SwapKitErrors {
             else -> R.string.dex_error_generic
         }
     }
+
+    /**
+     * True when [rawError] means the sell amount is under the minimum this swap can fill — the
+     * case the UI surfaces as an inline hint (raise the amount and retry) rather than a blocking
+     * modal. `noRoutesFound` is the ambiguous top-level form; the per-provider below-minimum codes
+     * from `providerErrors[]` are family-matched (see [isBelowMinimumCode]).
+     */
+    fun isAmountTooLow(rawError: String?): Boolean {
+        val code = codeOf(rawError)
+        return code == NO_ROUTES_FOUND || isBelowMinimumCode(code)
+    }
+
+    /**
+     * True when [code] is a per-provider "amount is below the route's minimum" code. SwapKit
+     * reports these with a code ending in `AmountTooSmall` (e.g. `sellAssetAmountTooSmall` from
+     * MAYACHAIN). Matched by suffix rather than an exact list because SwapKit doesn't document the
+     * per-provider vocabulary and the prefix names whichever side/field was too small;
+     * `AmountTooLow` is accepted as the same family. Both require "Amount" in the code, so
+     * unrelated below-threshold codes (a too-low fee, say) stay out.
+     */
+    private fun isBelowMinimumCode(code: String): Boolean =
+        code.endsWith("AmountTooSmall", ignoreCase = true) ||
+            code.endsWith("AmountTooLow", ignoreCase = true)
+
+    /**
+     * The failure of a quote that came back with no routes, rendered in the same
+     * `"<code>: <detail>"` shape the top-level `error` field uses. A provider reports its code in
+     * [SwapKitProviderError.errorCode] and prose in `message`; only the code is a stable
+     * identifier, so it must lead — matching on the prose would silently fall through to the
+     * generic message (the `sellAssetAmountTooSmall` case, where the user needs to be told to
+     * raise the amount). Null when there is no provider error to report.
+     */
+    fun providerErrorMessage(error: SwapKitProviderError?): String? {
+        val code = error?.errorCode?.trim()?.takeIf { it.isNotEmpty() }
+        val detail = error?.message?.trim()?.takeIf { it.isNotEmpty() }
+        return when {
+            code != null && detail != null -> "$code: $detail"
+            else -> code ?: detail
+        }
+    }
+
+    /**
+     * The SwapKit error code carried by [rawError]: the leading token before an optional
+     * `": <detail>"`, so both a bare `validation_error` and `validation_error: <detail>` match.
+     */
+    private fun codeOf(rawError: String?): String = rawError?.substringBefore(':')?.trim().orEmpty()
 }
