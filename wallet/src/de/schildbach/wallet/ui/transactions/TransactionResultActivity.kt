@@ -144,14 +144,27 @@ class TransactionResultActivity : LockScreenActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        if (isFinishing) {
+            // LockScreenActivity finishes us when there is no wallet, but the view binder below
+            // requires one.
+            return
+        }
+
         // Re-arm the deferred finish before the recreated sheet runs its lifecycle, so dismissing
         // the restored DashPayUserBottomSheet still finishes this host activity.
         if (savedInstanceState?.getBoolean(STATE_PENDING_FINISH) == true) {
             finishWhenUserSheetDismissed()
         }
 
-        val txId = intent.getSerializableExtra(EXTRA_TX_ID) as Sha256Hash
-        if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)!!) {
+        val txId = intent.getSerializableExtra(EXTRA_TX_ID) as? Sha256Hash
+
+        if (txId == null) {
+            log.warn("no transaction id in the intent, closing")
+            finish()
+            return
+        }
+
+        if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) == true) {
             intent.putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true)
         }
 
