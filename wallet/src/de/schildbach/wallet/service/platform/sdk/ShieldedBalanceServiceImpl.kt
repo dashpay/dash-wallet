@@ -45,6 +45,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.Network
 import org.dashfoundation.dashsdk.Sdk
@@ -54,6 +55,7 @@ import org.dashfoundation.dashsdk.persistence.entities.ShieldedNoteEntity
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.charset.CodingErrorAction
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -763,7 +765,13 @@ class ShieldedBalanceServiceImpl internal constructor(
      * momentarily "Internal" — mirroring the transparent/invite paths. No-op
      * default keeps the host-JVM tests inert.
      */
-    private val seedAssetLockKind: (displayHex: String, kind: AssetLockKind) -> Unit = { _, _ -> }
+    private val seedAssetLockKind: (displayHex: String, kind: AssetLockKind) -> Unit = { _, _ -> },
+    /**
+     * How long [stop] waits for [lock] before tearing the Kotlin side down
+     * without it — see [stop] for the 2026-09-22 field case. Injectable so a
+     * test can exercise the bound without waiting the production five seconds.
+     */
+    private val stopLockTimeoutMs: Long = STOP_LOCK_TIMEOUT_MS
 ) : ShieldedBalanceService {
 
     @Inject
@@ -795,6 +803,16 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
     private val lock = Mutex()
+
+    /**
+     * Bumped by every [stop]. A bring-up samples it before its native calls
+     * and, on return, treats a changed value as "a stop happened while I was
+     * away": it must not start the sync loop or report ready over a teardown
+     * that already ran. The native bind cannot observe coroutine cancellation
+     * (2026-09-22: it sat inside the SDK for an hour), so this is the only
+     * signal that can reach it.
+     */
+    private val stopGeneration = AtomicInteger(0)
 
     /**
      * Ready latch AND the flows' switchboard: the bound SDK wallet id
@@ -886,8 +904,16 @@ class ShieldedBalanceServiceImpl internal constructor(
                     return false
                 }
 
+                val generation = stopGeneration.get()
                 source.configureShielded(shieldedDbPath())
                 source.bindShielded(walletId, listOf(DEFAULT_SHIELDED_ACCOUNT))
+                if (stopGeneration.get() != generation) {
+                    log.warn(
+                        "shielded bring-up returned from the native bind after a stop() had abandoned " +
+                            "it — not starting the sync loop or reporting ready; the next trigger binds afresh"
+                    )
+                    return false
+                }
                 if (!source.isShieldedSyncRunning()) {
                     source.startShieldedSync()
                 }
@@ -911,19 +937,58 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
+    /**
+     * Tear the runtime down. Bounded: waits at most [stopLockTimeoutMs] for
+     * [lock], because the holder may be a bring-up parked inside a native SDK
+     * call that nothing can interrupt.
+     *
+     * 2026-09-22 (Andrei, SM-A536B, `12000017`): a blockchain reset cleared the
+     * ready latch, the next start's bring-up entered `bindShielded`, and the
+     * SDK parked that bind behind a resumed wallet shield waiting indefinitely
+     * for a ChainLock (plan §37). When the idle detector then stopped the
+     * service, this method waited on the lock forever, the service's
+     * `onDestroy` never finished, every later start refused itself as a
+     * "deadlock in onDestroy", and the engine stayed off for four hours. With
+     * the bound, the Kotlin side is torn down regardless; [stopGeneration]
+     * makes the abandoned bring-up inert when the SDK finally returns it.
+     * There is nothing to stop natively in that branch — the sync loop is only
+     * started after the bind, which has not returned.
+     */
     override suspend fun stop() {
-        lock.withLock {
+        // Before the lock: a bring-up holding it right now must see the bump
+        // when it returns.
+        stopGeneration.incrementAndGet()
+        val acquired = withTimeoutOrNull(stopLockTimeoutMs) { lock.lock() } != null
+        if (!acquired) {
+            log.warn(
+                "shielded stop: the bring-up has held the lock for over {}s and is inside a native SDK " +
+                    "call that cannot be cancelled — tearing the Kotlin side down without it; the " +
+                    "abandoned bring-up will not start the sync loop or report ready when it returns " +
+                    "(plan §37)",
+                stopLockTimeoutMs / 1000
+            )
+            tearDownReadyState()
+            return
+        }
+        try {
             if (readyWalletIdHex.value == null) return
-            readyWalletIdHex.value = null
-            syncStatusJob?.cancel()
-            syncStatusJob = null
-            balancePersistJob?.cancel()
-            balancePersistJob = null
-            _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
-            _shieldedBalanceMaybeStale.value = false
+            tearDownReadyState()
             runCatching { source.stopShieldedSync() }
                 .onFailure { log.warn("failed to stop the shielded sync loop", it) }
+        } finally {
+            lock.unlock()
         }
+    }
+
+    /** The Kotlin-side half of [stop]: the latch, the two loops, the UI flows. */
+    private fun tearDownReadyState() {
+        readyWalletIdHex.value = null
+        syncStatusJob?.cancel()
+        syncStatusJob = null
+        balancePersistJob?.cancel()
+        balancePersistJob = null
+        _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
+        _shieldedBalanceMaybeStale.value = false
     }
 
     /**
@@ -1618,6 +1683,14 @@ class ShieldedBalanceServiceImpl internal constructor(
          * re-proved on every screen open. The counter resets on app start.
          */
         internal const val MAX_RESUME_ATTEMPTS_PER_PROCESS = 3
+
+        /**
+         * [stop]'s bound on waiting for the bring-up lock. Short on purpose:
+         * `BlockchainServiceImpl.onCreate` gives a previous instance's whole
+         * cleanup 15 s before refusing to start, and the SPV stop ahead of
+         * this one in that cleanup took 8 s on 2026-09-22.
+         */
+        internal const val STOP_LOCK_TIMEOUT_MS = 5_000L
 
         /** How often the sync-status poller samples the pass-in-flight signal. */
         internal const val SYNC_STATUS_POLL_INTERVAL_MS = 500L
