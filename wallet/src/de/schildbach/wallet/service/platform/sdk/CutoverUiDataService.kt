@@ -2466,8 +2466,16 @@ class CutoverUiDataService internal constructor(
      * a side effect.
      *
      * BLOCKS on the FFI (it takes the engine's wallet-manager write lock), hence
-     * [Dispatchers.IO]. Null when the cutover is not active or the read is
-     * unavailable — the caller falls back, it never returns a guessed address.
+     * [Dispatchers.IO].
+     *
+     * Null when the cutover is not active, or when the read is unavailable AND
+     * nothing has ever been published. A failed read on a WARM cache returns the
+     * last known engine address instead — the same hold
+     * [sdkReceiveAddressLiveBlockingOrNull] documents and
+     * `postCutover_failedEngineReadHoldsTheLastAddress` pins, because dropping
+     * to null here would send the caller back to the frozen dashj pointer, which
+     * is the defect. Either way it never returns a GUESSED address: every value
+     * it yields came from the engine.
      */
     suspend fun sdkReceiveAddressLiveOrNull(): String? =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {

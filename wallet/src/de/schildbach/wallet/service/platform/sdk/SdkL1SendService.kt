@@ -1769,12 +1769,12 @@ class SdkL1SendService internal constructor(
     }
 
     /**
-     * The BIP70 `Payment.refund_to` source, post-cutover: the lowest
-     * unused external address from the SDK's persisted address pool
-     * ([SdkL1SendSource.unusedExternalAddress]) — no dashj keychain read.
-     * Contained: null (⇒ the caller omits refund_to, which BIP70 makes
-     * optional) when the wallet is unbound, the pool rows are missing, or
-     * the read fails.
+     * The BIP70 `Payment.refund_to` source, post-cutover: the ENGINE's next
+     * unused external address, read over the FFI
+     * ([SdkL1SendSource.unusedExternalAddress]) — no dashj keychain read, and
+     * no Room address-mirror read either. Contained: null (⇒ the caller omits
+     * refund_to, which BIP70 makes optional) when the wallet is unbound, has
+     * no BIP44 account yet, or the read fails.
      */
     suspend fun refundAddressOrNull(): String? = try {
         source.boundWalletIdOrNull()?.let { source.unusedExternalAddress(it) }

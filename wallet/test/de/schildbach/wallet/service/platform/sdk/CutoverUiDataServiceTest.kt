@@ -905,6 +905,17 @@ class CutoverUiDataServiceTest {
         every { observe(DashPayConfig.CUTOVER_STATE) } returns flowOf(state)
     }
 
+    /**
+     * [configWithState] backed by a MUTABLE state, so a test can drive the
+     * cutover flag after [CutoverUiDataService.start] — the rollback
+     * (CUT_OVER → DUAL_RUNNING) path. The plain helper returns a one-shot
+     * `flowOf`, which can never flip, so nothing could reach the deactivation
+     * branch before this existed.
+     */
+    private fun configWithMutableState(state: MutableStateFlow<String?>): DashPayConfig = mockk {
+        every { observe(DashPayConfig.CUTOVER_STATE) } returns state
+    }
+
     private fun buildService(
         source: FakeSource,
         dashPayConfig: DashPayConfig,
@@ -1523,6 +1534,31 @@ class CutoverUiDataServiceTest {
         runCurrent()
 
         assertNull(service.sdkReceiveAddressOrNull())
+    }
+
+    @Test
+    fun rollback_clearsTheReceiveAddressOverlayAndTheBoundWallet() = runTest {
+        // A rollback (CUT_OVER → DUAL_RUNNING) hands the key chain back to
+        // dashj, whose pointer is live again. If the overlay kept serving, the
+        // Receive screen would advertise an address derived from the SDK
+        // binding the rollback just abandoned — and the live read would go on
+        // answering from a wallet id nothing owns any more.
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithMutableState(state), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+
+        state.value = "DUAL_RUNNING"
+        runCurrent()
+
+        assertNull("the cached overlay must stop serving", service.sdkReceiveAddressOrNull())
+        assertNull("the live read must stop serving", service.sdkReceiveAddressLiveOrNull())
+        // The balance overlays clear on the same branch — pinned here too, so a
+        // future edit cannot drop one of them unnoticed.
+        assertNull(service.sdkBalanceOrNull())
+        assertNull(service.sdkSpendableUtxoCountOrNull())
     }
 
     @Test
