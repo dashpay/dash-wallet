@@ -2354,9 +2354,19 @@ same full-history sweep again. The durable set turned a lost sweep into a perman
 the mechanism behind "the same park after every restart" that §34.2 previously attributed to the
 tip re-forming the same batch.
 
-The parked height is still a batch boundary — the sweep gates the commit of the final partial
-batch, so the cursor sits at the last full 5,000 boundary — and the mod-5,000 residue table in the
-old text stands as arithmetic. It just does not mean what it was read to mean.
+**And the 1,532,170 re-walk boundary was never a park at all** (settled 2026-09-22 evening, §38.2).
+It is `coreHeightCreatedAt` of this wallet's earliest DashPay contact request. At every startup,
+before the SPV starts, rs-platform-wallet's `reconcile_dashpay_rescan`
+(`wallet/identity/network/payments.rs`) lowers the wallet's `synced_height` to the minimum
+contact-request height so the contact receival addresses get filter coverage from when the
+relationship began; its "already did this" guard is an in-memory set, and the function's own doc
+says a relaunch "safely re-triggers" it. The scan therefore restarts at 1,532,171 on every launch,
+and because the 5,000-block batch grid is anchored at that start, every boundary it commits is
+≡ 2,170 mod 5,000 — which is the whole of the "residue table" the earlier text took as proof of a
+batch-boundary park. Same residue, opposite cause. Upstream tracks it as dashpay/platform#4302
+("re-fires on every process start, forever … on a contact-heavy mainnet wallet this makes the
+initial sync impossible to complete"); PR #4740 is the adjacent change. Wallets with no DashPay
+contacts — Andrei's — resume at their last commit and never see it.
 
 ### 34.2 Everything it explains — with two corrections
 
@@ -2812,3 +2822,74 @@ wallet changes rarely, and the alternative is the zombie.
   keeps them warm) is what turned a stuck shielded bring-up into a stopped L1 engine. That policy
   is §36.3's question from the other side and is not changed here.
 - The 14-minute reconnect after the 06:08 watchdog restart, with 1,000 peers on disk, is unexplained.
+
+## 38. Restore evidence, 2026-09-22 evening: int22 on both devices
+
+Both devices restored the job flower wallet from seed on SDK `0.1.0-v42int22-SNAPSHOT` (engine
+pin `08c0c04e` = int21's `d525f431` + rust-dashcore #1015 + the block-counter fix; the sweep and
+our durable pending set are still present — §34.6). Branch `fix/sync-process-stalls` at
+`2e3e3518d`. Both reached synced and seeded the correct balance on the first pass, with no watchdog
+verdict, no stall WARN, no restart.
+
+### 38.1 The two restores
+
+| | emulator, debug `12000017` | Samsung SM-S901U, release `12000018` |
+|---|---|---|
+| `Starting filter download (scan_start=0)` | 17:18:48 | — (engine log not readable on release) |
+| filters 79% | — | 17:29:45 |
+| `display predicate -> l1Synced=true` | 17:22:22 | 17:39:09 (`pipelineLagging=false` at the flip) |
+| seed `PERSISTED` | 17:23:15, 10,805,162,729 duffs | 17:39:56, 10,805,162,729 duffs |
+| predicate → seed | 53 s | 47 s |
+| blocks | 17,743 downloaded, 332 from storage, 18,075 processed | — |
+| forward rescans | 102, totalling 702 blocks | — |
+| committed-range sweep | **none** | unknown |
+| peak native heap | 340 MB alloc / 416 MB reserved | 501 MB alloc / 831 MB reserved |
+
+Times are local (UTC−7). Scan start to synced on the emulator: 3 m 34 s.
+
+**No sweep on the emulator this time.** The 09-21 restore of the same wallet on the same emulator
+hit `Rescan committed filters (0-1555999)` at the tip and paid 19,305 false-positive block fetches
+(§34.1); tonight's log has no `Rescan committed filters` line at all, only the 102 forward rescans
+inside active batches. Best reading, from the code and not stated by the log: this launch
+provisioned the contact accounts BEFORE the SPV started, at `synced_height == 0`, which
+`manager/startup.rs` says marks them covered by the coming full scan, so nothing was derived late
+enough to reach the backward set. Whether a restore pays the sweep therefore depends on an ordering
+the user cannot see. One more reason it should go (§34.6).
+
+**A debug-build caveat for stall hunting.** `PlatformSyncService.shutdown` keeps the SDK engines
+warm across service teardown in debug builds, so the release-only idle-stop that cut Andrei's sweep
+short (§37) does not run on the emulator. Anything the engine does on its own shows; that kill does
+not.
+
+### 38.2 The per-launch re-walk, settled
+
+Every engine session on the emulator since the 09-21 restore begins
+`Starting filter download (scan_start=1532171 …)` — six sessions, each re-walking 26,000 blocks
+to the tip in 4–11 s, with 466 of 477 matched blocks served from block storage. The Room row
+`wallets.syncedHeight` reads 1,558,891, the tip; the rewind happens in memory after load. The value
+1,532,170 is `dashpay_contact_requests.coreHeightCreatedAt`, the earliest of this wallet's four
+contact requests (1,532,170–1,540,406). Mechanism and upstream references in §34.1a. It is cheap
+here because the filters and blocks are stored; on a mainnet wallet whose first contact request is
+old it is a re-walk of hundreds of thousands of filters on every launch, growing by one block per
+block forever, and #4302's title for that is "impossible to complete".
+
+Not the sweep, not a batch boundary, not fixed by rust-dashcore#1016 or by int22. It belongs to
+rs-platform-wallet.
+
+### 38.3 Andrei's device, same day
+
+Covered in §37 (the shutdown deadlock) and §34 (the sweep). Two further points from his log that
+belong here: his 06:08 stall at 68,087 short was the device offline for 21 minutes, with the engine
+honestly `WaitingForConnections` and our watchdog restarting into it; and his 09-21 evening on
+`12000015` shows three foreground `lowmemorykiller` kills in 25 minutes with the native heap at
+3.28 GB during a sweep — the strongest memory data point yet, and the sweep is the obvious suspect.
+
+### 38.4 What the day leaves open
+
+- rust-dashcore#1016 (drop the sweep) onto our pin, with our durable pending-sweep plumbing removed
+  — the other session's build.
+- dashpay/platform#4302 (persist the DashPay backfill completion) — the per-launch re-walk.
+- The watchdog restarting into a device-offline stall; it does not check connectivity.
+- The `SyncEvent monitor lagged` fatal (rust-dashcore#1002's field log): a broadcast channel of 16
+  that shuts the client down when a re-walk drains stored blocks faster than the monitor reads them.
+  Zero sightings on Android so far; untouched by #1016.
