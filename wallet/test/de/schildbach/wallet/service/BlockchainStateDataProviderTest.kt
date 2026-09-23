@@ -198,12 +198,23 @@ class BlockchainStateDataProviderTest {
         awaitUntil("null update applied") { provider.getSyncStage() == SyncStage.OFFLINE }
         assertTrue("an unknown verdict leaves the flag alone", dao.state!!.replaying)
 
+        // Review 2026-09-23, second round: a connectivity callback rewrites the
+        // same row through updateImpediments() — impediments only. The DAO's
+        // dashj-era clear-at-100% must not end the replay on that write either.
+        provider.updateImpediments(setOf(Impediment.NETWORK))
+        awaitUntil("impediment-only write applied") { dao.state?.impediments?.contains(Impediment.NETWORK) == true }
+        assertEquals(100, dao.state!!.percentageSync)
+        assertTrue("an impediment-only rewrite of a parked row must not end the replay", dao.state!!.replaying)
+
         // The pipeline drains: the lifecycle says complete, the flag clears.
         provider.updateSdkBlockchainState(
             sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE, replayComplete = true)
         )
         awaitUntil("completion applied") { dao.state?.replaying == false }
         assertFalse(dao.state!!.replaying)
+        // isSynced() also wants no impediments; drop the NETWORK bit set above.
+        provider.updateImpediments(emptySet())
+        awaitUntil("impediments cleared") { dao.state?.impediments?.isEmpty() == true }
         assertTrue(dao.state!!.isSynced())
     }
 

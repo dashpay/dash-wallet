@@ -194,12 +194,13 @@ class BlockchainStateDataProvider @Inject constructor(
             // behind and the block pipeline still lags, and deriving the flag
             // from it let a final-batch park drop the idle-stop guard and the
             // wake lock with the engine mid-work. A null (transient ERROR /
-            // IDLE / CONNECTING) leaves the flag as it was. The DAO's own
-            // clear-at-100% is switched off for this writer for the same
-            // reason — it would undo the separation one line later.
+            // IDLE / CONNECTING) leaves the flag as it was. The DAO's
+            // clear-at-100% is opt-in and only dashj's scan-progress writer
+            // opts in, so neither this write nor an impediment-only rewrite
+            // of the row can undo the separation.
             update.replayComplete?.let { blockchainState.replaying = !it }
             blockchainState.impediments = composeImpediments()
-            blockchainStateDao.saveState(blockchainState, clearReplayAtHundredPercent = false)
+            blockchainStateDao.saveState(blockchainState)
             // A caught-up snapshot must not REGRESS a COMPLETE stage — that is the
             // "syncing 100%" blip (see mayPreserveEstablishedSyncStage): a live
             // shadow SPV never latches SYNCED, so a FILTERS snapshot that has caught
@@ -264,7 +265,9 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainState.chainlockHeight = chainLockHeight
             blockchainState.mnlistHeight = mnListHeight
             blockchainState.percentageSync = percentageSync
-            blockchainStateDao.saveState(blockchainState)
+            // The one writer whose percent IS the scan position: dashj's own
+            // download progress ends a replay at 100%.
+            blockchainStateDao.saveState(blockchainState, clearReplayAtHundredPercent = true)
             syncStageFlow.value = syncStage?.toNeutral()
         }
     }
