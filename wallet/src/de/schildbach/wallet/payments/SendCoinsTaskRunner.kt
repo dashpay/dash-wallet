@@ -153,6 +153,9 @@ class SendCoinsTaskRunner @Inject constructor(
         beforeSending: Consumer<Transaction>?,
         canSendLockedOutput: Predicate<TransactionOutput>?
     ): Transaction {
+        // Coin selection below must not be able to pick an outpoint reserved by an uncertain
+        // payment whose locks have not been restored since the last process death.
+        pendingPaymentVerifier.awaitRestored()
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
 
@@ -213,11 +216,13 @@ class SendCoinsTaskRunner @Inject constructor(
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)?
     ): Transaction =
         withContext(Dispatchers.IO) {
+            pendingPaymentVerifier.awaitRestored()
             val paymentIntent = paymentIntentParser.parse(dashUri, false)
             createPaymentRequest(paymentIntent, serviceName, recovery, onTransactionCreated)
         }
 
     override suspend fun completeTransaction(sendRequest: SendRequest) {
+        pendingPaymentVerifier.awaitRestored()
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         val securityGuard = SecurityGuard.getInstance()
         val password = securityGuard.retrievePassword()
@@ -239,6 +244,7 @@ class SendCoinsTaskRunner @Inject constructor(
     }
 
     override suspend fun sendTransaction(sendRequest: SendRequest): Transaction {
+        pendingPaymentVerifier.awaitRestored()
         return sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = false)
     }
 
@@ -298,6 +304,7 @@ class SendCoinsTaskRunner @Inject constructor(
         serviceName: String? = null,
         recovery: PaymentRecoveryMetadata? = null
     ): Transaction = withContext(Dispatchers.IO) {
+        pendingPaymentVerifier.awaitRestored()
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
 
@@ -750,6 +757,8 @@ class SendCoinsTaskRunner @Inject constructor(
         beforeSending: Consumer<Transaction>? = null,
         serviceName: String? = null
     ): Transaction = withContext(Dispatchers.IO) {
+        // Callers may have built this request before restoration finished, so wait here too.
+        pendingPaymentVerifier.awaitRestored()
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
         val watch = Stopwatch.createStarted()

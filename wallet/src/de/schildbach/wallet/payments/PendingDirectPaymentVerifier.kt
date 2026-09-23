@@ -22,6 +22,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PendingDirectPayment
 import de.schildbach.wallet.data.PendingDirectPaymentConfig
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -45,6 +47,7 @@ import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -89,14 +92,19 @@ class PendingDirectPaymentVerifier @Inject constructor(
          * afterwards. Keep watching, and keep the order, well beyond that point.
          */
         private const val DEFAULT_RECORD_RETENTION_MS = 24 * 60 * 60_000L
+        /** How long a payment flow waits for restoration before refusing to proceed. */
+        private const val DEFAULT_RESTORE_TIMEOUT_MS = 30_000L
     }
 
     @VisibleForTesting internal var pollIntervalMs = DEFAULT_POLL_INTERVAL_MS
     @VisibleForTesting internal var minAgeMs = DEFAULT_MIN_AGE_MS
     @VisibleForTesting internal var syncedGraceMs = DEFAULT_SYNCED_GRACE_MS
     @VisibleForTesting internal var recordRetentionMs = DEFAULT_RECORD_RETENTION_MS
+    @VisibleForTesting internal var restoreTimeoutMs = DEFAULT_RESTORE_TIMEOUT_MS
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val restored = CompletableDeferred<Unit>()
+    private val restoreStarted = AtomicBoolean(false)
     private val jobs = ConcurrentHashMap<Sha256Hash, Deferred<Transaction?>>()
     private val jobsMutex = Mutex()
 
@@ -144,12 +152,51 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * Safe to call repeatedly; payments already being tracked are skipped.
      */
     fun resume() {
+        startRestore()
+    }
+
+    /**
+     * Suspends until persisted quarantines have been restored and their inputs locked again.
+     *
+     * Payment flows must pass through this before selecting coins. After process death the locks
+     * are gone, since they live only in memory, while the wallet is available to the UI
+     * immediately and restoration runs off a service start that may lag behind it. Without the
+     * gate a new payment could spend an outpoint reserved by an uncertain one whose signed
+     * transaction the payee still holds.
+     *
+     * Starts restoration itself if nothing has yet, so it does not depend on the service.
+     *
+     * @throws IllegalStateException if restoration does not finish in time. Refusing to build a
+     *   payment we cannot protect is the safer failure.
+     */
+    suspend fun awaitRestored() {
+        startRestore()
+        withTimeoutOrNull(restoreTimeoutMs) { restored.await() }
+            ?: throw IllegalStateException(
+                "pending payments could not be restored in time; refusing to risk spending their inputs"
+            )
+    }
+
+    private fun startRestore() {
+        if (!restoreStarted.compareAndSet(false, true)) {
+            return
+        }
         scope.launch {
+            try {
+                restorePersisted()
+            } finally {
+                restored.complete(Unit)
+            }
+        }
+    }
+
+    private suspend fun restorePersisted() {
+        run restore@{
             try {
                 val wallet = walletData.wallet ?: walletData.observeWallet().filterNotNull().first()
                 val pending = config.getAll()
                 if (pending.isEmpty()) {
-                    return@launch
+                    return@restore
                 }
                 log.info("resuming verification of {} pending direct payment(s)", pending.size)
                 for (payment in pending) {

@@ -25,6 +25,8 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -447,6 +449,53 @@ class PendingDirectPaymentVerifierTest {
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
         coVerify { config.remove(tx.txId) }
         assertFalse(verifier.isTracked(tx.txId))
+    }
+
+    @Test
+    fun `awaitRestored blocks until persisted quarantines have their locks back`() = runBlocking {
+        val tx = createTransaction()
+        val gate = CompletableDeferred<Unit>()
+        coEvery { config.getAll() } coAnswers {
+            // stand in for a slow preferences read after a restart
+            gate.await()
+            listOf(
+                PendingDirectPayment(
+                    tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", System.currentTimeMillis()
+                )
+            )
+        }
+
+        val restored = async { verifier.awaitRestored() }
+        delay(200)
+
+        // a payment flow reaching this point must not be allowed past while the inputs of an
+        // uncertain payment are still unprotected
+        assertFalse("must not proceed before restoration", restored.isCompleted)
+        tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
+
+        gate.complete(Unit)
+        withTimeout(5_000) { restored.await() }
+
+        tx.inputs.forEach { assertTrue("locks must be back before spending", wallet.isLockedOutput(it.outpoint)) }
+    }
+
+    @Test
+    fun `awaitRestored refuses to proceed when restoration cannot finish`() = runBlocking {
+        verifier.restoreTimeoutMs = 150L
+        coEvery { config.getAll() } coAnswers {
+            delay(10_000)
+            emptyList()
+        }
+
+        val thrown = try {
+            verifier.awaitRestored()
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // refusing a new payment beats risking the inputs of one already out there
+        assertNotNull("must fail closed", thrown)
     }
 
     @Test
