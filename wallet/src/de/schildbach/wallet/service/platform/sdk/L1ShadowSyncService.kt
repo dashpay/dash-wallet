@@ -2176,6 +2176,7 @@ class L1ShadowSyncService internal constructor(
      * outlived that stop would leave the engine running after shutdown
      * (review, 2026-09-23).
      */
+    @Volatile
     private var externalStopGeneration = 0L
 
     /**
@@ -2505,11 +2506,28 @@ class L1ShadowSyncService internal constructor(
      * is on and the app wallet is bound to the SDK. Never throws (see
      * class KDoc); returns whether the shadow is running afterwards.
      */
-    suspend fun startIfEnabled(): Boolean {
+    /**
+     * [expectedExternalStopGeneration]: a filter-stall restart passes the
+     * [externalStopGeneration] it sampled when it was decided, and this start
+     * refuses under [mutex] if it has moved since. The check has to live
+     * HERE, inside the critical section: the enablement read above suspends
+     * on DataStore, and an external stop can arrive and complete in that gap
+     * (review, 2026-09-23). Ordinary callers pass nothing.
+     */
+    suspend fun startIfEnabled(expectedExternalStopGeneration: Long? = null): Boolean {
         if (!isEnabled()) return false
         return try {
             mutex.withLock {
                 if (runningWalletIdHex.value != null) return true
+                if (expectedExternalStopGeneration != null &&
+                    externalStopGeneration != expectedExternalStopGeneration
+                ) {
+                    log.info(
+                        "L1 shadow sync not started: an external stop() arrived after this restart was " +
+                            "decided — the engine stays down"
+                    )
+                    return false
+                }
 
                 val walletIdHex = source.boundWalletIdOrNull()
                 if (walletIdHex == null) {
@@ -2546,12 +2564,35 @@ class L1ShadowSyncService internal constructor(
                     // runningWalletIdHex still null. Adding a second
                     // startWalletSubsystems on top of it is exactly the
                     // overlap this must not create, so join the one in flight.
-                    val bringUp = detachedBringUp?.takeIf { it.isActive }?.also {
+                    val joined = detachedBringUp?.takeIf { it.isActive }?.also {
                         log.info("DashPay bring-up from an earlier start is still running; joining it")
-                    } ?: scope.async {
-                        runCatching { source.startWalletSubsystems(walletIdHex) }
                     }
-                    val outcome = withTimeoutOrNull(bringUpBudgetMs) { bringUp.await() }
+                    // Owned by the service from the moment it exists — not only
+                    // once its budget expires. A caller cancelled during the wait
+                    // (BindHealL1Starter.cancel() from shutdown, say) used to
+                    // rethrow with the deferred neither recorded nor cancelled,
+                    // so stop() saw nothing to stop while startWalletSubsystems
+                    // was still live and a later start could run a second one
+                    // alongside it (review, 2026-09-23).
+                    val bringUp = joined ?: scope.async {
+                        runCatching { source.startWalletSubsystems(walletIdHex) }
+                    }.also { detachedBringUp = it }
+                    val outcome = try {
+                        withTimeoutOrNull(bringUpBudgetMs) { bringUp.await() }
+                    } catch (e: CancellationException) {
+                        if (currentCoroutineContext().isActive) {
+                            // This caller is fine; the DEFERRED was cancelled —
+                            // a stop() took the bring-up down under us. No SPV.
+                            if (detachedBringUp === bringUp) detachedBringUp = null
+                            log.info("DashPay bring-up was cancelled by a stop; not starting SPV")
+                            return false
+                        }
+                        // Genuine caller cancellation: take the bring-up we
+                        // created down with us; a joined one belongs to the
+                        // start that detached it.
+                        if (joined == null) bringUp.cancel()
+                        throw e
+                    }
                     when {
                         outcome == null -> {
                             log.warn(
@@ -2645,8 +2686,21 @@ class L1ShadowSyncService internal constructor(
             detachedBringUp?.let {
                 log.info("cancelling a DashPay bring-up still running past its budget")
                 it.cancel()
+                // Destructive callers (resetShadowState, the wallet wipe's
+                // stopSdkEngines) need it GONE, not merely told to go. Bounded:
+                // a bring-up inside its native call cannot observe the cancel
+                // until that call returns, and a stop must not hang on it.
+                val ended = withTimeoutOrNull(BRING_UP_STOP_JOIN_MS) { it.join(); true } == true
+                if (ended) {
+                    detachedBringUp = null
+                } else {
+                    log.warn(
+                        "the cancelled DashPay bring-up is still inside its native call after {} s; it " +
+                            "stays recorded so the next start joins it instead of running a second one",
+                        BRING_UP_STOP_JOIN_MS / 1000
+                    )
+                }
             }
-            detachedBringUp = null
             val walletIdHex = runningWalletIdHex.value ?: return
             // Phase 1b item 13 (docs/upgrade-memory-and-sync-plan.md): the
             // watermark the SDK will resume from vs. what the engine had
@@ -3235,7 +3289,9 @@ class L1ShadowSyncService internal constructor(
                     )
                     return@runCatching null
                 }
-                startIfEnabled()
+                // Re-validated under the start's own mutex: the enablement
+                // read inside suspends, and a stop can land in that gap too.
+                startIfEnabled(expectedExternalStopGeneration = generation)
             }.onSuccess { started ->
                 if (started != null) {
                     log.info(
@@ -3969,6 +4025,9 @@ class L1ShadowSyncService internal constructor(
          * that defect and gets the restart the watchdog exists to give.
          */
         internal const val FINAL_BATCH_RESTART_HOLD_MS = 30 * 60_000L
+
+        /** How long a stop waits for a cancelled DashPay bring-up to actually end before moving on. */
+        internal const val BRING_UP_STOP_JOIN_MS = 5_000L
 
         /** Retry backoff for a failed progress-monitor collection. */
         internal const val LOOP_RETRY_DELAY_MS = 5_000L

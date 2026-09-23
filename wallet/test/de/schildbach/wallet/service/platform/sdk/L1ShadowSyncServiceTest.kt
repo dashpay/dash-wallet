@@ -21,6 +21,8 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -185,9 +187,13 @@ class L1ShadowSyncServiceTest {
         lastResetMs: Long? = null,
         markerWrites: MutableList<Long> = mutableListOf(),
         cutoverState: String? = null,
-        dashjDiagnostic: Boolean = false
+        dashjDiagnostic: Boolean = false,
+        flagGate: () -> CompletableDeferred<Unit>? = { null }
     ): DashPayConfig = mockk<DashPayConfig>().also {
-        coEvery { it.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns flag
+        // The enablement read is a DataStore read in production — a real
+        // suspension point before startIfEnabled takes its mutex. A test that
+        // needs to land something in that gap parks the read on a gate.
+        coEvery { it.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } coAnswers { flagGate()?.await(); flag }
         // The parity POLICY inputs (see parityProbePolicy): a null stored
         // state is DUAL_RUNNING, i.e. the pre-cutover default every existing
         // test expects.
@@ -251,10 +257,11 @@ class L1ShadowSyncServiceTest {
         recreator: ShadowWalletRecreator? = null,
         cutoverState: String? = null,
         dashjDiagnostic: Boolean = false,
-        bringUpBudgetMs: Long = L1ShadowSyncService.BRING_UP_BUDGET_MS
+        bringUpBudgetMs: Long = L1ShadowSyncService.BRING_UP_BUDGET_MS,
+        flagGate: () -> CompletableDeferred<Unit>? = { null }
     ) = L1ShadowSyncService(
         source = source,
-        dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic),
+        dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic, flagGate),
         scope = scope,
         spvDataDirPath = { dataDir.resolve("spv").absolutePath },
         nowMs = nowMs,
@@ -851,7 +858,15 @@ class L1ShadowSyncServiceTest {
         // swallowed into a `false`), SPV must not start, and nothing may be
         // latched — the next start attempt runs the bring-up again.
         val source = FakeSource(boundWalletId = walletIdHex)
-        source.onStartWalletSubsystems = { awaitCancellation() }
+        var bringUpCancellations = 0
+        source.onStartWalletSubsystems = {
+            try {
+                awaitCancellation()
+            } catch (e: CancellationException) {
+                bringUpCancellations++
+                throw e
+            }
+        }
         val service = service(source)
         var completedNormally = false
         val job = scope.launch {
@@ -864,11 +879,58 @@ class L1ShadowSyncServiceTest {
         assertTrue(job.isCancelled)
         assertFalse(completedNormally)
         assertEquals(0, source.startCalls)
+        // Review 2026-09-23: the bring-up the cancelled caller created must
+        // have TERMINATED, not merely been abandoned on the service scope.
+        assertEquals("the first bring-up was cancelled with its caller", 1, bringUpCancellations)
 
         source.onStartWalletSubsystems = { "status=READY" }
         assertTrue(service.startIfEnabled())
         assertEquals(2, source.subsystemsCalls)
         assertEquals(1, source.startCalls)
+    }
+
+    /**
+     * Review, 2026-09-23: the bring-up is service-owned from the moment it
+     * exists. After a caller is cancelled mid-wait, nothing may be left live:
+     * a stop() finds no straggler, and the next start runs exactly one fresh
+     * bring-up — never a second one alongside the first. (A stop() cannot
+     * pre-empt a start that holds the mutex; the ownership matters for the
+     * caller-cancellation path, which is what this pins.)
+     */
+    @Test
+    fun cancelledCaller_leavesNoLiveBringUp_forStopOrTheNextStart() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var live = 0
+        var maxLive = 0
+        var cancellations = 0
+        source.onStartWalletSubsystems = {
+            live++; maxLive = maxOf(maxLive, live)
+            try {
+                awaitCancellation()
+            } catch (e: CancellationException) {
+                cancellations++
+                throw e
+            } finally {
+                live--
+            }
+        }
+        val service = service(source)
+        val job = scope.launch { service.startIfEnabled() }
+        withTimeout(5_000) { while (source.subsystemsCalls == 0) delay(5) }
+        job.cancel()
+        withTimeout(5_000) { job.join() }
+        assertEquals("the caller's bring-up ended with the caller", 1, cancellations)
+        assertEquals(0, live)
+
+        service.stop() // nothing running, nothing dangling — a no-op
+        assertEquals(0, source.stopCalls)
+
+        source.onStartWalletSubsystems = { live++; maxLive = maxOf(maxLive, live); try { "status=READY" } finally { live-- } }
+        assertTrue(service.startIfEnabled())
+        assertEquals(2, source.subsystemsCalls)
+        assertEquals("never two bring-ups alive at once", 1, maxLive)
+        assertEquals(1, source.startCalls)
+        service.stop()
     }
 
     @Test
@@ -1029,6 +1091,37 @@ class L1ShadowSyncServiceTest {
 
         assertEquals("the engine was NOT started again after the external stop", 1, source.startCalls)
         assertEquals(ShadowSyncProgress.IDLE, service.progress.value)
+        assertFalse(service.isShadowSpvRunning())
+    }
+
+    /**
+     * Review, 2026-09-23 (second round): the generation check before the
+     * start passes, then `startIfEnabled()` suspends in its DataStore
+     * enablement read BEFORE taking the mutex. An external stop that lands
+     * and completes in that gap used to go unnoticed — the restart resumed,
+     * took the mutex and started the engine after shutdown. The generation is
+     * now re-validated inside the critical section.
+     */
+    @Test
+    fun stallRestart_doesNotStartTheEngine_whenAnExternalStopLandsDuringTheEnablementRead() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var gate: CompletableDeferred<Unit>? = null
+        val service = service(source, flagGate = { gate })
+        assertTrue(service.startIfEnabled())
+
+        gate = CompletableDeferred() // from here every enablement read parks
+        val restart = service.launchStallRestart(stuckAt = 1_552_170L)
+        // The restart's own stop has run (nothing gates it); it is now parked
+        // in startIfEnabled's enablement read, past the pre-start comparison.
+        withTimeout(5_000) { while (source.stopCalls == 0) delay(5) }
+        delay(50)
+        assertTrue(restart.isActive)
+
+        service.stop() // external; completes at once — nothing is running
+        gate.complete(Unit) // the restart's read resumes; it takes the mutex…
+        withTimeout(5_000) { restart.join() }
+
+        assertEquals("…and must find the moved generation there and not start", 1, source.startCalls)
         assertFalse(service.isShadowSpvRunning())
     }
 
