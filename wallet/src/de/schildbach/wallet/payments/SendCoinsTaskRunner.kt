@@ -421,6 +421,14 @@ class SendCoinsTaskRunner @Inject constructor(
         log.info("trying to send tx to {}", requestUrl)
         val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_SEND_PAYMENT)
         val request = buildOkHttpDirectPayRequest(requestUrl, payment)
+
+        // Quarantine before the POST, not after a failure. From the moment the request leaves,
+        // the payee may receive and broadcast this transaction, and the input locks live only in
+        // memory. A process death mid-flight would otherwise restart with the order recorded but
+        // no pending payment, no locks and nothing for resume() to find, leaving the same inputs
+        // free to fund a retry of a payment that already went through.
+        val verification = pendingPaymentVerifier.quarantine(sendRequest.tx, requestUrl, serviceName, recovery)
+
         try {
             val response = directPayHttpClient.call(request)
             response.ensureSuccessful()
@@ -440,21 +448,22 @@ class SendCoinsTaskRunner @Inject constructor(
                 throw DirectPayException("Payment was not acknowledged by the server")
             }
         } catch (e: DirectPayException) {
+            // An explicit nack is a definite outcome: the payee refused it.
+            pendingPaymentVerifier.cancelQuarantine(sendRequest.tx)
             throw e
         } catch (e: Exception) {
             val tx = sendRequest.tx
 
             if (isDefinitelyNotSubmitted(e)) {
                 log.warn("Payment submission failed before the request could be sent: ${tx.txId}", e)
+                pendingPaymentVerifier.cancelQuarantine(tx)
                 throw e
             }
 
             log.warn("Payment submission failed, but transaction may have been sent: ${tx.txId}", e)
-            // The merchant may have received the payment and broadcast the tx. Lock its inputs
-            // so a retry can't double-spend them, and watch the network for it. The verifier
-            // is application-scoped and persists the tx, so it keeps going after this call,
-            // the purchase screen and even the process are gone.
-            val verification = pendingPaymentVerifier.quarantine(tx, requestUrl, serviceName, recovery)
+            // Leave the quarantine standing: the payee may have received the payment and
+            // broadcast it. The verifier is application-scoped and has the transaction on disk,
+            // so it keeps going after this call, the purchase screen and even the process.
             val result = withTimeoutOrNull(ambiguousSubmissionWaitMs) { verification.await() }
 
             if (result != null) {
@@ -472,7 +481,12 @@ class SendCoinsTaskRunner @Inject constructor(
             throw PaymentSubmissionPendingException(tx.txId, e)
         }
 
-        sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true)
+        // Acknowledged, so the outcome is certain and the quarantine has done its job. Cancel it
+        // only after the commit succeeds: if that throws, the payment is still out there and the
+        // watch should survive to catch it.
+        val sent = sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true)
+        pendingPaymentVerifier.cancelQuarantine(sendRequest.tx)
+        sent
     }
 
     /**

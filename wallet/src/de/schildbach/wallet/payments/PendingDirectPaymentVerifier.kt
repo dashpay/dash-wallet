@@ -182,6 +182,24 @@ class PendingDirectPaymentVerifier @Inject constructor(
     fun isTracked(txId: Sha256Hash): Boolean = jobs[txId]?.isActive == true
 
     /**
+     * Undoes a quarantine once the payment's outcome is known for certain, whether acknowledged
+     * or definitively refused. Stops the watch, frees the inputs and forgets the record, leaving
+     * nothing behind for a restart to resume.
+     *
+     * Only for an outcome that is actually certain: an unknown one must stay quarantined.
+     */
+    suspend fun cancelQuarantine(tx: Transaction) {
+        jobs.remove(tx.txId)?.cancel()
+        walletData.wallet?.let { unlockInputs(it, tx) }
+        try {
+            config.remove(tx.txId)
+        } catch (e: Exception) {
+            log.error("could not remove the pending record of resolved payment {}", tx.txId, e)
+        }
+        log.info("quarantine cancelled for {}, its outcome is known", tx.txId)
+    }
+
+    /**
      * True if there is any evidence that the network knows about [tx]: it is in the wallet with a
      * network source, has an InstantSend or ChainLock, or was announced by at least one peer.
      * Requires connected peers to ever become true.
@@ -348,6 +366,19 @@ class PendingDirectPaymentVerifier @Inject constructor(
         walletData.wallet?.getTransaction(payment.txId)?.let { walletTx ->
             log.info("abandoned payment {} turned out to be real after all, committing it", payment.txId)
             commit(walletTx, payment)
+            return
+        }
+
+        if (payment.isGiftCardPurchase) {
+            // Stop watching, but keep the order. A payee chooses when to relay, so it can outlast
+            // any horizon we pick and broadcast afterwards; deleting the rows would leave a paid
+            // purchase with nothing to redeem against. An order for a payment that truly never
+            // happened is merely stale, which is the far cheaper mistake.
+            log.warn(
+                "giving up watching {} after the retention period, but keeping its gift card order",
+                payment.txId
+            )
+            finish(payment)
             return
         }
 

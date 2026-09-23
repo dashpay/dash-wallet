@@ -911,10 +911,14 @@ class SendCoinsTaskRunnerBIP70Test {
             e
         }
 
-        // Then: a definitive failure, inputs stay spendable
+        // Then: a definitive failure. The payment is quarantined before the POST, because a
+        // process death mid-flight must not leave the inputs free, but a failure that proves
+        // nothing was sent cancels it again, so the inputs end up spendable and no record
+        // survives for a restart to resume.
         assertNotNull(thrown)
         assertFalse("DNS failure must not be reported as pending", thrown is PaymentSubmissionPendingException)
-        coVerify(exactly = 0) { pendingPaymentVerifier.quarantine(any(), any(), any()) }
+        coVerify { pendingPaymentVerifier.cancelQuarantine(sendRequest.tx) }
+        assertFalse(pendingPaymentVerifier.isTracked(sendRequest.tx.txId))
         sendRequest.tx.inputs.forEach { input ->
             assertFalse(wallet.isLockedOutput(input.outpoint))
         }

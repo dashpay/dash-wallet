@@ -353,6 +353,55 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
+    fun `keeps a gift card order when the retention period runs out`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 50L
+        verifier.recordRetentionMs = 0L
+        goOnlineAndSynced()
+        val tx = createTransaction()
+
+        val result = verifier.quarantine(
+            tx,
+            paymentUrl,
+            "PiggyCards",
+            PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = null)
+        )
+        withTimeout(5_000) { result.await() }
+
+        // The watch stops, but the order stays: a payee can outlast any horizon and broadcast
+        // afterwards, and deleting the rows would leave a paid purchase with nothing to redeem.
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+        coVerify { config.remove(tx.txId) }
+    }
+
+    @Test
+    fun `discards an ordinary payment when the retention period runs out`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 50L
+        verifier.recordRetentionMs = 0L
+        goOnlineAndSynced()
+        val tx = createTransaction()
+
+        val result = verifier.quarantine(tx, paymentUrl, "SomeService")
+        withTimeout(5_000) { result.await() }
+
+        coVerify { metadataProvider.forgetTransaction(tx.txId) }
+    }
+
+    @Test
+    fun `cancelling a quarantine frees the inputs and forgets the record`() = runBlocking {
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend")
+
+        verifier.cancelQuarantine(tx)
+
+        // used when the outcome becomes certain, so nothing may be left for a restart to resume
+        tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
+        coVerify { config.remove(tx.txId) }
+        assertFalse(verifier.isTracked(tx.txId))
+    }
+
+    @Test
     fun `does not release before the minimum age even when synced`() = runBlocking {
         verifier.minAgeMs = 60_000L
         verifier.syncedGraceMs = 0L
