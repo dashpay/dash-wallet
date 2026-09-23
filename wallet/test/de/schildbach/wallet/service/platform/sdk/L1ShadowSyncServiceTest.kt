@@ -133,8 +133,12 @@ class L1ShadowSyncServiceTest {
             return onStartWalletSubsystems(walletIdHex)
         }
 
+        /** Suspending stop hook: a stop parked inside the native `stopSpv` (plan §37 / review 2026-09-23). */
+        var onStop: suspend () -> Unit = {}
+
         override suspend fun stopSpv() {
             stopCalls++
+            onStop()
         }
 
         override fun spvProgress(): Flow<SpvSyncProgressData> = progressFlow
@@ -977,6 +981,76 @@ class L1ShadowSyncServiceTest {
         // And a fresh start works after a stop.
         assertTrue(service.startIfEnabled())
         assertEquals(2, source.startCalls)
+    }
+
+    // ── The filter-stall restart against an external stop (review, 2026-09-23) ──
+
+    /** Positive control: with nobody else stopping, the restart restarts. */
+    @Test
+    fun stallRestart_restartsTheEngine_whenNoExternalStopIntervenes() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+
+        service.launchStallRestart(stuckAt = 1_552_170L).join()
+
+        assertEquals(1, source.stopCalls)
+        assertEquals("stopped and started again", 2, source.startCalls)
+        assertTrue(service.isShadowSpvRunning() || service.progress.value != ShadowSyncProgress.IDLE || source.startCalls == 2)
+        service.stop()
+    }
+
+    /**
+     * The ordering the review named: the restart's own stop is parked inside
+     * the native `stopSpv` when the foreground service's teardown calls
+     * `stop()`. That external stop queues behind ours on the mutex and, once
+     * ours finishes, finds nothing running — but the restart must NOT then go
+     * on to `startIfEnabled()`, or the engine runs again after shutdown (and
+     * `stopSdkEngines()`'s guarantee before a wallet wipe is broken).
+     */
+    @Test
+    fun stallRestart_doesNotStartTheEngine_whenAnExternalStopArrivesMidRestart() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val gate = CompletableDeferred<Unit>()
+        source.onStop = { gate.await() } // the restart's stop parks in stopSpv
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+
+        val restart = service.launchStallRestart(stuckAt = 1_552_170L)
+        withTimeout(5_000) { while (source.stopCalls == 0) delay(5) }
+
+        // The external stop: bumps the generation at once, then waits on the mutex.
+        val external = launch { service.stop() }
+        delay(50)
+        assertTrue("the external stop is queued behind the restart's own", external.isActive)
+
+        gate.complete(Unit) // the native stop returns; both stops complete
+        withTimeout(5_000) { restart.join(); external.join() }
+
+        assertEquals("the engine was NOT started again after the external stop", 1, source.startCalls)
+        assertEquals(ShadowSyncProgress.IDLE, service.progress.value)
+        assertFalse(service.isShadowSpvRunning())
+    }
+
+    /** An external stop that lands BEFORE the restart coroutine runs is a stop too. */
+    @Test
+    fun stallRestart_doesNotStartTheEngine_whenAnExternalStopLandedBeforeItRan() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+
+        // Decide the restart, then stop externally before it does anything.
+        val gate = CompletableDeferred<Unit>()
+        source.onStop = { gate.await() }
+        val restart = service.launchStallRestart(stuckAt = 1_552_170L)
+        // The restart's stop is now parked; an external stop supersedes it.
+        val external = launch { service.stop() }
+        delay(20)
+        gate.complete(Unit)
+        withTimeout(5_000) { restart.join(); external.join() }
+
+        assertEquals(1, source.startCalls)
+        assertFalse(service.isShadowSpvRunning())
     }
 
     // ── ensureSpvRunning: the shield-from-wallet broadcast guard ───────

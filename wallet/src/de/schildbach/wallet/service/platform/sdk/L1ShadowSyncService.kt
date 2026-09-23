@@ -2169,6 +2169,16 @@ class L1ShadowSyncService internal constructor(
     private var stallRestartJob: Job? = null
 
     /**
+     * Bumped by every external [stop]. A filter-stall restart samples it when
+     * it is launched and refuses to start the engine again if it has moved by
+     * the time its own stop has finished: the foreground service (or a wallet
+     * wipe's `stopSdkEngines`) said stop in the meantime, and a restart that
+     * outlived that stop would leave the engine running after shutdown
+     * (review, 2026-09-23).
+     */
+    private var externalStopGeneration = 0L
+
+    /**
      * When the engine last delivered ANY wallet event, monotonic-ish wall
      * clock via [nowMs]; 0 until the first one of this run.
      *
@@ -2612,7 +2622,19 @@ class L1ShadowSyncService internal constructor(
      * Stop the probe loops and the Rust SPV client; SPV storage stays on
      * disk so the next start resumes. Safe to call when not running.
      */
+    /**
+     * The EXTERNAL stop — the foreground service's teardown, `stopSdkEngines`
+     * before a wallet wipe, the shadow recovery paths. Invalidates any
+     * filter-stall restart in flight (see [externalStopGeneration]) and then
+     * tears the engine down. The restart itself uses [stopInternal], which
+     * does not invalidate anything.
+     */
     suspend fun stop() {
+        externalStopGeneration++
+        stopInternal()
+    }
+
+    private suspend fun stopInternal() {
         mutex.withLock {
             // BEFORE the early return. A bring-up that outlived its budget is
             // not one of the four loop jobs, and it is not covered by
@@ -3126,23 +3148,7 @@ class L1ShadowSyncService internal constructor(
                 // cancel — it cancels the four loop jobs only) is what
                 // [checkProbeHeartbeat] already does for its own restart.
                 // The new run installs a fresh watchdogJob.
-                val stuckAt = p.filterHeight
-                stallRestartJob?.cancel()
-                stallRestartJob = scope.launch {
-                    runCatching {
-                        stop()
-                        startIfEnabled()
-                    }.onSuccess { started ->
-                        log.info(
-                            "L1Shadow filter-stall watchdog: engine restart {} (was stuck at {})",
-                            if (started == true) "succeeded" else "declined to start",
-                            stuckAt
-                        )
-                    }.onFailure {
-                        if (it is CancellationException) throw it
-                        log.warn("L1Shadow filter-stall watchdog: the engine restart failed", it)
-                    }
-                }.logCompletion("filter-stall engine restart")
+                launchStallRestart(stuckAt = p.filterHeight)
             }
             FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH -> {
                 // NO RESTART. Logged once per process, with everything needed
@@ -3189,17 +3195,62 @@ class L1ShadowSyncService internal constructor(
                 )
             }
             FilterStallWatchdogDecider.Decision.EXHAUSTED -> {
+                // No claim about the shape: a final-batch park that outlasts
+                // FINAL_BATCH_RESTART_HOLD_MS falls through to this ladder too
+                // (review nitpick, 2026-09-22), so the distance alone is stated.
                 log.error(
                     "L1Shadow filter-stall watchdog: the filter cursor is still wedged at {} of " +
-                        "{} ({} blocks short — MORE than one {}-block commit batch, so this is " +
-                        "not the section 34 final-partial-batch shape) after every restart this " +
-                        "process was willing to spend — standing down. Needs an SDK-side fix.",
-                    p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
-                    SDK_FILTER_BATCH_BLOCKS
+                        "{} ({} blocks short) after every restart this process was willing to " +
+                        "spend — standing down. Needs an SDK-side fix.",
+                    p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight
                 )
             }
             FilterStallWatchdogDecider.Decision.NONE -> Unit
         }
+    }
+
+    /**
+     * The RESTART verdict's action, on the service [scope] (which [stop] does
+     * not cancel — see the comment at the call site). Internal so the ordering
+     * against an external [stop] can be pinned by test.
+     *
+     * The generation is sampled HERE, when the restart is decided, not when
+     * its coroutine gets to run: an external stop that lands in between is
+     * just as much a stop as one that lands while our own [stopInternal] is
+     * inside `stopSpv()`. In both cases the check after [stopInternal] sees a
+     * moved generation and the engine stays down. The external stop's own
+     * [stopInternal] queues behind ours on [mutex] and finds nothing running.
+     */
+    internal fun launchStallRestart(stuckAt: Long): Job {
+        val generation = externalStopGeneration
+        stallRestartJob?.cancel()
+        val job = scope.launch {
+            runCatching {
+                stopInternal()
+                if (externalStopGeneration != generation) {
+                    log.info(
+                        "L1Shadow filter-stall watchdog: an external stop() arrived during the restart — " +
+                            "leaving the engine stopped (was stuck at {})",
+                        stuckAt
+                    )
+                    return@runCatching null
+                }
+                startIfEnabled()
+            }.onSuccess { started ->
+                if (started != null) {
+                    log.info(
+                        "L1Shadow filter-stall watchdog: engine restart {} (was stuck at {})",
+                        if (started) "succeeded" else "declined to start",
+                        stuckAt
+                    )
+                }
+            }.onFailure {
+                if (it is CancellationException) throw it
+                log.warn("L1Shadow filter-stall watchdog: the engine restart failed", it)
+            }
+        }.logCompletion("filter-stall engine restart")
+        stallRestartJob = job
+        return job
     }
 
     /**
