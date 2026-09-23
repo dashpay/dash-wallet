@@ -889,6 +889,17 @@ class ShieldedBalanceServiceImpl internal constructor(
             lock.withLock {
                 if (readyWalletIdHex.value != null) return true
 
+                // The fence against a stop() that timed out on [lock] and tore
+                // the Kotlin side down without us (review, 2026-09-23): the
+                // generation is sampled FIRST — hasShieldedSupport() and
+                // boundWalletIdOrNull() call ensureStarted(), which can
+                // bootstrap the SDK, and a stop landing in that interval must
+                // not be absorbed by a later snapshot — and re-checked after
+                // EVERY native step, so no path can publish ready, start the
+                // collectors or the pending-shield sweep over a teardown.
+                val generation = stopGeneration.get()
+                fun superseded() = stopGeneration.get() != generation
+
                 if (!source.hasShieldedSupport()) {
                     log.info("shielded runtime unavailable: native build has no shielded support")
                     return false
@@ -903,19 +914,35 @@ class ShieldedBalanceServiceImpl internal constructor(
                     log.warn("shielded runtime not started: malformed SDK wallet id")
                     return false
                 }
+                if (superseded()) {
+                    log.info("shielded bring-up abandoned before the bind: a stop() arrived while the SDK was starting")
+                    return false
+                }
 
-                val generation = stopGeneration.get()
                 source.configureShielded(shieldedDbPath())
                 source.bindShielded(walletId, listOf(DEFAULT_SHIELDED_ACCOUNT))
-                if (stopGeneration.get() != generation) {
+                if (superseded()) {
                     log.warn(
                         "shielded bring-up returned from the native bind after a stop() had abandoned " +
                             "it — not starting the sync loop or reporting ready; the next trigger binds afresh"
                     )
                     return false
                 }
-                if (!source.isShieldedSyncRunning()) {
+                val wasRunning = source.isShieldedSyncRunning()
+                if (!superseded() && !wasRunning) {
                     source.startShieldedSync()
+                }
+                if (superseded()) {
+                    // A stop() timed out while we were inside a native step
+                    // and could not reach the loop; whether we just started it
+                    // or found it running, the stop's intent is "runtime down".
+                    log.warn(
+                        "shielded bring-up superseded by a stop() around the sync-loop start — stopping " +
+                            "the loop and not reporting ready"
+                    )
+                    runCatching { source.stopShieldedSync() }
+                        .onFailure { log.warn("failed to stop the shielded sync loop after a superseded bring-up", it) }
+                    return false
                 }
                 // Best-effort: start building the Halo 2 proving key now so
                 // the first spend doesn't pay the ~30s warm-up on top of its
@@ -958,7 +985,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         // Before the lock: a bring-up holding it right now must see the bump
         // when it returns.
         stopGeneration.incrementAndGet()
-        val acquired = withTimeoutOrNull(stopLockTimeoutMs) { lock.lock() } != null
+        val acquired = tryLockWithin(stopLockTimeoutMs)
         if (!acquired) {
             log.warn(
                 "shielded stop: the bring-up has held the lock for over {}s and is inside a native SDK " +
@@ -977,6 +1004,30 @@ class ShieldedBalanceServiceImpl internal constructor(
                 .onFailure { log.warn("failed to stop the shielded sync loop", it) }
         } finally {
             lock.unlock()
+        }
+    }
+
+    /**
+     * Bounded, cancellation-safe acquisition of [lock].
+     *
+     * `withTimeoutOrNull { lock.lock() }` was wrong at the boundary (review,
+     * 2026-09-23): when a contended acquisition resumes right at the
+     * deadline, ownership can be delivered to this coroutine while the
+     * timeout still wins the completion of `withTimeoutOrNull`, which then
+     * returns null — the lock is held and nothing will ever release it.
+     * Mutex's prompt-cancellation guarantee covers the suspension, not
+     * ownership already handed to running code. On this singleton a leaked
+     * lock parks every later bring-up forever and turns every later stop
+     * into the timeout fallback. `tryLock` is non-suspending and atomic, so
+     * ownership and the return value cannot disagree; the only suspension
+     * here is the poll delay, during which nothing is held.
+     */
+    private suspend fun tryLockWithin(timeoutMs: Long): Boolean {
+        val deadlineNs = System.nanoTime() + timeoutMs * 1_000_000L
+        while (true) {
+            if (lock.tryLock()) return true
+            if (System.nanoTime() >= deadlineNs) return false
+            delay(STOP_LOCK_POLL_MS)
         }
     }
 
@@ -1691,6 +1742,9 @@ class ShieldedBalanceServiceImpl internal constructor(
          * this one in that cleanup took 8 s on 2026-09-22.
          */
         internal const val STOP_LOCK_TIMEOUT_MS = 5_000L
+
+        /** Poll interval of [tryLockWithin]. */
+        internal const val STOP_LOCK_POLL_MS = 25L
 
         /** How often the sync-status poller samples the pass-in-flight signal. */
         internal const val SYNC_STATUS_POLL_INTERVAL_MS = 500L
