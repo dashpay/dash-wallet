@@ -106,9 +106,13 @@ class ShieldedBalanceServiceTest {
         fun interactions() = supportCalls + configureCalls + bindCalls + startCalls +
             stopCalls + warmUpCalls + broadcastCalls
 
+        /** Suspending hook inside the support probe — the SDK bootstrap interval (review 2026-09-23). */
+        var onSupportSuspend: suspend () -> Unit = {}
+
         override suspend fun hasShieldedSupport(): Boolean {
             supportCalls++
             events += "support"
+            onSupportSuspend()
             return hasSupport
         }
 
@@ -142,10 +146,14 @@ class ShieldedBalanceServiceTest {
         var syncing = false
         override suspend fun isShieldedSyncing(): Boolean = syncing
 
+        /** Suspending hook inside the native sync-loop start (review 2026-09-23). */
+        var onStartSuspend: suspend () -> Unit = {}
+
         override suspend fun startShieldedSync() {
             startCalls++
             events += "start"
             onStart()
+            onStartSuspend()
         }
 
         override suspend fun stopShieldedSync() {
@@ -372,6 +380,61 @@ class ShieldedBalanceServiceTest {
         assertTrue(service.ensureShieldedReady())
         assertEquals(2, source.bindCalls)
         assertEquals(1, source.startCalls)
+    }
+
+    /**
+     * Review, 2026-09-23: the generation guard covered configure/bind only. A
+     * bring-up past that check could be parked in the native sync-loop start
+     * when stop() timed out and tore the Kotlin side down; on return it
+     * published ready and started the collectors over the teardown. The
+     * fence now re-checks after the loop start and, when superseded, stops
+     * the loop it started and declines.
+     */
+    @Test
+    fun stop_supersedesABringUpParkedInTheNativeLoopStart_whichThenStopsTheLoopItStarted() = runBlocking {
+        val gate = CompletableDeferred<Unit>()
+        val source = readySource().apply { onStartSuspend = { gate.await() } }
+        val service = service(source, stopLockTimeoutMs = 200)
+
+        val bringUp = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.startCalls == 0) delay(10) }
+        assertEquals(1, source.bindCalls)
+
+        withTimeout(5_000) { service.stop() } // times out on the lock, tears the Kotlin side down
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        gate.complete(Unit) // the native start returns into a superseded bring-up
+        assertFalse("superseded: not ready", bringUp.await())
+        assertEquals("…and the loop it started is stopped", 1, source.stopCalls)
+
+        // Fresh bring-up afterwards is whole again.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(2, source.bindCalls)
+        assertEquals(2, source.startCalls)
+    }
+
+    /**
+     * Review, 2026-09-23: hasShieldedSupport()/boundWalletIdOrNull() call
+     * ensureStarted(), which can bootstrap the SDK. A stop() in that interval
+     * used to be absorbed by a generation snapshot taken later; the snapshot
+     * is now taken first, so the bring-up aborts before it ever binds.
+     */
+    @Test
+    fun stop_duringTheSdkBootstrapInterval_abortsTheBringUpBeforeItBinds() = runBlocking {
+        val gate = CompletableDeferred<Unit>()
+        val source = readySource().apply { onSupportSuspend = { gate.await() } }
+        val service = service(source, stopLockTimeoutMs = 200)
+
+        val bringUp = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.supportCalls == 0) delay(10) }
+
+        withTimeout(5_000) { service.stop() } // times out; the bring-up holds the lock inside the probe
+        gate.complete(Unit)
+
+        assertFalse(bringUp.await())
+        assertEquals("never reached the bind", 0, source.bindCalls)
+        assertEquals(0, source.startCalls)
+        assertEquals(0, source.stopCalls)
     }
 
     /** The uncontended path is unchanged: stop under the lock, and the native loop IS stopped. */
