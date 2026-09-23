@@ -278,6 +278,23 @@ class SdkBindRetryService internal constructor(
      * `sdk_bind_blocker` still read OTHER in the support report.
      */
     private suspend fun onBindEstablished() = outcomeMutex.withLock {
+        // Stale-success guard (review, 2026-09-22). Success and failure ride
+        // separate StateFlows collected by separate coroutines, so a success
+        // already parked on this mutex can run AFTER a newer failure has
+        // classified its blocker — and would null it, clear the notice and
+        // persist NONE while the binder still says a retry is pending, with
+        // no further emission to put the UI back. The binder's live
+        // `bindRetryPending` tells the two apart: `noteBindOutcome` lowers it
+        // before it raises `bindEstablished` and raises it before it publishes
+        // a failure, so a true here means a newer failure owns the state and
+        // this success is history.
+        if (bindRetryPending()) {
+            log.info(
+                "SDK bind established signal superseded by a newer failure — leaving its blocker ({}) in place",
+                _blocker.value
+            )
+            return@withLock
+        }
         val previous = _blocker.value
         unlockedDenialStreak = 0
         otherFailureStreak = 0

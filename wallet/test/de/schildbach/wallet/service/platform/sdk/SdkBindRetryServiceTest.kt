@@ -20,9 +20,13 @@ package de.schildbach.wallet.service.platform.sdk
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
+import kotlinx.coroutines.test.advanceUntilIdle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -186,6 +190,52 @@ class SdkBindRetryServiceTest {
         h.nowMs += 10_000
         service.maybeRetry("poll")
         assertEquals(3, h.signal.passes)
+    }
+
+    /**
+     * Review, 2026-09-22: success and failure ride separate StateFlows on
+     * separate collectors, so a success that was already inside
+     * onBindEstablished and parked on the mutex can run AFTER a newer failure
+     * classified its blocker. The binder's live `bindRetryPending` — true
+     * before a failure is published, false before a success is — tells the
+     * stale success from a current one. A real success that follows still
+     * clears everything.
+     *
+     * Unconfined scope so each emission runs its collector synchronously; a
+     * locked-device denial classifies to a blocker on the first failure.
+     */
+    @Test
+    fun staleBindSuccess_doesNotClearANewerFailuresBlocker() = runBlocking {
+        val collectors = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        try {
+            val h = Harness(deviceLocked = true)
+            h.signal.primeFailed()
+            val service = h.service(collectors)
+
+            h.fail(lockedDenial())
+            val blocker = service.blocker.value
+            assertNotNull("the failure classified a blocker", blocker)
+            val clearsBefore = h.noticeClears
+
+            // The stale success: `bindEstablished` reads true while the binder
+            // still reports a retry pending for the newer failure.
+            h.established.value = true
+            assertEquals("a superseded success leaves the newer failure's blocker in place", blocker, service.blocker.value)
+            assertEquals("…and does not clear the notice", clearsBefore, h.noticeClears)
+            assertFalse("…and persists no NONE", h.persisted.contains(null))
+
+            // The binder lowers `bindEstablished` for the failure it published;
+            // the genuine success that follows clears the state as before.
+            h.established.value = false
+            h.succeed()
+            assertNull(service.blocker.value)
+            assertEquals(clearsBefore + 1, h.noticeClears)
+            assertTrue(h.persisted.contains(null))
+        } finally {
+            collectors.cancel()
+        }
     }
 
     @Test
