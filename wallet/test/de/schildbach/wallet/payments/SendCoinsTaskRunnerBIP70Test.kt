@@ -34,6 +34,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.IdentityRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -57,6 +58,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.services.BlockchainStateProvider
+import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -889,6 +891,45 @@ class SendCoinsTaskRunnerBIP70Test {
         // ... but it is not committed: nothing has proven the merchant broadcast it
         assertTrue(wallet.getTransaction(tx.txId) == null)
         assertTrue(pendingPaymentVerifier.isTracked(tx.txId))
+    }
+
+    @Test
+    fun `an acknowledged gift card payment is attributed before its quarantine is cancelled`() = runTest {
+        // Given: the payee acknowledges a gift card purchase
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        val paymentIntent = createBip70PaymentIntent(testAddress, testAmount, mockWebServer.url("/payment").toString())
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+        )
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+
+        // When
+        try {
+            sendCoinsTaskRunner.sendDirectPayment(
+                sendRequest,
+                paymentIntent,
+                "PiggyCards",
+                PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = "https://logo.example/x.png")
+            )
+        } catch (e: Exception) {
+            // commit may fail in this harness; the ordering below is what matters
+        }
+
+        // Then: the provider is written while the quarantine record still exists. Cancelling
+        // first would leave a process death here with a committed payment and no way to
+        // attribute it, since the card rows do not store the provider.
+        coVerifyOrder {
+            metadataProvider.markGiftCardTransaction(
+                sendRequest.tx.txId,
+                "PiggyCards",
+                "https://logo.example/x.png"
+            )
+            pendingPaymentVerifier.cancelQuarantine(sendRequest.tx)
+        }
     }
 
     @Test

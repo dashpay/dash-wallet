@@ -295,13 +295,14 @@ class SendCoinsTaskRunner @Inject constructor(
     suspend fun sendDirectPayment(
         sendRequest: SendRequest,
         paymentIntent: PaymentIntent,
-        serviceName: String? = null
+        serviceName: String? = null,
+        recovery: PaymentRecoveryMetadata? = null
     ): Transaction = withContext(Dispatchers.IO) {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
 
         signSendRequest(sendRequest)
-        directPay(sendRequest, paymentIntent, serviceName)
+        directPay(sendRequest, paymentIntent, serviceName, recovery)
     }
 
     private suspend fun createPaymentRequest(
@@ -475,13 +476,13 @@ class SendCoinsTaskRunner @Inject constructor(
                 return@withContext result
             }
 
-            if (verification.isCompleted) {
-                // resolved as never sent within the wait: inputs are released, report the failure
-                log.warn("Transaction not found on network, treating as failed: ${tx.txId}")
-                throw e
-            }
-
-            log.warn("Transaction ${tx.txId} not seen on network yet, verification continues in the background")
+            // Deliberately not distinguishing "verification finished without confirmation" from
+            // "still watching". Finishing means the inputs were released, or the retention
+            // horizon passed, and neither proves the payee never received the transaction: it
+            // chooses when to relay. Reporting a failure here sends callers into cleanup that
+            // deletes the order rows the verifier keeps on purpose at watch expiry, and a later
+            // broadcast then leaves a debit with nothing to redeem against.
+            log.warn("Transaction ${tx.txId} not confirmed on the network, reporting it as pending")
             throw PaymentSubmissionPendingException(tx.txId, e)
         }
 
@@ -500,9 +501,34 @@ class SendCoinsTaskRunner @Inject constructor(
             throw PaymentSubmissionPendingException(sendRequest.tx.txId, e)
         }
 
-        // Committed, so the outcome is certain and the quarantine has done its job.
-        pendingPaymentVerifier.cancelQuarantine(sendRequest.tx)
+        // Committed, so the outcome is certain. Apply the recovery metadata first: the
+        // transaction is in the wallet only now, so this is the earliest the provider can be
+        // written, and the quarantine record is the only durable copy of it. Cancelling first
+        // would leave a process death here with a committed payment, a recorded order and no way
+        // to attribute it, which is exactly what makes an order unretrievable.
+        try {
+            applyGiftCardRecoveryMetadata(sendRequest.tx.txId, serviceName, recovery)
+            pendingPaymentVerifier.cancelQuarantine(sendRequest.tx)
+        } catch (e: Exception) {
+            // Keep the quarantine: it still holds what is needed to attribute this later.
+            log.error("could not attribute committed payment {}, keeping its recovery record", sendRequest.tx.txId, e)
+        }
         sent
+    }
+
+    /**
+     * Records the provider and merchant icon of a gift card purchase now that its transaction is
+     * in the wallet. Harmless to repeat: the purchase screen writes the same thing on its success
+     * path, and doing it here means it survives a process death before that runs.
+     */
+    private suspend fun applyGiftCardRecoveryMetadata(
+        txId: Sha256Hash,
+        serviceName: String?,
+        recovery: PaymentRecoveryMetadata?
+    ) {
+        if (recovery?.isGiftCardPurchase == true && serviceName != null) {
+            metadataProvider.markGiftCardTransaction(txId, serviceName, recovery.merchantIconUrl)
+        }
     }
 
     /**

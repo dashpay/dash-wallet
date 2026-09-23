@@ -424,27 +424,27 @@ class DashSpendViewModel @Inject constructor(
         paymentUri: String,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Sha256Hash = withContext(Dispatchers.IO) {
+        // Snapshot before suspending. The selection lives on the navigation-scoped view model and
+        // stays writable, while payAndRecordOrder is NonCancellable and can outlive the screen
+        // that started it. Re-reading afterwards would attribute this payment to whatever the
+        // user picked in the meantime, and overwrite the attribution recovery had got right.
+        //
+        // The provider, not the merchant's source field: those disagree for a PiggyCards order on
+        // a CTX-sourced merchant, and the provider is what GiftCardDetailsViewModel routes by.
+        val provider = selectedProvider?.serviceName ?: ServiceName.CTXSpend
+        val merchantIconUrl = _giftCardMerchant.value?.logoLocation
+
         val transaction = sendPaymentService.payWithDashUrl(
             paymentUri,
-            // The selected provider, not the merchant's source field. These disagree for a
-            // PiggyCards order on a CTX-sourced merchant, and this is the name the recovery path
-            // stores and GiftCardDetailsViewModel routes retrieval by.
-            selectedProvider?.serviceName ?: ServiceName.CTXSpend,
+            provider,
             // The purchase screen cannot record this itself for a payment that stays unresolved:
             // marking a gift card transaction needs the transaction to be in the wallet. Carry it
             // so recovery can restore the expense category and merchant icon after committing.
-            PaymentRecoveryMetadata(
-                isGiftCardPurchase = true,
-                merchantIconUrl = _giftCardMerchant.value?.logoLocation
-            ),
+            PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = merchantIconUrl),
             onTransactionCreated
         )
         log.info("ctx spend transaction: ${transaction.txId}")
-        transactionMetadata.markGiftCardTransaction(
-            transaction.txId,
-            selectedProvider!!.serviceName,
-            _giftCardMerchant.value?.logoLocation
-        )
+        transactionMetadata.markGiftCardTransaction(transaction.txId, provider, merchantIconUrl)
 //        BitcoinURI(paymentUri).message?.let { memo ->
 //            if (memo.isNotBlank()) {
 //                transactionMetadata.setTransactionMemo(transaction.txId, memo)
