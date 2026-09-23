@@ -892,6 +892,46 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
+    fun `an acknowledged payment that cannot be committed locally is reported as pending`() = runTest {
+        // Given: the payee acknowledges, but committing the transaction fails afterwards
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        val paymentIntent = createBip70PaymentIntent(testAddress, testAmount, mockWebServer.url("/payment").toString())
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+        )
+        // explicit types: SendPaymentService has an address/amount overload of the same name
+        coEvery {
+            sendCoinsTaskRunner.sendCoins(
+                any<SendRequest>(),
+                any<Boolean>(),
+                any<Boolean>(),
+                isNull(),
+                isNull()
+            )
+        } throws IllegalStateException("could not commit")
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+
+        // When
+        val thrown = try {
+            sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent, "TestService")
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // Then: the payee has the payment, so this must not look like a failure. Callers would
+        // run their cleanup and delete the order recorded before sending, leaving the watch to
+        // commit an acknowledged purchase with nothing to redeem against.
+        assertTrue("expected pending, got $thrown", thrown is PaymentSubmissionPendingException)
+        coVerify(exactly = 0) { pendingPaymentVerifier.cancelQuarantine(any()) }
+        assertTrue("the watch must survive", pendingPaymentVerifier.isTracked(sendRequest.tx.txId))
+    }
+
+    @Test
     fun `sendDirectPayment does not quarantine when the host cannot be resolved`() = runTest {
         // Given: a payment URL whose host cannot resolve, so the request never leaves the device.
         // RFC 2606 reserves the .invalid TLD; a made-up TLD can be answered by a wildcard

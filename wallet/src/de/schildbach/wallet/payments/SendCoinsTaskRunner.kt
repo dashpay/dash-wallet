@@ -481,10 +481,22 @@ class SendCoinsTaskRunner @Inject constructor(
             throw PaymentSubmissionPendingException(tx.txId, e)
         }
 
-        // Acknowledged, so the outcome is certain and the quarantine has done its job. Cancel it
-        // only after the commit succeeds: if that throws, the payment is still out there and the
-        // watch should survive to catch it.
-        val sent = sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true)
+        // Acknowledged, so the payee has the payment whatever happens from here.
+        val sent = try {
+            sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true)
+        } catch (e: Exception) {
+            // Committing locally can still fail, and several of those failures land before
+            // maybeCommitTx: a leftover-balance check, verification, the database. The payment is
+            // out there regardless, so this is not a failure to report as one. Reporting it as
+            // such would send callers down their cleanup path and delete the order they recorded
+            // before sending, leaving the watch to commit an acknowledged purchase with nothing
+            // to redeem against. Leave the quarantine standing and call it what it is: submitted,
+            // outcome not yet reflected locally.
+            log.error("payment was acknowledged but could not be committed locally: {}", sendRequest.tx.txId, e)
+            throw PaymentSubmissionPendingException(sendRequest.tx.txId, e)
+        }
+
+        // Committed, so the outcome is certain and the quarantine has done its job.
         pendingPaymentVerifier.cancelQuarantine(sendRequest.tx)
         sent
     }
