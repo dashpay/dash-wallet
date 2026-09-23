@@ -599,6 +599,18 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val notificationHandlerThread = HandlerThread("notification-lane").apply { start() }
     private val notificationHandler = Handler(notificationHandlerThread.looper)
     private var wakeLock: PowerManager.WakeLock? = null
+
+    /**
+     * Whether the REPLAY's own acquisition of [wakeLock] is outstanding.
+     * Tracked apart from `isHeld` because the lock is reference-counted and
+     * shared with the dashj path: with the Tools dashj-sync diagnostic on, a
+     * peergroup and an SDK replay coexist, so `isHeld` cannot say whose count
+     * is whose. Each owner releases its own acquisition — the tick receiver
+     * on replay completion, [onDestroy] for an interrupted replay, where one
+     * release used to cover two acquisitions (review, 2026-09-22/23).
+     */
+    @Volatile
+    private var replayWakeLockHeld = false
     private var peerConnectivityListener: PeerConnectivityListener? = null
     private var nm: NotificationManager? = null
     private val impediments: MutableSet<Impediment> = EnumSet.noneOf(
@@ -2040,16 +2052,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
          * completes. The dashj path's own acquire/release (checkService /
          * stopPeerGroup) is untouched; onDestroy releases either way.
          */
-        /**
-         * Whether the REPLAY's own acquisition is outstanding. Tracked apart
-         * from [wakeLock].isHeld because the lock is reference-counted and
-         * shared with the dashj path: with the Tools dashj-sync diagnostic on,
-         * a peergroup and an SDK replay coexist, and releasing only when
-         * `peerGroup == null` left the replay's count held until onDestroy
-         * (review, 2026-09-22). Each acquisition now releases itself.
-         */
-        private var replayWakeLockHeld = false
-
         private fun holdWakeLockWhileReplaying(replaying: Boolean) {
             if (!dashjHeldByCutover) return
             val lock = wakeLock ?: return
@@ -3024,6 +3026,16 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // wakeLock is only assigned in onCreate; if onDestroy runs after an early/partial
                 // onCreate it may still be null, so guard rather than assert.
                 wakeLock?.let { lock ->
+                    // One release per owner: the replay's own acquisition first
+                    // (an interrupted replay never reached its completion
+                    // release), then whatever the dashj path still holds.
+                    if (replayWakeLockHeld) {
+                        replayWakeLockHeld = false
+                        if (lock.isHeld) {
+                            log.debug("releasing the replay's wake-lock acquisition")
+                            lock.release()
+                        }
+                    }
                     if (lock.isHeld) {
                         log.debug("wakelock still held, releasing")
                         lock.release()
