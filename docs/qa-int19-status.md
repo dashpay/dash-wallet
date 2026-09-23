@@ -6,7 +6,10 @@ Source: QA testing by Pasta on an **int19** build. Assessed 2026-09-19 against t
 release builds `12000016`/`12000017`; the entries below carry dated updates where that changed
 anything, and **A-01** (Andrei's post-upgrade "still 99%") is added at the end of the fixed list.
 **A-02** (Andrei's 2026-09-22 "resync got stuck") is fixed on the stacked branch
-`fix/sync-process-stalls`; #1568 itself takes only review fixes from here.
+`fix/sync-process-stalls`; #1568 itself takes only review fixes from here. Re-assessed
+2026-09-22 evening at `2e3e3518d` on SDK int22 after fresh restores on both devices
+(plan §38); **A-03** (the per-launch 26,000-block re-walk) is added under "Still applies" as an SDK
+defect.
 
 "Addressed" below means *the defect's cause is fixed on this branch*. It does **not** mean
 retested — see [Retest before closing](#retest-before-closing).
@@ -18,7 +21,7 @@ retested — see [Retest before closing](#retest-before-closing).
 | Fixed on this branch | 4 | SR-01, **SR-06** (delivered on device 2026-09-21), **A-01** (Andrei's "still 99%", 2026-09-21), **A-02** (Andrei's "resync got stuck", 2026-09-22 — on `fix/sync-process-stalls`) |
 | Addressed by the #1555 merge | 2 | D-056, D-031 |
 | Addressed by the pending master merge | 1 | D-011 |
-| Still applies | 7 | D-037, **D-041** (SDK defect; the display hold and the seed gate are now proven on device — see the 2026-09-21 update), D-068, SR-22, SR-05, SR-03/04, SR-07 |
+| Still applies | 8 | D-037, **D-041** (SDK defect; the display hold and the seed gate are now proven on device — see the 2026-09-21 update), D-068, SR-22, SR-05, SR-03/04, SR-07, **A-03** (per-launch re-walk, SDK defect, 2026-09-22) |
 | Applies by deliberate decision | 1 | SR-08 |
 
 ---
@@ -112,6 +115,13 @@ set restarts from scratch on every launch. Already open upstream as rust-dashcor
 by dropping the sweep in rust-dashcore#1016 (draft); our issue draft is retired in favour of a
 comment there.
 
+**2026-09-22 evening, int22, fresh restores (plan §38.1).** Emulator debug `12000017`: scan start
+17:18:48, `l1Synced=true` 17:22:22, seed 17:23:15 at 10,805,162,729 duffs, no sweep, no stall.
+Samsung release `12000018`: `l1Synced=true` 17:39:09 with `pipelineLagging=false`, seed 17:39:56 at
+the same figure, no watchdog verdict, no WARN. int22 still carries the sweep; this wallet did not
+trigger it tonight, which the code attributes to the contact accounts being provisioned before the
+scan started.
+
 ---
 
 ### A-02 — "Mo-1022 resync got stuck" (Andrei, 2026-09-22)
@@ -190,6 +200,23 @@ survives the merge.
 ---
 
 ## Still applies — untouched by this branch
+
+### A-03 — The engine re-walks 26,000 blocks on every launch (2026-09-22)
+
+*Found on the emulator's engine log, six sessions since the 09-21 restore. SDK defect; not
+reproducible on a wallet without DashPay contacts.*
+
+**The defect.** Every engine session starts `Starting filter download (scan_start=1532171 …)` and
+re-walks to the tip, although the previous session committed to the tip and the SDK's own Room row
+holds `syncedHeight` at the tip. 1,532,170 is `coreHeightCreatedAt` of the wallet's earliest DashPay
+contact request: at startup rs-platform-wallet's `reconcile_dashpay_rescan` lowers `synced_height`
+to that height so contact receival addresses get filter coverage, and its "already done" guard is
+in-memory only. Upstream: dashpay/platform#4302 (open since 2026-08-17), PR #4740 adjacent. Plan
+§34.1a and §38.2.
+
+**Cost.** 4–11 s per launch on the emulator with everything in storage. On a mainnet wallet with an
+old first contact it is a re-walk of hundreds of thousands of filters on every launch, growing
+forever. Not fixed by rust-dashcore#1016 or by int22; nothing on the app side can stop it.
 
 ### D-037 — Historical fully-spent transactions get no history row
 
