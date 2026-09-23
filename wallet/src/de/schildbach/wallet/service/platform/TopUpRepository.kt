@@ -31,6 +31,7 @@ import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
@@ -168,7 +169,8 @@ class TopUpRepositoryImpl @Inject constructor(
     private val invitationsDao: InvitationsDao,
     private val coinJoinConfig: CoinJoinConfig,
     private val dashPayConfig: DashPayConfig,
-    private val dashSystemService: DashSystemService
+    private val dashSystemService: DashSystemService,
+    private val pendingPaymentVerifier: PendingDirectPaymentVerifier
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
@@ -394,6 +396,9 @@ class TopUpRepositoryImpl @Inject constructor(
         topUpTx: AssetLockTransaction,
         aesKeyParameter: KeyParameter?
     ) {
+        // Funding runs outside SendCoinsTaskRunner, so it needs the same barrier: after a restart
+        // the input locks of an uncertain payment live only in memory until they are restored.
+        pendingPaymentVerifier.awaitRestored()
         val topUp = topUpsDao.getByTxId(
             topUpTx.txId
         ) ?: addTopUp(topUpTx.txId)

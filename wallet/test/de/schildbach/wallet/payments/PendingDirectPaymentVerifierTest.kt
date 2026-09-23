@@ -480,6 +480,71 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
+    fun `a later scan attributes an expired payment whose transaction has since arrived`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAll() } returns listOf(
+            PendingDirectPayment(
+                tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
+                System.currentTimeMillis(), isGiftCardPurchase = true,
+                merchantIconUrl = "https://logo.example/x.png",
+                abandoned = true, watchExpired = true
+            )
+        )
+
+        // first scan: the transaction is not in the wallet yet, so the record is left alone
+        verifier.awaitRestored()
+        coVerify(exactly = 0) { metadataProvider.markGiftCardTransaction(any(), any(), any()) }
+
+        // ordinary syncing finds it afterwards, and a later service start scans again
+        wallet.maybeCommitTx(tx)
+        verifier.resume()
+
+        // scans must stay repeatable: an expired record has no watch and no arrival observer,
+        // so only a later scan can attribute it
+        withTimeout(5_000) {
+            coVerify(timeout = 5_000) {
+                metadataProvider.markGiftCardTransaction(tx.txId, "PiggyCards", "https://logo.example/x.png")
+            }
+        }
+    }
+
+    @Test
+    fun `awaitRestored refuses to proceed when the stored payments cannot be read`() = runBlocking {
+        verifier.restoreTimeoutMs = 2_000L
+        coEvery { config.getAll() } throws RuntimeException("preferences unreadable")
+
+        val thrown = try {
+            verifier.awaitRestored()
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // an unreadable store is not an empty one: treating it as such would report every
+        // outpoint as free to spend
+        assertNotNull("a failed read must not count as readiness", thrown)
+    }
+
+    @Test
+    fun `awaitRestored retries after a failed scan`() = runBlocking {
+        verifier.restoreTimeoutMs = 2_000L
+        var attempt = 0
+        coEvery { config.getAll() } coAnswers {
+            attempt++
+            if (attempt == 1) throw RuntimeException("transient read failure") else emptyList()
+        }
+
+        try {
+            verifier.awaitRestored()
+        } catch (expected: Exception) {
+            // first attempt fails
+        }
+        // a failure must not lock payments out for good
+        verifier.awaitRestored()
+        assertEquals(2, attempt)
+    }
+
+    @Test
     fun `awaitRestored refuses to proceed when restoration cannot finish`() = runBlocking {
         verifier.restoreTimeoutMs = 150L
         coEvery { config.getAll() } coAnswers {

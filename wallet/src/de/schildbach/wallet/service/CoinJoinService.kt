@@ -25,6 +25,7 @@ import com.google.common.base.Stopwatch
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
@@ -129,7 +130,8 @@ class CoinJoinMixingService @Inject constructor(
     private val blockchainStateProvider: BlockchainStateProvider,
     private val config: CoinJoinConfig,
     private val platformRepo: PlatformRepo,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val pendingPaymentVerifier: PendingDirectPaymentVerifier
 ) : CoinJoinService {
 
     companion object {
@@ -654,6 +656,14 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun startMixing(): Boolean {
+        // Mixing spends from the same wallet, so it waits for the same barrier: an uncertain
+        // payment's outpoints are unprotected until their locks are restored after a restart.
+        try {
+            pendingPaymentVerifier.awaitRestored()
+        } catch (e: Exception) {
+            log.warn("not starting mixing, pending payments are not restored yet", e)
+            return false
+        }
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_TIME_CHANGED)
         }

@@ -103,8 +103,10 @@ class PendingDirectPaymentVerifier @Inject constructor(
     @VisibleForTesting internal var restoreTimeoutMs = DEFAULT_RESTORE_TIMEOUT_MS
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val restored = CompletableDeferred<Unit>()
-    private val restoreStarted = AtomicBoolean(false)
+    private val scanMutex = Mutex()
+
+    /** Set once a scan has protected every persisted payment; cleared until then. */
+    @Volatile private var locksRestored = false
     private val jobs = ConcurrentHashMap<Sha256Hash, Deferred<Transaction?>>()
     private val jobsMutex = Mutex()
 
@@ -152,7 +154,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * Safe to call repeatedly; payments already being tracked are skipped.
      */
     fun resume() {
-        startRestore()
+        scope.launch { scan() }
     }
 
     /**
@@ -170,30 +172,46 @@ class PendingDirectPaymentVerifier @Inject constructor(
      *   payment we cannot protect is the safer failure.
      */
     suspend fun awaitRestored() {
-        startRestore()
-        withTimeoutOrNull(restoreTimeoutMs) { restored.await() }
-            ?: throw IllegalStateException(
-                "pending payments could not be restored in time; refusing to risk spending their inputs"
-            )
-    }
-
-    private fun startRestore() {
-        if (!restoreStarted.compareAndSet(false, true)) {
+        if (locksRestored) {
             return
         }
-        scope.launch {
-            try {
-                restorePersisted()
-            } finally {
-                restored.complete(Unit)
-            }
+        // Readiness means a scan that actually protected everything, not merely one that ran.
+        // Swallowing a failed read here and carrying on would leave an uncertain payment's
+        // outpoints spendable, which is what the barrier exists to prevent. A failure leaves the
+        // flag clear, so the next payment retries rather than being locked out for good.
+        val protectedNow = withTimeoutOrNull(restoreTimeoutMs) { scan() }
+        if (protectedNow != true) {
+            throw IllegalStateException(
+                "pending payments could not be restored; refusing to risk spending their inputs"
+            )
+        }
+    }
+
+    /**
+     * Restores every persisted quarantine and applies anything owed to records whose watch has
+     * expired. Repeatable on purpose: an expired record whose transaction had not yet arrived is
+     * left in place, and only a later scan can attribute it once ordinary syncing finds it.
+     *
+     * @return true when every unresolved payment is accounted for
+     */
+    private suspend fun scan(): Boolean = scanMutex.withLock {
+        try {
+            restorePersisted()
+            locksRestored = true
+            true
+        } catch (e: Exception) {
+            log.error("could not restore pending direct payments", e)
+            false
         }
     }
 
     private suspend fun restorePersisted() {
+        var failed = false
         run restore@{
-            try {
+            run {
                 val wallet = walletData.wallet ?: walletData.observeWallet().filterNotNull().first()
+                // Deliberately unguarded: a read that throws must fail the scan, not be mistaken
+                // for an empty store, which would report every outpoint as free to spend.
                 val pending = config.getAll()
                 if (pending.isEmpty()) {
                     return@restore
@@ -222,18 +240,24 @@ class PendingDirectPaymentVerifier @Inject constructor(
                         }
                         track(tx, payment)
                     } catch (e: Exception) {
-                        // Keep it. Failing to deserialize, lock or track says nothing about
-                        // whether the merchant received the payment, and dropping the record
+                        // Keep the record. Failing to deserialize, lock or track says nothing
+                        // about whether the merchant received the payment, and dropping it
                         // destroys the only information a later attempt could recover it from.
                         log.error(
                             "could not restore pending direct payment {}, keeping it to retry",
                             payment.txId, e
                         )
+                        // ... but do not call this scan a success: an unrestored payment means
+                        // unprotected outpoints, and spending must stay blocked until a later
+                        // scan manages it.
+                        failed = true
                     }
                 }
-            } catch (e: Exception) {
-                log.error("failed to resume pending direct payments", e)
             }
+        }
+
+        if (failed) {
+            throw IllegalStateException("some pending direct payments could not be restored")
         }
     }
 
