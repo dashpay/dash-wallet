@@ -98,7 +98,7 @@ interface TopUpRepository {
         useCoinJoin: Boolean
     )
 
-    fun createTopupTransaction(
+    suspend fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
         keyParameter: KeyParameter?,
@@ -188,6 +188,9 @@ class TopUpRepositoryImpl @Inject constructor(
         keyParameter: KeyParameter?,
         useCoinJoin: Boolean
     ) {
+        // Before coin selection, not after: restoring locks once a transaction is built does
+        // not remove the outpoints it already chose.
+        pendingPaymentVerifier.awaitRestored()
         val fee = if (Names.isUsernameContestable(username)) {
             Constants.DASH_PAY_FEE_CONTESTED
         } else {
@@ -207,12 +210,15 @@ class TopUpRepositoryImpl @Inject constructor(
         blockchainIdentity.initializeAssetLockTransaction(cftx)
     }
 
-    override fun createTopupTransaction(
+    override suspend fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
         keyParameter: KeyParameter?,
         useCoinJoin: Boolean
     ): AssetLockTransaction {
+        // Before coin selection, not after: restoring locks once a transaction is built does
+        // not remove the outpoints it already chose.
+        pendingPaymentVerifier.awaitRestored()
         Context.propagate(walletDataProvider.wallet!!.context)
         val balance = walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
         val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
@@ -306,6 +312,8 @@ class TopUpRepositoryImpl @Inject constructor(
      * @return True if successful
      */
     override suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
+        // Backstop for callers that built the transaction elsewhere, such as invite funding.
+        pendingPaymentVerifier.awaitRestored()
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
             log.info("adding credit funding transaction listener for ${cftx.txId}")
@@ -589,6 +597,9 @@ class TopUpRepositoryImpl @Inject constructor(
         keyParameter: KeyParameter?,
         topupAmount: Coin
     ): AssetLockTransaction {
+        // Before coin selection, not after: restoring locks once a transaction is built does
+        // not remove the outpoints it already chose.
+        pendingPaymentVerifier.awaitRestored()
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)

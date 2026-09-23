@@ -210,9 +210,10 @@ class PendingDirectPaymentVerifier @Inject constructor(
         run restore@{
             run {
                 val wallet = walletData.wallet ?: walletData.observeWallet().filterNotNull().first()
-                // Deliberately unguarded: a read that throws must fail the scan, not be mistaken
-                // for an empty store, which would report every outpoint as free to spend.
-                val pending = config.getAll()
+                // Strict read: the ordinary one turns an unreadable store into empty preferences
+                // and silently drops entries it cannot decode, either of which would report every
+                // outpoint as free to spend.
+                val pending = config.getAllOrThrow()
                 if (pending.isEmpty()) {
                     return@restore
                 }

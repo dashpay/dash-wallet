@@ -90,7 +90,7 @@ class PendingDirectPaymentVerifierTest {
         metadataProvider = mockk(relaxed = true)
         coEvery { metadataProvider.forgetTransaction(any()) } returns true
         config = mockk(relaxed = true)
-        coEvery { config.getAll() } returns emptyList()
+        coEvery { config.getAllOrThrow() } returns emptyList()
 
         verifier = PendingDirectPaymentVerifier(
             walletData, walletApplication, blockchainStateProvider, metadataProvider, config
@@ -279,7 +279,7 @@ class PendingDirectPaymentVerifierTest {
     fun `resume keeps watching an abandoned payment without locking its inputs`() = runBlocking {
         verifier.recordRetentionMs = 0L
         val tx = createTransaction()
-        coEvery { config.getAll() } returns listOf(
+        coEvery { config.getAllOrThrow() } returns listOf(
             PendingDirectPayment(
                 tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend",
                 System.currentTimeMillis(), abandoned = true
@@ -287,13 +287,17 @@ class PendingDirectPaymentVerifierTest {
         )
 
         verifier.resume()
+        // Wait for cleanup to finish, not merely for forgetTransaction to be called: the verifier
+        // still has to return from it and run finish, which is what clears the tracking job.
         withTimeout(5_000) {
-            coVerify(timeout = 5_000) { metadataProvider.forgetTransaction(tx.txId) }
+            while (verifier.isTracked(tx.txId)) {
+                delay(10)
+            }
         }
 
         // an abandoned payment is never re-locked or re-verified, only cleaned up
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
-        assertFalse(verifier.isTracked(tx.txId))
+        coVerify { metadataProvider.forgetTransaction(tx.txId) }
         coVerify { config.remove(tx.txId) }
     }
 
@@ -386,7 +390,7 @@ class PendingDirectPaymentVerifierTest {
         val tx = createTransaction()
         // the wallet found it through ordinary syncing, long after polling stopped
         wallet.maybeCommitTx(tx)
-        coEvery { config.getAll() } returns listOf(
+        coEvery { config.getAllOrThrow() } returns listOf(
             PendingDirectPayment(
                 tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
                 System.currentTimeMillis(), isGiftCardPurchase = true,
@@ -407,7 +411,7 @@ class PendingDirectPaymentVerifierTest {
     @Test
     fun `leaves an expired watch alone while its transaction is still absent`() = runBlocking {
         val tx = createTransaction()
-        coEvery { config.getAll() } returns listOf(
+        coEvery { config.getAllOrThrow() } returns listOf(
             PendingDirectPayment(
                 tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
                 System.currentTimeMillis(), isGiftCardPurchase = true,
@@ -455,7 +459,7 @@ class PendingDirectPaymentVerifierTest {
     fun `awaitRestored blocks until persisted quarantines have their locks back`() = runBlocking {
         val tx = createTransaction()
         val gate = CompletableDeferred<Unit>()
-        coEvery { config.getAll() } coAnswers {
+        coEvery { config.getAllOrThrow() } coAnswers {
             // stand in for a slow preferences read after a restart
             gate.await()
             listOf(
@@ -482,7 +486,7 @@ class PendingDirectPaymentVerifierTest {
     @Test
     fun `a later scan attributes an expired payment whose transaction has since arrived`() = runBlocking {
         val tx = createTransaction()
-        coEvery { config.getAll() } returns listOf(
+        coEvery { config.getAllOrThrow() } returns listOf(
             PendingDirectPayment(
                 tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
                 System.currentTimeMillis(), isGiftCardPurchase = true,
@@ -511,7 +515,7 @@ class PendingDirectPaymentVerifierTest {
     @Test
     fun `awaitRestored refuses to proceed when the stored payments cannot be read`() = runBlocking {
         verifier.restoreTimeoutMs = 2_000L
-        coEvery { config.getAll() } throws RuntimeException("preferences unreadable")
+        coEvery { config.getAllOrThrow() } throws RuntimeException("preferences unreadable")
 
         val thrown = try {
             verifier.awaitRestored()
@@ -529,7 +533,7 @@ class PendingDirectPaymentVerifierTest {
     fun `awaitRestored retries after a failed scan`() = runBlocking {
         verifier.restoreTimeoutMs = 2_000L
         var attempt = 0
-        coEvery { config.getAll() } coAnswers {
+        coEvery { config.getAllOrThrow() } coAnswers {
             attempt++
             if (attempt == 1) throw RuntimeException("transient read failure") else emptyList()
         }
@@ -547,7 +551,7 @@ class PendingDirectPaymentVerifierTest {
     @Test
     fun `awaitRestored refuses to proceed when restoration cannot finish`() = runBlocking {
         verifier.restoreTimeoutMs = 150L
-        coEvery { config.getAll() } coAnswers {
+        coEvery { config.getAllOrThrow() } coAnswers {
             delay(10_000)
             emptyList()
         }
@@ -580,7 +584,7 @@ class PendingDirectPaymentVerifierTest {
     @Test
     fun `resume re-locks inputs of persisted payments and tracks them`() = runBlocking {
         val tx = createTransaction()
-        coEvery { config.getAll() } returns listOf(
+        coEvery { config.getAllOrThrow() } returns listOf(
             PendingDirectPayment(tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", System.currentTimeMillis())
         )
 
@@ -596,7 +600,7 @@ class PendingDirectPaymentVerifierTest {
     @Test
     fun `resume keeps a payment it cannot restore`() = runBlocking {
         val txId = Sha256Hash.of(byteArrayOf(9))
-        coEvery { config.getAll() } returns listOf(
+        coEvery { config.getAllOrThrow() } returns listOf(
             PendingDirectPayment(txId, byteArrayOf(0, 1), paymentUrl, null, System.currentTimeMillis())
         )
 

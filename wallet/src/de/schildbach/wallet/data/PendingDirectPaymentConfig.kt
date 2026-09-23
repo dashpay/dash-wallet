@@ -19,6 +19,7 @@ package de.schildbach.wallet.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.core.Sha256Hash
@@ -101,9 +102,9 @@ data class PendingDirectPayment(
 @Singleton
 // Persists BIP70 payments whose submission result is unknown, keyed by transaction id.
 open class PendingDirectPaymentConfig @Inject constructor(
-    context: Context,
+    private val appContext: Context,
     walletDataProvider: WalletDataProvider
-) : BaseConfig(context, PREFERENCES_NAME, walletDataProvider) {
+) : BaseConfig(appContext, PREFERENCES_NAME, walletDataProvider) {
     companion object {
         const val PREFERENCES_NAME = "pending_direct_payments"
         val PENDING_PAYMENTS = stringPreferencesKey("pending_payments")
@@ -113,6 +114,27 @@ open class PendingDirectPaymentConfig @Inject constructor(
     private val mutex = Mutex()
 
     open suspend fun getAll(): List<PendingDirectPayment> = decode(get(PENDING_PAYMENTS)).readable
+
+    /**
+     * Reads every stored payment, refusing to guess when it cannot.
+     *
+     * [getAll] goes through [BaseConfig], whose reader turns an IOException into empty
+     * preferences, and it drops entries it cannot decode. Both are reasonable defaults for a
+     * settings store and wrong here: an unreadable file would report no pending payments, which
+     * a caller deciding whether outpoints are safe to spend would read as nothing to protect.
+     * This reads without that fallback and refuses to return a partial answer.
+     *
+     * @throws Exception if the store cannot be read or holds an entry that cannot be decoded
+     */
+    open suspend fun getAllOrThrow(): List<PendingDirectPayment> {
+        val stored = decode(appContext.dataStore.data.first()[PENDING_PAYMENTS])
+        if (stored.unreadable.isNotEmpty()) {
+            throw IllegalStateException(
+                "${stored.unreadable.size} pending direct payment(s) could not be decoded"
+            )
+        }
+        return stored.readable
+    }
 
     open suspend fun add(payment: PendingDirectPayment) = mutex.withLock {
         val stored = decode(get(PENDING_PAYMENTS))
