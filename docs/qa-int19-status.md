@@ -353,6 +353,13 @@ alarm), §32.11 (the replay guard can prevent it arming at all), and whether a N
 permits the start — the Samsung turned out to be exempt (plan §36.4), so no device we have answers
 that. Kept in this section for the history; the summary table counts it as fixed.
 
+
+**2026-09-22 update (plan §36.6).** A second route to the same outcome, found on the Samsung: the
+restart alarm was armed only inside onDestroy's cleanup, so a kill that pre-empts that cleanup — the
+deferred task-removal kill, or `lowmemorykiller` on a cached process — left the app with no pending
+alarm at all; 70 minutes with no relaunch on an awake, charging, exempt device. Fixed on
+`fix/sync-process-stalls` by arming the alarm at service start as well. Device proof pending.
+
 ### SR-08 — Prod build seeds all SDK flags
 
 *Static, high confidence.*

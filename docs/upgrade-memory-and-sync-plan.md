@@ -2731,6 +2731,37 @@ own `isIgnoringBatteryOptimizations` logged `true`. An earlier note said "NO" fr
 device we have; and exemption did not prevent either pressure kill, which is expected, since
 `lowmemorykiller` reclaims cached processes regardless.
 
+### 36.6 The restart alarm was armed only by a clean stop (Samsung, 2026-09-22 17:47)
+
+Release `12000018`, testnet, fresh restore, synced and seeded at 17:39. The user swiped the app
+from the task list at about 17:43. Sequence from `dumpsys` and logcat:
+
+| 17:39:10 | synced; `stopForeground` demotes the service; process cached, adj 850 |
+|---|---|
+| ~17:43 | task swiped. Android does NOT kill: the blockchain service is a started service, so the "remove task" kill is deferred. The engine keeps ticking at the tip. |
+| 17:47:01.0 | `idling detected, stopping service` → `onDestroy()`; cleanup coroutine starts |
+| 17:47:01.2 | the deferred kill executes: `Killing 16569 (adj 850): remove task`. SIGKILL 600 ms into cleanup. |
+| 18:57 | still no process. `dumpsys alarm` lists no pending alarm for the app's uid. Device awake, charging, battery-exempt. |
+
+The periodic restart alarm had one call site: `WalletApplication.scheduleStartBlockchainService`
+from onDestroy's cleanup coroutine at the "detaching from wallet" step, after the onCreate latch
+and the 5-second check-mutex acquisition. The kill landed before it. A fresh install has no alarm
+from any earlier session, so the app had none, and the 17:23–17:47 session never logged an
+`ALARM-DIAG armed` line. Generalised: any kill in the first seconds of onDestroy, and every
+`lowmemorykiller` kill of a cached process (no onDestroy at all), leaves the wallet with no
+background restart — SR-06's outcome by a route SR-06 did not cover.
+
+**Fixed on `fix/sync-process-stalls`:** the alarm is now armed at service start too, in
+`BlockchainServiceImpl.onCreate` after the foreground promotion. The scheduler cancels and replaces
+its own PendingIntent, so the two arms are idempotent. Not yet proven on device: the proof is a
+swipe-kill followed by a `started by alarm (reason=periodic-15min)` line within the tier's window.
+
+Two things this does not change. The demotion-then-kill loop itself (§36.3) — tonight the user's
+swipe stood in for `lowmemorykiller`. And the engine's clean shutdown: a kill 600 ms into cleanup
+gives dash-spv no `Storage shutdown completed`; the durable sync height is persisted per batch
+commit, so nothing was lost tonight, but any teardown work that needs to finish will not finish in
+that path.
+
 ### 36.5 The re-walk is a process-death cost, not an engine-stop cost
 
 An in-process engine restart (16:58:57, 17:36:18) came back IDLE → SYNCED at the tip in ~15 s with

@@ -2184,6 +2184,32 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
             }
         }
+
+        // Plan §36.6 (Samsung SM-S901U, 2026-09-22 17:47): the periodic restart
+        // alarm used to be armed in ONE place — onDestroy's cleanup coroutine,
+        // at its "detaching from wallet" step, which runs only after the
+        // onCreate latch and the check() mutex. A kill that lands before that
+        // step leaves the wallet with no pending alarm: the task-removal kill
+        // Android defers until a started service stops itself arrived 600 ms
+        // into that coroutine, and lowmemorykiller on a cached process gives
+        // no onDestroy at all. A fresh install has no alarm from any earlier
+        // session either. Result: 70 minutes with no relaunch on an awake,
+        // charging, battery-exempt device, and nothing that would ever change
+        // that until the user opened the app.
+        //
+        // So arm it at service start as well. The scheduler cancels and
+        // replaces its own PendingIntent, so this and the clean-stop arm are
+        // idempotent; a start delivered while the service is already running
+        // is an ordinary onStartCommand. The tier it picks follows
+        // Configuration.lastUsed, which MainActivity stamps on open — a start
+        // from the alarm or the boot receiver with the UI never opened this
+        // process still reads the last stamped value, not zero.
+        try {
+            WalletApplication.scheduleStartBlockchainService(this)
+        } catch (t: Throwable) {
+            log.warn("could not arm the periodic restart alarm at service start", t)
+        }
+
         serviceScope.launch {
             try {
                 log.info("onCreate() serviceScope waiting for cleanup {}", cleanupDeferred?.isActive)
