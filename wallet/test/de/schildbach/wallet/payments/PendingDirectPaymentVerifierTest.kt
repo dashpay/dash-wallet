@@ -219,19 +219,23 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
-    fun `keeps inputs locked and keeps verifying when the quarantine cannot be persisted`() = runBlocking {
-        // After an ambiguous submission the merchant may already hold the transaction, so a
-        // storage failure must not free the inputs or report the payment as failed: that would
-        // let the caller offer a retry and pay twice.
+    fun `aborts and frees the inputs when the quarantine cannot be persisted`() = runBlocking {
+        // Callers quarantine before submitting, so nothing has been sent and aborting is free.
+        // Proceeding without a record would leave memory-only locks that no restart could
+        // restore, and the inputs of an uncertain payment free to fund a retry.
         coEvery { config.add(any()) } throws RuntimeException("datastore is gone")
         val tx = createTransaction()
 
-        val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
-        delay(200)
+        val thrown = try {
+            verifier.quarantine(tx, paymentUrl, "CTXSpend")
+            null
+        } catch (e: Exception) {
+            e
+        }
 
-        tx.inputs.forEach { assertTrue(wallet.isLockedOutput(it.outpoint)) }
-        assertTrue("verification must continue in memory", verifier.isTracked(tx.txId))
-        assertFalse(result.isCompleted)
+        assertNotNull("the caller must not be allowed to submit", thrown)
+        tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
+        assertFalse(verifier.isTracked(tx.txId))
     }
 
     @Test
@@ -368,10 +372,54 @@ class PendingDirectPaymentVerifierTest {
         )
         withTimeout(5_000) { result.await() }
 
-        // The watch stops, but the order stays: a payee can outlast any horizon and broadcast
-        // afterwards, and deleting the rows would leave a paid purchase with nothing to redeem.
+        // The watch stops, but nothing is deleted: the record holds the only durable copy of the
+        // selected provider, and without it a late arrival cannot be attributed or retrieved.
         coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+        coVerify(exactly = 0) { config.remove(tx.txId) }
+        coVerify { config.add(match { it.txId == tx.txId && it.watchExpired }) }
+    }
+
+    @Test
+    fun `attributes a gift card payment that arrives after its watch expired`() = runBlocking {
+        val tx = createTransaction()
+        // the wallet found it through ordinary syncing, long after polling stopped
+        wallet.maybeCommitTx(tx)
+        coEvery { config.getAll() } returns listOf(
+            PendingDirectPayment(
+                tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
+                System.currentTimeMillis(), isGiftCardPurchase = true,
+                merchantIconUrl = "https://logo.example/x.png",
+                abandoned = true, watchExpired = true
+            )
+        )
+
+        verifier.resume()
+        withTimeout(5_000) {
+            coVerify(timeout = 5_000) {
+                metadataProvider.markGiftCardTransaction(tx.txId, "PiggyCards", "https://logo.example/x.png")
+            }
+        }
         coVerify { config.remove(tx.txId) }
+    }
+
+    @Test
+    fun `leaves an expired watch alone while its transaction is still absent`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAll() } returns listOf(
+            PendingDirectPayment(
+                tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
+                System.currentTimeMillis(), isGiftCardPurchase = true,
+                abandoned = true, watchExpired = true
+            )
+        )
+
+        verifier.resume()
+        delay(300)
+
+        // no polling, no locks, and the record survives for the next start to look again
+        assertFalse(verifier.isTracked(tx.txId))
+        tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
+        coVerify(exactly = 0) { config.remove(tx.txId) }
     }
 
     @Test

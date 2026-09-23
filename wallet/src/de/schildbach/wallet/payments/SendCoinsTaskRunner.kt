@@ -323,13 +323,17 @@ class SendCoinsTaskRunner @Inject constructor(
                 true,
                 sendRequest.ensureMinRequiredFee
             )
-            val transaction = sendCoins(sendRequestForSigning, serviceName = serviceName)
-            // Same contract as the BIP70 branch: a caller that persists its order from this
-            // callback must not silently get nothing. It fires after the send here, because
-            // sendCoins completes the transaction internally and offers no suspending hook
-            // beforehand. There is no ambiguous submission on this path, so nothing waits on it.
-            onTransactionCreated?.invoke(transaction.txId)
-            return transaction
+            // Same ordering as the BIP70 branch: complete and sign locally so the transaction id
+            // is final, let the caller record its order, and only then commit and broadcast.
+            // Recording afterwards would mean a failed insert arriving when the payment has
+            // already gone out, which sends callers down their failure path and leaves an
+            // already-paid order with nothing durable behind it.
+            val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+            Context.propagate(wallet.context)
+            signSendRequest(sendRequestForSigning)
+            wallet.completeTx(sendRequestForSigning)
+            onTransactionCreated?.invoke(sendRequestForSigning.tx.txId)
+            return sendCoins(sendRequestForSigning, txCompleted = true, serviceName = serviceName)
         }
     }
 

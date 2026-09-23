@@ -126,15 +126,14 @@ class PendingDirectPaymentVerifier @Inject constructor(
         try {
             config.add(payment)
         } catch (e: Exception) {
-            // Keep the locks and keep verifying. By this point the merchant may already hold the
-            // signed transaction, so the inputs must not become spendable and the caller must not
-            // be told the payment failed: it would offer a retry and could pay twice. Losing the
-            // record costs durability across process death, which is the lesser harm, so carry on
-            // verifying in memory.
-            log.error(
-                "could not persist pending direct payment {}, continuing to verify it in memory only",
-                tx.txId, e
-            )
+            // Callers quarantine before submitting, so nothing has been sent yet and aborting
+            // costs nothing. Carrying on without a record would be the expensive choice: the
+            // locks live only in memory, so a process death during submission or the wait would
+            // leave resume() with nothing to restore and the inputs of an uncertain payment free
+            // to fund a retry.
+            log.error("could not persist pending direct payment {}, releasing its inputs", tx.txId, e)
+            unlockInputs(wallet, tx)
+            throw e
         }
         log.info("quarantined possibly-sent tx {} ({} inputs locked)", tx.txId, tx.inputs.size)
         return track(tx, payment)
@@ -156,6 +155,18 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 for (payment in pending) {
                     try {
                         val tx = Transaction(wallet.params, payment.txBytes)
+
+                        if (payment.watchExpired) {
+                            // Polling stopped long ago. If ordinary syncing has since found the
+                            // transaction, attribute it and let the record go; otherwise leave it
+                            // untouched for the next start to look again.
+                            wallet.getTransaction(tx.txId)?.let {
+                                log.info("transaction {} arrived after its watch expired", tx.txId)
+                                commit(it, payment)
+                            }
+                            continue
+                        }
+
                         // An abandoned payment keeps its watch but not its locks: the inputs were
                         // already released, and re-locking outputs the user may since have spent
                         // would be wrong. The watch continues so a late broadcast is still caught.
@@ -370,15 +381,23 @@ class PendingDirectPaymentVerifier @Inject constructor(
         }
 
         if (payment.isGiftCardPurchase) {
-            // Stop watching, but keep the order. A payee chooses when to relay, so it can outlast
-            // any horizon we pick and broadcast afterwards; deleting the rows would leave a paid
-            // purchase with nothing to redeem against. An order for a payment that truly never
-            // happened is merely stale, which is the far cheaper mistake.
+            // Stop polling, but keep everything needed to make sense of a late arrival. Dropping
+            // the record would take the selected provider with it: the card rows do not store it,
+            // and the metadata could never be written while the transaction was absent from the
+            // wallet. Without it GiftCardDetailsViewModel has nothing to dispatch on and a paid
+            // purchase cannot be retrieved. Marked so resume() applies it if the transaction ever
+            // shows up, without watching for it.
             log.warn(
-                "giving up watching {} after the retention period, but keeping its gift card order",
+                "giving up watching {} after the retention period, keeping its order and provider " +
+                    "in case the transaction still arrives",
                 payment.txId
             )
-            finish(payment)
+            try {
+                config.add(payment.copy(watchExpired = true))
+            } catch (e: Exception) {
+                log.error("could not record the expired watch for {}", payment.txId, e)
+            }
+            jobs.remove(payment.txId)
             return
         }
 

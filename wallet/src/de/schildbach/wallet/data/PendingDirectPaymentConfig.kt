@@ -54,7 +54,13 @@ data class PendingDirectPayment(
      * removal of the records saved against it. Such a payment must never be locked or verified
      * again; it is kept solely so a failed cleanup can be retried.
      */
-    val abandoned: Boolean = false
+    val abandoned: Boolean = false,
+    /**
+     * True once active watching has stopped but the record is kept anyway, because it holds the
+     * only durable copy of the selected provider. Such a payment is never polled; it is applied
+     * only if the transaction turns up in the wallet by other means.
+     */
+    val watchExpired: Boolean = false
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put(KEY_TX_ID, txId.toString())
@@ -65,6 +71,7 @@ data class PendingDirectPayment(
         .put(KEY_GIFT_CARD, isGiftCardPurchase)
         .put(KEY_ICON_URL, merchantIconUrl ?: JSONObject.NULL)
         .put(KEY_ABANDONED, abandoned)
+        .put(KEY_WATCH_EXPIRED, watchExpired)
 
     companion object {
         private const val KEY_TX_ID = "txId"
@@ -75,6 +82,7 @@ data class PendingDirectPayment(
         private const val KEY_ABANDONED = "abandoned"
         private const val KEY_GIFT_CARD = "giftCard"
         private const val KEY_ICON_URL = "iconUrl"
+        private const val KEY_WATCH_EXPIRED = "watchExpired"
 
         fun fromJson(json: JSONObject): PendingDirectPayment = PendingDirectPayment(
             txId = Sha256Hash.wrap(json.getString(KEY_TX_ID)),
@@ -84,7 +92,8 @@ data class PendingDirectPayment(
             createdAt = json.getLong(KEY_CREATED_AT),
             isGiftCardPurchase = json.optBoolean(KEY_GIFT_CARD, false),
             merchantIconUrl = if (json.isNull(KEY_ICON_URL)) null else json.optString(KEY_ICON_URL, "").ifEmpty { null },
-            abandoned = json.optBoolean(KEY_ABANDONED, false)
+            abandoned = json.optBoolean(KEY_ABANDONED, false),
+            watchExpired = json.optBoolean(KEY_WATCH_EXPIRED, false)
         )
     }
 }
