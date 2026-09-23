@@ -96,10 +96,19 @@
     <string name="send_coins_error_insufficient_money">Insufficient funds</string>
     <string name="syncing">Syncing</string>
     <!-- SR-22: shown INSTEAD of a bare "Synced" whenever the scan started at a
-         user-supplied wallet creation date, so the balance and history only
-         cover the chain from that date forward. %1$s is the date. -->
+         user-supplied wallet creation date, so the balance and history cover
+         only part of the chain. %1$s is the date.
+
+         The date is a LANDMARK, not a boundary: BirthHeightResolver takes the
+         last checkpoint at or before it and subtracts a 4,032-block safety
+         margin, so the scan actually begins somewhat EARLIER and some pre-date
+         history does arrive. (Observed: a wallet restored with 22 Sep 2026
+         listed transactions back to 15 Aug 2026.) Both strings therefore
+         understate coverage rather than overstate it, and neither may claim
+         that everything before the date is absent — the list beside them would
+         contradict it. -->
     <string name="sync_synced_from">Synced from %1$s</string>
-    <string name="sync_partial_scan_warning">This wallet was restored with a creation date of %1$s. Transactions before that date were never downloaded, so the balance and history shown cover only the period from that date onward.</string>
+    <string name="sync_partial_scan_warning">This wallet was restored with a creation date of %1$s. Transactions before that date may be missing from the balance and history shown.</string>
     <string name="no_connection">No internet connection</string>
     <string name="rate_not_available">Not available</string>
 
