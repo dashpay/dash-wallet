@@ -973,6 +973,38 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
+    fun `a delivered payment answered with 503 stays pending and is never replayed`() = runTest {
+        // Given: the payee takes delivery, then answers 503 with Retry-After: 0. Without a
+        // one-shot body OkHttp would replay the payment, and a refused follow-up connection would
+        // surface as a ConnectException that looks like it never went out.
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        val paymentIntent = createBip70PaymentIntent(testAddress, testAmount, mockWebServer.url("/payment").toString())
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_UNAVAILABLE)
+                .setHeader("Retry-After", "0")
+                .setHeader("Connection", "close")
+        )
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+
+        // When
+        val thrown = try {
+            sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent, "TestService")
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // Then: sent exactly once, and treated as unresolved rather than failed, so the caller
+        // keeps the order instead of running the cleanup that would delete it
+        assertEquals(1, mockWebServer.requestCount)
+        assertTrue("expected pending, got $thrown", thrown is PaymentSubmissionPendingException)
+        coVerify(exactly = 0) { pendingPaymentVerifier.cancelQuarantine(any()) }
+        assertTrue("the watch must survive", pendingPaymentVerifier.isTracked(sendRequest.tx.txId))
+    }
+
+    @Test
     fun `sendDirectPayment does not quarantine when the host cannot be resolved`() = runTest {
         // Given: a payment URL whose host cannot resolve, so the request never leaves the device.
         // RFC 2606 reserves the .invalid TLD; a made-up TLD can be answered by a wildcard

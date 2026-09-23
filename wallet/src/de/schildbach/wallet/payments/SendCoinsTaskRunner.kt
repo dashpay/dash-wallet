@@ -899,6 +899,19 @@ class SendCoinsTaskRunner @Inject constructor(
             .header("Accept", PaymentProtocol.MIMETYPE_PAYMENTACK)
             .header("User-Agent", packageInfoProvider.httpUserAgent())
             .post(object : RequestBody() {
+                /**
+                 * One-shot, so this payment is written to the wire at most once.
+                 *
+                 * retryOnConnectionFailure(false) is not enough on its own: OkHttp still follows
+                 * up at the HTTP level, and a 503 with Retry-After: 0 replays the request without
+                 * consulting that setting. An endpoint could take delivery of the payment, answer
+                 * 503 and then refuse the follow-up connection, leaving us holding a
+                 * ConnectException that looks like it never went out. A one-shot body makes
+                 * RetryAndFollowUpInterceptor return the 503 instead of replaying, so the failure
+                 * we classify is the one that actually happened.
+                 */
+                override fun isOneShot(): Boolean = true
+
                 override fun contentType(): MediaType? {
                     return PaymentProtocol.MIMETYPE_PAYMENT.toMediaTypeOrNull()
                 }
