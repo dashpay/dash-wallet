@@ -81,6 +81,21 @@ internal data class SdkBlockchainStateUpdate(
     /** Masternode-list sync height, or null (unknown — preserve). */
     val mnListHeight: Int?,
     /**
+     * Whether the REPLAY — the engine's actual scan work, not the display —
+     * is finished: `!`[ShadowSyncProgress.replayActive], so it stays false
+     * while the block pipeline lags behind a caught-up cursor. Null on the
+     * phases with no trustworthy position (preserve), like [percentageSync].
+     *
+     * Carried separately from [percentageSync] on purpose (review,
+     * 2026-09-23): the display percent reads 100 at the iOS aggregate
+     * threshold with the committed cursor thousands of blocks behind, and
+     * `BlockchainState.replaying` — the idle-stop guard and the replay wake
+     * lock — used to be derived from it, so a final-batch park could stop the
+     * release-build engine and `rescheduleIfReplayInterrupted` then declined
+     * the restart because the replay was already "over".
+     */
+    val replayComplete: Boolean?,
+    /**
      * Neutral sync stage for
      * [org.dash.wallet.common.services.BlockchainStateProvider.observeSyncStage].
      * Always the phase's own stage — the value to WRITE, and the value to seed
@@ -338,6 +353,13 @@ internal fun deriveBlockchainStateUpdate(
         // only real scan phases (and a genuine ERROR → null) move it.
         percentageSync = percent,
         mnListHeight = p.mnListHeight.takeIf { it > 0 }?.toInt(),
+        // Lifecycle completion, not display completion — see the field KDoc.
+        replayComplete = when (p.phase) {
+            ShadowSyncPhase.ERROR,
+            ShadowSyncPhase.IDLE,
+            ShadowSyncPhase.CONNECTING -> null
+            else -> !p.replayActive
+        },
         syncStage = sdkSyncStage(p.phase),
         preserveEstablishedSyncStage = mayPreserveEstablishedSyncStage(p.phase, scanPercent),
         networkStalled = snapshot.stalled,

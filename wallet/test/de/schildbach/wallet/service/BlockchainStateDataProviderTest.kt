@@ -77,12 +77,16 @@ class BlockchainStateDataProviderTest {
         syncStage: SyncStage = SyncStage.BLOCKS,
         networkStalled: Boolean = false,
         chainlockHeight: Int? = null,
-        preserveEstablishedSyncStage: Boolean = false
+        preserveEstablishedSyncStage: Boolean = false,
+        // Default: the lifecycle agrees with the percent, which is what every
+        // pre-2026-09-23 fixture assumed. Tests of the disagreement pass it.
+        replayComplete: Boolean? = percentageSync?.let { it >= 100 }
     ) = SdkBlockchainStateUpdate(
         bestChainHeight = bestChainHeight,
         bestChainDateMs = bestChainDateMs,
         percentageSync = percentageSync,
         mnListHeight = mnListHeight,
+        replayComplete = replayComplete,
         syncStage = syncStage,
         networkStalled = networkStalled,
         chainlockHeight = chainlockHeight,
@@ -163,6 +167,43 @@ class BlockchainStateDataProviderTest {
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
         awaitUntil("tip update applied") { dao.state?.percentageSync == 100 }
         assertFalse("at the tip the replay is over", dao.state!!.replaying)
+        assertTrue(dao.state!!.isSynced())
+    }
+
+    /**
+     * Review, 2026-09-23. The display percent reads 100 at the iOS aggregate
+     * threshold (plan §35) while the committed cursor is thousands of blocks
+     * behind and the block pipeline still lags (the §34 final-batch park).
+     * `replaying` is the idle-stop guard and the replay wake lock; deriving
+     * it from that percent stopped the release-build engine mid-work and
+     * then declined the one-minute restart because the replay was "over".
+     * The flag now follows the lifecycle signal, and the DAO's clear-at-100%
+     * must not undo that one line later.
+     */
+    @Test
+    fun updateSdkBlockchainState_replayingFollowsTheLifecycle_notTheDisplayPercent() {
+        dao.state = BlockchainState(Date(0L), 0, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+
+        // The park: display says 100, the engine is still replaying.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE, replayComplete = false)
+        )
+        awaitUntil("parked update applied") { dao.state?.percentageSync == 100 }
+        assertTrue("100% on the display does not end the replay while the engine still works", dao.state!!.replaying)
+
+        // A transient ERROR/IDLE/CONNECTING snapshot carries no verdict: preserve.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = null, syncStage = SyncStage.OFFLINE, replayComplete = null)
+        )
+        awaitUntil("null update applied") { provider.getSyncStage() == SyncStage.OFFLINE }
+        assertTrue("an unknown verdict leaves the flag alone", dao.state!!.replaying)
+
+        // The pipeline drains: the lifecycle says complete, the flag clears.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE, replayComplete = true)
+        )
+        awaitUntil("completion applied") { dao.state?.replaying == false }
+        assertFalse(dao.state!!.replaying)
         assertTrue(dao.state!!.isSynced())
     }
 

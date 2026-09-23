@@ -182,17 +182,24 @@ class BlockchainStateDataProvider @Inject constructor(
             // Null percent (transient SDK ERROR) preserves the row's value —
             // a peer hiccup must not flap isSynced() consumers 100 → 0 → 100.
             update.percentageSync?.let { blockchainState.percentageSync = it }
-            // Phase 1b item 7: on the SDK path `replaying` means "the scan has
-            // not reached the tip", and it keeps the blockchain service alive
-            // (idle rule guard + wake lock) until it has. This used to be
+            // Phase 1b item 7: on the SDK path `replaying` means "the engine is
+            // still doing replay work", and it keeps the blockchain service alive
+            // (idle rule guard + wake lock) until it is not. This used to be
             // hard-coded false, so nothing protected the post-upgrade replay
             // and the one-minute restart alarm never fired after an idle stop.
-            // Set from the percentage the SDK reports; a null percent (transient
-            // ERROR) leaves the flag as it was. BlockchainStateDao.saveState
-            // clears it at 100% as well.
-            update.percentageSync?.let { blockchainState.replaying = it < 100 }
+            //
+            // Set from the LIFECYCLE signal, not the display percent (review,
+            // 2026-09-23): percentageSync reads 100 at the iOS aggregate
+            // threshold while the committed cursor is thousands of blocks
+            // behind and the block pipeline still lags, and deriving the flag
+            // from it let a final-batch park drop the idle-stop guard and the
+            // wake lock with the engine mid-work. A null (transient ERROR /
+            // IDLE / CONNECTING) leaves the flag as it was. The DAO's own
+            // clear-at-100% is switched off for this writer for the same
+            // reason — it would undo the separation one line later.
+            update.replayComplete?.let { blockchainState.replaying = !it }
             blockchainState.impediments = composeImpediments()
-            blockchainStateDao.saveState(blockchainState)
+            blockchainStateDao.saveState(blockchainState, clearReplayAtHundredPercent = false)
             // A caught-up snapshot must not REGRESS a COMPLETE stage — that is the
             // "syncing 100%" blip (see mayPreserveEstablishedSyncStage): a live
             // shadow SPV never latches SYNCED, so a FILTERS snapshot that has caught
