@@ -51,6 +51,7 @@ import de.schildbach.wallet.service.platform.sdk.boundedLegacyPlatformQuery
 import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
 import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
 import de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateService
+import de.schildbach.wallet.service.platform.sdk.BindHealL1Starter
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.NonInteractiveWalletUnlock
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
@@ -395,6 +396,19 @@ class PlatformSynchronizationService @Inject constructor(
     // TODO: cancel these on shutdown?
     private val syncJob = SupervisorJob()
     private val syncScope = CoroutineScope(Dispatchers.IO + syncJob)
+
+    /**
+     * Review 2026-09-23: when the startup bind pass fails (device locked at
+     * upgrade time) and a later retry heals it inside this service lifetime,
+     * start the L1 engine — nothing else did. Armed by [kickSdkEngines] when
+     * its one-shot start declines, cancelled by [shutdown]/[stopSdkEngines].
+     */
+    private val bindHealL1Starter = BindHealL1Starter(
+        scope = syncScope,
+        bindEstablished = sdkWalletBinder.bindEstablished,
+        serviceTearingDown = { de.schildbach.wallet.service.BlockchainServiceImpl.isCleaningUpNow },
+        startL1 = { l1ShadowSyncService.startIfEnabled() }
+    )
     private var lastTopupUpdateTime = 0L
     private var lastMetadataUpdateTime = 0L
 
@@ -459,8 +473,12 @@ class PlatformSynchronizationService @Inject constructor(
                 )
             } else {
                 StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTING, "SDK_L1_ENGINE_STARTING")
-                l1ShadowSyncService.startIfEnabled()
+                val started = l1ShadowSyncService.startIfEnabled()
                 StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTED, "SDK_L1_ENGINE_STARTED")
+                // Declined — most often "no wallet bound" after a failed startup
+                // bind pass. The unlock receiver and the retry ladder only bind;
+                // this is what starts L1 when they succeed (review, 2026-09-23).
+                if (started) bindHealL1Starter.cancel() else bindHealL1Starter.arm()
             }
             // Phase 5d follow-up: the post-cutover UI data source (balance
             // header / tx list / coins-received detection served from the
@@ -675,6 +693,9 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun shutdown() {
+        // A bind heal that lands after this point must not start an engine
+        // the service is tearing down.
+        bindHealL1Starter.cancel()
         // Best-effort teardown of the Kotlin-SDK background engines. The
         // shadow SPV service had NO stop path before this (its Rust header
         // store was observed regressing after unclean kills — the suspected
@@ -735,6 +756,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun stopSdkEngines() {
+        bindHealL1Starter.cancel()
         runCatching { l1ShadowSyncService.stop() }
             .onFailure { log.warn("failed to stop the L1 shadow sync on shutdown", it) }
         runCatching { shieldedBalanceService.stop() }
