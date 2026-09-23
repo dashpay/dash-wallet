@@ -2040,16 +2040,28 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
          * completes. The dashj path's own acquire/release (checkService /
          * stopPeerGroup) is untouched; onDestroy releases either way.
          */
+        /**
+         * Whether the REPLAY's own acquisition is outstanding. Tracked apart
+         * from [wakeLock].isHeld because the lock is reference-counted and
+         * shared with the dashj path: with the Tools dashj-sync diagnostic on,
+         * a peergroup and an SDK replay coexist, and releasing only when
+         * `peerGroup == null` left the replay's count held until onDestroy
+         * (review, 2026-09-22). Each acquisition now releases itself.
+         */
+        private var replayWakeLockHeld = false
+
         private fun holdWakeLockWhileReplaying(replaying: Boolean) {
             if (!dashjHeldByCutover) return
             val lock = wakeLock ?: return
             try {
-                if (replaying && !lock.isHeld) {
+                if (replaying && !replayWakeLockHeld) {
                     log.info("replay in progress on the SDK path — acquiring the wake lock")
                     lock.acquire()
-                } else if (!replaying && lock.isHeld && peerGroup == null) {
+                    replayWakeLockHeld = true
+                } else if (!replaying && replayWakeLockHeld) {
                     log.info("replay complete — releasing the wake lock")
-                    lock.release()
+                    replayWakeLockHeld = false
+                    if (lock.isHeld) lock.release()
                 }
             } catch (t: Throwable) {
                 log.warn("wake lock hold/release for the replay failed", t)
