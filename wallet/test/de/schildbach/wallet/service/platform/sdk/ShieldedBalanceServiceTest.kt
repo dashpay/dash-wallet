@@ -437,6 +437,47 @@ class ShieldedBalanceServiceTest {
         assertEquals(0, source.stopCalls)
     }
 
+    /**
+     * Review, 2026-09-24: the two-bring-up handoff. Bring-up #1 holds the lock
+     * inside the native bind; #2 is queued on the lock; stop() bumps the
+     * generation and starts polling. #1 returns superseded and releases; the
+     * queued #2 wins the handoff over stop's tryLock and snapshots the
+     * generation stop already produced; #2 then parks in ITS native bind and
+     * stop times out. Without a second bump in the fallback, #2's snapshot
+     * still matched and it went on to start the loop and publish ready over
+     * the teardown.
+     */
+    @Test
+    fun stop_fallbackAlsoSupersedesASecondBringUpThatTookTheLockDuringItsPoll() = runBlocking {
+        val gate1 = CompletableDeferred<Unit>()
+        val gate2 = CompletableDeferred<Unit>()
+        var binds = 0
+        val source = readySource().apply { onBindSuspend = { if (++binds == 1) gate1.await() else gate2.await() } }
+        val service = service(source, stopLockTimeoutMs = 400)
+
+        val first = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.bindCalls == 0) delay(10) } // #1 inside its bind
+        val second = async(Dispatchers.Default) { service.ensureShieldedReady() } // #2 queued on the lock
+        delay(50)
+        val stop = async(Dispatchers.Default) { service.stop() } // polling for the lock
+        delay(100)
+
+        gate1.complete(Unit) // #1 returns superseded; the queued #2 takes the lock…
+        withTimeout(5_000) { while (source.bindCalls < 2) delay(10) } // …and parks in its own bind
+        assertFalse(first.await())
+        withTimeout(5_000) { stop.await() } // times out on #2; fallback tears down
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        gate2.complete(Unit) // #2's native bind returns
+        assertFalse("#2 snapshotted a generation the fallback has since moved past", second.await())
+        assertEquals("no loop was ever started", 0, source.startCalls)
+
+        // A genuinely new bring-up after the stop is whole.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(3, source.bindCalls)
+        assertEquals(1, source.startCalls)
+    }
+
     /** The uncontended path is unchanged: stop under the lock, and the native loop IS stopped. */
     @Test
     fun stop_uncontended_stillStopsTheNativeLoopUnderTheLock() = runBlocking {
