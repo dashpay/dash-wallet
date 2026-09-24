@@ -2077,7 +2077,9 @@ class L1ShadowSyncService internal constructor(
      */
     private val balanceFactsEnabled: Boolean = false,
     /** How long [startIfEnabled] waits for the DashPay bring-up before starting SPV anyway. */
-    private val bringUpBudgetMs: Long = BRING_UP_BUDGET_MS
+    private val bringUpBudgetMs: Long = BRING_UP_BUDGET_MS,
+    /** How long a stop waits for a cancelled bring-up to actually end — see [stopInternal]. */
+    private val bringUpStopJoinMs: Long = BRING_UP_STOP_JOIN_MS
 ) {
     @Inject
     constructor(
@@ -2564,62 +2566,91 @@ class L1ShadowSyncService internal constructor(
                     // runningWalletIdHex still null. Adding a second
                     // startWalletSubsystems on top of it is exactly the
                     // overlap this must not create, so join the one in flight.
-                    val joined = detachedBringUp?.takeIf { it.isActive }?.also {
-                        log.info("DashPay bring-up from an earlier start is still running; joining it")
-                    }
-                    // Owned by the service from the moment it exists — not only
-                    // once its budget expires. A caller cancelled during the wait
-                    // (BindHealL1Starter.cancel() from shutdown, say) used to
+                    // A bring-up an earlier start left behind comes in two kinds:
+                    // still ACTIVE (its start detached it at the budget), or
+                    // CANCELLED but not COMPLETED — a stop() cancelled it and its
+                    // native call has not returned yet. `isActive` is false for
+                    // the second kind, and that is precisely the straggler a new
+                    // bring-up must not run alongside (review, 2026-09-24), so
+                    // the test is "not completed".
+                    //
+                    // Owned by the service from the moment one is created — not
+                    // only once its budget expires. A caller cancelled during the
+                    // wait (BindHealL1Starter.cancel() from shutdown, say) used to
                     // rethrow with the deferred neither recorded nor cancelled,
                     // so stop() saw nothing to stop while startWalletSubsystems
-                    // was still live and a later start could run a second one
-                    // alongside it (review, 2026-09-23).
-                    val bringUp = joined ?: scope.async {
-                        runCatching { source.startWalletSubsystems(walletIdHex) }
-                    }.also { detachedBringUp = it }
-                    val outcome = try {
-                        withTimeoutOrNull(bringUpBudgetMs) { bringUp.await() }
-                    } catch (e: CancellationException) {
-                        if (currentCoroutineContext().isActive) {
-                            // This caller is fine; the DEFERRED was cancelled —
-                            // a stop() took the bring-up down under us. No SPV.
-                            if (detachedBringUp === bringUp) detachedBringUp = null
-                            log.info("DashPay bring-up was cancelled by a stop; not starting SPV")
-                            return false
-                        }
-                        // Genuine caller cancellation: take the bring-up we
-                        // created down with us; a joined one belongs to the
-                        // start that detached it.
-                        if (joined == null) bringUp.cancel()
-                        throw e
-                    }
-                    when {
-                        outcome == null -> {
-                            log.warn(
-                                "DashPay bring-up before SPV exceeded its {} s budget — starting SPV now; " +
-                                    "the bring-up continues in the background",
-                                bringUpBudgetMs / 1000
+                    // was still live (review, 2026-09-23).
+                    val straggler = detachedBringUp?.takeIf { !it.isCompleted }
+                    val (bringUp, joined) = when {
+                        straggler == null -> newBringUp(walletIdHex) to false
+                        straggler.isCancelled -> {
+                            log.info(
+                                "a cancelled DashPay bring-up is still inside its native call; waiting up to " +
+                                    "{} ms for it before starting another",
+                                bringUpBudgetMs
                             )
-                            // Service-owned from here: nobody is awaiting it
-                            // any more, so stop() is the only thing that can
-                            // end it.
-                            detachedBringUp = bringUp
-                            scope.launch {
-                                bringUp.await()
-                                    .onSuccess { if (it != null) log.info("DashPay bring-up (finished after SPV start): $it") }
-                                    .onFailure { if (it !is CancellationException) log.warn("DashPay bring-up (after SPV start) failed", it) }
-                                if (detachedBringUp === bringUp) detachedBringUp = null
+                            val ended = withTimeoutOrNull(bringUpBudgetMs) { straggler.join(); true } == true
+                            if (ended) {
+                                if (detachedBringUp === straggler) detachedBringUp = null
+                                newBringUp(walletIdHex) to false
+                            } else {
+                                log.warn(
+                                    "the cancelled DashPay bring-up is still running after the budget — starting " +
+                                        "SPV without a new bring-up; it stays recorded until it ends"
+                                )
+                                null to false
                             }
                         }
-                        outcome.isSuccess -> {
-                            if (detachedBringUp === bringUp) detachedBringUp = null
-                            outcome.getOrNull()?.let { log.info("DashPay bring-up before SPV: $it") }
-                        }
                         else -> {
-                            if (detachedBringUp === bringUp) detachedBringUp = null
-                            val t = outcome.exceptionOrNull()
-                            if (t is CancellationException) throw t
-                            log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
+                            log.info("DashPay bring-up from an earlier start is still running; joining it")
+                            straggler to true
+                        }
+                    }
+                    if (bringUp != null) {
+                        val outcome = try {
+                            withTimeoutOrNull(bringUpBudgetMs) { bringUp.await() }
+                        } catch (e: CancellationException) {
+                            if (currentCoroutineContext().isActive) {
+                                // This caller is fine; the DEFERRED was cancelled —
+                                // a stop() took the bring-up down under us. No SPV.
+                                if (detachedBringUp === bringUp) detachedBringUp = null
+                                log.info("DashPay bring-up was cancelled by a stop; not starting SPV")
+                                return false
+                            }
+                            // Genuine caller cancellation: take the bring-up we
+                            // created down with us; a joined one belongs to the
+                            // start that detached it.
+                            if (!joined) bringUp.cancel()
+                            throw e
+                        }
+                        when {
+                            outcome == null -> {
+                                log.warn(
+                                    "DashPay bring-up before SPV exceeded its {} s budget — starting SPV now; " +
+                                        "the bring-up continues in the background",
+                                    bringUpBudgetMs / 1000
+                                )
+                                // Service-owned from here: nobody is awaiting it
+                                // any more, so stop() is the only thing that can
+                                // end it.
+                                detachedBringUp = bringUp
+                                scope.launch {
+                                    bringUp.await()
+                                        .onSuccess { if (it != null) log.info("DashPay bring-up (finished after SPV start): $it") }
+                                        .onFailure { if (it !is CancellationException) log.warn("DashPay bring-up (after SPV start) failed", it) }
+                                    if (detachedBringUp === bringUp) detachedBringUp = null
+                                }
+                            }
+                            outcome.isSuccess -> {
+                                if (detachedBringUp === bringUp) detachedBringUp = null
+                                outcome.getOrNull()?.let { log.info("DashPay bring-up before SPV: $it") }
+                            }
+                            else -> {
+                                if (detachedBringUp === bringUp) detachedBringUp = null
+                                val t = outcome.exceptionOrNull()
+                                if (t is CancellationException) throw t
+                                log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
+                            }
                         }
                     }
                     source.startSpv(dataDir.absolutePath)
@@ -2663,6 +2694,10 @@ class L1ShadowSyncService internal constructor(
      * Stop the probe loops and the Rust SPV client; SPV storage stays on
      * disk so the next start resumes. Safe to call when not running.
      */
+    /** Create and RECORD a DashPay bring-up — service-owned from birth (see [startIfEnabled]). */
+    private fun newBringUp(walletIdHex: String): Deferred<Result<String?>> =
+        scope.async { runCatching { source.startWalletSubsystems(walletIdHex) } }.also { detachedBringUp = it }
+
     /**
      * The EXTERNAL stop — the foreground service's teardown, `stopSdkEngines`
      * before a wallet wipe, the shadow recovery paths. Invalidates any
@@ -2690,14 +2725,14 @@ class L1ShadowSyncService internal constructor(
                 // stopSdkEngines) need it GONE, not merely told to go. Bounded:
                 // a bring-up inside its native call cannot observe the cancel
                 // until that call returns, and a stop must not hang on it.
-                val ended = withTimeoutOrNull(BRING_UP_STOP_JOIN_MS) { it.join(); true } == true
+                val ended = withTimeoutOrNull(bringUpStopJoinMs) { it.join(); true } == true
                 if (ended) {
                     detachedBringUp = null
                 } else {
                     log.warn(
-                        "the cancelled DashPay bring-up is still inside its native call after {} s; it " +
-                            "stays recorded so the next start joins it instead of running a second one",
-                        BRING_UP_STOP_JOIN_MS / 1000
+                        "the cancelled DashPay bring-up is still inside its native call after {} ms; it " +
+                            "stays recorded so the next start waits for it instead of running a second one",
+                        bringUpStopJoinMs
                     )
                 }
             }

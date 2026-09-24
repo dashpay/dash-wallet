@@ -35,6 +35,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
 import org.dashfoundation.dashsdk.wallet.SpvSubProgress
 import org.dashfoundation.dashsdk.wallet.SpvSyncProgressData
 import org.dashfoundation.dashsdk.wallet.SpvSyncState
@@ -258,6 +260,7 @@ class L1ShadowSyncServiceTest {
         cutoverState: String? = null,
         dashjDiagnostic: Boolean = false,
         bringUpBudgetMs: Long = L1ShadowSyncService.BRING_UP_BUDGET_MS,
+        bringUpStopJoinMs: Long = L1ShadowSyncService.BRING_UP_STOP_JOIN_MS,
         flagGate: () -> CompletableDeferred<Unit>? = { null }
     ) = L1ShadowSyncService(
         source = source,
@@ -269,7 +272,8 @@ class L1ShadowSyncServiceTest {
         watchdogIntervalMs = watchdogIntervalMs,
         probeStallThresholdMs = probeStallThresholdMs,
         recreator = recreator,
-        bringUpBudgetMs = bringUpBudgetMs
+        bringUpBudgetMs = bringUpBudgetMs,
+        bringUpStopJoinMs = bringUpStopJoinMs
     )
 
     // ── Phase 1b item 10: SPV waits for the DashPay bring-up, but not forever ──
@@ -930,6 +934,62 @@ class L1ShadowSyncServiceTest {
         assertEquals(2, source.subsystemsCalls)
         assertEquals("never two bring-ups alive at once", 1, maxLive)
         assertEquals(1, source.startCalls)
+        service.stop()
+    }
+
+    /**
+     * Review, 2026-09-24: `cancel()` makes a deferred inactive at once, but a
+     * bring-up inside a NATIVE call cannot see the cancel until that call
+     * returns. `takeIf { it.isActive }` therefore rejected exactly the
+     * straggler a stop had retained, and the next start ran a second bring-up
+     * alongside it. The straggler is now recognised by "not completed", the
+     * next start waits its budget for it, and starts SPV without a new
+     * bring-up if it is still there.
+     */
+    @Test
+    fun nextStart_doesNotOverlapACancelledBringUpStillInsideItsNativeCall() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val nativeReturn = CompletableDeferred<Unit>()
+        var live = 0
+        var maxLive = 0
+        source.onStartWalletSubsystems = {
+            live++; maxLive = maxOf(maxLive, live)
+            try {
+                awaitCancellation()
+            } catch (e: CancellationException) {
+                // The native call: it returns when IT is done, not when cancelled.
+                withContext(NonCancellable) { nativeReturn.await() }
+                throw e
+            } finally {
+                live--
+            }
+        }
+        val service = service(source, bringUpBudgetMs = 150, bringUpStopJoinMs = 50)
+
+        val first = scope.launch { service.startIfEnabled() }
+        withTimeout(5_000) { while (source.subsystemsCalls == 0) delay(5) }
+        first.cancel()
+        withTimeout(5_000) { first.join() }
+        assertEquals("cancelled, but the native call has not returned", 1, live)
+
+        service.stop() // its bounded join gives up; the straggler stays recorded
+
+        // The next start must not run a second bring-up next to the straggler:
+        // it waits its budget, then starts SPV without one.
+        assertTrue(service.startIfEnabled())
+        assertEquals("no second bring-up while the first is still native", 1, source.subsystemsCalls)
+        assertEquals(1, maxLive)
+        assertEquals(1, source.startCalls)
+
+        nativeReturn.complete(Unit) // the native call finally returns
+        withTimeout(5_000) { while (live != 0) delay(5) }
+        service.stop()
+
+        // With the straggler gone, a start runs one fresh bring-up again.
+        source.onStartWalletSubsystems = { "status=READY" }
+        assertTrue(service.startIfEnabled())
+        assertEquals(2, source.subsystemsCalls)
+        assertEquals(1, maxLive)
         service.stop()
     }
 
