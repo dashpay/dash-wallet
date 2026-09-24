@@ -29,8 +29,13 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
@@ -287,6 +292,35 @@ class SdkShieldedInviteCreationTest {
         val invite = (result as SdkWriteResult.Broadcast).value
         assertEquals(invite.linkData.link.toString(), invite.shareLink)
         assertEquals(invite.linkData.link.toString(), inserted.captured.dynamicLink)
+    }
+
+    @Test
+    fun cancellationAfterFundingStillPersistsRawInviteLink() = runTest {
+        val source = happySource()
+        val dao = dao()
+        val inserted = mutableListOf<Invitation>()
+        coEvery { dao.insert(capture(inserted)) } just Runs
+        val fundingReturned = CompletableDeferred<Unit>()
+        var createJob: Job? = null
+        coEvery { source.fundNotesToRaw43(walletIdHex, orchardAddress, any()) } coAnswers {
+            fundingReturned.complete(Unit)
+            Unit
+        }
+
+        createJob = launch {
+            service(
+                source = source,
+                invitationsDao = dao,
+                generateOneLink = { awaitCancellation() }
+            ).createShieldedInvite("alice", "Alice", "", contested = false)
+        }
+        fundingReturned.await()
+        createJob.cancelAndJoin()
+
+        val persistedLink = inserted.single().dynamicLink!!
+        assertTrue(persistedLink.startsWith("dashpay://invite?"))
+        assertTrue(persistedLink.contains("osk=${bytes32ToHex(spendingKey)}"))
+        assertEquals(persistedLink, inserted.single().shortDynamicLink)
     }
 
     @Test
