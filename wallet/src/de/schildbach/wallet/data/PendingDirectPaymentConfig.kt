@@ -19,13 +19,16 @@ package de.schildbach.wallet.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
+import org.dash.wallet.common.services.UnresolvedPaymentsProvider
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -104,7 +107,7 @@ data class PendingDirectPayment(
 open class PendingDirectPaymentConfig @Inject constructor(
     private val appContext: Context,
     walletDataProvider: WalletDataProvider
-) : BaseConfig(appContext, PREFERENCES_NAME, walletDataProvider) {
+) : BaseConfig(appContext, PREFERENCES_NAME, walletDataProvider), UnresolvedPaymentsProvider {
     companion object {
         const val PREFERENCES_NAME = "pending_direct_payments"
         val PENDING_PAYMENTS = stringPreferencesKey("pending_payments")
@@ -135,6 +138,25 @@ open class PendingDirectPaymentConfig @Inject constructor(
         }
         return stored.readable
     }
+
+    override suspend fun hasUnresolvedGiftCardPurchase(): Boolean = getAll().any { it.isUnresolvedGiftCard }
+
+    override fun observeUnresolvedGiftCardPurchase(): Flow<Boolean> =
+        observe(PENDING_PAYMENTS).map { stored -> decode(stored).readable.any { it.isUnresolvedGiftCard } }
+
+    /**
+     * Both readers above go through the tolerant [decode] on purpose, unlike everything that
+     * decides whether an outpoint may be spent. That decision belongs to the barrier in
+     * PendingDirectPaymentVerifier, which already refuses every payment when this store cannot be
+     * read; a second, differently-worded refusal here would only tell the user a worse story about
+     * the same failure. This answers the question the purchase screen asks, as far as it can.
+     *
+     * Released payments are deliberately not counted: their inputs are free again and the order
+     * that outlives them is kept only to explain a late broadcast, so a user who has waited out an
+     * unlucky purchase can buy again rather than being locked out for the retention period.
+     */
+    private val PendingDirectPayment.isUnresolvedGiftCard: Boolean
+        get() = isGiftCardPurchase && !abandoned
 
     // Both writes read strictly first. Reading through the fallback would turn a failed read into
     // an empty store, and the write would then replace the file with just this one entry,

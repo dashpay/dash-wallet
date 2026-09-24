@@ -20,10 +20,12 @@ package de.schildbach.wallet.data
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import io.mockk.mockk
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.WalletDataProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -222,5 +224,60 @@ class PendingDirectPaymentConfigTest {
     fun getAllReportsNothingWhenTheStoreIsUnparseable() = runBlocking {
         seed("""[{"txId":"00000000""")
         assertEquals(emptyList<PendingDirectPayment>(), config.getAll())
+    }
+
+    // --- the durable answer the gift card screens block on ------------------------------------
+
+    private val giftCardPayment = payment.copy(isGiftCardPurchase = true)
+
+    @Test
+    fun anUnresolvedGiftCardPurchaseBlocksAnother() = runBlocking {
+        config.add(giftCardPayment)
+
+        assertTrue(config.hasUnresolvedGiftCardPurchase())
+        assertTrue(config.observeUnresolvedGiftCardPurchase().first())
+    }
+
+    @Test
+    fun anOrdinaryPaymentDoesNotBlockGiftCards() = runBlocking {
+        config.add(payment)
+
+        assertFalse(config.hasUnresolvedGiftCardPurchase())
+        assertFalse(config.observeUnresolvedGiftCardPurchase().first())
+    }
+
+    @Test
+    fun resolvingThePaymentLiftsTheBlock() = runBlocking {
+        config.add(giftCardPayment)
+        assertTrue(config.hasUnresolvedGiftCardPurchase())
+
+        // what commit() does once the network shows the transaction
+        config.remove(giftCardPayment.txId)
+
+        assertFalse(config.hasUnresolvedGiftCardPurchase())
+        assertFalse(config.observeUnresolvedGiftCardPurchase().first())
+    }
+
+    @Test
+    fun aReleasedPurchaseNoLongerBlocks() = runBlocking {
+        // its inputs are free again, and the order that outlives it is kept only to explain a late
+        // broadcast, so waiting out an unlucky purchase must not cost the user gift cards for the
+        // whole retention period
+        config.add(giftCardPayment.copy(abandoned = true))
+
+        assertFalse(config.hasUnresolvedGiftCardPurchase())
+        assertFalse(config.observeUnresolvedGiftCardPurchase().first())
+    }
+
+    @Test
+    fun theBlockFollowsTheStoreRatherThanBeingReadOnce() = runBlocking {
+        val seen = mutableListOf<Boolean>()
+        seen.add(config.observeUnresolvedGiftCardPurchase().first())
+        config.add(giftCardPayment)
+        seen.add(config.observeUnresolvedGiftCardPurchase().first())
+        config.remove(giftCardPayment.txId)
+        seen.add(config.observeUnresolvedGiftCardPurchase().first())
+
+        assertEquals(listOf(false, true, false), seen)
     }
 }

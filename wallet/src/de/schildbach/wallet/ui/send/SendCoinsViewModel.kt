@@ -287,6 +287,12 @@ class SendCoinsViewModel @Inject constructor(
         }
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
 
+        // Same reason as the ordinary send: the empty-wallet branch below completes and signs the
+        // request itself, so it selects coins before sendCoins() gets its own chance to wait. After
+        // a restart the locks of an unresolved payment are gone until restoration runs, and an
+        // outpoint locked afterwards is not taken back out of a transaction that already chose it.
+        sendCoinsTaskRunner.awaitPaymentReadiness()
+
         val transaction = try {
             var finalSendRequest = sendCoinsTaskRunner.createAssetLockSendRequest(
                 basePaymentIntent.mayEditAmount(),

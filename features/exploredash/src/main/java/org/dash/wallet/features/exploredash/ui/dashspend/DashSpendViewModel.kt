@@ -28,12 +28,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
@@ -149,7 +152,8 @@ class DashSpendViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val exploreDao: MerchantDao,
     private val ctxSpendConfig: CTXSpendConfig,
-    blockchainStateProvider: BlockchainStateProvider
+    blockchainStateProvider: BlockchainStateProvider,
+    private val unresolvedPayments: UnresolvedPaymentsProvider
 ) : ViewModel() {
 
     companion object {
@@ -328,23 +332,42 @@ class DashSpendViewModel @Inject constructor(
     private val _submissionState = MutableStateFlow(GiftCardSubmissionState.IDLE)
 
     /**
+     * What the wallet has on disk about a payment that outlived the screen which sent it. The
+     * in-memory state above cannot answer that: it is created fresh as IDLE every time this view
+     * model is, while the merchant may still be holding a transaction from before the process
+     * died. Kept as a flow rather than read once, so resolving the payment - committed once the
+     * network shows it, or released once it is judged never sent - lifts the block by itself and
+     * does not shut the user out of gift cards for good.
+     */
+    private val hasUnresolvedPurchase: StateFlow<Boolean> = unresolvedPayments
+        .observeUnresolvedGiftCardPurchase()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /**
      * Survives dialog recreation because this view model is scoped to the navigation graph, not
      * to a fragment, so a dialog rebuilt after the activity is destroyed still sees that a
-     * purchase is outstanding.
+     * purchase is outstanding, and survives process death through the durable record above.
      */
-    val submissionState: StateFlow<GiftCardSubmissionState> = _submissionState.asStateFlow()
+    val submissionState: StateFlow<GiftCardSubmissionState> =
+        combine(_submissionState, hasUnresolvedPurchase) { state, unresolved ->
+            if (state == GiftCardSubmissionState.IDLE && unresolved) GiftCardSubmissionState.PENDING else state
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, GiftCardSubmissionState.IDLE)
 
     /**
      * Starts a new purchase from a clean state. Called only when the confirmation screen is
      * genuinely created by the user, never when it is rebuilt after activity recreation, so an
      * outstanding purchase stays blocked while a later, separate order is still allowed.
      *
-     * A submission that is still running is left alone: it belongs to a purchase already in
-     * flight, and this view model outlives the screen that started it.
+     * A submission that is still running or unresolved is left alone. The running one belongs to a
+     * purchase already in flight, and this view model outlives the screen that started it. The
+     * unresolved one is the whole point of the guard: an ambiguous submission dismisses the flow,
+     * so the next screen is always a new instance, and clearing the state for it would hand the
+     * user a second order paid from whatever inputs the first one did not reserve.
      */
     fun beginNewPurchase() {
-        if (_submissionState.value == GiftCardSubmissionState.IN_PROGRESS) {
-            log.info("not resetting submission state, a purchase is still in progress")
+        val current = _submissionState.value
+        if (current == GiftCardSubmissionState.IN_PROGRESS || current == GiftCardSubmissionState.PENDING) {
+            log.info("not resetting submission state, a purchase is still {}", current)
             return
         }
         _submissionState.value = GiftCardSubmissionState.IDLE
@@ -360,7 +383,8 @@ class DashSpendViewModel @Inject constructor(
      * [releaseUnusedSubmission].
      */
     fun tryStartSubmission(): Boolean =
-        _submissionState.compareAndSet(GiftCardSubmissionState.IDLE, GiftCardSubmissionState.IN_PROGRESS)
+        !hasUnresolvedPurchase.value &&
+            _submissionState.compareAndSet(GiftCardSubmissionState.IDLE, GiftCardSubmissionState.IN_PROGRESS)
 
     /** Gives back a claim that never reached submission, so the user can try again. */
     fun releaseUnusedSubmission() {
@@ -385,6 +409,14 @@ class DashSpendViewModel @Inject constructor(
         paymentUri: String,
         giftCards: List<GiftCardInfo>
     ): Sha256Hash = withContext(NonCancellable) {
+        // Read the durable record here rather than trust the flow above: this runs on a claim that
+        // may have been taken moments after the view model was built, before the store had been
+        // read once, and the in-memory state says nothing about a payment from before the process
+        // died. A claim is no protection against a purchase this process never saw.
+        if (unresolvedPayments.hasUnresolvedGiftCardPurchase()) {
+            throw DuplicateGiftCardSubmissionException(GiftCardSubmissionState.PENDING)
+        }
+
         // Accepts a claim already made by the caller, and claims one itself otherwise, so this
         // stays a guard of last resort for any caller that does not pre-claim.
         if (_submissionState.value != GiftCardSubmissionState.IN_PROGRESS &&
