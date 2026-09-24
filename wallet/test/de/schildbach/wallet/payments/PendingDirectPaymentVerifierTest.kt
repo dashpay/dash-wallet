@@ -286,9 +286,13 @@ class PendingDirectPaymentVerifierTest {
             )
         )
 
-        verifier.resume()
-        // Wait for cleanup to finish, not merely for forgetTransaction to be called: the verifier
-        // still has to return from it and run finish, which is what clears the tracking job.
+        // awaitRestored, not resume: it returns only once the scan has finished, so the job is
+        // registered before anything is asserted. resume() returns immediately and isTracked
+        // reads false for a job that has not been created yet, so polling straight after it can
+        // pass without the scan having run at all.
+        withTimeout(5_000) { verifier.awaitRestored() }
+        // Then wait for cleanup to finish, not merely for forgetTransaction to be called: the
+        // verifier still has to return from it and run finish, which clears the tracking job.
         withTimeout(5_000) {
             while (verifier.isTracked(tx.txId)) {
                 delay(10)

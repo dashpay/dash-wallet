@@ -249,6 +249,10 @@ class SendCoinsViewModel @Inject constructor(
         }
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
 
+        // Before coin selection: after a restart the locks of an unresolved payment are gone
+        // until restoration runs, and a transaction built now could spend its outpoints.
+        sendCoinsTaskRunner.awaitPaymentReadiness()
+
         val transaction = try {
             val finalSendRequest = sendCoinsTaskRunner.createSendRequest(
                 basePaymentIntent.mayEditAmount(),

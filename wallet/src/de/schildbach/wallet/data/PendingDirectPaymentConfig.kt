@@ -127,7 +127,7 @@ open class PendingDirectPaymentConfig @Inject constructor(
      * @throws Exception if the store cannot be read or holds an entry that cannot be decoded
      */
     open suspend fun getAllOrThrow(): List<PendingDirectPayment> {
-        val stored = decode(appContext.dataStore.data.first()[PENDING_PAYMENTS])
+        val stored = decodeStrict()
         if (stored.unreadable.isNotEmpty()) {
             throw IllegalStateException(
                 "${stored.unreadable.size} pending direct payment(s) could not be decoded"
@@ -136,19 +136,28 @@ open class PendingDirectPaymentConfig @Inject constructor(
         return stored.readable
     }
 
+    // Both writes read strictly first. Reading through the fallback would turn a failed read into
+    // an empty store, and the write would then replace the file with just this one entry,
+    // discarding every other quarantine. Their locks live only in memory, so nothing would be
+    // left for a restart to restore, which is the state the strict read exists to prevent. A
+    // failing store aborts the write instead.
     open suspend fun add(payment: PendingDirectPayment) = mutex.withLock {
-        val stored = decode(get(PENDING_PAYMENTS))
+        val stored = decodeStrict()
         val payments = stored.readable.filter { it.txId != payment.txId } + payment
         set(PENDING_PAYMENTS, encode(payments, stored.unreadable))
     }
 
     open suspend fun remove(txId: Sha256Hash) = mutex.withLock {
-        val stored = decode(get(PENDING_PAYMENTS))
+        val stored = decodeStrict()
         val remaining = stored.readable.filter { it.txId != txId }
         if (remaining.size != stored.readable.size) {
             set(PENDING_PAYMENTS, encode(remaining, stored.unreadable))
         }
     }
+
+    /** Reads without BaseConfig's IOException-to-empty fallback, so a failed read throws. */
+    private suspend fun decodeStrict(): StoredPayments =
+        decode(appContext.dataStore.data.first()[PENDING_PAYMENTS])
 
     /**
      * What was on disk: the entries we could read, and the raw entries we could not. Unreadable

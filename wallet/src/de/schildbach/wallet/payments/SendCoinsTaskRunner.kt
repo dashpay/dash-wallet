@@ -143,6 +143,16 @@ class SendCoinsTaskRunner @Inject constructor(
 
     private val paymentIntentParser = DashPaymentIntentParser(NETWORK_PARAMETERS)
 
+    /**
+     * Waits until the inputs of any unresolved payment are protected again.
+     *
+     * Callers that build a transaction themselves must await this before doing so. The barriers
+     * inside this class guard the commit, which is too late: coin selection happens in
+     * createSendRequest, and locking an outpoint afterwards does not remove it from a transaction
+     * that already chose it.
+     */
+    suspend fun awaitPaymentReadiness() = pendingPaymentVerifier.awaitRestored()
+
     @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
         address: Address,

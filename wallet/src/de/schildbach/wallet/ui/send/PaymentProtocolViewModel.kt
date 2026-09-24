@@ -180,6 +180,10 @@ class PaymentProtocolViewModel @Inject constructor(
             try {
                 directPaymentAckLiveData.postValue(Resource.loading(null))
 
+                // Before coin selection, for the same reason: locking an outpoint afterwards
+                // does not remove it from a transaction that already selected it.
+                sendCoinsTaskRunner.awaitPaymentReadiness()
+
                 val sendRequest = sendCoinsTaskRunner.createSendRequest(
                     basePaymentIntent.mayEditAmount(),
                     finalPaymentIntent!!,
