@@ -39,6 +39,9 @@ import kotlinx.coroutines.runBlocking
 @Config(application = Application::class, sdk = [29], manifest = Config.NONE)
 class RecoveredWalletPersistenceTest {
     @get:Rule val directory = TemporaryFolder()
+    /** The app's `noBackupFilesDir`, which holds the wipe marker's install token. */
+    @get:Rule val noBackupDirectory = TemporaryFolder()
+    private val noBackupDir: File get() = noBackupDirectory.root
     private lateinit var app: WalletApplication
     private lateinit var primary: File
     private lateinit var backup: File
@@ -235,17 +238,18 @@ class RecoveredWalletPersistenceTest {
     fun `a wipe keeps its marker while the recovery marker's absence is unverified`() {
         val wipeApp = spyk(app)
         every { wipeApp.filesDir } returns directory.root
-        assertTrue(WalletWipeState.begin(directory.root))
+        every { wipeApp.noBackupFilesDir } returns noBackupDir
+        assertTrue(WalletWipeState.begin(directory.root, noBackupDir))
         val onDisk = RecoveryResetState.inspect
         RecoveryResetState.inspect = { RecoveryResetState.Marker.UNKNOWN }
         try {
             wipeApp.markWalletWipeComplete()
-            assertTrue("the next launch must retry", WalletWipeState.isPending(directory.root))
+            assertTrue("the next launch must retry", WalletWipeState.isPending(directory.root, noBackupDir))
         } finally {
             RecoveryResetState.inspect = onDisk
         }
         wipeApp.markWalletWipeComplete()
-        assertFalse(WalletWipeState.isPending(directory.root))
+        assertFalse(WalletWipeState.isPending(directory.root, noBackupDir))
     }
 
     @Test
@@ -331,15 +335,16 @@ class RecoveredWalletPersistenceTest {
     }
 
     @Test
-    fun `a wipe marker on disk refuses a replacement wallet and latches the guard`() {
+    fun `a valid wipe marker on disk refuses a replacement wallet and latches the guard`() {
         ReflectionHelpers.setField(app, "wallet", null)
         val guardedApp = spyk(app)
         every { guardedApp.filesDir } returns directory.root
+        every { guardedApp.noBackupFilesDir } returns noBackupDir
         assertFalse(guardedApp.isWalletReplacementRefused)
 
-        // The next cold launch would read this marker as an unfinished Reset
-        // Wallet and wipe whatever wallet it found.
-        assertTrue(WalletWipeState.begin(directory.root))
+        // The next cold launch would read this marker as PENDING and wipe
+        // whatever wallet it found.
+        assertTrue(WalletWipeState.begin(directory.root, noBackupDir))
         assertFalse(guardedApp.setWallet(Wallet(Constants.NETWORK_PARAMETERS)))
         assertNull(guardedApp.wallet)
         assertFalse(primary.exists())
@@ -581,8 +586,9 @@ class RecoveredWalletPersistenceTest {
         }
         val wipeApp = spyk(app)
         every { wipeApp.filesDir } returns directory.root
+        every { wipeApp.noBackupFilesDir } returns noBackupDir
         suspend fun wipe(destroy: suspend () -> Unit): Boolean = WalletWipeSequence.finish(
-            pending = { WalletWipeState.isPending(directory.root) },
+            pending = { WalletWipeState.isPending(directory.root, noBackupDir) },
             detachWallet = { ReflectionHelpers.setField(wipeApp, "wallet", null) },
             destroy = destroy,
             markComplete = { wipeApp.markWalletWipeComplete() }
@@ -590,13 +596,13 @@ class RecoveredWalletPersistenceTest {
 
         assertFalse(wipe { fail("unrequested wipe must not destroy data") })
         assertTrue(wipeApp.isWalletLoadDegraded)
-        assertTrue(WalletWipeState.begin(directory.root))
+        assertTrue(WalletWipeState.begin(directory.root, noBackupDir))
         try {
             wipe { throw IOException("injected destruction failure") }
             fail("wipe must fail")
         } catch (expected: IOException) {
             assertTrue(wipeApp.isWalletLoadDegraded)
-            assertTrue(WalletWipeState.isPending(directory.root))
+            assertTrue(WalletWipeState.isPending(directory.root, noBackupDir))
         }
 
         // A nonempty directory at the marker path makes marker removal fail.
@@ -606,11 +612,11 @@ class RecoveredWalletPersistenceTest {
         val child = File(marker, "block-delete").apply { writeText("test") }
         assertTrue(wipe { })
         assertTrue(wipeApp.isWalletLoadDegraded)
-        assertTrue(WalletWipeState.isPending(directory.root))
+        assertTrue(WalletWipeState.isPending(directory.root, noBackupDir))
         assertTrue(child.delete())
 
         assertTrue(wipe { assertTrue(backup.delete()) })
-        assertFalse(WalletWipeState.isPending(directory.root))
+        assertFalse(WalletWipeState.isPending(directory.root, noBackupDir))
         assertFalse(wipeApp.isWalletLoadDegraded)
         assertNull(wipeApp.wallet)
         val controller = Robolectric.buildActivity(Activity::class.java).create()
@@ -631,9 +637,10 @@ class RecoveredWalletPersistenceTest {
         }
         val wipeApp = spyk(app)
         every { wipeApp.filesDir } returns directory.root
+        every { wipeApp.noBackupFilesDir } returns noBackupDir
         // As finishWalletWipe does: the sequence, then the stopped-wipe verdict.
         suspend fun wipe(): Boolean = WalletWipeSequence.finish(
-            pending = { WalletWipeState.isPending(directory.root) },
+            pending = { WalletWipeState.isPending(directory.root, noBackupDir) },
             detachWallet = { ReflectionHelpers.setField(wipeApp, "wallet", null) },
             destroy = { },
             markComplete = { wipeApp.markWalletWipeComplete() }
@@ -645,9 +652,9 @@ class RecoveredWalletPersistenceTest {
             parentFile!!.mkdirs()
             writeText("test")
         }
-        assertTrue(WalletWipeState.begin(directory.root))
+        assertTrue(WalletWipeState.begin(directory.root, noBackupDir))
         assertTrue(wipe())
-        assertTrue("the next launch must retry", WalletWipeState.isPending(directory.root))
+        assertTrue("the next launch must retry", WalletWipeState.isPending(directory.root, noBackupDir))
         assertTrue(recoveryMarker.exists())
         assertTrue(wipeApp.isWalletLoadDegraded)
         assertTrue(ReflectionHelpers.getField<Boolean>(wipeApp, "recoveredWalletPersistencePending"))
@@ -661,7 +668,7 @@ class RecoveredWalletPersistenceTest {
         assertTrue(child.delete())
         assertTrue(wipe())
         assertFalse(recoveryMarker.exists())
-        assertFalse(WalletWipeState.isPending(directory.root))
+        assertFalse(WalletWipeState.isPending(directory.root, noBackupDir))
         assertFalse(ReflectionHelpers.getField<Boolean>(wipeApp, "recoveredWalletPersistencePending"))
         assertFalse(wipeApp.isWalletLoadDegraded)
         Unit
@@ -679,26 +686,27 @@ class RecoveredWalletPersistenceTest {
         }
         val wipeApp = spyk(app)
         every { wipeApp.filesDir } returns directory.root
+        every { wipeApp.noBackupFilesDir } returns noBackupDir
         every { wipeApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns backup
         // As finishWalletWipe does: the sequence (failures caught), then the
         // stopped-wipe verdict; destroyWalletData ends with the confirmation.
         suspend fun wipe(): Result<Boolean> = runCatching {
             WalletWipeSequence.finish(
-                pending = { WalletWipeState.isPending(directory.root) },
+                pending = { WalletWipeState.isPending(directory.root, noBackupDir) },
                 detachWallet = { ReflectionHelpers.setField(wipeApp, "wallet", null) },
                 destroy = { wipeApp.confirmWalletSourcesDestroyed() },
                 markComplete = { wipeApp.markWalletWipeComplete() }
             )
         }.also { wipeApp.recordWalletWipeStopped() }
 
-        assertTrue(WalletWipeState.begin(directory.root))
+        assertTrue(WalletWipeState.begin(directory.root, noBackupDir))
         val failed = wipe()
         assertTrue("an unconfirmed backup deletion fails the wipe", failed.exceptionOrNull() is IOException)
         assertFalse("the primary is deleted", primary.exists())
         assertTrue(backup.exists())
         // onCreate checks this marker before any recoverable wallet file, so
         // the next launch re-runs the wipe rather than recovering the backup.
-        assertTrue("the next launch must retry", WalletWipeState.isPending(directory.root))
+        assertTrue("the next launch must retry", WalletWipeState.isPending(directory.root, noBackupDir))
         assertTrue(wipeApp.isWalletWipeRecoveryRequired)
         assertTrue(wipeApp.isWalletLoadDegraded)
         assertTrue(wipeApp.isWalletReplacementRefused)
@@ -708,7 +716,7 @@ class RecoveredWalletPersistenceTest {
         assertEquals(true, wipe().getOrThrow())
         assertFalse(backup.exists())
         assertFalse(primary.exists())
-        assertFalse(WalletWipeState.isPending(directory.root))
+        assertFalse(WalletWipeState.isPending(directory.root, noBackupDir))
         assertFalse(wipeApp.isWalletWipeRecoveryRequired)
         Unit
     }
@@ -762,6 +770,7 @@ class RecoveredWalletPersistenceTest {
     private fun backupWritingApp(): WalletApplication {
         val writingApp = spyk(app)
         every { writingApp.filesDir } returns directory.root
+        every { writingApp.noBackupFilesDir } returns noBackupDir
         every { writingApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns keyBackup
         every { writingApp.openFileOutput(any(), any()) } answers {
             java.io.FileOutputStream(File(directory.root, firstArg<String>()))
@@ -770,7 +779,7 @@ class RecoveredWalletPersistenceTest {
     }
 
     private suspend fun finishWipe(wipeApp: WalletApplication): Boolean = WalletWipeSequence.finish(
-        pending = { WalletWipeState.isPending(directory.root) },
+        pending = { WalletWipeState.isPending(directory.root, noBackupDir) },
         detachWallet = { wipeApp.detachWalletForWipe() },
         destroy = {
             primary.delete()
@@ -804,7 +813,7 @@ class RecoveredWalletPersistenceTest {
         assertTrue(paused.await(5, java.util.concurrent.TimeUnit.SECONDS))
 
         // The user resets while maintenance holds a proto of the wallet.
-        assertTrue(WalletWipeState.begin(directory.root))
+        assertTrue(WalletWipeState.begin(directory.root, noBackupDir))
         resume.countDown()
         maintenance.join(5_000)
         assertTrue("the write is refused", maintenanceFailure.get() is IOException)
@@ -813,7 +822,7 @@ class RecoveredWalletPersistenceTest {
         assertTrue(finishWipe(wipeApp))
         assertFalse(keyBackup.exists())
         assertFalse(primary.exists())
-        assertFalse(WalletWipeState.isPending(directory.root))
+        assertFalse(WalletWipeState.isPending(directory.root, noBackupDir))
         assertFalse(wipeApp.isWalletWipeRecoveryRequired)
         Unit
     }
@@ -841,7 +850,7 @@ class RecoveredWalletPersistenceTest {
         writer.start()
         assertTrue(writing.await(5, java.util.concurrent.TimeUnit.SECONDS))
 
-        assertTrue(WalletWipeState.begin(directory.root))
+        assertTrue(WalletWipeState.begin(directory.root, noBackupDir))
         val detach = Thread { wipeApp.detachWalletForWipe() }
         detach.start()
         detach.join(300)
@@ -856,7 +865,7 @@ class RecoveredWalletPersistenceTest {
 
         assertTrue(finishWipe(wipeApp))
         assertFalse(keyBackup.exists())
-        assertFalse(WalletWipeState.isPending(directory.root))
+        assertFalse(WalletWipeState.isPending(directory.root, noBackupDir))
         Unit
     }
 }

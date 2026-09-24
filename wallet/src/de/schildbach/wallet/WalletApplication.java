@@ -392,7 +392,7 @@ public class WalletApplication extends MultiDexApplication
         if (walletWipeIncomplete) {
             return true;
         }
-        if (WalletWipeState.INSTANCE.isPending(getFilesDir())) {
+        if (WalletWipeState.INSTANCE.isPending(getFilesDir(), getNoBackupFilesDir())) {
             walletWipeIncomplete = true;
             return true;
         }
@@ -518,7 +518,7 @@ public class WalletApplication extends MultiDexApplication
         });
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_CONFIG_LOADED, "CONFIG_LOADED");
-        if (WalletWipeState.INSTANCE.isPending(getFilesDir())) {
+        if (WalletWipeState.INSTANCE.isPending(getFilesDir(), getNoBackupFilesDir())) {
             // The previous process died inside a Reset Wallet. What is left on
             // disk is a half-destroyed wallet, and loading it would present it
             // as the user's own. Finish the wipe instead — it is idempotent,
@@ -2070,7 +2070,7 @@ public class WalletApplication extends MultiDexApplication
     void writeKeyBackupProto(final Wallet backedUpWallet, final Protos.Wallet walletProto) throws IOException {
         final IOException[] failure = new IOException[1];
         AtomicFileWriter.runExclusive(() -> {
-            if (wallet != backedUpWallet || WalletWipeState.INSTANCE.isPending(getFilesDir())) {
+            if (wallet != backedUpWallet || WalletWipeState.INSTANCE.isPending(getFilesDir(), getNoBackupFilesDir())) {
                 failure[0] = new IOException("a Reset Wallet has begun — the wallet's key backup is not written");
                 return;
             }
@@ -2463,7 +2463,7 @@ public class WalletApplication extends MultiDexApplication
             return;
         }
         WalletWipeState.INSTANCE.complete(getFilesDir());
-        if (!WalletWipeState.INSTANCE.isPending(getFilesDir())) {
+        if (!WalletWipeState.INSTANCE.isPending(getFilesDir(), getNoBackupFilesDir())) {
             recoveredWalletPersistencePending = false;
         }
     }
@@ -2474,7 +2474,7 @@ public class WalletApplication extends MultiDexApplication
      * onboarding must not create or restore a replacement wallet.
      */
     void recordWalletWipeStopped() {
-        walletWipeIncomplete = WalletWipeState.INSTANCE.isPending(getFilesDir());
+        walletWipeIncomplete = WalletWipeState.INSTANCE.isPending(getFilesDir(), getNoBackupFilesDir());
         if (walletWipeIncomplete) {
             log.warn("Reset Wallet stopped with its marker on disk — staying degraded until a relaunch finishes it");
         }
