@@ -68,7 +68,7 @@ object WalletApplicationExt {
         // in the destroy phase comes after the same teardown.
         PublishTransactionMetadataOperation.cancelAll(this)
         WalletWipeSequence.begin(
-            markPending = { WalletWipeState.begin(filesDir) },
+            markPending = { WalletWipeState.begin(filesDir, noBackupFilesDir) },
             handOffUi = {
                 setWipeInProgress(true)
                 restartService.performRestart(this, true, false)
@@ -91,7 +91,7 @@ object WalletApplicationExt {
             // marker stays behind instead, and the next launch re-runs it.
             wipeFinished = runCatching {
                 WalletWipeSequence.finish(
-                    pending = { WalletWipeState.isPending(filesDir) },
+                    pending = { WalletWipeState.isPending(filesDir, noBackupFilesDir) },
                     detachWallet = { withContext(Dispatchers.Main) { detachWalletForWipe() } },
                     destroy = { destroyWalletData() },
                     markComplete = { markWalletWipeComplete() }

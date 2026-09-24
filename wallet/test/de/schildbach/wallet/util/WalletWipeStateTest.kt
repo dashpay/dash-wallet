@@ -43,7 +43,7 @@ class WalletWipeStateTest {
     @Test
     fun `pendingOrNull is true when the marker is present`() {
         val filesDir = tmp.newFolder("files")
-        assertTrue(WalletWipeState.begin(filesDir))
+        assertTrue(WalletWipeState.begin(filesDir, tmp.newFolder("no_backup")))
 
         assertEquals(true, WalletWipeState.pendingOrNull(filesDir))
     }
@@ -58,7 +58,7 @@ class WalletWipeStateTest {
     @Test
     fun `pendingOrNull is false once the wipe is recorded complete`() {
         val filesDir = tmp.newFolder("files")
-        WalletWipeState.begin(filesDir)
+        WalletWipeState.begin(filesDir, tmp.newFolder("no_backup"))
         WalletWipeState.complete(filesDir)
 
         assertEquals(false, WalletWipeState.pendingOrNull(filesDir))

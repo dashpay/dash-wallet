@@ -38,6 +38,9 @@ class WalletWipeMetadataSavesTest {
     @get:Rule
     val filesDir = TemporaryFolder()
 
+    @get:Rule
+    val noBackupFilesDir = TemporaryFolder()
+
     private val applicationScope = CoroutineScope(SupervisorJob() + StandardTestDispatcher())
     private val queue = TransactionMetadataSaveQueue(applicationScope).apply { pause() }
 
@@ -65,7 +68,7 @@ class WalletWipeMetadataSavesTest {
     @Test
     fun aFailedWipeKeepsSavesPaused() {
         // a failed destroy leaves the marker so the next launch re-runs the wipe
-        WalletWipeState.begin(filesDir.root)
+        WalletWipeState.begin(filesDir.root, noBackupFilesDir.root)
 
         resumeMetadataSavesIfWipeComplete(queue, wipeFinished = false) { WalletWipeState.pendingOrNull(filesDir.root) }
 
@@ -75,7 +78,7 @@ class WalletWipeMetadataSavesTest {
     @Test
     fun aMarkerLeftBehindAfterAFinishedWipeKeepsSavesPaused() {
         // complete() could not delete the marker; the next launch re-runs the wipe
-        WalletWipeState.begin(filesDir.root)
+        WalletWipeState.begin(filesDir.root, noBackupFilesDir.root)
 
         resumeMetadataSavesIfWipeComplete(queue, wipeFinished = true) { WalletWipeState.pendingOrNull(filesDir.root) }
 
