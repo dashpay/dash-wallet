@@ -987,8 +987,16 @@ class ShieldedBalanceServiceImpl internal constructor(
         stopGeneration.incrementAndGet()
         val acquired = tryLockWithin(stopLockTimeoutMs)
         if (!acquired) {
+            // Bump AGAIN, after giving up (review, 2026-09-24): a second
+            // bring-up queued on the lock can take it during the poll above —
+            // a queued lock() waiter wins the handoff over our tryLock — and
+            // snapshot the generation the first bump already produced. If it
+            // then outlasts this timeout, only a snapshot older than the
+            // CURRENT generation makes it decline, so the current generation
+            // must move once more before we tear down.
+            stopGeneration.incrementAndGet()
             log.warn(
-                "shielded stop: the bring-up has held the lock for over {}s and is inside a native SDK " +
+                "shielded stop: a bring-up has held the lock for over {}s and is inside a native SDK " +
                     "call that cannot be cancelled — tearing the Kotlin side down without it; the " +
                     "abandoned bring-up will not start the sync loop or report ready when it returns " +
                     "(plan §37)",
