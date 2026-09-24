@@ -445,11 +445,34 @@ class PlatformSynchronizationService @Inject constructor(
     // instrumentation — it runs a second SPV engine), and failures are
     // logged+swallowed inside startIfEnabled(). Bind is single-flight and
     // startIfEnabled() is idempotent, so re-running the recipe is safe.
+    /**
+     * Review 2026-09-24: `isCleaningUpNow` says teardown is IN PROGRESS, not
+     * whether the foreground-service lifetime that asked for a start still
+     * exists. The startup kick below waits on the bind on the long-lived
+     * [syncScope]; for a wallet without a DashPay identity [shutdown] skips
+     * both identity-gated `cancelChildren` branches, so the kick survived the
+     * teardown and — once the cleanup flags cleared — started L1 for a
+     * service that was gone. [serviceLifetime] is bumped by [shutdown]; a kick
+     * that outlives the lifetime it was issued in starts nothing, and
+     * [shutdown] also cancels the kick outright.
+     */
+    private val serviceLifetime = AtomicLong(0)
+    private var startupKickJob: Job? = null
+
     private fun kickSdkEngines(startL1Engine: Boolean) {
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_BIND_KICKED, "SDK_BIND_KICKED")
         val bindJob = sdkWalletBinder.bindInBackground(nonInteractiveWalletUnlock::unlockOrNull)
-        syncScope.launch {
+        val lifetime = serviceLifetime.get()
+        startupKickJob?.cancel()
+        startupKickJob = syncScope.launch {
             bindJob.join()
+            if (serviceLifetime.get() != lifetime) {
+                log.info(
+                    "SDK engine kick abandoned: the foreground service that requested it has shut down " +
+                        "since; the next service start re-kicks"
+                )
+                return@launch
+            }
             // Async-lane breadcrumbs around the NATIVE engine start: a
             // deterministic Rust/JNI crash on resume leaves no Java trace, so a
             // crash-looped install whose previous-launch trail repeatedly ends
@@ -693,8 +716,12 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun shutdown() {
-        // A bind heal that lands after this point must not start an engine
-        // the service is tearing down.
+        // This service lifetime is over: a startup kick still waiting on its
+        // bind, or a bind heal that lands after this point, must not start an
+        // engine the service is tearing down.
+        serviceLifetime.incrementAndGet()
+        startupKickJob?.cancel()
+        startupKickJob = null
         bindHealL1Starter.cancel()
         // Best-effort teardown of the Kotlin-SDK background engines. The
         // shadow SPV service had NO stop path before this (its Rust header
@@ -756,6 +783,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun stopSdkEngines() {
+        startupKickJob?.cancel()
         bindHealL1Starter.cancel()
         runCatching { l1ShadowSyncService.stop() }
             .onFailure { log.warn("failed to stop the L1 shadow sync on shutdown", it) }
