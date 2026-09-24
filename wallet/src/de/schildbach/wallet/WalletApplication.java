@@ -302,6 +302,16 @@ public class WalletApplication extends MultiDexApplication
     }
 
     /**
+     * Startup has two durable wallet sources: the primary protobuf and the
+     * transaction-stripped key backup. The public {@link #walletFileExists()}
+     * predicate intentionally keeps its old, strict meaning because onboarding
+     * uses it to distinguish an already-loaded primary wallet from first run.
+     */
+    private boolean recoverableWalletFileExists() {
+        return walletFileExists() || getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists();
+    }
+
+    /**
      * True when the wallet file exists but NO wallet object is loaded — the
      * launch is running degraded (load failure caught, or safe mode skipped
      * the load after consecutive launch deaths). OnboardingActivity must show
@@ -393,7 +403,7 @@ public class WalletApplication extends MultiDexApplication
             // as the user's own. Finish the wipe instead — it is idempotent,
             // and it is the only path to a state the user can act on.
             WalletApplicationExt.INSTANCE.resumeInterruptedWipe(this);
-        } else if (walletFileExists()) {
+        } else if (recoverableWalletFileExists()) {
             if (StartupBreadcrumbs.isSafeModeAdvised()) {
                 // Crash-loop breaker: the last two launches died before the
                 // main UI. Skip the wallet load and every engine start so the
@@ -1438,6 +1448,30 @@ public class WalletApplication extends MultiDexApplication
             log.info("wallet restored from backup: '{}'", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
             StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
                     "WALLET_RECOVERED_FROM_BACKUP");
+
+            // The restored wallet is intentionally small and transaction-free,
+            // and after SDK L1 cutover dashj may not dirty it again during the
+            // session. Do not wait for autosave or graceful shutdown: publish
+            // the primary wallet now so a kill immediately after recovery does
+            // not strand the next launch on onboarding with only the backup on
+            // disk.
+            try {
+                protobufSerializeWallet(wallet);
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
+                        "WALLET_RECOVERED_PRIMARY_SAVED");
+            } catch (final IOException x) {
+                // Keep the recovered wallet for this process, and keep the
+                // key-backup launch gate above so the next process retries the
+                // same recovery instead of falling through to onboarding.
+                log.error("wallet restored from backup but primary wallet save failed", x);
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
+                        "WALLET_RECOVERED_PRIMARY_SAVE_FAILED",
+                        x.getClass().getName() + ": " + x.getMessage());
+                try {
+                    CrashReporter.saveBackgroundTrace(x, packageInfoProvider.getPackageInfo());
+                } catch (final Throwable ignored) {
+                }
+            }
 
             // POST-RECOVERY GUARD: if the Tools "dashj sync (diagnostic)"
             // toggle is ON, force it OFF. With the toggle on, the un-held dashj
