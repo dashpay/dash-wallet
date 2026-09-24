@@ -198,6 +198,7 @@
     <string name="purchase_gift_card_details">Detail kartu hadiah</string>
     <string name="purchase_original_purchase">Pembelian asli</string>
     <string name="purchase_check_current_balance">Lihat detail kartu</string>
+    <string name="purchase_redeem_url_challange">Tantangan</string>
     <string name="purchase_card_number">Nomor Kartu</string>
     <string name="purchase_card_pin">PIN kartu</string>
     <string name="purchase_view_transaction">Lihat Detail Transaksi</string>

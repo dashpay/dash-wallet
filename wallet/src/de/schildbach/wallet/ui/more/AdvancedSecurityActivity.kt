@@ -77,8 +77,8 @@ class AdvancedSecurityActivity : LockScreenActivity() {
     }
     private lateinit var dashSymbol: ImageSpan
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         binding = ActivityAdvancedSecurityBinding.inflate(layoutInflater)
         setContentView(binding.root)

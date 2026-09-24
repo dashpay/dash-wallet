@@ -95,8 +95,10 @@
     <string name="search_user_no_results">Eşleşen kullanıcı yok</string>
     <string name="search_user_loading">Dash Ağı\'nda <b>%</b> kullanıcı adı aranıyor</string>
     <string name="contact_request_pending">Bekleyen İletişim Talebi</string>
+    <string name="send_button_label">Gönder</string>
     <string name="pay">Ödeme</string>
     <string name="contact_request_received_title">%s arkadaş olmayı talep etti</string>
+    <string name="contact_request_received_card_title">%s size bir iletişim isteği gönderdi</string>
     <string name="contact_request_accept">Kabul et</string>
     <string name="contact_request_ignore">Yoksay</string>
 
@@ -391,4 +393,11 @@
     <string name="invitation_fee_title">Davet Ücreti</string>
     <string name="create_instant_username_cancel">İptal et</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">QR Tara</string>
+    <string name="dash_connect_status_disconnected">Bağlantı kesildi</string>
+    <string name="dash_connect_approve_verify_identity">Kimliğinizi doğrulayın</string>
+    <string name="dash_connect_username">Kullanıcı Adı</string>
+    <string name="dash_connect_identity">Kimlik</string>
+    <string name="dash_connect_deny">Reddet</string>
+    <string name="dash_connect_confirm">Onayla</string>
+    </resources>

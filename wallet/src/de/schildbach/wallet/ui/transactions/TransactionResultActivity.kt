@@ -141,8 +141,8 @@ class TransactionResultActivity : LockScreenActivity() {
     lateinit var dashPayProfileDao: DashPayProfileDao
 
     @SuppressLint("SetTextI18n")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         // Re-arm the deferred finish before the recreated sheet runs its lifecycle, so dismissing
         // the restored DashPayUserBottomSheet still finishes this host activity.
@@ -150,8 +150,15 @@ class TransactionResultActivity : LockScreenActivity() {
             finishWhenUserSheetDismissed()
         }
 
-        val txId = intent.getSerializableExtra(EXTRA_TX_ID) as Sha256Hash
-        if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)!!) {
+        val txId = intent.getSerializableExtra(EXTRA_TX_ID) as? Sha256Hash
+
+        if (txId == null) {
+            log.warn("no transaction id in the intent, closing")
+            finish()
+            return
+        }
+
+        if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) == true) {
             intent.putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true)
         }
 
@@ -348,7 +355,10 @@ class TransactionResultActivity : LockScreenActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.transaction.value?.confidence?.removeEventListener(transactionResultViewBinder)
+
+        if (::transactionResultViewBinder.isInitialized) {
+            viewModel.transaction.value?.confidence?.removeEventListener(transactionResultViewBinder)
+        }
     }
 
     private fun rescanBlockchain() {

@@ -25,6 +25,8 @@
     <string name="dash_address">Endereço Dash</string>
     <string name="username">Nome de usuário</string>
     <string name="balance">Saldo:</string>
+    <string name="hide_balance">Ocultar saldo</string>
+    <string name="show_balance">Mostrar saldo</string>
     <string name="nothing_here">Nada aqui</string>
 
     <!-- Local Currency List: GGP -->
@@ -48,11 +50,15 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Dispensar</string>
+    <string name="button_not_now">Agora não</string>
+    <string name="button_settings">Configurações</string>
     <string name="network_unavailable_return">Voltar para a carteira</string>
     <string name="button_continue">Continuar</string>
     <string name="get_quote">Obter cotação</string>
     <string name="button_close">Fechar</string>
     <string name="button_cancel">Cancelar</string>
+    <string name="button_clear">Limpar</string>
+    <string name="button_paste">Colar</string>
     <string name="button_confirm">Confirmar</string>
     <string name="button_retry">Tentar novamente</string>
     <string name="button_send_report">Enviar Relatório</string>
@@ -100,6 +106,8 @@
     <string name="payment_request_problem_title">O pagamento não foi reconhecido</string>
     <string name="payment_protocol_default_error_title">Erro no pagamento</string>
     <string name="payment_request_problem_message">Seu pagamento não pôde ser processado pelo servidor, por favor, entre em contato com o comerciante</string>
+    <string name="payment_submission_pending_title">Status do pagamento desconhecido</string>
+    <string name="payment_submission_pending_message">O pagamento foi enviado, mas não recebemos uma confirmação do comerciante. Sua carteira continuará verificando a rede e mostrará a transação como enviada assim que for encontrada. Aguarde antes de enviar este pagamento novamente.</string>
     <string name="exchange_rate_not_found">Não foi possível encontrar a taxa de câmbio.</string>
     <string name="send_coins_fragment_hint_replaying">Pagamentos não são possíveis no momento porque a carteira não está totalmente sincronizada com a rede</string>
 
@@ -120,7 +128,7 @@
     <string name="scan_camera_problem_dialog_message">Ocorreu um problema com a câmera. Você provavelmente precisará reiniciar o dispositivo.</string>
     <string name="scan_camera_permission_dialog_title">Permitir camera</string>
     <string name="scan_camera_permission_dialog_message">Para escanear códigos QR, é necessário conceder permissão para usar a câmera.</string>
-
+    <string name="scan_camera_permission_denied_dialog_message">Para escanear códigos QR, o acesso à câmera precisa estar ativado para este aplicativo nas Configurações.</string>
     <!-- address input -->
     <string name="address_input_title">Enviar Dash</string>
     <string name="show_clipboard">Exibir conteúdo na área de transferência </string>
@@ -137,7 +145,8 @@
     <string name="input_parser_invalid_paymentrequest">Cobrança inválida:\n%s</string>
     <string name="input_parser_invalid_transaction">Transação inválida:\n%s</string>
     <string name="address_input_paste_from">Colar de %s</string>
-    <string name="input_connect">Conectar</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">Entrar</string>
 
     <!-- others -->
     <string name="confirm_sec">Confirmar (%ss)</string>

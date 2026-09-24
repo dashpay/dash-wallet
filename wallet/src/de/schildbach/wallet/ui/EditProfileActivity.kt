@@ -102,8 +102,8 @@ class EditProfileActivity : LockScreenActivity() {
     private var initialDisplayName = ""
     private var initialAboutMe = ""
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         binding = ActivityEditProfileBinding.inflate(layoutInflater)
         setContentView(binding.root)

@@ -125,7 +125,7 @@ object GenericUtils {
         val urls = mutableListOf<String>()
         if (!identifier.isNullOrEmpty()) {
             val swapKitId = identifier.lowercase(Locale.getDefault())
-            urls.add("https://storage.googleapis.com/token-list-swapkit/images/$swapKitId.png")
+            urls.add("https://tokens.swapkit.dev/images/$swapKitId.png")
         }
         urls.add("https://assets.coincap.io/assets/icons/$sanitized@2x.png")
         urls.add("https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/$sanitized.png")

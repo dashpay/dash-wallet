@@ -99,8 +99,8 @@ open class SendCoinsActivity : LockScreenActivity() {
     private var buyCredits: Boolean = false
     private var isQuickScan: Boolean = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         // only set INTENT_EXTRA_KEEP_UNLOCKED if it is not yet set
         // if this Activity is started by a dash: uri, then it will not be set

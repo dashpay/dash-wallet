@@ -105,8 +105,10 @@
     <string name="search_user_no_results">일치하는 사용자가 없습니다</string>
     <string name="search_user_loading">대시 네트워크상에서 사용자 이름 <b>"%"</b> 을 찾는 중</string>
     <string name="contact_request_pending">연락처 요청 대기 중</string>
+    <string name="send_button_label">보내기</string>
     <string name="pay">지불</string>
     <string name="contact_request_received_title">%s 님이 친구 요청을 보냈습니다</string>
+    <string name="contact_request_received_card_title">%s 님이 연락처 요청을 보냈습니다</string>
     <string name="contact_request_accept">수락</string>
     <string name="contact_request_ignore">무시</string>
 
@@ -544,4 +546,12 @@
     <string name="create_instant_username_button">인스턴트 사용자 이름 생성하기</string>
     <string name="create_instant_username_cancel">취소</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">QR 코드 스캔</string>
+    <string name="dash_connect_status_disconnected">연결 해제</string>
+    <string name="dash_connect_approve_verify_identity">당신의 신원을 인증하세요</string>
+    <string name="dash_connect_username">사용자 이름</string>
+    <string name="dash_connect_identity">아이덴티티</string>
+    <string name="dash_connect_approve_no_withdraw_funds">출금하기</string>
+    <string name="dash_connect_deny">거부</string>
+    <string name="dash_connect_confirm">승인</string>
+    </resources>

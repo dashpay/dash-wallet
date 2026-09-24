@@ -68,8 +68,8 @@ class StakingActivity : LockScreenActivity() {
     @Inject
     lateinit var securityFunctions: AuthenticationManager
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         binding = ActivityStakingBinding.inflate(layoutInflater)
         lifecycleScope.launch {

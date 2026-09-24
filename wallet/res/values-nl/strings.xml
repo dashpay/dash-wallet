@@ -445,4 +445,8 @@
     <string name="upgrade_pin_description">Stel een nieuwe pin in</string>
     <string name="upgrade_pin_continue">Doorgaan</string>
 
-    </resources>
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">Je hebt een saldo op CrowdNode</string>
+    <string name="crowdnode_withdrawal_reminder_message">Dit saldo moeten worden opgenomen van CrowdNode. Je kunt dit saldo overmaken naar deze portemonnee of via je online account op een ander apparaat.</string>
+    <string name="crowdnode_withdraw_funds">Neem saldo op</string>
+</resources>

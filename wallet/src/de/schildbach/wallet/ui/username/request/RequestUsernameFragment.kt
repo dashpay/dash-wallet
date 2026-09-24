@@ -277,7 +277,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 binding.requestUsernameButton.isEnabled = if (usernameType == UsernameType.Secondary) {
                     !it.usernameExists && !it.usernameContestable
                 } else {
-                    it.enoughBalance && !it.usernameExists
+                    it.enoughBalance && !it.usernameExists && !it.usernameBlocked
                 }
 
                 if (it.usernameRequestSubmitting) {

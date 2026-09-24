@@ -445,4 +445,8 @@
     <string name="upgrade_pin_description">新しいPINを設定する</string>
     <string name="upgrade_pin_continue">続ける</string>
 
-    </resources>
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">CrowdNodeに残高があります</string>
+    <string name="crowdnode_withdrawal_reminder_message">これらの資金はCrowdNodeから引き出す必要があります。このウォレットに送金したり、別のデバイス上のオンラインアカウントを経由してこれらの資金を移動することができます。</string>
+    <string name="crowdnode_withdraw_funds">資金を引き出す</string>
+</resources>

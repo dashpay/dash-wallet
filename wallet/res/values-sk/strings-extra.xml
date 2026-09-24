@@ -40,6 +40,8 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Kúpiť a predať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_dash_dex">Dash DEX</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Prijať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importovať privátny Kľúč</string>
@@ -303,11 +305,15 @@
     <string name="about_review_and_rate">Pridať recenziu alebo ohodnotiť applikáciu</string>
     <string name="about_contact_support">Kontaktovať podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
+    <string name="about_copyright">Autorské práva © %1$d Dash Core Group</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
     <string name="about_version_name">Peňaženka DashPay %s</string>
     <string name="about_last_explore_device_sync">Posledná synchronizácia preskúmania zariadenia</string>
     <string name="about_last_explore_server_update">Posledná synchronizácia preskúmania servera</string>
+    <string name="about_app_version_label">Verzia aplikácie</string>
+    <string name="about_platform_label">Platforma</string>
     <string name="about_explore_section">Objavte Dash</string>
+    <string name="about_explore_update">Aktualizácia</string>
     <string name="about_last_device_sync">Posledná synchronizácia zariadenia</string>
     <string name="about_last_server_update">Posledná synchronizácia servera</string>
     <string name="about_value_not_available">Nie je k dispozícií</string>

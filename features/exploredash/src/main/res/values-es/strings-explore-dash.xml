@@ -250,6 +250,8 @@
     <string name="something_wrong_title">¡Algo salió mal!</string>
     <string name="retry">Reintentar</string>
     <string name="gift_card_purchase_failed">Error en la compra de la tarjeta de regalo</string>
+    <string name="gift_card_save_failed_title">Los detalles de la tarjeta de regalo no se guardaron</string>
+    <string name="gift_card_save_failed_message">Tu pago se envió correctamente, pero la tarjeta de regalo no se pudo guardar en este dispositivo. No vuelvas a comprar esta tarjeta de regalo. Puedes encontrar el pago en tu historial de transacciones y el soporte puede recuperar la tarjeta a partir de él.</string>
     <string name="try_again">Intentar de nuevo</string>
     <string name="cancel">Cancelar</string>
     <string name="gift_card_error">Por alguna razón no pudimos comprar una tarjeta de regalo. Por favor, inténtalo de nuevo.</string>

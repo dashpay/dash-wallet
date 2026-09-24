@@ -17,23 +17,16 @@
 package de.schildbach.wallet.ui
 
 import android.content.Context
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Parcel
 import android.security.keystore.KeyPermanentlyInvalidatedException
-import android.telephony.TelephonyManager
-import android.view.KeyCharacterMap
-import android.view.KeyEvent
 import android.view.View
-import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
@@ -108,7 +101,7 @@ open class LockScreenActivity : SecureActivity() {
     private val pinLength by lazy { configuration.pinLength }
 
     val lockScreenDisplayed: Boolean
-        get() = binding.rootViewSwitcher.displayedChild == 0
+        get() = ::binding.isInitialized && binding.rootViewSwitcher.displayedChild == 0
 
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
@@ -134,21 +127,36 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     protected var isLocked: Boolean = false
+
+    /**
+     * Set when [onCreate] gave up because there is no wallet. Lifecycle callbacks must check this
+     * rather than [isFinishing]: Activity.finish() only marks the activity finishing when the
+     * activity manager can finish it right away, so an activity finished mid-launch (for instance
+     * while a task is being restored) still reports isFinishing == false while it runs onStart().
+     */
+    protected var finishedWithoutWallet = false
+        private set
     private val shouldShowBackupReminder
         get() = configuration.remindBackupSeed && configuration.lastBackupSeedReminderMoreThan24hAgo()
     private val lockScreenDeactivatedListeners = arrayListOf<() -> Unit>()
 
+    /**
+     * Subclasses must not override this - Hilt forbids making it final, but the whole body runs
+     * even when there is no wallet and the activity is already finishing. Override
+     * [onCreateWithWallet] instead.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         if (walletData.wallet == null) {
+            log.warn("no wallet, finishing {}", javaClass.simpleName)
+            finishedWithoutWallet = true
             finish()
             return
         }
 
         binding = ActivityLockScreenRootBinding.inflate(layoutInflater)
         super.setContentView(binding.root)
-        setupKeyboardBottomMargin()
         isLocked = autoLogout.shouldLogout()
         onBackPressedDispatcher.addCallback(this) {
             handleBackNavigation()
@@ -158,7 +166,17 @@ open class LockScreenActivity : SecureActivity() {
         initViewModel()
 
         setupBackupSeedReminder()
+
+        onCreateWithWallet(savedInstanceState)
     }
+
+    /**
+     * Subclasses override this instead of [onCreate]. It runs at the point where onCreate() used
+     * to hand control back to the subclass, but only once the lock screen is set up and a wallet
+     * is known to exist - when there is none, the activity is finished and this is never called,
+     * so overrides can rely on [WalletDataProvider.wallet] being non-null.
+     */
+    protected open fun onCreateWithWallet(savedInstanceState: Bundle?) = Unit
 
     override fun setContentView(contentViewResId: Int) {
         if (isFinishing) return
@@ -206,43 +224,15 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
-    private fun setupKeyboardBottomMargin() {
-        if (!hasNavBar()) {
-            val set = ConstraintSet()
-            val layout = binding.lockScreen.numericKeyboard.parent as ConstraintLayout
-            set.clone(layout)
-            set.clear(R.id.numeric_keyboard, ConstraintSet.BOTTOM)
-            set.connect(R.id.numeric_keyboard, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
-            set.applyTo(layout)
-        }
-    }
-
-    private fun hasNavBar(): Boolean {
-        val tm: TelephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        // emulator
-        if ("Android" == tm.networkOperatorName || Build.FINGERPRINT.startsWith("generic")) {
-            return true
-        }
-        val id: Int = resources.getIdentifier("config_showNavigationBar", "bool", "android")
-
-        // Krip devices seem to incorrectly report config_showNavigationBar
-        val isKripDeviceWithoutNavBar = Build.BRAND == "KRIP" && when (Build.MODEL) {
-            "K5", "K5c", "K5b", "K4m", "KRIP_K4" -> true
-            else -> false
-        }
-
-        return if (id > 0 && !isKripDeviceWithoutNavBar) {
-            resources.getBoolean(id)
-        } else {
-            // Check for keys
-            val hasMenuKey = ViewConfiguration.get(this).hasPermanentMenuKey()
-            val hasBackKey = KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_BACK)
-            !hasMenuKey && !hasBackKey
-        }
-    }
-
     override fun onStart() {
         super.onStart()
+
+        if (finishedWithoutWallet) {
+            // onCreate() gave up for having no wallet, but the system still starts the activity -
+            // everything below touches the lock screen binding it never inflated
+            return
+        }
+
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         val showLockScreen = !keepUnlocked && configuration.autoLogoutEnabled &&
