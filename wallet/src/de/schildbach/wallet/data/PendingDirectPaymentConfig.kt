@@ -155,9 +155,12 @@ open class PendingDirectPaymentConfig @Inject constructor(
         }
     }
 
-    /** Reads without BaseConfig's IOException-to-empty fallback, so a failed read throws. */
+    /**
+     * Reads without BaseConfig's IOException-to-empty fallback and without [decode]'s tolerance
+     * for a store it cannot parse at all, so anything short of a fully understood file throws.
+     */
     private suspend fun decodeStrict(): StoredPayments =
-        decode(appContext.dataStore.data.first()[PENDING_PAYMENTS])
+        parse(appContext.dataStore.data.first()[PENDING_PAYMENTS])
 
     /**
      * What was on disk: the entries we could read, and the raw entries we could not. Unreadable
@@ -166,41 +169,65 @@ open class PendingDirectPaymentConfig @Inject constructor(
      */
     private data class StoredPayments(
         val readable: List<PendingDirectPayment>,
-        val unreadable: List<JSONObject>
+        /**
+         * Raw array elements that did not decode, kept as [Any] rather than JSONObject so that an
+         * element which is not even an object still counts as unreadable instead of vanishing
+         * from both lists and letting a strict read report a clean store.
+         */
+        val unreadable: List<Any>
     )
 
-    private fun encode(payments: List<PendingDirectPayment>, unreadable: List<JSONObject>): String {
+    private fun encode(payments: List<PendingDirectPayment>, unreadable: List<Any>): String {
         val array = JSONArray()
         payments.forEach { array.put(it.toJson()) }
         unreadable.forEach { array.put(it) }
         return array.toString()
     }
 
-    private fun decode(value: String?): StoredPayments {
-        if (value.isNullOrEmpty()) {
+    /** Tolerant read for callers that only want whatever is legible. See [parse]. */
+    private fun decode(value: String?): StoredPayments = try {
+        parse(value)
+    } catch (e: Exception) {
+        log.error("pending direct payments are unreadable, reporting none: {}", value, e)
+        StoredPayments(emptyList(), emptyList())
+    }
+
+    /**
+     * Reads the stored array, refusing to treat anything it does not understand as absence.
+     *
+     * @throws IllegalStateException if the value exists but is not a JSON array. Only a missing
+     * preference is trusted as "nothing was ever written": an empty string is not something
+     * [encode] can produce, so it is a truncated or foreign write, and a blob that does not parse
+     * may hold quarantines whose inputs are still unlocked in memory.
+     */
+    private fun parse(value: String?): StoredPayments {
+        if (value == null) {
             return StoredPayments(emptyList(), emptyList())
+        }
+        if (value.isEmpty()) {
+            throw IllegalStateException("pending direct payments hold an empty string, not an array")
         }
 
         val array = try {
             JSONArray(value)
         } catch (e: JSONException) {
-            log.error("pending direct payments are not a JSON array, discarding: {}", value, e)
-            return StoredPayments(emptyList(), emptyList())
+            throw IllegalStateException("pending direct payments are not a JSON array", e)
         }
 
         val readable = mutableListOf<PendingDirectPayment>()
-        val unreadable = mutableListOf<JSONObject>()
+        val unreadable = mutableListOf<Any>()
         for (i in 0 until array.length()) {
             // Per entry: one malformed record used to return an empty list, so every other
             // pending payment stopped being restored and the next write erased them all.
             try {
                 readable.add(PendingDirectPayment.fromJson(array.getJSONObject(i)))
             } catch (e: Exception) {
-                // Deliberately broad: hex decoding throws a decoder exception derived from
-                // IllegalStateException and Sha256Hash.wrap has its own runtime failures, so
-                // naming types would let one entry escape and hide every payment again.
+                // Deliberately broad: hex decoding and Sha256Hash.wrap have their own runtime
+                // failures, so naming types would let one entry escape and hide every payment
+                // again. getJSONObject also lands here when the element is not an object at all,
+                // which has to count as unreadable rather than be skipped.
                 log.error("could not read pending direct payment at index {}, keeping it as is", i, e)
-                (array.opt(i) as? JSONObject)?.let { unreadable.add(it) }
+                unreadable.add(array.opt(i) ?: JSONObject.NULL)
             }
         }
         return StoredPayments(readable, unreadable)
