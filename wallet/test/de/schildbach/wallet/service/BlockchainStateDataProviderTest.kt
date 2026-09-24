@@ -188,7 +188,8 @@ class BlockchainStateDataProviderTest {
         provider.updateSdkBlockchainState(
             sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE, replayComplete = false)
         )
-        awaitUntil("parked update applied") { dao.state?.percentageSync == 100 }
+        // The fixture already reads 100, so wait for the stage the update publishes.
+        awaitUntil("parked update applied") { provider.getSyncStage() == SyncStage.COMPLETE }
         assertTrue("100% on the display does not end the replay while the engine still works", dao.state!!.replaying)
 
         // A transient ERROR/IDLE/CONNECTING snapshot carries no verdict: preserve.
