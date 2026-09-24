@@ -387,7 +387,7 @@ public class WalletApplication extends MultiDexApplication
         registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_CONFIG_LOADED, "CONFIG_LOADED");
-        if (WalletWipeState.INSTANCE.isPending(getFilesDir())) {
+        if (WalletWipeState.INSTANCE.isPending(getFilesDir(), getNoBackupFilesDir())) {
             // The previous process died inside a Reset Wallet. What is left on
             // disk is a half-destroyed wallet, and loading it would present it
             // as the user's own. Finish the wipe instead — it is idempotent,

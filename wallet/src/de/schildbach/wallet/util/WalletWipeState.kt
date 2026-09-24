@@ -19,6 +19,7 @@ package de.schildbach.wallet.util
 
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.security.SecureRandom
 
 /**
  * The PERSISTED "a Reset Wallet is in flight" marker.
@@ -34,13 +35,15 @@ import java.io.File
  *
  * The marker is written BEFORE the first destructive step and removed only
  * after the last one. That turns an ambiguous half-wipe into a yes/no answer
- * for the next launch: marker present -> the wipe did not finish, finish it
- * before showing any wallet UI; marker absent -> nothing was destroyed, the
- * wallet on disk is whole.
+ * for the next launch: valid marker present -> the wipe did not finish, finish
+ * it before showing any wallet UI; marker absent/invalid -> nothing was
+ * destroyed by this install's Reset Wallet flow, so do not destroy anything.
  *
- * Deliberately a bare file in `filesDir` rather than SharedPreferences or a
+ * Deliberately a file in `filesDir` rather than SharedPreferences or a
  * DataStore: the wipe clears both of those, so neither can record its own
- * progress.
+ * progress. The marker is bound to a token in `noBackupFilesDir`, so an empty
+ * planted marker or a restored `files/` marker from another install cannot
+ * silently authorize destroying a healthy wallet on cold launch.
  *
  * Every method is failure-contained and never throws — a diagnostic/recovery
  * channel must not be able to take the app down.
@@ -48,39 +51,52 @@ import java.io.File
 object WalletWipeState {
     private val log = LoggerFactory.getLogger(WalletWipeState::class.java)
 
-    /** Name kept stable: an older build's marker must still be understood. */
+    /** Name kept stable: older invalid markers must still be found and ignored. */
     const val MARKER_FILE_NAME = "wallet-wipe.pending"
 
+    private const val TOKEN_FILE_NAME = "wallet-wipe.install-token"
+    private const val MARKER_VERSION = "v1"
+    private const val TOKEN_BYTES = 32
+
     private fun marker(filesDir: File) = File(filesDir, MARKER_FILE_NAME)
+    private fun tokenFile(noBackupFilesDir: File) = File(noBackupFilesDir, TOKEN_FILE_NAME)
 
     /**
      * Records that a wipe has started. MUST return before the first
      * destructive step runs.
      *
-     * @return true when the marker is on disk (either just written or already
-     *   there from an interrupted wipe). False means the wipe is about to run
-     *   unrecorded — it still proceeds, but a mid-wipe process death would not
-     *   be recoverable, so the caller logs it.
+     * @return true when a valid marker is on disk. False means the wipe is
+     *   about to run unrecorded — it still proceeds, but a mid-wipe process
+     *   death would not be recoverable, so the caller logs it.
      */
-    fun begin(filesDir: File): Boolean = try {
+    fun begin(filesDir: File, noBackupFilesDir: File): Boolean = try {
         val file = marker(filesDir)
-        if (file.exists() || file.createNewFile()) {
-            true
-        } else {
-            log.warn("could not create the wallet-wipe marker at {}", file)
-            false
-        }
+        val token = installToken(noBackupFilesDir) ?: return false
+        file.writeText(markerBody(token), Charsets.UTF_8)
+        isPending(filesDir, noBackupFilesDir)
     } catch (t: Throwable) {
         log.warn("could not create the wallet-wipe marker", t)
         false
     }
 
     /** True when a wipe was started and never recorded as finished. */
-    fun isPending(filesDir: File): Boolean = try {
-        marker(filesDir).exists()
-    } catch (t: Throwable) {
-        log.warn("could not read the wallet-wipe marker", t)
-        false
+    fun isPending(filesDir: File, noBackupFilesDir: File): Boolean {
+        return try {
+            val file = marker(filesDir)
+            if (!file.exists()) {
+                return false
+            }
+            val token = readInstallToken(noBackupFilesDir)
+            val valid = token != null && file.readText(Charsets.UTF_8) == markerBody(token)
+            if (!valid) {
+                log.warn("ignoring invalid wallet-wipe marker at {}", file)
+                removeInvalidMarker(file)
+            }
+            valid
+        } catch (t: Throwable) {
+            log.warn("could not read the wallet-wipe marker", t)
+            false
+        }
     }
 
     /**
@@ -98,6 +114,47 @@ object WalletWipeState {
             }
         } catch (t: Throwable) {
             log.warn("could not delete the wallet-wipe marker", t)
+        }
+    }
+
+    private fun markerBody(token: String) = "$MARKER_VERSION\n$token\n"
+
+    private fun installToken(noBackupFilesDir: File): String? {
+        readInstallToken(noBackupFilesDir)?.let { return it }
+        return try {
+            val token = newToken()
+            tokenFile(noBackupFilesDir).writeText("$token\n", Charsets.UTF_8)
+            token
+        } catch (t: Throwable) {
+            log.warn("could not create the wallet-wipe install token", t)
+            null
+        }
+    }
+
+    private fun readInstallToken(noBackupFilesDir: File): String? = try {
+        tokenFile(noBackupFilesDir)
+            .takeIf { it.isFile }
+            ?.readText(Charsets.UTF_8)
+            ?.trim()
+            ?.takeIf { it.length == TOKEN_BYTES * 2 && it.all { c -> c in '0'..'9' || c in 'a'..'f' } }
+    } catch (t: Throwable) {
+        log.warn("could not read the wallet-wipe install token", t)
+        null
+    }
+
+    private fun newToken(): String {
+        val bytes = ByteArray(TOKEN_BYTES)
+        SecureRandom().nextBytes(bytes)
+        return bytes.joinToString(separator = "") { "%02x".format(it.toInt() and 0xff) }
+    }
+
+    private fun removeInvalidMarker(file: File) {
+        try {
+            if (!file.delete()) {
+                log.warn("could not delete invalid wallet-wipe marker at {}", file)
+            }
+        } catch (t: Throwable) {
+            log.warn("could not delete invalid wallet-wipe marker", t)
         }
     }
 }
