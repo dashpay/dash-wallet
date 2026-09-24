@@ -46,27 +46,50 @@ import org.junit.Test
 class WalletWipeSequenceTest {
 
     private fun newFilesDir(): File = Files.createTempDirectory("wipe-state").toFile()
+    private fun newNoBackupFilesDir(): File = Files.createTempDirectory("wipe-state-nobackup").toFile()
 
     // ── WalletWipeState: the recovery marker ───────────────────────────
 
     @Test
     fun `marker survives until the wipe is recorded complete`() {
         val filesDir = newFilesDir()
-        assertFalse(WalletWipeState.isPending(filesDir))
+        val noBackupFilesDir = newNoBackupFilesDir()
+        assertFalse(WalletWipeState.isPending(filesDir, noBackupFilesDir))
 
-        assertTrue(WalletWipeState.begin(filesDir))
-        assertTrue(WalletWipeState.isPending(filesDir))
+        assertTrue(WalletWipeState.begin(filesDir, noBackupFilesDir))
+        assertTrue(WalletWipeState.isPending(filesDir, noBackupFilesDir))
 
         WalletWipeState.complete(filesDir)
-        assertFalse(WalletWipeState.isPending(filesDir))
+        assertFalse(WalletWipeState.isPending(filesDir, noBackupFilesDir))
     }
 
     @Test
     fun `a wipe restarted over an interrupted one keeps the marker`() {
         val filesDir = newFilesDir()
-        assertTrue(WalletWipeState.begin(filesDir))
-        assertTrue(WalletWipeState.begin(filesDir))
-        assertTrue(WalletWipeState.isPending(filesDir))
+        val noBackupFilesDir = newNoBackupFilesDir()
+        assertTrue(WalletWipeState.begin(filesDir, noBackupFilesDir))
+        assertTrue(WalletWipeState.begin(filesDir, noBackupFilesDir))
+        assertTrue(WalletWipeState.isPending(filesDir, noBackupFilesDir))
+    }
+
+    @Test
+    fun `an empty marker planted before launch is ignored and removed`() {
+        val filesDir = newFilesDir()
+        val noBackupFilesDir = newNoBackupFilesDir()
+        File(filesDir, WalletWipeState.MARKER_FILE_NAME).createNewFile()
+
+        assertFalse(WalletWipeState.isPending(filesDir, noBackupFilesDir))
+        assertFalse(File(filesDir, WalletWipeState.MARKER_FILE_NAME).exists())
+    }
+
+    @Test
+    fun `a marker restored without this install token is ignored`() {
+        val filesDir = newFilesDir()
+        val originalNoBackupFilesDir = newNoBackupFilesDir()
+        val restoredNoBackupFilesDir = newNoBackupFilesDir()
+        assertTrue(WalletWipeState.begin(filesDir, originalNoBackupFilesDir))
+
+        assertFalse(WalletWipeState.isPending(filesDir, restoredNoBackupFilesDir))
     }
 
     @Test
@@ -74,8 +97,9 @@ class WalletWipeSequenceTest {
         // A file where the directory should be: every call has to fail soft —
         // this is the recovery channel, it must not be able to kill a launch.
         val notADir = File.createTempFile("wipe-state", ".notdir")
-        assertFalse(WalletWipeState.begin(notADir))
-        assertFalse(WalletWipeState.isPending(notADir))
+        val noBackupFilesDir = newNoBackupFilesDir()
+        assertFalse(WalletWipeState.begin(notADir, noBackupFilesDir))
+        assertFalse(WalletWipeState.isPending(notADir, noBackupFilesDir))
         WalletWipeState.complete(notADir)
     }
 
