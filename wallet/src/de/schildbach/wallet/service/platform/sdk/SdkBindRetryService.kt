@@ -336,6 +336,20 @@ class SdkBindRetryService internal constructor(
             )
             return
         }
+        // LIVE OUTCOME, under the lock (review, 2026-09-24): the identity
+        // check above compares against a value THIS sequential collector
+        // wrote, so it cannot see a success the OTHER collector delivered
+        // while this handler waited on the mutex — that success cleared the
+        // blocker, and classifying now would republish it. The binder's live
+        // `bindRetryPending` can see it: false means the bind has since
+        // succeeded and this failure is history.
+        if (!bindRetryPending()) {
+            log.info(
+                "SDK bind failure from {} arrived after the bind succeeded; dropping it",
+                failure.atMs
+            )
+            return
+        }
         // StateFlow conflates; a re-emission of the same failure is not a new one.
         if (failure.atMs == lastClassifiedFailureAtMs) return
         lastClassifiedFailureAtMs = failure.atMs

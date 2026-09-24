@@ -238,6 +238,42 @@ class SdkBindRetryServiceTest {
         }
     }
 
+    /**
+     * Review, 2026-09-24: the mirror image of the stale success. A failure
+     * that reached its handler and then waited on the mutex while the OTHER
+     * collector delivered a success is history by the time it classifies —
+     * the identity check cannot see that, because it compares against a
+     * value the failure collector itself wrote. The binder's live
+     * `bindRetryPending` reads false once the bind succeeded, and the
+     * classifier now drops the failure on that.
+     */
+    @Test
+    fun staleBindFailure_arrivingAfterTheBindSucceeded_publishesNothing() = runBlocking {
+        val collectors = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        try {
+            val h = Harness(deviceLocked = true)
+            h.signal.primeFailed()
+            val service = h.service(collectors)
+            h.fail(lockedDenial())
+            assertNotNull(service.blocker.value)
+
+            h.succeed() // pending=false, blocker cleared
+            assertNull(service.blocker.value)
+            val noticesBefore = h.notices.size
+            val persistedBefore = h.persisted.size
+
+            // The stale failure: the binder still says no retry is pending.
+            h.failures.value = SdkBindFailure(lockedDenial(), 1, atMs = ++h.nowMs)
+            assertNull("a failure that lost the race to a success republishes nothing", service.blocker.value)
+            assertEquals(noticesBefore, h.notices.size)
+            assertEquals(persistedBefore, h.persisted.size)
+        } finally {
+            collectors.cancel()
+        }
+    }
+
     @Test
     fun maybeRetry_successResetsTheLadder() = runTest {
         val h = Harness()
