@@ -433,6 +433,14 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     .padding(20.dp, 10.dp, 20.dp, 10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                if (walletApplication.isWalletWipeRecoveryRequired) {
+                    Text(
+                        text = stringResource(R.string.wallet_wipe_recovery_required),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 if (safeMode && !recoveryFromSeedNeeded) {
                     // Safe mode SKIPPED the load — nothing is known to be
                     // broken, so say so and offer the way back in.
@@ -483,7 +491,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 )
             }
         }
-        if (firstShow) {
+        if (firstShow && !walletApplication.isWalletWipeRecoveryRequired) {
             showDegradedStartupReportDialog()
         }
         // A degraded launch that OPENED is a launch that reached its UI: the

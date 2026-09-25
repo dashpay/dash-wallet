@@ -219,6 +219,7 @@ public class WalletApplication extends MultiDexApplication
     /** The wallet protobuf load threw past the internal recovery (e.g. OOM on a huge wallet). */
     private volatile boolean walletLoadFailed = false;
     private volatile boolean recoveredWalletPersistencePending = false;
+    private volatile boolean walletWipeRecoveryRequired = false;
     /** Safe mode skipped the wallet load after consecutive launch deaths (see StartupBreadcrumbs). */
     private volatile boolean walletLoadSkippedSafeMode = false;
     /** An optional startup stage failed and was skipped (catch-degrade). */
@@ -318,7 +319,12 @@ public class WalletApplication extends MultiDexApplication
      * the crash-report path instead of onboarding/`wallet!!` routing.
      */
     public boolean isWalletLoadDegraded() {
-        return walletLoadFailed || walletLoadSkippedSafeMode || recoveredWalletPersistencePending;
+        return walletLoadFailed || walletLoadSkippedSafeMode || recoveredWalletPersistencePending
+                || walletWipeRecoveryRequired;
+    }
+
+    public boolean isWalletWipeRecoveryRequired() {
+        return walletWipeRecoveryRequired;
     }
 
     /** Whether safe mode (crash-loop breaker) skipped the wallet load this launch. */
@@ -397,7 +403,11 @@ public class WalletApplication extends MultiDexApplication
         registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_CONFIG_LOADED, "CONFIG_LOADED");
-        if (WalletWipeState.INSTANCE.isPending(getFilesDir())) {
+        WalletWipeState.State wipeState = WalletWipeState.INSTANCE.inspect(getFilesDir(), getNoBackupFilesDir());
+        if (wipeState == WalletWipeState.State.RECOVERY_REQUIRED) {
+            walletWipeRecoveryRequired = true;
+            log.warn("unverified wallet reset state; preserving files and blocking wallet startup");
+        } else if (wipeState == WalletWipeState.State.PENDING) {
             // The previous process died inside a Reset Wallet. What is left on
             // disk is a half-destroyed wallet, and loading it would present it
             // as the user's own. Finish the wipe instead — it is idempotent,
@@ -650,6 +660,9 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void fullInitialization() {
+        if (walletWipeRecoveryRequired) {
+            return;
+        }
         long t0 = System.currentTimeMillis();
         initEnvironment();
         log.info("STARTUP fullInit: initEnvironment done in {}ms", System.currentTimeMillis() - t0);
@@ -1933,6 +1946,12 @@ public class WalletApplication extends MultiDexApplication
 
     /** @see #wipeInProgress */
     public void setWipeInProgress(boolean inProgress) {
+        if (!inProgress) {
+            // A failed wipe or marker deletion must not allow a new wallet to be
+            // created under a marker that could delete it on the next launch.
+            walletWipeRecoveryRequired = WalletWipeState.INSTANCE.inspect(getFilesDir(), getNoBackupFilesDir())
+                    != WalletWipeState.State.NONE;
+        }
         wipeInProgress.setValue(inProgress);
     }
 

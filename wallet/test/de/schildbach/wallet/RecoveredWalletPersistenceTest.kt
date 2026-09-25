@@ -116,6 +116,37 @@ class RecoveredWalletPersistenceTest {
     }
 
     @Test
+    fun `persisting recovered wallet does not clear an independent wipe recovery guard`() {
+        val originalBackup = backup.readBytes()
+        setField("recoveredWalletPersistencePending", true)
+        setField("walletWipeRecoveryRequired", true)
+
+        app.persistRecoveredWallet(recovered)
+        assertTrue(app.isWalletLoadDegraded)
+        assertTrue(app.isWalletWipeRecoveryRequired)
+        assertFalse(app.retryWalletLoadAfterSafeMode())
+
+        val originalPrimary = primary.readBytes()
+        // Must return before initialization or loading, even with a usable primary.
+        app.fullInitialization()
+        assertArrayEquals(originalPrimary, primary.readBytes())
+        assertArrayEquals(originalBackup, backup.readBytes())
+
+        val controller = Robolectric.buildActivity(Activity::class.java).create()
+        assertTrue(controller.get().redirectDegradedWallet(app))
+        assertTrue(controller.get().isFinishing)
+        controller.destroy()
+
+        setField("recoveredWalletPersistencePending", true)
+        setField("walletWipeRecoveryRequired", false)
+        assertTrue(app.isWalletLoadDegraded)
+        assertFalse(app.retryWalletLoadAfterSafeMode())
+
+        app.persistRecoveredWallet(recovered)
+        assertFalse(app.isWalletLoadDegraded)
+    }
+
+    @Test
     fun `new unsaved onboarding wallet does not activate recovery guard`() {
         setField("wallet", Wallet(Constants.NETWORK_PARAMETERS))
         assertFalse(app.walletFileExists())

@@ -56,7 +56,7 @@ object WalletApplicationExt {
      */
     fun WalletApplication.beginWalletWipe() {
         WalletWipeSequence.begin(
-            markPending = { WalletWipeState.begin(filesDir) },
+            markPending = { WalletWipeState.begin(filesDir, noBackupFilesDir) },
             handOffUi = {
                 setWipeInProgress(true)
                 restartService.performRestart(this, true, false)
@@ -78,7 +78,7 @@ object WalletApplicationExt {
             // marker stays behind instead, and the next launch re-runs it.
             runCatching {
                 WalletWipeSequence.finish(
-                    pending = { WalletWipeState.isPending(filesDir) },
+                    pending = { WalletWipeState.isPending(filesDir, noBackupFilesDir) },
                     detachWallet = { withContext(Dispatchers.Main) { detachWalletForWipe() } },
                     destroy = { destroyWalletData() },
                     markComplete = { WalletWipeState.complete(filesDir) }
