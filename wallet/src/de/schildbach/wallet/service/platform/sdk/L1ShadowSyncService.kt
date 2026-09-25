@@ -2079,7 +2079,13 @@ class L1ShadowSyncService internal constructor(
     /** How long [startIfEnabled] waits for the DashPay bring-up before starting SPV anyway. */
     private val bringUpBudgetMs: Long = BRING_UP_BUDGET_MS,
     /** How long a stop waits for a cancelled bring-up to actually end — see [stopInternal]. */
-    private val bringUpStopJoinMs: Long = BRING_UP_STOP_JOIN_MS
+    private val bringUpStopJoinMs: Long = BRING_UP_STOP_JOIN_MS,
+    /**
+     * How long a destructive step that can be refused ([recoverByRecreatingWallet],
+     * a hard [resetShadowState]) waits for a cancelled bring-up to leave its
+     * native call before giving up — see [quiesceBringUpForDestruction].
+     */
+    private val destructiveBringUpJoinMs: Long = DESTRUCTIVE_BRING_UP_JOIN_MS
 ) {
     @Inject
     constructor(
@@ -2721,10 +2727,12 @@ class L1ShadowSyncService internal constructor(
             detachedBringUp?.let {
                 log.info("cancelling a DashPay bring-up still running past its budget")
                 it.cancel()
-                // Destructive callers (resetShadowState, the wallet wipe's
-                // stopSdkEngines) need it GONE, not merely told to go. Bounded:
-                // a bring-up inside its native call cannot observe the cancel
-                // until that call returns, and a stop must not hang on it.
+                // Bounded: a bring-up inside its native call cannot observe
+                // the cancel until that call returns, and an ordinary stop
+                // must not hang on it. The callers that go on to REMOVE the
+                // SDK wallet or the dataDir cannot accept that: they wait for
+                // it themselves, under the mutex, in
+                // quiesceBringUpForDestruction (review, 2026-09-25).
                 val ended = withTimeoutOrNull(bringUpStopJoinMs) { it.join(); true } == true
                 if (ended) {
                     detachedBringUp = null
@@ -3559,6 +3567,57 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
+     * Under [mutex]. A bring-up that [stopInternal] cancelled but could not
+     * join is still INSIDE `startWalletSubsystems` — still using the SDK
+     * wallet and the SPV dataDir the caller is about to remove. A stop may
+     * leave it be; a destructive step may not: removing the wallet row or the
+     * directory underneath a native call is a use-after-free with extra
+     * steps (review, 2026-09-25). So the destructive callers wait for it
+     * here, holding the mutex so no start can create another meanwhile.
+     *
+     * @param budgetMs how long to wait; null waits as long as it takes,
+     *   logging every [DESTRUCTION_WAIT_LOG_SLICE_MS] so the log shows what
+     *   the caller is waiting on.
+     * @return whether the bring-up has ended and the caller may proceed.
+     *   False means it is still running when the budget expired: the caller
+     *   must leave the SDK wallet and the dataDir alone.
+     */
+    private suspend fun quiesceBringUpForDestruction(what: String, budgetMs: Long?): Boolean {
+        val live = detachedBringUp?.takeIf { !it.isCompleted } ?: return true
+        live.cancel()
+        log.warn(
+            "{}: a cancelled DashPay bring-up is still inside its native call — waiting {} for it " +
+                "before touching the SDK wallet or the SPV dataDir",
+            what,
+            budgetMs?.let { "up to $it ms" } ?: "as long as it takes"
+        )
+        var waitedMs = 0L
+        while (!live.isCompleted) {
+            val slice = if (budgetMs == null) {
+                DESTRUCTION_WAIT_LOG_SLICE_MS
+            } else {
+                minOf(DESTRUCTION_WAIT_LOG_SLICE_MS, budgetMs - waitedMs)
+            }
+            if (slice <= 0) break
+            val ended = withTimeoutOrNull(slice) { live.join(); true } == true
+            if (ended) break
+            waitedMs += slice
+            if (budgetMs != null && waitedMs >= budgetMs) break
+            log.warn("{}: still waiting on the DashPay bring-up's native call after {} s", what, waitedMs / 1000)
+        }
+        if (!live.isCompleted) {
+            log.error(
+                "{}: the DashPay bring-up is still inside its native call after {} ms — refusing to " +
+                    "remove the SDK wallet or the SPV dataDir underneath it; nothing was touched",
+                what, waitedMs
+            )
+            return false
+        }
+        if (detachedBringUp === live) detachedBringUp = null
+        return true
+    }
+
+    /**
      * Tear down and rebuild the shadow SPV's PERSISTED state, then restart
      * SPV for a fresh full scan (the scan start comes from the wallet's
      * stored birth height Rust-side — no height override). Sequencing:
@@ -3615,6 +3674,13 @@ class L1ShadowSyncService internal constructor(
                     if (hard) "HARD" else "soft",
                     if (hard) "deleting the SPV dataDir" else "clearing SPV storage via the SDK"
                 )
+                // A hard reset deletes the dataDir a straggling bring-up may
+                // still be using (a start that found one running past its
+                // budget starts SPV next to it). Refuse rather than delete
+                // underneath it; nothing has been touched yet.
+                if (hard && !quiesceBringUpForDestruction("shadow hard reset", destructiveBringUpJoinMs)) {
+                    return false
+                }
                 runCatching { source.stopSpv() }
                     .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
                 _progress.value = ShadowSyncProgress.IDLE
@@ -3774,6 +3840,13 @@ class L1ShadowSyncService internal constructor(
                         log.warn("wallet re-creation aborted: the shadow was restarted concurrently")
                         return false
                     }
+                    // stop() above joins a cancelled bring-up for a bounded
+                    // time only. Removing the wallet under a native call still
+                    // using it is not an option, so wait here — and refuse if
+                    // it outlasts the budget: this path is re-runnable.
+                    if (!quiesceBringUpForDestruction("wallet re-creation", destructiveBringUpJoinMs)) {
+                        return false
+                    }
                     recreator.removeSdkWallet(walletIdHex)
                     deleteSpvDataDir()
                     runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }
@@ -3864,6 +3937,14 @@ class L1ShadowSyncService internal constructor(
                 runCatching { recreator.stopShieldedSync() }
                     .onFailure { log.warn("wipe cleanup: shielded stop failed; continuing", it) }
                 mutex.withLock {
+                    // The wipe cannot be refused and cannot be retried later
+                    // against a directory the NEXT wallet may by then own, so
+                    // it waits for a straggling bring-up as long as that takes.
+                    // The wipe already runs for minutes and survives process
+                    // death through its marker; a native call that never
+                    // returns is the process's problem, not a reason to delete
+                    // underneath it.
+                    quiesceBringUpForDestruction("wallet-wipe SDK cleanup", budgetMs = null)
                     if (walletIdHex != null) {
                         runCatching { recreator.removeSdkWallet(walletIdHex) }
                             .onFailure { log.warn("wipe cleanup: removeSdkWallet failed; continuing", it) }
@@ -4063,6 +4144,18 @@ class L1ShadowSyncService internal constructor(
 
         /** How long a stop waits for a cancelled DashPay bring-up to actually end before moving on. */
         internal const val BRING_UP_STOP_JOIN_MS = 5_000L
+
+        /**
+         * How long a refusable destructive step waits for that bring-up to
+         * leave its native call — see [quiesceBringUpForDestruction]. A
+         * minute: long enough for a bind that is merely slow, short enough
+         * that a wedged one (§37's ran 50 minutes) does not hold the
+         * recovery mutex for the rest of the process.
+         */
+        internal const val DESTRUCTIVE_BRING_UP_JOIN_MS = 60_000L
+
+        /** How often an unbounded destructive wait says what it is waiting on. */
+        internal const val DESTRUCTION_WAIT_LOG_SLICE_MS = 30_000L
 
         /** Retry backoff for a failed progress-monitor collection. */
         internal const val LOOP_RETRY_DELAY_MS = 5_000L

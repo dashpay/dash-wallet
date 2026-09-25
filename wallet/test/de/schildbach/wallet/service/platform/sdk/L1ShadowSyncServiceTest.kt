@@ -261,6 +261,7 @@ class L1ShadowSyncServiceTest {
         dashjDiagnostic: Boolean = false,
         bringUpBudgetMs: Long = L1ShadowSyncService.BRING_UP_BUDGET_MS,
         bringUpStopJoinMs: Long = L1ShadowSyncService.BRING_UP_STOP_JOIN_MS,
+        destructiveBringUpJoinMs: Long = L1ShadowSyncService.DESTRUCTIVE_BRING_UP_JOIN_MS,
         flagGate: () -> CompletableDeferred<Unit>? = { null }
     ) = L1ShadowSyncService(
         source = source,
@@ -273,8 +274,40 @@ class L1ShadowSyncServiceTest {
         probeStallThresholdMs = probeStallThresholdMs,
         recreator = recreator,
         bringUpBudgetMs = bringUpBudgetMs,
-        bringUpStopJoinMs = bringUpStopJoinMs
+        bringUpStopJoinMs = bringUpStopJoinMs,
+        destructiveBringUpJoinMs = destructiveBringUpJoinMs
     )
+
+    /**
+     * A bring-up parked inside its native call: cancellation is observed only
+     * once [nativeReturn] completes, exactly as a Rust call that ignores the
+     * Kotlin cancel behaves. [live] counts bring-ups currently inside it.
+     */
+    private class ParkedBringUp {
+        val nativeReturn = CompletableDeferred<Unit>()
+        var live = 0
+        val body: suspend (String) -> String? = {
+            live++
+            try {
+                awaitCancellation()
+            } catch (e: CancellationException) {
+                withContext(NonCancellable) { nativeReturn.await() }
+                throw e
+            } finally {
+                live--
+            }
+        }
+    }
+
+    /** Starts the service, cancels the start mid-bring-up and leaves the native call parked. */
+    private suspend fun parkACancelledBringUp(service: L1ShadowSyncService, source: FakeSource, parked: ParkedBringUp) {
+        source.onStartWalletSubsystems = parked.body
+        val first = scope.launch { service.startIfEnabled() }
+        withTimeout(5_000) { while (source.subsystemsCalls == 0) delay(5) }
+        first.cancel()
+        withTimeout(5_000) { first.join() }
+        assertEquals("cancelled, but the native call has not returned", 1, parked.live)
+    }
 
     // ── Phase 1b item 10: SPV waits for the DashPay bring-up, but not forever ──
 
@@ -946,6 +979,95 @@ class L1ShadowSyncServiceTest {
      * next start waits its budget for it, and starts SPV without a new
      * bring-up if it is still there.
      */
+    // ── Destructive steps must not run underneath a bring-up still inside its native call ──
+
+    /**
+     * Review, 2026-09-25: stop()'s join of a cancelled bring-up is bounded,
+     * and both destructive callers went straight on to remove the SDK wallet
+     * and delete the dataDir the parked native call was still using.
+     */
+    @Test
+    fun recoverByRecreatingWallet_refusesWhileACancelledBringUpIsStillInsideItsNativeCall() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val parked = ParkedBringUp()
+        val service = service(
+            source, recreator = recreator, bringUpBudgetMs = 150, bringUpStopJoinMs = 50, destructiveBringUpJoinMs = 200
+        )
+        val spvDir = dataDir.resolve("spv").apply { mkdirs() }
+        spvDir.resolve("headers.dat").writeText("chain data")
+        parkACancelledBringUp(service, source, parked)
+
+        assertFalse(
+            "the SDK wallet must not be removed under a native call still using it",
+            service.recoverByRecreatingWallet()
+        )
+        assertFalse(recreator.events.contains("removeWallet"))
+        assertTrue("the dataDir is untouched", spvDir.resolve("headers.dat").exists())
+        assertEquals(1, parked.live)
+
+        parked.nativeReturn.complete(Unit)
+        withTimeout(5_000) { while (parked.live != 0) delay(5) }
+
+        // With the native call returned, the same re-runnable path succeeds.
+        // (Hold the rebind open so the post-re-creation restart does not
+        // recreate the dataDir before it is inspected.)
+        recreator.bindJob = kotlinx.coroutines.Job()
+        assertTrue(service.recoverByRecreatingWallet())
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertFalse("the dataDir went with the wallet", spvDir.exists())
+    }
+
+    @Test
+    fun clearForWalletWipe_waitsForTheCancelledBringUpToLeaveItsNativeCall_beforeRemovingTheWallet() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val parked = ParkedBringUp()
+        val service = service(source, recreator = recreator, bringUpBudgetMs = 150, bringUpStopJoinMs = 50)
+        val spvDir = dataDir.resolve("spv").apply { mkdirs() }
+        spvDir.resolve("headers.dat").writeText("chain data")
+        parkACancelledBringUp(service, source, parked)
+
+        val wipe = scope.launch { service.clearForWalletWipe() }
+        delay(400) // well past stop()'s 50 ms join bound: the wipe is waiting, not proceeding
+        assertFalse("the wipe waits as long as it takes", wipe.isCompleted)
+        assertFalse(recreator.events.contains("removeWallet"))
+        assertTrue(spvDir.resolve("headers.dat").exists())
+        assertEquals(1, parked.live)
+
+        parked.nativeReturn.complete(Unit)
+        withTimeout(5_000) { wipe.join() }
+        assertEquals(listOf("stopShielded", "removeWallet", "resetBinderLatch"), recreator.events)
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertFalse(spvDir.exists())
+        assertEquals(0, parked.live)
+    }
+
+    @Test
+    fun hardReset_refusesToDeleteTheDataDir_whileAStragglingBringUpIsStillInsideItsNativeCall() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val parked = ParkedBringUp()
+        val service = service(source, bringUpBudgetMs = 150, bringUpStopJoinMs = 50, destructiveBringUpJoinMs = 200)
+        parkACancelledBringUp(service, source, parked)
+        service.stop() // bounded join gives up; the straggler stays recorded
+
+        // The next start runs SPV next to the straggler (no second bring-up).
+        assertTrue(service.startIfEnabled())
+        assertEquals(1, source.subsystemsCalls)
+        val spvDir = dataDir.resolve("spv")
+        spvDir.resolve("headers.dat").writeText("chain data")
+
+        assertFalse("a hard reset must not delete the dataDir underneath the native call", service.resetShadowState(hard = true))
+        assertTrue(spvDir.resolve("headers.dat").exists())
+        assertEquals("nothing was touched: SPV still counts as running", 1, source.startCalls)
+
+        parked.nativeReturn.complete(Unit)
+        withTimeout(5_000) { while (parked.live != 0) delay(5) }
+        assertTrue(service.resetShadowState(hard = true))
+        assertFalse(spvDir.resolve("headers.dat").exists())
+        service.stop()
+    }
+
     @Test
     fun nextStart_doesNotOverlapACancelledBringUpStillInsideItsNativeCall() = runBlocking {
         val source = FakeSource(boundWalletId = walletIdHex)
