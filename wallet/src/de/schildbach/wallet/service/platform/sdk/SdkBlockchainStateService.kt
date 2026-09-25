@@ -182,6 +182,9 @@ class SdkBlockchainStateService internal constructor(
         var lastPropagated: SdkChainSnapshot? = null
         var lastProgress: ShadowSyncProgress? = null
         var lastProgressChangeMs = nowMs()
+        // One log line per static spell that the aggregate exempts from the
+        // banner; reset whenever the progress moves (see the collect below).
+        var stallSpellLogged = false
 
         val safeTip = tipUnixSeconds
             .onStart { emit(0L) } // unblock combine() even if the SDK feed lags
@@ -205,11 +208,35 @@ class SdkBlockchainStateService internal constructor(
                 if (p != lastProgress) {
                     lastProgress = p
                     lastProgressChangeMs = now
+                    stallSpellLogged = false
+                }
+                val stillMs = now - lastProgressChangeMs
+                // The phase-based verdict decides whether the snapshot is
+                // STATIC; the aggregate-aware one decides whether that is
+                // reported as a NETWORK impediment. When they disagree the
+                // engine is parked at the iOS synced threshold with every
+                // filter stored — the dash-spv final-partial-batch stall
+                // (plan §34) — and the user must not see "unable to connect"
+                // for a wallet that is, by the rule iOS applies, synced. It
+                // is still a stall, so it is still logged: once per spell,
+                // not once per tick.
+                val staticMidScan = isSpvProgressStalled(p.phase, stillMs, stallThresholdMs)
+                val stalled = isSpvProgressStalled(p, stillMs, stallThresholdMs)
+                if (staticMidScan && !stalled && !stallSpellLogged) {
+                    stallSpellLogged = true
+                    log.warn(
+                        "SPV progress static for {}s at {} of {} filters ({} short, aggregate {}%) — " +
+                            "at the iOS synced threshold with the filter commit parked, so NOT raising " +
+                            "the network impediment; this is the dash-spv final-partial-batch stall " +
+                            "(plan section 34) and it clears when the chain re-cuts the batch boundary",
+                        stillMs / 1000, p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
+                        String.format(java.util.Locale.US, "%.3f", p.overallPercent * 100)
+                    )
                 }
                 val snapshot = SdkChainSnapshot(
                     progress = p,
                     tipUnixSeconds = tip,
-                    stalled = isSpvProgressStalled(p.phase, now - lastProgressChangeMs, stallThresholdMs),
+                    stalled = stalled,
                     chainLockHeight = clHeight
                 )
                 // THE equality gate: identical snapshot → no derivation, no

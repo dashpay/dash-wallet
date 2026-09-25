@@ -23,6 +23,7 @@ import android.text.format.DateUtils
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
 import com.google.zxing.BarcodeFormat
+import de.schildbach.wallet.AppForegroundMonitor
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
@@ -47,10 +48,10 @@ import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.service.platform.sdk.boundedLegacyPlatformQuery
-import de.schildbach.wallet.service.platform.sdk.CutoverAutoCommitObserver
 import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
 import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
 import de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateService
+import de.schildbach.wallet.service.platform.sdk.BindHealL1Starter
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.NonInteractiveWalletUnlock
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
@@ -232,7 +233,6 @@ class PlatformSynchronizationService @Inject constructor(
     private val cutoverUiDataService: CutoverUiDataService,
     private val sdkBlockchainStateService: SdkBlockchainStateService,
     private val cutoverTxSeamService: CutoverTxSeamService,
-    private val cutoverAutoCommitObserver: CutoverAutoCommitObserver,
     private val shieldedTransferExecutor: ShieldedTransferExecutor,
     private val contactRequestNotificationService: ContactRequestNotificationService,
     // The DashPay half of the user-facing "still syncing" state; this service
@@ -321,6 +321,10 @@ class PlatformSynchronizationService @Inject constructor(
     private var contactUpdateRetryJob: Job? = null
     private val updatingContacts = AtomicBoolean(false)
 
+    /** Ticks of the 15 s platform ticker since the last contact pass; seeded so the first tick runs. */
+    @Volatile
+    private var ticksSinceContactUpdate = BACKGROUND_CONTACT_TICKS
+
     /**
      * Owner ([Job]) and claim time of the in-flight [updateContactRequests]
      * pass. Together they make the [updatingContacts] guard recoverable and
@@ -392,6 +396,19 @@ class PlatformSynchronizationService @Inject constructor(
     // TODO: cancel these on shutdown?
     private val syncJob = SupervisorJob()
     private val syncScope = CoroutineScope(Dispatchers.IO + syncJob)
+
+    /**
+     * Review 2026-09-23: when the startup bind pass fails (device locked at
+     * upgrade time) and a later retry heals it inside this service lifetime,
+     * start the L1 engine — nothing else did. Armed by [kickSdkEngines] when
+     * its one-shot start declines, cancelled by [shutdown]/[stopSdkEngines].
+     */
+    private val bindHealL1Starter = BindHealL1Starter(
+        scope = syncScope,
+        bindEstablished = sdkWalletBinder.bindEstablished,
+        serviceTearingDown = { de.schildbach.wallet.service.BlockchainServiceImpl.isCleaningUpNow },
+        startL1 = { l1ShadowSyncService.startIfEnabled() }
+    )
     private var lastTopupUpdateTime = 0L
     private var lastMetadataUpdateTime = 0L
 
@@ -408,7 +425,16 @@ class PlatformSynchronizationService @Inject constructor(
         // wallet-crypter key non-interactively ([NonInteractiveWalletUnlock]
         // — the SecurityGuard-stored password, no user prompt; extracted so
         // the L1 shadow recovery path reuses the identical recipe).
-        kickSdkEngines()
+        //
+        // The L1 ENGINE is deliberately NOT started from here (emulator
+        // finding 12, docs/upgrade-memory-and-sync-plan.md §10.4): init()
+        // runs from WalletApplication.onCreate, which a WorkManager job or a
+        // package-replaced broadcast can trigger in a plain background
+        // process with no foreground service — and the cached-app freezer
+        // suspended exactly such a scan nine seconds in. The engine starts
+        // from resume(), which BlockchainServiceImpl calls after
+        // startForeground().
+        kickSdkEngines(startL1Engine = false)
         log.info("Starting the platform sync job")
     }
 
@@ -419,19 +445,64 @@ class PlatformSynchronizationService @Inject constructor(
     // instrumentation — it runs a second SPV engine), and failures are
     // logged+swallowed inside startIfEnabled(). Bind is single-flight and
     // startIfEnabled() is idempotent, so re-running the recipe is safe.
-    private fun kickSdkEngines() {
+    /**
+     * Review 2026-09-24: `isCleaningUpNow` says teardown is IN PROGRESS, not
+     * whether the foreground-service lifetime that asked for a start still
+     * exists. The startup kick below waits on the bind on the long-lived
+     * [syncScope]; for a wallet without a DashPay identity [shutdown] skips
+     * both identity-gated `cancelChildren` branches, so the kick survived the
+     * teardown and — once the cleanup flags cleared — started L1 for a
+     * service that was gone. [serviceLifetime] is bumped by [shutdown]; a kick
+     * that outlives the lifetime it was issued in starts nothing, and
+     * [shutdown] also cancels the kick outright.
+     */
+    private val serviceLifetime = AtomicLong(0)
+    private var startupKickJob: Job? = null
+
+    private fun kickSdkEngines(startL1Engine: Boolean) {
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_BIND_KICKED, "SDK_BIND_KICKED")
         val bindJob = sdkWalletBinder.bindInBackground(nonInteractiveWalletUnlock::unlockOrNull)
-        syncScope.launch {
+        val lifetime = serviceLifetime.get()
+        startupKickJob?.cancel()
+        startupKickJob = syncScope.launch {
             bindJob.join()
+            if (serviceLifetime.get() != lifetime) {
+                log.info(
+                    "SDK engine kick abandoned: the foreground service that requested it has shut down " +
+                        "since; the next service start re-kicks"
+                )
+                return@launch
+            }
             // Async-lane breadcrumbs around the NATIVE engine start: a
             // deterministic Rust/JNI crash on resume leaves no Java trace, so a
             // crash-looped install whose previous-launch trail repeatedly ends
             // at SDK_L1_ENGINE_STARTING is the fingerprint that convicts the
             // native engine (see StartupBreadcrumbs).
-            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTING, "SDK_L1_ENGINE_STARTING")
-            l1ShadowSyncService.startIfEnabled()
-            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTED, "SDK_L1_ENGINE_STARTED")
+            if (!startL1Engine) {
+                log.info(
+                    "SDK L1 engine not started from Application init — it starts from the foreground " +
+                        "blockchain service (resume())"
+                )
+            } else if (de.schildbach.wallet.service.BlockchainServiceImpl.isCleaningUpNow) {
+                // Phase 1b item 12 (docs/upgrade-memory-and-sync-plan.md): the
+                // blockchain service is tearing down — its shutdown() is about
+                // to stopSdkEngines(). Starting the engine now only hands it a
+                // teardown seconds later (three "started then torn down within
+                // 15 s" cycles on the reference install on 2026-09-16, each a
+                // watermark rewind). The next service start re-kicks it.
+                log.info(
+                    "SDK L1 engine start skipped: the blockchain service is tearing down; the next " +
+                        "service start re-kicks the engine"
+                )
+            } else {
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTING, "SDK_L1_ENGINE_STARTING")
+                val started = l1ShadowSyncService.startIfEnabled()
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_L1_ENGINE_STARTED, "SDK_L1_ENGINE_STARTED")
+                // Declined — most often "no wallet bound" after a failed startup
+                // bind pass. The unlock receiver and the retry ladder only bind;
+                // this is what starts L1 when they succeed (review, 2026-09-23).
+                if (started) bindHealL1Starter.cancel() else bindHealL1Starter.arm()
+            }
             // Phase 5d follow-up: the post-cutover UI data source (balance
             // header / tx list / coins-received detection served from the
             // SDK once the cutover is committed). Idempotent once-per-process
@@ -447,15 +518,10 @@ class PlatformSynchronizationService @Inject constructor(
             // tx reads served from the SDK store). Same lifecycle and the
             // same provably-inert-pre-cutover contract as above.
             cutoverTxSeamService.start()
-            // Phase 5d AUTO-COMMIT: on an UPGRADE install (existing dashj
-            // wallet), drive the cutover to SDK-primary with no debug
-            // broadcast once the SDK's scan has caught up to the tip AND the
-            // full readiness policy passes. Fail-safe (never a forced/timeout
-            // commit), self-gating (inert until the shadow catches up), and
-            // once-per-process idempotent. Restore/new wallets skip this and
-            // commit immediately at setWallet — see
-            // CutoverCoordinator.commitForFreshWalletSetup.
-            cutoverAutoCommitObserver.start()
+            // (The readiness-driven CutoverAutoCommitObserver used to start
+            // here. Every install commits on its first launch now — fresh
+            // wallets at setWallet, upgrades at finalizeInitialization — so
+            // there is nothing left for a parity observer to decide.)
             // Bring the SHIELDED runtime up at startup too (Brian): it used
             // to start only when a shielded UI screen called
             // ensureShieldedReady(), so until the user visited More (or a
@@ -499,7 +565,10 @@ class PlatformSynchronizationService @Inject constructor(
         // (re)start must kick them again, or the shadow parity harness
         // stays down for the rest of the process lifetime and the shielded
         // transfer gate never reopens ("Verifying your balance" forever).
-        kickSdkEngines()
+        //
+        // Called by BlockchainServiceImpl after startForeground(): the only
+        // path that starts the SDK L1 engine (see init()).
+        kickSdkEngines(startL1Engine = true)
     }
 
     override suspend fun initSync(runFirstUpdateBlocking: Boolean) {
@@ -514,7 +583,20 @@ class PlatformSynchronizationService @Inject constructor(
         platformSyncJob?.cancel(CancellationException("re-arming the platform sync ticker"))
         txMetadataJob?.cancel(CancellationException("re-arming the tx metadata ticker"))
         platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY)
-            .onEach { updateContactRequests() }
+            .onEach {
+                // Background-aware cadence (docs/upgrade-memory-and-sync-plan.md
+                // §10.4, emulator finding 11): the full contact/profile/invite/
+                // metadata cycle every 15 s is for a user looking at the app.
+                // In a cached process it ran 54 cycles in 24 minutes and earned
+                // an EXCESSIVE_RESOURCE_USAGE kill. Every [BACKGROUND_CONTACT_TICKS]
+                // ticks (5 min) is plenty when nobody is watching;
+                // requestContactUpdate() still forces a pass on demand.
+                ticksSinceContactUpdate++
+                if (contactTickDue(AppForegroundMonitor.isInBackground, ticksSinceContactUpdate)) {
+                    ticksSinceContactUpdate = 0
+                    updateContactRequests()
+                }
+            }
             .launchIn(syncScope)
 
         txMetadataJob = TickerFlow(PUSH_PERIOD)
@@ -634,6 +716,13 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun shutdown() {
+        // This service lifetime is over: a startup kick still waiting on its
+        // bind, or a bind heal that lands after this point, must not start an
+        // engine the service is tearing down.
+        serviceLifetime.incrementAndGet()
+        startupKickJob?.cancel()
+        startupKickJob = null
+        bindHealL1Starter.cancel()
         // Best-effort teardown of the Kotlin-SDK background engines. The
         // shadow SPV service had NO stop path before this (its Rust header
         // store was observed regressing after unclean kills — the suspected
@@ -694,6 +783,8 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun stopSdkEngines() {
+        startupKickJob?.cancel()
+        bindHealL1Starter.cancel()
         runCatching { l1ShadowSyncService.stop() }
             .onFailure { log.warn("failed to stop the L1 shadow sync on shutdown", it) }
         runCatching { shieldedBalanceService.stop() }
@@ -2920,3 +3011,19 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 }
+
+/**
+ * How many 15 s ticks of the platform ticker pass between contact passes
+ * while the app is in the background: 20 = five minutes.
+ */
+internal const val BACKGROUND_CONTACT_TICKS = 20
+
+/**
+ * Whether this tick of the platform ticker runs the contact/profile/invite/
+ * metadata cycle. Every tick in the foreground; every
+ * [BACKGROUND_CONTACT_TICKS] ticks in the background (emulator finding 11:
+ * 54 full cycles in a cached process, then an EXCESSIVE_RESOURCE_USAGE
+ * kill). Pure — host-testable.
+ */
+internal fun contactTickDue(inBackground: Boolean, ticksSinceLastRun: Int): Boolean =
+    !inBackground || ticksSinceLastRun >= BACKGROUND_CONTACT_TICKS

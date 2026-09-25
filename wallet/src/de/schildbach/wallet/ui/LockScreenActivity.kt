@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -142,6 +143,32 @@ open class LockScreenActivity : SecureActivity() {
         super.onCreate(savedInstanceState)
 
         if (walletData.wallet == null) {
+            // SAFE-MODE / DEGRADED LAUNCH. Android restores whatever activity
+            // was on top of the task straight into a fresh process, so any
+            // subclass of this class can be the FIRST activity of a launch
+            // whose wallet load was skipped (StartupBreadcrumbs safe mode) or
+            // failed. Joel's 12000012 report is exactly that: two ANRs armed
+            // safe mode, the next launch restored NetworkMonitorActivity, and
+            // it died in onCreate — which counts as another death before the
+            // main UI and re-arms safe mode, so the crash-loop breaker fed
+            // the loop it exists to break.
+            //
+            // OnboardingActivity is the only screen that owns the recovery
+            // (WalletApplication.retryWalletLoadAfterSafeMode) and the
+            // crash-report path, so send the user there instead of finishing
+            // into nothing. CLEAR_TASK drops the restored back stack, whose
+            // every entry would hit this same branch.
+            if (walletApplication.isWalletLoadDegraded) {
+                log.warn(
+                    "degraded launch: {} was restored without a wallet — routing to onboarding",
+                    javaClass.simpleName
+                )
+                startActivity(
+                    OnboardingActivity.createIntent(this).addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    )
+                )
+            }
             finish()
             return
         }
@@ -160,13 +187,38 @@ open class LockScreenActivity : SecureActivity() {
         setupBackupSeedReminder()
     }
 
+    /**
+     * These two wrap the subclass's content view in the lock-screen root, so
+     * they need [binding] — which [onCreate] does NOT inflate on the
+     * no-wallet path above.
+     *
+     * They used to guard on `isFinishing` and RETURN, which made
+     * `setContentView` a silent no-op: the subclass's `onCreate` carried on
+     * believing its layout was installed, and the next `findViewById`
+     * returned null. Three activities dereference that immediately
+     * (`NetworkMonitorActivity` line 84, `AddressBookActivity` line 75,
+     * `BlockInfoActivity` line 59, all on `R.id.toolbar`), so a degraded
+     * launch turned into an NPE in `onCreate`.
+     *
+     * The real precondition is "the lock-screen root exists", not "we are
+     * finishing" — and when it does not, the honest answer is AppCompat's own
+     * `setContentView`. The activity is finishing either way; this only
+     * guarantees that a subclass which keeps running finds its own views
+     * instead of null.
+     */
     override fun setContentView(contentViewResId: Int) {
-        if (isFinishing) return
+        if (!::binding.isInitialized) {
+            super.setContentView(contentViewResId)
+            return
+        }
         setContentView(layoutInflater.inflate(contentViewResId, null))
     }
 
     override fun setContentView(contentView: View?) {
-        if (isFinishing) return
+        if (!::binding.isInitialized) {
+            if (contentView != null) super.setContentView(contentView)
+            return
+        }
         binding.regularContent.removeAllViews()
         binding.regularContent.addView(contentView)
     }

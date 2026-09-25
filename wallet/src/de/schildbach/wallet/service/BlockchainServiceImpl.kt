@@ -243,13 +243,18 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         AppForegroundMonitor.isForeground
             .onEach { foreground ->
                 isAppInBackground = !foreground
-                if (foreground && ::sdkBindRetryService.isInitialized) {
+                if (!::sdkBindRetryService.isInitialized) return@onEach
+                if (foreground) {
                     // A pending SDK bind retry runs the moment the user is
                     // actually looking at the app — the device is then provably
                     // unlocked, which is the heal condition for a device-locked
                     // keystore denial, and no broadcast has to survive an OEM's
                     // background restrictions.
                     sdkBindRetryService.noteAppForeground()
+                } else {
+                    // Leaving with the bind still pending: the notification is
+                    // the only surface left to say what the wallet waits for.
+                    sdkBindRetryService.noteAppBackground()
                 }
             }
             .launchIn(serviceScope)
@@ -269,6 +274,136 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private val POST_CUTOVER_IDENTITY_RETRY_INTERVAL_MS = TimeUnit.MINUTES.toMillis(2)
         private val log = LoggerFactory.getLogger(BlockchainServiceImpl::class.java)
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
+
+        /**
+         * ALARM-DIAG (§28). Stamped on the Intent behind every alarm-armed
+         * PendingIntent so a delivered start can be told apart from an
+         * app-opened one in a field log.
+         *
+         * The app CANNOT observe the refusal directly: when an alarm fires a
+         * `PendingIntent.getForegroundService` and the background FGS-start is
+         * not allowed, the system drops it — no exception reaches us. So the
+         * evidence is the ABSENCE of a matching `started by alarm` line after
+         * an `ALARM-DIAG armed` line. Grep `ALARM-DIAG` for the whole trail.
+         */
+        const val START_REASON_EXTRA = "start_reason"
+
+        /**
+         * Distinct PendingIntent request codes for the two alarms that both
+         * target this service.
+         *
+         * A PendingIntent's identity ignores EXTRAS — it is the package, the
+         * request code and the Intent's component/action/data. Both schedulers
+         * built theirs with request code 0 against this same component and no
+         * action, so they were THE SAME PendingIntent, and
+         * `FLAG_UPDATE_CURRENT` merely swapped the extras while the second
+         * `setInexactRepeating` replaced the first alarm outright. Observed on
+         * a test device: the armed alarm was the daily periodic one with an
+         * 18-hour window, not the 15-minute restart that had just been asked
+         * for.
+         *
+         * PERIODIC keeps 0 deliberately: an alarm already scheduled by an
+         * older build carries that code, and `AlarmManager.cancel` only
+         * matches an equal PendingIntent, so changing it would orphan the very
+         * alarm the reschedule means to replace.
+         */
+        const val ALARM_REQUEST_CODE_PERIODIC = 0
+        const val ALARM_REQUEST_CODE_RESTART = 1
+
+        /**
+         * The replay restart alarm's PendingIntent, built in ONE place so
+         * arming and retiring can never disagree about which alarm they
+         * mean. `AlarmManager.cancel` matches an equal PendingIntent, and
+         * equality ignores extras, so a cancel built here retires whatever
+         * an earlier process armed.
+         */
+        @JvmStatic
+        fun replayRestartAlarmIntent(context: Context): PendingIntent {
+            val serviceIntent = Intent(context, BlockchainServiceImpl::class.java)
+            serviceIntent.putExtra(START_REASON_EXTRA, "restart-15min")
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true)
+                PendingIntent.getForegroundService(
+                    context, ALARM_REQUEST_CODE_RESTART, serviceIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            } else {
+                PendingIntent.getService(
+                    context, ALARM_REQUEST_CODE_RESTART, serviceIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            }
+        }
+
+        /**
+         * Arms the replay restart alarm: first fire in one minute, then every
+         * fifteen. Returns the first fire time. Repeating, so it survives a
+         * refused or failed start — and therefore needs an explicit
+         * retirement, which [decideOnReplayRestartAlarm] defines.
+         */
+        @JvmStatic
+        fun armReplayRestartAlarm(context: Context): Long {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val restartTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
+            alarmManager.setInexactRepeating(
+                AlarmManager.RTC_WAKEUP,
+                restartTime,
+                AlarmManager.INTERVAL_FIFTEEN_MINUTES,
+                replayRestartAlarmIntent(context)
+            )
+            return restartTime
+        }
+
+        /**
+         * Retires the replay restart alarm. Never throws: this runs inside
+         * teardowns and the wallet wipe, neither of which may fail on it.
+         */
+        @JvmStatic
+        fun cancelReplayRestartAlarm(context: Context, why: String) {
+            try {
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                alarmManager.cancel(replayRestartAlarmIntent(context))
+                log.info("ALARM-DIAG retired reason=restart-15min — {}", why)
+            } catch (t: Throwable) {
+                log.warn("could not retire the replay restart alarm ({})", why, t)
+            }
+        }
+
+        /** What a teardown does with the replay restart alarm. */
+        enum class ReplayRestartAlarmAction { ARM, RETIRE, LEAVE }
+
+        /**
+         * The replay restart alarm is armed by a teardown that interrupts a
+         * replay the service did not choose to abandon, and retired by the
+         * next teardown that has nothing to recover: the replay completed, or
+         * the user wiped or reset the wallet, or the SDK bind is blocked and
+         * the unlock receiver owns the restart. Once armed it repeats every
+         * fifteen minutes until retired, so leaving it standing after the
+         * replay it was armed for is over means a background service start
+         * every fifteen minutes for as long as the device stays up (review,
+         * 2026-09-24).
+         *
+         * A teardown of an instance that never finished initialising —
+         * a start refused because the previous cleanup is still running, an
+         * init failure, a start with no wallet — decides nothing: it knows
+         * nothing about the replay, and the alarm may be the only thing left
+         * that can recover the instance that armed it (§37).
+         *
+         * The wallet wipe retires the alarm itself, in
+         * `WalletApplication.destroyWalletFiles`, because the wipe can also
+         * be resumed by a launch that never runs this service.
+         */
+        @JvmStatic
+        fun decideOnReplayRestartAlarm(
+            initialised: Boolean,
+            replaying: Boolean,
+            deliberateStop: Boolean,
+            bindBlocked: Boolean
+        ): ReplayRestartAlarmAction = when {
+            !initialised -> ReplayRestartAlarmAction.LEAVE
+            !replaying || deliberateStop || bindBlocked -> ReplayRestartAlarmAction.RETIRE
+            else -> ReplayRestartAlarmAction.ARM
+        }
 
         /**
          * Does this `onTrimMemory` level mean the process is genuinely under
@@ -324,6 +459,28 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         var cleanupDeferred: CompletableDeferred<Unit>? = null
         private val isCleaningUp = AtomicBoolean(false)
 
+        /**
+         * Phase 1b item 11: destroys that onDestroy() has SCHEDULED but whose
+         * cleanup coroutine has not finished. Incremented synchronously on the
+         * main thread in onDestroy, decremented when the cleanup ends. A new
+         * instance's onCreate waits while this is non-zero, closing the race
+         * where it only awaited [cleanupDeferred] — which the previous
+         * instance's coroutine had not yet CREATED — and opened the dashj
+         * blockstore while that instance still held its file lock
+         * (OverlappingFileLockException, five failed starts on the reference
+         * install on 2026-09-16).
+         */
+        private val pendingDestroys = java.util.concurrent.atomic.AtomicInteger(0)
+
+        /** Whether a previous instance of this service is still tearing down. */
+        val isCleaningUpNow: Boolean get() = isCleaningUp.get() || pendingDestroys.get() > 0
+
+        /** Retries of a lock-blocked blockstore open before giving up. */
+        private const val BLOCKSTORE_LOCK_RETRIES = 3
+
+        /** How long each retry waits for the previous instance's cleanup. */
+        private const val BLOCKSTORE_LOCK_WAIT_MS = 5_000L
+
         // TEST ONLY: Reduce timeout for testing onTimeout callback
         // Set to 0 to disable test timeout (use Android's default 6-hour limit)
         // Set to 1-2 minutes for testing the timeout behavior
@@ -332,6 +489,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private val onCreateCompleted = CompletableDeferred<Unit>()
+
+    /**
+     * True once [onCreate]'s init coroutine ran to its end with a wallet.
+     * [onCreateCompleted] cannot say this: the refusal and failure paths
+     * complete it too, to release the callers awaiting it.
+     */
+    @Volatile
+    private var initCompleted = false
     private var checkMutex = Mutex(false)
 
     @Inject lateinit var  application: WalletApplication
@@ -537,6 +702,18 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val notificationHandlerThread = HandlerThread("notification-lane").apply { start() }
     private val notificationHandler = Handler(notificationHandlerThread.looper)
     private var wakeLock: PowerManager.WakeLock? = null
+
+    /**
+     * Whether the REPLAY's own acquisition of [wakeLock] is outstanding.
+     * Tracked apart from `isHeld` because the lock is reference-counted and
+     * shared with the dashj path: with the Tools dashj-sync diagnostic on, a
+     * peergroup and an SDK replay coexist, so `isHeld` cannot say whose count
+     * is whose. Each owner releases its own acquisition — the tick receiver
+     * on replay completion, [onDestroy] for an interrupted replay, where one
+     * release used to cover two acquisitions (review, 2026-09-22/23).
+     */
+    @Volatile
+    private var replayWakeLockHeld = false
     private var peerConnectivityListener: PeerConnectivityListener? = null
     private var nm: NotificationManager? = null
     private val impediments: MutableSet<Impediment> = EnumSet.noneOf(
@@ -1041,36 +1218,142 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     @SuppressLint("WrongConstant")
+    /**
+     * Phase 1b item 11: wait for the PREVIOUS service instance to finish its
+     * cleanup. Awaits an active [cleanupDeferred] and also any destroy that
+     * onDestroy has scheduled but whose coroutine has not created the
+     * deferred yet ([pendingDestroys]). Returns false on timeout.
+     */
+    private suspend fun awaitPreviousInstanceCleanup(timeoutMs: Long): Boolean =
+        withTimeoutOrNull(timeoutMs) {
+            while (true) {
+                val active = cleanupDeferred?.takeIf { it.isActive }
+                if (active != null) {
+                    active.await()
+                    continue
+                }
+                if (pendingDestroys.get() <= 0 && !isCleaningUp.get()) break
+                delay(100)
+            }
+            true
+        } != null
+
+    private fun isFileLockException(x: Throwable): Boolean =
+        x.cause?.javaClass?.simpleName?.contains("OverlappingFileLockException") == true ||
+            x.message?.contains("OverlappingFileLockException") == true ||
+            x.message?.contains("FileLock") == true
+
+    /**
+     * Phase 1b item 11: open a dashj SPV blockstore, and if the previous
+     * service instance still holds its file lock (its shutdown serializes the
+     * whole wallet before closing — 62 MB on the reference install), wait for
+     * that cleanup and retry instead of failing the start. Five starts died
+     * this way on 2026-09-16, each costing a replay restart. A non-lock
+     * failure (corruption) propagates unchanged to the caller's handling.
+     */
+    private suspend fun openBlockStoreWaitingForLock(file: File, what: String): SPVBlockStore {
+        var attempt = 0
+        while (true) {
+            try {
+                return SPVBlockStore(Constants.NETWORK_PARAMETERS, file)
+            } catch (x: BlockStoreException) {
+                if (!isFileLockException(x) || attempt >= BLOCKSTORE_LOCK_RETRIES) throw x
+                attempt++
+                log.warn(
+                    "{} blockstore is still file-locked by the previous service instance " +
+                        "(attempt {}/{}) — waiting up to {} ms for its cleanup before retrying",
+                    what, attempt, BLOCKSTORE_LOCK_RETRIES, BLOCKSTORE_LOCK_WAIT_MS
+                )
+                if (!awaitPreviousInstanceCleanup(BLOCKSTORE_LOCK_WAIT_MS)) {
+                    delay(500)
+                }
+            }
+        }
+    }
+
+    /**
+     * Phase 1b item 9 (docs/upgrade-memory-and-sync-plan.md): the one-minute
+     * restart alarm is the FALLBACK for a replay the service did not choose
+     * to abandon. Item 7 keeps the service alive through idle stretches, so
+     * a teardown while `replaying` is still true means the OS or a failure
+     * stopped it: onTrimMemory, the Android 15 dataSync 6-hour timeout, a
+     * "cleanup did not complete" bail-out in onCreate, an uncaught init
+     * error. Before, the alarm was armed only on the idle path, and on the
+     * SDK path `replaying` was hard-coded false, so restarts waited for the
+     * 15-minute job or the user (5 to 18 minutes on the reference install,
+     * each costing up to 155,000 blocks of watermark).
+     *
+     * Not armed for deliberate stops: a wallet wipe, a rescan (the reset flow
+     * restarts the service itself), or the "SDK setup pending" state, where
+     * nothing can replay until the device is unlocked (the unlock receiver
+     * and the foreground edge restart it). Those teardowns, and any teardown
+     * with no replay in progress, RETIRE the alarm instead — it repeats
+     * every fifteen minutes until something does ([decideOnReplayRestartAlarm]).
+     * Runs on the main thread at the top of onDestroy so a hung cleanup
+     * cannot prevent it. Never throws.
+     */
+    private fun rescheduleIfReplayInterrupted() {
+        try {
+            val replaying = blockchainState?.replaying == true
+            val deliberateStop = deleteWalletFileOnShutdown || resetBlockchainOnShutdown
+            val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
+            when (decideOnReplayRestartAlarm(initCompleted, replaying, deliberateStop, bindBlocked)) {
+                ReplayRestartAlarmAction.LEAVE ->
+                    log.info("service never finished initialising — leaving the replay restart alarm as it is")
+                ReplayRestartAlarmAction.RETIRE -> {
+                    val why = when {
+                        deliberateStop -> "replay interrupted by a deliberate wipe/reset"
+                        bindBlocked ->
+                            "replay flagged but the SDK bind is blocked (${sdkBindRetryService.blocker.value}); " +
+                                "the unlock receiver / app foreground restart the service"
+                        else -> "no replay in progress"
+                    }
+                    cancelReplayRestartAlarm(application, why)
+                }
+                ReplayRestartAlarmAction.ARM -> {
+                    log.warn(
+                        "service stopping with a replay in progress ({}%) — arming the one-minute restart " +
+                            "so the scan resumes without waiting for the periodic job",
+                        blockchainState?.percentageSync
+                    )
+                    rescheduleService()
+                }
+            }
+        } catch (t: Throwable) {
+            log.warn("could not arm or retire the replay restart alarm", t)
+        }
+    }
+
+    /**
+     * ALARM-DIAG (§28). Record what was armed and, critically, whether this
+     * device holds the battery-optimisation exemption.
+     *
+     * Both schedulers use `setInexactRepeating`, and only EXACT alarms are on
+     * Android's background FGS-start exemption list. The one other exemption
+     * that applies here is the user-granted battery-optimisation whitelist. So
+     * on an exempt device the alarm start works and on a default device it
+     * should not — which is the whole question §28 could not settle, because
+     * every emulator used for testing happened to be whitelisted.
+     */
+    private fun logAlarmDiagnostics(reason: String, whenMs: Long) {
+        val exempt = try {
+            (getSystemService(POWER_SERVICE) as android.os.PowerManager)
+                .isIgnoringBatteryOptimizations(packageName)
+        } catch (t: Throwable) {
+            null
+        }
+        log.info(
+            "ALARM-DIAG armed reason={} at={} exact=false batteryOptimisationExempt={} — " +
+                "if no matching 'started by alarm' line follows, the background FGS start was refused",
+            reason, Date(whenMs), exempt?.toString() ?: "unknown"
+        )
+    }
+
     private fun rescheduleService() {
         // Schedule restart in 1 minute
-        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
-        val serviceIntent = Intent(
-            application,
-            BlockchainServiceImpl::class.java
-        )
-        val alarmIntent: PendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true)
-            PendingIntent.getForegroundService(
-                application, 0, serviceIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-        } else {
-            PendingIntent.getService(
-                application, 0, serviceIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-        }
-        // alarmManager.cancel(alarmIntent)
-
-        val restartTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
-        alarmManager.setInexactRepeating(
-            AlarmManager.RTC_WAKEUP,
-            restartTime,
-            AlarmManager.INTERVAL_FIFTEEN_MINUTES,
-            alarmIntent
-        )
-
+        val restartTime = armReplayRestartAlarm(application)
         log.info("Scheduled service restart in 1 minute at {}", Date(restartTime))
+        logAlarmDiagnostics("restart-15min", restartTime)
     }
 
     private val blockchainDownloadListener: MyDownloadProgressTracker =
@@ -1338,9 +1621,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             val wallet = application.wallet
             if (impediments.isEmpty() && peerGroup == null) {
                 if (!dashjEngineMayStart) {
-                    // Phase 5d cutover committed: the SDK owns L1 this launch,
-                    // so the dashj peergroup must never start (never two live
-                    // SPV engines for one user). Reversible via ROLLBACK.
+                    // The SDK owns L1 on every install; the dashj peergroup
+                    // starts only for the Tools › dashj sync diagnostic (never
+                    // two live SPV engines for one user, unless the user asks).
                     log.info("cutover committed — holding the dashj L1 engine; SDK owns L1 this launch")
                     return
                 }
@@ -1640,8 +1923,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     try {
                         // Mirror onCreate's gate resolution (coordinatorAllowsDashj
                         // is fixed for the launch; only the diagnostic flag changes).
+                        // Fail CLOSED: a read failure must not start dashj.
                         val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
-                            .getOrDefault(true)
+                            .getOrDefault(false)
                         val newEngineMayStart = coordinatorAllowsDashj || enabled
                         val changed = enabled != dashjSyncDiagnostic ||
                             newEngineMayStart != dashjEngineMayStart
@@ -1691,48 +1975,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
 
-        /**
-         * MO-995: a cutover ROLLBACK must un-hold the dashj engine on the
-         * LIVE service. The engine gate is resolved once per launch
-         * (onCreate), so when [CutoverCoordinator.rollbackForFailedBind]
-         * rolls a bind-stranded fresh wallet back to DUAL_RUNNING mid-launch
-         * (or the debug ROLLBACK_CUTOVER broadcast fires), nothing used to
-         * start the fallback engine until the next app launch — exactly the
-         * "no sync engine at all" outage this exists to end. Mirrors
-         * [onDashjDiagnosticChanged]'s live re-resolution under [checkMutex].
-         *
-         * Deliberately UN-HOLD only: the commit direction (a mid-launch
-         * auto-commit flipping `coordinatorAllowsDashj` false) keeps today's
-         * behavior — the running dashj engine finishes the launch and the
-         * hold takes effect on the next one. Stopping a live primary engine
-         * on commit is a separate decision this fix does not make.
-         */
-        fun onCutoverStateChanged() {
-            serviceScope.launch {
-                onCreateCompleted.await()
-                checkMutex.withLock {
-                    try {
-                        val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
-                            .getOrDefault(true)
-                        val newEngineMayStart = coordinatorAllowsDashj || dashjSyncDiagnostic
-                        if (!coordinatorAllowsDashj || newEngineMayStart == dashjEngineMayStart) {
-                            return@withLock
-                        }
-                        dashjHeldByCutover = false
-                        dashjEngineMayStart = true
-                        log.info(
-                            "cutover state rolled back mid-launch — un-holding the dashj L1 " +
-                                "engine (dashjEngineMayStart=true); starting the fallback sync"
-                        )
-                        if (peerGroup == null) {
-                            checkService()
-                        }
-                    } catch (e: Exception) {
-                        log.error("onCutoverStateChanged failed", e)
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -1852,13 +2094,62 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 activityHistory.joinToString(", ")
             )
 
-            // if idling, shutdown service
-            if (isSyncIdle(activityHistory)) {
+            // Phase 1b item 7: idle counters do NOT stop the service while a
+            // replay (restore / rescan / the post-upgrade SDK scan) is in
+            // progress. The flag used to only reschedule a one-minute restart
+            // after the stop; the reference install lost up to 155,000 blocks
+            // per teardown that way. One exception: while the SDK bind is
+            // BLOCKED ("SDK setup pending", Phase 1a item 3) nothing can
+            // replay, so the service is allowed to idle out — the unlock
+            // receiver / foreground edge bring it back.
+            val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
+            val replaying = blockchainState?.replaying == true && !bindBlocked
+            holdWakeLockWhileReplaying(replaying)
+
+            if (isSyncIdle(activityHistory) && replaying) {
+                log.info(
+                    "idle counters, but a replay is in progress ({}%) — keeping the service alive " +
+                        "until it completes",
+                    blockchainState?.percentageSync
+                )
+                return
+            }
+            if (isSyncIdle(activityHistory) && bindBlocked) {
+                log.info(
+                    "idling detected with the SDK bind blocked ({}) — stopping the service; the " +
+                        "unlock receiver / app foreground restart it",
+                    sdkBindRetryService.blocker.value
+                )
+            }
+            if (shouldStopForIdle(activityHistory, replaying)) {
                 log.info("idling detected, stopping service")
-                if (blockchainState?.replaying == true) {
-                    rescheduleService()
-                }
                 stopSelf()
+            }
+        }
+
+        /**
+         * On the SDK path no peergroup start acquires the partial wake lock,
+         * so a replay that the idle rule now keeps alive could still be
+         * dozed. Hold the lock for exactly the span the service is kept
+         * alive for: acquired while `replaying`, released when the replay
+         * completes. The dashj path's own acquire/release (checkService /
+         * stopPeerGroup) is untouched; onDestroy releases either way.
+         */
+        private fun holdWakeLockWhileReplaying(replaying: Boolean) {
+            if (!dashjHeldByCutover) return
+            val lock = wakeLock ?: return
+            try {
+                if (replaying && !replayWakeLockHeld) {
+                    log.info("replay in progress on the SDK path — acquiring the wake lock")
+                    lock.acquire()
+                    replayWakeLockHeld = true
+                } else if (!replaying && replayWakeLockHeld) {
+                    log.info("replay complete — releasing the wake lock")
+                    replayWakeLockHeld = false
+                    if (lock.isHeld) lock.release()
+                }
+            } catch (t: Throwable) {
+                log.warn("wake lock hold/release for the replay failed", t)
             }
         }
     }
@@ -1937,10 +2228,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             try {
                 log.info("onCreate() serviceScope waiting for cleanup {}", cleanupDeferred?.isActive)
 
-                val cleanupCompleted = withTimeoutOrNull(15_000) {
-                    cleanupDeferred?.await()
-                    true
-                } != null
+                val cleanupCompleted = awaitPreviousInstanceCleanup(15_000)
 
                 if (!cleanupCompleted) {
                     log.error("CRITICAL: Cleanup did not complete within 15 seconds")
@@ -1968,7 +2256,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // Phase 5d: resolve the cutover engine gate ONCE, before we
                 // release onCreateCompleted — checkService() awaits that latch,
                 // so the gate is always settled by the time it decides whether
-                // to start the peergroup. Failure defaults to true (start dashj).
+                // to start the peergroup. The coordinator answers false on every
+                // install (the SDK owns L1; dashj never starts on its own), and a
+                // read failure defaults to false too — never start dashj by
+                // accident. Only the Tools › dashj sync diagnostic below can
+                // turn the local gate back on.
                 //
                 // Resolved HERE, at the very top of the init, rather than after
                 // the block-store setup below: the missing-blockstore
@@ -1977,7 +2269,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // idle detector's tick receiver — registered further down — picks
                 // its sample source from the same flags.
                 val coordinatorAllowsDashj = runCatching { cutoverCoordinator.dashjEngineMayStart() }
-                    .getOrDefault(true)
+                    .getOrDefault(false)
                 // DIAGNOSTIC un-hold (Tools toggle): when the cutover has committed
                 // (SDK owns L1) but the tester turned on DASHJ_SYNC_DIAGNOSTIC, let the
                 // dashj peergroup start anyway so it syncs as a backup / parity check.
@@ -2030,9 +2322,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     resetMNListsOnPeerGroupStart = true
                 }
                 try {
-                    blockStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile)
+                    blockStore = openBlockStoreWaitingForLock(blockChainFile!!, "blockchain")
                     blockStore?.chainHead // detect corruptions as early as possible
-                    headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
+                    headerStore = openBlockStoreWaitingForLock(headerChainFile!!, "header")
                     headerStore?.chainHead // detect corruptions as early as possible
                     wallet.isNotifyTxOnNextBlock = false
                     val blockchainStoreMemoryError = serviceConfig.get(BLOCKCHAIN_STORE_MEMORY_FAILURE) ?: false
@@ -2190,10 +2482,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                 } catch (x: BlockStoreException) {
                     // Check if this is a file lock exception - don't delete files if another service is using them
-                    val isFileLockException = x.cause?.javaClass?.simpleName?.contains("OverlappingFileLockException") == true ||
-                                            x.message?.contains("OverlappingFileLockException") == true ||
-                                            x.message?.contains("FileLock") == true
-                    
+                    val isFileLockException = isFileLockException(x)
+
                     if (isFileLockException) {
                         log.warn("BlockStore creation failed due to file lock conflict - NOT deleting blockchain files as another service may be using them: {}", x.message)
                         val msg = "blockstore cannot be created due to file lock conflict - files preserved"
@@ -2340,17 +2630,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     .onEach { enabled -> (networkCallback as? NetworkCallbackImpl)?.onDashjDiagnosticChanged(enabled) }
                     .launchIn(serviceScope)
 
-                // MO-995: keep the cutover ROLLBACK effective on a LIVE service —
-                // the bind-failure fallback (CutoverCoordinator.rollbackForFailedBind)
-                // rolls CUT_OVER back to DUAL_RUNNING mid-launch, and the one-shot
-                // gate above would otherwise leave the wallet engine-less until the
-                // next app launch. Un-hold direction only; the first (current-value)
-                // emission is a no-op (the gate was just resolved from it).
-                dashPayConfig.observe(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.CUTOVER_STATE)
-                    .distinctUntilChanged()
-                    .onEach { (networkCallback as? NetworkCallbackImpl)?.onCutoverStateChanged() }
-                    .launchIn(serviceScope)
-
+                initCompleted = true
                 onCreateCompleted.complete(Unit)
                 log.info(".onCreate() finished")
             } catch (t: Throwable) {
@@ -2496,6 +2776,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         log.info(".onStartCommand($intent)")
+        intent?.getStringExtra(START_REASON_EXTRA)?.let { reason ->
+            log.info("ALARM-DIAG service started by alarm (reason={}) — a background FGS start WAS permitted", reason)
+        }
         super.onStartCommand(intent, flags, startId)
         // MO-995 CRASH FIX — this MUST stay synchronous, before the coroutine.
         //
@@ -2662,6 +2945,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onDestroy() {
         log.info(".onDestroy()")
+        pendingDestroys.incrementAndGet()
         super.onDestroy()
         // unregister receivers on the main thread, if they were registered
         // in some cases, onDestroy is called soon after onCreate and before its coroutine finishes
@@ -2676,6 +2960,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
 
         log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
+
+        rescheduleIfReplayInterrupted()
 
         // Monitor the entire cleanup process with timeout reporting
         val cleanupThread = Thread.currentThread()
@@ -2698,15 +2984,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
 
         serviceScope.launch {
+            // Prevent multiple cleanup operations using atomic flag.
+            //
+            // This claim is made BEFORE the try below, because the loser of the race must not run
+            // that try's finally block: it owns neither isCleaningUp nor cleanupDeferred nor
+            // checkMutex, and serviceJob.cancel() there would cancel the WINNER's cleanup out from
+            // under it (serviceScope is built on serviceJob). Returning from inside the try also
+            // ran the finally, so one scheduled destroy decremented pendingDestroys twice and could
+            // drive it negative — at which point isCleaningUpNow and awaitPreviousInstanceCleanup
+            // both report "nothing pending" and a new instance races the old one for the wallet
+            // file lock, which is the OverlappingFileLockException this counter exists to prevent.
+            if (!isCleaningUp.compareAndSet(false, true)) {
+                log.info("Another onDestroy() is already running cleanup, skipping duplicate cleanup")
+                pendingDestroys.decrementAndGet()
+                cleanupMonitorJob.cancel()
+                return@launch
+            }
+
             try {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
                 onCreateCompleted.await() // wait until onCreate is finished
                 log.info("The check() mutex is locked: {}", checkMutex.isLocked)
-                // Prevent multiple cleanup operations using atomic flag
-                if (!isCleaningUp.compareAndSet(false, true)) {
-                    log.info("Another onDestroy() is already running cleanup, skipping duplicate cleanup")
-                    return@launch
-                }
 
                 // Create cleanup coordination only if none exists or existing one is already completed
                 val existingCleanup = cleanupDeferred
@@ -2812,6 +3110,16 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // wakeLock is only assigned in onCreate; if onDestroy runs after an early/partial
                 // onCreate it may still be null, so guard rather than assert.
                 wakeLock?.let { lock ->
+                    // One release per owner: the replay's own acquisition first
+                    // (an interrupted replay never reached its completion
+                    // release), then whatever the dashj path still holds.
+                    if (replayWakeLockHeld) {
+                        replayWakeLockHeld = false
+                        if (lock.isHeld) {
+                            log.debug("releasing the replay's wake-lock acquisition")
+                            lock.release()
+                        }
+                    }
                     if (lock.isHeld) {
                         log.debug("wakelock still held, releasing")
                         lock.release()
@@ -2852,6 +3160,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     checkMutex.unlock()
                 }
                 isCleaningUp.set(false)
+                pendingDestroys.decrementAndGet()
                 cleanupDeferred?.complete(Unit)
                 // Cancel the cleanup monitor since cleanup is done
                 cleanupMonitorJob.cancel()

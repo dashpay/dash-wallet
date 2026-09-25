@@ -182,8 +182,23 @@ class BlockchainStateDataProvider @Inject constructor(
             // Null percent (transient SDK ERROR) preserves the row's value —
             // a peer hiccup must not flap isSynced() consumers 100 → 0 → 100.
             update.percentageSync?.let { blockchainState.percentageSync = it }
-            // The SDK has no replay concept — its re-scan reads as percent < 100.
-            blockchainState.replaying = false
+            // Phase 1b item 7: on the SDK path `replaying` means "the engine is
+            // still doing replay work", and it keeps the blockchain service alive
+            // (idle rule guard + wake lock) until it is not. This used to be
+            // hard-coded false, so nothing protected the post-upgrade replay
+            // and the one-minute restart alarm never fired after an idle stop.
+            //
+            // Set from the LIFECYCLE signal, not the display percent (review,
+            // 2026-09-23): percentageSync reads 100 at the iOS aggregate
+            // threshold while the committed cursor is thousands of blocks
+            // behind and the block pipeline still lags, and deriving the flag
+            // from it let a final-batch park drop the idle-stop guard and the
+            // wake lock with the engine mid-work. A null (transient ERROR /
+            // IDLE / CONNECTING) leaves the flag as it was. The DAO's
+            // clear-at-100% is opt-in and only dashj's scan-progress writer
+            // opts in, so neither this write nor an impediment-only rewrite
+            // of the row can undo the separation.
+            update.replayComplete?.let { blockchainState.replaying = !it }
             blockchainState.impediments = composeImpediments()
             blockchainStateDao.saveState(blockchainState)
             // A caught-up snapshot must not REGRESS a COMPLETE stage — that is the
@@ -250,7 +265,9 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainState.chainlockHeight = chainLockHeight
             blockchainState.mnlistHeight = mnListHeight
             blockchainState.percentageSync = percentageSync
-            blockchainStateDao.saveState(blockchainState)
+            // The one writer whose percent IS the scan position: dashj's own
+            // download progress ends a replay at 100%.
+            blockchainStateDao.saveState(blockchainState, clearReplayAtHundredPercent = true)
             syncStageFlow.value = syncStage?.toNeutral()
         }
     }
@@ -269,6 +286,52 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainStateDao.saveState(
                 BlockchainState(true)
             )
+        }
+    }
+
+    /**
+     * Phase 1b item 8 (docs/upgrade-memory-and-sync-plan.md): the cutover
+     * just handed L1 to the SDK on an EXISTING (upgraded) wallet, so the SDK
+     * is about to scan from the wallet's birth height while the row still
+     * carries dashj's "synced, 100%". Mark the replay as started NOW — before
+     * the SDK's first progress update, which can trail the commit by minutes
+     * — so `isSynced()` reads false (the home screen shows syncing rather than
+     * dashj's stale 100%, emulator finding 3), the idle rule keeps the
+     * service alive (item 7), and the one-minute restart alarm applies
+     * (item 9). Only restore and rescan used to set the flag.
+     *
+     * Heights, dates and impediments are preserved; the percentage is zeroed
+     * because the SDK has scanned nothing yet — its first update replaces it
+     * with the real figure. Idempotent: a row already mid-replay is left
+     * alone. Never throws.
+     */
+    fun markReplayStartedForSdkTakeover() {
+        coroutineScope.launch {
+            val state = try {
+                blockchainStateDao.getState()
+            } catch (ex: SQLiteException) {
+                null
+            } ?: BlockchainState()
+            if (state.replaying && state.percentageSync < 100) return@launch
+            state.replaying = true
+            state.percentageSync = 0
+            blockchainStateDao.saveState(state)
+            // The STAGE has to move with the row, in this same serialized job.
+            //
+            // isSynced() is fixed by the replaying flag above, but getSyncStage()
+            // reads syncStageFlow, and dashj typically leaves that at COMPLETE —
+            // it had finished before the cutover handed the wallet over. Nothing
+            // corrects it until the SDK's first progress update lands, so every
+            // syncStage consumer (MainViewModel.observeSyncStage) reads "finished"
+            // over a row that says "replaying from 0%".
+            //
+            // BLOCKS, not null: null reads as OFFLINE (see getSyncStage), which
+            // would claim the opposite falsehood — disconnected rather than done
+            // — and a takeover replay IS a block scan. A real stage from the SDK
+            // replaces this on the first update, and it cannot be held back by
+            // the COMPLETE-preservation rule above precisely because it is no
+            // longer COMPLETE.
+            syncStageFlow.value = SyncStage.BLOCKS
         }
     }
 

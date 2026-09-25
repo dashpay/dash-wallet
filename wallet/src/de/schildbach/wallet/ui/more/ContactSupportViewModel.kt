@@ -61,6 +61,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TreeSet
+import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
 
@@ -104,6 +105,15 @@ class ContactSupportViewModel @Inject constructor(
          * one was collected.
          */
         private const val MAX_SDK_RUN_LOG_TAIL = 2L * 1024 * 1024
+
+        /**
+         * Caps for the app's own logcat ([collectLogcat]). Two independent
+         * limits on purpose: `-t` bounds what logcat reads, the byte cap
+         * bounds what a device with unusually long lines can hand back.
+         */
+        private const val MAX_LOGCAT_LINES = 20_000
+        private const val MAX_LOGCAT_TAIL = 2L * 1024 * 1024
+        private const val LOGCAT_TIMEOUT_SECS = 20L
     }
 
     val wallet: Wallet? = walletDataProvider.wallet
@@ -276,6 +286,38 @@ class ContactSupportViewModel @Inject constructor(
             } catch (x: Exception) {
                 log.info("problem attaching the SDK run.log", x)
             }
+
+            // THE APP'S OWN LOGCAT. wallet.log carries only what this app
+            // logs through slf4j, so an entire class of evidence has never
+            // reached a support report: the framework's own warnings about
+            // THIS process. `SQLiteConnectionPool` refusing the SDK database,
+            // ART's GC and "Suspending all threads took", StrictMode, the
+            // ANR and low-memory notices — all logged under our pid, none of
+            // them ours to write.
+            //
+            // That gap is not hypothetical. Section 34's database-lock lead —
+            // a primary-connection wait on dash-sdk.db immediately before a
+            // filter stall — is visible ONLY here, which means no tester
+            // bundle we have collected could ever have shown it, on any
+            // device, including both of the reference installs.
+            //
+            // Android has restricted `logcat` to the caller's own process
+            // since Jelly Bean, so this needs no permission and can expose no
+            // other app's data. `--pid` makes that explicit rather than
+            // implicit.
+            runCatching { collectLogcat(reportDir) }
+                .onSuccess { file ->
+                    if (file != null) {
+                        attachments.add(
+                            FileProvider.getUriForFile(
+                                application,
+                                application.packageName + ".file_attachment", file
+                            )
+                        )
+                        log.info("attached {} bytes of this process's logcat", file.length())
+                    }
+                }
+                .onFailure { log.info("problem attaching logcat", it) }
         }
 
         if (collectWalletDump) {
@@ -409,6 +451,60 @@ class ContactSupportViewModel @Inject constructor(
      * throws, so a mid-write rotation or permission hiccup cannot sink the
      * report.
      */
+    /**
+     * This process's own logcat, tail-capped, or null when nothing could be
+     * read.
+     *
+     * Deliberately NOT the whole buffer: `-t` asks logcat for the most recent
+     * lines only, so the cost is bounded before a single byte crosses the
+     * pipe, and the byte cap below bounds it again for a device whose lines
+     * are unusually long.
+     *
+     * `main` and `crash` are the two buffers that carry app entries — `crash`
+     * holds the fatal exception that `main` may have lost to rotation, which
+     * is exactly the case a support report is sent about.
+     *
+     * Never throws and never blocks the report for long: the process is given
+     * a hard [LOGCAT_TIMEOUT_SECS] and destroyed if it outstays it. A report
+     * without logcat is worth far more than a report that never finishes.
+     */
+    private fun collectLogcat(reportDir: File): File? {
+        val dest = File(reportDir, "logcat.txt")
+        var process: Process? = null
+        return try {
+            process = ProcessBuilder(
+                "logcat", "-d", "-v", "time",
+                "-b", "main", "-b", "crash",
+                "-t", MAX_LOGCAT_LINES.toString(),
+                "--pid=${android.os.Process.myPid()}"
+            ).redirectErrorStream(true).start()
+
+            var written = 0L
+            FileOutputStream(dest).use { out ->
+                process.inputStream.use { input ->
+                    val buffer = ByteArray(8192)
+                    while (written < MAX_LOGCAT_TAIL) {
+                        val read = input.read(buffer)
+                        if (read <= 0) break
+                        val take = minOf(read.toLong(), MAX_LOGCAT_TAIL - written).toInt()
+                        out.write(buffer, 0, take)
+                        written += take
+                    }
+                }
+            }
+            if (!process.waitFor(LOGCAT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
+                log.info("logcat did not exit within {}s — taking what it produced", LOGCAT_TIMEOUT_SECS)
+            }
+            if (written > 0L) dest else { dest.delete(); null }
+        } catch (t: Throwable) {
+            log.info("could not read this process's logcat: {}", t.toString())
+            runCatching { dest.delete() }
+            null
+        } finally {
+            runCatching { process?.destroy() }
+        }
+    }
+
     private fun copyTail(source: File, dest: File, maxBytes: Long): File? {
         return try {
             FileInputStream(source).use { fis ->

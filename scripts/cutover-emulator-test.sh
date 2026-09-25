@@ -169,6 +169,9 @@ assert_log() {
 }
 
 # refute_log <label> <grep-pattern>   — PASS if absent from the new lines
+# Samples ONCE. Correct only for a window that is already closed — i.e. after
+# something has been asserted that could only be logged later than the line
+# being refuted. For "this must never happen", use refute_log_for.
 refute_log() {
   local label="$1" pat="$2"
   local w; w=$(since_mark)
@@ -176,6 +179,37 @@ refute_log() {
     fail "$label" "(unexpected: $pat)"
     grep -E "$pat" "$w" | head -2 | sed 's/^/          /'
   else printf '   \033[32mPASS\033[0m %s\n' "$label"; fi
+}
+
+# refute_log_for <label> <grep-pattern> [budget-secs]
+# PASS only if the pattern stays absent for the WHOLE budget.
+#
+# The counterpart to assert_log's polling, and needed for the same reason.
+# check() is asynchronous and can reach checkService() long after the event
+# that triggered it, so a single sample taken seconds after launch proves
+# nothing about a forbidden start: the window simply had not been written yet
+# when it was read. A one-shot refutation of a line that has not had time to
+# appear passes for free — the worst kind of green.
+#
+# Uses the same default budget as assert_log so the two agree on how long
+# "startup" lasts on this emulator.
+refute_log_for() {
+  local label="$1" pat="$2" budget="${3:-45}" waited=0 w
+  # Check-then-sleep, with the check repeated ONCE MORE after the deadline.
+  # The first version checked through second 40 of a 45 s budget, slept to
+  # 45 and exited PASS — a forbidden line written in the final five seconds
+  # produced a false pass (CodeRabbit on #1568).
+  while :; do
+    w=$(since_mark)
+    if grep -qE "$pat" "$w"; then
+      fail "$label" "(unexpected after ${waited}s: $pat)"
+      grep -E "$pat" "$w" | head -2 | sed 's/^/          /'
+      return 0
+    fi
+    [ "$waited" -ge "$budget" ] && break
+    sleep 5; waited=$((waited + 5))
+  done
+  printf '   \033[32mPASS\033[0m %s (absent for %ss)\n' "$label" "$budget"
 }
 
 # assert_not_committed <label> — reads the PERSISTED state, not the log.
@@ -399,15 +433,13 @@ s1)
   require_state PRECOMMIT
   fake_pre_cutover_previous_launch || exit 1
   mark_log
-  note "launch 1: boundary should latch, commit should DECLINE (bind has not run yet)"
+  note "launch 1: the upgrade launch itself must commit, arm the explainer, and never start dashj"
   wake_unlock; launch_app
-  assert_log "launch 1 declined the commit"      "declining to commit .*bind has never succeeded"
-  refute_log "launch 1 did NOT cut over"         "DUAL_RUNNING -> CUT_OVER"
-  note "launch 2: bind marker now set, latch carries the crossing -> should commit"
-  adbs am force-stop "$PKG"; sleep 2; launch_app
-  assert_log "launch 2 committed"                "cutover state DUAL_RUNNING -> CUT_OVER \(upgraded-wallet launch\)"
+  assert_log "launch 1 committed"                "cutover state DUAL_RUNNING -> CUT_OVER \(upgraded-wallet launch\)"
   assert_log "explainer armed"                   "one-time sync explainer armed"
+  assert_log "dashj held"                        "holding the dashj L1 engine"
   assert_log "SDK L1 engine started"             "L1 shadow SPV started"
+  refute_log_for "dashj did NOT start"           "starting peergroup"
   ;;
 
 s2)
@@ -421,12 +453,14 @@ s2)
   note "locking the screen so the bind runs while Keystore's super key is zeroed"
   lock_screen
   start_service
-  assert_log "keystore denied the master alias"  "Keystore denied '(encrypt|createWallet)' on lock-bound alias"
-  assert_log "commit declined on a broken bind"  "declining to commit .*bind has never succeeded"
-  refute_log "did NOT cut over"                  "DUAL_RUNNING -> CUT_OVER"
-  assert_log "dashj is the live engine"          "starting peergroup"
-  refute_log "wallet is NOT engine-less"         "holding the dashj L1 engine"
-  note "the old bug looked like: 'holding the dashj L1 engine' with no 'L1 shadow SPV started'"
+  # A first bind on a provably locked device is DEFERRED before the keystore is
+  # asked ("SDK bind deferred: the device is locked", SdkWalletBinder); the
+  # denial is the shape on devices whose lock state cannot be established.
+  assert_log "locked-device bind deferred or denied" "SDK bind deferred: the device is locked|Keystore denied '(encrypt|createWallet)' on lock-bound alias"
+  assert_log "committed despite the broken bind" "DUAL_RUNNING -> CUT_OVER"
+  assert_log "dashj held"                        "holding the dashj L1 engine"
+  refute_log_for "dashj did NOT start as a fallback" "starting peergroup"
+  note "no-fallback policy: the bind is retried at unlock (s3); nothing syncs until then"
   ;;
 
 s3)
@@ -452,27 +486,27 @@ s3)
   # nothing. walletB restarted repeatedly and never recovered.
   refute_log "healed WITHOUT a process restart"  "WalletApplication.onCreate\(\)"
 
-  # dashj must still own L1 for this launch. The commit is NOT expected here and
-  # asserting it was my error: the upgrade seam only runs at process start, so
-  # in-session the only route is the readiness-gated auto-commit, which needs
-  # MIN_PARITY_STREAK readings at a 10s throttle AND the SDK scan caught up to
-  # tip. 45s cannot satisfy that, so a missing commit here is correct deferral,
-  # not a defect. The commit is checked on the NEXT launch instead — see s3b.
-  assert_not_committed "dashj still owns L1 (state not committed)"
-  note "commit is deliberately NOT asserted here — run s3b to check the next launch"
+  # The state was already committed in s2 (unconditional commit); the heal
+  # only has to start the SDK engine.
+  assert_log "SDK L1 engine started after the heal" "L1 shadow SPV started"
+  refute_log_for "dashj did NOT start"           "starting peergroup"
   ;;
 
 s3b)
   say "S3b — the launch AFTER an in-session heal should commit"
   require_device; require_root
   show_state
-  note "the bind marker must be set by now (s3 healed it); the seam can act at process start"
+  note "already committed in s2; this launch must simply come up SDK-only"
   adbs am force-stop "$PKG"; sleep 3
   mark_log
   wake_unlock
   launch_app
-  assert_log "committed on the next launch"      "cutover state DUAL_RUNNING -> CUT_OVER|READY_OBSERVED -> CUT_OVER"
+  assert_log "dashj held"                        "holding the dashj L1 engine"
   assert_log "SDK L1 engine started"             "L1 shadow SPV started"
+  # S3b had no negative assertion at all: it is the launch that follows an
+  # in-session heal, which is exactly the shape where a late checkService()
+  # could still reach for dashj.
+  refute_log_for "dashj did NOT start"           "starting peergroup"
   ;;
 
 s4)
@@ -526,7 +560,7 @@ s4)
 log)
   require_device
   f=$(pull_log); echo "$f"
-  grep -nE "cutover state|declining to commit|Keystore denied|L1 shadow SPV started|L1ShadowLifecycle STOPPED|memory pressure \(onTrimMemory|idling detected|starting peergroup|holding the dashj L1 engine|bind has never succeeded|explainer armed" "$f" | tail -40
+  grep -nE "cutover state|declining to commit|Keystore denied|SDK bind deferred|L1 shadow SPV started|L1ShadowLifecycle STOPPED|memory pressure \(onTrimMemory|idling detected|starting peergroup|holding the dashj L1 engine|bind has never succeeded|explainer armed" "$f" | tail -40
   ;;
 
 *)

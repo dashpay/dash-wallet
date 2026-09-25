@@ -193,7 +193,11 @@ class SdkL1SendServiceTest {
      */
     private fun caughtUpProgress() = ShadowSyncProgress(
         phase = ShadowSyncPhase.FILTERS,
-        overallPercent = 1.0, // the SDK under-reports the percent; the gate ignores it
+        // The SDK's three-phase mean; 1.0 is honest for a fixture at the tip.
+        // Since 2026-09-21 the gate READS it (the iOS aggregate rule), so a
+        // fixture that is behind on heights must lower this too — see
+        // gateClosed_scanNotCaughtUp_isNotBroadcast.
+        overallPercent = 1.0,
         headerHeight = 1_500_000,
         headerTarget = 1_500_000,
         filterHeight = 1_500_000,
@@ -520,7 +524,9 @@ class SdkL1SendServiceTest {
         // on caught-up alone — so these fixtures are behind on the HEIGHTS.
         val closedProgressions = listOf(
             caughtUpProgress().copy(phase = ShadowSyncPhase.HEADERS, headerHeight = 1_400_000, filterHeight = 0),
-            caughtUpProgress().copy(filterHeight = 1_400_000),
+            // 100k filters behind: the aggregate has to be honest too —
+            // (100 + 100 + 93.3) / 3 — or the iOS rule would call it caught up.
+            caughtUpProgress().copy(filterHeight = 1_400_000, overallPercent = 0.978),
             caughtUpProgress().copy(
                 phase = ShadowSyncPhase.SYNCED,
                 headerHeight = 0, headerTarget = 0, filterHeight = 0, filterTarget = 0
@@ -531,6 +537,31 @@ class SdkL1SendServiceTest {
                 .sendToAddress(validAddress, amount, emptyWallet = false)
             assertTrue("$progress must close the gate", result is SdkWriteResult.NotBroadcast)
         }
+        assertEquals(0, source.sendCalls)
+    }
+
+    @Test
+    fun gateClosed_pipelineLagging_isNotBroadcast() = runBlocking {
+        // 2026-09-21: the DISPLAY predicate dropped the pipeline-lag veto (iOS
+        // rule). The SEND gate must not follow it. Filters at the tip and the
+        // aggregate at 100%, but the wallet cursor 300k blocks back = matched
+        // blocks still being processed = this wallet's own spends not yet
+        // applied to the ledger. A send built on that ledger can pick a UTXO
+        // already spent — the double-spend shape of the 48.86 DASH incident.
+        val source = readySource()
+        val lagging = caughtUpProgress().copy(walletSyncedHeight = 1_200_000)
+        assertTrue("fixture must read caught up for the display", lagging.scanCaughtUpToTip)
+        assertTrue("…and provably lagging", lagging.blockPipelineLagging)
+
+        val result = service(source, progress = { lagging })
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(
+            "the reason must name the pipeline, not the scan: $reason",
+            reason.contains("processing matched blocks")
+        )
         assertEquals(0, source.sendCalls)
     }
 
@@ -560,7 +591,8 @@ class SdkL1SendServiceTest {
                 .probeSendGate().allowed
         )
         assertFalse(
-            service(source, progress = { caughtUpProgress().copy(filterHeight = 1_400_000) })
+            // 100k behind with an honest aggregate, or the iOS rule opens it.
+            service(source, progress = { caughtUpProgress().copy(filterHeight = 1_400_000, overallPercent = 0.978) })
                 .probeSendGate().allowed
         )
         // Contained like a real send's gate read: a progress throw = closed.

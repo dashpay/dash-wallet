@@ -24,9 +24,18 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.schildbach.wallet.AppForegroundMonitor
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -58,7 +67,7 @@ internal fun bindRetryDelayMs(retriesAttempted: Int): Long = when (retriesAttemp
  * bind — leaving the wallet with no sync engine at all and the Network
  * Monitor showing a dead "Not started".
  *
- * Three cooperating mechanisms:
+ * Two cooperating mechanisms:
  *
  * 1. **Backoff-capped re-invocation** ([maybeRetry]) — driven by
  *    [CutoverUiDataService]'s existing 5 s bound-wallet wait loop, which
@@ -68,22 +77,44 @@ internal fun bindRetryDelayMs(retriesAttempted: Int): Long = when (retriesAttemp
  *    bind pass. [noteAppForeground] resets the ladder so a user returning
  *    to the app is never stuck behind the hourly tail.
  * 2. **Device-unlock heal** — a runtime-registered
- *    [Intent.ACTION_USER_PRESENT] receiver (RECEIVER_NOT_EXPORTED) fires
- *    an immediate retry on the next unlock: the exact heal condition for
- *    the keystore false-locked class. Armed once, on the first retry
- *    consultation after a failure; retries once the wallet is bound are
- *    cheap no-ops.
- * 3. **Engine fallback** — after [rollbackAfterFailures] consecutive
- *    failed passes ([SdkWalletBinder.consecutiveBindFailures]) the
- *    committed cutover is rolled back
- *    ([CutoverCoordinator.rollbackForFailedBind]) so
- *    `dashjEngineMayStart` is true again and the user syncs on the dashj
- *    fallback engine. Skipped while the device is PROVABLY locked
- *    ([KeyguardManager.isDeviceLocked]) — a genuinely-locked keystore
- *    denial is expected, heals on unlock, and must not flip engines.
+ *    [Intent.ACTION_USER_PRESENT] receiver (RECEIVER_EXPORTED; see
+ *    `registerUserPresentReceiver` for why the flag matters) fires an
+ *    immediate retry on the next unlock. Armed on the FIRST failure, not on
+ *    a later poll.
  *
- * The invariant all three protect: the gate always ends with dashj
- * allowed OR the SDK wallet bound — never both held.
+ *    It has two known limits, both observed. The receiver lives in the
+ *    process, so a background process with no foreground service cannot run
+ *    it: the 2026-09-16 upgrade test logged `ActivityManager: freezing <pid>`
+ *    30 s after the package-replaced broadcast, then "Sending oneway calls to
+ *    frozen process" while `USER_PRESENT` went out. Starting the blockchain
+ *    service on that path (see `WalletApplication
+ *    .startBlockchainServiceAfterUpgrade`) keeps the process unfrozen and
+ *    closes that hole. And some OEMs simply do not deliver the broadcast:
+ *    walletB's HONOR PTP-N49 delivered zero in ten hours.
+ *
+ * Because of those limits the ongoing notification is the guaranteed path:
+ * the user opens the app, [noteAppForeground] runs, and the bind completes —
+ * 1.6 s after the app was opened on that same test.
+ *
+ * There is deliberately NO engine fallback. A third mechanism used to roll
+ * the committed cutover back to dashj after five consecutive failures with
+ * the device unlocked. That fallback is what put two SPV engines in one
+ * process on the reference install (docs/upgrade-memory-and-sync-plan.md
+ * §12), and under the no-fallback policy the dashj peergroup starts only
+ * for the Tools › dashj sync diagnostic. A bind that keeps failing keeps
+ * retrying — on the ladder, on unlock, on foreground.
+ *
+ * 3. **"SDK setup pending" state** (Phase 1a item 3) — instead of a
+ *    fallback, every failed pass ([SdkWalletBinder.lastBindFailure]) is
+ *    CLASSIFIED ([classifyBindFailure]) into an [SdkBindBlocker] and
+ *    published on [blocker]. The unlock receiver is armed the moment the
+ *    first failure lands (not on a later poll), the classification is
+ *    persisted for the support report ([DashPayConfig.SDK_BIND_BLOCKER]),
+ *    a notification asks the user to unlock the phone when the app is in
+ *    the background, and the home screen shows a sheet while the app is
+ *    open. The reference install (2026-09-14) sat in this state for 22
+ *    hours with nothing telling the user; walletB's HONOR never healed at
+ *    all because its keystore denied while unlocked.
  *
  * Never throws into a caller; every entry point contains its own failures.
  * The SDK-side hardening (a typed keystore error + internal retry in
@@ -98,8 +129,6 @@ class SdkBindRetryService internal constructor(
     private val consecutiveBindFailures: () -> Int,
     /** One full bind pass — [SdkWalletBinder.bindIfEnabled], which never throws. */
     private val runBindPass: suspend () -> Unit,
-    /** [CutoverCoordinator.rollbackForFailedBind]. */
-    private val rollbackCutover: suspend (Int) -> Unit,
     /**
      * Register the unlock receiver; the callback fires on every
      * ACTION_USER_PRESENT. Returns whether registration succeeded (a
@@ -107,14 +136,24 @@ class SdkBindRetryService internal constructor(
      */
     private val registerUnlockReceiver: (onUserPresent: () -> Unit) -> Boolean,
     /**
-     * Whether the device is PROVABLY locked right now. True suppresses the
-     * engine rollback (see class KDoc); the false-locked keystore class
-     * reads false here, which is exactly when the rollback must fire.
+     * Whether the device is PROVABLY locked right now ([KeyguardManager
+     * .isDeviceLocked]). Used to classify a failed pass: a denial while
+     * locked is expected and heals on unlock; a denial while unlocked is the
+     * false-locked keystore class.
      */
     private val deviceProvablyLocked: () -> Boolean = { false },
     private val now: () -> Long = System::currentTimeMillis,
     private val retryDelayMs: (Int) -> Long = ::bindRetryDelayMs,
-    private val rollbackAfterFailures: Int = ROLLBACK_AFTER_CONSECUTIVE_FAILURES
+    /** [SdkWalletBinder.lastBindFailure]: null once bound, else the latest failed pass. */
+    private val bindFailures: Flow<SdkBindFailure?> = emptyFlow(),
+    /** [SdkWalletBinder.bindEstablished]: true once a pass in THIS process bound the wallet. */
+    private val bindEstablished: Flow<Boolean> = emptyFlow(),
+    /** Durable record of the current blocker for the support report. */
+    private val persistBlocker: suspend (SdkBindBlocker?) -> Unit = {},
+    /** Post / clear the "unlock your phone" notification (background only). */
+    private val showPendingNotice: (SdkBindBlocker) -> Unit = {},
+    private val clearPendingNotice: () -> Unit = {},
+    private val appInBackground: () -> Boolean = { false }
 ) {
     @Inject
     constructor(
@@ -122,6 +161,7 @@ class SdkBindRetryService internal constructor(
         binder: SdkWalletBinder,
         nonInteractiveWalletUnlock: NonInteractiveWalletUnlock,
         cutoverCoordinator: CutoverCoordinator,
+        dashPayConfig: DashPayConfig,
         scope: CoroutineScope
     ) : this(
         scope = scope,
@@ -130,7 +170,6 @@ class SdkBindRetryService internal constructor(
         // The same non-interactive unlock recipe every background binding
         // trigger uses (PlatformSyncService.kickSdkEngines) — never a prompt.
         runBindPass = { binder.bindIfEnabled(nonInteractiveWalletUnlock::unlockOrNull) },
-        rollbackCutover = { failures -> cutoverCoordinator.rollbackForFailedBind(failures) },
         registerUnlockReceiver = { onUserPresent ->
             registerUserPresentReceiver(context, onUserPresent)
         }, // (top-level helper — a companion reference is not legal in constructor delegation)
@@ -138,10 +177,247 @@ class SdkBindRetryService internal constructor(
             try {
                 context.getSystemService(KeyguardManager::class.java)?.isDeviceLocked == true
             } catch (t: Throwable) {
-                false // unknowable reads as unlocked — the rollback stays available
+                false // unknowable reads as unlocked
+            }
+        },
+        bindFailures = binder.lastBindFailure,
+        bindEstablished = binder.bindEstablished,
+        persistBlocker = { blocker ->
+            dashPayConfig.set(DashPayConfig.SDK_BIND_BLOCKER, blocker?.name ?: "NONE")
+        },
+        showPendingNotice = { blocker -> SdkBindPendingNotification.show(context, blocker) },
+        clearPendingNotice = { SdkBindPendingNotification.clear(context) },
+        appInBackground = { AppForegroundMonitor.isInBackground }
+    )
+
+    /**
+     * Why the bind is pending right now; null while the wallet is bound (or
+     * before the first pass). The home screen renders a sheet from this and
+     * the support report records it.
+     */
+    private val _blocker = MutableStateFlow<SdkBindBlocker?>(null)
+    val blocker: StateFlow<SdkBindBlocker?> = _blocker.asStateFlow()
+
+    /** Consecutive keystore denials seen with the device reporting UNLOCKED. */
+    @Volatile
+    private var unlockedDenialStreak = 0
+
+    /** Consecutive non-keystore failures. */
+    @Volatile
+    private var otherFailureStreak = 0
+
+    @Volatile
+    private var lastClassifiedFailureAtMs = Long.MIN_VALUE
+
+    /**
+     * Serializes [onBindFailureChanged] against [onBindEstablished].
+     *
+     * The two run on SEPARATE collectors, and both suspend part-way through
+     * (persistBlocker) while holding a decision made before the suspension.
+     * Re-reading `_blocker` after the suspension is not enough on its own: the
+     * failure handler can pass that check and then be overtaken, so its
+     * showPendingNotice lands AFTER onBindEstablished's clearPendingNotice and
+     * the "unlock your device" notification survives on a bound wallet, with
+     * nothing left to dismiss it until a next failure a healed bind never
+     * produces. Holding one lock across each handler's whole body makes the
+     * post-or-clear decision and the act of posting indivisible.
+     */
+    private val outcomeMutex = Mutex()
+
+    /**
+     * The most recent value the failure feed delivered, recorded by the
+     * collector BEFORE it waits on [outcomeMutex]. The identity check in
+     * [classifyAndAnnounce] compares against this under the lock.
+     *
+     * Why the mutex alone is not enough (CodeRabbit on #1568): the feed is a
+     * StateFlow, so the collector only ever sees the latest failure — but a
+     * failure A can be parked waiting for the lock while success B and then
+     * failure C are delivered. When A finally runs it is stale twice over,
+     * yet nothing about A itself says so; the timestamp dedup below only
+     * catches a RE-emission of the same failure. Recording the newest
+     * emission here, sequentially, gives the lock holder a current value to
+     * compare against: A is not it, so A is dropped instead of advancing the
+     * streaks and publishing an outdated blocker ahead of C.
+     */
+    @Volatile
+    private var latestBindFailure: SdkBindFailure? = null
+
+    init {
+        scope.launch {
+            try {
+                bindFailures.collect { onBindFailureChanged(it) }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("SDK bind failure feed died; blocker classification stops", t)
             }
         }
-    )
+        scope.launch {
+            try {
+                bindEstablished.collect { established -> if (established) onBindEstablished() }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("SDK bind success feed died; the durable blocker may go stale", t)
+            }
+        }
+    }
+
+    /**
+     * A pass in THIS process left the wallet bound: drop the in-memory blocker
+     * AND overwrite the durable record with NONE.
+     *
+     * Kept separate from the `failure == null` arm of [onBindFailureChanged] on
+     * purpose. [SdkWalletBinder.lastBindFailure] is null both when the wallet is
+     * bound and before the first pass of a fresh process, so that arm cannot
+     * safely write NONE — doing so would erase a real blocker before this
+     * process has attempted anything. It therefore keys off the in-memory
+     * [_blocker], which a new process starts at null, so a blocker persisted by
+     * an EARLIER process was never cleared on success.
+     *
+     * Caught on emulator-5554 (2026-09-16): the app was force-stopped, the bind
+     * then succeeded in the new process and the notification cleared, yet
+     * `sdk_bind_blocker` still read OTHER in the support report.
+     */
+    private suspend fun onBindEstablished() = outcomeMutex.withLock {
+        // Stale-success guard (review, 2026-09-22). Success and failure ride
+        // separate StateFlows collected by separate coroutines, so a success
+        // already parked on this mutex can run AFTER a newer failure has
+        // classified its blocker — and would null it, clear the notice and
+        // persist NONE while the binder still says a retry is pending, with
+        // no further emission to put the UI back. The binder's live
+        // `bindRetryPending` tells the two apart: `noteBindOutcome` lowers it
+        // before it raises `bindEstablished` and raises it before it publishes
+        // a failure, so a true here means a newer failure owns the state and
+        // this success is history.
+        if (bindRetryPending()) {
+            log.info(
+                "SDK bind established signal superseded by a newer failure — leaving its blocker ({}) in place",
+                _blocker.value
+            )
+            return@withLock
+        }
+        val previous = _blocker.value
+        unlockedDenialStreak = 0
+        otherFailureStreak = 0
+        _blocker.value = null
+        log.info(
+            "SDK bind established — clearing the pending state ({})",
+            previous ?: "no blocker recorded in this process"
+        )
+        clearPendingNotice()
+        runCatching { persistBlocker(null) }
+            .onFailure { if (it is CancellationException) throw it; log.warn("failed to persist the cleared bind blocker", it) }
+    }
+
+    private suspend fun onBindFailureChanged(failure: SdkBindFailure?) {
+        // Success is NOT handled here. `lastBindFailure` goes null both when the
+        // wallet is bound and before the first pass of a fresh process, so this
+        // feed cannot tell them apart. [onBindEstablished] owns the whole
+        // success path, keyed off a signal that only a bound pass raises.
+        // Recorded BEFORE the lock, null included: this collector is
+        // sequential, so by the time a queued call acquires the mutex this
+        // already holds whatever the feed delivered after it — a newer
+        // failure, or the null a success leaves behind.
+        latestBindFailure = failure
+        if (failure == null) return
+        outcomeMutex.withLock { classifyAndAnnounce(failure) }
+    }
+
+    /** The body of [onBindFailureChanged], under [outcomeMutex]. */
+    private suspend fun classifyAndAnnounce(failure: SdkBindFailure) {
+        // IDENTITY FIRST, under the lock: is this still the feed's latest
+        // value? A failure that waited on the mutex while a success (null) or
+        // a newer failure was delivered is stale, and classifying it would
+        // advance the streaks and publish an outdated blocker ahead of the
+        // current one. See [latestBindFailure].
+        if (failure !== latestBindFailure) {
+            log.info(
+                "SDK bind failure from {} superseded while waiting for classification; dropping it",
+                failure.atMs
+            )
+            return
+        }
+        // LIVE OUTCOME, under the lock (review, 2026-09-24): the identity
+        // check above compares against a value THIS sequential collector
+        // wrote, so it cannot see a success the OTHER collector delivered
+        // while this handler waited on the mutex — that success cleared the
+        // blocker, and classifying now would republish it. The binder's live
+        // `bindRetryPending` can see it: false means the bind has since
+        // succeeded and this failure is history.
+        if (!bindRetryPending()) {
+            log.info(
+                "SDK bind failure from {} arrived after the bind succeeded; dropping it",
+                failure.atMs
+            )
+            return
+        }
+        // StateFlow conflates; a re-emission of the same failure is not a new one.
+        if (failure.atMs == lastClassifiedFailureAtMs) return
+        lastClassifiedFailureAtMs = failure.atMs
+
+        val locked = deviceProvablyLocked()
+        if (isKeystoreDenial(failure.cause)) {
+            otherFailureStreak = 0
+            val lockedByEvidence = locked || keystoreDenialReportsDeviceLocked(failure.cause) == true
+            if (lockedByEvidence) unlockedDenialStreak = 0 else unlockedDenialStreak++
+        } else {
+            unlockedDenialStreak = 0
+            otherFailureStreak++
+        }
+        val blocker = classifyBindFailure(
+            failure.cause,
+            deviceProvablyLocked = locked,
+            unlockedDenialStreak = unlockedDenialStreak,
+            otherFailureStreak = otherFailureStreak
+        )
+        val changed = _blocker.value != blocker
+        _blocker.value = blocker
+        log.warn(
+            "SDK bind pending: {} ({} consecutive failure(s); device provably locked={}; " +
+                "unlocked keystore denials in a row={}; other failures in a row={}; cause={})",
+            blocker, failure.consecutiveFailures, locked, unlockedDenialStreak, otherFailureStreak,
+            failure.cause.toString().take(200)
+        )
+        // Arm the unlock heal NOW — not on some later poll that may never come.
+        armUnlockReceiver()
+        if (changed) {
+            runCatching { persistBlocker(blocker) }
+                .onFailure { if (it is CancellationException) throw it; log.warn("failed to persist the bind blocker", it) }
+        }
+        // Re-read _blocker AFTER persistBlocker's suspension. onBindEstablished
+        // can run in the gap: it sets _blocker to null and calls
+        // clearPendingNotice(), and this would then resume and repost "unlock
+        // your device" for a wallet that is already bound — a notification with
+        // nothing left to dismiss it until the next failure, which on a healed
+        // bind never comes. The blocker this call classified has to still be the
+        // one in force.
+        if (_blocker.value == blocker && appInBackground()) showPendingNotice(blocker)
+    }
+
+    /**
+     * The app left the foreground with the bind still pending: tell the user
+     * what it is waiting for, since nothing on screen can.
+     *
+     * Decided and posted UNDER [outcomeMutex], from live state (review,
+     * 2026-09-25): this callback used to read `_blocker` and post outside the
+     * lock, so a success that cleared the blocker and cancelled the notice
+     * between its read and its `notify()` left an "unlock your device"
+     * notification standing on a bound wallet — and [noteAppForeground] could
+     * not repair it, because it clears only while a blocker is recorded. The
+     * callback is not suspending (it comes from the foreground monitor on the
+     * main thread), so the lock is taken on the service scope; the post is
+     * skipped if the bind is no longer pending or the app is already back in
+     * the foreground by the time the lock is held.
+     */
+    fun noteAppBackground() {
+        scope.launch {
+            outcomeMutex.withLock {
+                val blocker = _blocker.value ?: return@withLock
+                if (!bindRetryPending()) return@withLock // a success owns the state now
+                if (!appInBackground()) return@withLock // back on screen before the lock was ours
+                showPendingNotice(blocker)
+            }
+        }
+    }
 
     /** Retries THIS service has attempted since the last success/foreground reset — the ladder index. */
     @Volatile
@@ -218,11 +494,25 @@ class SdkBindRetryService internal constructor(
      * `ACTION_USER_PRESENT` zero times in ten hours; MagicOS suppresses
      * exactly that kind of broadcast.
      *
-     * [retryNowInBackground] resets the ladder and runs one pass, which also
-     * consults the rollback — so a foreground visit both heals a recoverable
-     * denial and, when the bind is truly dead, lets the engine fall back.
+     * [retryNowInBackground] resets the ladder and runs one pass.
      */
     fun noteAppForeground() {
+        // The user is looking at the app: the notification is redundant and
+        // the sheet takes over. Cleared under the outcome mutex for the same
+        // reason noteAppBackground posts under it: a failure handler that
+        // passed its background check and is about to post must not land its
+        // notice after this clear (its re-check under the lock sees the
+        // foreground and skips). And decided from LIVE visibility under the
+        // lock (review, 2026-09-25): the mutex serializes the operations, not
+        // the order independently dispatched coroutines reach it, so a clear
+        // queued by a foreground edge can run after the app has gone back to
+        // the background and a valid notice has been posted for a still-blocked
+        // wallet — clearing it would lose the recovery prompt.
+        scope.launch {
+            outcomeMutex.withLock {
+                if (!appInBackground() && _blocker.value != null) clearPendingNotice()
+            }
+        }
         if (!bindRetryPending()) return
         log.info("app foregrounded with an SDK bind retry pending — retrying the bind now")
         armUnlockReceiver()
@@ -234,7 +524,7 @@ class SdkBindRetryService internal constructor(
         nextRetryAtMs = 0L
     }
 
-    /** One retry attempt + the post-attempt rollback consultation. */
+    /** One retry attempt. */
     private suspend fun retryOnce(trigger: String) {
         if (!retryInFlight.compareAndSet(false, true)) return
         try {
@@ -253,37 +543,15 @@ class SdkBindRetryService internal constructor(
                 resetBackoff()
                 return
             }
-            maybeRollBackCutover()
+            log.warn(
+                "SDK bind retry {} ({}) failed — {} consecutive failure(s); device provably " +
+                    "locked={}. No dashj fallback: retrying on the ladder, on unlock and on " +
+                    "app foreground",
+                retriesAttempted, trigger, consecutiveBindFailures(), deviceProvablyLocked()
+            )
         } finally {
             retryInFlight.set(false)
         }
-    }
-
-    /**
-     * After [rollbackAfterFailures] consecutive failed passes, roll the
-     * committed cutover back so dashj may run — unless the device is
-     * provably locked (the denial is then EXPECTED and heals on unlock;
-     * flipping engines for it would punish every locked-screen background
-     * start). The coordinator no-ops from any non-CUT_OVER state, so
-     * repeated consultations are harmless.
-     */
-    private suspend fun maybeRollBackCutover() {
-        val failures = consecutiveBindFailures()
-        if (failures < rollbackAfterFailures) return
-        if (deviceProvablyLocked()) {
-            log.info(
-                "SDK bind has failed {} consecutive passes but the device is provably locked — " +
-                    "holding the cutover rollback; the unlock receiver retries the bind first",
-                failures
-            )
-            return
-        }
-        log.warn(
-            "SDK bind failed {} consecutive passes with the device unlocked — rolling the " +
-                "cutover back so the dashj fallback engine can sync",
-            failures
-        )
-        rollbackCutover(failures)
     }
 
     /** Arm the ACTION_USER_PRESENT heal receiver (once per process). */
@@ -303,26 +571,48 @@ class SdkBindRetryService internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkBindRetryService::class.java)
-
-        /**
-         * Consecutive failed bind passes before the cutover rolls back to
-         * dashj. With the 5/15/30/60 s ladder this is roughly two minutes
-         * of retrying — long enough for a transient keystore hiccup to
-         * clear, short enough that the user is never staring at a dead
-         * "Not started" for a whole session.
-         */
-        internal const val ROLLBACK_AFTER_CONSECUTIVE_FAILURES = 5
-
     }
 }
 
 /**
- * The real ACTION_USER_PRESENT registration. NOT_EXPORTED: the unlock
- * broadcast is a protected system broadcast — no app-facing surface is
- * exposed. The receiver stays registered for the process lifetime; once
- * the wallet is bound its retries are cheap no-ops. Top-level (not a
- * companion member) so the @Inject constructor's delegation expression may
- * reference it.
+ * The real ACTION_USER_PRESENT registration.
+ *
+ * RECEIVER_EXPORTED, and that is load-bearing. This was RECEIVER_NOT_EXPORTED,
+ * reasoning that a protected system broadcast needs no app-facing surface. The
+ * reasoning inverted the consequence: `NOT_EXPORTED` matches only broadcasts
+ * whose sender shares our uid (or is the platform), and `ACTION_USER_PRESENT`
+ * is broadcast by **SystemUI**, a normal app uid — so the filter was never
+ * matched and the receiver never ran.
+ *
+ * Measured on the 2026-09-16 locked-upgrade test (emulator-5554, Android 16).
+ * The wallet's filter was registered and visible in `dumpsys activity
+ * broadcasts`:
+ *
+ *     ReceiverList{… hashengineering.darkcoin.wallet_test/10169/u0}
+ *       Filter #0: BroadcastFilter{59c4fef}
+ *         Action: "android.intent.action.USER_PRESENT"
+ *
+ * …and the broadcast that followed a real device unlock reached four
+ * receivers, none of them ours:
+ *
+ *     caller=com.android.systemui 1547:com.android.systemui/u0a124 uid=10124
+ *     DELIVERED #0 system/1000/u0   DELIVERED #1 system/1000/u-1
+ *     DELIVERED #2 com.android.launcher3/10116/u0   SKIPPED #3 (manifest)
+ *
+ * The launcher receives it because it registers exported. The same dump shows
+ * the wallet receiving TIME_TICK, which the system server sends from uid 1000,
+ * the one sender `NOT_EXPORTED` does admit — which is why the registration
+ * looked healthy while being inert for the broadcast it exists for.
+ *
+ * Exporting is safe precisely because the action is protected: it is declared
+ * `<protected-broadcast>` by the platform, so a third-party app that tries to
+ * send it gets a SecurityException. Exported here means "accept it from the
+ * privileged component that legitimately sends it", not "accept it from
+ * anyone". The receiver re-checks the action anyway.
+ *
+ * The receiver stays registered for the process lifetime; once the wallet is
+ * bound its retries are cheap no-ops. Top-level (not a companion member) so
+ * the @Inject constructor's delegation expression may reference it.
  */
 private fun registerUserPresentReceiver(context: Context, onUserPresent: () -> Unit): Boolean =
     try {
@@ -335,10 +625,10 @@ private fun registerUserPresentReceiver(context: Context, onUserPresent: () -> U
             context,
             receiver,
             IntentFilter(Intent.ACTION_USER_PRESENT),
-            ContextCompat.RECEIVER_NOT_EXPORTED
+            ContextCompat.RECEIVER_EXPORTED
         )
         LoggerFactory.getLogger(SdkBindRetryService::class.java)
-            .info("unlock-heal receiver registered (ACTION_USER_PRESENT, not exported)")
+            .info("unlock-heal receiver registered (ACTION_USER_PRESENT, exported — SystemUI is the sender)")
         true
     } catch (t: Throwable) {
         LoggerFactory.getLogger(SdkBindRetryService::class.java)

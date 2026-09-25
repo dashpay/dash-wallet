@@ -48,7 +48,11 @@ import java.util.concurrent.atomic.AtomicInteger
 @OptIn(ExperimentalCoroutinesApi::class)
 class SdkBlockchainStateServiceTest {
 
-    private val syncing = ShadowSyncProgress(ShadowSyncPhase.FILTERS, 1.0, 100, 100, 50, 100)
+    // Filters at 50/100 with an HONEST aggregate — (100 + 100 + 50) / 3. The
+    // former 1.0 was inert; since 2026-09-21 the stall verdict reads it (the
+    // iOS caught-up exemption), and a 100% aggregate would exempt this
+    // fixture's stall from the NETWORK impediment these tests assert on.
+    private val syncing = ShadowSyncProgress(ShadowSyncPhase.FILTERS, 0.833, 100, 100, 50, 100)
 
     private fun configWithState(state: String?): DashPayConfig = mockk {
         every { observe(DashPayConfig.CUTOVER_STATE) } returns flowOf(state)

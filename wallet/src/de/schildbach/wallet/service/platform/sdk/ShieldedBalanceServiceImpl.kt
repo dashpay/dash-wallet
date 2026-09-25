@@ -249,6 +249,18 @@ internal fun evaluateWalletFundingGate(
         WalletFundingGate(false, "SDK L1 engine reported a sync error")
     !progress.scanCaughtUpToTip ->
         WalletFundingGate(false, "SDK L1 filter scan has not caught up to the chain tip yet")
+    // THIS GATE STARTS A SPEND, so it keeps the veto the DISPLAY predicate
+    // dropped on 2026-09-21. `scanCaughtUpToTip` now also accepts the iOS
+    // aggregate rule and no longer requires the block pipeline drained; that
+    // is right for a label and wrong for funding. Matched blocks still being
+    // processed means SPENDS not yet applied to the ledger — a UTXO this
+    // wallet already spent still reads unspent, and a transfer built on it is
+    // a double-spend the network rejects (the 48.86 DASH incident's shape).
+    // The wallet cursor within tolerance of the tip is the evidence those
+    // blocks are through; until then the gate stays closed. Unknown cursor
+    // (0) never counts as lagging, so this cannot wedge a wallet at the tip.
+    progress.blockPipelineLagging ->
+        WalletFundingGate(false, "SDK L1 block pipeline is still processing matched blocks")
     else -> WalletFundingGate(true, "SDK L1 filter scan caught up to the chain tip")
 }
 

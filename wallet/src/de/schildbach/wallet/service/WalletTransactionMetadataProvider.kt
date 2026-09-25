@@ -208,7 +208,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
         val existing = transactionMetadataDao.load(txId)
 
         if (existing != null) {
-            log.info("txmetadata for $txId exists, only do update")
+            // Per-transaction: DEBUG. On a 33k-tx wallet this line alone ran
+            // to thousands per metadata re-merge (Phase 1a item 5).
+            log.debug("txmetadata for {} exists, only do update", txId)
             update(existing)
         } else {
             log.info("txmetadata for $txId does not exist, perform insert, then update")
@@ -305,7 +307,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
             // so a memo that is on the network but absent on screen is either
             // logged here as applied (=> a render problem) or never reaches
             // here (=> a sync problem). Memo length only; never its text.
-            log.info(
+            // DEBUG since Phase 1a item 5: per-transaction, and a full re-merge
+            // on the reference install wrote 12,646 of these in 23 seconds.
+            log.debug(
                 "platform metadata merged for {}: memo={} rate={} service={} taxCategory={}",
                 txId,
                 updated.memo.length.takeIf { it > 0 }?.let { "$it chars" } ?: "none",
