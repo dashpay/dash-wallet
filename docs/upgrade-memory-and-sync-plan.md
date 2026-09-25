@@ -3195,3 +3195,27 @@ floor that snapshot is 56.8%, which is what the header showed. Under the old fig
 90-second re-walk would have read 96 → 99 → gone.
 
 Not run: the recipe's §5 step 0 (kill mid-restore, relaunch, balance must still land).
+
+### 39.10 The mid-sync kill on int22, reproduced here: 0.449 DASH gone
+
+The recipe's §5 test, run on this build (`b973ec308`, `12000018`, `Pixel_9`) with the same
+wallet and the same tool, killing at the 40th committed batch (committed height 1,215,000):
+
+```
+clean restore   1083 coins   169.02812043   watched 21,227
+kill + resync   1076 coins   168.57927067   watched 18,749     short by 0.44884976
+```
+
+Seven owned outputs absent from the store after the resume reached `SyncComplete` at the same
+tip — the 09-23 run's three dust outputs and four more, one of them 0.379 DASH. All seven are
+BIP44 change addresses (indices 828–1,630) the killed run had derived, all at heights inside the
+range the resume rescanned from 1,175,001, none watched afterwards. Same mechanism as the
+recipe's finding, a different kill point, 78 times the loss. Full table and reproduction in
+`~/Documents/dash/wallet-snapshots/2026-09-25-topple-int22-killtest/FINDINGS.md`; the clean
+control is `2026-09-25-topple-int22-clean/`.
+
+Two things this settles. The loss is not a dust curiosity: it scales with whatever the in-flight
+addresses received. And the dashj audit alone cannot see it — every lost coin is deeper than
+dashj's lookahead, so the audit reads "0 missing" on the damaged store; only the clean control
+shows the difference (`tools/diff-stores.py`). Any wallet on int22 as published, Joel's
+`12000018` included, has this window open on every process death mid-scan.
