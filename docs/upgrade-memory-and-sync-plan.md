@@ -3072,7 +3072,8 @@ tick receiver on the main thread, and `getPss` walks `/proc/self/smaps`. On this
 in-app ANR watchdog dumped the main thread `BLOCKED` inside `Debug.getPss` at 21:11, 21:19 and
 21:26, and again in the final process at 01:46:39 (logcat, `tickReceiver.logMemory`). Five seconds
 or more on the main thread, inside a broadcast receiver, once a minute, for the entire replay. The
-comment in the code says "a few ms". It should move off the main thread or drop `getPss`.
+comment in the code said "a few ms". Fixed on `fix/sync-process-stalls`: the sample runs on the
+service scope, one in flight at a time, and a slow one skips ticks rather than queueing.
 
 **The 01:43 process death.** PSS 2.30–2.33 GB in the last two ticks, app backgrounded two minutes
 earlier, no crash, no ANR, breadcrumbs clean. Consistent with a low-memory kill of a background
