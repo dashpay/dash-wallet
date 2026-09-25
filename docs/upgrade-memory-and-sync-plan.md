@@ -2942,3 +2942,148 @@ honestly `WaitingForConnections` and our watchdog restarting into it; and his 09
 - The `SyncEvent monitor lagged` fatal (rust-dashcore#1002's field log): a broadcast channel of 16
   that shuts the client down when a re-walk drains stored blocks faster than the monitor reads them.
   Zero sightings on Android so far; untouched by #1016.
+
+## 39. Joel's upgrade to `12000017`, 2026-09-24/25: "Synced almost to completion, then reset"
+
+Source: Joel's contact-support report from the Pixel 8a (Android 17, 8 GB, `prod` release
+`12000017`), filed 2026-09-25 01:47 UTC, with `wallet.log` back to 09-13, the last 2 MB of the
+`dash_spv` and `platform_wallet` engine logs, and a logcat of the final process. Saved at
+`~/Downloads/joel-stuck-at-99/`. This is the reference install of §31 — 33,297 transactions,
+68,317 keys, 229 DashPay friend chains — on the SDK **int21** build. It has none of
+`fix/sync-process-stalls` (#1571): no bounded shielded stop (§37), no 5-minute process exit, no
+start-time alarm (§36.6), no int22.
+
+All times below are UTC; `wallet.log` is written in UTC, the logcat in EDT (UTC−4).
+
+### 39.1 What the report says, and what it was
+
+"Synced almost to completion, then reset" is exactly what the header showed: 99.9% at 23:34, and
+95.1% when Joel opened the app at 01:44 to file the report. No blockchain reset happened (the last
+one is still 2026-09-15 23:07, the §31 restore). The percentage went backwards because the SDK
+engine's filter cursor went backwards — three times, for three different reasons, all of them
+already in this document. Nothing here is new in kind; what is new is the scale on a real mainnet
+wallet, and a second field occurrence of the §37 deadlock.
+
+### 39.2 Timeline
+
+Before the upgrade, for context:
+
+| when | what |
+|---|---|
+| 09-15 23:07 | blockchain reset on `12000012` (§31). Block segments 37–42 (1.85 M–2.15 M) are written 23:13–00:13 |
+| 09-19 03:49 | the old build's last logged position: 98.1%, filters 2,397,092. Segments 48–50 (2.4 M–2.55 M) carry 09-19 timestamps, so it reached the tip at least once |
+| 09-21 09:09 | launch on `12000012` dies 30 s in, after `WALLET_PROTOBUF_PARSED` (breadcrumb `failures=1`); §33's wallet-load death. Nothing runs again until the upgrade |
+
+The upgrade and the sync:
+
+| when | what | cursor |
+|---|---|---|
+| 09-24 20:44:35 | `12000017` installed over `12000012` | |
+| 20:44:37 | Joel opens the app. Wallet parse 9.9 s, consistency 5.4 s; `detected app upgrade: 12000012 -> 12000017` at +15.6 s; UI at +16.1 s. Cutover already committed, SDK owns L1 | |
+| 20:45:19 | L1 engine starts. First progress line reads the wallet's synced height | 2,277,092 |
+| 20:48:18 | the engine's filter cursor appears — 110,000 lower than the wallet's | **2,167,092** |
+| 20:48 → 23:28 | the pass: 95.1% → 99.6%. 365,000 filters in 158 min, about 2,300/min. PSS 1.9–2.1 GB throughout | 2,517,092 |
+| 23:33:59 | `SPV progress static for 90s at 2537092 of 2544441 filters (7349 short, aggregate 99.904%) — at the iOS synced threshold` — the §34 final-batch park, and the §35 rule declares the wallet synced | 2,537,092 |
+| 23:34:44 | Joel leaves the app (`app closed`) | |
+| 23:36:06 | with `replaying` now false the idle rule stops the service (`idling detected`). Teardown reads `durable syncedHeight 2467092 is 70000 blocks BEHIND the committed cursor 2537092` | |
+| 23:36:38 | `failed to stop the shielded sync loop: shielded sync pass did not drain within the quiesce budget` — the SDK-side bound held, 32 s | |
+| 23:51:55 | Joel opens the app (PIN screen). Service starts cleanly; the DashPay bring-up blows its 20 s budget; the engine never comes up in this instance | |
+| 23:54:01 | idle stop after 2 min. **This cleanup does not finish for 50 minutes** | |
+| 23:56:08 | Joel opens the app again. `deadlock in onDestroy — cannot proceed with onCreate`; the refused instance still resumes the engine for 9 s | 2,482,092 |
+| 00:03:42, 00:11:06, 00:20:38, 00:20:54, 00:26:09, 00:41:10 | six more refused starts — four of them the periodic alarm, delivered (`started by alarm`, battery exemption granted) | |
+| 00:44:40 | `shielded runtime ready on SDK wallet` — the shielded bind the cleanup was waiting on finally returns; cleanup steps 5–6 and the wallet save follow within 20 s | |
+| 00:56:13 | alarm start, `waiting for cleanup false`. Engine not up within 3 min → idle stop at 00:59:07; the engine then starts at 01:00:52 into a stopped service and is torn down after 3 s | 2,537,092 |
+| 01:14:45 | alarm start; engine up at 01:14:58 | |
+| 01:15:33 | first progress: **2,294,809** — 242,000 below the height the last stop recorded. The engine log shows `Rescan filters (2354810-…) for new scripts` at 01:31: the durable sweep re-testing already-scanned heights | 2,294,809 |
+| 01:40:01 | 96%, replay kept alive. PSS 2.33 GB, native heap 1.62 GB | 2,379,809 |
+| 01:41:26 | Joel leaves the app; last tick 01:43:01 | |
+| ~01:43 | **process dies**. No crash, no ANR line, no OOM in the app log; the breadcrumbs mark the launch `COMPLETE`. Cause not in the evidence (the logcat begins with the next process) | |
+| 01:43:49 | Joel opens the app; UI at +15.3 s | |
+| 01:44:27 | engine start: `Recovered pending script sweep from a previous session; already-scanned heights will be re-tested for these scripts wallets=1 scripts=67658`, `Batch 2167093-2172092: found 817 matching blocks`, `Seeding recovered pending script sweep into the lowest active batch … batch_start=2167093` | **2,167,092** |
+| 01:45:15 | header: 95.1% | |
+| 01:47:10 | report filed | |
+
+### 39.3 The three rewinds
+
+**1. 99.904% → 2,467,092 (70,000 blocks), 23:36.** The last batch parked in the §34 committed-range
+sweep; the §35 rule read the park as synced (it is the same rule iOS uses, and 7,349 filters short
+of the tip is inside its threshold); the idle rule, no longer held by `replaying`, stopped the
+service two minutes later. The SDK persists `synced_height` at wallet-event batches, and at that
+moment it was 70,000 behind the cursor. §35.4 priced this at "a few thousand blocks"; on this wallet
+it was 70,000. Not a defect in either rule on its own — the cost is the SDK's persistence granularity
+under the park, which the app cannot set.
+
+**2. 2,537,092 → 2,294,809 (242,000 blocks), 01:15.** An in-process engine restart, so not the
+fresh-process re-walk of §38.2. The engine log in the report starts at 01:26, after the fact; from
+01:31 it shows sweep batches on a grid anchored at 2,294,810 (`Rescan filters (2354810-2359809)`),
+so the durable pending-sweep set (§34.1a, 1.96 MB on disk, 67,658 scripts) was re-seeded and
+re-tested from there. Why the lowest active batch sat at 2,294,810 rather than at the recorded
+2,537,092 is not determinable from what was sent.
+
+**3. → 2,167,092 on every fresh process (20:48 and 01:44).** The §38.2 signature, on mainnet:
+a fixed height, the same on both process-fresh launches, not on the in-process restarts, with the
+batch grid re-anchored on it (residue 2,093 mod 5,000 after 01:44; residue 2,092 after 20:48). On
+testnet the anchor was 1,532,171, the wallet's earliest DashPay contact request; this wallet has
+229 contacts and 2,167,092 is where its earliest one would sit. dashpay/platform#4302. Each fresh
+launch costs a 377,000-filter re-walk from there — and, with the durable sweep set seeded into that
+lowest batch, every one of those filters is also re-tested against all 67,658 scripts.
+
+### 39.4 The sweep at 67,658 scripts
+
+§34.2 did the arithmetic for Andrei's 13,024 scripts: a 1.66% false-positive rate per filter at
+BIP158's P=19, 93 block fetches per 5,000 filters observed. Joel's wallet carries 67,658 scripts
+into the sweep — five times as many — and the observed rate follows:
+
+| | scripts | blocks fetched per 5,000-filter batch | per pass from 2,167,093 |
+|---|---|---|---|
+| Andrei, testnet (§34.2) | 13,024 | 83 expected / 93 observed | — |
+| Joel, mainnet, 01:44 | 67,658 | **817** (`Batch 2167093-2172092`), then 800 (`Rescan found 800 additional blocks`) | ≈ 60,000 block fetches |
+
+16% of every batch's blocks are fetched, parsed and matched, for a sweep that finds nothing new.
+The 09-24 pass ran 158 minutes for 365,000 filters and rewrote block segments 43–47 (250,000
+heights' worth of files, 550 MB) on the way; the 01:14 pass had rewritten 45–47 again by 01:41. A
+full pass from the anchor is about 2.7 h of continuous foreground-service time at 2 GB PSS, and
+then the final batch parks. Joel got through one full pass on 09-24; the service stop that followed
+cost 70,000 blocks, the deadlock cost 50 minutes, and the process death sent it back to the anchor.
+
+### 39.5 The §37 deadlock, second sighting
+
+The 23:54:01 cleanup waited inside the shielded stop from 23:54 until `shielded runtime ready` at
+00:44:40 — 50 minutes, seven refused starts, the engine off for 78 of the 80 minutes between 23:36
+and 00:56. Same shape as Andrei's 4-hour case (§37): the shielded bring-up parked in the native
+bind, `stop()` waiting on its mutex, every start refusing itself. Here the bind eventually returned
+on its own, so the chain ended without a process death. `fix/sync-process-stalls` bounds that stop
+at 5 s and exits a backgrounded process whose cleanup is stuck past 5 minutes; both would have
+applied at 23:56.
+
+Not the ChainLock-wait variant necessarily: nothing in the report says whether this wallet has a
+pending shield. The shielded bind simply took 50 minutes on a process that was also running a
+2 GB replay. The app-side fix does not care which.
+
+### 39.6 Two things the logs add
+
+**`Debug.getPss()` blocks the main thread.** The per-minute memory line (§36) is written from the
+tick receiver on the main thread, and `getPss` walks `/proc/self/smaps`. On this 2 GB process the
+in-app ANR watchdog dumped the main thread `BLOCKED` inside `Debug.getPss` at 21:11, 21:19 and
+21:26, and again in the final process at 01:46:39 (logcat, `tickReceiver.logMemory`). Five seconds
+or more on the main thread, inside a broadcast receiver, once a minute, for the entire replay. The
+comment in the code says "a few ms". It should move off the main thread or drop `getPss`.
+
+**The 01:43 process death.** PSS 2.30–2.33 GB in the last two ticks, app backgrounded two minutes
+earlier, no crash, no ANR, breadcrumbs clean. Consistent with a low-memory kill of a background
+process holding 2.3 GB, which §36.2 has seen on this device before; not proven. The logcat Joel
+sent begins at the next process start, so the kill reason is not in it. Note that the death cost
+more than the memory: a fresh process is what re-arms rewind 3.
+
+### 39.7 What #1571 would have changed, and what it would not
+
+Would have: the 50-minute deadlock (bounded stop, process exit after 5 min in the background), so
+the engine resumes at 23:56 instead of 01:14. That is the whole of the app-side difference.
+
+Would not: the re-walk to 2,167,092 on every fresh process (#4302, platform), the sweep's 817
+block fetches per batch (rust-dashcore#1016, the other session's build), the 70,000-block persistence
+lag under the final-batch park (SDK), or the 2.3 GB process that makes the fresh process likely.
+On this wallet those four together mean the sync cannot reach a persisted tip on
+`12000017`, and cannot on `12000018` either. The #1016 build removes the sweep's block fetches
+but not the re-walk; #4302 removes the re-walk. It needs both before the reference install can
+finish a sync it started.
