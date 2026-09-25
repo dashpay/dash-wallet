@@ -2991,6 +2991,92 @@ class L1ShadowSyncServiceTest {
         )
     }
 
+    // ── The session's work, not the whole chain (Joel, 2026-09-25) ──────
+
+    /**
+     * The reference install's 2026-09-24 pass: the DashPay backfill rewound
+     * the filter cursor to 2,167,092 under a 2,544,483 tip. Over the whole
+     * chain that read 95.1% at the start and crept to 99.9% over three hours;
+     * over the session's own work it starts at 0 and 99.1 / 99.9 mean what
+     * they say.
+     */
+    @Test
+    fun shadowSyncPercent_measuresTheSessionsWork_notTheWholeChain() {
+        val tip = 2_544_483L
+        val floor = 2_167_092L
+        fun at(filters: Long) = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.0, tip, tip, filters, tip,
+            sessionHeaderStart = tip, sessionFilterStart = floor
+        )
+        assertEquals(0, shadowSyncPermille(at(floor)))
+        assertEquals(0, shadowSyncPercent(at(floor)))
+        // Half the 377,391 filters of work: 2,355,787.
+        assertEquals(500, shadowSyncPermille(at(floor + 188_696)))
+        assertEquals(50, shadowSyncPercent(at(floor + 188_696)))
+        // 99.1% of the work done — the tenths are the figure the header shows.
+        assertEquals(991, shadowSyncPermille(at(floor + 374_000)))
+        assertEquals(99, shadowSyncPercent(at(floor + 374_000)))
+        // Three short of the tip: inside the caught-up tolerance? No (2 blocks) — 99.9, not 100.
+        assertEquals(999, shadowSyncPermille(at(tip - 3)))
+        assertEquals(99, shadowSyncPercent(at(tip - 3)))
+        // Within tolerance: caught up, and only then 100.
+        assertEquals(1000, shadowSyncPermille(at(tip - 2)))
+        assertEquals(100, shadowSyncPercent(at(tip - 2)))
+
+        // The 27,000-block re-walk every launch pays (§38.2): 0 → 100 over
+        // the re-walk, instead of 99 the whole way.
+        val reWalk = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.0, 1_558_891, 1_558_891, 1_545_000, 1_558_891,
+            sessionHeaderStart = 1_558_891, sessionFilterStart = 1_532_171
+        )
+        assertEquals(480, shadowSyncPermille(reWalk))
+        // Whole-chain reading of the same snapshot, for the record.
+        assertEquals(995, shadowSyncPermille(reWalk.copy(sessionHeaderStart = 0, sessionFilterStart = 0)))
+
+        // No floor recorded (a fresh restore, an old snapshot): the whole-chain ratio, as before.
+        assertEquals(750, shadowSyncPermille(ShadowSyncProgress(ShadowSyncPhase.FILTERS, 0.5, 100, 100, 50, 100)))
+        // A floor above the cursor (a rewind the floor has not caught up with yet) cannot go negative.
+        assertEquals(0, shadowSyncPermille(at(floor).copy(sessionFilterStart = floor + 10_000)))
+    }
+
+    @Test
+    fun progressFeed_anchorsTheSessionAtTheLowestCursorSeen_andEveryStopResetsIt() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        val tip = 2_544_483L
+        fun filtersAt(h: Long) = syncing(
+            headers = sub(SpvSyncState.SYNCED, tip, tip),
+            filters = sub(SpvSyncState.SYNCING, h, tip)
+        )
+
+        // First snapshot reads the wallet's stored height…
+        source.progressFlow.value = filtersAt(2_277_092)
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 2_277_092L) delay(5) }
+        assertEquals(2_277_092L, service.progress.value.sessionFilterStart)
+        assertEquals(tip, service.progress.value.sessionHeaderStart)
+        // …then the backfill rewinds the cursor below it: the floor follows.
+        source.progressFlow.value = filtersAt(2_167_092)
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 2_167_092L) delay(5) }
+        assertEquals(2_167_092L, service.progress.value.sessionFilterStart)
+        assertEquals(0, shadowSyncPermille(service.progress.value))
+        // Progress is measured from the floor, not from 0.
+        source.progressFlow.value = filtersAt(2_355_788)
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 2_355_788L) delay(5) }
+        assertEquals(2_167_092L, service.progress.value.sessionFilterStart)
+        assertEquals(500, shadowSyncPermille(service.progress.value))
+
+        // A stop ends the session; the next one measures its own work.
+        service.stop()
+        assertEquals(0L, service.progress.value.sessionFilterStart)
+        source.progressFlow.value = SpvSyncProgressData.EMPTY // a stopped engine reports nothing
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = filtersAt(2_400_000)
+        withTimeout(5_000) { while (service.progress.value.sessionFilterStart != 2_400_000L) delay(5) }
+        assertEquals(tip, service.progress.value.sessionHeaderStart)
+        service.stop()
+    }
+
     // ── shadowSyncPercent (post-cutover home "Syncing N%" source) ─────
 
     @Test
