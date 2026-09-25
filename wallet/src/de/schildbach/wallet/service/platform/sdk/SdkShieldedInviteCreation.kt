@@ -294,6 +294,10 @@ class SdkShieldedInviteCreation internal constructor(
      * returns the ready-to-share [InvitationLinkData] and persists a tracking
      * [Invitation] row. Nothing is spent when any preflight fails; the funding
      * transfer is attempted once and classified via [classifyBroadcastFailure].
+     *
+     * Funding through the initial raw-link persistence attempt ignores caller cancellation.
+     * OneLink generation and the subsequent tracking update remain cancellable. This protects
+     * against sheet dismissal, but not process death, ambiguous funding, or database failure.
      */
     suspend fun createShieldedInvite(
         username: String,
@@ -436,6 +440,7 @@ class SdkShieldedInviteCreation internal constructor(
         return SdkWriteResult.Broadcast(ShieldedInvite(link, shareLink))
     }
 
+    /** Saves the share link under the stable tracking identifier derived from the one-time address. */
     private suspend fun persistTracking(oneTimeAddress43: ByteArray, shareLink: String) {
         val syntheticUserId = Identifier.from(Sha256Hash.hash(oneTimeAddress43)).toString()
         invitationsDao.insert(
@@ -451,6 +456,7 @@ class SdkShieldedInviteCreation internal constructor(
         )
     }
 
+    /** Logs a preflight failure and reports that no funding transfer was submitted. */
     private fun notBroadcast(reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {
         log.info("shielded invite not created ({})", reason, cause)
         return SdkWriteResult.NotBroadcast(reason, cause)
